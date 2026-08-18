@@ -69,6 +69,47 @@ describe('resolveWidget', () => {
     expect(resolved.connected.value).toBe(false);
   });
 
+  it('reports disconnected instead of throwing when an adapter rejects', async () => {
+    const flaky: Adapter = {
+      id: 'flaky',
+      resolve: async () => {
+        throw new Error('network timeout');
+      },
+    };
+    const widget: Widget = {
+      type: 'uw-status',
+      props: { value: 'last-known' },
+      bindings: { value: { adapter: 'flaky', ref: 'x' } },
+    };
+
+    const resolved = await resolveWidget(widget, [flaky]);
+
+    expect(resolved.props.value).toBe('last-known');
+    expect(resolved.connected.value).toBe(false);
+  });
+
+  it('does not let one binding rejecting stop the others from resolving', async () => {
+    const flaky: Adapter = {
+      id: 'flaky',
+      resolve: async () => {
+        throw new Error('network timeout');
+      },
+    };
+    const cmms = new InMemoryAdapter('cmms', { temp: { value: 42, connected: true } });
+    const widget: Widget = {
+      type: 'uw-metric',
+      bindings: {
+        broken: { adapter: 'flaky', ref: 'x' },
+        ok: { adapter: 'cmms', ref: 'temp' },
+      },
+    };
+
+    const resolved = await resolveWidget(widget, [flaky, cmms]);
+
+    expect(resolved.connected).toEqual({ broken: false, ok: true });
+    expect(resolved.props.ok).toBe(42);
+  });
+
   it('resolves multiple bindings against different adapters concurrently', async () => {
     const cmms = new InMemoryAdapter('cmms', {
       temp: { value: 42, connected: true },

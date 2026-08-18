@@ -31,8 +31,12 @@ export interface ResolvedWidget {
 /**
  * Resolves every binding on a widget against the given adapters, producing the props a renderer
  * hands to the widget library plus per-prop connectivity. A binding whose adapter id doesn't
- * match any given Adapter is reported as disconnected and its prop is left at whatever static
- * value (or absence) it already had — never overwritten with a missing value.
+ * match any given Adapter — or whose adapter rejects instead of returning a result (a network
+ * timeout, for example) — is reported as disconnected and its prop is left at whatever static
+ * value (or absence) it already had, never overwritten with a missing value. One binding's
+ * adapter failing never fails the others: connectivity problems are data to show, not exceptions
+ * to propagate (ROADMAP's L1 "연결 끊김 가시화" requirement is exactly this — a widget that can't
+ * reach its source should render disconnected, not take the rest of the document down with it).
  */
 export async function resolveWidget(
   widget: Widget,
@@ -49,9 +53,13 @@ export async function resolveWidget(
         connected[propKey] = false;
         return;
       }
-      const resolved = await adapter.resolve(binding.ref);
-      props[propKey] = resolved.value;
-      connected[propKey] = resolved.connected;
+      try {
+        const resolved = await adapter.resolve(binding.ref);
+        props[propKey] = resolved.value;
+        connected[propKey] = resolved.connected;
+      } catch {
+        connected[propKey] = false;
+      }
     })
   );
 
