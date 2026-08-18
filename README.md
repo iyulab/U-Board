@@ -29,6 +29,32 @@ implemented and browser-verified. Binding to a real external data source is not 
 implemented — the adapter contract is complete and validated end-to-end against a mock adapter
 only.
 
+## Domain layer
+
+The renderer-agnostic core — the view document schema, the adapter contract, and binding
+resolution — is available as a package entry point independent of the (not yet built) authoring
+UI and canvas rendering pipeline. This package isn't published to a registry yet, so consume it
+as a `file:` or workspace dependency:
+
+```json
+{ "dependencies": { "@iyulab/u-board": "file:../path/to/U-Board" } }
+```
+
+```ts
+import { resolveDocument, type ViewDocument, type Adapter } from '@iyulab/u-board';
+
+const doc: ViewDocument = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+const adapters: Adapter[] = [/* your Adapter implementations */];
+
+const resolved = await resolveDocument(doc, adapters);
+```
+
+`resolveDocument` is the single entry point a renderer calls to turn a saved `ViewDocument` into
+something paintable — it has no opinion on canvas-kit, u-widgets, or any other rendering concern.
+See [`docs/concepts.md`](docs/concepts.md) for the vocabulary (`ViewDocument`, `Binding`,
+`Adapter`) and [`docs/architecture.md`](docs/architecture.md) for how this layer fits the rest of
+the system. Run `npm run build:lib` to produce the `dist/lib` output these exports point at.
+
 ## Documentation
 
 | Topic | Doc |
