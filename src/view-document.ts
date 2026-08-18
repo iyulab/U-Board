@@ -35,6 +35,10 @@ export interface Node {
   id: string;
   x: number;
   y: number;
+  /** The widget's footprint in scene units. Absent means the renderer picks a default size —
+   * a node doesn't have to specify one until an author actually resizes it. */
+  width?: number;
+  height?: number;
   /** Whether (x, y) is an anchor — a coordinate meaningful in the background's real space —
    * or a freely-placed position with no real-space meaning (docs/concepts.md — "Node", "Anchor").
    * Both cases store the same x/y shape; this flag only carries what that position means. */

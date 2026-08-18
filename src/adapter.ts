@@ -21,6 +21,9 @@ export interface ResolvedBinding {
 }
 
 export interface ResolvedWidget {
+  /** Carried through unchanged from the source Widget — resolution only touches `props`, and a
+   * renderer still needs to know which widget kind to hand these props to. */
+  type: string;
   /** The widget's static `props` merged with every binding that resolved successfully. */
   props: Record<string, unknown>;
   /** Connectivity per bound prop key. A key is present only for props that had a binding —
@@ -37,6 +40,10 @@ export interface ResolvedWidget {
  * adapter failing never fails the others: connectivity problems are data to show, not exceptions
  * to propagate (ROADMAP's L1 "연결 끊김 가시화" requirement is exactly this — a widget that can't
  * reach its source should render disconnected, not take the rest of the document down with it).
+ *
+ * A binding key may be a dotted path (e.g. `"data.status"`) to reach a field nested inside a
+ * widget library's own config shape (u-widgets nests bindable fields under `data`) — resolution
+ * writes into that path without disturbing the rest of the object it lives in.
  */
 export async function resolveWidget(
   widget: Widget,
@@ -47,21 +54,39 @@ export async function resolveWidget(
 
   const bindingEntries = Object.entries(widget.bindings ?? {});
   await Promise.all(
-    bindingEntries.map(async ([propKey, binding]) => {
+    bindingEntries.map(async ([propPath, binding]) => {
       const adapter = adapters.find(a => a.id === binding.adapter);
       if (!adapter) {
-        connected[propKey] = false;
+        connected[propPath] = false;
         return;
       }
       try {
         const resolved = await adapter.resolve(binding.ref);
-        props[propKey] = resolved.value;
-        connected[propKey] = resolved.connected;
+        setPath(props, propPath, resolved.value);
+        connected[propPath] = resolved.connected;
       } catch {
-        connected[propKey] = false;
+        connected[propPath] = false;
       }
     })
   );
 
-  return { props, connected };
+  return { type: widget.type, props, connected };
+}
+
+/** Sets `path` (dot-separated) on `target`, copying each object along the way so the caller's
+ * original nested objects are never mutated in place. */
+function setPath(target: Record<string, unknown>, path: string, value: unknown): void {
+  const keys = path.split('.');
+  let cursor = target;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const key = keys[i];
+    const existing = cursor[key];
+    const next =
+      typeof existing === 'object' && existing !== null && !Array.isArray(existing)
+        ? { ...(existing as Record<string, unknown>) }
+        : {};
+    cursor[key] = next;
+    cursor = next;
+  }
+  cursor[keys[keys.length - 1]] = value;
 }

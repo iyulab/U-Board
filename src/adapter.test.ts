@@ -22,7 +22,13 @@ describe('resolveWidget', () => {
   it('returns static props unchanged for a widget with no bindings', async () => {
     const widget: Widget = { type: 'uw-metric', props: { label: 'Note' } };
     const resolved = await resolveWidget(widget, []);
-    expect(resolved).toEqual({ props: { label: 'Note' }, connected: {} });
+    expect(resolved).toEqual({ type: 'uw-metric', props: { label: 'Note' }, connected: {} });
+  });
+
+  it('carries the widget type through unchanged', async () => {
+    const widget: Widget = { type: 'gauge', props: {} };
+    const resolved = await resolveWidget(widget, []);
+    expect(resolved.type).toBe('gauge');
   });
 
   it('merges a resolved binding value into props and marks it connected', async () => {
@@ -136,5 +142,34 @@ describe('resolveWidget', () => {
     const resolved = await resolveWidget(widget, []);
     expect(resolved.connected).toEqual({});
     expect('label' in resolved.connected).toBe(false);
+  });
+
+  it('resolves a dotted binding path into a nested field without disturbing its siblings', async () => {
+    const cmms = new InMemoryAdapter('cmms', { state: { value: 'running', connected: true } });
+    const widget: Widget = {
+      type: 'status',
+      props: { data: { label: 'Pump A' } },
+      bindings: { 'data.status': { adapter: 'cmms', ref: 'state' } },
+    };
+
+    const resolved = await resolveWidget(widget, [cmms]);
+
+    expect(resolved.props).toEqual({ data: { label: 'Pump A', status: 'running' } });
+    expect(resolved.connected).toEqual({ 'data.status': true });
+  });
+
+  it('does not mutate the original widget when resolving a nested binding path', async () => {
+    const cmms = new InMemoryAdapter('cmms', { state: { value: 'running', connected: true } });
+    const originalData = { label: 'Pump A' };
+    const widget: Widget = {
+      type: 'status',
+      props: { data: originalData },
+      bindings: { 'data.status': { adapter: 'cmms', ref: 'state' } },
+    };
+
+    await resolveWidget(widget, [cmms]);
+
+    expect(originalData).toEqual({ label: 'Pump A' });
+    expect('status' in originalData).toBe(false);
   });
 });

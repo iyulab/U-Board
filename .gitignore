@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.playwright-mcp/
 
 # Local dev tracking — see AGENTS.md ("Documentation split"). Tracking lives in the umbrella,
 # not here.
