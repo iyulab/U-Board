@@ -66,6 +66,20 @@ describe('applySceneToDocument', () => {
     expect(updated.nodes[0]).toMatchObject({ x: 42, y: 99 });
   });
 
+  it("updates a node's width/height from its matching rect (a resize, not just a move)", () => {
+    const original = doc({
+      nodes: [{ id: 'n1', x: 0, y: 0, width: 100, height: 50, anchored: false, widget: { type: 'status' } }],
+    });
+    const scene = documentToScene(original);
+    const resized = scene.copy();
+    const rectInResized = resized.getObjects()[0];
+    if (rectInResized.type !== 'rect') throw new Error('expected a rect');
+    resized.updateObject(rectInResized, { ...rectInResized, width: 240, height: 130 });
+
+    const updated = applySceneToDocument(original, resized);
+    expect(updated.nodes[0]).toMatchObject({ x: 0, y: 0, width: 240, height: 130 });
+  });
+
   it('leaves a node unchanged when the scene has no matching rect (e.g. mid-transition)', () => {
     const original = doc({
       nodes: [{ id: 'n1', x: 5, y: 5, anchored: false, widget: { type: 'status' } }],

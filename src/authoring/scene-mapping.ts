@@ -75,7 +75,7 @@ export function applySceneToDocument(doc: ViewDocument, scene: Scene): ViewDocum
   const rectsById = new Map(
     scene
       .getObjects()
-      .filter(obj => obj.type === 'rect' && obj.id)
+      .filter((obj): obj is Extract<typeof obj, { type: 'rect' }> => obj.type === 'rect' && !!obj.id)
       .map(obj => [obj.id as string, obj])
   );
 
@@ -83,7 +83,7 @@ export function applySceneToDocument(doc: ViewDocument, scene: Scene): ViewDocum
     ...doc,
     nodes: doc.nodes.map(node => {
       const rect = rectsById.get(node.id);
-      return rect ? { ...node, x: rect.x, y: rect.y } : node;
+      return rect ? { ...node, x: rect.x, y: rect.y, width: rect.width, height: rect.height } : node;
     }),
   };
 }
