@@ -3,11 +3,7 @@ import type { ViewerOverlayItem } from '@canvas-kit/viewer';
 import { UWidget } from '@iyulab/u-widgets/react';
 import '@iyulab/u-widgets';
 import type { ResolvedViewDocument } from '../resolve-document';
-
-/** A node's footprint when its own width/height weren't set (docs/view-document.ts — "the
- * renderer picks a default size"). */
-const DEFAULT_NODE_WIDTH = 160;
-const DEFAULT_NODE_HEIGHT = 100;
+import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults';
 
 export interface CanvasKitRenderOutput {
   scene: Scene;

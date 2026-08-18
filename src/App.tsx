@@ -1,9 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Viewer } from '@canvas-kit/viewer';
-import { resolveDocument } from './resolve-document';
+import { useMemo } from 'react';
+import { AuthoringView } from './authoring/AuthoringView';
 import type { Adapter, ResolvedBinding } from './adapter';
-import { toCanvasKit } from './renderer/to-canvas-kit';
-import type { CanvasKitRenderOutput } from './renderer/to-canvas-kit';
 import type { ViewDocument } from './view-document';
 
 /** A stand-in for a real CMMS adapter (docs — "실제 CMMS adapter 구현은 그 시스템 접근이 필요해
@@ -79,31 +76,18 @@ const demoDocument: ViewDocument = {
 };
 
 export function App() {
-  const [output, setOutput] = useState<CanvasKitRenderOutput | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    resolveDocument(demoDocument, [new DemoAdapter()]).then(resolved => {
-      if (!cancelled) setOutput(toCanvasKit(resolved));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const adapters = useMemo(() => [new DemoAdapter()], []);
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — rendering pipeline smoke test</h1>
+      <h1 style={{ fontSize: 18 }}>U-Board — authoring</h1>
       <p style={{ color: '#64748b', maxWidth: 640 }}>
-        A hand-built View Document, resolved against a demo adapter (one connected value, one
-        deliberately disconnected), rendered through canvas-kit's Viewer with u-widgets overlays.
-        Not the authoring tool — this only proves the render path.
+        Add and drag nodes on the left; the right pane renders the same ViewDocument through the
+        real render path (resolveDocument + canvas-kit Viewer + u-widgets overlays) against a
+        demo adapter (one connected value, one deliberately disconnected). Saving is not yet
+        implemented — this proves layout editing, not persistence.
       </p>
-      {output ? (
-        <Viewer width={900} height={560} scene={output.scene} overlays={output.overlays} />
-      ) : (
-        <p>Resolving…</p>
-      )}
+      <AuthoringView initialDocument={demoDocument} adapters={adapters} width={900} height={560} />
     </div>
   );
 }
