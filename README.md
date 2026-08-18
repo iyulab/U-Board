@@ -23,8 +23,11 @@ not assume or require a specific host platform.
 
 ## Status
 
-This project is in early development. The core canvas engine and the authoring tool are not yet
-implemented.
+This project is in early development. The rendering pipeline (canvas-kit + u-widgets), the
+authoring UI (add/drag/resize nodes), local save (export/import), and a read-only viewer mode are
+implemented and browser-verified. Binding to a real external data source is not yet
+implemented — the adapter contract is complete and validated end-to-end against a mock adapter
+only.
 
 ## Documentation
 
