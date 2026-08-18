@@ -16,6 +16,9 @@
     "type": "git",
     "url": "https://github.com/iyulab/U-Board"
   },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@canvas-kit/core": "^0.2.0",
     "@canvas-kit/designer": "^0.2.0",
