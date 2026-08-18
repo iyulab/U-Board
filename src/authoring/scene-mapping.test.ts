@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { documentToScene, applySceneToDocument, addNode } from './scene-mapping';
+import { documentToScene, applySceneToDocument, addNode, nextNodePosition } from './scene-mapping';
 import type { ViewDocument } from '../view-document';
 
 function doc(overrides: Partial<ViewDocument> = {}): ViewDocument {
@@ -131,5 +131,29 @@ describe('addNode', () => {
     d = addNode(d, { x: 0, y: 0 });
     d = addNode(d, { x: 0, y: 0 });
     expect(d.nodes[0].id).not.toBe(d.nodes[1].id);
+  });
+});
+
+describe('nextNodePosition', () => {
+  it('places the first node at the base offset', () => {
+    expect(nextNodePosition(doc())).toEqual({ x: 40, y: 40 });
+  });
+
+  it("cascades each subsequent node's position so it doesn't stack on the last one", () => {
+    const withOneNode = doc({ nodes: [{ id: 'n1', x: 40, y: 40, anchored: false, widget: { type: 'status' } }] });
+    const position = nextNodePosition(withOneNode);
+    expect(position).not.toEqual({ x: 40, y: 40 });
+  });
+
+  it('produces a distinct position for each node added in sequence', () => {
+    let d = doc();
+    const positions = [];
+    for (let i = 0; i < 5; i++) {
+      const position = nextNodePosition(d);
+      positions.push(position);
+      d = addNode(d, position);
+    }
+    const unique = new Set(positions.map(p => `${p.x},${p.y}`));
+    expect(unique.size).toBe(positions.length);
   });
 });

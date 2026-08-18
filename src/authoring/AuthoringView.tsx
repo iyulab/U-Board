@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { KonvaDesigner } from '@canvas-kit/designer';
 import { Viewer } from '@canvas-kit/viewer';
 import type { Scene } from '@canvas-kit/core';
-import { documentToScene, applySceneToDocument, addNode } from './scene-mapping';
+import { documentToScene, applySceneToDocument, addNode, nextNodePosition } from './scene-mapping';
 import { resolveDocument } from '../resolve-document';
 import { toCanvasKit } from '../renderer/to-canvas-kit';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit';
@@ -46,10 +46,12 @@ export function AuthoringView({ initialDocument, adapters, width, height }: Auth
   };
 
   const handleAddNode = () => {
-    setDoc(prev => addNode(prev, { x: 40, y: 40 }));
+    setDoc(prev => addNode(prev, nextNodePosition(prev)));
+    setImportError(null);
   };
 
   const handleExport = () => {
+    setImportError(null);
     const blob = new Blob([serializeViewDocument(doc)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -92,6 +94,7 @@ export function AuthoringView({ initialDocument, adapters, width, height }: Auth
         accept="application/json"
         onChange={handleImportFile}
         style={{ display: 'none' }}
+        data-testid="import-file-input"
       />
       {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
       <div style={{ display: 'flex', gap: 24 }}>

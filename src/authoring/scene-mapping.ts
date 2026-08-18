@@ -93,6 +93,18 @@ export function applySceneToDocument(doc: ViewDocument, scene: Scene): ViewDocum
  * one. `value` is included even though it's static and unbound: u-widgets' status widget renders
  * nothing at all when `data.value` is absent (it treats a valueless item as not an item), so a
  * new node needs a placeholder value to be visible before it's ever bound. */
+const NEW_NODE_BASE_OFFSET = 40;
+const NEW_NODE_CASCADE_STEP = 24;
+const NEW_NODE_CASCADE_WRAP = 8; // after this many nodes, the cascade wraps back to the base offset
+
+/** Where to place the next node the author adds, so repeated "Add node" clicks don't stack every
+ * node exactly on top of the last one. Cascades diagonally by node count, wrapping so positions
+ * stay on-canvas even after many additions — the author can still drag it wherever they want. */
+export function nextNodePosition(doc: ViewDocument): { x: number; y: number } {
+  const offset = (doc.nodes.length % NEW_NODE_CASCADE_WRAP) * NEW_NODE_CASCADE_STEP;
+  return { x: NEW_NODE_BASE_OFFSET + offset, y: NEW_NODE_BASE_OFFSET + offset };
+}
+
 export function addNode(doc: ViewDocument, position: { x: number; y: number }): ViewDocument {
   const node: Node = {
     id: `node-${crypto.randomUUID()}`,
