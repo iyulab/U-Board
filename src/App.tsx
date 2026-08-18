@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { AuthoringView } from './authoring/AuthoringView';
+import { ViewerPage } from './viewer/ViewerPage';
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { ViewDocument } from './view-document';
 
@@ -77,18 +78,40 @@ const demoDocument: ViewDocument = {
 
 export function App() {
   const adapters = useMemo(() => [new DemoAdapter()], []);
+  const [mode, setMode] = useState<'author' | 'view'>('author');
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — authoring</h1>
-      <p style={{ color: '#64748b', maxWidth: 640 }}>
-        Add and drag nodes on the left; the right pane renders the same ViewDocument through the
-        real render path (resolveDocument + canvas-kit Viewer + u-widgets overlays) against a
-        demo adapter (one connected value, one deliberately disconnected). Export/Import save and
-        restore the document as a local file — there's no backend yet, so a file is the save
-        mechanism for now.
-      </p>
-      <AuthoringView initialDocument={demoDocument} adapters={adapters} width={900} height={560} />
+      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : 'viewer'}</h1>
+      <div style={{ marginBottom: 12 }}>
+        <button onClick={() => setMode('author')} disabled={mode === 'author'}>
+          Author
+        </button>{' '}
+        <button onClick={() => setMode('view')} disabled={mode === 'view'}>
+          View
+        </button>
+      </div>
+      {mode === 'author' ? (
+        <>
+          <p style={{ color: '#64748b', maxWidth: 640 }}>
+            Add and drag nodes on the left; the right pane renders the same ViewDocument through
+            the real render path (resolveDocument + canvas-kit Viewer + u-widgets overlays)
+            against a demo adapter (one connected value, one deliberately disconnected). Export/
+            Import save and restore the document as a local file — there's no backend yet, so a
+            file is the save mechanism for now.
+          </p>
+          <AuthoringView initialDocument={demoDocument} adapters={adapters} width={900} height={560} />
+        </>
+      ) : (
+        <>
+          <p style={{ color: '#64748b', maxWidth: 640 }}>
+            Read-only — import a ViewDocument (e.g. one exported from Author mode) and it renders
+            through the same path a standalone viewer app would use, with no editing controls and
+            no dependency on the designer.
+          </p>
+          <ViewerPage adapters={adapters} width={900} height={560} />
+        </>
+      )}
     </div>
   );
 }
