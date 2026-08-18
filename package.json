@@ -5,9 +5,20 @@
   "description": "Spatial dashboard authoring middleware",
   "type": "module",
   "license": "AGPL-3.0-or-later",
+  "main": "./dist/lib/index.js",
+  "module": "./dist/lib/index.js",
+  "types": "./dist/lib/index.d.ts",
+  "files": ["dist/lib"],
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:lib": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"

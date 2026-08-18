@@ -1,4 +1,4 @@
-import type { Widget } from './view-document';
+import type { Widget } from './view-document.js';
 
 /**
  * A pluggable resolver for one specific external system's values (docs/concepts.md — "Adapter").

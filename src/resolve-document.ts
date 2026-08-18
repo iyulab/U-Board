@@ -1,6 +1,6 @@
-import type { ViewDocument, Node } from './view-document';
-import type { Adapter, ResolvedWidget } from './adapter';
-import { resolveWidget } from './adapter';
+import type { ViewDocument, Node } from './view-document.js';
+import type { Adapter, ResolvedWidget } from './adapter.js';
+import { resolveWidget } from './adapter.js';
 
 /** A Node whose widget has been resolved against a set of adapters — everything a renderer
  * needs to paint one node without itself knowing how bindings are resolved. */
