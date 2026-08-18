@@ -84,8 +84,9 @@ export function App() {
       <p style={{ color: '#64748b', maxWidth: 640 }}>
         Add and drag nodes on the left; the right pane renders the same ViewDocument through the
         real render path (resolveDocument + canvas-kit Viewer + u-widgets overlays) against a
-        demo adapter (one connected value, one deliberately disconnected). Saving is not yet
-        implemented — this proves layout editing, not persistence.
+        demo adapter (one connected value, one deliberately disconnected). Export/Import save and
+        restore the document as a local file — there's no backend yet, so a file is the save
+        mechanism for now.
       </p>
       <AuthoringView initialDocument={demoDocument} adapters={adapters} width={900} height={560} />
     </div>

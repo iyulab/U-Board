@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { KonvaDesigner } from '@canvas-kit/designer';
 import { Viewer } from '@canvas-kit/viewer';
 import type { Scene } from '@canvas-kit/core';
@@ -6,6 +6,7 @@ import { documentToScene, applySceneToDocument, addNode } from './scene-mapping'
 import { resolveDocument } from '../resolve-document';
 import { toCanvasKit } from '../renderer/to-canvas-kit';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit';
+import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file';
 import type { Adapter } from '../adapter';
 import type { ViewDocument } from '../view-document';
 
@@ -26,6 +27,8 @@ export interface AuthoringViewProps {
 export function AuthoringView({ initialDocument, adapters, width, height }: AuthoringViewProps) {
   const [doc, setDoc] = useState(initialDocument);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scene = useMemo(() => documentToScene(doc), [doc]);
 
   useEffect(() => {
@@ -46,11 +49,51 @@ export function AuthoringView({ initialDocument, adapters, width, height }: Auth
     setDoc(prev => addNode(prev, { x: 40, y: 40 }));
   };
 
+  const handleExport = () => {
+    const blob = new Blob([serializeViewDocument(doc)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'view-document.json';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportClick = () => fileInputRef.current?.click();
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+
+    try {
+      const imported = parseViewDocument(await file.text());
+      setDoc(imported);
+      setImportError(null);
+    } catch (err) {
+      setImportError(err instanceof InvalidViewDocumentError ? err.message : 'Import failed.');
+    }
+  };
+
   return (
     <div>
       <button onClick={handleAddNode} style={{ marginBottom: 8 }}>
         Add node
+      </button>{' '}
+      <button onClick={handleExport} style={{ marginBottom: 8 }}>
+        Export
+      </button>{' '}
+      <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
+        Import
       </button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json"
+        onChange={handleImportFile}
+        style={{ display: 'none' }}
+      />
+      {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
       <div style={{ display: 'flex', gap: 24 }}>
         <div>
           <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>Editor</h2>
