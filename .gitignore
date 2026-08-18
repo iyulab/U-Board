@@ -1,0 +1,10 @@
+node_modules/
+dist/
+
+# Local dev tracking — see AGENTS.md ("Documentation split"). Tracking lives in the umbrella,
+# not here.
+claudedocs/
+CLAUDE.md
+
+.DS_Store
+Thumbs.db
