@@ -5,18 +5,19 @@ import type { Adapter, ResolvedBinding } from './adapter';
 import type { ViewDocument } from './view-document';
 
 /** A stand-in for a real CMMS adapter (docs — "실제 CMMS adapter 구현은 그 시스템 접근이 필요해
- * 별도"). Exercises the resolution/connectivity pipeline end-to-end without a real system. */
+ * 별도"). Exercises the resolution/connection-quality pipeline end-to-end without a real
+ * system — one live value, one stale (last-known) value, and one that's never connected. */
 class DemoAdapter implements Adapter {
   readonly id = 'demo-cmms';
   private data: Record<string, ResolvedBinding> = {
-    'pump-a.state': { value: 'running', connected: true },
-    'pump-a.load': { value: 73, connected: true },
-    'pump-b.state': { value: 'stopped (last known)', connected: false },
+    'pump-a.state': { value: 'running', quality: 'live' },
+    'pump-a.load': { value: 73, quality: 'live' },
+    'pump-b.state': { value: 'stopped (last known)', quality: 'stale' },
   };
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
     const key = ref as string;
-    return this.data[key] ?? { value: undefined, connected: false };
+    return this.data[key] ?? { value: undefined, quality: 'disconnected' };
   }
 }
 
@@ -96,7 +97,7 @@ export function App() {
           <p style={{ color: '#64748b', maxWidth: 640 }}>
             Add and drag nodes on the left; the right pane renders the same ViewDocument through
             the real render path (resolveDocument + canvas-kit Viewer + u-widgets overlays)
-            against a demo adapter (one connected value, one deliberately disconnected). Export/
+            against a demo adapter (one live value, one deliberately stale). Export/
             Import save and restore the document as a local file — there's no backend yet, so a
             file is the save mechanism for now.
           </p>

@@ -14,7 +14,7 @@ class InMemoryAdapter implements Adapter {
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
     const key = ref as string;
-    return this.data.get(key) ?? { value: undefined, connected: false };
+    return this.data.get(key) ?? { value: undefined, quality: 'disconnected' };
   }
 }
 
@@ -22,7 +22,7 @@ describe('resolveWidget', () => {
   it('returns static props unchanged for a widget with no bindings', async () => {
     const widget: Widget = { type: 'uw-metric', props: { label: 'Note' } };
     const resolved = await resolveWidget(widget, []);
-    expect(resolved).toEqual({ type: 'uw-metric', props: { label: 'Note' }, connected: {} });
+    expect(resolved).toEqual({ type: 'uw-metric', props: { label: 'Note' }, quality: {} });
   });
 
   it('carries the widget type through unchanged', async () => {
@@ -31,9 +31,9 @@ describe('resolveWidget', () => {
     expect(resolved.type).toBe('gauge');
   });
 
-  it('merges a resolved binding value into props and marks it connected', async () => {
+  it('merges a resolved binding value into props and marks it live', async () => {
     const cmms = new InMemoryAdapter('cmms', {
-      'pump-a.runningState': { value: 'running', connected: true },
+      'pump-a.runningState': { value: 'running', quality: 'live' },
     });
     const widget: Widget = {
       type: 'uw-status',
@@ -44,12 +44,12 @@ describe('resolveWidget', () => {
     const resolved = await resolveWidget(widget, [cmms]);
 
     expect(resolved.props).toEqual({ label: 'Pump A', value: 'running' });
-    expect(resolved.connected).toEqual({ value: true });
+    expect(resolved.quality).toEqual({ value: 'live' });
   });
 
-  it('surfaces a disconnected source without discarding the last-known value', async () => {
+  it('passes through a stale last-known value from the adapter without collapsing it to disconnected', async () => {
     const cmms = new InMemoryAdapter('cmms', {
-      'pump-a.runningState': { value: 'stopped', connected: false },
+      'pump-a.runningState': { value: 'running (last known)', quality: 'stale' },
     });
     const widget: Widget = {
       type: 'uw-status',
@@ -58,8 +58,8 @@ describe('resolveWidget', () => {
 
     const resolved = await resolveWidget(widget, [cmms]);
 
-    expect(resolved.props.value).toBe('stopped');
-    expect(resolved.connected.value).toBe(false);
+    expect(resolved.props.value).toBe('running (last known)');
+    expect(resolved.quality.value).toBe('stale');
   });
 
   it('marks a binding disconnected and leaves props untouched when no adapter matches its id', async () => {
@@ -72,7 +72,7 @@ describe('resolveWidget', () => {
     const resolved = await resolveWidget(widget, []);
 
     expect(resolved.props.value).toBe('last-known');
-    expect(resolved.connected.value).toBe(false);
+    expect(resolved.quality.value).toBe('disconnected');
   });
 
   it('reports disconnected instead of throwing when an adapter rejects', async () => {
@@ -91,7 +91,7 @@ describe('resolveWidget', () => {
     const resolved = await resolveWidget(widget, [flaky]);
 
     expect(resolved.props.value).toBe('last-known');
-    expect(resolved.connected.value).toBe(false);
+    expect(resolved.quality.value).toBe('disconnected');
   });
 
   it('does not let one binding rejecting stop the others from resolving', async () => {
@@ -101,7 +101,7 @@ describe('resolveWidget', () => {
         throw new Error('network timeout');
       },
     };
-    const cmms = new InMemoryAdapter('cmms', { temp: { value: 42, connected: true } });
+    const cmms = new InMemoryAdapter('cmms', { temp: { value: 42, quality: 'live' } });
     const widget: Widget = {
       type: 'uw-metric',
       bindings: {
@@ -112,16 +112,16 @@ describe('resolveWidget', () => {
 
     const resolved = await resolveWidget(widget, [flaky, cmms]);
 
-    expect(resolved.connected).toEqual({ broken: false, ok: true });
+    expect(resolved.quality).toEqual({ broken: 'disconnected', ok: 'live' });
     expect(resolved.props.ok).toBe(42);
   });
 
   it('resolves multiple bindings against different adapters concurrently', async () => {
     const cmms = new InMemoryAdapter('cmms', {
-      temp: { value: 42, connected: true },
+      temp: { value: 42, quality: 'live' },
     });
     const weather = new InMemoryAdapter('weather', {
-      outsideTemp: { value: 18, connected: true },
+      outsideTemp: { value: 18, quality: 'live' },
     });
     const widget: Widget = {
       type: 'uw-metric',
@@ -134,18 +134,18 @@ describe('resolveWidget', () => {
     const resolved = await resolveWidget(widget, [cmms, weather]);
 
     expect(resolved.props).toEqual({ insideTemp: 42, outsideTemp: 18 });
-    expect(resolved.connected).toEqual({ insideTemp: true, outsideTemp: true });
+    expect(resolved.quality).toEqual({ insideTemp: 'live', outsideTemp: 'live' });
   });
 
-  it('does not add a connected entry for props that have no binding', async () => {
+  it('does not add a quality entry for props that have no binding', async () => {
     const widget: Widget = { type: 'uw-metric', props: { label: 'static' } };
     const resolved = await resolveWidget(widget, []);
-    expect(resolved.connected).toEqual({});
-    expect('label' in resolved.connected).toBe(false);
+    expect(resolved.quality).toEqual({});
+    expect('label' in resolved.quality).toBe(false);
   });
 
   it('resolves a dotted binding path into a nested field without disturbing its siblings', async () => {
-    const cmms = new InMemoryAdapter('cmms', { state: { value: 'running', connected: true } });
+    const cmms = new InMemoryAdapter('cmms', { state: { value: 'running', quality: 'live' } });
     const widget: Widget = {
       type: 'status',
       props: { data: { label: 'Pump A' } },
@@ -155,11 +155,11 @@ describe('resolveWidget', () => {
     const resolved = await resolveWidget(widget, [cmms]);
 
     expect(resolved.props).toEqual({ data: { label: 'Pump A', status: 'running' } });
-    expect(resolved.connected).toEqual({ 'data.status': true });
+    expect(resolved.quality).toEqual({ 'data.status': 'live' });
   });
 
   it('does not mutate the original widget when resolving a nested binding path', async () => {
-    const cmms = new InMemoryAdapter('cmms', { state: { value: 'running', connected: true } });
+    const cmms = new InMemoryAdapter('cmms', { state: { value: 'running', quality: 'live' } });
     const originalData = { label: 'Pump A' };
     const widget: Widget = {
       type: 'status',

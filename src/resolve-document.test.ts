@@ -14,13 +14,13 @@ class InMemoryAdapter implements Adapter {
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
     const key = ref as string;
-    return this.data.get(key) ?? { value: undefined, connected: false };
+    return this.data.get(key) ?? { value: undefined, quality: 'disconnected' };
   }
 }
 
 const cmms = new InMemoryAdapter('cmms', {
-  'pump-a.state': { value: 'running', connected: true },
-  'pump-b.state': { value: 'stopped', connected: false },
+  'pump-a.state': { value: 'running', quality: 'live' },
+  'pump-b.state': { value: 'stopped', quality: 'disconnected' },
 });
 
 describe('resolveDocument', () => {
@@ -58,11 +58,11 @@ describe('resolveDocument', () => {
       x: 10,
       y: 20,
       anchored: true,
-      widget: { props: { value: 'running' }, connected: { value: true } },
+      widget: { props: { value: 'running' }, quality: { value: 'live' } },
     });
     expect(resolved.nodes[1]).toMatchObject({
       id: 'n2',
-      widget: { props: { label: 'note' }, connected: {} },
+      widget: { props: { label: 'note' }, quality: {} },
     });
   });
 
@@ -103,7 +103,7 @@ describe('resolveDocument', () => {
     const resolved = await resolveDocument(doc, [cmms]);
 
     expect(resolved.nodes[0].widget.props.value).toBe('stopped');
-    expect(resolved.nodes[0].widget.connected.value).toBe(false);
+    expect(resolved.nodes[0].widget.quality.value).toBe('disconnected');
   });
 
   it('resolves an empty document to an empty node list', async () => {

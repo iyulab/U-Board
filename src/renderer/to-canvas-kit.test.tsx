@@ -34,8 +34,8 @@ describe('toCanvasKit', () => {
     const { scene } = toCanvasKit(
       doc({
         nodes: [
-          { id: 'n1', x: 0, y: 0, width: 100, height: 100, anchored: false, widget: { type: 'metric', props: { data: { value: 1 } }, connected: {} } },
-          { id: 'n2', x: 200, y: 0, width: 100, height: 100, anchored: false, widget: { type: 'metric', props: { data: { value: 2 } }, connected: {} } },
+          { id: 'n1', x: 0, y: 0, width: 100, height: 100, anchored: false, widget: { type: 'metric', props: { data: { value: 1 } }, quality: {} } },
+          { id: 'n2', x: 200, y: 0, width: 100, height: 100, anchored: false, widget: { type: 'metric', props: { data: { value: 2 } }, quality: {} } },
         ],
         connectors: [{ id: 'c1', fromNodeId: 'n1', toNodeId: 'n2' }],
       })
@@ -55,8 +55,8 @@ describe('toCanvasKit', () => {
     const { overlays } = toCanvasKit(
       doc({
         nodes: [
-          { id: 'sized', x: 10, y: 20, width: 300, height: 150, anchored: true, widget: { type: 'metric', connected: {}, props: {} } },
-          { id: 'unsized', x: 0, y: 0, anchored: false, widget: { type: 'metric', connected: {}, props: {} } },
+          { id: 'sized', x: 10, y: 20, width: 300, height: 150, anchored: true, widget: { type: 'metric', quality: {}, props: {} } },
+          { id: 'unsized', x: 0, y: 0, anchored: false, widget: { type: 'metric', quality: {}, props: {} } },
         ],
       })
     );
@@ -76,7 +76,7 @@ describe('toCanvasKit', () => {
             x: 0,
             y: 0,
             anchored: false,
-            widget: { type: 'gauge', props: { data: { value: 73 } }, connected: {} },
+            widget: { type: 'gauge', props: { data: { value: 73 } }, quality: {} },
           },
         ],
       })

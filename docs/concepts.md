@@ -21,7 +21,12 @@ and so on). Widget rendering is provided by an external library the view consume
 canvas layer itself.
 
 **Binding** — a reference from a widget to a value in an external system. U-Board reads through a
-binding; it does not store the value it resolves to.
+binding; it does not store the value it resolves to. A resolved binding carries a connection
+quality alongside its value — `live` (the adapter reached the source just now), `stale` (the
+adapter couldn't reach it, but is showing a previously-live value as last-known), or
+`disconnected` (no value has ever been reached). This is deliberately narrower than a full alarm
+model (priority, acknowledgement, shelving) — that belongs to the system a binding points at, not
+to the binding surface itself.
 
 **Adapter** — a pluggable package that resolves bindings against one specific external system. The
 core binding surface is generic; system-specific knowledge lives in an adapter, not in the core.

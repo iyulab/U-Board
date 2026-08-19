@@ -12,12 +12,17 @@ export interface Adapter {
   resolve(ref: unknown): Promise<ResolvedBinding>;
 }
 
+/** How current a resolved binding's value is (docs/concepts.md — "Binding"). `live` — the
+ * adapter reached the source system just now. `stale` — it could not reach the source, but is
+ * showing a previously-live value as last-known. `disconnected` — no value has ever been
+ * reached (no matching adapter, or the source has never resolved). SCADA/HMI practice treats
+ * these as distinct operator-facing states rather than one binary flag — a renderer decides how
+ * to show each (ROADMAP's L1 "연결 끊김 가시화" requirement hangs off this field). */
+export type ConnectionQuality = 'live' | 'stale' | 'disconnected';
+
 export interface ResolvedBinding {
   value: unknown;
-  /** Whether the adapter could reach the source system just now. `value` may be a stale/
-   * last-known reading when this is false — the renderer decides how to show that (ROADMAP's
-   * L1 "연결 끊김 가시화" requirement hangs off this field). */
-  connected: boolean;
+  quality: ConnectionQuality;
 }
 
 export interface ResolvedWidget {
@@ -26,20 +31,22 @@ export interface ResolvedWidget {
   type: string;
   /** The widget's static `props` merged with every binding that resolved successfully. */
   props: Record<string, unknown>;
-  /** Connectivity per bound prop key. A key is present only for props that had a binding —
-   * unbound (static-only) props carry no entry, since connectivity doesn't apply to them. */
-  connected: Record<string, boolean>;
+  /** Connection quality per bound prop key. A key is present only for props that had a
+   * binding — unbound (static-only) props carry no entry, since quality doesn't apply to them. */
+  quality: Record<string, ConnectionQuality>;
 }
 
 /**
  * Resolves every binding on a widget against the given adapters, producing the props a renderer
- * hands to the widget library plus per-prop connectivity. A binding whose adapter id doesn't
- * match any given Adapter — or whose adapter rejects instead of returning a result (a network
- * timeout, for example) — is reported as disconnected and its prop is left at whatever static
- * value (or absence) it already had, never overwritten with a missing value. One binding's
- * adapter failing never fails the others: connectivity problems are data to show, not exceptions
- * to propagate (ROADMAP's L1 "연결 끊김 가시화" requirement is exactly this — a widget that can't
- * reach its source should render disconnected, not take the rest of the document down with it).
+ * hands to the widget library plus per-prop connection quality. A binding whose adapter id
+ * doesn't match any given Adapter — or whose adapter rejects instead of returning a result (a
+ * network timeout, for example) — is reported `disconnected` and its prop is left at whatever
+ * static value (or absence) it already had, never overwritten with a missing value. One
+ * binding's adapter failing never fails the others: connectivity problems are data to show, not
+ * exceptions to propagate (ROADMAP's L1 "연결 끊김 가시화" requirement is exactly this — a widget
+ * that can't reach its source should render disconnected, not take the rest of the document
+ * down with it). A `stale` reading only ever comes from the adapter itself — `resolveWidget`
+ * has no memory of past calls, so it cannot infer staleness on its own.
  *
  * A binding key may be a dotted path (e.g. `"data.status"`) to reach a field nested inside a
  * widget library's own config shape (u-widgets nests bindable fields under `data`) — resolution
@@ -50,27 +57,27 @@ export async function resolveWidget(
   adapters: readonly Adapter[]
 ): Promise<ResolvedWidget> {
   const props = { ...(widget.props ?? {}) };
-  const connected: Record<string, boolean> = {};
+  const quality: Record<string, ConnectionQuality> = {};
 
   const bindingEntries = Object.entries(widget.bindings ?? {});
   await Promise.all(
     bindingEntries.map(async ([propPath, binding]) => {
       const adapter = adapters.find(a => a.id === binding.adapter);
       if (!adapter) {
-        connected[propPath] = false;
+        quality[propPath] = 'disconnected';
         return;
       }
       try {
         const resolved = await adapter.resolve(binding.ref);
         setPath(props, propPath, resolved.value);
-        connected[propPath] = resolved.connected;
+        quality[propPath] = resolved.quality;
       } catch {
-        connected[propPath] = false;
+        quality[propPath] = 'disconnected';
       }
     })
   );
 
-  return { type: widget.type, props, connected };
+  return { type: widget.type, props, quality };
 }
 
 /** Sets `path` (dot-separated) on `target`, copying each object along the way so the caller's
