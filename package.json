@@ -36,6 +36,7 @@
     "@canvas-kit/viewer": "^0.2.0",
     "@iyulab/u-widgets": "^0.16.1",
     "@lit/react": "^1.0.8",
+    "echarts": "^6.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

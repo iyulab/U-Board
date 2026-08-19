@@ -2,6 +2,12 @@ import { Scene } from '@canvas-kit/core';
 import type { ViewerOverlayItem } from '@canvas-kit/viewer';
 import { UWidget } from '@iyulab/u-widgets/react';
 import '@iyulab/u-widgets';
+// u-widgets keeps chart.* behind this opt-in subpath (echarts is an optional peer dep) so
+// consumers who don't need charts avoid the bundle cost. Without this import, a node whose
+// widget.type starts with "chart." silently renders as an "Unknown widget" fallback instead of
+// the chart — this renderer doesn't otherwise restrict which widget types a document can use, so
+// it opts every u-widgets entry point in rather than special-casing chart.* as excluded.
+import '@iyulab/u-widgets/charts';
 import type { ResolvedViewDocument } from '../resolve-document';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults';
 

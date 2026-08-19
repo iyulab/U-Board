@@ -73,6 +73,32 @@ const demoDocument: ViewDocument = {
         bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-b.state' } },
       },
     },
+    {
+      // Trend chart, unverified in the actual render path until now (u-widgets unit-tests
+      // chart.* on its own, but this pipeline — resolveDocument → canvas-kit overlay → the
+      // uw-chart custom element — had not been exercised end-to-end). No binding: a real trend
+      // needs a time-series adapter method the current DemoAdapter (single-value resolve)
+      // doesn't have, so this uses static sample data to verify rendering alone.
+      id: 'pump-a-load-trend',
+      x: 540,
+      y: 120,
+      width: 320,
+      height: 260,
+      anchored: true,
+      widget: {
+        type: 'chart.line',
+        props: {
+          data: [
+            { t: '09:00', load: 61 },
+            { t: '10:00', load: 68 },
+            { t: '11:00', load: 73 },
+            { t: '12:00', load: 70 },
+          ],
+          mapping: { x: 't', y: 'load' },
+          options: { smooth: true },
+        },
+      },
+    },
   ],
   connectors: [{ id: 'a-to-b', fromNodeId: 'pump-a', toNodeId: 'pump-b' }],
 };
