@@ -8,7 +8,9 @@
   "main": "./dist/lib/index.js",
   "module": "./dist/lib/index.js",
   "types": "./dist/lib/index.d.ts",
-  "files": ["dist/lib"],
+  "files": [
+    "dist/lib"
+  ],
   "exports": {
     ".": {
       "types": "./dist/lib/index.d.ts",
@@ -21,7 +23,8 @@
     "build:lib": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "repository": {
     "type": "git",
@@ -41,8 +44,10 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/node": "^26.2.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.5",

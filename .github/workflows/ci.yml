@@ -38,3 +38,12 @@ jobs:
 
       - name: Build library entry
         run: npm run build:lib
+
+      # Slowest/most expensive check last. jsdom (the `Test` step above) can't render <canvas> or
+      # custom-element shadow DOM at all, so it can't tell a real chart from a silent fallback —
+      # only a real browser can catch that regression class (see e2e/chart-rendering.spec.ts).
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E
+        run: npm run test:e2e

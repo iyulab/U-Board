@@ -10,7 +10,15 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "baseUrl": ".",
+    "paths": {
+      // Lets in-repo code (the docs walkthrough example, its test) import the package by its
+      // published name and exercise the same entry point a real consumer would, instead of
+      // reaching into src/ with relative paths. tsconfig.build.json's narrower "include" means
+      // this never affects what actually ships in dist/lib.
+      "@iyulab/u-board": ["./src/index.ts"]
+    }
   },
   "include": ["src"]
 }

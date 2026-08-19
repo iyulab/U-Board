@@ -17,7 +17,7 @@ import { resolveDocument } from '@iyulab/u-board';
 
 // 1. An Adapter resolves this system's own reference shape to a value + connection quality.
 //    Nothing about `ref`'s shape is fixed by the core — each adapter defines and interprets it.
-class DemoAdapter implements Adapter {
+export class DemoAdapter implements Adapter {
   readonly id = 'demo'; // matches the `adapter` field a Binding uses to select this Adapter
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
@@ -32,7 +32,7 @@ class DemoAdapter implements Adapter {
 // 2. A ViewDocument node whose widget has one bound prop (`data.value`) and one static prop
 //    (`data.label`). `bindings` keys are dotted paths into `props` — resolution overwrites
 //    that path's value, everything else in `props` passes through untouched.
-const doc: ViewDocument = {
+export const doc: ViewDocument = {
   kind: 'canvas',
   background: {},
   nodes: [
@@ -55,11 +55,17 @@ const doc: ViewDocument = {
 //    ResolvedViewDocument — the same document shape, but every node's `widget` is now a
 //    ResolvedWidget: its bound props carry resolved values, and a `quality` map records how
 //    current each bound prop is.
-const resolved = await resolveDocument(doc, [new DemoAdapter()]);
+export const resolved = await resolveDocument(doc, [new DemoAdapter()]);
 
 resolved.nodes[0].widget.props; //   { data: { label: 'Pump A', value: 'running' } }
 resolved.nodes[0].widget.quality; // { 'data.value': 'live' }
 ```
+
+This exact file also lives at [`src/examples/walkthrough.ts`](../src/examples/walkthrough.ts), where a
+test (`walkthrough.test.ts`) re-runs it and asserts on the two values above — so if a future change to
+`resolveDocument`'s behavior or this package's exports makes either wrong, that test fails instead of
+this page silently drifting. A second test in the same file checks this code block is byte-identical
+to that source file, so the two can't quietly diverge from each other either.
 
 ## Types
 
