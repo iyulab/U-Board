@@ -117,7 +117,7 @@ describe('toCanvasKit', () => {
 
     it('marks a disconnected binding with a distinct border and an explanatory title', () => {
       const frame = overlayFor({ state: 'disconnected' });
-      expect(frame.props.style?.border).toContain('dashed');
+      expect(frame.props.style?.border).toContain('dotted');
       expect(frame.props.title).toMatch(/disconnected/);
     });
 
@@ -126,10 +126,13 @@ describe('toCanvasKit', () => {
       expect(frame.props.title).toMatch(/disconnected/);
     });
 
-    it('gives stale and disconnected visually distinct borders (not color-only)', () => {
+    it('gives stale and disconnected distinct border *styles*, not just distinct colors', () => {
       const stale = overlayFor({ state: 'stale' });
       const disconnected = overlayFor({ state: 'disconnected' });
-      expect(stale.props.style?.border).not.toEqual(disconnected.props.style?.border);
+      expect(stale.props.style?.border).toContain('dashed');
+      expect(stale.props.style?.border).not.toContain('dotted');
+      expect(disconnected.props.style?.border).toContain('dotted');
+      expect(disconnected.props.style?.border).not.toContain('dashed');
     });
   });
 });

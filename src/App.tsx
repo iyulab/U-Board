@@ -139,8 +139,10 @@ export function App() {
             Add and drag nodes on the left; the right pane renders the same ViewDocument through
             the real render path (resolveDocument + canvas-kit Viewer + u-widgets overlays)
             against a demo adapter (one live value, one deliberately stale, one that never
-            resolves). Widgets whose binding isn't live get a dashed frame — amber for stale,
-            gray for disconnected. Export/Import save and restore the document as a local
+            resolves). Widgets whose binding isn't live get a frame — amber dashed for stale,
+            gray dotted for disconnected (distinct border style, not just color, so the two
+            don't rely on color perception alone). Export/Import save and restore the document
+            as a local
             file — there's no backend yet, so a file is the save mechanism for now.
           </p>
           <AuthoringView initialDocument={demoDocument} adapters={adapters} width={900} height={560} />
