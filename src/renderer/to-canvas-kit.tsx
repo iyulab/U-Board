@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { Scene } from '@canvas-kit/core';
 import type { ViewerOverlayItem } from '@canvas-kit/viewer';
 import { UWidget } from '@iyulab/u-widgets/react';
@@ -9,7 +10,31 @@ import '@iyulab/u-widgets';
 // it opts every u-widgets entry point in rather than special-casing chart.* as excluded.
 import '@iyulab/u-widgets/charts';
 import type { ResolvedViewDocument } from '../resolve-document';
+import type { ConnectionQuality } from '../adapter';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults';
+
+// Worst-first: a node with several bindings shows whichever one needs the operator's attention
+// most (ISA-18.2 alarm-precedence convention — the least-current binding governs the indicator).
+const QUALITY_SEVERITY: Record<ConnectionQuality, number> = { live: 0, stale: 1, disconnected: 2 };
+
+function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined {
+  const values = Object.values(quality);
+  if (values.length === 0) return undefined;
+  return values.reduce((worst, q) => (QUALITY_SEVERITY[q] > QUALITY_SEVERITY[worst] ? q : worst));
+}
+
+// `live` is deliberately unstyled (ISA-101 — color is reserved for abnormal state, not spent on
+// normal operation) and a widget with no bindings at all gets no frame. Dashed, not solid, so the
+// distinction doesn't rely on color perception alone.
+const QUALITY_FRAME_STYLE: Partial<Record<ConnectionQuality, CSSProperties>> = {
+  stale: { border: '2px dashed #f59e0b', boxSizing: 'border-box' },
+  disconnected: { border: '2px dashed #6b7280', boxSizing: 'border-box' },
+};
+
+const QUALITY_LABEL: Partial<Record<ConnectionQuality, string>> = {
+  stale: 'stale — showing last known value',
+  disconnected: 'disconnected — no value has been reached',
+};
 
 export interface CanvasKitRenderOutput {
   scene: Scene;
@@ -60,14 +85,24 @@ export function toCanvasKit(doc: ResolvedViewDocument): CanvasKitRenderOutput {
 
   // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
   // `data`/`mapping`/`options` — `type` + `props` here recombine into exactly that shape.
-  const overlays: ViewerOverlayItem[] = doc.nodes.map(node => ({
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    width: node.width ?? DEFAULT_NODE_WIDTH,
-    height: node.height ?? DEFAULT_NODE_HEIGHT,
-    content: <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} />,
-  }));
+  const overlays: ViewerOverlayItem[] = doc.nodes.map(node => {
+    const quality = worstQuality(node.widget.quality);
+    const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
+    const label = quality ? QUALITY_LABEL[quality] : undefined;
+
+    return {
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      width: node.width ?? DEFAULT_NODE_WIDTH,
+      height: node.height ?? DEFAULT_NODE_HEIGHT,
+      content: (
+        <div style={{ width: '100%', height: '100%', ...frameStyle }} title={label}>
+          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} />
+        </div>
+      ),
+    };
+  });
 
   return { scene, overlays };
 }

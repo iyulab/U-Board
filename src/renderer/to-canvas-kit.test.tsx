@@ -82,7 +82,54 @@ describe('toCanvasKit', () => {
       })
     );
 
-    const content = overlays[0].content as ReactElement<{ spec: Record<string, unknown> }>;
-    expect(content.props.spec).toEqual({ widget: 'gauge', data: { value: 73 } });
+    const frame = overlays[0].content as ReactElement<{ children: ReactElement<{ spec: Record<string, unknown> }> }>;
+    const widget = frame.props.children;
+    expect(widget.props.spec).toEqual({ widget: 'gauge', data: { value: 73 } });
+  });
+
+  describe('connection-quality visual indicator', () => {
+    function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>) {
+      const { overlays } = toCanvasKit(
+        doc({
+          nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', props: {}, quality } }],
+        })
+      );
+      return overlays[0].content as ReactElement<{ style?: Record<string, unknown>; title?: string }>;
+    }
+
+    it('adds no border and no title when a widget has no bindings at all', () => {
+      const frame = overlayFor({});
+      expect(frame.props.style?.border).toBeUndefined();
+      expect(frame.props.title).toBeUndefined();
+    });
+
+    it('adds no border when every binding is live (ISA-101 — normal state is unmarked)', () => {
+      const frame = overlayFor({ state: 'live', load: 'live' });
+      expect(frame.props.style?.border).toBeUndefined();
+      expect(frame.props.title).toBeUndefined();
+    });
+
+    it('marks a stale binding with a distinct border and an explanatory title', () => {
+      const frame = overlayFor({ state: 'stale' });
+      expect(frame.props.style?.border).toContain('dashed');
+      expect(frame.props.title).toMatch(/stale/);
+    });
+
+    it('marks a disconnected binding with a distinct border and an explanatory title', () => {
+      const frame = overlayFor({ state: 'disconnected' });
+      expect(frame.props.style?.border).toContain('dashed');
+      expect(frame.props.title).toMatch(/disconnected/);
+    });
+
+    it('shows the worst binding when a widget has several bindings of mixed quality', () => {
+      const frame = overlayFor({ state: 'live', load: 'stale', mode: 'disconnected' });
+      expect(frame.props.title).toMatch(/disconnected/);
+    });
+
+    it('gives stale and disconnected visually distinct borders (not color-only)', () => {
+      const stale = overlayFor({ state: 'stale' });
+      const disconnected = overlayFor({ state: 'disconnected' });
+      expect(stale.props.style?.border).not.toEqual(disconnected.props.style?.border);
+    });
   });
 });

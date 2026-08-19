@@ -74,6 +74,21 @@ const demoDocument: ViewDocument = {
       },
     },
     {
+      // Bound to a ref DemoAdapter has no entry for, so it resolves `disconnected` — exercises
+      // the third connection-quality state (the other two nodes above cover live and stale).
+      id: 'pump-c',
+      x: 340,
+      y: 300,
+      width: 180,
+      height: 90,
+      anchored: true,
+      widget: {
+        type: 'status',
+        props: { data: { label: 'Pump C' } },
+        bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-c.state' } },
+      },
+    },
+    {
       // Trend chart, unverified in the actual render path until now (u-widgets unit-tests
       // chart.* on its own, but this pipeline — resolveDocument → canvas-kit overlay → the
       // uw-chart custom element — had not been exercised end-to-end). No binding: a real trend
@@ -123,9 +138,10 @@ export function App() {
           <p style={{ color: '#64748b', maxWidth: 640 }}>
             Add and drag nodes on the left; the right pane renders the same ViewDocument through
             the real render path (resolveDocument + canvas-kit Viewer + u-widgets overlays)
-            against a demo adapter (one live value, one deliberately stale). Export/
-            Import save and restore the document as a local file — there's no backend yet, so a
-            file is the save mechanism for now.
+            against a demo adapter (one live value, one deliberately stale, one that never
+            resolves). Widgets whose binding isn't live get a dashed frame — amber for stale,
+            gray for disconnected. Export/Import save and restore the document as a local
+            file — there's no backend yet, so a file is the save mechanism for now.
           </p>
           <AuthoringView initialDocument={demoDocument} adapters={adapters} width={900} height={560} />
         </>
