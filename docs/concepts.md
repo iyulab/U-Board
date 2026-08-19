@@ -1,5 +1,8 @@
 # Concepts
 
+> For exact types, method signatures, and a runnable example, see
+> [`api-reference.md`](api-reference.md).
+
 **View** — the unit an author creates and a viewer opens. A view has a kind, which determines
 what it can contain and how it's authored.
 

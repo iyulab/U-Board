@@ -53,7 +53,9 @@ const resolved = await resolveDocument(doc, adapters);
 something paintable — it has no opinion on canvas-kit, u-widgets, or any other rendering concern.
 See [`docs/concepts.md`](docs/concepts.md) for the vocabulary (`ViewDocument`, `Binding`,
 `Adapter`) and [`docs/architecture.md`](docs/architecture.md) for how this layer fits the rest of
-the system. Run `npm run build:lib` to produce the `dist/lib` output these exports point at.
+the system. **See [`docs/api-reference.md`](docs/api-reference.md) for the full type reference and
+a runnable example that implements an `Adapter` and inspects `resolveDocument`'s result.** Run
+`npm run build:lib` to produce the `dist/lib` output these exports point at.
 
 ## Documentation
 
@@ -64,6 +66,7 @@ the system. Run `npm run build:lib` to produce the `dist/lib` output these expor
 | What's in scope, what's out | [`docs/scope.md`](docs/scope.md) |
 | System structure | [`docs/architecture.md`](docs/architecture.md) |
 | Core concepts and terms | [`docs/concepts.md`](docs/concepts.md) |
+| Domain layer API reference | [`docs/api-reference.md`](docs/api-reference.md) |
 
 ## License
 
