@@ -13,6 +13,24 @@ function doc(overrides: Partial<ResolvedViewDocument> = {}): ResolvedViewDocumen
   };
 }
 
+function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>) {
+  const { overlays } = toCanvasKit(
+    doc({
+      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', props: {}, quality } }],
+    })
+  );
+  return overlays[0].content as ReactElement<{
+    style?: Record<string, unknown>;
+    title?: string;
+    children?: ReactElement[];
+  }>;
+}
+
+function liveRegionFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>) {
+  const [, liveRegion] = overlayFor(quality).props.children ?? [];
+  return liveRegion as ReactElement<{ role?: string; 'aria-live'?: string; children?: string }>;
+}
+
 describe('toCanvasKit', () => {
   it('adds an image DrawingObject for the background when one is set', () => {
     const { scene } = toCanvasKit(
@@ -82,21 +100,14 @@ describe('toCanvasKit', () => {
       })
     );
 
-    const frame = overlays[0].content as ReactElement<{ children: ReactElement<{ spec: Record<string, unknown> }> }>;
-    const widget = frame.props.children;
+    const frame = overlays[0].content as ReactElement<{
+      children: [ReactElement<{ spec: Record<string, unknown> }>, ReactElement];
+    }>;
+    const [widget] = frame.props.children;
     expect(widget.props.spec).toEqual({ widget: 'gauge', data: { value: 73 } });
   });
 
   describe('connection-quality visual indicator', () => {
-    function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>) {
-      const { overlays } = toCanvasKit(
-        doc({
-          nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', props: {}, quality } }],
-        })
-      );
-      return overlays[0].content as ReactElement<{ style?: Record<string, unknown>; title?: string }>;
-    }
-
     it('adds no border and no title when a widget has no bindings at all', () => {
       const frame = overlayFor({});
       expect(frame.props.style?.border).toBeUndefined();
@@ -133,6 +144,34 @@ describe('toCanvasKit', () => {
       expect(stale.props.style?.border).not.toContain('dotted');
       expect(disconnected.props.style?.border).toContain('dotted');
       expect(disconnected.props.style?.border).not.toContain('dashed');
+    });
+  });
+
+  describe('connection-quality screen-reader announcement', () => {
+    // A separate sibling node, not a role/aria-live on the frame `<div>` itself or on `UWidget`:
+    // each `uw-*` custom element already renders its own role inside its own shadow root (e.g.
+    // `role="list"` for `status`, `role="meter"`/`"progressbar"` for `gauge`), and putting the
+    // live region there instead avoids any chance of colliding with that.
+    it('always renders a dedicated status live region, separate from the widget', () => {
+      const liveRegion = liveRegionFor({ state: 'live' });
+      expect(liveRegion.props.role).toBe('status');
+      expect(liveRegion.props['aria-live']).toBe('polite');
+    });
+
+    it('leaves the live region empty when every binding is live (ISA-101 — normal state is unmarked)', () => {
+      expect(liveRegionFor({ state: 'live', load: 'live' }).props.children).toBe('');
+    });
+
+    it('leaves the live region empty when a widget has no bindings at all', () => {
+      expect(liveRegionFor({}).props.children).toBe('');
+    });
+
+    it('announces the same explanatory text as the title when stale', () => {
+      expect(liveRegionFor({ state: 'stale' }).props.children).toMatch(/stale/);
+    });
+
+    it('announces the same explanatory text as the title when disconnected', () => {
+      expect(liveRegionFor({ state: 'disconnected' }).props.children).toMatch(/disconnected/);
     });
   });
 });

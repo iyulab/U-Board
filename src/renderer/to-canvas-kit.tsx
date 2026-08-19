@@ -38,6 +38,24 @@ const QUALITY_LABEL: Partial<Record<ConnectionQuality, string>> = {
   disconnected: 'disconnected — no value has been reached',
 };
 
+// Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
+// on screen. Kept off the frame `<div>` itself and off `UWidget` — each `uw-*` custom element
+// already renders its own role (e.g. `role="list"`/`"meter"`/`"img"`) inside its shadow root, and
+// a `title` attribute or a border-style change carries no text for `aria-live` to observe. This
+// sibling node exists purely to hold the announced text in the light DOM, next to (not wrapping)
+// the widget, so it can't collide with either.
+const VISUALLY_HIDDEN_STYLE: CSSProperties = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
+
 export interface CanvasKitRenderOutput {
   scene: Scene;
   overlays: ViewerOverlayItem[];
@@ -101,6 +119,9 @@ export function toCanvasKit(doc: ResolvedViewDocument): CanvasKitRenderOutput {
       content: (
         <div style={{ width: '100%', height: '100%', ...frameStyle }} title={label}>
           <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} />
+          <span role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
+            {label ?? ''}
+          </span>
         </div>
       ),
     };
