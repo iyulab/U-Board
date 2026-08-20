@@ -15,6 +15,8 @@ export interface AuthoringViewProps {
   adapters: readonly Adapter[];
   width: number;
   height: number;
+  /** Save 버튼 동작을 오버라이드한다. 생략 시 오늘과 같은 로컬 파일 다운로드(Export). */
+  onSave?: (doc: ViewDocument) => void | Promise<void>;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface AuthoringViewProps {
  * approximation (docs/principles.md — editor/renderer separation; the designer never renders a
  * widget itself, it only owns the node's footprint).
  */
-export function AuthoringView({ initialDocument, adapters, width, height }: AuthoringViewProps) {
+export function AuthoringView({ initialDocument, adapters, width, height, onSave }: AuthoringViewProps) {
   const [doc, setDoc] = useState(initialDocument);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -50,8 +52,12 @@ export function AuthoringView({ initialDocument, adapters, width, height }: Auth
     setImportError(null);
   };
 
-  const handleExport = () => {
+  const handleSave = () => {
     setImportError(null);
+    if (onSave) {
+      onSave(doc);
+      return;
+    }
     const blob = new Blob([serializeViewDocument(doc)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -82,8 +88,8 @@ export function AuthoringView({ initialDocument, adapters, width, height }: Auth
       <button onClick={handleAddNode} style={{ marginBottom: 8 }}>
         Add node
       </button>{' '}
-      <button onClick={handleExport} style={{ marginBottom: 8 }}>
-        Export
+      <button onClick={handleSave} style={{ marginBottom: 8 }}>
+        {onSave ? 'Save' : 'Export'}
       </button>{' '}
       <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
         Import

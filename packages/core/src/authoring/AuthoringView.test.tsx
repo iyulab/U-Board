@@ -56,3 +56,37 @@ describe('AuthoringView import error', () => {
     expect(screen.queryByText(/not valid json/i)).not.toBeInTheDocument();
   });
 });
+
+describe('AuthoringView onSave', () => {
+  it('renders a Save button and calls onSave with the current document when provided', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} />);
+
+    expect(screen.getByText('Save')).toBeInTheDocument();
+    expect(screen.queryByText('Export')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(doc()));
+  });
+
+  it('does not download a file when onSave is provided', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click');
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} />);
+
+    clickSpy.mockClear();
+
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+
+    expect(clickSpy).not.toHaveBeenCalled();
+    clickSpy.mockRestore();
+  });
+
+  it('still exports to a local file when onSave is omitted (no regression)', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
+    expect(screen.getByText('Export')).toBeInTheDocument();
+    expect(screen.queryByText('Save')).not.toBeInTheDocument();
+  });
+});
