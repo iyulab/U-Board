@@ -35,3 +35,12 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: '가입' })).toBeInTheDocument();
   });
 });
+
+describe('/boards without a session', () => {
+  it('redirects to / (which shows the login/signup gate)', async () => {
+    vi.mocked(api.getSession).mockResolvedValue(null);
+    vi.mocked(api.getBootstrapStatus).mockResolvedValue({ hasAnyUser: true });
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/boards']} />);
+    expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument();
+  });
+});

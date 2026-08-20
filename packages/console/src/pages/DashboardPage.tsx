@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { getSession, listMembers, inviteMember, switchWorkspace, logout } from '../api-client.js';
 
 type Member = { userId: string; email: string; name: string; role: 'owner' | 'member' };
@@ -62,6 +63,7 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
             <option key={w.id} value={w.id}>{w.name}</option>
           ))}
         </select>
+        <Link to="/boards">보드</Link>
         <button onClick={handleLogout}>로그아웃</button>
       </header>
 

@@ -5,6 +5,9 @@ import { SignupPage } from './pages/SignupPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { InvitePage } from './pages/InvitePage.js';
+import { RequireSession } from './RequireSession.js';
+import { BoardsListPage } from './pages/BoardsListPage.js';
+import { BoardEditorPage } from './pages/BoardEditorPage.js';
 
 type RootStatus = 'loading' | 'authenticated' | 'needs-bootstrap-signup' | 'needs-login';
 
@@ -49,6 +52,14 @@ export function App({
       <Routes>
         <Route path="/" element={<RootRoute />} />
         <Route path="/invite/:token" element={<InviteRoute />} />
+        <Route
+          path="/boards"
+          element={<RequireSession>{s => <BoardsListPage workspaceId={s.activeWorkspaceId} />}</RequireSession>}
+        />
+        <Route
+          path="/boards/:boardId/edit"
+          element={<RequireSession>{s => <BoardEditorPage workspaceId={s.activeWorkspaceId} />}</RequireSession>}
+        />
       </Routes>
     </RouterComponent>
   );
