@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { login, ApiError } from '../api-client.js';
 
+/**
+ * `onSuccess` is fire-and-forget: it is called after the credentials are accepted and is not
+ * awaited, so an implementation that does async follow-up work (e.g. `InvitePage` accepting
+ * the invitation) must handle its own failures. Reporting them here is not possible — this
+ * page only knows how to say that the credentials were wrong.
+ */
 export function LoginPage({ prefillEmail, onSuccess }: { prefillEmail?: string; onSuccess: (activeWorkspaceId: string) => void }) {
   const [email, setEmail] = useState(prefillEmail ?? '');
   const [password, setPassword] = useState('');

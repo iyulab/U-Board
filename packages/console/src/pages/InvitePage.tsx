@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getInvitation, acceptInvitation } from '../api-client.js';
+import { getInvitation, acceptInvitation, switchWorkspace } from '../api-client.js';
 import { SignupPage } from './SignupPage.js';
 import { LoginPage } from './LoginPage.js';
 
@@ -14,8 +14,19 @@ export function InvitePage({ token, onJoined }: { token: string; onJoined: (work
   }, [token]);
 
   async function handleLoginSuccess() {
-    const result = await acceptInvitation(token);
-    onJoined(result.workspaceId);
+    // Every failure is contained here: `LoginPage` calls this without awaiting (its prop type
+    // is `() => void`), so a rejection escaping this function would be unhandled and the user
+    // would see nothing happen at all.
+    try {
+      const { workspaceId } = await acceptInvitation(token);
+      // `login` minted the session cookie from the workspaces the user already belonged to,
+      // before this membership existed — without switching, they would land on their old
+      // default workspace with no sign the invitation was accepted.
+      await switchWorkspace(workspaceId);
+      onJoined(workspaceId);
+    } catch {
+      setError('초대 수락에 실패했습니다. 다시 시도해 주세요.');
+    }
   }
 
   function handleSignupSuccess(workspaceId: string) {

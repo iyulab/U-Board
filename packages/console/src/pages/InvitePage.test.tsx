@@ -12,6 +12,7 @@ describe('InvitePage', () => {
     vi.mocked(api.getInvitation).mockResolvedValue({ email: 'existing@x.com', workspaceId: 'w1', hasAccount: true });
     vi.mocked(api.login).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'other-workspace' });
     vi.mocked(api.acceptInvitation).mockResolvedValue({ workspaceId: 'w1' });
+    vi.mocked(api.switchWorkspace).mockResolvedValue({ activeWorkspaceId: 'w1' });
     const onJoined = vi.fn();
 
     render(<InvitePage token="tok123" onJoined={onJoined} />);
@@ -22,7 +23,27 @@ describe('InvitePage', () => {
     await userEvent.click(screen.getByRole('button', { name: '로그인' }));
 
     await waitFor(() => expect(api.acceptInvitation).toHaveBeenCalledWith('tok123'));
+    // The session cookie minted by `login` still points at the pre-existing workspace, so the
+    // freshly joined one has to be made active before navigating to the dashboard.
+    await waitFor(() => expect(api.switchWorkspace).toHaveBeenCalledWith('w1'));
     await waitFor(() => expect(onJoined).toHaveBeenCalledWith('w1'));
+  });
+
+  it('shows an error and does not navigate when accepting the invitation fails after login', async () => {
+    vi.mocked(api.getInvitation).mockResolvedValue({ email: 'existing@x.com', workspaceId: 'w1', hasAccount: true });
+    vi.mocked(api.login).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'other-workspace' });
+    vi.mocked(api.acceptInvitation).mockRejectedValue(new api.ApiError('INVITATION_EXPIRED', 410));
+    const onJoined = vi.fn();
+
+    render(<InvitePage token="tok123" onJoined={onJoined} />);
+
+    await screen.findByLabelText('비밀번호');
+    await userEvent.type(screen.getByLabelText('비밀번호'), 'p4ssword!');
+    await userEvent.click(screen.getByRole('button', { name: '로그인' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('초대 수락에 실패했습니다. 다시 시도해 주세요.');
+    expect(api.switchWorkspace).not.toHaveBeenCalled();
+    expect(onJoined).not.toHaveBeenCalled();
   });
 
   it('shows the signup form when the invited email has no account, and joins without a separate accept call', async () => {
