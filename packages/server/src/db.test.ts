@@ -2,13 +2,19 @@ import { describe, it, expect } from 'vitest';
 import { createDb } from './db.js';
 
 describe('createDb', () => {
-  it('creates all four tables on an in-memory database', () => {
+  it('creates all five tables on an in-memory database', () => {
     const db = createDb(':memory:');
     const tables = db
       .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`)
       .all()
       .map((row: any) => row.name);
-    expect(tables).toEqual(['users', 'workspace_invitations', 'workspace_users', 'workspaces']);
+    expect(tables).toEqual([
+      'boards',
+      'users',
+      'workspace_invitations',
+      'workspace_users',
+      'workspaces',
+    ]);
   });
 
   it('enforces unique (workspace_id, user_id) on workspace_users', () => {

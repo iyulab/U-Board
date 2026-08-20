@@ -34,6 +34,15 @@ CREATE TABLE IF NOT EXISTS workspace_invitations (
   expires_at TEXT NOT NULL,
   accepted_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS boards (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  document TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
 
 export function createDb(path: string): Database.Database {
