@@ -58,6 +58,28 @@ describe('POST /workspaces/:id/invitations', () => {
     expect(res.body.token).toBeTruthy();
   });
 
+  it('rejects re-inviting an existing member with 409, without minting a token', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const inviteRes = await ownerAgent.post(`/workspaces/${workspaceId}/invitations`).send({ email: 'member@x.com', role: 'member' });
+    await request(app).post('/auth/signup').send({
+      email: 'member@x.com', password: 'p4ssword!', name: 'Member', invitationToken: inviteRes.body.token,
+    });
+    const invitationsBefore = db.prepare('SELECT COUNT(*) AS c FROM workspace_invitations').get() as { c: number };
+
+    const res = await ownerAgent.post(`/workspaces/${workspaceId}/invitations`).send({ email: 'member@x.com', role: 'member' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('ALREADY_MEMBER');
+    expect(db.prepare('SELECT COUNT(*) AS c FROM workspace_invitations').get()).toEqual(invitationsBefore);
+  });
+
+  it('rejects re-inviting an existing member regardless of email casing', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const res = await ownerAgent.post(`/workspaces/${workspaceId}/invitations`).send({ email: 'OWNER@X.com', role: 'member' });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('ALREADY_MEMBER');
+  });
+
   it('rejects a member trying to invite (403)', async () => {
     const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
     const inviteRes = await ownerAgent.post(`/workspaces/${workspaceId}/invitations`).send({ email: 'member@x.com', role: 'member' });

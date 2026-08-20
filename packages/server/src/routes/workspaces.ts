@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import type { AppConfig } from '../app.js';
-import { listWorkspacesForUser, listWorkspaceMembers } from '../db/workspaces.js';
+import { listWorkspacesForUser, listWorkspaceMembers, findWorkspaceUser } from '../db/workspaces.js';
 import { createInvitation } from '../db/invitations.js';
+import { findUserByEmail } from '../db/users.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
 import { requireWorkspaceOwner, requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { signSession } from '../auth/session.js';
@@ -27,6 +28,13 @@ export function createWorkspacesRouter(config: AppConfig): Router {
     const { email, role } = req.body ?? {};
     if (typeof email !== 'string' || (role !== 'owner' && role !== 'member')) {
       res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    // Re-inviting someone who already belongs here is a conflict, not a second invitation —
+    // otherwise a redundant token is minted that can only ever resolve to ALREADY_MEMBER.
+    const existingUser = findUserByEmail(db, email);
+    if (existingUser && findWorkspaceUser(db, req.params.workspaceId, existingUser.id)) {
+      res.status(409).json({ code: 'ALREADY_MEMBER' });
       return;
     }
     const invitation = createInvitation(db, { workspaceId: req.params.workspaceId, email, role, invitedByUserId: req.userId! });
