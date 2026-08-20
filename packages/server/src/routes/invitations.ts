@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import type { AppConfig } from '../app.js';
 import { findInvitationByToken, markInvitationAccepted, isInvitationUsable } from '../db/invitations.js';
-import { findUserByEmail } from '../db/users.js';
+import { findUserByEmail, findUserById } from '../db/users.js';
+import { normalizeEmail } from '../db/email.js';
 import { addWorkspaceUser, findWorkspaceUser } from '../db/workspaces.js';
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
 
@@ -34,6 +35,15 @@ export function createInvitationsRouter(config: AppConfig): Router {
     }
     if (!isInvitationUsable(invitation)) {
       res.status(410).json({ code: 'INVITATION_EXPIRED' });
+      return;
+    }
+    // An invitation is addressed to one specific email, and `createInvitation` takes an
+    // arbitrary role — so a forwarded/leaked owner-role link must not let whoever happens to
+    // be logged in redeem it. `POST /auth/signup` enforces the same match for the other
+    // redemption path; both return the identical 410 INVITATION_INVALID.
+    const user = findUserById(db, req.userId!);
+    if (!user || normalizeEmail(invitation.email) !== normalizeEmail(user.email)) {
+      res.status(410).json({ code: 'INVITATION_INVALID' });
       return;
     }
     if (findWorkspaceUser(db, invitation.workspaceId, req.userId!)) {

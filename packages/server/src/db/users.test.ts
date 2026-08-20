@@ -23,6 +23,19 @@ describe('user repository', () => {
     expect(findUserByEmail(db, 'nobody@x.com')).toBeUndefined();
   });
 
+  it('normalizes email casing/whitespace on write, and on lookup', () => {
+    const created = createUser(db, { email: 'alice@x.com', passwordHash: 'h', name: 'Alice' });
+    expect(created.email).toBe('alice@x.com');
+    expect(findUserByEmail(db, 'ALICE@x.com')).toEqual(created);
+    expect(findUserByEmail(db, '  Alice@X.com  ')).toEqual(created);
+  });
+
+  it('stores a mixed-case email in normalized form, findable by the lowercase form', () => {
+    const created = createUser(db, { email: '  Bob@X.COM ', passwordHash: 'h', name: 'Bob' });
+    expect(created.email).toBe('bob@x.com');
+    expect(findUserByEmail(db, 'bob@x.com')).toEqual(created);
+  });
+
   it('counts users', () => {
     expect(countUsers(db)).toBe(0);
     createUser(db, { email: 'c@x.com', passwordHash: 'h', name: 'C' });

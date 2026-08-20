@@ -108,6 +108,13 @@ describe('POST /auth/login', () => {
     expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=/);
   });
 
+  it('logs in when the email casing differs from how the account was created', async () => {
+    await request(app).post('/auth/signup').send({ email: 'Mixed.Case@X.com', password: 'p4ssword!', name: 'A' });
+    const res = await request(app).post('/auth/login').send({ email: 'mixed.case@x.com', password: 'p4ssword!' });
+    expect(res.status).toBe(200);
+    expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=/);
+  });
+
   it('rejects an unknown email with 401 (no enumeration)', async () => {
     const res = await request(app).post('/auth/login').send({ email: 'nobody@x.com', password: 'x' });
     expect(res.status).toBe(401);

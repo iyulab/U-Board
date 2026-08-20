@@ -3,6 +3,7 @@ import type { AppConfig } from '../app.js';
 import { createUser, findUserByEmail, countUsers } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { findInvitationByToken, markInvitationAccepted, isInvitationUsable } from '../db/invitations.js';
+import { normalizeEmail } from '../db/email.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
@@ -39,7 +40,7 @@ export function createAuthRouter(config: AppConfig): Router {
     const invitation = typeof invitationToken === 'string' ? findInvitationByToken(db, invitationToken) : undefined;
 
     if (invitationToken) {
-      if (!invitation || !isInvitationUsable(invitation) || invitation.email !== email) {
+      if (!invitation || !isInvitationUsable(invitation) || invitation.email !== normalizeEmail(email)) {
         res.status(410).json({ code: 'INVITATION_INVALID' });
         return;
       }

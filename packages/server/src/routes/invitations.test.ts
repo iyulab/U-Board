@@ -61,6 +61,23 @@ describe('POST /invitations/:token/accept', () => {
     expect(acceptRes.body.workspaceId).toBe(workspace.id);
   });
 
+  it('returns 410 when the session user is not the invited email', async () => {
+    const owner = createUser(db, { email: 'owner@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = createWorkspace(db, 'W1');
+    addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    // An owner-role invitation addressed to one person, redeemed by someone else who got the link.
+    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'invited@x.com', role: 'owner', invitedByUserId: owner.id });
+
+    const passwordHash = await hashPassword('p4ssword!');
+    createUser(db, { email: 'someone-else@x.com', passwordHash, name: 'Someone Else' });
+    const agent = request.agent(app);
+    await agent.post('/auth/login').send({ email: 'someone-else@x.com', password: 'p4ssword!' });
+
+    const res = await agent.post(`/invitations/${invitation.token}/accept`);
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('INVITATION_INVALID');
+  });
+
   it('returns 401 when not authenticated', async () => {
     const owner = createUser(db, { email: 'owner@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
     const workspace = createWorkspace(db, 'W1');

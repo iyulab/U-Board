@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3';
 import { randomUUID, randomBytes } from 'node:crypto';
 import type { WorkspaceRole } from './workspaces.js';
+import { normalizeEmail } from './email.js';
 
 export interface WorkspaceInvitation {
   id: string;
@@ -46,7 +47,7 @@ export function createInvitation(
   const invitation: WorkspaceInvitation = {
     id: randomUUID(),
     workspaceId: input.workspaceId,
-    email: input.email,
+    email: normalizeEmail(input.email),
     role: input.role,
     token: randomBytes(24).toString('hex'),
     invitedByUserId: input.invitedByUserId,

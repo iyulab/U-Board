@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
+import { normalizeEmail } from './email.js';
 
 export interface User {
   id: string;
@@ -25,7 +26,7 @@ export function createUser(
   db: Database.Database,
   input: { email: string; passwordHash: string; name: string }
 ): User {
-  const user: User = { id: randomUUID(), email: input.email, passwordHash: input.passwordHash, name: input.name, createdAt: new Date().toISOString() };
+  const user: User = { id: randomUUID(), email: normalizeEmail(input.email), passwordHash: input.passwordHash, name: input.name, createdAt: new Date().toISOString() };
   db.prepare(`INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)`).run(
     user.id, user.email, user.passwordHash, user.name, user.createdAt
   );
@@ -33,7 +34,7 @@ export function createUser(
 }
 
 export function findUserByEmail(db: Database.Database, email: string): User | undefined {
-  const row = db.prepare(`SELECT * FROM users WHERE email = ?`).get(email) as UserRow | undefined;
+  const row = db.prepare(`SELECT * FROM users WHERE email = ?`).get(normalizeEmail(email)) as UserRow | undefined;
   return row ? rowToUser(row) : undefined;
 }
 
