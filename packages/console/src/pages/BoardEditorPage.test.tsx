@@ -38,6 +38,7 @@ describe('BoardEditorPage', () => {
     await userEvent.click(await screen.findByText('Save'));
 
     await waitFor(() => expect(api.updateBoard).toHaveBeenCalledWith('w1', 'b1', { document: EMPTY_DOC }));
+    expect(await screen.findByRole('status')).toHaveTextContent('저장됨');
   });
 
   it('shows an error message when saving fails', async () => {

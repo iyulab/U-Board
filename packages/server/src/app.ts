@@ -13,7 +13,8 @@ export interface AppConfig {
 
 export function createApp(config: AppConfig): express.Express {
   const app = express();
-  app.use(express.json());
+  // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
+  app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
   app.use('/auth', createAuthRouter(config));
   app.use('/invitations', createInvitationsRouter(config));
@@ -31,6 +32,10 @@ export function createApp(config: AppConfig): express.Express {
  * driver detail to the client.
  */
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
+  if (err && typeof err === 'object' && 'type' in err && (err as { type?: string }).type === 'entity.too.large') {
+    res.status(413).json({ code: 'PAYLOAD_TOO_LARGE' });
+    return;
+  }
   console.error(err);
   res.status(500).json({ code: 'INTERNAL_ERROR' });
 }

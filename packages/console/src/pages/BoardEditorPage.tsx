@@ -10,6 +10,7 @@ export function BoardEditorPage({ workspaceId }: { workspaceId: string }) {
   const { boardId } = useParams<{ boardId: string }>();
   const [document, setDocument] = useState<ViewDocument | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const adapters = useMemo(() => [new DemoAdapter()], []);
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export function BoardEditorPage({ workspaceId }: { workspaceId: string }) {
     try {
       await updateBoard(workspaceId, boardId!, { document: doc });
       setSaveError(null);
+      setSavedAt(new Date());
     } catch {
       setSaveError('저장 실패');
     }
@@ -33,7 +35,8 @@ export function BoardEditorPage({ workspaceId }: { workspaceId: string }) {
   return (
     <>
       {saveError && <p role="alert">{saveError}</p>}
-      <AuthoringView initialDocument={document} adapters={adapters} width={width} height={height} onSave={handleSave} />
+      {savedAt && <p role="status">저장됨</p>}
+      <AuthoringView key={boardId} initialDocument={document} adapters={adapters} width={width} height={height} onSave={handleSave} />
     </>
   );
 }

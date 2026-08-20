@@ -18,6 +18,7 @@ test('create a board, add a node, save, and see it persisted after reopening', a
   await expect(page.getByText('Save')).toBeVisible();
   await page.getByText('Add node').click();
   await page.getByText('Save').click();
+  await expect(page.getByText('저장됨')).toBeVisible();
 
   // 목록으로 돌아가 재진입해도 저장된 상태(추가한 노드)가 남아있는지 확인
   await page.goto('/boards');
