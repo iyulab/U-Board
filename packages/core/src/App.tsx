@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
-import { AuthoringView } from './authoring/AuthoringView';
-import { ViewerPage } from './viewer/ViewerPage';
-import type { ViewDocument } from './view-document';
-import { DemoAdapter } from './demo-adapter';
+import { AuthoringView } from './authoring/AuthoringView.js';
+import { ViewerPage } from './viewer/ViewerPage.js';
+import type { ViewDocument } from './view-document.js';
+import { DemoAdapter } from './demo-adapter.js';
 
 const FLOOR_PLAN = `data:image/svg+xml,${encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560">

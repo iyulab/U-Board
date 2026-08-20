@@ -9,9 +9,9 @@ import '@iyulab/u-widgets';
 // the chart — this renderer doesn't otherwise restrict which widget types a document can use, so
 // it opts every u-widgets entry point in rather than special-casing chart.* as excluded.
 import '@iyulab/u-widgets/charts';
-import type { ResolvedViewDocument } from '../resolve-document';
-import type { ConnectionQuality } from '../adapter';
-import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults';
+import type { ResolvedViewDocument } from '../resolve-document.js';
+import type { ConnectionQuality } from '../adapter.js';
+import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 
 // Worst-first: a node with several bindings shows whichever one needs the operator's attention
 // most (ISA-18.2 alarm-precedence convention — the least-current binding governs the indicator).

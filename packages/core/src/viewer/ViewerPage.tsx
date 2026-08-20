@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Viewer } from '@canvas-kit/viewer';
-import { resolveDocument } from '../resolve-document';
-import { toCanvasKit } from '../renderer/to-canvas-kit';
-import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit';
-import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file';
-import type { Adapter } from '../adapter';
-import type { ViewDocument } from '../view-document';
+import { resolveDocument } from '../resolve-document.js';
+import { toCanvasKit } from '../renderer/to-canvas-kit.js';
+import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
+import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
+import type { Adapter } from '../adapter.js';
+import type { ViewDocument } from '../view-document.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];

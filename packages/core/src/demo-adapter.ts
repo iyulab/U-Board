@@ -1,4 +1,4 @@
-import type { Adapter, ResolvedBinding } from './adapter';
+import type { Adapter, ResolvedBinding } from './adapter.js';
 
 /** A stand-in for a real CMMS adapter (실제 CMMS adapter 구현은 그 시스템 접근이 필요해 별도).
  * Exercises the resolution/connection-quality pipeline end-to-end without a real system — one

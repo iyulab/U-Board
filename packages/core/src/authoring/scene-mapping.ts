@@ -1,6 +1,6 @@
 import { Scene } from '@canvas-kit/core';
-import type { ViewDocument, Node } from '../view-document';
-import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults';
+import type { ViewDocument, Node } from '../view-document.js';
+import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 
 /** A node's placeholder fill/stroke in the designer canvas — the box being positioned, not the
  * widget itself. The real widget renders in the live preview pane (`resolveDocument` +

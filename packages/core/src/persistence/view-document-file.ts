@@ -1,4 +1,4 @@
-import type { ViewDocument } from '../view-document';
+import type { ViewDocument } from '../view-document.js';
 
 /** Thrown when a file selected for import isn't a ViewDocument — the file-open boundary is the
  * one place this app validates untrusted input (docs/architecture.md — internal data is
