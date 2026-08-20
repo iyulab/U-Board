@@ -1,25 +1,8 @@
 import { useMemo, useState } from 'react';
 import { AuthoringView } from './authoring/AuthoringView';
 import { ViewerPage } from './viewer/ViewerPage';
-import type { Adapter, ResolvedBinding } from './adapter';
 import type { ViewDocument } from './view-document';
-
-/** A stand-in for a real CMMS adapter (docs — "실제 CMMS adapter 구현은 그 시스템 접근이 필요해
- * 별도"). Exercises the resolution/connection-quality pipeline end-to-end without a real
- * system — one live value, one stale (last-known) value, and one that's never connected. */
-class DemoAdapter implements Adapter {
-  readonly id = 'demo-cmms';
-  private data: Record<string, ResolvedBinding> = {
-    'pump-a.state': { value: 'running', quality: 'live' },
-    'pump-a.load': { value: 73, quality: 'live' },
-    'pump-b.state': { value: 'stopped (last known)', quality: 'stale' },
-  };
-
-  async resolve(ref: unknown): Promise<ResolvedBinding> {
-    const key = ref as string;
-    return this.data[key] ?? { value: undefined, quality: 'disconnected' };
-  }
-}
+import { DemoAdapter } from './demo-adapter';
 
 const FLOOR_PLAN = `data:image/svg+xml,${encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560">

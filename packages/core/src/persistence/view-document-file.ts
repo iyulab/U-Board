@@ -30,7 +30,7 @@ export function parseViewDocument(text: string): ViewDocument {
   return value;
 }
 
-function isViewDocumentShape(value: unknown): value is ViewDocument {
+export function isViewDocumentShape(value: unknown): value is ViewDocument {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
   return (
