@@ -1,3 +1,5 @@
+import type { ViewDocument } from '@iyulab/u-board';
+
 export class ApiError extends Error {
   constructor(public code: string, public status: number) {
     super(code);
@@ -67,4 +69,32 @@ export function inviteMember(workspaceId: string, input: { email: string; role: 
 
 export function switchWorkspace(workspaceId: string) {
   return request<{ activeWorkspaceId: string }>(`/workspaces/${workspaceId}/switch`, { method: 'POST' });
+}
+
+export function listBoards(workspaceId: string) {
+  return request<{ boards: { id: string; name: string; updatedAt: string }[] }>(`/workspaces/${workspaceId}/boards`);
+}
+
+export function createBoard(workspaceId: string, name: string) {
+  return request<{ id: string; name: string; updatedAt: string }>(`/workspaces/${workspaceId}/boards`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getBoard(workspaceId: string, boardId: string) {
+  return request<{ id: string; name: string; document: ViewDocument; updatedAt: string }>(
+    `/workspaces/${workspaceId}/boards/${boardId}`
+  );
+}
+
+export function updateBoard(workspaceId: string, boardId: string, input: { name?: string; document?: ViewDocument }) {
+  return request<{ id: string; name: string; updatedAt: string }>(`/workspaces/${workspaceId}/boards/${boardId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteBoard(workspaceId: string, boardId: string) {
+  return request<void>(`/workspaces/${workspaceId}/boards/${boardId}`, { method: 'DELETE' });
 }
