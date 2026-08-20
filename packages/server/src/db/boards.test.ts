@@ -19,6 +19,12 @@ describe('board repository', () => {
     expect(board.createdAt).toBe(board.updatedAt);
   });
 
+  it('creates each board with a unique document object (not a shared singleton)', () => {
+    const board1 = createBoard(db, { workspaceId, name: 'A' });
+    const board2 = createBoard(db, { workspaceId, name: 'B' });
+    expect(board1.document.nodes).not.toBe(board2.document.nodes);
+  });
+
   it('lists boards for a workspace without the document body', () => {
     createBoard(db, { workspaceId, name: 'A' });
     createBoard(db, { workspaceId, name: 'B' });

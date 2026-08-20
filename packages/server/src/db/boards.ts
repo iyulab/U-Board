@@ -20,8 +20,6 @@ interface BoardRow {
   updated_at: string;
 }
 
-const EMPTY_DOCUMENT: ViewDocument = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
-
 function rowToBoard(row: BoardRow): Board {
   return {
     id: row.id,
@@ -39,7 +37,7 @@ export function createBoard(db: Database.Database, input: { workspaceId: string;
     id: randomUUID(),
     workspaceId: input.workspaceId,
     name: input.name,
-    document: EMPTY_DOCUMENT,
+    document: { kind: 'canvas', background: {}, nodes: [], connectors: [] },
     createdAt: now,
     updatedAt: now,
   };
