@@ -49,9 +49,13 @@ export function findWorkspaceUser(db: Database.Database, workspaceId: string, us
 export function listWorkspacesForUser(db: Database.Database, userId: string): Workspace[] {
   const rows = db
     .prepare(
+      // Ordered so the caller's [0] is stable: login uses it to pick the session's initial
+      // activeWorkspaceId, and the console's workspace switcher lists it as-is. `id` breaks
+      // ties between workspaces created within the same millisecond.
       `SELECT w.id, w.name, w.created_at FROM workspaces w
        JOIN workspace_users wu ON wu.workspace_id = w.id
-       WHERE wu.user_id = ?`
+       WHERE wu.user_id = ?
+       ORDER BY w.created_at ASC, w.id ASC`
     )
     .all(userId) as { id: string; name: string; created_at: string }[];
   return rows.map(r => ({ id: r.id, name: r.name, createdAt: r.created_at }));
