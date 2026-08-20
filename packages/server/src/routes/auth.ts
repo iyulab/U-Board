@@ -20,6 +20,15 @@ export function createAuthRouter(config: AppConfig): Router {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
+
+    // Hash the password (async) BEFORE any check-then-write gating logic below, so that
+    // nothing yields the event loop between a synchronous gate check (countUsers === 0 for
+    // bootstrap, isInvitationUsable for invitation redemption) and the synchronous writes it
+    // is meant to gate. Concurrent requests interleaving inside that gap could otherwise both
+    // pass the same gate before either write lands (double-bootstrap owners, double-redeemed
+    // invitation tokens).
+    const passwordHash = await hashPassword(password);
+
     if (findUserByEmail(db, email)) {
       res.status(409).json({ code: 'EMAIL_TAKEN' });
       return;
@@ -45,7 +54,6 @@ export function createAuthRouter(config: AppConfig): Router {
       role = 'owner';
     }
 
-    const passwordHash = await hashPassword(password);
     const user = createUser(db, { email, passwordHash, name });
     addWorkspaceUser(db, { workspaceId, userId: user.id, role });
     if (invitation) markInvitationAccepted(db, invitation.id);

@@ -52,6 +52,52 @@ describe('POST /auth/signup', () => {
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('EMAIL_TAKEN');
   });
+
+  it('rejects malformed input (missing password) with 400', async () => {
+    const res = await request(app).post('/auth/signup').send({ email: 'bad@x.com', name: 'A' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+  });
+
+  it('rejects an unknown/garbage invitation token with 410', async () => {
+    // First user must exist so the request goes down the invitation-required branch
+    // rather than the (also-403) open-bootstrap branch.
+    await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
+    const res = await request(app).post('/auth/signup').send({
+      email: 'nobody@x.com', password: 'p4ssword!', name: 'Nobody', invitationToken: 'garbage-token',
+    });
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('INVITATION_INVALID');
+  });
+
+  it('rejects an expired invitation with 410', async () => {
+    const owner = createUser(db, { email: 'owner2@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = createWorkspace(db, 'W2');
+    addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'late@x.com', role: 'member', invitedByUserId: owner.id });
+    db.prepare('UPDATE workspace_invitations SET expires_at = ? WHERE id = ?').run(
+      new Date(Date.now() - 1000).toISOString(), invitation.id
+    );
+
+    const res = await request(app).post('/auth/signup').send({
+      email: 'late@x.com', password: 'p4ssword!', name: 'Late', invitationToken: invitation.token,
+    });
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('INVITATION_INVALID');
+  });
+
+  it('rejects an invitation whose email does not match the signup email with 410', async () => {
+    const owner = createUser(db, { email: 'owner3@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = createWorkspace(db, 'W3');
+    addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'invited@x.com', role: 'member', invitedByUserId: owner.id });
+
+    const res = await request(app).post('/auth/signup').send({
+      email: 'someone-else@x.com', password: 'p4ssword!', name: 'Mismatch', invitationToken: invitation.token,
+    });
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('INVITATION_INVALID');
+  });
 });
 
 describe('POST /auth/login', () => {
@@ -73,6 +119,12 @@ describe('POST /auth/login', () => {
     const res = await request(app).post('/auth/login').send({ email: 'wrongpw@x.com', password: 'incorrect!' });
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('INVALID_CREDENTIALS');
+  });
+
+  it('rejects malformed input (missing email) with 400', async () => {
+    const res = await request(app).post('/auth/login').send({ password: 'p4ssword!' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
   });
 });
 
