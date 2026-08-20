@@ -12,6 +12,8 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts"]
+  // No "exclude": the test files must be part of the program `typecheck` compiles, or type
+  // errors in them go unnoticed. Shipping them is a separate concern — tsconfig.build.json
+  // excludes them from the emitted `dist/`.
+  "include": ["src"]
 }
