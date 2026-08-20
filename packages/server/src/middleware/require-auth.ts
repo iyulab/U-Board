@@ -1,9 +1,42 @@
-import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import type { CookieOptions, Request, Response, NextFunction, RequestHandler } from 'express';
 import type Database from 'better-sqlite3';
 import { verifySession } from '../auth/session.js';
 import { findUserById } from '../db/users.js';
 
 export const SESSION_COOKIE_NAME = 'ub_session';
+
+/** Must stay in step with `SESSION_TTL_MS` in `auth/session.ts` — the cookie should not
+ *  outlive the signature's own validity window. */
+export const SESSION_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * The single definition of how the session cookie is written. Every set-site uses this so the
+ * attributes can never drift apart between signup, login and workspace switch.
+ *
+ * `secure` is on outside development only, because a dev/test server is plain HTTP and the
+ * browser would silently drop a `Secure` cookie there.
+ */
+export function sessionCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    maxAge: SESSION_COOKIE_MAX_AGE_MS,
+    sameSite: 'lax' as const,
+    secure: process.env.NODE_ENV === 'production',
+  };
+}
+
+/**
+ * The subset of the above that a `res.clearCookie` must repeat for browsers to match the
+ * cookie being cleared. Deliberately NOT `sessionCookieOptions()`: Express merges the options
+ * into the clearing cookie, so carrying `maxAge` over would re-issue a 30-day expiry instead
+ * of expiring it.
+ */
+export function clearSessionCookieOptions(): CookieOptions {
+  return {
+    sameSite: 'lax' as const,
+    secure: process.env.NODE_ENV === 'production',
+  };
+}
 
 export interface AuthedRequest extends Request {
   userId?: string;

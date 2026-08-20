@@ -39,6 +39,9 @@ CREATE TABLE IF NOT EXISTS workspace_invitations (
 export function createDb(path: string): Database.Database {
   const db = new Database(path);
   db.pragma('foreign_keys = ON');
+  // Wait out a writer holding the database lock instead of throwing SQLITE_BUSY immediately —
+  // that throw is the most reachable way an unexpected error reaches a route handler.
+  db.pragma('busy_timeout = 5000');
   db.exec(SCHEMA_SQL);
   return db;
 }

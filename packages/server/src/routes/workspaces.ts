@@ -2,11 +2,9 @@ import { Router } from 'express';
 import type { AppConfig } from '../app.js';
 import { listWorkspacesForUser, listWorkspaceMembers } from '../db/workspaces.js';
 import { createInvitation } from '../db/invitations.js';
-import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
+import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
 import { requireWorkspaceOwner, requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { signSession } from '../auth/session.js';
-
-const SESSION_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function createWorkspacesRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
@@ -37,7 +35,7 @@ export function createWorkspacesRouter(config: AppConfig): Router {
 
   router.post('/:workspaceId/switch', requireWorkspaceMember(db), (req: AuthedRequest, res) => {
     const token = signSession({ userId: req.userId!, activeWorkspaceId: req.params.workspaceId, issuedAt: Date.now() }, sessionSecret);
-    res.cookie(SESSION_COOKIE_NAME, token, { httpOnly: true, maxAge: SESSION_COOKIE_MAX_AGE_MS, sameSite: 'lax' });
+    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
     res.status(200).json({ activeWorkspaceId: req.params.workspaceId });
   });
 

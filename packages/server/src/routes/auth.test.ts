@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import type Database from 'better-sqlite3';
 import type express from 'express';
@@ -16,6 +16,10 @@ let app: express.Express;
 beforeEach(() => {
   db = createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('POST /auth/signup', () => {
@@ -98,6 +102,20 @@ describe('POST /auth/signup', () => {
     expect(res.status).toBe(410);
     expect(res.body.code).toBe('INVITATION_INVALID');
   });
+
+  it('rolls the entire signup back when a write inside the transaction fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    // Makes `addWorkspaceUser` — the last write of the sequence — fail, after the workspace and
+    // the user rows have already been inserted within the same transaction.
+    db.exec('DROP TABLE workspace_users');
+
+    const res = await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
+
+    expect(res.status).toBe(500);
+    expect(res.body.code).toBe('INTERNAL_ERROR');
+    expect(db.prepare('SELECT COUNT(*) AS c FROM users').get()).toEqual({ c: 0 });
+    expect(db.prepare('SELECT COUNT(*) AS c FROM workspaces').get()).toEqual({ c: 0 });
+  });
 });
 
 describe('POST /auth/login', () => {
@@ -140,6 +158,15 @@ describe('POST /auth/logout', () => {
     const res = await request(app).post('/auth/logout');
     expect(res.status).toBe(204);
     expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=;/);
+  });
+
+  it('expires the cookie instead of re-issuing the 30-day one, and repeats SameSite', async () => {
+    const res = await request(app).post('/auth/logout');
+    const header = res.headers['set-cookie']?.[0] ?? '';
+    // A clearing cookie carrying the live Max-Age would leave the session valid in the browser.
+    expect(header).not.toMatch(/Max-Age=2592000/);
+    expect(header).toMatch(/Expires=Thu, 01 Jan 1970/);
+    expect(header).toMatch(/SameSite=Lax/);
   });
 });
 
