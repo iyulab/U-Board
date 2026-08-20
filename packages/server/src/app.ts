@@ -1,6 +1,7 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import type Database from 'better-sqlite3';
+import { createAuthRouter } from './routes/auth.js';
 
 export interface AppConfig {
   db: Database.Database;
@@ -12,5 +13,6 @@ export function createApp(config: AppConfig): express.Express {
   app.use(express.json());
   app.use(cookieParser());
   app.set('appConfig', config);
+  app.use('/auth', createAuthRouter(config));
   return app;
 }
