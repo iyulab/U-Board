@@ -17,9 +17,10 @@ describe('docs/api-reference.md walkthrough example', () => {
   it('is embedded in the doc byte-for-byte (catches copy-paste drift the type check cannot)', () => {
     // vitest runs from the package root, so resolve relative to process.cwd() rather than
     // import.meta.url — under this project's jsdom test environment, import.meta.url isn't a
-    // usable file: URL.
+    // usable file: URL. docs/ lives at the workspace root (one level above packages/*), not
+    // inside this package, hence the '../..'.
     const sourcePath = resolve(process.cwd(), 'src/examples/walkthrough.ts');
-    const docPath = resolve(process.cwd(), 'docs/api-reference.md');
+    const docPath = resolve(process.cwd(), '../../docs/api-reference.md');
     const source = readFileSync(sourcePath, 'utf-8');
     const docText = readFileSync(docPath, 'utf-8');
 
