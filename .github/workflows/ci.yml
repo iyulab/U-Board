@@ -46,5 +46,9 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: packages/core
 
+      - name: Install Chromium (console)
+        run: npx playwright install --with-deps chromium
+        working-directory: packages/console
+
       - name: E2E
         run: npm run test:e2e
