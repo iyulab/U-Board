@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import type { AppConfig } from '../app.js';
 import { createUser, findUserByEmail, countUsers } from '../db/users.js';
-import { createWorkspace, addWorkspaceUser, type WorkspaceRole } from '../db/workspaces.js';
+import {
+  createWorkspace,
+  addWorkspaceUser,
+  listWorkspacesForUser,
+  type WorkspaceRole,
+} from '../db/workspaces.js';
 import {
   findInvitationByToken,
   markInvitationAccepted,
@@ -17,7 +22,6 @@ import {
   clearSessionCookieOptions,
 } from '../middleware/require-auth.js';
 import { asyncHandler } from '../middleware/async-handler.js';
-import { listWorkspacesForUser } from '../db/workspaces.js';
 
 /** A signup gate that only the transaction can evaluate; carries the response it maps to. */
 class SignupRejected extends Error {
@@ -79,8 +83,13 @@ export function createAuthRouter(config: AppConfig): Router {
         let workspaceId: string;
         let role: WorkspaceRole;
         if (invitation) {
+          // Re-read rather than trusting the copy loaded before the hash: another signup may
+          // have redeemed this token in the meantime. The gate is stated in full here so it
+          // stands on its own if the advisory copy above is ever changed.
           const current = findInvitationByToken(db, invitation.token);
-          if (!current || !isInvitationUsable(current)) throw new SignupRejected(410, 'INVITATION_INVALID');
+          if (!current || !isInvitationUsable(current) || current.email !== normalizeEmail(email)) {
+            throw new SignupRejected(410, 'INVITATION_INVALID');
+          }
           workspaceId = current.workspaceId;
           role = current.role;
         } else {
