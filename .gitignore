@@ -3,6 +3,7 @@ dist/
 .playwright-mcp/
 test-results/
 playwright-report/
+.worktrees/
 
 # Local dev tracking — see AGENTS.md ("Documentation split"). Tracking lives in the umbrella,
 # not here.
