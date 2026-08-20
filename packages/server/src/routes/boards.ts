@@ -40,6 +40,10 @@ export function createBoardsRouter(config: AppConfig): Router {
   router.put('/:boardId', (req: AuthedRequest, res) => {
     const { workspaceId, boardId } = req.params as { workspaceId: string; boardId: string };
     const { name, document } = req.body ?? {};
+    if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
     if (document !== undefined && !isViewDocumentShape(document)) {
       res.status(400).json({ code: 'INVALID_DOCUMENT' });
       return;

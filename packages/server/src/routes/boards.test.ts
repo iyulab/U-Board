@@ -100,4 +100,44 @@ describe('boards routes', () => {
     const res = await request(app).get(`/workspaces/${workspaceId}/boards/nonexistent-id`).set('Cookie', memberCookie);
     expect(res.status).toBe(404);
   });
+
+  it('returns 400 INVALID_INPUT when PUT has an empty name', async () => {
+    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
+    const boardId = create.body.id;
+    const res = await request(app)
+      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .send({ name: '' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+  });
+
+  it('returns 400 INVALID_INPUT when PUT has a non-string name', async () => {
+    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
+    const boardId = create.body.id;
+    const res = await request(app)
+      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .send({ name: 123 });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+  });
+
+  it('allows a name-only PUT and keeps the document unchanged', async () => {
+    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'Original' });
+    const boardId = create.body.id;
+    const originalDoc = create.body.document ?? { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .send({ name: 'Updated Name' });
+    expect(update.status).toBe(200);
+    expect(update.body.name).toBe('Updated Name');
+
+    const get = await request(app).get(`/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    expect(get.status).toBe(200);
+    expect(get.body.name).toBe('Updated Name');
+    expect(get.body.document).toEqual(originalDoc);
+  });
 });
