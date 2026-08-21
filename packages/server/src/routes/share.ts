@@ -23,6 +23,27 @@ function referencedConnectorIds(db: AppConfig['db'], workspaceId: string, doc: V
   return [...ids].filter(id => !!findConnector(db, workspaceId, id));
 }
 
+/** True when `(connectorId, ref)` matches some binding this board's document actually declares —
+ * not just "this connector is used somewhere in the document" (that alone would let a caller vary
+ * `ref` freely against any referenced connector: (a) it would grant access to the connector's
+ * entire origin rather than just the specific values the board owner chose to expose, and (b) it
+ * would let `ref.valuePath` — which never appears in the request URL, only the body, and plays no
+ * part in the origin-pinning check — be varied without bound to grow the resolve cache
+ * unboundedly, since the cache key includes it). Both sides of the comparison come from parsing
+ * the same stored document (the client's `resolveWidget` call flow forwards `binding.ref`
+ * unmodified), so canonical-JSON-string comparison is reliable — it is not a functional
+ * restriction for any ref the legitimate embed viewer would ever send. */
+function isDeclaredBinding(doc: ViewDocument, connectorId: string, ref: unknown): boolean {
+  for (const node of doc.nodes) {
+    for (const binding of Object.values(node.widget.bindings ?? {})) {
+      if (binding.adapter === connectorId && JSON.stringify(binding.ref) === JSON.stringify(ref)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function createShareRouter(config: AppConfig, resolveCache: Map<string, unknown>): Router {
   const { db } = config;
   const router = Router();
@@ -66,19 +87,18 @@ export function createShareRouter(config: AppConfig, resolveCache: Map<string, u
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    const allowedIds = referencedConnectorIds(db, token.workspaceId, board.document);
-    if (!allowedIds.includes(req.params.connectorId)) {
+    const ref = req.body?.ref;
+    if (!isValidRef(ref)) {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    if (!isDeclaredBinding(board.document, req.params.connectorId, ref)) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
     const connector = findConnector(db, token.workspaceId, req.params.connectorId);
     if (!connector) {
       res.status(404).json({ code: 'NOT_FOUND' });
-      return;
-    }
-    const ref = req.body?.ref;
-    if (!isValidRef(ref)) {
-      res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
     const target = buildResolveTarget(connector, ref);
