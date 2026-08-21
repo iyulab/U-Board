@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { AppConfig } from '../app.js';
 import { requireAuth } from '../middleware/require-auth.js';
+import { asyncHandler } from '../middleware/async-handler.js';
 import { requireWorkspaceMember, requireWorkspaceOwner } from '../middleware/require-workspace-role.js';
 import {
   createConnector,
@@ -8,9 +9,25 @@ import {
   findConnector,
   updateConnector,
   deleteConnector,
+  type Connector,
 } from '../db/connectors.js';
 
 const AUTH_TYPES = new Set(['none', 'bearer', 'header']);
+
+/**
+ * A connector's baseUrl must be an absolute http(s) URL. The scheme allowlist is load-bearing,
+ * not cosmetic: the resolve proxy pins the request target to the baseUrl's origin, and a
+ * non-special scheme has the opaque origin `"null"`, which would make that comparison vacuous.
+ */
+function parseBaseUrl(value: unknown): URL | null {
+  if (typeof value !== 'string' || value.trim() === '') return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
+}
 
 function getByPath(obj: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((cursor, key) => {
@@ -21,13 +38,30 @@ function getByPath(obj: unknown, path: string): unknown {
   }, obj);
 }
 
-function validateAuthFields(body: any): string | null {
+/**
+ * A secret-bearing auth field is satisfied when the request supplies a non-blank string, or —
+ * when the request omits it entirely — when the connector already has one stored. Omitting the
+ * field means "keep the stored secret" (the console's edit form leaves it blank on purpose so a
+ * rename does not require re-typing the secret); an explicitly supplied blank/non-string value is
+ * still rejected, and so is omission when nothing is stored, because storing nothing would make
+ * the resolve proxy send a literal `Bearer undefined`.
+ */
+function authFieldSatisfied(provided: unknown, stored: string | undefined): boolean {
+  if (provided === undefined) return typeof stored === 'string' && stored.trim() !== '';
+  return typeof provided === 'string' && provided.trim() !== '';
+}
+
+function validateAuthFields(body: any, existing?: Connector): string | null {
   if (!AUTH_TYPES.has(body.authType)) return 'INVALID_INPUT';
-  if (body.authType === 'header' && (typeof body.authHeaderName !== 'string' || body.authHeaderName.trim() === '')) {
-    return 'INVALID_INPUT';
+  if (body.authType === 'header') {
+    // Only fall back to a stored header name if the connector is *currently* header-auth —
+    // otherwise the stored value is not a live header name we may keep.
+    const storedHeaderName = existing?.authType === 'header' ? existing.authHeaderName : undefined;
+    if (!authFieldSatisfied(body.authHeaderName, storedHeaderName)) return 'INVALID_INPUT';
   }
-  if (body.authType !== 'none' && (typeof body.authValue !== 'string' || body.authValue.trim() === '')) {
-    return 'INVALID_INPUT';
+  if (body.authType !== 'none') {
+    const storedValue = existing?.authType === 'none' ? undefined : existing?.authValue;
+    if (!authFieldSatisfied(body.authValue, storedValue)) return 'INVALID_INPUT';
   }
   return null;
 }
@@ -48,7 +82,7 @@ export function createConnectorsRouter(config: AppConfig): Router {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    if (typeof body.baseUrl !== 'string' || body.baseUrl.trim() === '') {
+    if (!parseBaseUrl(body.baseUrl)) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
@@ -77,12 +111,20 @@ export function createConnectorsRouter(config: AppConfig): Router {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    if (body.baseUrl !== undefined && (typeof body.baseUrl !== 'string' || body.baseUrl.trim() === '')) {
+    if (body.baseUrl !== undefined && !parseBaseUrl(body.baseUrl)) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
+    // Auth validation runs against the *merged* state, so the existing connector has to be read
+    // first: `{authType: 'bearer'}` with no `authValue` is valid when a secret is already stored
+    // (a rename that leaves the secret alone) and invalid when there is none to fall back on.
+    const existing = findConnector(db, req.params.workspaceId, req.params.connectorId);
+    if (!existing) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return;
+    }
     if (body.authType !== undefined) {
-      const authError = validateAuthFields(body);
+      const authError = validateAuthFields(body, existing);
       if (authError) {
         res.status(400).json({ code: authError });
         return;
@@ -134,14 +176,34 @@ export function createConnectorsRouter(config: AppConfig): Router {
     res.status(204).send();
   });
 
-  router.post('/:connectorId/resolve', requireWorkspaceMember(db), async (req, res) => {
+  router.post('/:connectorId/resolve', requireWorkspaceMember(db), asyncHandler(async (req, res) => {
     const connector = findConnector(db, req.params.workspaceId, req.params.connectorId);
     if (!connector) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
     const ref = req.body?.ref;
-    if (!ref || typeof ref.path !== 'string') {
+    // `ref.path` is caller-controlled and the request carries the connector's credentials, so it
+    // must not be able to move the request off the connector's origin. A path that does not start
+    // with a single `/` could otherwise be parsed as URL authority — `"@attacker.example/"`
+    // appended to `https://plant.example.com` yields `plant.example.com` as *userinfo* and
+    // `attacker.example` as the host, sending the owner's secret to the caller's server.
+    if (!ref || typeof ref.path !== 'string' || !ref.path.startsWith('/') || ref.path.startsWith('//')) {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    let target: URL;
+    let base: URL;
+    try {
+      base = new URL(connector.baseUrl);
+      // Concatenation (rather than `new URL(path, base)`) so a baseUrl with a path prefix keeps
+      // it; the trailing-slash trim keeps the joined URL from doubling the separator.
+      target = new URL(connector.baseUrl.replace(/\/+$/, '') + ref.path);
+    } catch {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    if (target.origin !== base.origin) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
@@ -154,7 +216,10 @@ export function createConnectorsRouter(config: AppConfig): Router {
     }
 
     try {
-      const response = await fetch(connector.baseUrl + ref.path, { headers, signal: AbortSignal.timeout(5000) });
+      // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
+      // compromised upstream must not be able to bounce the credentialed request to a host of its
+      // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
+      const response = await fetch(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
       if (!response.ok) throw new Error(`upstream responded ${response.status}`);
       const contentType = response.headers.get('content-type') ?? '';
       const body = contentType.includes('json') ? await response.json() : await response.text();
@@ -168,7 +233,7 @@ export function createConnectorsRouter(config: AppConfig): Router {
         res.status(200).json({ value: undefined, quality: 'disconnected' });
       }
     }
-  });
+  }));
 
   return router;
 }

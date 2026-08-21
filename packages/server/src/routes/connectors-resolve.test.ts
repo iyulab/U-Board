@@ -54,10 +54,13 @@ describe('connector resolve proxy', () => {
       .send({ ref: { path: '/pumps/a', valuePath: 'data.status' } });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ value: 'running', quality: 'live' });
-    expect(fetch).toHaveBeenCalledWith(
-      'https://plant.example.com/pumps/a',
-      expect.objectContaining({ headers: { Authorization: 'Bearer secret-token' } })
-    );
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [url, options] = (fetch as any).mock.calls[0];
+    expect(String(url)).toBe('https://plant.example.com/pumps/a');
+    // No explicit method is set, so the proxied request is a GET by fetch's default.
+    expect(options.method ?? 'GET').toBe('GET');
+    expect(options.headers).toEqual({ Authorization: 'Bearer secret-token' });
+    expect(options.redirect).toBe('manual');
   });
 
   it('returns disconnected quality on first failure with no cache', async () => {
@@ -101,5 +104,46 @@ describe('connector resolve proxy', () => {
       .send({ ref: {} });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_INPUT');
+  });
+
+  describe('rejects a ref.path that could move the credentialed request off the connector origin', () => {
+    // A workspace member is a lower-privileged principal than the owner who configured the
+    // connector's secret. None of these may reach the network at all — the connector's
+    // Authorization header would travel with the request.
+    const cases: Array<[string, string]> = [
+      ['userinfo injection that would make the path a new host', '@attacker.example/'],
+      ['a path not anchored at the connector root', 'not-starting-with-slash'],
+      ['a protocol-relative path', '//attacker.example/pumps'],
+    ];
+
+    for (const [label, path] of cases) {
+      it(`rejects ${label}`, async () => {
+        const res = await request(app)
+          .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+          .set('Cookie', memberCookie)
+          .send({ ref: { path } });
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('INVALID_INPUT');
+        expect(fetch).not.toHaveBeenCalled();
+      });
+    }
+  });
+
+  it('keeps a path-prefixed baseUrl intact and does not double the separator', async () => {
+    const owner = createUser(db, { email: 'owner2@x.com', passwordHash: 'h', name: 'Owner2' });
+    addWorkspaceUser(db, { workspaceId, userId: owner.id, role: 'owner' });
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', cookieFor(owner.id, workspaceId))
+      .send({ name: 'Prefixed', baseUrl: 'https://plant.example.com/api/v2/', authType: 'none' });
+    expect(create.status).toBe(201);
+
+    (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
+    const res = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${create.body.id}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
+    expect(res.status).toBe(200);
+    expect(String((fetch as any).mock.calls[0][0])).toBe('https://plant.example.com/api/v2/pumps/a');
   });
 });

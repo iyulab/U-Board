@@ -233,4 +233,113 @@ describe('connectors CRUD routes', () => {
     stored = findConnector(db, workspaceId, connectorId);
     expect(stored?.authHeaderName).toBeUndefined();
   });
+
+  async function createBearerConnector(authValue = 'secret-1') {
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'API', baseUrl: 'https://api.example.com', authType: 'bearer', authValue });
+    expect(create.status).toBe(201);
+    return create.body.id as string;
+  }
+
+  it('renames a bearer connector without re-sending the secret (authType echoed, authValue omitted)', async () => {
+    const connectorId = await createBearerConnector();
+    expect(findConnector(db, workspaceId, connectorId)?.authValue).toBe('secret-1');
+
+    // The console's edit form leaves the secret field blank and omits authValue, but still sends
+    // the (unchanged) authType — this must not be read as "set bearer auth with no secret".
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'Renamed', authType: 'bearer' });
+    expect(update.status).toBe(200);
+    expect(update.body.name).toBe('Renamed');
+    expect(update.body.authType).toBe('bearer');
+    expect(findConnector(db, workspaceId, connectorId)?.authValue).toBe('secret-1');
+  });
+
+  it('renames a header-auth connector without re-sending the secret or the header name', async () => {
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'Legacy', baseUrl: 'https://legacy.example.com', authType: 'header', authHeaderName: 'X-API-Key', authValue: 'secret-2' });
+    expect(create.status).toBe(201);
+    const connectorId = create.body.id;
+
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'Legacy Renamed', authType: 'header', authHeaderName: 'X-API-Key' });
+    expect(update.status).toBe(200);
+    expect(update.body.name).toBe('Legacy Renamed');
+    const stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authHeaderName).toBe('X-API-Key');
+    expect(stored?.authValue).toBe('secret-2');
+  });
+
+  it('returns 400 when switching to bearer with no authValue and none stored', async () => {
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'Open', baseUrl: 'https://open.example.com', authType: 'none' });
+    expect(create.status).toBe(201);
+
+    // There is genuinely no secret to fall back on — accepting this would leave the resolve proxy
+    // sending a literal `Bearer undefined`.
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${create.body.id}`)
+      .set('Cookie', ownerCookie)
+      .send({ authType: 'bearer' });
+    expect(update.status).toBe(400);
+    expect(update.body.code).toBe('INVALID_INPUT');
+    expect(findConnector(db, workspaceId, create.body.id)?.authType).toBe('none');
+  });
+
+  it('returns 400 when switching to header auth with no authHeaderName and none stored', async () => {
+    const connectorId = await createBearerConnector();
+
+    // The stored secret satisfies authValue, but a bearer connector has no header name to keep.
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ authType: 'header' });
+    expect(update.status).toBe(400);
+    expect(update.body.code).toBe('INVALID_INPUT');
+  });
+
+  it('returns 400 when an explicitly supplied authValue is blank, even with a secret stored', async () => {
+    const connectorId = await createBearerConnector();
+
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ authType: 'bearer', authValue: '   ' });
+    expect(update.status).toBe(400);
+    expect(update.body.code).toBe('INVALID_INPUT');
+    expect(findConnector(db, workspaceId, connectorId)?.authValue).toBe('secret-1');
+  });
+
+  it('returns 400 INVALID_INPUT when baseUrl is not an absolute http(s) URL on create', async () => {
+    for (const baseUrl of ['not a url', '/relative/path', 'file:///etc/passwd']) {
+      const res = await request(app)
+        .post(`/workspaces/${workspaceId}/connectors`)
+        .set('Cookie', ownerCookie)
+        .send({ name: 'A', baseUrl, authType: 'none' });
+      expect(res.status, `baseUrl ${baseUrl}`).toBe(400);
+      expect(res.body.code).toBe('INVALID_INPUT');
+    }
+  });
+
+  it('returns 400 INVALID_INPUT when baseUrl is not an absolute http(s) URL on update', async () => {
+    const connectorId = await createBearerConnector();
+
+    const res = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ baseUrl: 'not a url' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(findConnector(db, workspaceId, connectorId)?.baseUrl).toBe('https://api.example.com');
+  });
 });
