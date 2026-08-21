@@ -79,16 +79,16 @@ export function createConnectorsRouter(config: AppConfig): Router {
     }
     // Compute authHeaderName and authValue based on authType change:
     // - undefined authType: don't touch either field
-    // - authType === 'none': explicitly clear authValue
-    // - authType === 'header': keep or set authHeaderName, clear authValue only if not provided
-    // - authType === 'bearer': clear authHeaderName, keep or set authValue only if provided
+    // - authType === 'none': explicitly clear both authHeaderName and authValue
+    // - authType === 'header': set authHeaderName to new value, clear authValue if not provided
+    // - authType === 'bearer': clear authHeaderName, keep or set authValue if provided
     let authHeaderName: string | null | undefined;
     let authValue: string | null | undefined;
     if (body.authType === undefined) {
       authHeaderName = undefined;
       authValue = undefined;
     } else if (body.authType === 'none') {
-      authHeaderName = body.authHeaderName === undefined ? undefined : null;
+      authHeaderName = null;
       authValue = null;
     } else if (body.authType === 'header') {
       authHeaderName = body.authHeaderName;

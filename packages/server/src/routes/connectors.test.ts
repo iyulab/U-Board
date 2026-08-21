@@ -205,4 +205,32 @@ describe('connectors CRUD routes', () => {
     stored = findConnector(db, workspaceId, connectorId);
     expect(stored?.authValue).toBe('secret123');
   });
+
+  it('clears authHeaderName when switching to authType none (without providing authHeaderName in body)', async () => {
+    // Create connector with header auth
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'API', baseUrl: 'https://api.example.com', authType: 'header', authHeaderName: 'X-API-Key', authValue: 'secret123' });
+    expect(create.status).toBe(201);
+    const connectorId = create.body.id;
+
+    // Verify authHeaderName was stored
+    let stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authHeaderName).toBe('X-API-Key');
+
+    // Update to authType 'none' WITHOUT providing authHeaderName in the body
+    // This tests the gap: authHeaderName should be cleared unconditionally, not only if body.authHeaderName is absent
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ authType: 'none' });
+    expect(update.status).toBe(200);
+    expect(update.body.authType).toBe('none');
+    expect(update.body.authHeaderName).toBeUndefined();
+
+    // Verify authHeaderName was cleared in database
+    stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authHeaderName).toBeUndefined();
+  });
 });
