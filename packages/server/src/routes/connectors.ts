@@ -11,6 +11,7 @@ import {
   deleteConnector,
   type Connector,
 } from '../db/connectors.js';
+import { isValidRef, buildResolveTarget, resolveConnectorValue } from '../resolve-connector.js';
 
 const AUTH_TYPES = new Set(['none', 'bearer', 'header']);
 
@@ -27,15 +28,6 @@ function parseBaseUrl(value: unknown): URL | null {
   } catch {
     return null;
   }
-}
-
-function getByPath(obj: unknown, path: string): unknown {
-  return path.split('.').reduce<unknown>((cursor, key) => {
-    if (cursor && typeof cursor === 'object' && key in (cursor as Record<string, unknown>)) {
-      return (cursor as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
 }
 
 /**
@@ -66,11 +58,10 @@ function validateAuthFields(body: any, existing?: Connector): string | null {
   return null;
 }
 
-export function createConnectorsRouter(config: AppConfig): Router {
+export function createConnectorsRouter(config: AppConfig, resolveCache: Map<string, unknown>): Router {
   const { db, sessionSecret } = config;
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent mount path
   router.use(requireAuth(db, sessionSecret));
-  const cache = new Map<string, unknown>();
 
   router.get('/', requireWorkspaceMember(db), (req, res) => {
     res.status(200).json({ connectors: listConnectorsForWorkspace(db, req.params.workspaceId) });
@@ -183,56 +174,17 @@ export function createConnectorsRouter(config: AppConfig): Router {
       return;
     }
     const ref = req.body?.ref;
-    // `ref.path` is caller-controlled and the request carries the connector's credentials, so it
-    // must not be able to move the request off the connector's origin. A path that does not start
-    // with a single `/` could otherwise be parsed as URL authority — `"@attacker.example/"`
-    // appended to `https://plant.example.com` yields `plant.example.com` as *userinfo* and
-    // `attacker.example` as the host, sending the owner's secret to the caller's server.
-    if (!ref || typeof ref.path !== 'string' || !ref.path.startsWith('/') || ref.path.startsWith('//')) {
+    if (!isValidRef(ref)) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    let target: URL;
-    let base: URL;
-    try {
-      base = new URL(connector.baseUrl);
-      // Concatenation (rather than `new URL(path, base)`) so a baseUrl with a path prefix keeps
-      // it; the trailing-slash trim keeps the joined URL from doubling the separator.
-      target = new URL(connector.baseUrl.replace(/\/+$/, '') + ref.path);
-    } catch {
+    const target = buildResolveTarget(connector, ref);
+    if (!target) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    if (target.origin !== base.origin) {
-      res.status(400).json({ code: 'INVALID_INPUT' });
-      return;
-    }
-    const cacheKey = `${connector.id}:${JSON.stringify(ref)}`;
-
-    const headers: Record<string, string> = {};
-    if (connector.authType === 'bearer') headers.Authorization = `Bearer ${connector.authValue}`;
-    if (connector.authType === 'header' && connector.authHeaderName) {
-      headers[connector.authHeaderName] = connector.authValue ?? '';
-    }
-
-    try {
-      // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
-      // compromised upstream must not be able to bounce the credentialed request to a host of its
-      // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
-      const response = await fetch(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
-      if (!response.ok) throw new Error(`upstream responded ${response.status}`);
-      const contentType = response.headers.get('content-type') ?? '';
-      const body = contentType.includes('json') ? await response.json() : await response.text();
-      const value = ref.valuePath ? getByPath(body, ref.valuePath) : body;
-      cache.set(cacheKey, value);
-      res.status(200).json({ value, quality: 'live' });
-    } catch {
-      if (cache.has(cacheKey)) {
-        res.status(200).json({ value: cache.get(cacheKey), quality: 'stale' });
-      } else {
-        res.status(200).json({ value: undefined, quality: 'disconnected' });
-      }
-    }
+    const result = await resolveConnectorValue(connector, target, ref, resolveCache);
+    res.status(200).json(result);
   }));
 
   return router;

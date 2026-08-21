@@ -17,11 +17,12 @@ export function createApp(config: AppConfig): express.Express {
   // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
   app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
+  const resolveCache = new Map<string, unknown>();
   app.use('/auth', createAuthRouter(config));
   app.use('/invitations', createInvitationsRouter(config));
   app.use('/workspaces', createWorkspacesRouter(config));
   app.use('/workspaces/:workspaceId/boards', createBoardsRouter(config));
-  app.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config));
+  app.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveCache));
   // Must stay last: Express only reaches an error handler registered AFTER the layer that
   // failed, so anything mounted below this line would bypass it.
   app.use(errorHandler);
