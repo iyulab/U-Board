@@ -58,6 +58,19 @@ CREATE TABLE IF NOT EXISTS connectors (
 );
 
 CREATE INDEX IF NOT EXISTS idx_connectors_workspace_id ON connectors(workspace_id);
+
+CREATE TABLE IF NOT EXISTS board_share_tokens (
+  id TEXT PRIMARY KEY,
+  board_id TEXT NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  token_mask TEXT NOT NULL,
+  created_by_user_id TEXT NOT NULL REFERENCES users(id),
+  created_at TEXT NOT NULL,
+  last_used_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_board_share_tokens_board_id ON board_share_tokens(board_id);
 `;
 
 export function createDb(path: string): Database.Database {
