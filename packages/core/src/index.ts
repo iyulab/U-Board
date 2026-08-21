@@ -6,4 +6,6 @@ export { resolveDocument } from './resolve-document.js';
 export { DemoAdapter } from './demo-adapter.js';
 export { AuthoringView } from './authoring/AuthoringView.js';
 export type { AuthoringViewProps } from './authoring/AuthoringView.js';
+export { ViewerPage } from './viewer/ViewerPage.js';
+export type { ViewerPageProps } from './viewer/ViewerPage.js';
 export { parseViewDocument, isViewDocumentShape, InvalidViewDocumentError } from './persistence/view-document-file.js';

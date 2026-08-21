@@ -11,6 +11,9 @@ export interface ViewerPageProps {
   adapters: readonly Adapter[];
   width: number;
   height: number;
+  /** 주어지면 Import UI 없이 이 문서를 즉시 렌더한다(공개 임베드 뷰용). 생략 시 오늘과 같은
+   * 로컬 파일 Import 데모 동작. */
+  initialDocument?: ViewDocument;
 }
 
 /**
@@ -19,8 +22,8 @@ export interface ViewerPageProps {
  * deployment would ship with (docs/principles.md — editor/renderer separation): the authoring
  * tool's weight can never leak in here, because it isn't a dependency of this file.
  */
-export function ViewerPage({ adapters, width, height }: ViewerPageProps) {
-  const [doc, setDoc] = useState<ViewDocument | null>(null);
+export function ViewerPage({ adapters, width, height, initialDocument }: ViewerPageProps) {
+  const [doc, setDoc] = useState<ViewDocument | null>(initialDocument ?? null);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,16 +59,20 @@ export function ViewerPage({ adapters, width, height }: ViewerPageProps) {
 
   return (
     <div>
-      <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
-        Import
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json"
-        onChange={handleImportFile}
-        style={{ display: 'none' }}
-      />
+      {!initialDocument && (
+        <>
+          <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
+            Import
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json"
+            onChange={handleImportFile}
+            style={{ display: 'none' }}
+          />
+        </>
+      )}
       {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
       {!doc ? (
         <p style={{ color: '#64748b' }}>No document loaded — Import one to view it.</p>
