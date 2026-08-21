@@ -5,6 +5,7 @@ import { createAuthRouter } from './routes/auth.js';
 import { createInvitationsRouter } from './routes/invitations.js';
 import { createWorkspacesRouter } from './routes/workspaces.js';
 import { createBoardsRouter } from './routes/boards.js';
+import { createBoardShareTokensRouter } from './routes/board-share-tokens.js';
 import { createConnectorsRouter } from './routes/connectors.js';
 
 export interface AppConfig {
@@ -22,6 +23,7 @@ export function createApp(config: AppConfig): express.Express {
   app.use('/invitations', createInvitationsRouter(config));
   app.use('/workspaces', createWorkspacesRouter(config));
   app.use('/workspaces/:workspaceId/boards', createBoardsRouter(config));
+  app.use('/workspaces/:workspaceId/boards/:boardId/share-tokens', createBoardShareTokensRouter(config));
   app.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveCache));
   // Must stay last: Express only reaches an error handler registered AFTER the layer that
   // failed, so anything mounted below this line would bypass it.
