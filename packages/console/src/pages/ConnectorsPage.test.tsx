@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ConnectorsPage } from './ConnectorsPage.js';
 import * as api from '../api-client.js';
@@ -54,5 +55,93 @@ describe('ConnectorsPage', () => {
     );
 
     expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 목록을 불러오지 못했습니다');
+  });
+
+  it('prefills form with connector data and omits authValue on edit', async () => {
+    const headerConnector = { id: 'c2', name: 'Legacy API', type: 'http' as const, baseUrl: 'https://legacy.example.com', authType: 'header' as const, authHeaderName: 'X-API-Key', updatedAt: 't' };
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [headerConnector] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.updateConnector).mockResolvedValue(headerConnector);
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('button', { name: '수정' });
+    fireEvent.click(screen.getByRole('button', { name: '수정' }));
+
+    expect((screen.getByLabelText('이름') as HTMLInputElement).value).toBe('Legacy API');
+    expect((screen.getByLabelText('Base URL') as HTMLInputElement).value).toBe('https://legacy.example.com');
+    expect((screen.getByLabelText('인증 방식') as HTMLSelectElement).value).toBe('header');
+    expect((screen.getByLabelText('헤더 이름') as HTMLInputElement).value).toBe('X-API-Key');
+    expect((screen.getByLabelText('값(변경 시에만 입력)') as HTMLInputElement).value).toBe('');
+
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 수정' }));
+
+    await waitFor(() => expect(api.updateConnector).toHaveBeenCalledWith('w1', 'c2', {
+      name: 'Legacy API', baseUrl: 'https://legacy.example.com', authType: 'header', authHeaderName: 'X-API-Key', authValue: undefined,
+    }));
+  });
+
+  it('deletes a connector after confirmation', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [CONNECTOR] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.deleteConnector).mockResolvedValue(undefined);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/Plant API/);
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+
+    await waitFor(() => expect(api.deleteConnector).toHaveBeenCalledWith('w1', 'c1'));
+    expect(screen.queryByText(/Plant API/)).not.toBeInTheDocument();
+  });
+
+  it('shows error on create, then clears it after a successful retry', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.createConnector).mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce(CONNECTOR);
+
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    const addButton = await screen.findByRole('button', { name: '데이터소스 추가' });
+    await userEvent.type(screen.getByLabelText('이름'), 'Plant API');
+    await userEvent.type(screen.getByLabelText('Base URL'), 'https://plant.example.com');
+    fireEvent.click(addButton);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 생성에 실패했습니다');
+
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 추가' }));
+
+    await waitFor(() => expect(api.createConnector).toHaveBeenCalledTimes(2));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows error when delete fails', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [CONNECTOR] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.deleteConnector).mockRejectedValue(new Error('network'));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/Plant API/);
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 삭제에 실패했습니다');
   });
 });

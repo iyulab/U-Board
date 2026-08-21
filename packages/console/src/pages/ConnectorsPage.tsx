@@ -14,7 +14,10 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
 
   function reload() {
     return listConnectors(workspaceId)
-      .then(res => setConnectors(res.connectors))
+      .then(res => {
+        setError(null);
+        setConnectors(res.connectors);
+      })
       .catch(() => setError('데이터소스 목록을 불러오지 못했습니다'));
   }
 
@@ -59,6 +62,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       } else {
         await createConnector(workspaceId, input);
       }
+      setError(null);
       resetForm();
       await reload();
     } catch {
@@ -70,6 +74,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     if (!window.confirm('이 데이터소스를 삭제할까요?')) return;
     try {
       await deleteConnector(workspaceId, connectorId);
+      setError(null);
       setConnectors(prev => prev.filter(c => c.id !== connectorId));
     } catch {
       setError('데이터소스 삭제에 실패했습니다');
