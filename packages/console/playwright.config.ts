@@ -41,6 +41,12 @@ export default defineConfig({
       port: 5175,
       reuseExistingServer: !process.env.CI,
     },
+    {
+      command: 'npm run dev -- --port 5176',
+      cwd: '../share',
+      port: 5176,
+      reuseExistingServer: !process.env.CI,
+    },
   ],
   use: { baseURL: 'http://localhost:5175' },
 });

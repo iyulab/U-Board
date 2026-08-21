@@ -24,7 +24,11 @@ test('create a board, add a node, save, and see it persisted after reopening', a
   await page.goto('/boards');
   await page.getByRole('link', { name: 'E2E Board' }).click();
   await expect(page.getByText('Save')).toBeVisible();
-  await expect(page.locator('details summary')).toHaveText('ViewDocument (debug)');
-  await page.locator('details').click(); // <details> 펼치기
+  // NOTE: 보드 편집기 페이지에는 owner에게 렌더링되는 공유 패널도 <details>이므로(공유
+  // 태스크 이후 실측), 텍스트로 ViewDocument 디버그 패널을 특정해 strict-mode violation을
+  // 피한다.
+  const debugPanel = page.locator('details').filter({ hasText: 'ViewDocument (debug)' });
+  await expect(debugPanel.locator('summary')).toHaveText('ViewDocument (debug)');
+  await debugPanel.locator('summary').click(); // <details> 펼치기
   await expect(page.locator('pre')).toContainText('"widget"'); // 추가한 노드가 document에 남아있음
 });
