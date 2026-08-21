@@ -59,7 +59,7 @@ export function App({
         />
         <Route
           path="/boards/:boardId/edit"
-          element={<RequireSession>{s => <BoardEditorPage workspaceId={s.activeWorkspaceId} />}</RequireSession>}
+          element={<RequireSession>{s => <BoardEditorPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</RequireSession>}
         />
         <Route
           path="/connectors"

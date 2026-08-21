@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { BoardEditorPage } from './BoardEditorPage.js';
@@ -11,13 +11,15 @@ vi.mock('@canvas-kit/viewer', () => ({ Viewer: () => <div data-testid="viewer" /
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+  vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'owner@x.com', name: 'Owner', role: 'owner' }] });
+  vi.mocked(api.listShareTokens).mockResolvedValue({ tokens: [] });
 });
 
 function renderPage(boardId = 'b1') {
   return render(
     <MemoryRouter initialEntries={[`/boards/${boardId}/edit`]}>
       <Routes>
-        <Route path="/boards/:boardId/edit" element={<BoardEditorPage workspaceId="w1" />} />
+        <Route path="/boards/:boardId/edit" element={<BoardEditorPage workspaceId="w1" userId="u1" />} />
       </Routes>
     </MemoryRouter>
   );
@@ -74,5 +76,66 @@ describe('BoardEditorPage connector wiring', () => {
 
     expect(await screen.findByText('Save')).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 목록을 불러오지 못했습니다');
+  });
+});
+
+describe('BoardEditorPage share panel', () => {
+  const DOC = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
+
+  it('hides the entire share panel for a non-owner, and never calls listShareTokens', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'm@x.com', name: 'M', role: 'member' }] });
+    renderPage();
+
+    await screen.findByText('Save'); // wait for the page to finish its initial loads
+    expect(screen.queryByText('공유')).not.toBeInTheDocument();
+    expect(api.listShareTokens).not.toHaveBeenCalled();
+  });
+
+  it('owner creates a share link and sees the one-time URL', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.listShareTokens).mockResolvedValue({ tokens: [] });
+    vi.mocked(api.createShareToken).mockResolvedValue({ id: 't1', token: 'plaintext-secret-value', tokenMask: 'ab12cd34', createdAt: 't' });
+
+    renderPage();
+    // `<details>` renders closed by default; its content is outside the accessibility tree
+    // (hence unreachable by `getByRole`) until opened, so every test that needs the panel's
+    // contents must open it first — clicking the native `<summary>` toggles `open`.
+    fireEvent.click(await screen.findByText('공유'));
+    const createButton = await screen.findByRole('button', { name: '새 공유 링크 생성' });
+    fireEvent.click(createButton);
+
+    await waitFor(() => expect(api.createShareToken).toHaveBeenCalledWith('w1', 'b1'));
+    expect(await screen.findByText(/plaintext-secret-value/)).toBeInTheDocument();
+  });
+
+  it('owner revokes a share link', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.listShareTokens).mockResolvedValue({ tokens: [{ id: 't1', tokenMask: 'ab12cd34', createdAt: 't' }] });
+    vi.mocked(api.deleteShareToken).mockResolvedValue(undefined);
+
+    renderPage();
+    fireEvent.click(await screen.findByText('공유'));
+    const revokeButton = await screen.findByRole('button', { name: '회수' });
+    fireEvent.click(revokeButton);
+
+    await waitFor(() => expect(api.deleteShareToken).toHaveBeenCalledWith('w1', 'b1', 't1'));
+    await waitFor(() => expect(screen.queryByText(/ab12cd34/)).not.toBeInTheDocument());
+  });
+
+  it('shows an error when the share token list fails to load', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.listShareTokens).mockRejectedValue(new Error('network'));
+
+    renderPage();
+    fireEvent.click(await screen.findByText('공유'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('공유 링크 목록을 불러오지 못했습니다');
   });
 });
