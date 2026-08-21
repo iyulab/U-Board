@@ -1,4 +1,4 @@
-import type { Adapter, ResolvedBinding } from '@iyulab/u-board';
+import type { Adapter, ResolvedBinding } from '@iyulab/u-board/viewer';
 
 /** Delegates to the server's public `/share` resolve proxy instead of the session-authenticated
  * one — the auth mechanism differs (query-string token vs. cookie), so this is a separate class

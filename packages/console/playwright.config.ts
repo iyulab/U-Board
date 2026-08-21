@@ -38,6 +38,7 @@ export default defineConfig({
     },
     {
       command: 'npm run dev -- --port 5175',
+      env: { VITE_SHARE_BASE_URL: 'http://localhost:5176' },
       port: 5175,
       reuseExistingServer: !process.env.CI,
     },

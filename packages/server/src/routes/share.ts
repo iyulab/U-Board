@@ -10,13 +10,13 @@ import { isValidRef, buildResolveTarget, resolveConnectorValue } from '../resolv
 
 /** Every adapter id a document's widgets reference, intersected with the connectors that actually
  * exist in this workspace — an id like `demo-cmms` (the client-side mock, never a DB row) is
- * dropped without any special-casing. Used both to report `connectorIds` to the viewer and to gate
- * the resolve endpoint, so a board-scoped share token can never reach a connector its own document
- * doesn't use. */
+ * dropped without any special-casing. Used to report the `connectorIds` list to the viewer, so it
+ * knows which `ShareConnectorAdapter`s to construct. Access to the resolve endpoint is gated
+ * separately and more narrowly by `isDeclaredBinding` below. */
 function referencedConnectorIds(db: AppConfig['db'], workspaceId: string, doc: ViewDocument): string[] {
   const ids = new Set<string>();
   for (const node of doc.nodes) {
-    for (const binding of Object.values(node.widget.bindings ?? {})) {
+    for (const binding of Object.values(node.widget?.bindings ?? {})) {
       ids.add(binding.adapter);
     }
   }
@@ -35,7 +35,7 @@ function referencedConnectorIds(db: AppConfig['db'], workspaceId: string, doc: V
  * restriction for any ref the legitimate embed viewer would ever send. */
 function isDeclaredBinding(doc: ViewDocument, connectorId: string, ref: unknown): boolean {
   for (const node of doc.nodes) {
-    for (const binding of Object.values(node.widget.bindings ?? {})) {
+    for (const binding of Object.values(node.widget?.bindings ?? {})) {
       if (binding.adapter === connectorId && JSON.stringify(binding.ref) === JSON.stringify(ref)) {
         return true;
       }

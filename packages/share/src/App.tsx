@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ViewerPage, DemoAdapter, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { ViewerPage, DemoAdapter, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter } from './share-connector-adapter.js';
 
 const DEFAULT_WIDTH = 1200;

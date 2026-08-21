@@ -24,7 +24,7 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await page.getByRole('button', { name: '새 공유 링크 생성' }).click();
   const urlText = await page.locator('code').textContent();
   expect(urlText).toMatch(new RegExp(`board=${boardId}&token=`));
-  const shareUrl = urlText!.replace('http://localhost:5175', 'http://localhost:5176');
+  const shareUrl = urlText!;
 
   // 쿠키 없는 별도 브라우저 컨텍스트로 공유 링크 열기
   //

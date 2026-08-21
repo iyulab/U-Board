@@ -57,7 +57,11 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     try {
       const created = await createShareToken(workspaceId, boardId!);
       setShareError(null);
-      setNewShareUrl(`${window.location.origin}/?board=${boardId}&token=${created.token}`);
+      // The embed viewer (`packages/share`) is a separate app on its own origin, so the console's
+      // own origin is only a fallback for a hypothetical same-origin deployment — production
+      // topology is still undecided, hence the build-time override rather than a hardcoded host.
+      const shareBase = import.meta.env.VITE_SHARE_BASE_URL ?? window.location.origin;
+      setNewShareUrl(`${shareBase}/?board=${boardId}&token=${created.token}`);
       await reloadShareTokens();
     } catch {
       setShareError('공유 링크 생성에 실패했습니다');
@@ -68,6 +72,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     try {
       await deleteShareToken(workspaceId, boardId!, tokenId);
       setShareError(null);
+      setNewShareUrl(null);
       setShareTokens(prev => prev.filter(t => t.id !== tokenId));
     } catch {
       setShareError('공유 링크 회수에 실패했습니다');

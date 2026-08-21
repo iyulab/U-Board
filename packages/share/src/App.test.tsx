@@ -4,8 +4,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
 import { App } from './App.js';
 
-vi.mock('@iyulab/u-board', async () => {
-  const actual = await vi.importActual('@iyulab/u-board');
+vi.mock('@iyulab/u-board/viewer', async () => {
+  const actual = await vi.importActual('@iyulab/u-board/viewer');
   return {
     ...actual,
     ViewerPage: (props: any) => (

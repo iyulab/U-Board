@@ -2,6 +2,9 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <!-- This page's URL carries the share token in the query string; suppress the Referer header
+         so the secret is never leaked to any origin a rendered widget happens to request. -->
+    <meta name="referrer" content="no-referrer" />
     <title>U-Board — 공유 보드</title>
   </head>
   <body>
