@@ -5,11 +5,21 @@ import { requireWorkspaceMember, requireWorkspaceOwner } from '../middleware/req
 import {
   createConnector,
   listConnectorsForWorkspace,
+  findConnector,
   updateConnector,
   deleteConnector,
 } from '../db/connectors.js';
 
 const AUTH_TYPES = new Set(['none', 'bearer', 'header']);
+
+function getByPath(obj: unknown, path: string): unknown {
+  return path.split('.').reduce<unknown>((cursor, key) => {
+    if (cursor && typeof cursor === 'object' && key in (cursor as Record<string, unknown>)) {
+      return (cursor as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, obj);
+}
 
 function validateAuthFields(body: any): string | null {
   if (!AUTH_TYPES.has(body.authType)) return 'INVALID_INPUT';
@@ -26,6 +36,7 @@ export function createConnectorsRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent mount path
   router.use(requireAuth(db, sessionSecret));
+  const cache = new Map<string, unknown>();
 
   router.get('/', requireWorkspaceMember(db), (req, res) => {
     res.status(200).json({ connectors: listConnectorsForWorkspace(db, req.params.workspaceId) });
@@ -121,6 +132,42 @@ export function createConnectorsRouter(config: AppConfig): Router {
       return;
     }
     res.status(204).send();
+  });
+
+  router.post('/:connectorId/resolve', requireWorkspaceMember(db), async (req, res) => {
+    const connector = findConnector(db, req.params.workspaceId, req.params.connectorId);
+    if (!connector) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return;
+    }
+    const ref = req.body?.ref;
+    if (!ref || typeof ref.path !== 'string') {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    const cacheKey = `${connector.id}:${JSON.stringify(ref)}`;
+
+    const headers: Record<string, string> = {};
+    if (connector.authType === 'bearer') headers.Authorization = `Bearer ${connector.authValue}`;
+    if (connector.authType === 'header' && connector.authHeaderName) {
+      headers[connector.authHeaderName] = connector.authValue ?? '';
+    }
+
+    try {
+      const response = await fetch(connector.baseUrl + ref.path, { headers, signal: AbortSignal.timeout(5000) });
+      if (!response.ok) throw new Error(`upstream responded ${response.status}`);
+      const contentType = response.headers.get('content-type') ?? '';
+      const body = contentType.includes('json') ? await response.json() : await response.text();
+      const value = ref.valuePath ? getByPath(body, ref.valuePath) : body;
+      cache.set(cacheKey, value);
+      res.status(200).json({ value, quality: 'live' });
+    } catch {
+      if (cache.has(cacheKey)) {
+        res.status(200).json({ value: cache.get(cacheKey), quality: 'stale' });
+      } else {
+        res.status(200).json({ value: undefined, quality: 'disconnected' });
+      }
+    }
   });
 
   return router;
