@@ -8,7 +8,10 @@ import * as api from '../api-client.js';
 vi.mock('../api-client.js');
 vi.mock('@canvas-kit/designer', () => ({ KonvaDesigner: () => <div data-testid="konva-designer" /> }));
 vi.mock('@canvas-kit/viewer', () => ({ Viewer: () => <div data-testid="viewer" /> }));
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+});
 
 function renderPage(boardId = 'b1') {
   return render(
@@ -49,5 +52,27 @@ describe('BoardEditorPage', () => {
     await userEvent.click(await screen.findByText('Save'));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
+  });
+});
+
+describe('BoardEditorPage connector wiring', () => {
+  it('loads workspace connectors alongside the board document', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({
+      connectors: [{ id: 'c1', name: 'Plant API', type: 'http', baseUrl: 'https://plant.example.com', authType: 'none', updatedAt: 't' }],
+    });
+    renderPage();
+
+    expect(await screen.findByText('Save')).toBeInTheDocument();
+    expect(api.listConnectors).toHaveBeenCalledWith('w1');
+  });
+
+  it('still renders the editor when the connector list fails to load (DemoAdapter still works)', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockRejectedValue(new Error('network'));
+    renderPage();
+
+    expect(await screen.findByText('Save')).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 목록을 불러오지 못했습니다');
   });
 });
