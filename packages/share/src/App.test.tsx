@@ -6,7 +6,14 @@ import { App } from './App.js';
 
 vi.mock('@iyulab/u-board', async () => {
   const actual = await vi.importActual('@iyulab/u-board');
-  return { ...actual, ViewerPage: (props: any) => <div data-testid="viewer-page">{props.initialDocument.background ? 'rendered' : ''}</div> };
+  return {
+    ...actual,
+    ViewerPage: (props: any) => (
+      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')}>
+        {props.initialDocument.background ? 'rendered' : ''}
+      </div>
+    ),
+  };
 });
 
 beforeEach(() => {
@@ -39,5 +46,16 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({ ok: false });
     render(<App />);
     expect(await screen.findByText(/더 이상 유효하지 않습니다/)).toBeInTheDocument();
+  });
+
+  it('wires each returned connectorId into a ShareConnectorAdapter alongside the DemoAdapter', async () => {
+    setLocation('?board=b1&token=tok');
+    (fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ name: 'A', document: DOC, connectorIds: ['c1', 'c2'] }),
+    });
+    render(<App />);
+    const viewer = await screen.findByTestId('viewer-page');
+    expect(viewer.dataset.adapterIds).toBe('demo-cmms,c1,c2');
   });
 });
