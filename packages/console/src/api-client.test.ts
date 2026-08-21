@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard } from './api-client.js';
+import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector } from './api-client.js';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
@@ -72,5 +72,42 @@ describe('board endpoints', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
     await expect(deleteBoard('w1', 'b1')).resolves.toBeUndefined();
     expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1', expect.objectContaining({ method: 'DELETE' }));
+  });
+});
+
+describe('connector endpoints', () => {
+  it('listConnectors GETs /workspaces/:id/connectors', async () => {
+    const summary = { id: 'c1', name: 'A', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't' };
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ connectors: [summary] }) });
+    await expect(listConnectors('w1')).resolves.toEqual({ connectors: [summary] });
+    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors', expect.objectContaining({ credentials: 'include' }));
+  });
+
+  it('createConnector POSTs the input', async () => {
+    const summary = { id: 'c1', name: 'A', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't' };
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => summary });
+    const input = { name: 'A', baseUrl: 'https://a.example.com', authType: 'none' as const };
+    await expect(createConnector('w1', input)).resolves.toEqual(summary);
+    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors', expect.objectContaining({ method: 'POST', body: JSON.stringify(input) }));
+  });
+
+  it('updateConnector PUTs the given fields', async () => {
+    const summary = { id: 'c1', name: 'Renamed', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't2' };
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => summary });
+    await expect(updateConnector('w1', 'c1', { name: 'Renamed' })).resolves.toEqual(summary);
+    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors/c1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ name: 'Renamed' }) }));
+  });
+
+  it('deleteConnector DELETEs and resolves with no body', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await expect(deleteConnector('w1', 'c1')).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors/c1', expect.objectContaining({ method: 'DELETE' }));
+  });
+
+  it('resolveConnector POSTs the ref and returns value+quality', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ value: 'running', quality: 'live' }) });
+    const ref = { path: '/pumps/a', valuePath: 'status' };
+    await expect(resolveConnector('w1', 'c1', ref)).resolves.toEqual({ value: 'running', quality: 'live' });
+    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors/c1/resolve', expect.objectContaining({ method: 'POST', body: JSON.stringify({ ref }) }));
   });
 });

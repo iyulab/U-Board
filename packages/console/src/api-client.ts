@@ -98,3 +98,51 @@ export function updateBoard(workspaceId: string, boardId: string, input: { name?
 export function deleteBoard(workspaceId: string, boardId: string) {
   return request<void>(`/workspaces/${workspaceId}/boards/${boardId}`, { method: 'DELETE' });
 }
+
+export type ConnectorAuthType = 'none' | 'bearer' | 'header';
+
+export interface ConnectorSummary {
+  id: string;
+  name: string;
+  type: 'http';
+  baseUrl: string;
+  authType: ConnectorAuthType;
+  authHeaderName?: string;
+  updatedAt: string;
+}
+
+export function listConnectors(workspaceId: string) {
+  return request<{ connectors: ConnectorSummary[] }>(`/workspaces/${workspaceId}/connectors`);
+}
+
+export function createConnector(
+  workspaceId: string,
+  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authValue?: string }
+) {
+  return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateConnector(
+  workspaceId: string,
+  connectorId: string,
+  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authValue?: string }
+) {
+  return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors/${connectorId}`, {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteConnector(workspaceId: string, connectorId: string) {
+  return request<void>(`/workspaces/${workspaceId}/connectors/${connectorId}`, { method: 'DELETE' });
+}
+
+export function resolveConnector(workspaceId: string, connectorId: string, ref: { path: string; valuePath?: string }) {
+  return request<{ value: unknown; quality: 'live' | 'stale' | 'disconnected' }>(
+    `/workspaces/${workspaceId}/connectors/${connectorId}/resolve`,
+    { method: 'POST', body: JSON.stringify({ ref }) }
+  );
+}
