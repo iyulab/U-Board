@@ -136,20 +136,24 @@ export function updateConnector(
     name?: string;
     baseUrl?: string;
     authType?: 'none' | 'bearer' | 'header';
-    authHeaderName?: string;
-    authValue?: string;
+    authHeaderName?: string | null;
+    authValue?: string | null;
   }
 ): Connector | undefined {
   const existing = findConnector(db, workspaceId, connectorId);
   if (!existing) return undefined;
+
+  // Distinguish undefined (don't touch) from null (explicitly clear)
+  const authHeaderName = input.authHeaderName === undefined ? existing.authHeaderName : (input.authHeaderName ?? undefined);
+  const authValue = input.authValue === undefined ? existing.authValue : (input.authValue ?? undefined);
 
   const updated: Connector = {
     ...existing,
     name: input.name ?? existing.name,
     baseUrl: input.baseUrl ?? existing.baseUrl,
     authType: input.authType ?? existing.authType,
-    authHeaderName: input.authHeaderName ?? existing.authHeaderName,
-    authValue: input.authValue ?? existing.authValue,
+    authHeaderName,
+    authValue,
     updatedAt: new Date().toISOString(),
   };
   db.prepare(
@@ -159,8 +163,8 @@ export function updateConnector(
     updated.name,
     updated.baseUrl,
     updated.authType,
-    updated.authHeaderName ?? null,
-    updated.authValue ?? null,
+    authHeaderName ?? null,
+    authValue ?? null,
     updated.updatedAt,
     connectorId,
     workspaceId

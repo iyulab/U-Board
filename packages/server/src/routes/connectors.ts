@@ -77,12 +77,32 @@ export function createConnectorsRouter(config: AppConfig): Router {
         return;
       }
     }
+    // Compute authHeaderName and authValue based on authType change:
+    // - undefined authType: don't touch either field
+    // - authType === 'none': explicitly clear authValue
+    // - authType === 'header': keep or set authHeaderName, clear authValue only if not provided
+    // - authType === 'bearer': clear authHeaderName, keep or set authValue only if provided
+    let authHeaderName: string | null | undefined;
+    let authValue: string | null | undefined;
+    if (body.authType === undefined) {
+      authHeaderName = undefined;
+      authValue = undefined;
+    } else if (body.authType === 'none') {
+      authHeaderName = body.authHeaderName === undefined ? undefined : null;
+      authValue = null;
+    } else if (body.authType === 'header') {
+      authHeaderName = body.authHeaderName;
+      authValue = body.authValue ?? undefined;
+    } else if (body.authType === 'bearer') {
+      authHeaderName = null;
+      authValue = body.authValue ?? undefined;
+    }
     const updated = updateConnector(db, req.params.workspaceId, req.params.connectorId, {
       name: body.name,
       baseUrl: body.baseUrl,
       authType: body.authType,
-      authHeaderName: body.authType === 'header' ? body.authHeaderName : body.authHeaderName,
-      authValue: body.authType === 'none' ? undefined : body.authValue,
+      authHeaderName,
+      authValue,
     });
     if (!updated) {
       res.status(404).json({ code: 'NOT_FOUND' });

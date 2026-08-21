@@ -8,6 +8,7 @@ import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
+import { findConnector } from '../db/connectors.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
 let db: Database.Database;
@@ -123,5 +124,85 @@ describe('connectors CRUD routes', () => {
       .set('Cookie', otherCookie)
       .send({ name: 'X' });
     expect(res.status).toBe(404);
+  });
+
+  it('clears authValue when authType changes to none', async () => {
+    // Create connector with bearer auth
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'API', baseUrl: 'https://api.example.com', authType: 'bearer', authValue: 'secret123' });
+    expect(create.status).toBe(201);
+    const connectorId = create.body.id;
+
+    // Verify secret was stored (via database, since API doesn't expose it)
+    let stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authValue).toBe('secret123');
+
+    // Update authType to 'none', clearing the secret
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ authType: 'none' });
+    expect(update.status).toBe(200);
+    expect(update.body.authType).toBe('none');
+
+    // Verify secret was cleared in database
+    stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authValue).toBeUndefined();
+  });
+
+  it('clears authHeaderName when authType changes away from header', async () => {
+    // Create connector with header auth
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'API', baseUrl: 'https://api.example.com', authType: 'header', authHeaderName: 'X-API-Key', authValue: 'secret123' });
+    expect(create.status).toBe(201);
+    const connectorId = create.body.id;
+
+    // Verify authHeaderName was stored
+    let stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authHeaderName).toBe('X-API-Key');
+
+    // Update authType to 'bearer', clearing authHeaderName
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ authType: 'bearer', authValue: 'newtoken' });
+    expect(update.status).toBe(200);
+    expect(update.body.authType).toBe('bearer');
+    expect(update.body.authHeaderName).toBeUndefined();
+
+    // Verify authHeaderName was cleared in database
+    stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authHeaderName).toBeUndefined();
+  });
+
+  it('preserves auth fields when updating only name (partial update)', async () => {
+    // Create connector with bearer auth
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'API', baseUrl: 'https://api.example.com', authType: 'bearer', authValue: 'secret123' });
+    expect(create.status).toBe(201);
+    const connectorId = create.body.id;
+
+    // Verify secret was stored
+    let stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authValue).toBe('secret123');
+
+    // Update only name, without touching authType
+    const update = await request(app)
+      .put(`/workspaces/${workspaceId}/connectors/${connectorId}`)
+      .set('Cookie', ownerCookie)
+      .send({ name: 'Renamed API' });
+    expect(update.status).toBe(200);
+    expect(update.body.name).toBe('Renamed API');
+    expect(update.body.authType).toBe('bearer');
+
+    // Verify secret was NOT cleared (partial update preserved it)
+    stored = findConnector(db, workspaceId, connectorId);
+    expect(stored?.authValue).toBe('secret123');
   });
 });
