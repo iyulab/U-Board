@@ -64,6 +64,7 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
           ))}
         </select>
         <Link to="/boards">보드</Link>
+        <Link to="/connectors">커넥터</Link>
         <button onClick={handleLogout}>로그아웃</button>
       </header>
 

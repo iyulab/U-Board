@@ -8,6 +8,7 @@ import { InvitePage } from './pages/InvitePage.js';
 import { RequireSession } from './RequireSession.js';
 import { BoardsListPage } from './pages/BoardsListPage.js';
 import { BoardEditorPage } from './pages/BoardEditorPage.js';
+import { ConnectorsPage } from './pages/ConnectorsPage.js';
 
 type RootStatus = 'loading' | 'authenticated' | 'needs-bootstrap-signup' | 'needs-login';
 
@@ -59,6 +60,10 @@ export function App({
         <Route
           path="/boards/:boardId/edit"
           element={<RequireSession>{s => <BoardEditorPage workspaceId={s.activeWorkspaceId} />}</RequireSession>}
+        />
+        <Route
+          path="/connectors"
+          element={<RequireSession>{s => <ConnectorsPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</RequireSession>}
         />
       </Routes>
     </RouterComponent>
