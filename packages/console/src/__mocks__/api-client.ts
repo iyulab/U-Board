@@ -27,3 +27,6 @@ export const createConnector = vi.fn();
 export const updateConnector = vi.fn();
 export const deleteConnector = vi.fn();
 export const resolveConnector = vi.fn();
+export const listShareTokens = vi.fn();
+export const createShareToken = vi.fn();
+export const deleteShareToken = vi.fn();

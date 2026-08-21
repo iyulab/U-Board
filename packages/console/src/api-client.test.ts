@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector } from './api-client.js';
+import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector, listShareTokens, createShareToken, deleteShareToken } from './api-client.js';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
@@ -109,5 +109,27 @@ describe('connector endpoints', () => {
     const ref = { path: '/pumps/a', valuePath: 'status' };
     await expect(resolveConnector('w1', 'c1', ref)).resolves.toEqual({ value: 'running', quality: 'live' });
     expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors/c1/resolve', expect.objectContaining({ method: 'POST', body: JSON.stringify({ ref }) }));
+  });
+});
+
+describe('share token endpoints', () => {
+  it('listShareTokens GETs /workspaces/:id/boards/:id/share-tokens', async () => {
+    const summary = { id: 't1', tokenMask: 'ab12cd34', createdAt: 't' };
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ tokens: [summary] }) });
+    await expect(listShareTokens('w1', 'b1')).resolves.toEqual({ tokens: [summary] });
+    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ credentials: 'include' }));
+  });
+
+  it('createShareToken POSTs with no body', async () => {
+    const created = { id: 't1', token: 'plaintext-token-value', tokenMask: 'ab12cd34', createdAt: 't' };
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => created });
+    await expect(createShareToken('w1', 'b1')).resolves.toEqual(created);
+    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('deleteShareToken DELETEs and resolves with no body', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await expect(deleteShareToken('w1', 'b1', 't1')).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1/share-tokens/t1', expect.objectContaining({ method: 'DELETE' }));
   });
 });

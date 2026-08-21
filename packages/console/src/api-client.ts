@@ -146,3 +146,25 @@ export function resolveConnector(workspaceId: string, connectorId: string, ref: 
     { method: 'POST', body: JSON.stringify({ ref }) }
   );
 }
+
+export interface ShareTokenSummary {
+  id: string;
+  tokenMask: string;
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
+export function listShareTokens(workspaceId: string, boardId: string) {
+  return request<{ tokens: ShareTokenSummary[] }>(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`);
+}
+
+export function createShareToken(workspaceId: string, boardId: string) {
+  return request<{ id: string; token: string; tokenMask: string; createdAt: string }>(
+    `/workspaces/${workspaceId}/boards/${boardId}/share-tokens`,
+    { method: 'POST' }
+  );
+}
+
+export function deleteShareToken(workspaceId: string, boardId: string, tokenId: string) {
+  return request<void>(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens/${tokenId}`, { method: 'DELETE' });
+}
