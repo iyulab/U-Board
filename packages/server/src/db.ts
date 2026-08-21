@@ -43,6 +43,21 @@ CREATE TABLE IF NOT EXISTS boards (
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS connectors (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('http')),
+  base_url TEXT NOT NULL,
+  auth_type TEXT NOT NULL CHECK (auth_type IN ('none', 'bearer', 'header')),
+  auth_header_name TEXT,
+  auth_value TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_connectors_workspace_id ON connectors(workspace_id);
 `;
 
 export function createDb(path: string): Database.Database {

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createDb } from './db.js';
 
 describe('createDb', () => {
-  it('creates all five tables on an in-memory database', () => {
+  it('creates all six tables on an in-memory database', () => {
     const db = createDb(':memory:');
     const tables = db
       .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`)
@@ -10,6 +10,7 @@ describe('createDb', () => {
       .map((row: any) => row.name);
     expect(tables).toEqual([
       'boards',
+      'connectors',
       'users',
       'workspace_invitations',
       'workspace_users',
