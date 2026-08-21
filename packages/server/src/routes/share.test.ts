@@ -81,9 +81,9 @@ describe('public share routes', () => {
     const token = await createShareToken();
     const otherBoardId = createBoard(db, { workspaceId, name: 'Board B' }).id;
 
-    await expect(request(app).get(`/share/boards/${boardId}`)).resolves.toMatchObject({ status: 404 });
-    await expect(request(app).get(`/share/boards/${boardId}?token=garbage`)).resolves.toMatchObject({ status: 404 });
-    await expect(request(app).get(`/share/boards/${otherBoardId}?token=${token}`)).resolves.toMatchObject({ status: 404 });
+    await expect(request(app).get(`/share/boards/${boardId}`)).resolves.toMatchObject({ status: 404, body: { code: 'NOT_FOUND' } });
+    await expect(request(app).get(`/share/boards/${boardId}?token=garbage`)).resolves.toMatchObject({ status: 404, body: { code: 'NOT_FOUND' } });
+    await expect(request(app).get(`/share/boards/${otherBoardId}?token=${token}`)).resolves.toMatchObject({ status: 404, body: { code: 'NOT_FOUND' } });
   });
 
   it('updates lastUsedAt on a successful access', async () => {
@@ -128,6 +128,7 @@ describe('public share routes', () => {
       .post(`/share/boards/${boardId}/connectors/${other.id}/resolve?token=${token}`)
       .send({ ref: { path: '/status' } });
     expect(res.status).toBe(404);
+    expect(res.body).toEqual({ code: 'NOT_FOUND' });
     expect(fetch).not.toHaveBeenCalled();
   });
 
