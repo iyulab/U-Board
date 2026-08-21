@@ -7,6 +7,7 @@ import { createWorkspacesRouter } from './routes/workspaces.js';
 import { createBoardsRouter } from './routes/boards.js';
 import { createBoardShareTokensRouter } from './routes/board-share-tokens.js';
 import { createConnectorsRouter } from './routes/connectors.js';
+import { createShareRouter } from './routes/share.js';
 
 export interface AppConfig {
   db: Database.Database;
@@ -25,6 +26,7 @@ export function createApp(config: AppConfig): express.Express {
   app.use('/workspaces/:workspaceId/boards', createBoardsRouter(config));
   app.use('/workspaces/:workspaceId/boards/:boardId/share-tokens', createBoardShareTokensRouter(config));
   app.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveCache));
+  app.use('/share', createShareRouter(config, resolveCache));
   // Must stay last: Express only reaches an error handler registered AFTER the layer that
   // failed, so anything mounted below this line would bypass it.
   app.use(errorHandler);
