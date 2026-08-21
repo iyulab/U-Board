@@ -46,6 +46,11 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   expect(boardInfoResp.status()).toBe(200);
   await expect(sharePage.getByText('더 이상 유효하지 않습니다')).not.toBeVisible();
   await expect(sharePage.locator('body')).not.toContainText('불러오는 중...', { timeout: 10000 });
+  // 위 negative assertion들은 200 응답이 실제로 뷰어에 렌더링됐음을 증명하지 않는다 — 응답
+  // 파싱이나 canvas-kit 렌더 파이프라인이 조용히 실패해도 통과한다. ViewerPage는 resolveDocument
+  // 완료 후에만 preview state를 세팅하고, Viewer는 그때만 canvas를 마운트하므로(canvas-kit
+  // viewer 패키지 확인) 이 엘리먼트의 가시성이 실제 렌더 성공의 positive 증거가 된다.
+  await expect(sharePage.getByTestId('canvas')).toBeVisible();
   await shareContext.close();
 
   // 콘솔에서 회수
