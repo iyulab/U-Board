@@ -127,6 +127,41 @@ describe('ConnectorsPage', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
+  it('edits a bearer connector name without re-entering the secret', async () => {
+    const bearerConnector = { id: 'c3', name: 'Plant API', type: 'http' as const, baseUrl: 'https://plant.example.com', authType: 'bearer' as const, updatedAt: 't' };
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [bearerConnector] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.updateConnector).mockResolvedValue({ ...bearerConnector, name: 'Renamed API' });
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '수정' }));
+    // The secret field starts blank on edit and is left untouched here.
+    expect((screen.getByLabelText('값(변경 시에만 입력)') as HTMLInputElement).value).toBe('');
+    fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Renamed API' } });
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 수정' }));
+
+    await waitFor(() => expect(api.updateConnector).toHaveBeenCalledWith('w1', 'c3', {
+      name: 'Renamed API', baseUrl: 'https://plant.example.com', authType: 'bearer', authHeaderName: undefined, authValue: undefined,
+    }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows an error when the member list (permission check) fails to load', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [CONNECTOR] });
+    vi.mocked(api.listMembers).mockRejectedValue(new Error('network'));
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('권한 정보를 불러오지 못해 관리 기능을 표시할 수 없습니다');
+  });
+
   it('shows error when delete fails', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [CONNECTOR] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });

@@ -5,6 +5,9 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
   const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Kept separate from `error` rather than sharing it: the connector-list load resolves
+  // independently and clears `error` on success, which would race away a permission-load failure.
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
@@ -26,7 +29,14 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   }, [workspaceId]);
 
   useEffect(() => {
-    listMembers(workspaceId).then(res => setIsOwner(res.members.find(m => m.userId === userId)?.role === 'owner'));
+    // Without this catch a failure here is silent: `isOwner` stays false and an actual owner sees
+    // the read-only view with no explanation of where the management controls went.
+    listMembers(workspaceId)
+      .then(res => {
+        setPermissionError(null);
+        setIsOwner(res.members.find(m => m.userId === userId)?.role === 'owner');
+      })
+      .catch(() => setPermissionError('권한 정보를 불러오지 못해 관리 기능을 표시할 수 없습니다'));
   }, [workspaceId, userId]);
 
   function resetForm() {
@@ -85,6 +95,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     <div>
       <h2>데이터소스</h2>
       {error && <p role="alert">{error}</p>}
+      {permissionError && <p role="alert">{permissionError}</p>}
       <ul>
         {connectors.map(c => (
           <li key={c.id}>
