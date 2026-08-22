@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
-import type Database from 'better-sqlite3';
-import type express from 'express';
+import type { DbClient } from '../db.js';
 import { createDb } from '../db.js';
 import { createApp } from '../app.js';
 import { createUser } from '../db/users.js';
@@ -10,11 +9,11 @@ import { createInvitation } from '../db/invitations.js';
 import { hashPassword } from '../auth/password.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
-let db: Database.Database;
-let app: express.Express;
+let db: DbClient;
+let app: import('express').Express;
 
-beforeEach(() => {
-  db = createDb(':memory:');
+beforeEach(async () => {
+  db = await createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
 });
 
@@ -38,10 +37,10 @@ describe('POST /auth/signup', () => {
   });
 
   it('accepts signup with a valid invitation token, joining the inviting workspace as member', async () => {
-    const owner = createUser(db, { email: 'owner@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
-    const workspace = createWorkspace(db, 'W1');
-    addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
-    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'invitee@x.com', role: 'member', invitedByUserId: owner.id });
+    const owner = await createUser(db, { email: 'owner@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = await createWorkspace(db, 'W1');
+    await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'invitee@x.com', role: 'member', invitedByUserId: owner.id });
 
     const res = await request(app).post('/auth/signup').send({
       email: 'invitee@x.com', password: 'p4ssword!', name: 'Invitee', invitationToken: invitation.token,
@@ -64,8 +63,6 @@ describe('POST /auth/signup', () => {
   });
 
   it('rejects an unknown/garbage invitation token with 410', async () => {
-    // First user must exist so the request goes down the invitation-required branch
-    // rather than the (also-403) open-bootstrap branch.
     await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
     const res = await request(app).post('/auth/signup').send({
       email: 'nobody@x.com', password: 'p4ssword!', name: 'Nobody', invitationToken: 'garbage-token',
@@ -75,13 +72,13 @@ describe('POST /auth/signup', () => {
   });
 
   it('rejects an expired invitation with 410', async () => {
-    const owner = createUser(db, { email: 'owner2@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
-    const workspace = createWorkspace(db, 'W2');
-    addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
-    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'late@x.com', role: 'member', invitedByUserId: owner.id });
-    db.prepare('UPDATE workspace_invitations SET expires_at = ? WHERE id = ?').run(
-      new Date(Date.now() - 1000).toISOString(), invitation.id
-    );
+    const owner = await createUser(db, { email: 'owner2@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = await createWorkspace(db, 'W2');
+    await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'late@x.com', role: 'member', invitedByUserId: owner.id });
+    await db.query('UPDATE workspace_invitations SET expires_at = $1 WHERE id = $2', [
+      new Date(Date.now() - 1000).toISOString(), invitation.id,
+    ]);
 
     const res = await request(app).post('/auth/signup').send({
       email: 'late@x.com', password: 'p4ssword!', name: 'Late', invitationToken: invitation.token,
@@ -91,10 +88,10 @@ describe('POST /auth/signup', () => {
   });
 
   it('rejects an invitation whose email does not match the signup email with 410', async () => {
-    const owner = createUser(db, { email: 'owner3@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
-    const workspace = createWorkspace(db, 'W3');
-    addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
-    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'invited@x.com', role: 'member', invitedByUserId: owner.id });
+    const owner = await createUser(db, { email: 'owner3@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = await createWorkspace(db, 'W3');
+    await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'invited@x.com', role: 'member', invitedByUserId: owner.id });
 
     const res = await request(app).post('/auth/signup').send({
       email: 'someone-else@x.com', password: 'p4ssword!', name: 'Mismatch', invitationToken: invitation.token,
@@ -107,14 +104,62 @@ describe('POST /auth/signup', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     // Makes `addWorkspaceUser` — the last write of the sequence — fail, after the workspace and
     // the user rows have already been inserted within the same transaction.
-    db.exec('DROP TABLE workspace_users');
+    await db.query('DROP TABLE workspace_users');
 
     const res = await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
 
     expect(res.status).toBe(500);
     expect(res.body.code).toBe('INTERNAL_ERROR');
-    expect(db.prepare('SELECT COUNT(*) AS c FROM users').get()).toEqual({ c: 0 });
-    expect(db.prepare('SELECT COUNT(*) AS c FROM workspaces').get()).toEqual({ c: 0 });
+    expect(Number((await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM users')).rows[0].c)).toBe(0);
+    expect(Number((await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM workspaces')).rows[0].c)).toBe(0);
+  });
+
+  it('serializes two concurrent open bootstrap signups — only one becomes owner', async () => {
+    // Both requests have no invitation token, so both race the "am I the first user" bootstrap
+    // gate guarded by pg_advisory_xact_lock. The loser is rejected by that gate (403) before it
+    // ever reaches the users.email UNIQUE constraint — a separate scenario below races on the
+    // constraint itself.
+    const attempt = () => request(app).post('/auth/signup').send({ email: 'race@x.com', password: 'p4ssword!', name: 'Racer' });
+    const [a, b] = await Promise.all([attempt(), attempt()]);
+    const statuses = [a.status, b.status].sort((x, y) => x - y);
+    expect(statuses).toEqual([201, 403]);
+    expect(Number((await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM users')).rows[0].c)).toBe(1);
+  });
+
+  it('rejects one of two concurrent invited signups with the same email — the users.email UNIQUE constraint wins', async () => {
+    // Two distinct, independently-valid invitations for the same email. Both skip the bootstrap
+    // gate (an invitation is present) and both successfully claim their own distinct invitation
+    // row via markInvitationAcceptedIfUnused — so this is the scenario that actually reaches two
+    // concurrent createUser() calls for the same email and exercises the 23505 catch.
+    const owner = await createUser(db, { email: 'owner5@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = await createWorkspace(db, 'W5');
+    await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    const invitationA = await createInvitation(db, { workspaceId: workspace.id, email: 'race2@x.com', role: 'member', invitedByUserId: owner.id });
+    const invitationB = await createInvitation(db, { workspaceId: workspace.id, email: 'race2@x.com', role: 'member', invitedByUserId: owner.id });
+
+    const attempt = (token: string) => request(app).post('/auth/signup').send({
+      email: 'race2@x.com', password: 'p4ssword!', name: 'Racer2', invitationToken: token,
+    });
+    const [a, b] = await Promise.all([attempt(invitationA.token), attempt(invitationB.token)]);
+    const statuses = [a.status, b.status].sort((x, y) => x - y);
+    expect(statuses).toEqual([201, 409]);
+    expect(
+      Number((await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM users WHERE email = $1', ['race2@x.com'])).rows[0].c)
+    ).toBe(1);
+  });
+
+  it('rejects one of two concurrent signups redeeming the same invitation token', async () => {
+    const owner = await createUser(db, { email: 'owner4@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = await createWorkspace(db, 'W4');
+    await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'shared@x.com', role: 'member', invitedByUserId: owner.id });
+
+    const attempt = () => request(app).post('/auth/signup').send({
+      email: 'shared@x.com', password: 'p4ssword!', name: 'Shared', invitationToken: invitation.token,
+    });
+    const [a, b] = await Promise.all([attempt(), attempt()]);
+    const statuses = [a.status, b.status].sort((x, y) => x - y);
+    expect(statuses).toEqual([201, 410]);
   });
 });
 
@@ -163,7 +208,6 @@ describe('POST /auth/logout', () => {
   it('expires the cookie instead of re-issuing the 30-day one, and repeats SameSite', async () => {
     const res = await request(app).post('/auth/logout');
     const header = res.headers['set-cookie']?.[0] ?? '';
-    // A clearing cookie carrying the live Max-Age would leave the session valid in the browser.
     expect(header).not.toMatch(/Max-Age=2592000/);
     expect(header).toMatch(/Expires=Thu, 01 Jan 1970/);
     expect(header).toMatch(/SameSite=Lax/);
