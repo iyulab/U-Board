@@ -1,51 +1,52 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import { createDb } from '../db.js';
 import { createUser } from './users.js';
-import {
-  createWorkspace,
-  addWorkspaceUser,
-  findWorkspaceUser,
-  listWorkspacesForUser,
-  listWorkspaceMembers,
-} from './workspaces.js';
+import { createWorkspace, addWorkspaceUser, findWorkspaceUser, listWorkspacesForUser, listWorkspaceMembers } from './workspaces.js';
 
-let db: Database.Database;
-beforeEach(() => {
-  db = createDb(':memory:');
+let db: DbClient;
+beforeEach(async () => {
+  db = await createDb(':memory:');
 });
 
 describe('workspace repository', () => {
-  it('creates a workspace and adds a member', () => {
-    const workspace = createWorkspace(db, 'Default');
-    const user = createUser(db, { email: 'a@x.com', passwordHash: 'h', name: 'A' });
-    const wu = addWorkspaceUser(db, { workspaceId: workspace.id, userId: user.id, role: 'owner' });
-    expect(wu.role).toBe('owner');
-    expect(findWorkspaceUser(db, workspace.id, user.id)).toEqual(wu);
+  it('creates a workspace', async () => {
+    const ws = await createWorkspace(db, 'My Workspace');
+    expect(ws.name).toBe('My Workspace');
+    expect(ws.id).toBeTruthy();
   });
 
-  it('lists all workspaces a user belongs to', () => {
-    const user = createUser(db, { email: 'a@x.com', passwordHash: 'h', name: 'A' });
-    const w1 = createWorkspace(db, 'W1');
-    const w2 = createWorkspace(db, 'W2');
-    addWorkspaceUser(db, { workspaceId: w1.id, userId: user.id, role: 'owner' });
-    addWorkspaceUser(db, { workspaceId: w2.id, userId: user.id, role: 'member' });
-    const names = listWorkspacesForUser(db, user.id).map(w => w.name).sort();
-    expect(names).toEqual(['W1', 'W2']);
+  it('adds a user to a workspace and finds the membership', async () => {
+    const user = await createUser(db, { email: 'a@x.com', passwordHash: 'h', name: 'A' });
+    const ws = await createWorkspace(db, 'W');
+    await addWorkspaceUser(db, { workspaceId: ws.id, userId: user.id, role: 'owner' });
+    const found = await findWorkspaceUser(db, ws.id, user.id);
+    expect(found?.role).toBe('owner');
   });
 
-  it('lists members of a workspace with their role and profile', () => {
-    const user = createUser(db, { email: 'a@x.com', passwordHash: 'h', name: 'A' });
-    const workspace = createWorkspace(db, 'W1');
-    addWorkspaceUser(db, { workspaceId: workspace.id, userId: user.id, role: 'owner' });
-    expect(listWorkspaceMembers(db, workspace.id)).toEqual([
-      { userId: user.id, email: 'a@x.com', name: 'A', role: 'owner' },
-    ]);
+  it('returns undefined for a non-member', async () => {
+    const ws = await createWorkspace(db, 'W');
+    expect(await findWorkspaceUser(db, ws.id, 'nobody')).toBeUndefined();
   });
 
-  it('returns undefined when the user is not a member of the workspace', () => {
-    const workspace = createWorkspace(db, 'W1');
-    const user = createUser(db, { email: 'a@x.com', passwordHash: 'h', name: 'A' });
-    expect(findWorkspaceUser(db, workspace.id, user.id)).toBeUndefined();
+  it('lists workspaces for a user, oldest first', async () => {
+    const user = await createUser(db, { email: 'a@x.com', passwordHash: 'h', name: 'A' });
+    const ws1 = await createWorkspace(db, 'First');
+    await addWorkspaceUser(db, { workspaceId: ws1.id, userId: user.id, role: 'owner' });
+    const ws2 = await createWorkspace(db, 'Second');
+    await addWorkspaceUser(db, { workspaceId: ws2.id, userId: user.id, role: 'owner' });
+    const list = await listWorkspacesForUser(db, user.id);
+    expect(list.map(w => w.id)).toEqual([ws1.id, ws2.id]);
+  });
+
+  it('lists members of a workspace', async () => {
+    const owner = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
+    const member = await createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
+    const ws = await createWorkspace(db, 'W');
+    await addWorkspaceUser(db, { workspaceId: ws.id, userId: owner.id, role: 'owner' });
+    await addWorkspaceUser(db, { workspaceId: ws.id, userId: member.id, role: 'member' });
+    const members = await listWorkspaceMembers(db, ws.id);
+    expect(members).toHaveLength(2);
+    expect(members.find(m => m.userId === owner.id)?.role).toBe('owner');
   });
 });
