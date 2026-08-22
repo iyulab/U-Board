@@ -218,7 +218,7 @@ describe('public share routes', () => {
     // PUT /workspaces/:id/boards/:id route (not the updateBoard() DB helper directly), and the
     // ref used against the resolve route is read back out of the share GET response rather than
     // the literal object above — so both sides of isDeclaredBinding's comparison actually pass
-    // through JSON.stringify -> SQLite storage -> JSON.parse -> HTTP response -> HTTP request,
+    // through JSON.stringify -> database storage -> JSON.parse -> HTTP response -> HTTP request,
     // the same path the embed viewer takes, instead of sharing one in-memory object by reference.
     const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {

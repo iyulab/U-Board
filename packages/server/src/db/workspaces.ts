@@ -55,6 +55,9 @@ export async function findWorkspaceUser(db: DbClient, workspaceId: string, userI
 
 export async function listWorkspacesForUser(db: DbClient, userId: string): Promise<Workspace[]> {
   const { rows } = await db.query<{ id: string; name: string; created_at: string }>(
+    // Ordered so the caller's [0] is stable: login uses it to pick the session's initial
+    // activeWorkspaceId, and the console's workspace switcher lists it as-is. `id` breaks
+    // ties between workspaces created within the same millisecond.
     `SELECT w.id, w.name, w.created_at FROM workspaces w
      JOIN workspace_users wu ON wu.workspace_id = w.id
      WHERE wu.user_id = $1

@@ -81,6 +81,12 @@ CREATE TABLE IF NOT EXISTS board_share_tokens (
 CREATE INDEX IF NOT EXISTS idx_board_share_tokens_board_id ON board_share_tokens(board_id);
 `;
 
+// Distinct from routes/auth.ts's SIGNUP_BOOTSTRAP_LOCK_KEY (727100) — Postgres advisory locks
+// share one global per-database keyspace, so every key used anywhere in this app must stay
+// distinct. This one serializes schema bootstrap against concurrent cold-start replicas racing
+// to CREATE TABLE at once — not atomic on its own in Postgres.
+const SCHEMA_BOOTSTRAP_LOCK_KEY = 727101;
+
 class PgDbClient implements DbClient {
   constructor(private readonly runner: Pool | PoolClient) {}
 
@@ -98,12 +104,19 @@ class PgDbClient implements DbClient {
       await client.query('BEGIN');
       const result = await fn(new PgDbClient(client));
       await client.query('COMMIT');
+      client.release();
       return result;
     } catch (err) {
-      await client.query('ROLLBACK');
+      try {
+        await client.query('ROLLBACK');
+        client.release();
+      } catch (rollbackErr) {
+        // ROLLBACK itself failed — the connection is broken. Destroy it (don't return it to the
+        // pool healthy) rather than let it fail every future checkout with "current transaction
+        // is aborted".
+        client.release(rollbackErr instanceof Error ? rollbackErr : new Error(String(rollbackErr)));
+      }
       throw err;
-    } finally {
-      client.release();
     }
   }
 }
@@ -129,7 +142,20 @@ class PgliteDbClient implements DbClient {
 export async function createDb(url: string): Promise<DbClient> {
   if (url.startsWith('postgres://') || url.startsWith('postgresql://')) {
     const pool = new Pool({ connectionString: url });
-    await pool.query(SCHEMA_SQL);
+    pool.on('error', err => {
+      // A pooled client can emit this for an *idle* connection dropped by the network/gateway —
+      // routine in cloud Postgres. Without a listener, Node's EventEmitter rethrows and crashes the
+      // process; the pool itself recovers on its own (the broken idle client is simply evicted).
+      console.error('pg pool idle client error', err);
+    });
+    const bootstrapClient = await pool.connect();
+    try {
+      await bootstrapClient.query('SELECT pg_advisory_lock($1)', [SCHEMA_BOOTSTRAP_LOCK_KEY]);
+      await bootstrapClient.query(SCHEMA_SQL);
+    } finally {
+      await bootstrapClient.query('SELECT pg_advisory_unlock($1)', [SCHEMA_BOOTSTRAP_LOCK_KEY]);
+      bootstrapClient.release();
+    }
     return new PgDbClient(pool);
   }
   // `:memory:` (tests) or any local path (local `npm run dev` default) both use PGlite — a real

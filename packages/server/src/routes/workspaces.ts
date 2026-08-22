@@ -31,6 +31,8 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
+    // Re-inviting someone who already belongs here is a conflict, not a second invitation —
+    // otherwise a redundant token is minted that can only ever resolve to ALREADY_MEMBER.
     const existingUser = await findUserByEmail(db, email);
     if (existingUser && (await findWorkspaceUser(db, req.params.workspaceId, existingUser.id))) {
       res.status(409).json({ code: 'ALREADY_MEMBER' });

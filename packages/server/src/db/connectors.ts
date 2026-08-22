@@ -134,6 +134,7 @@ export async function updateConnector(
   const existing = await findConnector(db, workspaceId, connectorId);
   if (!existing) return undefined;
 
+  // Distinguish undefined (don't touch) from null (explicitly clear)
   const authHeaderName = input.authHeaderName === undefined ? existing.authHeaderName : (input.authHeaderName ?? undefined);
   const authValue = input.authValue === undefined ? existing.authValue : (input.authValue ?? undefined);
 

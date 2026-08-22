@@ -15,6 +15,11 @@ import { isValidRef, buildResolveTarget, resolveConnectorValue } from '../resolv
 
 const AUTH_TYPES = new Set(['none', 'bearer', 'header']);
 
+/**
+ * A connector's baseUrl must be an absolute http(s) URL. The scheme allowlist is load-bearing,
+ * not cosmetic: the resolve proxy pins the request target to the baseUrl's origin, and a
+ * non-special scheme has the opaque origin `"null"`, which would make that comparison vacuous.
+ */
 function parseBaseUrl(value: unknown): URL | null {
   if (typeof value !== 'string' || value.trim() === '') return null;
   try {
@@ -25,6 +30,14 @@ function parseBaseUrl(value: unknown): URL | null {
   }
 }
 
+/**
+ * A secret-bearing auth field is satisfied when the request supplies a non-blank string, or —
+ * when the request omits it entirely — when the connector already has one stored. Omitting the
+ * field means "keep the stored secret" (the console's edit form leaves it blank on purpose so a
+ * rename does not require re-typing the secret); an explicitly supplied blank/non-string value is
+ * still rejected, and so is omission when nothing is stored, because storing nothing would make
+ * the resolve proxy send a literal `Bearer undefined`.
+ */
 function authFieldSatisfied(provided: unknown, stored: string | undefined): boolean {
   if (provided === undefined) return typeof stored === 'string' && stored.trim() !== '';
   return typeof provided === 'string' && provided.trim() !== '';
@@ -33,6 +46,8 @@ function authFieldSatisfied(provided: unknown, stored: string | undefined): bool
 function validateAuthFields(body: any, existing?: Connector): string | null {
   if (!AUTH_TYPES.has(body.authType)) return 'INVALID_INPUT';
   if (body.authType === 'header') {
+    // Only fall back to a stored header name if the connector is *currently* header-auth —
+    // otherwise the stored value is not a live header name we may keep.
     const storedHeaderName = existing?.authType === 'header' ? existing.authHeaderName : undefined;
     if (!authFieldSatisfied(body.authHeaderName, storedHeaderName)) return 'INVALID_INPUT';
   }
@@ -45,7 +60,7 @@ function validateAuthFields(body: any, existing?: Connector): string | null {
 
 export function createConnectorsRouter(config: AppConfig, resolveCache: Map<string, unknown>): Router {
   const { db, sessionSecret } = config;
-  const router = Router({ mergeParams: true });
+  const router = Router({ mergeParams: true }); // :workspaceId comes from the parent mount path
   router.use(requireAuth(db, sessionSecret));
 
   router.get('/', requireWorkspaceMember(db), asyncHandler(async (req, res) => {
@@ -91,6 +106,9 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
+    // Auth validation runs against the *merged* state, so the existing connector has to be read
+    // first: `{authType: 'bearer'}` with no `authValue` is valid when a secret is already stored
+    // (a rename that leaves the secret alone) and invalid when there is none to fall back on.
     const existing = await findConnector(db, req.params.workspaceId, req.params.connectorId);
     if (!existing) {
       res.status(404).json({ code: 'NOT_FOUND' });
@@ -103,6 +121,11 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
         return;
       }
     }
+    // Compute authHeaderName and authValue based on authType change:
+    // - undefined authType: don't touch either field
+    // - authType === 'none': explicitly clear both authHeaderName and authValue
+    // - authType === 'header': set authHeaderName to new value, clear authValue if not provided
+    // - authType === 'bearer': clear authHeaderName, keep or set authValue if provided
     let authHeaderName: string | null | undefined;
     let authValue: string | null | undefined;
     if (body.authType === undefined) {
