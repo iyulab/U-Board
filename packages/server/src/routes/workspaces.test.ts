@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import type express from 'express';
 import { createDb } from '../db.js';
 import { createApp } from '../app.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
-let db: Database.Database;
+let db: DbClient;
 let app: express.Express;
 
-beforeEach(() => {
-  db = createDb(':memory:');
+beforeEach(async () => {
+  db = await createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
 });
 
@@ -64,13 +64,13 @@ describe('POST /workspaces/:id/invitations', () => {
     await request(app).post('/auth/signup').send({
       email: 'member@x.com', password: 'p4ssword!', name: 'Member', invitationToken: inviteRes.body.token,
     });
-    const invitationsBefore = db.prepare('SELECT COUNT(*) AS c FROM workspace_invitations').get() as { c: number };
+    const invitationsBefore = (await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM workspace_invitations')).rows[0];
 
     const res = await ownerAgent.post(`/workspaces/${workspaceId}/invitations`).send({ email: 'member@x.com', role: 'member' });
 
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('ALREADY_MEMBER');
-    expect(db.prepare('SELECT COUNT(*) AS c FROM workspace_invitations').get()).toEqual(invitationsBefore);
+    expect((await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM workspace_invitations')).rows[0]).toEqual(invitationsBefore);
   });
 
   it('rejects re-inviting an existing member regardless of email casing', async () => {
