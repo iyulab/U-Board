@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import type Database from 'better-sqlite3';
-import type express from 'express';
+import type { DbClient } from './db.js';
 import { createDb } from './db.js';
 import { createApp } from './app.js';
 import { createUser } from './db/users.js';
@@ -10,11 +9,11 @@ import { signSession } from './auth/session.js';
 import { SESSION_COOKIE_NAME, requireAuth } from './middleware/require-auth.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
-let db: Database.Database;
-let app: express.Express;
+let db: DbClient;
+let app: import('express').Express;
 
-beforeEach(() => {
-  db = createDb(':memory:');
+beforeEach(async () => {
+  db = await createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
   app.get('/_test/protected', requireAuth(db, SECRET), (req: any, res) => {
     res.status(200).json({ userId: req.userId });
@@ -36,9 +35,9 @@ describe('createApp / requireAuth', () => {
 
 describe('errorHandler / body size limit', () => {
   it('returns 413 PAYLOAD_TOO_LARGE (not a generic 500) when the request body exceeds the limit', async () => {
-    const member = createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
-    const workspace = createWorkspace(db, 'W1');
-    addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
+    const member = await createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
+    const workspace = await createWorkspace(db, 'W1');
+    await addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
     const cookie = `${SESSION_COOKIE_NAME}=${signSession({ userId: member.id, activeWorkspaceId: workspace.id, issuedAt: Date.now() }, SECRET)}`;
 
     const create = await request(app)

@@ -1,6 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
-import type Database from 'better-sqlite3';
+import type { DbClient } from './db.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createInvitationsRouter } from './routes/invitations.js';
 import { createWorkspacesRouter } from './routes/workspaces.js';
@@ -10,7 +10,7 @@ import { createConnectorsRouter } from './routes/connectors.js';
 import { createShareRouter } from './routes/share.js';
 
 export interface AppConfig {
-  db: Database.Database;
+  db: DbClient;
   sessionSecret: string;
 }
 
