@@ -9,6 +9,7 @@ import {
   listBoardShareTokensForBoard,
   deleteBoardShareToken,
 } from '../db/board-share-tokens.js';
+import { asyncHandler } from '../middleware/async-handler.js';
 
 export function hashShareToken(plain: string): string {
   return createHash('sha256').update(plain).digest('hex');
@@ -21,41 +22,41 @@ export function generateShareToken(): { plain: string; hash: string; mask: strin
 
 export function createBoardShareTokensRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
-  const router = Router({ mergeParams: true }); // :workspaceId, :boardId from the parent mount path
+  const router = Router({ mergeParams: true });
   router.use(requireAuth(db, sessionSecret));
   router.use(requireWorkspaceOwner(db));
 
-  router.get('/', (req, res) => {
+  router.get('/', asyncHandler(async (req, res) => {
     const { workspaceId, boardId } = req.params as { workspaceId: string; boardId: string };
-    if (!findBoard(db, workspaceId, boardId)) {
+    if (!(await findBoard(db, workspaceId, boardId))) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    res.status(200).json({ tokens: listBoardShareTokensForBoard(db, workspaceId, boardId) });
-  });
+    res.status(200).json({ tokens: await listBoardShareTokensForBoard(db, workspaceId, boardId) });
+  }));
 
-  router.post('/', (req: AuthedRequest, res) => {
+  router.post('/', asyncHandler(async (req: AuthedRequest, res) => {
     const { workspaceId, boardId } = req.params as { workspaceId: string; boardId: string };
-    if (!findBoard(db, workspaceId, boardId)) {
+    if (!(await findBoard(db, workspaceId, boardId))) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
     const { plain, hash, mask } = generateShareToken();
-    const created = createBoardShareToken(db, {
+    const created = await createBoardShareToken(db, {
       boardId, workspaceId, tokenHash: hash, tokenMask: mask, createdByUserId: req.userId!,
     });
     res.status(201).json({ id: created.id, token: plain, tokenMask: created.tokenMask, createdAt: created.createdAt });
-  });
+  }));
 
-  router.delete('/:tokenId', (req, res) => {
+  router.delete('/:tokenId', asyncHandler(async (req, res) => {
     const { workspaceId, boardId, tokenId } = req.params as { workspaceId: string; boardId: string; tokenId: string };
-    const deleted = deleteBoardShareToken(db, workspaceId, boardId, tokenId);
+    const deleted = await deleteBoardShareToken(db, workspaceId, boardId, tokenId);
     if (!deleted) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
     res.status(204).send();
-  });
+  }));
 
   return router;
 }

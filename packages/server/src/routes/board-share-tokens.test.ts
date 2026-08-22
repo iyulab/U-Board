@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import type Database from 'better-sqlite3';
-import type express from 'express';
+import type { DbClient } from '../db.js';
 import { createDb } from '../db.js';
 import { createApp } from '../app.js';
 import { createUser } from '../db/users.js';
@@ -11,8 +10,8 @@ import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
-let db: Database.Database;
-let app: express.Express;
+let db: DbClient;
+let app: import('express').Express;
 let workspaceId: string;
 let boardId: string;
 let ownerCookie: string;
@@ -22,17 +21,17 @@ function cookieFor(userId: string, activeWorkspaceId: string) {
   return `${SESSION_COOKIE_NAME}=${signSession({ userId, activeWorkspaceId, issuedAt: Date.now() }, SECRET)}`;
 }
 
-beforeEach(() => {
-  db = createDb(':memory:');
+beforeEach(async () => {
+  db = await createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
 
-  const owner = createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
-  const member = createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
-  const workspace = createWorkspace(db, 'W1');
-  addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
-  addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
+  const owner = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
+  const member = await createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
+  const workspace = await createWorkspace(db, 'W1');
+  await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+  await addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
   workspaceId = workspace.id;
-  boardId = createBoard(db, { workspaceId, name: 'Board A' }).id;
+  boardId = (await createBoard(db, { workspaceId, name: 'Board A' })).id;
   ownerCookie = cookieFor(owner.id, workspace.id);
   memberCookie = cookieFor(member.id, workspace.id);
 });
@@ -85,7 +84,7 @@ describe('board share token management routes', () => {
     const create = await request(app)
       .post(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
-    const otherBoardId = createBoard(db, { workspaceId, name: 'Board B' }).id;
+    const otherBoardId = (await createBoard(db, { workspaceId, name: 'Board B' })).id;
 
     const res = await request(app)
       .delete(`/workspaces/${workspaceId}/boards/${otherBoardId}/share-tokens/${create.body.id}`)
