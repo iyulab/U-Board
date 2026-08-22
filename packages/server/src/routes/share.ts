@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { ViewDocument } from '@iyulab/u-board';
+import type { ViewDocument } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { asyncHandler } from '../middleware/async-handler.js';
 import { findBoard } from '../db/boards.js';

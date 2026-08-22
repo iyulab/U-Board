@@ -1,5 +1,5 @@
 import { Router, type Request } from 'express';
-import { isViewDocumentShape } from '@iyulab/u-board';
+import { isViewDocumentShape } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
 import { requireWorkspaceMember } from '../middleware/require-workspace-role.js';

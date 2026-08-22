@@ -1,6 +1,6 @@
 import type Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
-import type { ViewDocument } from '@iyulab/u-board';
+import type { ViewDocument } from '@iyulab/u-board/domain';
 
 export interface Board {
   id: string;

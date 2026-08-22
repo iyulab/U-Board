@@ -19,6 +19,10 @@
     "./viewer": {
       "types": "./dist/lib/viewer-entry.d.ts",
       "import": "./dist/lib/viewer-entry.js"
+    },
+    "./domain": {
+      "types": "./dist/lib/domain-entry.d.ts",
+      "import": "./dist/lib/domain-entry.js"
     }
   },
   "scripts": {
