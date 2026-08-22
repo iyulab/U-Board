@@ -48,4 +48,28 @@ describe('invitation repository', () => {
     const second = await markInvitationAcceptedIfUnused(db, inv.id);
     expect(second).toBeUndefined();
   });
+
+  it('is not usable after being marked accepted', async () => {
+    const owner = await createUser(db, { email: 'acceptowner@x.com', passwordHash: 'h', name: 'Owner' });
+    const workspace = await createWorkspace(db, 'W');
+    const inv = await createInvitation(db, { workspaceId: workspace.id, email: 'a@x.com', role: 'member', invitedByUserId: owner.id });
+    await markInvitationAccepted(db, inv.id);
+    const reloaded = await findInvitationByToken(db, inv.token);
+    expect(isInvitationUsable(reloaded!)).toBe(false);
+  });
+
+  it('is not usable after expiring', async () => {
+    const owner = await createUser(db, { email: 'expireowner@x.com', passwordHash: 'h', name: 'Owner2' });
+    const workspace = await createWorkspace(db, 'W2');
+    const inv = await createInvitation(db, { workspaceId: workspace.id, email: 'a@x.com', role: 'member', invitedByUserId: owner.id });
+    // Directly backdate expires_at via a raw query — createInvitation always sets a future
+    // expiry (INVITATION_TTL_MS from now), so there's no repository function for "create an
+    // already-expired invitation"; going straight to SQL is the simplest way to test this branch.
+    await db.query('UPDATE workspace_invitations SET expires_at = $1 WHERE id = $2', [
+      new Date(Date.now() - 1000).toISOString(),
+      inv.id,
+    ]);
+    const reloaded = await findInvitationByToken(db, inv.token);
+    expect(isInvitationUsable(reloaded!)).toBe(false);
+  });
 });
