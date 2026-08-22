@@ -32,7 +32,7 @@ export default defineConfig({
       // them directly on the spawned process's environment rather than relying on shell parsing.
       command: 'npm run build && npm start',
       cwd: '../server',
-      env: { UBOARD_DB_PATH: ':memory:', UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long' },
+      env: { UBOARD_DATABASE_URL: ':memory:', UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long' },
       port: 4000,
       reuseExistingServer: !process.env.CI,
     },
