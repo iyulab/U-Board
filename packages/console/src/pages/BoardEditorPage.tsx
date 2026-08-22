@@ -26,6 +26,8 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const [newShareUrl, setNewShareUrl] = useState<string | null>(null);
 
   useEffect(() => {
+    setDocument(null);
+    setLoadError(null);
     getBoard(workspaceId, boardId!)
       .then(board => setDocument(board.document))
       .catch(() => setLoadError('보드를 불러오지 못했습니다'));
@@ -104,6 +106,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       setSavedAt(new Date());
     } catch {
       setSaveError('저장 실패');
+      setSavedAt(null);
     }
   }
 

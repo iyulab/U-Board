@@ -19,6 +19,15 @@ describe('createDb', () => {
     ]);
   });
 
+  it('indexes boards.workspace_id, the column listBoardsForWorkspace filters on', () => {
+    const db = createDb(':memory:');
+    const indexes = db.prepare(`PRAGMA index_list(boards)`).all() as Array<{ name: string }>;
+    const indexedColumns = indexes.flatMap(
+      idx => (db.prepare(`PRAGMA index_info(${idx.name})`).all() as Array<{ name: string }>).map(c => c.name)
+    );
+    expect(indexedColumns).toContain('workspace_id');
+  });
+
   it('enforces unique (workspace_id, user_id) on workspace_users', () => {
     const db = createDb(':memory:');
     db.prepare(

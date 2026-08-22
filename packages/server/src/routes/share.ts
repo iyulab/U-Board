@@ -8,6 +8,17 @@ import { findBoardShareTokenByHash, touchBoardShareTokenLastUsed, type BoardShar
 import { hashShareToken } from './board-share-tokens.js';
 import { isValidRef, buildResolveTarget, resolveConnectorValue } from '../resolve-connector.js';
 
+/** Every `(connectorId, ref)` pair a document's widgets declare via their bindings — the single
+ * traversal `referencedConnectorIds` and `isDeclaredBinding` below both build on, so the
+ * `doc.nodes` → `node.widget?.bindings` → `Object.values(...)` walk exists in exactly one place. */
+function* declaredBindings(doc: ViewDocument): Generator<{ connectorId: string; ref: unknown }> {
+  for (const node of doc.nodes) {
+    for (const binding of Object.values(node.widget?.bindings ?? {})) {
+      yield { connectorId: binding.adapter, ref: binding.ref };
+    }
+  }
+}
+
 /** Every adapter id a document's widgets reference, intersected with the connectors that actually
  * exist in this workspace — an id like `demo-cmms` (the client-side mock, never a DB row) is
  * dropped without any special-casing. Used to report the `connectorIds` list to the viewer, so it
@@ -15,11 +26,7 @@ import { isValidRef, buildResolveTarget, resolveConnectorValue } from '../resolv
  * separately and more narrowly by `isDeclaredBinding` below. */
 function referencedConnectorIds(db: AppConfig['db'], workspaceId: string, doc: ViewDocument): string[] {
   const ids = new Set<string>();
-  for (const node of doc.nodes) {
-    for (const binding of Object.values(node.widget?.bindings ?? {})) {
-      ids.add(binding.adapter);
-    }
-  }
+  for (const { connectorId } of declaredBindings(doc)) ids.add(connectorId);
   return [...ids].filter(id => !!findConnector(db, workspaceId, id));
 }
 
@@ -34,11 +41,9 @@ function referencedConnectorIds(db: AppConfig['db'], workspaceId: string, doc: V
  * unmodified), so canonical-JSON-string comparison is reliable — it is not a functional
  * restriction for any ref the legitimate embed viewer would ever send. */
 function isDeclaredBinding(doc: ViewDocument, connectorId: string, ref: unknown): boolean {
-  for (const node of doc.nodes) {
-    for (const binding of Object.values(node.widget?.bindings ?? {})) {
-      if (binding.adapter === connectorId && JSON.stringify(binding.ref) === JSON.stringify(ref)) {
-        return true;
-      }
+  for (const binding of declaredBindings(doc)) {
+    if (binding.connectorId === connectorId && JSON.stringify(binding.ref) === JSON.stringify(ref)) {
+      return true;
     }
   }
   return false;

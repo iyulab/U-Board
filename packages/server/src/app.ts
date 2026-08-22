@@ -39,8 +39,13 @@ export function createApp(config: AppConfig): express.Express {
  * driver detail to the client.
  */
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {
-  if (err && typeof err === 'object' && 'type' in err && (err as { type?: string }).type === 'entity.too.large') {
+  const type = err && typeof err === 'object' && 'type' in err ? (err as { type?: string }).type : undefined;
+  if (type === 'entity.too.large') {
     res.status(413).json({ code: 'PAYLOAD_TOO_LARGE' });
+    return;
+  }
+  if (type === 'entity.parse.failed') {
+    res.status(400).json({ code: 'INVALID_JSON' });
     return;
   }
   console.error(err);

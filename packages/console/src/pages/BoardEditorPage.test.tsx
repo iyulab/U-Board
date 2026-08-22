@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, Link } from 'react-router-dom';
 import { BoardEditorPage } from './BoardEditorPage.js';
 import * as api from '../api-client.js';
 
@@ -71,6 +71,56 @@ describe('BoardEditorPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('구성원 정보를 불러오지 못했습니다');
     expect(screen.queryByText('공유')).not.toBeInTheDocument();
+  });
+
+  it('does not keep showing the previous board while the next one is still loading after an in-place navigation', async () => {
+    let resolveB2: (v: { id: string; name: string; document: typeof EMPTY_DOC; updatedAt: string }) => void;
+    vi.mocked(api.getBoard).mockImplementation((_workspaceId: string, boardId: string) => {
+      if (boardId === 'b1') return Promise.resolve({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't' });
+      return new Promise(resolve => {
+        resolveB2 = resolve;
+      });
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/boards/b1/edit']}>
+        <Routes>
+          <Route
+            path="/boards/:boardId/edit"
+            element={
+              <>
+                <Link to="/boards/b2/edit">Go to b2</Link>
+                <BoardEditorPage workspaceId="w1" userId="u1" />
+              </>
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    );
+    await screen.findByText('Save');
+
+    fireEvent.click(screen.getByText('Go to b2'));
+
+    expect(screen.queryByText('Save')).not.toBeInTheDocument();
+    expect(screen.getByText('불러오는 중...')).toBeInTheDocument();
+
+    resolveB2!({ id: 'b2', name: 'B', document: EMPTY_DOC, updatedAt: 't2' });
+    await screen.findByText('Save');
+  });
+
+  it('clears the "saved" status when a save fails after a previous successful save', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockResolvedValueOnce({ id: 'b1', name: 'A', updatedAt: 't2' });
+    renderPage();
+
+    await userEvent.click(await screen.findByText('Save'));
+    await screen.findByRole('status');
+
+    vi.mocked(api.updateBoard).mockRejectedValueOnce(new Error('network down'));
+    await userEvent.click(screen.getByText('Save'));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
 

@@ -3,7 +3,7 @@ import { resolveDocument } from '@iyulab/u-board';
 
 // 1. An Adapter resolves this system's own reference shape to a value + connection quality.
 //    Nothing about `ref`'s shape is fixed by the core — each adapter defines and interprets it.
-export class DemoAdapter implements Adapter {
+export class ExampleAdapter implements Adapter {
   readonly id = 'demo'; // matches the `adapter` field a Binding uses to select this Adapter
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
@@ -41,7 +41,7 @@ export const doc: ViewDocument = {
 //    ResolvedViewDocument — the same document shape, but every node's `widget` is now a
 //    ResolvedWidget: its bound props carry resolved values, and a `quality` map records how
 //    current each bound prop is.
-export const resolved = await resolveDocument(doc, [new DemoAdapter()]);
+export const resolved = await resolveDocument(doc, [new ExampleAdapter()]);
 
 resolved.nodes[0].widget.props; //   { data: { label: 'Pump A', value: 'running' } }
 resolved.nodes[0].widget.quality; // { 'data.value': 'live' }

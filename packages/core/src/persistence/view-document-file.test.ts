@@ -33,4 +33,9 @@ describe('serializeViewDocument / parseViewDocument', () => {
   it('rejects a document whose nodes/connectors are not arrays', () => {
     expect(() => parseViewDocument(JSON.stringify({ ...doc(), nodes: 'nope' }))).toThrow(InvalidViewDocumentError);
   });
+
+  it('rejects a node with no widget, even though the top-level shape is otherwise valid', () => {
+    const withWidgetlessNode = { ...doc(), nodes: [{ id: 'n1', x: 0, y: 0, anchored: false }] };
+    expect(() => parseViewDocument(JSON.stringify(withWidgetlessNode))).toThrow(InvalidViewDocumentError);
+  });
 });

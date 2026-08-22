@@ -65,4 +65,17 @@ describe('errorHandler / body size limit', () => {
     expect(res.status).toBe(413);
     expect(res.body.code).toBe('PAYLOAD_TOO_LARGE');
   });
+
+  it('returns 400 INVALID_JSON (not a generic 500) for a malformed JSON body, including on a public route', async () => {
+    const malformed = await request(app).post('/auth/login').set('Content-Type', 'application/json').send('{not json');
+    expect(malformed.status).toBe(400);
+    expect(malformed.body.code).toBe('INVALID_JSON');
+
+    const malformedPublicRoute = await request(app)
+      .post('/share/boards/nonexistent/connectors/nonexistent/resolve')
+      .set('Content-Type', 'application/json')
+      .send('{not json');
+    expect(malformedPublicRoute.status).toBe(400);
+    expect(malformedPublicRoute.body.code).toBe('INVALID_JSON');
+  });
 });

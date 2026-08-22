@@ -212,4 +212,40 @@ describe('public share routes', () => {
       .send({ ref: { path: '@attacker.example/' } });
     expect(res.status).toBe(400);
   });
+
+  it('resolves a binding using the exact (connectorId, ref) round-tripped through save -> DB -> share GET -> resolve', async () => {
+    // Unlike the other tests in this file, the document here is saved through the real
+    // PUT /workspaces/:id/boards/:id route (not the updateBoard() DB helper directly), and the
+    // ref used against the resolve route is read back out of the share GET response rather than
+    // the literal object above — so both sides of isDeclaredBinding's comparison actually pass
+    // through JSON.stringify -> SQLite storage -> JSON.parse -> HTTP response -> HTTP request,
+    // the same path the embed viewer takes, instead of sharing one in-memory object by reference.
+    const connector = createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const doc = {
+      kind: 'canvas' as const, background: {},
+      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
+      connectors: [],
+    };
+
+    const saveRes = await request(app)
+      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', ownerCookie)
+      .send({ document: doc });
+    expect(saveRes.status).toBe(200);
+
+    const token = await createShareToken();
+    const getRes = await request(app).get(`/share/boards/${boardId}?token=${token}`);
+    expect(getRes.status).toBe(200);
+    expect(getRes.body.connectorIds).toEqual([connector.id]);
+
+    const binding = getRes.body.document.nodes[0].widget.bindings.value;
+    expect(binding).toEqual({ adapter: connector.id, ref: { path: '/status', valuePath: 'status' } });
+
+    (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
+    const resolveRes = await request(app)
+      .post(`/share/boards/${boardId}/connectors/${binding.adapter}/resolve?token=${token}`)
+      .send({ ref: binding.ref });
+    expect(resolveRes.status).toBe(200);
+    expect(resolveRes.body).toEqual({ value: 'running', quality: 'live' });
+  });
 });
