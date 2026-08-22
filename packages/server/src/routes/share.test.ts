@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import type express from 'express';
 import { createDb } from '../db.js';
 import { createApp } from '../app.js';
@@ -12,7 +12,7 @@ import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
-let db: Database.Database;
+let db: DbClient;
 let app: express.Express;
 let workspaceId: string;
 let boardId: string;
@@ -28,15 +28,15 @@ function jsonResponse(body: unknown) {
 
 beforeEach(async () => {
   vi.stubGlobal('fetch', vi.fn());
-  db = createDb(':memory:');
+  db = await createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
 
-  const owner = createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
-  const workspace = createWorkspace(db, 'W1');
-  addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+  const owner = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
+  const workspace = await createWorkspace(db, 'W1');
+  await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
   workspaceId = workspace.id;
   ownerCookie = cookieFor(owner.id, workspace.id);
-  boardId = createBoard(db, { workspaceId, name: 'Board A' }).id;
+  boardId = (await createBoard(db, { workspaceId, name: 'Board A' })).id;
 });
 
 async function createShareToken(): Promise<string> {
@@ -48,13 +48,13 @@ async function createShareToken(): Promise<string> {
 
 describe('public share routes', () => {
   it('returns the board document and connectorIds for a valid token', async () => {
-    const connector = createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: '/status' } } } }],
       connectors: [],
     };
-    updateBoard(db, workspaceId, boardId, { document: doc });
+    await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
     const res = await request(app).get(`/share/boards/${boardId}?token=${token}`);
@@ -70,7 +70,7 @@ describe('public share routes', () => {
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: 'demo-cmms', ref: 'pump-a.state' } } } }],
       connectors: [],
     };
-    updateBoard(db, workspaceId, boardId, { document: doc });
+    await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
     const res = await request(app).get(`/share/boards/${boardId}?token=${token}`);
@@ -79,7 +79,7 @@ describe('public share routes', () => {
 
   it('returns 404 for a missing, invalid, or wrong-board token', async () => {
     const token = await createShareToken();
-    const otherBoardId = createBoard(db, { workspaceId, name: 'Board B' }).id;
+    const otherBoardId = (await createBoard(db, { workspaceId, name: 'Board B' })).id;
 
     // Exact body equality (not toMatchObject's partial match) so a future branch that adds an
     // extra field to one 404 body — e.g. {code:'NOT_FOUND', reason:'wrong-board'} — would fail
@@ -99,13 +99,13 @@ describe('public share routes', () => {
   });
 
   it('returns 404 for a missing or garbage token on the resolve route', async () => {
-    const connector = createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: '/status' } } } }],
       connectors: [],
     };
-    updateBoard(db, workspaceId, boardId, { document: doc });
+    await updateBoard(db, workspaceId, boardId, { document: doc });
 
     const noToken = await request(app)
       .post(`/share/boards/${boardId}/connectors/${connector.id}/resolve`)
@@ -132,7 +132,7 @@ describe('public share routes', () => {
   });
 
   it('resolves a referenced connector and returns live quality', async () => {
-    const connector = createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     // The document's binding.ref must be the exact `{path, valuePath?}` shape the resolve
     // endpoint expects — that's what `HttpConnectorAdapter.resolve` forwards unmodified
     // (packages/console/src/http-connector-adapter.ts), and what `isDeclaredBinding` compares
@@ -142,7 +142,7 @@ describe('public share routes', () => {
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
       connectors: [],
     };
-    updateBoard(db, workspaceId, boardId, { document: doc });
+    await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
 
@@ -154,14 +154,14 @@ describe('public share routes', () => {
   });
 
   it('returns 404 resolving a connector the board document does not reference', async () => {
-    const referenced = createConnector(db, { workspaceId, name: 'Referenced', baseUrl: 'https://a.example.com', authType: 'none' });
-    const other = createConnector(db, { workspaceId, name: 'Other', baseUrl: 'https://b.example.com', authType: 'none' });
+    const referenced = await createConnector(db, { workspaceId, name: 'Referenced', baseUrl: 'https://a.example.com', authType: 'none' });
+    const other = await createConnector(db, { workspaceId, name: 'Other', baseUrl: 'https://b.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: referenced.id, ref: '/status' } } } }],
       connectors: [],
     };
-    updateBoard(db, workspaceId, boardId, { document: doc });
+    await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
     const res = await request(app)
@@ -173,7 +173,7 @@ describe('public share routes', () => {
   });
 
   it('returns 404 resolving a connector the document uses, with a ref it does not declare', async () => {
-    const connector = createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     // Declares one specific ref (`/status`) for this connector. The resolve request below sends
     // a *differently-shaped but still individually valid* ref (`/other-metric`) for the SAME
     // connector, so a pass here would only be possible if the gate checks exact ref equality —
@@ -183,7 +183,7 @@ describe('public share routes', () => {
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
       connectors: [],
     };
-    updateBoard(db, workspaceId, boardId, { document: doc });
+    await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
     // Same connector as the document's own binding, but a ref the document never declared — the
@@ -198,13 +198,13 @@ describe('public share routes', () => {
   });
 
   it('returns 400 for a malformed ref', async () => {
-    const connector = createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: '/status' } } } }],
       connectors: [],
     };
-    updateBoard(db, workspaceId, boardId, { document: doc });
+    await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
     const res = await request(app)
@@ -220,7 +220,7 @@ describe('public share routes', () => {
     // the literal object above — so both sides of isDeclaredBinding's comparison actually pass
     // through JSON.stringify -> SQLite storage -> JSON.parse -> HTTP response -> HTTP request,
     // the same path the embed viewer takes, instead of sharing one in-memory object by reference.
-    const connector = createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
