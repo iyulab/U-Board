@@ -1,4 +1,4 @@
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 
 export interface Connector {
@@ -62,8 +62,8 @@ function rowToConnector(row: ConnectorRow): Connector {
   };
 }
 
-export function createConnector(
-  db: Database.Database,
+export async function createConnector(
+  db: DbClient,
   input: {
     workspaceId: string;
     name: string;
@@ -72,7 +72,7 @@ export function createConnector(
     authHeaderName?: string;
     authValue?: string;
   }
-): Connector {
+): Promise<Connector> {
   const now = new Date().toISOString();
   const connector: Connector = {
     id: randomUUID(),
@@ -86,30 +86,23 @@ export function createConnector(
     createdAt: now,
     updatedAt: now,
   };
-  db.prepare(
+  await db.query(
     `INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_header_name, auth_value, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    connector.id,
-    connector.workspaceId,
-    connector.name,
-    connector.type,
-    connector.baseUrl,
-    connector.authType,
-    connector.authHeaderName ?? null,
-    connector.authValue ?? null,
-    connector.createdAt,
-    connector.updatedAt
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      connector.id, connector.workspaceId, connector.name, connector.type, connector.baseUrl,
+      connector.authType, connector.authHeaderName ?? null, connector.authValue ?? null,
+      connector.createdAt, connector.updatedAt,
+    ]
   );
   return connector;
 }
 
-export function listConnectorsForWorkspace(db: Database.Database, workspaceId: string): ConnectorSummary[] {
-  const rows = db
-    .prepare(
-      `SELECT id, name, type, base_url, auth_type, auth_header_name, updated_at FROM connectors WHERE workspace_id = ?`
-    )
-    .all(workspaceId) as ConnectorSummaryRow[];
+export async function listConnectorsForWorkspace(db: DbClient, workspaceId: string): Promise<ConnectorSummary[]> {
+  const { rows } = await db.query<ConnectorSummaryRow>(
+    `SELECT id, name, type, base_url, auth_type, auth_header_name, updated_at FROM connectors WHERE workspace_id = $1`,
+    [workspaceId]
+  );
   return rows.map(r => ({
     id: r.id,
     name: r.name,
@@ -121,15 +114,13 @@ export function listConnectorsForWorkspace(db: Database.Database, workspaceId: s
   }));
 }
 
-export function findConnector(db: Database.Database, workspaceId: string, connectorId: string): Connector | undefined {
-  const row = db
-    .prepare(`SELECT * FROM connectors WHERE id = ? AND workspace_id = ?`)
-    .get(connectorId, workspaceId) as ConnectorRow | undefined;
-  return row ? rowToConnector(row) : undefined;
+export async function findConnector(db: DbClient, workspaceId: string, connectorId: string): Promise<Connector | undefined> {
+  const { rows } = await db.query<ConnectorRow>(`SELECT * FROM connectors WHERE id = $1 AND workspace_id = $2`, [connectorId, workspaceId]);
+  return rows[0] ? rowToConnector(rows[0]) : undefined;
 }
 
-export function updateConnector(
-  db: Database.Database,
+export async function updateConnector(
+  db: DbClient,
   workspaceId: string,
   connectorId: string,
   input: {
@@ -139,11 +130,10 @@ export function updateConnector(
     authHeaderName?: string | null;
     authValue?: string | null;
   }
-): Connector | undefined {
-  const existing = findConnector(db, workspaceId, connectorId);
+): Promise<Connector | undefined> {
+  const existing = await findConnector(db, workspaceId, connectorId);
   if (!existing) return undefined;
 
-  // Distinguish undefined (don't touch) from null (explicitly clear)
   const authHeaderName = input.authHeaderName === undefined ? existing.authHeaderName : (input.authHeaderName ?? undefined);
   const authValue = input.authValue === undefined ? existing.authValue : (input.authValue ?? undefined);
 
@@ -156,23 +146,15 @@ export function updateConnector(
     authValue,
     updatedAt: new Date().toISOString(),
   };
-  db.prepare(
-    `UPDATE connectors SET name = ?, base_url = ?, auth_type = ?, auth_header_name = ?, auth_value = ?, updated_at = ?
-     WHERE id = ? AND workspace_id = ?`
-  ).run(
-    updated.name,
-    updated.baseUrl,
-    updated.authType,
-    authHeaderName ?? null,
-    authValue ?? null,
-    updated.updatedAt,
-    connectorId,
-    workspaceId
+  await db.query(
+    `UPDATE connectors SET name = $1, base_url = $2, auth_type = $3, auth_header_name = $4, auth_value = $5, updated_at = $6
+     WHERE id = $7 AND workspace_id = $8`,
+    [updated.name, updated.baseUrl, updated.authType, authHeaderName ?? null, authValue ?? null, updated.updatedAt, connectorId, workspaceId]
   );
   return updated;
 }
 
-export function deleteConnector(db: Database.Database, workspaceId: string, connectorId: string): boolean {
-  const result = db.prepare(`DELETE FROM connectors WHERE id = ? AND workspace_id = ?`).run(connectorId, workspaceId);
-  return result.changes > 0;
+export async function deleteConnector(db: DbClient, workspaceId: string, connectorId: string): Promise<boolean> {
+  const { rowCount } = await db.query(`DELETE FROM connectors WHERE id = $1 AND workspace_id = $2`, [connectorId, workspaceId]);
+  return (rowCount ?? 0) > 0;
 }
