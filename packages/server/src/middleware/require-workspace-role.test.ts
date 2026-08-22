@@ -1,26 +1,26 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import { createDb } from '../db.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { requireWorkspaceMember, requireWorkspaceOwner } from './require-workspace-role.js';
 import type { AuthedRequest } from './require-auth.js';
 
-let db: Database.Database;
+let db: DbClient;
 let app: express.Express;
 let ownerId: string;
 let memberId: string;
 let workspaceId: string;
 
-beforeEach(() => {
-  db = createDb(':memory:');
-  const owner = createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
-  const member = createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
-  const workspace = createWorkspace(db, 'W1');
-  addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
-  addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
+beforeEach(async () => {
+  db = await createDb(':memory:');
+  const owner = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
+  const member = await createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
+  const workspace = await createWorkspace(db, 'W1');
+  await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+  await addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
   ownerId = owner.id;
   memberId = member.id;
   workspaceId = workspace.id;

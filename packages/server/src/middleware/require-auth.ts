@@ -1,7 +1,8 @@
 import type { CookieOptions, Request, Response, NextFunction, RequestHandler } from 'express';
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import { verifySession } from '../auth/session.js';
 import { findUserById } from '../db/users.js';
+import { asyncHandler } from './async-handler.js';
 
 export const SESSION_COOKIE_NAME = 'ub_session';
 
@@ -43,8 +44,8 @@ export interface AuthedRequest extends Request {
   activeWorkspaceId?: string;
 }
 
-export function requireAuth(db: Database.Database, sessionSecret: string): RequestHandler {
-  return (req: AuthedRequest, res: Response, next: NextFunction) => {
+export function requireAuth(db: DbClient, sessionSecret: string): RequestHandler {
+  return asyncHandler(async (req: AuthedRequest, res: Response, next: NextFunction) => {
     const cookieValue = req.cookies?.[SESSION_COOKIE_NAME];
     if (!cookieValue) {
       res.status(401).json({ code: 'UNAUTHENTICATED' });
@@ -55,7 +56,7 @@ export function requireAuth(db: Database.Database, sessionSecret: string): Reque
       res.status(401).json({ code: 'UNAUTHENTICATED' });
       return;
     }
-    const user = findUserById(db, payload.userId);
+    const user = await findUserById(db, payload.userId);
     if (!user) {
       res.status(401).json({ code: 'UNAUTHENTICATED' });
       return;
@@ -63,5 +64,5 @@ export function requireAuth(db: Database.Database, sessionSecret: string): Reque
     req.userId = payload.userId;
     req.activeWorkspaceId = payload.activeWorkspaceId;
     next();
-  };
+  });
 }
