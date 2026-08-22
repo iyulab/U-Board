@@ -64,4 +64,16 @@ describe('createDb', () => {
     const { rows } = await db.query<{ count: string }>(`SELECT COUNT(*) as count FROM workspaces`);
     expect(Number(rows[0].count)).toBe(1);
   });
+
+  it('rejects a nested withTransaction call rather than allowing it to hang', async () => {
+    const db = await createDb(':memory:');
+    await expect(
+      Promise.race([
+        db.withTransaction(async tx => {
+          await tx.withTransaction(async () => {});
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timed out — likely deadlocked')), 2000)),
+      ])
+    ).rejects.toThrow(/nested transactions are not supported/);
+  });
 });

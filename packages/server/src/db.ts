@@ -119,6 +119,9 @@ class PgliteDbClient implements DbClient {
   }
 
   async withTransaction<T>(fn: (tx: DbClient) => Promise<T>): Promise<T> {
+    if (this.runner !== this.root) {
+      throw new Error('nested transactions are not supported');
+    }
     return this.root.transaction(async pgliteTx => fn(new PgliteDbClient(pgliteTx, this.root)));
   }
 }
