@@ -1,4 +1,4 @@
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import { randomUUID, randomBytes } from 'node:crypto';
 import type { WorkspaceRole } from './workspaces.js';
 import { normalizeEmail } from './email.js';
@@ -40,10 +40,10 @@ function rowToInvitation(row: InvitationRow): WorkspaceInvitation {
   };
 }
 
-export function createInvitation(
-  db: Database.Database,
+export async function createInvitation(
+  db: DbClient,
   input: { workspaceId: string; email: string; role: WorkspaceRole; invitedByUserId: string }
-): WorkspaceInvitation {
+): Promise<WorkspaceInvitation> {
   const invitation: WorkspaceInvitation = {
     id: randomUUID(),
     workspaceId: input.workspaceId,
@@ -54,23 +54,34 @@ export function createInvitation(
     expiresAt: new Date(Date.now() + INVITATION_TTL_MS).toISOString(),
     acceptedAt: null,
   };
-  db.prepare(
+  await db.query(
     `INSERT INTO workspace_invitations (id, workspace_id, email, role, token, invited_by_user_id, expires_at, accepted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    invitation.id, invitation.workspaceId, invitation.email, invitation.role,
-    invitation.token, invitation.invitedByUserId, invitation.expiresAt, invitation.acceptedAt
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [invitation.id, invitation.workspaceId, invitation.email, invitation.role, invitation.token, invitation.invitedByUserId, invitation.expiresAt, invitation.acceptedAt]
   );
   return invitation;
 }
 
-export function findInvitationByToken(db: Database.Database, token: string): WorkspaceInvitation | undefined {
-  const row = db.prepare(`SELECT * FROM workspace_invitations WHERE token = ?`).get(token) as InvitationRow | undefined;
-  return row ? rowToInvitation(row) : undefined;
+export async function findInvitationByToken(db: DbClient, token: string): Promise<WorkspaceInvitation | undefined> {
+  const { rows } = await db.query<InvitationRow>(`SELECT * FROM workspace_invitations WHERE token = $1`, [token]);
+  return rows[0] ? rowToInvitation(rows[0]) : undefined;
 }
 
-export function markInvitationAccepted(db: Database.Database, id: string): void {
-  db.prepare(`UPDATE workspace_invitations SET accepted_at = ? WHERE id = ?`).run(new Date().toISOString(), id);
+export async function markInvitationAccepted(db: DbClient, id: string): Promise<void> {
+  await db.query(`UPDATE workspace_invitations SET accepted_at = $1 WHERE id = $2`, [new Date().toISOString(), id]);
+}
+
+/** Atomically claims an invitation only if nobody has accepted it yet — the WHERE clause and the
+ * write happen as one statement, so two concurrent redemptions of the same token can't both
+ * succeed (the loser gets zero rows back). This is what actually makes concurrent signup safe
+ * under Postgres with multiple server instances; a separate read-then-write from the caller
+ * would not be. */
+export async function markInvitationAcceptedIfUnused(db: DbClient, id: string): Promise<WorkspaceInvitation | undefined> {
+  const { rows } = await db.query<InvitationRow>(
+    `UPDATE workspace_invitations SET accepted_at = $1 WHERE id = $2 AND accepted_at IS NULL RETURNING *`,
+    [new Date().toISOString(), id]
+  );
+  return rows[0] ? rowToInvitation(rows[0]) : undefined;
 }
 
 export function isInvitationUsable(invitation: WorkspaceInvitation): boolean {

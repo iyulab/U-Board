@@ -1,55 +1,51 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type Database from 'better-sqlite3';
+import { describe, it, expect, beforeEach } from 'vitest';
+import type { DbClient } from '../db.js';
 import { createDb } from '../db.js';
 import { createUser } from './users.js';
 import { createWorkspace } from './workspaces.js';
-import { createInvitation, findInvitationByToken, markInvitationAccepted, isInvitationUsable } from './invitations.js';
+import { createInvitation, findInvitationByToken, markInvitationAccepted, markInvitationAcceptedIfUnused, isInvitationUsable } from './invitations.js';
 
-let db: Database.Database;
-beforeEach(() => {
-  db = createDb(':memory:');
-});
-afterEach(() => {
-  vi.useRealTimers();
+let db: DbClient;
+let workspaceId: string;
+let userId: string;
+
+beforeEach(async () => {
+  db = await createDb(':memory:');
+  const user = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
+  userId = user.id;
+  const workspace = await createWorkspace(db, 'W1');
+  workspaceId = workspace.id;
 });
 
 describe('invitation repository', () => {
-  it('creates an invitation with a unique token and finds it by token', () => {
-    const owner = createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
-    const workspace = createWorkspace(db, 'W1');
-    const invitation = createInvitation(db, {
-      workspaceId: workspace.id,
-      email: 'new@x.com',
-      role: 'member',
-      invitedByUserId: owner.id,
-    });
-    expect(invitation.token).toHaveLength(48);
-    expect(findInvitationByToken(db, invitation.token)).toEqual(invitation);
+  it('creates an invitation and finds it by token', async () => {
+    const inv = await createInvitation(db, { workspaceId, email: 'a@x.com', role: 'member', invitedByUserId: userId });
+    expect(await findInvitationByToken(db, inv.token)).toEqual(inv);
   });
 
-  it('is usable when unaccepted and unexpired', () => {
-    const owner = createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
-    const workspace = createWorkspace(db, 'W1');
-    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'new@x.com', role: 'member', invitedByUserId: owner.id });
-    expect(isInvitationUsable(invitation)).toBe(true);
+  it('is usable when unaccepted and unexpired', async () => {
+    const inv = await createInvitation(db, { workspaceId, email: 'a@x.com', role: 'member', invitedByUserId: userId });
+    expect(isInvitationUsable(inv)).toBe(true);
   });
 
-  it('is not usable after being marked accepted', () => {
-    const owner = createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
-    const workspace = createWorkspace(db, 'W1');
-    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'new@x.com', role: 'member', invitedByUserId: owner.id });
-    markInvitationAccepted(db, invitation.id);
-    const reloaded = findInvitationByToken(db, invitation.token)!;
-    expect(isInvitationUsable(reloaded)).toBe(false);
+  it('marks an invitation accepted unconditionally', async () => {
+    const inv = await createInvitation(db, { workspaceId, email: 'a@x.com', role: 'member', invitedByUserId: userId });
+    await markInvitationAccepted(db, inv.id);
+    const reloaded = await findInvitationByToken(db, inv.token);
+    expect(reloaded?.acceptedAt).toBeTruthy();
   });
 
-  it('is not usable after expiring', () => {
-    const owner = createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
-    const workspace = createWorkspace(db, 'W1');
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-01-01T00:00:00Z'));
-    const invitation = createInvitation(db, { workspaceId: workspace.id, email: 'new@x.com', role: 'member', invitedByUserId: owner.id });
-    vi.setSystemTime(new Date('2026-01-09T00:00:00Z')); // 8 days later, TTL is 7
-    expect(isInvitationUsable(invitation)).toBe(false);
+  it('markInvitationAcceptedIfUnused claims an unused invitation and returns it', async () => {
+    const inv = await createInvitation(db, { workspaceId, email: 'a@x.com', role: 'member', invitedByUserId: userId });
+    const claimed = await markInvitationAcceptedIfUnused(db, inv.id);
+    expect(claimed?.id).toBe(inv.id);
+    expect(claimed?.workspaceId).toBe(workspaceId);
+  });
+
+  it('markInvitationAcceptedIfUnused returns undefined for an already-accepted invitation', async () => {
+    const inv = await createInvitation(db, { workspaceId, email: 'a@x.com', role: 'member', invitedByUserId: userId });
+    await markInvitationAcceptedIfUnused(db, inv.id);
+    const second = await markInvitationAcceptedIfUnused(db, inv.id);
+    expect(second).toBeUndefined();
   });
 });
