@@ -2,13 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { createDb } from './db.js';
 
 describe('createDb', () => {
-  it('creates all seven tables on an in-memory database', () => {
-    const db = createDb(':memory:');
-    const tables = db
-      .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`)
-      .all()
-      .map((row: any) => row.name);
-    expect(tables).toEqual([
+  it('creates all seven tables on an in-memory (PGlite) database', async () => {
+    const db = await createDb(':memory:');
+    const { rows } = await db.query<{ table_name: string }>(
+      `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`
+    );
+    expect(rows.map(r => r.table_name)).toEqual([
       'board_share_tokens',
       'boards',
       'connectors',
@@ -19,32 +18,50 @@ describe('createDb', () => {
     ]);
   });
 
-  it('indexes boards.workspace_id, the column listBoardsForWorkspace filters on', () => {
-    const db = createDb(':memory:');
-    const indexes = db.prepare(`PRAGMA index_list(boards)`).all() as Array<{ name: string }>;
-    const indexedColumns = indexes.flatMap(
-      idx => (db.prepare(`PRAGMA index_info(${idx.name})`).all() as Array<{ name: string }>).map(c => c.name)
+  it('indexes boards.workspace_id, the column listBoardsForWorkspace filters on', async () => {
+    const db = await createDb(':memory:');
+    const { rows } = await db.query<{ indexdef: string }>(
+      `SELECT indexdef FROM pg_indexes WHERE tablename = 'boards' AND indexname = 'idx_boards_workspace_id'`
     );
-    expect(indexedColumns).toContain('workspace_id');
+    expect(rows).toHaveLength(1);
   });
 
-  it('enforces unique (workspace_id, user_id) on workspace_users', () => {
-    const db = createDb(':memory:');
-    db.prepare(
-      `INSERT INTO users (id, email, password_hash, name, created_at) VALUES ('u1','a@x.com','h','A',datetime('now'))`
-    ).run();
-    db.prepare(
-      `INSERT INTO workspaces (id, name, created_at) VALUES ('w1','W',datetime('now'))`
-    ).run();
-    db.prepare(
-      `INSERT INTO workspace_users (id, workspace_id, user_id, role, created_at) VALUES ('wu1','w1','u1','owner',datetime('now'))`
-    ).run();
-    expect(() =>
-      db
-        .prepare(
-          `INSERT INTO workspace_users (id, workspace_id, user_id, role, created_at) VALUES ('wu2','w1','u1','member',datetime('now'))`
-        )
-        .run()
-    ).toThrow();
+  it('enforces unique (workspace_id, user_id) on workspace_users', async () => {
+    const db = await createDb(':memory:');
+    await db.query(
+      `INSERT INTO users (id, email, password_hash, name, created_at) VALUES ('u1','a@x.com','h','A', now())`
+    );
+    await db.query(`INSERT INTO workspaces (id, name, created_at) VALUES ('w1','W', now())`);
+    await db.query(
+      `INSERT INTO workspace_users (id, workspace_id, user_id, role, created_at) VALUES ('wu1','w1','u1','owner', now())`
+    );
+    await expect(
+      db.query(
+        `INSERT INTO workspace_users (id, workspace_id, user_id, role, created_at) VALUES ('wu2','w1','u1','member', now())`
+      )
+    ).rejects.toThrow();
+  });
+
+  it('runs a transaction that rolls back on error, leaving no rows behind', async () => {
+    const db = await createDb(':memory:');
+    await expect(
+      db.withTransaction(async tx => {
+        await tx.query(`INSERT INTO workspaces (id, name, created_at) VALUES ('w1','W', now())`);
+        throw new Error('boom');
+      })
+    ).rejects.toThrow('boom');
+    const { rows } = await db.query<{ count: string }>(`SELECT COUNT(*) as count FROM workspaces`);
+    expect(Number(rows[0].count)).toBe(0);
+  });
+
+  it('commits a transaction whose callback resolves', async () => {
+    const db = await createDb(':memory:');
+    const result = await db.withTransaction(async tx => {
+      await tx.query(`INSERT INTO workspaces (id, name, created_at) VALUES ('w1','W', now())`);
+      return 'ok';
+    });
+    expect(result).toBe('ok');
+    const { rows } = await db.query<{ count: string }>(`SELECT COUNT(*) as count FROM workspaces`);
+    expect(Number(rows[0].count)).toBe(1);
   });
 });

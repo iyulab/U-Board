@@ -1,4 +1,10 @@
-import Database from 'better-sqlite3';
+import { Pool, type PoolClient } from 'pg';
+import { PGlite } from '@electric-sql/pglite';
+
+export interface DbClient {
+  query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[]; rowCount: number | null }>;
+  withTransaction<T>(fn: (tx: DbClient) => Promise<T>): Promise<T>;
+}
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS users (
@@ -75,12 +81,57 @@ CREATE TABLE IF NOT EXISTS board_share_tokens (
 CREATE INDEX IF NOT EXISTS idx_board_share_tokens_board_id ON board_share_tokens(board_id);
 `;
 
-export function createDb(path: string): Database.Database {
-  const db = new Database(path);
-  db.pragma('foreign_keys = ON');
-  // Wait out a writer holding the database lock instead of throwing SQLITE_BUSY immediately —
-  // that throw is the most reachable way an unexpected error reaches a route handler.
-  db.pragma('busy_timeout = 5000');
-  db.exec(SCHEMA_SQL);
-  return db;
+class PgDbClient implements DbClient {
+  constructor(private readonly runner: Pool | PoolClient) {}
+
+  async query<T = unknown>(sql: string, params: unknown[] = []): Promise<{ rows: T[]; rowCount: number | null }> {
+    const result = await this.runner.query<T extends Record<string, unknown> ? T : any>(sql, params as any[]);
+    return { rows: result.rows as T[], rowCount: result.rowCount };
+  }
+
+  async withTransaction<T>(fn: (tx: DbClient) => Promise<T>): Promise<T> {
+    if (!(this.runner instanceof Pool)) {
+      throw new Error('nested transactions are not supported');
+    }
+    const client = await this.runner.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await fn(new PgDbClient(client));
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+}
+
+class PgliteDbClient implements DbClient {
+  // `runner` is a PGlite instance for the top-level client, or a PGlite Transaction object once
+  // inside withTransaction — both expose a structurally identical `query()` method.
+  constructor(private readonly runner: { query: PGlite['query'] }, private readonly root: PGlite) {}
+
+  async query<T = unknown>(sql: string, params: unknown[] = []): Promise<{ rows: T[]; rowCount: number | null }> {
+    const result = await this.runner.query<T>(sql, params);
+    return { rows: result.rows, rowCount: result.rowCount ?? result.rows.length };
+  }
+
+  async withTransaction<T>(fn: (tx: DbClient) => Promise<T>): Promise<T> {
+    return this.root.transaction(async pgliteTx => fn(new PgliteDbClient(pgliteTx, this.root)));
+  }
+}
+
+export async function createDb(url: string): Promise<DbClient> {
+  if (url.startsWith('postgres://') || url.startsWith('postgresql://')) {
+    const pool = new Pool({ connectionString: url });
+    await pool.query(SCHEMA_SQL);
+    return new PgDbClient(pool);
+  }
+  // `:memory:` (tests) or any local path (local `npm run dev` default) both use PGlite — a real
+  // Postgres engine compiled to WASM, not a mock, so the SQL executed is identical to production.
+  const pglite = url === ':memory:' ? new PGlite() : new PGlite(url);
+  await pglite.exec(SCHEMA_SQL); // .exec (not .query) runs the semicolon-separated statement list
+  return new PgliteDbClient(pglite, pglite);
 }
