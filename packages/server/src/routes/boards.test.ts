@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import type express from 'express';
 import { createDb } from '../db.js';
 import { createApp } from '../app.js';
@@ -10,7 +10,7 @@ import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
-let db: Database.Database;
+let db: DbClient;
 let app: express.Express;
 let workspaceId: string;
 let memberCookie: string;
@@ -20,14 +20,14 @@ function cookieFor(userId: string, activeWorkspaceId: string) {
   return `${SESSION_COOKIE_NAME}=${signSession({ userId, activeWorkspaceId, issuedAt: Date.now() }, SECRET)}`;
 }
 
-beforeEach(() => {
-  db = createDb(':memory:');
+beforeEach(async () => {
+  db = await createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
 
-  const member = createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
-  const stranger = createUser(db, { email: 'stranger@x.com', passwordHash: 'h', name: 'Stranger' });
-  const workspace = createWorkspace(db, 'W1');
-  addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
+  const member = await createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
+  const stranger = await createUser(db, { email: 'stranger@x.com', passwordHash: 'h', name: 'Stranger' });
+  const workspace = await createWorkspace(db, 'W1');
+  await addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
   workspaceId = workspace.id;
   memberCookie = cookieFor(member.id, workspace.id);
   strangerCookie = cookieFor(stranger.id, workspace.id);
@@ -85,9 +85,9 @@ describe('boards routes', () => {
   it('returns 404 for a board id that belongs to a different workspace', async () => {
     const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
 
-    const otherWorkspace = createWorkspace(db, 'Other');
-    const otherMember = createUser(db, { email: 'other@x.com', passwordHash: 'h', name: 'Other' });
-    addWorkspaceUser(db, { workspaceId: otherWorkspace.id, userId: otherMember.id, role: 'member' });
+    const otherWorkspace = await createWorkspace(db, 'Other');
+    const otherMember = await createUser(db, { email: 'other@x.com', passwordHash: 'h', name: 'Other' });
+    await addWorkspaceUser(db, { workspaceId: otherWorkspace.id, userId: otherMember.id, role: 'member' });
     const otherCookie = cookieFor(otherMember.id, otherWorkspace.id);
 
     const res = await request(app)
