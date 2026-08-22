@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import type { DbClient } from '../db.js';
+import type express from 'express';
 import { createDb } from '../db.js';
 import { createApp } from '../app.js';
 import { createUser } from '../db/users.js';

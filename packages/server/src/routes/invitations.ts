@@ -39,6 +39,10 @@ export function createInvitationsRouter(config: AppConfig): Router {
       return;
     }
     const user = await findUserById(db, req.userId!);
+    // An invitation is addressed to one specific email, and `createInvitation` takes an
+    // arbitrary role — so a forwarded/leaked owner-role link must not let whoever happens to
+    // be logged in redeem it. `POST /auth/signup` enforces the same match for the other
+    // redemption path; both return the identical 410 INVITATION_INVALID.
     if (!user || normalizeEmail(invitation.email) !== normalizeEmail(user.email)) {
       res.status(410).json({ code: 'INVITATION_INVALID' });
       return;
