@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
-import type Database from 'better-sqlite3';
+import type { DbClient } from './db.js';
 import type express from 'express';
 import { createDb } from './db.js';
 import { createApp } from './app.js';
@@ -14,11 +14,11 @@ vi.mock('./auth/password.js', () => ({
 }));
 
 const SECRET = 'test-secret-at-least-16-chars';
-let db: Database.Database;
+let db: DbClient;
 let app: express.Express;
 
-beforeEach(() => {
-  db = createDb(':memory:');
+beforeEach(async () => {
+  db = await createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
@@ -39,7 +39,7 @@ describe('error-handling middleware', () => {
   });
 
   it('answers 500 INTERNAL_ERROR when the login handler rejects', async () => {
-    createDbUser(db);
+    await createDbUser(db);
     const res = await request(app).post('/auth/login').send({ email: 'first@x.com', password: 'p4ssword!' });
 
     expect(res.status).toBe(500);
@@ -47,8 +47,9 @@ describe('error-handling middleware', () => {
   });
 });
 
-function createDbUser(database: Database.Database): void {
-  database
-    .prepare(`INSERT INTO users (id, email, password_hash, name, created_at) VALUES (?, ?, ?, ?, ?)`)
-    .run('u1', 'first@x.com', 'hash', 'First', new Date().toISOString());
+async function createDbUser(database: DbClient): Promise<void> {
+  await database.query(
+    `INSERT INTO users (id, email, password_hash, name, created_at) VALUES ($1, $2, $3, $4, $5)`,
+    ['u1', 'first@x.com', 'hash', 'First', new Date().toISOString()]
+  );
 }
