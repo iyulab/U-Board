@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import type express from 'express';
 import { createDb } from '../db.js';
 import { createApp } from '../app.js';
@@ -11,7 +11,7 @@ import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
 import { findConnector } from '../db/connectors.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
-let db: Database.Database;
+let db: DbClient;
 let app: express.Express;
 let workspaceId: string;
 let ownerCookie: string;
@@ -22,16 +22,16 @@ function cookieFor(userId: string, activeWorkspaceId: string) {
   return `${SESSION_COOKIE_NAME}=${signSession({ userId, activeWorkspaceId, issuedAt: Date.now() }, SECRET)}`;
 }
 
-beforeEach(() => {
-  db = createDb(':memory:');
+beforeEach(async () => {
+  db = await createDb(':memory:');
   app = createApp({ db, sessionSecret: SECRET });
 
-  const owner = createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
-  const member = createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
-  const stranger = createUser(db, { email: 'stranger@x.com', passwordHash: 'h', name: 'Stranger' });
-  const workspace = createWorkspace(db, 'W1');
-  addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
-  addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
+  const owner = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
+  const member = await createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
+  const stranger = await createUser(db, { email: 'stranger@x.com', passwordHash: 'h', name: 'Stranger' });
+  const workspace = await createWorkspace(db, 'W1');
+  await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+  await addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
   workspaceId = workspace.id;
   ownerCookie = cookieFor(owner.id, workspace.id);
   memberCookie = cookieFor(member.id, workspace.id);
@@ -114,9 +114,9 @@ describe('connectors CRUD routes', () => {
       .set('Cookie', ownerCookie)
       .send({ name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
 
-    const otherWorkspace = createWorkspace(db, 'Other');
-    const otherOwner = createUser(db, { email: 'other@x.com', passwordHash: 'h', name: 'Other' });
-    addWorkspaceUser(db, { workspaceId: otherWorkspace.id, userId: otherOwner.id, role: 'owner' });
+    const otherWorkspace = await createWorkspace(db, 'Other');
+    const otherOwner = await createUser(db, { email: 'other@x.com', passwordHash: 'h', name: 'Other' });
+    await addWorkspaceUser(db, { workspaceId: otherWorkspace.id, userId: otherOwner.id, role: 'owner' });
     const otherCookie = cookieFor(otherOwner.id, otherWorkspace.id);
 
     const res = await request(app)
@@ -136,7 +136,7 @@ describe('connectors CRUD routes', () => {
     const connectorId = create.body.id;
 
     // Verify secret was stored (via database, since API doesn't expose it)
-    let stored = findConnector(db, workspaceId, connectorId);
+    let stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authValue).toBe('secret123');
 
     // Update authType to 'none', clearing the secret
@@ -148,7 +148,7 @@ describe('connectors CRUD routes', () => {
     expect(update.body.authType).toBe('none');
 
     // Verify secret was cleared in database
-    stored = findConnector(db, workspaceId, connectorId);
+    stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authValue).toBeUndefined();
   });
 
@@ -162,7 +162,7 @@ describe('connectors CRUD routes', () => {
     const connectorId = create.body.id;
 
     // Verify authHeaderName was stored
-    let stored = findConnector(db, workspaceId, connectorId);
+    let stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authHeaderName).toBe('X-API-Key');
 
     // Update authType to 'bearer', clearing authHeaderName
@@ -175,7 +175,7 @@ describe('connectors CRUD routes', () => {
     expect(update.body.authHeaderName).toBeUndefined();
 
     // Verify authHeaderName was cleared in database
-    stored = findConnector(db, workspaceId, connectorId);
+    stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authHeaderName).toBeUndefined();
   });
 
@@ -189,7 +189,7 @@ describe('connectors CRUD routes', () => {
     const connectorId = create.body.id;
 
     // Verify secret was stored
-    let stored = findConnector(db, workspaceId, connectorId);
+    let stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authValue).toBe('secret123');
 
     // Update only name, without touching authType
@@ -202,7 +202,7 @@ describe('connectors CRUD routes', () => {
     expect(update.body.authType).toBe('bearer');
 
     // Verify secret was NOT cleared (partial update preserved it)
-    stored = findConnector(db, workspaceId, connectorId);
+    stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authValue).toBe('secret123');
   });
 
@@ -216,7 +216,7 @@ describe('connectors CRUD routes', () => {
     const connectorId = create.body.id;
 
     // Verify authHeaderName was stored
-    let stored = findConnector(db, workspaceId, connectorId);
+    let stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authHeaderName).toBe('X-API-Key');
 
     // Update to authType 'none' WITHOUT providing authHeaderName in the body
@@ -230,7 +230,7 @@ describe('connectors CRUD routes', () => {
     expect(update.body.authHeaderName).toBeUndefined();
 
     // Verify authHeaderName was cleared in database
-    stored = findConnector(db, workspaceId, connectorId);
+    stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authHeaderName).toBeUndefined();
   });
 
@@ -245,7 +245,7 @@ describe('connectors CRUD routes', () => {
 
   it('renames a bearer connector without re-sending the secret (authType echoed, authValue omitted)', async () => {
     const connectorId = await createBearerConnector();
-    expect(findConnector(db, workspaceId, connectorId)?.authValue).toBe('secret-1');
+    expect((await findConnector(db, workspaceId, connectorId))?.authValue).toBe('secret-1');
 
     // The console's edit form leaves the secret field blank and omits authValue, but still sends
     // the (unchanged) authType — this must not be read as "set bearer auth with no secret".
@@ -256,7 +256,7 @@ describe('connectors CRUD routes', () => {
     expect(update.status).toBe(200);
     expect(update.body.name).toBe('Renamed');
     expect(update.body.authType).toBe('bearer');
-    expect(findConnector(db, workspaceId, connectorId)?.authValue).toBe('secret-1');
+    expect((await findConnector(db, workspaceId, connectorId))?.authValue).toBe('secret-1');
   });
 
   it('renames a header-auth connector without re-sending the secret or the header name', async () => {
@@ -273,7 +273,7 @@ describe('connectors CRUD routes', () => {
       .send({ name: 'Legacy Renamed', authType: 'header', authHeaderName: 'X-API-Key' });
     expect(update.status).toBe(200);
     expect(update.body.name).toBe('Legacy Renamed');
-    const stored = findConnector(db, workspaceId, connectorId);
+    const stored = await findConnector(db, workspaceId, connectorId);
     expect(stored?.authHeaderName).toBe('X-API-Key');
     expect(stored?.authValue).toBe('secret-2');
   });
@@ -293,7 +293,7 @@ describe('connectors CRUD routes', () => {
       .send({ authType: 'bearer' });
     expect(update.status).toBe(400);
     expect(update.body.code).toBe('INVALID_INPUT');
-    expect(findConnector(db, workspaceId, create.body.id)?.authType).toBe('none');
+    expect((await findConnector(db, workspaceId, create.body.id))?.authType).toBe('none');
   });
 
   it('returns 400 when switching to header auth with no authHeaderName and none stored', async () => {
@@ -317,7 +317,7 @@ describe('connectors CRUD routes', () => {
       .send({ authType: 'bearer', authValue: '   ' });
     expect(update.status).toBe(400);
     expect(update.body.code).toBe('INVALID_INPUT');
-    expect(findConnector(db, workspaceId, connectorId)?.authValue).toBe('secret-1');
+    expect((await findConnector(db, workspaceId, connectorId))?.authValue).toBe('secret-1');
   });
 
   it('returns 400 INVALID_INPUT when baseUrl is not an absolute http(s) URL on create', async () => {
@@ -340,6 +340,6 @@ describe('connectors CRUD routes', () => {
       .send({ baseUrl: 'not a url' });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_INPUT');
-    expect(findConnector(db, workspaceId, connectorId)?.baseUrl).toBe('https://api.example.com');
+    expect((await findConnector(db, workspaceId, connectorId))?.baseUrl).toBe('https://api.example.com');
   });
 });

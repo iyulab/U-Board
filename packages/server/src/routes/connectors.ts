@@ -15,11 +15,6 @@ import { isValidRef, buildResolveTarget, resolveConnectorValue } from '../resolv
 
 const AUTH_TYPES = new Set(['none', 'bearer', 'header']);
 
-/**
- * A connector's baseUrl must be an absolute http(s) URL. The scheme allowlist is load-bearing,
- * not cosmetic: the resolve proxy pins the request target to the baseUrl's origin, and a
- * non-special scheme has the opaque origin `"null"`, which would make that comparison vacuous.
- */
 function parseBaseUrl(value: unknown): URL | null {
   if (typeof value !== 'string' || value.trim() === '') return null;
   try {
@@ -30,14 +25,6 @@ function parseBaseUrl(value: unknown): URL | null {
   }
 }
 
-/**
- * A secret-bearing auth field is satisfied when the request supplies a non-blank string, or —
- * when the request omits it entirely — when the connector already has one stored. Omitting the
- * field means "keep the stored secret" (the console's edit form leaves it blank on purpose so a
- * rename does not require re-typing the secret); an explicitly supplied blank/non-string value is
- * still rejected, and so is omission when nothing is stored, because storing nothing would make
- * the resolve proxy send a literal `Bearer undefined`.
- */
 function authFieldSatisfied(provided: unknown, stored: string | undefined): boolean {
   if (provided === undefined) return typeof stored === 'string' && stored.trim() !== '';
   return typeof provided === 'string' && provided.trim() !== '';
@@ -46,8 +33,6 @@ function authFieldSatisfied(provided: unknown, stored: string | undefined): bool
 function validateAuthFields(body: any, existing?: Connector): string | null {
   if (!AUTH_TYPES.has(body.authType)) return 'INVALID_INPUT';
   if (body.authType === 'header') {
-    // Only fall back to a stored header name if the connector is *currently* header-auth —
-    // otherwise the stored value is not a live header name we may keep.
     const storedHeaderName = existing?.authType === 'header' ? existing.authHeaderName : undefined;
     if (!authFieldSatisfied(body.authHeaderName, storedHeaderName)) return 'INVALID_INPUT';
   }
@@ -60,14 +45,14 @@ function validateAuthFields(body: any, existing?: Connector): string | null {
 
 export function createConnectorsRouter(config: AppConfig, resolveCache: Map<string, unknown>): Router {
   const { db, sessionSecret } = config;
-  const router = Router({ mergeParams: true }); // :workspaceId comes from the parent mount path
+  const router = Router({ mergeParams: true });
   router.use(requireAuth(db, sessionSecret));
 
-  router.get('/', requireWorkspaceMember(db), (req, res) => {
-    res.status(200).json({ connectors: listConnectorsForWorkspace(db, req.params.workspaceId) });
-  });
+  router.get('/', requireWorkspaceMember(db), asyncHandler(async (req, res) => {
+    res.status(200).json({ connectors: await listConnectorsForWorkspace(db, req.params.workspaceId) });
+  }));
 
-  router.post('/', requireWorkspaceOwner(db), (req, res) => {
+  router.post('/', requireWorkspaceOwner(db), asyncHandler(async (req, res) => {
     const body = req.body ?? {};
     if (typeof body.name !== 'string' || body.name.trim() === '') {
       res.status(400).json({ code: 'INVALID_INPUT' });
@@ -82,7 +67,7 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       res.status(400).json({ code: authError });
       return;
     }
-    const connector = createConnector(db, {
+    const connector = await createConnector(db, {
       workspaceId: req.params.workspaceId,
       name: body.name,
       baseUrl: body.baseUrl,
@@ -94,9 +79,9 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       id: connector.id, name: connector.name, type: connector.type, baseUrl: connector.baseUrl,
       authType: connector.authType, authHeaderName: connector.authHeaderName, updatedAt: connector.updatedAt,
     });
-  });
+  }));
 
-  router.put('/:connectorId', requireWorkspaceOwner(db), (req, res) => {
+  router.put('/:connectorId', requireWorkspaceOwner(db), asyncHandler(async (req, res) => {
     const body = req.body ?? {};
     if (body.name !== undefined && (typeof body.name !== 'string' || body.name.trim() === '')) {
       res.status(400).json({ code: 'INVALID_INPUT' });
@@ -106,10 +91,7 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    // Auth validation runs against the *merged* state, so the existing connector has to be read
-    // first: `{authType: 'bearer'}` with no `authValue` is valid when a secret is already stored
-    // (a rename that leaves the secret alone) and invalid when there is none to fall back on.
-    const existing = findConnector(db, req.params.workspaceId, req.params.connectorId);
+    const existing = await findConnector(db, req.params.workspaceId, req.params.connectorId);
     if (!existing) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
@@ -121,11 +103,6 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
         return;
       }
     }
-    // Compute authHeaderName and authValue based on authType change:
-    // - undefined authType: don't touch either field
-    // - authType === 'none': explicitly clear both authHeaderName and authValue
-    // - authType === 'header': set authHeaderName to new value, clear authValue if not provided
-    // - authType === 'bearer': clear authHeaderName, keep or set authValue if provided
     let authHeaderName: string | null | undefined;
     let authValue: string | null | undefined;
     if (body.authType === undefined) {
@@ -141,7 +118,7 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       authHeaderName = null;
       authValue = body.authValue ?? undefined;
     }
-    const updated = updateConnector(db, req.params.workspaceId, req.params.connectorId, {
+    const updated = await updateConnector(db, req.params.workspaceId, req.params.connectorId, {
       name: body.name,
       baseUrl: body.baseUrl,
       authType: body.authType,
@@ -156,19 +133,19 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       id: updated.id, name: updated.name, type: updated.type, baseUrl: updated.baseUrl,
       authType: updated.authType, authHeaderName: updated.authHeaderName, updatedAt: updated.updatedAt,
     });
-  });
+  }));
 
-  router.delete('/:connectorId', requireWorkspaceOwner(db), (req, res) => {
-    const deleted = deleteConnector(db, req.params.workspaceId, req.params.connectorId);
+  router.delete('/:connectorId', requireWorkspaceOwner(db), asyncHandler(async (req, res) => {
+    const deleted = await deleteConnector(db, req.params.workspaceId, req.params.connectorId);
     if (!deleted) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
     res.status(204).send();
-  });
+  }));
 
   router.post('/:connectorId/resolve', requireWorkspaceMember(db), asyncHandler(async (req, res) => {
-    const connector = findConnector(db, req.params.workspaceId, req.params.connectorId);
+    const connector = await findConnector(db, req.params.workspaceId, req.params.connectorId);
     if (!connector) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
