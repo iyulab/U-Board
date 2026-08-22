@@ -30,10 +30,16 @@ export function isValidRef(ref: unknown): ref is { path: string; valuePath?: str
   );
 }
 
-/** Resolves `ref.path` against `connector.baseUrl`, pinned to the connector's own origin. Returns
- * `null` if the ref can't be turned into a same-origin request — the caller should treat that as
+/** Resolves `ref.path` against `connector.baseUrl`, pinned to the connector's own origin *and*,
+ * when the owner configured `baseUrl` with a path prefix, pinned to that prefix too. Returns
+ * `null` if the ref can't be turned into a same-prefix request — the caller should treat that as
  * `400 INVALID_INPUT`, not as a resolve outcome, since a malformed request never reaches the
- * network at all. */
+ * network at all.
+ *
+ * The prefix check exists alongside the origin check because `..` dot-segments normalize *within*
+ * the origin: `new URL('/../../admin', 'https://plant.example.com/api/v2/')` resolves to
+ * `https://plant.example.com/admin` — the origin the owner scoped the connector's credentials to,
+ * but not the path prefix the owner scoped the connector's *use* to. */
 export function buildResolveTarget(connector: Connector, ref: { path: string }): URL | null {
   let target: URL;
   let base: URL;
@@ -45,7 +51,12 @@ export function buildResolveTarget(connector: Connector, ref: { path: string }):
   } catch {
     return null;
   }
-  return target.origin === base.origin ? target : null;
+  if (target.origin !== base.origin) return null;
+  const basePathname = base.pathname === '/' ? '' : base.pathname.replace(/\/+$/, '');
+  if (basePathname && target.pathname !== basePathname && !target.pathname.startsWith(basePathname + '/')) {
+    return null;
+  }
+  return target;
 }
 
 /** Fetches `target` with `connector`'s auth headers, caching the last-known value so a failure

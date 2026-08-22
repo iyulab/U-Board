@@ -146,4 +146,22 @@ describe('connector resolve proxy', () => {
     expect(res.status).toBe(200);
     expect(String((fetch as any).mock.calls[0][0])).toBe('https://plant.example.com/api/v2/pumps/a');
   });
+
+  it('rejects a ref.path whose dot-segments resolve outside a path-prefixed baseUrl even though the origin stays the same', async () => {
+    const owner = createUser(db, { email: 'owner3@x.com', passwordHash: 'h', name: 'Owner3' });
+    addWorkspaceUser(db, { workspaceId, userId: owner.id, role: 'owner' });
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', cookieFor(owner.id, workspaceId))
+      .send({ name: 'Prefixed2', baseUrl: 'https://plant.example.com/api/v2', authType: 'none' });
+    expect(create.status).toBe(201);
+
+    const res = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${create.body.id}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/../../admin' } });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });
