@@ -13,18 +13,22 @@ const DEFAULT_HEIGHT = 800;
 export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const { boardId } = useParams<{ boardId: string }>();
   const [document, setDocument] = useState<ViewDocument | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
   const [connectorsError, setConnectorsError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   const [isOwner, setIsOwner] = useState(false);
+  const [membersError, setMembersError] = useState<string | null>(null);
   const [shareTokens, setShareTokens] = useState<ShareTokenSummary[]>([]);
   const [shareError, setShareError] = useState<string | null>(null);
   const [newShareUrl, setNewShareUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    getBoard(workspaceId, boardId!).then(board => setDocument(board.document));
+    getBoard(workspaceId, boardId!)
+      .then(board => setDocument(board.document))
+      .catch(() => setLoadError('보드를 불러오지 못했습니다'));
   }, [workspaceId, boardId]);
 
   useEffect(() => {
@@ -34,7 +38,9 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   }, [workspaceId]);
 
   useEffect(() => {
-    listMembers(workspaceId).then(res => setIsOwner(res.members.find(m => m.userId === userId)?.role === 'owner'));
+    listMembers(workspaceId)
+      .then(res => setIsOwner(res.members.find(m => m.userId === userId)?.role === 'owner'))
+      .catch(() => setMembersError('구성원 정보를 불러오지 못했습니다'));
   }, [workspaceId, userId]);
 
   function reloadShareTokens() {
@@ -85,6 +91,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     return [demo, ...real];
   }, [workspaceId, connectors]);
 
+  if (loadError) return <p role="alert">{loadError}</p>;
   if (!document) return <p>불러오는 중...</p>;
 
   const width = document.background.image?.width ?? DEFAULT_WIDTH;
@@ -103,6 +110,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   return (
     <>
       {connectorsError && <p role="alert">{connectorsError}</p>}
+      {membersError && <p role="alert">{membersError}</p>}
       {saveError && <p role="alert">{saveError}</p>}
       {savedAt && <p role="status">저장됨</p>}
       <AuthoringView key={boardId} initialDocument={document} adapters={adapters} width={width} height={height} onSave={handleSave} />

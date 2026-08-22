@@ -55,6 +55,23 @@ describe('BoardEditorPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
   });
+
+  it('shows an error instead of getting stuck on the loading placeholder when the board fails to load', async () => {
+    vi.mocked(api.getBoard).mockRejectedValue(new Error('network down'));
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('보드를 불러오지 못했습니다');
+    expect(screen.queryByText('불러오는 중...')).not.toBeInTheDocument();
+  });
+
+  it('shows an error when the member list fails to load, and keeps the owner-only share panel hidden', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.listMembers).mockRejectedValue(new Error('network down'));
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('구성원 정보를 불러오지 못했습니다');
+    expect(screen.queryByText('공유')).not.toBeInTheDocument();
+  });
 });
 
 describe('BoardEditorPage connector wiring', () => {

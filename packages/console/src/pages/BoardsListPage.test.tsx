@@ -62,4 +62,41 @@ describe('BoardsListPage', () => {
     await waitFor(() => expect(api.deleteBoard).toHaveBeenCalledWith('w1', 'b1'));
     expect(screen.queryByText('Floor 1')).not.toBeInTheDocument();
   });
+
+  it('shows an error with a retry button when the list fails to load, and recovers on retry', async () => {
+    vi.mocked(api.listBoards).mockRejectedValueOnce(new Error('network down'));
+    renderPage();
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('보드 목록을 불러오지 못했습니다');
+
+    vi.mocked(api.listBoards).mockResolvedValueOnce({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: 't' }] });
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+
+    expect(await screen.findByText('Floor 1')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows an error when creating a board fails', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
+    vi.mocked(api.createBoard).mockRejectedValue(new Error('network down'));
+    vi.spyOn(window, 'prompt').mockReturnValue('New Board');
+
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '새 보드' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('보드 생성에 실패했습니다');
+  });
+
+  it('shows an error when deleting a board fails', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: 't' }] });
+    vi.mocked(api.deleteBoard).mockRejectedValue(new Error('network down'));
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+
+    renderPage();
+    await screen.findByText('Floor 1');
+    await userEvent.click(screen.getByRole('button', { name: '삭제' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('보드 삭제에 실패했습니다');
+    expect(screen.getByText('Floor 1')).toBeInTheDocument();
+  });
 });
