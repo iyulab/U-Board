@@ -152,9 +152,18 @@ export async function createDb(url: string): Promise<DbClient> {
     try {
       await bootstrapClient.query('SELECT pg_advisory_lock($1)', [SCHEMA_BOOTSTRAP_LOCK_KEY]);
       await bootstrapClient.query(SCHEMA_SQL);
-    } finally {
       await bootstrapClient.query('SELECT pg_advisory_unlock($1)', [SCHEMA_BOOTSTRAP_LOCK_KEY]);
       bootstrapClient.release();
+    } catch (err) {
+      try {
+        await bootstrapClient.query('SELECT pg_advisory_unlock($1)', [SCHEMA_BOOTSTRAP_LOCK_KEY]);
+        bootstrapClient.release();
+      } catch (unlockErr) {
+        // Unlock itself failed — the connection is broken. Destroy it rather than leak it or
+        // return it to the pool still holding the advisory lock.
+        bootstrapClient.release(unlockErr instanceof Error ? unlockErr : new Error(String(unlockErr)));
+      }
+      throw err;
     }
     return new PgDbClient(pool);
   }
