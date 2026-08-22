@@ -1,4 +1,4 @@
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import type { ViewDocument } from '@iyulab/u-board/domain';
 
@@ -31,7 +31,7 @@ function rowToBoard(row: BoardRow): Board {
   };
 }
 
-export function createBoard(db: Database.Database, input: { workspaceId: string; name: string }): Board {
+export async function createBoard(db: DbClient, input: { workspaceId: string; name: string }): Promise<Board> {
   const now = new Date().toISOString();
   const board: Board = {
     id: randomUUID(),
@@ -41,36 +41,36 @@ export function createBoard(db: Database.Database, input: { workspaceId: string;
     createdAt: now,
     updatedAt: now,
   };
-  db.prepare(
-    `INSERT INTO boards (id, workspace_id, name, document, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(board.id, board.workspaceId, board.name, JSON.stringify(board.document), board.createdAt, board.updatedAt);
+  await db.query(
+    `INSERT INTO boards (id, workspace_id, name, document, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+    [board.id, board.workspaceId, board.name, JSON.stringify(board.document), board.createdAt, board.updatedAt]
+  );
   return board;
 }
 
-export function listBoardsForWorkspace(
-  db: Database.Database,
+export async function listBoardsForWorkspace(
+  db: DbClient,
   workspaceId: string
-): Array<{ id: string; name: string; updatedAt: string }> {
-  const rows = db
-    .prepare(`SELECT id, name, updated_at FROM boards WHERE workspace_id = ?`)
-    .all(workspaceId) as { id: string; name: string; updated_at: string }[];
+): Promise<Array<{ id: string; name: string; updatedAt: string }>> {
+  const { rows } = await db.query<{ id: string; name: string; updated_at: string }>(
+    `SELECT id, name, updated_at FROM boards WHERE workspace_id = $1`,
+    [workspaceId]
+  );
   return rows.map(r => ({ id: r.id, name: r.name, updatedAt: r.updated_at }));
 }
 
-export function findBoard(db: Database.Database, workspaceId: string, boardId: string): Board | undefined {
-  const row = db
-    .prepare(`SELECT * FROM boards WHERE id = ? AND workspace_id = ?`)
-    .get(boardId, workspaceId) as BoardRow | undefined;
-  return row ? rowToBoard(row) : undefined;
+export async function findBoard(db: DbClient, workspaceId: string, boardId: string): Promise<Board | undefined> {
+  const { rows } = await db.query<BoardRow>(`SELECT * FROM boards WHERE id = $1 AND workspace_id = $2`, [boardId, workspaceId]);
+  return rows[0] ? rowToBoard(rows[0]) : undefined;
 }
 
-export function updateBoard(
-  db: Database.Database,
+export async function updateBoard(
+  db: DbClient,
   workspaceId: string,
   boardId: string,
   input: { name?: string; document?: ViewDocument }
-): Board | undefined {
-  const existing = findBoard(db, workspaceId, boardId);
+): Promise<Board | undefined> {
+  const existing = await findBoard(db, workspaceId, boardId);
   if (!existing) return undefined;
 
   const updated: Board = {
@@ -79,13 +79,14 @@ export function updateBoard(
     document: input.document ?? existing.document,
     updatedAt: new Date().toISOString(),
   };
-  db.prepare(`UPDATE boards SET name = ?, document = ?, updated_at = ? WHERE id = ? AND workspace_id = ?`).run(
-    updated.name, JSON.stringify(updated.document), updated.updatedAt, boardId, workspaceId
+  await db.query(
+    `UPDATE boards SET name = $1, document = $2, updated_at = $3 WHERE id = $4 AND workspace_id = $5`,
+    [updated.name, JSON.stringify(updated.document), updated.updatedAt, boardId, workspaceId]
   );
   return updated;
 }
 
-export function deleteBoard(db: Database.Database, workspaceId: string, boardId: string): boolean {
-  const result = db.prepare(`DELETE FROM boards WHERE id = ? AND workspace_id = ?`).run(boardId, workspaceId);
-  return result.changes > 0;
+export async function deleteBoard(db: DbClient, workspaceId: string, boardId: string): Promise<boolean> {
+  const { rowCount } = await db.query(`DELETE FROM boards WHERE id = $1 AND workspace_id = $2`, [boardId, workspaceId]);
+  return (rowCount ?? 0) > 0;
 }
