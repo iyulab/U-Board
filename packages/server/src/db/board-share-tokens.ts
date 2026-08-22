@@ -1,4 +1,4 @@
-import type Database from 'better-sqlite3';
+import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 
 export interface BoardShareToken {
@@ -43,10 +43,10 @@ function rowToToken(row: BoardShareTokenRow): BoardShareToken {
   };
 }
 
-export function createBoardShareToken(
-  db: Database.Database,
+export async function createBoardShareToken(
+  db: DbClient,
   input: { boardId: string; workspaceId: string; tokenHash: string; tokenMask: string; createdByUserId: string }
-): BoardShareToken {
+): Promise<BoardShareToken> {
   const token: BoardShareToken = {
     id: randomUUID(),
     boardId: input.boardId,
@@ -56,36 +56,39 @@ export function createBoardShareToken(
     createdByUserId: input.createdByUserId,
     createdAt: new Date().toISOString(),
   };
-  db.prepare(
+  await db.query(
     `INSERT INTO board_share_tokens (id, board_id, workspace_id, token_hash, token_mask, created_by_user_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(token.id, token.boardId, token.workspaceId, token.tokenHash, token.tokenMask, token.createdByUserId, token.createdAt);
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [token.id, token.boardId, token.workspaceId, token.tokenHash, token.tokenMask, token.createdByUserId, token.createdAt]
+  );
   return token;
 }
 
-export function listBoardShareTokensForBoard(
-  db: Database.Database,
+export async function listBoardShareTokensForBoard(
+  db: DbClient,
   workspaceId: string,
   boardId: string
-): BoardShareTokenSummary[] {
-  const rows = db
-    .prepare(`SELECT id, token_mask, created_at, last_used_at FROM board_share_tokens WHERE board_id = ? AND workspace_id = ?`)
-    .all(boardId, workspaceId) as { id: string; token_mask: string; created_at: string; last_used_at: string | null }[];
+): Promise<BoardShareTokenSummary[]> {
+  const { rows } = await db.query<{ id: string; token_mask: string; created_at: string; last_used_at: string | null }>(
+    `SELECT id, token_mask, created_at, last_used_at FROM board_share_tokens WHERE board_id = $1 AND workspace_id = $2`,
+    [boardId, workspaceId]
+  );
   return rows.map(r => ({ id: r.id, tokenMask: r.token_mask, createdAt: r.created_at, lastUsedAt: r.last_used_at ?? undefined }));
 }
 
-export function findBoardShareTokenByHash(db: Database.Database, tokenHash: string): BoardShareToken | undefined {
-  const row = db.prepare(`SELECT * FROM board_share_tokens WHERE token_hash = ?`).get(tokenHash) as BoardShareTokenRow | undefined;
-  return row ? rowToToken(row) : undefined;
+export async function findBoardShareTokenByHash(db: DbClient, tokenHash: string): Promise<BoardShareToken | undefined> {
+  const { rows } = await db.query<BoardShareTokenRow>(`SELECT * FROM board_share_tokens WHERE token_hash = $1`, [tokenHash]);
+  return rows[0] ? rowToToken(rows[0]) : undefined;
 }
 
-export function deleteBoardShareToken(db: Database.Database, workspaceId: string, boardId: string, tokenId: string): boolean {
-  const result = db
-    .prepare(`DELETE FROM board_share_tokens WHERE id = ? AND board_id = ? AND workspace_id = ?`)
-    .run(tokenId, boardId, workspaceId);
-  return result.changes > 0;
+export async function deleteBoardShareToken(db: DbClient, workspaceId: string, boardId: string, tokenId: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `DELETE FROM board_share_tokens WHERE id = $1 AND board_id = $2 AND workspace_id = $3`,
+    [tokenId, boardId, workspaceId]
+  );
+  return (rowCount ?? 0) > 0;
 }
 
-export function touchBoardShareTokenLastUsed(db: Database.Database, tokenId: string): void {
-  db.prepare(`UPDATE board_share_tokens SET last_used_at = ? WHERE id = ?`).run(new Date().toISOString(), tokenId);
+export async function touchBoardShareTokenLastUsed(db: DbClient, tokenId: string): Promise<void> {
+  await db.query(`UPDATE board_share_tokens SET last_used_at = $1 WHERE id = $2`, [new Date().toISOString(), tokenId]);
 }
