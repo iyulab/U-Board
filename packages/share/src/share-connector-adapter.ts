@@ -8,8 +8,9 @@ export class ShareConnectorAdapter implements Adapter {
   constructor(private boardId: string, private token: string, readonly id: string) {}
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
+    const base = import.meta.env.VITE_API_BASE_URL ?? '';
     const res = await fetch(
-      `/share/boards/${this.boardId}/connectors/${this.id}/resolve?token=${encodeURIComponent(this.token)}`,
+      `${base}/share/boards/${this.boardId}/connectors/${this.id}/resolve?token=${encodeURIComponent(this.token)}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref }) }
     );
     if (!res.ok) return { value: undefined, quality: 'disconnected' };

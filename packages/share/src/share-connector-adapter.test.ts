@@ -28,4 +28,16 @@ describe('ShareConnectorAdapter', () => {
     const adapter = new ShareConnectorAdapter('b1', 'tok', 'c1');
     await expect(adapter.resolve({ path: '/status' })).resolves.toEqual({ value: undefined, quality: 'disconnected' });
   });
+
+  it('prefixes the resolve URL with VITE_API_BASE_URL when set', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr');
+    (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ value: 1, quality: 'live' }) });
+    const adapter = new ShareConnectorAdapter('b1', 'tok', 'c1');
+    await adapter.resolve({ path: '/status' });
+    expect(fetch).toHaveBeenCalledWith(
+      'https://api.board.u-platform.kr/share/boards/b1/connectors/c1/resolve?token=tok',
+      expect.anything()
+    );
+    vi.unstubAllEnvs();
+  });
 });

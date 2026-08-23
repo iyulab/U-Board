@@ -18,7 +18,8 @@ export function App() {
       setState('error');
       return;
     }
-    fetch(`/share/boards/${boardId}?token=${encodeURIComponent(token)}`)
+    const base = import.meta.env.VITE_API_BASE_URL ?? '';
+    fetch(`${base}/share/boards/${boardId}?token=${encodeURIComponent(token)}`)
       .then(res => {
         if (!res.ok) throw new Error('not ok');
         return res.json();
