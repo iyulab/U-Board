@@ -129,4 +129,27 @@ describe('auth rate limiting', () => {
     const res = await request(app).get('/auth/bootstrap-status');
     expect(res.status).not.toBe(429);
   });
+
+  it('keys by CF-Connecting-IP instead of req.ip when trustCloudflareProxy is set', async () => {
+    const cfApp = createApp({ db, sessionSecret: SECRET, trustCloudflareProxy: true });
+    for (let i = 0; i < 10; i++) {
+      await request(cfApp)
+        .post('/auth/login')
+        .set('CF-Connecting-IP', '203.0.113.1')
+        .send({ email: 'x@x.com', password: 'wrong' });
+    }
+    const sameIp = await request(cfApp)
+      .post('/auth/login')
+      .set('CF-Connecting-IP', '203.0.113.1')
+      .send({ email: 'x@x.com', password: 'wrong' });
+    expect(sameIp.status).toBe(429);
+
+    // A different CF-Connecting-IP is a separate bucket even though supertest sends every
+    // request from the same underlying req.ip — proves the key came from the header, not req.ip.
+    const otherIp = await request(cfApp)
+      .post('/auth/login')
+      .set('CF-Connecting-IP', '203.0.113.2')
+      .send({ email: 'x@x.com', password: 'wrong' });
+    expect(otherIp.status).not.toBe(429);
+  });
 });

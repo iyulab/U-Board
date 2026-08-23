@@ -17,6 +17,21 @@ export interface AppConfig {
   /** Production-only CORS allowlist (console + share origins). Unset in dev/test, where the
    *  same-origin dev proxy makes CORS a no-op anyway. */
   corsOrigins?: string[];
+  /** Key the auth rate limiter off Cloudflare's `CF-Connecting-IP` header instead of `req.ip`.
+   *  Enable ONLY once Container App ingress is locked to Cloudflare-only traffic (deployment
+   *  routing plan's infra checklist, HD-24) — otherwise the header is client-spoofable and the
+   *  limiter is worse than doing nothing. Unset in dev/test, where the header doesn't exist. */
+  trustCloudflareProxy?: boolean;
+}
+
+/** `req.ip` collapses to the single ingress IP behind Cloudflare -> Container Apps unless the
+ *  exact hop count is configured via Express's `trust proxy`, which is fragile (a platform-side
+ *  change to that chain silently reopens the shared-bucket DoS). `CF-Connecting-IP` sidesteps the
+ *  hop-count question entirely — Cloudflare always sets it to the real client IP, and it's only
+ *  trustworthy once ingress rejects traffic that didn't come through Cloudflare. */
+function cloudflareKeyGenerator(req: Request): string {
+  const cfIp = req.headers['cf-connecting-ip'];
+  return typeof cfIp === 'string' && cfIp.length > 0 ? cfIp : (req.ip ?? 'unknown');
 }
 
 export function createApp(config: AppConfig): express.Express {
@@ -38,6 +53,9 @@ export function createApp(config: AppConfig): express.Express {
     limit: 10,
     standardHeaders: true,
     legacyHeaders: false,
+    ...(config.trustCloudflareProxy
+      ? { keyGenerator: cloudflareKeyGenerator, validate: { xForwardedForHeader: false } }
+      : {}),
   });
   app.use('/auth/login', authRateLimiter);
   app.use('/auth/signup', authRateLimiter);

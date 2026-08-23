@@ -19,9 +19,10 @@ function redactDatabaseUrl(url: string): string {
 }
 
 const corsOrigins = process.env.UBOARD_CORS_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean);
+const trustCloudflareProxy = process.env.UBOARD_TRUST_CF_PROXY === 'true';
 
 const db = await createDb(databaseUrl);
-const app = createApp({ db, sessionSecret, corsOrigins });
+const app = createApp({ db, sessionSecret, corsOrigins, trustCloudflareProxy });
 
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {
