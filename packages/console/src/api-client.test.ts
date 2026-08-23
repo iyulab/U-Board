@@ -1,8 +1,21 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector, listShareTokens, createShareToken, deleteShareToken } from './api-client.js';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
+});
+
+describe('API base URL', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('prefixes requests with VITE_API_BASE_URL when set', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr');
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
+    await getBootstrapStatus();
+    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/auth/bootstrap-status', expect.anything());
+  });
 });
 
 describe('signup', () => {
