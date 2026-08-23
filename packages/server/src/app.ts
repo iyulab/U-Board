@@ -1,5 +1,6 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import type { DbClient } from './db.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createInvitationsRouter } from './routes/invitations.js';
@@ -12,12 +13,18 @@ import { createShareRouter } from './routes/share.js';
 export interface AppConfig {
   db: DbClient;
   sessionSecret: string;
+  /** Production-only CORS allowlist (console + share origins). Unset in dev/test, where the
+   *  same-origin dev proxy makes CORS a no-op anyway. */
+  corsOrigins?: string[];
 }
 
 export function createApp(config: AppConfig): express.Express {
   const app = express();
   // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
   app.use(express.json({ limit: '10mb' }));
+  if (config.corsOrigins && config.corsOrigins.length > 0) {
+    app.use(cors({ origin: config.corsOrigins, credentials: true }));
+  }
   app.use(cookieParser());
   const resolveCache = new Map<string, unknown>();
   app.use('/auth', createAuthRouter(config));

@@ -78,3 +78,23 @@ describe('errorHandler / body size limit', () => {
     expect(malformedPublicRoute.body.code).toBe('INVALID_JSON');
   });
 });
+
+describe('CORS', () => {
+  it('reflects an allowed origin and marks credentials allowed', async () => {
+    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://board.u-platform.kr'] });
+    const res = await request(corsApp).get('/auth/bootstrap-status').set('Origin', 'https://board.u-platform.kr');
+    expect(res.headers['access-control-allow-origin']).toBe('https://board.u-platform.kr');
+    expect(res.headers['access-control-allow-credentials']).toBe('true');
+  });
+
+  it('omits CORS headers for an origin not on the allowlist', async () => {
+    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://board.u-platform.kr'] });
+    const res = await request(corsApp).get('/auth/bootstrap-status').set('Origin', 'https://evil.example.com');
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+
+  it('adds no CORS middleware when corsOrigins is unset (dev/test default)', async () => {
+    const res = await request(app).get('/auth/bootstrap-status').set('Origin', 'https://anything.example.com');
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+  });
+});

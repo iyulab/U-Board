@@ -18,8 +18,10 @@ function redactDatabaseUrl(url: string): string {
   return url; // ':memory:' or a local PGlite path — nothing sensitive to redact
 }
 
+const corsOrigins = process.env.UBOARD_CORS_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean);
+
 const db = await createDb(databaseUrl);
-const app = createApp({ db, sessionSecret });
+const app = createApp({ db, sessionSecret, corsOrigins });
 
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {
