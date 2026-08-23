@@ -98,3 +98,21 @@ describe('CORS', () => {
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
 });
+
+describe('auth rate limiting', () => {
+  it('returns 429 after exceeding the login attempt limit', async () => {
+    for (let i = 0; i < 10; i++) {
+      await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
+    }
+    const res = await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
+    expect(res.status).toBe(429);
+  });
+
+  it('does not rate-limit unrelated routes', async () => {
+    for (let i = 0; i < 10; i++) {
+      await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
+    }
+    const res = await request(app).get('/auth/bootstrap-status');
+    expect(res.status).not.toBe(429);
+  });
+});

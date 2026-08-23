@@ -1,6 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import type { DbClient } from './db.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createInvitationsRouter } from './routes/invitations.js';
@@ -27,6 +28,14 @@ export function createApp(config: AppConfig): express.Express {
   }
   app.use(cookieParser());
   const resolveCache = new Map<string, unknown>();
+  const authRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/auth/login', authRateLimiter);
+  app.use('/auth/signup', authRateLimiter);
   app.use('/auth', createAuthRouter(config));
   app.use('/invitations', createInvitationsRouter(config));
   app.use('/workspaces', createWorkspacesRouter(config));
