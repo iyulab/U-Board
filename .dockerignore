@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+.git
+.claude
+.worktrees
+test-results
+playwright-report
+.playwright-mcp
+claudedocs
+packages/*/*.db
+packages/*/.env
