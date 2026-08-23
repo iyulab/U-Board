@@ -21,11 +21,16 @@ export interface AppConfig {
 
 export function createApp(config: AppConfig): express.Express {
   const app = express();
-  // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
-  app.use(express.json({ limit: '10mb' }));
+  // CORS must be registered before express.json(): when express.json() throws (413 for an
+  // oversized body, 400 for malformed JSON), Express skips every remaining non-error middleware
+  // and jumps straight to errorHandler — a cors() mounted after it would never run, so those
+  // error responses would ship without CORS headers and the browser would block the client from
+  // ever reading them.
   if (config.corsOrigins && config.corsOrigins.length > 0) {
     app.use(cors({ origin: config.corsOrigins, credentials: true }));
   }
+  // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
+  app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
   const resolveCache = new Map<string, unknown>();
   const authRateLimiter = rateLimit({
