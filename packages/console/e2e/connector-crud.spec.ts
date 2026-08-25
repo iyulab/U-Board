@@ -54,7 +54,8 @@ test('create a connector via the UI, then resolve a live value through the real 
     await page.getByRole('button', { name: '새 보드' }).click();
     await expect(page.getByText('Save')).toBeVisible();
 
-    // resolve 왕복 자체는 UI에 노출되지 않으므로 같은 세션 쿠키로 직접 호출해 검증
+    // UI를 통한 resolve 왕복은 binding-editor.spec.ts가 검증한다 — 여기서는 API 계층 자체를
+    // 독립적으로(UI 무관하게) 확인한다.
     const session = await page.request.get('/workspaces/me').then(r => r.json());
     const workspaceId = session.activeWorkspaceId;
     const connectors = await page.request.get(`/workspaces/${workspaceId}/connectors`).then(r => r.json());
