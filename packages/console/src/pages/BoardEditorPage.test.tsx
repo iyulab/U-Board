@@ -6,7 +6,15 @@ import { BoardEditorPage } from './BoardEditorPage.js';
 import * as api from '../api-client.js';
 
 vi.mock('../api-client.js');
-vi.mock('@canvas-kit/designer', () => ({ KonvaDesigner: () => <div data-testid="konva-designer" /> }));
+vi.mock('@canvas-kit/designer', () => ({
+  KonvaDesigner: ({ onSelectionChange }: any) => (
+    <div data-testid="konva-designer">
+      <button onClick={() => onSelectionChange?.([{ type: 'rect', id: 'n1', x: 0, y: 0, width: 10, height: 10 }])}>
+        select-n1
+      </button>
+    </div>
+  ),
+}));
 vi.mock('@canvas-kit/viewer', () => ({ Viewer: () => <div data-testid="viewer" /> }));
 beforeEach(() => {
   vi.resetAllMocks();
@@ -204,5 +212,34 @@ describe('BoardEditorPage share panel', () => {
     renderPage();
     fireEvent.click(await screen.findByText('공유'));
     expect(await screen.findByRole('alert')).toHaveTextContent('공유 링크 목록을 불러오지 못했습니다');
+  });
+});
+
+describe('BoardEditorPage binding editor wiring', () => {
+  it('passes connector display names (not raw ids) down to the binding editor', async () => {
+    const doc = {
+      kind: 'canvas' as const,
+      background: {},
+      nodes: [
+        {
+          id: 'n1',
+          x: 0,
+          y: 0,
+          anchored: false,
+          widget: { type: 'status' as const, props: { data: { label: 'A', level: 'info' as const, value: 'x' } } },
+        },
+      ],
+      connectors: [],
+    };
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: doc, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({
+      connectors: [{ id: 'c1', name: 'Plant API', type: 'http', baseUrl: 'https://plant.example.com', authType: 'none', updatedAt: 't' }],
+    });
+    renderPage();
+
+    await screen.findByText('Save');
+    fireEvent.click(screen.getByText('select-n1'));
+
+    expect(await screen.findByRole('option', { name: 'Plant API' })).toBeInTheDocument();
   });
 });

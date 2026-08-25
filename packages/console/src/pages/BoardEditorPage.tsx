@@ -93,6 +93,11 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     return [demo, ...real];
   }, [workspaceId, connectors]);
 
+  const connectorLabels = useMemo(
+    () => Object.fromEntries(connectors.map(c => [c.id, c.name])),
+    [connectors]
+  );
+
   if (loadError) return <p role="alert">{loadError}</p>;
   if (!document) return <p>불러오는 중...</p>;
 
@@ -116,7 +121,15 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       {membersError && <p role="alert">{membersError}</p>}
       {saveError && <p role="alert">{saveError}</p>}
       {savedAt && <p role="status">저장됨</p>}
-      <AuthoringView key={boardId} initialDocument={document} adapters={adapters} width={width} height={height} onSave={handleSave} />
+      <AuthoringView
+        key={boardId}
+        initialDocument={document}
+        adapters={adapters}
+        connectorLabels={connectorLabels}
+        width={width}
+        height={height}
+        onSave={handleSave}
+      />
 
       {isOwner && (
         <details>
