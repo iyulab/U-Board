@@ -10,7 +10,14 @@ import type { ViewDocument } from '../view-document';
 // AuthoringView's own state (import error handling), matching how canvas-kit's own tests stub
 // react-konva rather than exercising real canvas rendering.
 vi.mock('@canvas-kit/designer', () => ({
-  KonvaDesigner: () => <div data-testid="konva-designer" />,
+  KonvaDesigner: ({ onSelectionChange }: any) => (
+    <div data-testid="konva-designer">
+      <button onClick={() => onSelectionChange?.([{ type: 'rect', id: 'node-1', x: 0, y: 0, width: 10, height: 10 }])}>
+        select-node-1
+      </button>
+      <button onClick={() => onSelectionChange?.([])}>deselect</button>
+    </div>
+  ),
 }));
 vi.mock('@canvas-kit/viewer', () => ({
   Viewer: () => <div data-testid="viewer" />,
@@ -88,5 +95,64 @@ describe('AuthoringView onSave', () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
     expect(screen.getByText('Export')).toBeInTheDocument();
     expect(screen.queryByText('Save')).not.toBeInTheDocument();
+  });
+});
+
+describe('AuthoringView node selection', () => {
+  function docWithNode(): ViewDocument {
+    return {
+      kind: 'canvas',
+      background: {},
+      nodes: [
+        {
+          id: 'node-1',
+          x: 0,
+          y: 0,
+          anchored: false,
+          widget: { type: 'status', props: { data: { label: 'Pump A', level: 'info', value: 'running' } } },
+        },
+      ],
+      connectors: [],
+    };
+  }
+
+  it('shows the placeholder when nothing is selected', () => {
+    render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} />);
+    expect(screen.getByText('노드를 선택하세요.')).toBeInTheDocument();
+  });
+
+  it('shows the selected node in the property panel', () => {
+    render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} />);
+
+    fireEvent.click(screen.getByText('select-node-1'));
+
+    expect(screen.getByLabelText('위젯 타입')).toHaveValue('status');
+  });
+
+  it('returns to the placeholder when the selection is cleared', () => {
+    render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} />);
+
+    fireEvent.click(screen.getByText('select-node-1'));
+    fireEvent.click(screen.getByText('deselect'));
+
+    expect(screen.getByText('노드를 선택하세요.')).toBeInTheDocument();
+  });
+
+  it('writes a widget-type change back onto the selected node in the document', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText('select-node-1'));
+    fireEvent.change(screen.getByLabelText('위젯 타입'), { target: { value: 'gauge' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith({
+        kind: 'canvas',
+        background: {},
+        nodes: [{ id: 'node-1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', props: { data: { value: 0 } } } }],
+        connectors: [],
+      })
+    );
   });
 });
