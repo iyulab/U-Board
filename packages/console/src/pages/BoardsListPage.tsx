@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { listBoards, createBoard, deleteBoard } from '../api-client.js';
 
@@ -8,6 +8,10 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   const [boards, setBoards] = useState<BoardSummary[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newBoardName, setNewBoardName] = useState('');
+  const [createError, setCreateError] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const navigate = useNavigate();
 
   function reload() {
@@ -21,14 +25,32 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
     reload();
   }, [workspaceId]);
 
-  async function handleCreate() {
-    const name = window.prompt('보드 이름');
-    if (!name) return;
+  // `<dialog>` (native modal — focus trap, Escape-to-close, and top-layer rendering come for
+  // free from the platform, none of which a plain positioned `<div>` gives you without hand-
+  // rolling it) is driven imperatively per the HTML spec — `open` as a JSX prop alone would
+  // render it non-modal. `onClose` below covers every way it can close (Cancel, Escape, and
+  // after a successful create) so the two stay in sync regardless of which one happened.
+  useEffect(() => {
+    if (isCreateOpen) dialogRef.current?.showModal();
+    else dialogRef.current?.close();
+  }, [isCreateOpen]);
+
+  function openCreateDialog() {
+    setNewBoardName('');
+    setCreateError(null);
+    setIsCreateOpen(true);
+  }
+
+  async function handleCreateSubmit(e: FormEvent) {
+    e.preventDefault();
     try {
-      const created = await createBoard(workspaceId, name);
+      const created = await createBoard(workspaceId, newBoardName);
+      setIsCreateOpen(false);
       navigate(`/boards/${created.id}/edit`);
     } catch {
-      setActionError('보드 생성에 실패했습니다');
+      // Left open — same "fix and resubmit without retyping" pattern ConnectorsPage's inline
+      // form uses on a failed create.
+      setCreateError('보드 생성에 실패했습니다');
     }
   }
 
@@ -51,7 +73,7 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
         </p>
       )}
       {actionError && <p role="alert">{actionError}</p>}
-      <button onClick={handleCreate}>새 보드</button>
+      <button onClick={openCreateDialog}>새 보드</button>
       <ul>
         {boards.map(b => (
           <li key={b.id}>
@@ -60,6 +82,20 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
           </li>
         ))}
       </ul>
+      <dialog ref={dialogRef} onClose={() => setIsCreateOpen(false)} aria-labelledby="create-board-heading">
+        <h3 id="create-board-heading">새 보드</h3>
+        <form onSubmit={handleCreateSubmit}>
+          <label>
+            보드 이름
+            <input value={newBoardName} onChange={e => setNewBoardName(e.target.value)} required autoFocus />
+          </label>
+          {createError && <p role="alert">{createError}</p>}
+          <button type="submit">생성</button>{' '}
+          <button type="button" onClick={() => setIsCreateOpen(false)}>
+            취소
+          </button>
+        </form>
+      </dialog>
     </div>
   );
 }

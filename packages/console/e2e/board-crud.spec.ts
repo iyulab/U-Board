@@ -11,8 +11,9 @@ test('create a board, add a node, save, and see it persisted after reopening', a
 
   // 보드 생성
   await page.getByRole('link', { name: '보드' }).click();
-  page.once('dialog', dialog => dialog.accept('E2E Board'));
   await page.getByRole('button', { name: '새 보드' }).click();
+  await page.getByLabel('보드 이름').fill('E2E Board');
+  await page.getByRole('button', { name: '생성' }).click();
 
   // 편집기로 이동, 노드 추가, 저장
   await expect(page.getByText('Save')).toBeVisible();

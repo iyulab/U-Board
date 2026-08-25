@@ -26,8 +26,9 @@ test('binds a node to a live value via the property panel and its path explorer'
     await expect(page.getByText('Mock Plant API')).toBeVisible();
 
     await page.goto('/boards');
-    page.once('dialog', dialog => dialog.accept('Binding Board'));
     await page.getByRole('button', { name: '새 보드' }).click();
+    await page.getByLabel('보드 이름').fill('Binding Board');
+    await page.getByRole('button', { name: '생성' }).click();
     await expect(page.getByText('Save')).toBeVisible();
 
     await page.getByText('Add node').click();

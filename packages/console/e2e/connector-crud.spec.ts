@@ -50,8 +50,9 @@ test('create a connector via the UI, then resolve a live value through the real 
     // 보드 편집기가 이 커넥터를 어댑터 목록 로딩에서 실패 없이 받아들이는지 확인
     // ConnectorsPage에는 대시보드로 돌아가는 네비게이션 링크가 없으므로 직접 이동한다.
     await page.goto('/boards');
-    page.once('dialog', dialog => dialog.accept('Connector Board'));
     await page.getByRole('button', { name: '새 보드' }).click();
+    await page.getByLabel('보드 이름').fill('Connector Board');
+    await page.getByRole('button', { name: '생성' }).click();
     await expect(page.getByText('Save')).toBeVisible();
 
     // UI를 통한 resolve 왕복은 binding-editor.spec.ts가 검증한다 — 여기서는 API 계층 자체를

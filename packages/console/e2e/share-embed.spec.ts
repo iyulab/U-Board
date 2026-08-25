@@ -11,8 +11,9 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
 
   // 보드 생성 + 편집
   await page.getByRole('link', { name: '보드' }).click();
-  page.once('dialog', dialog => dialog.accept('Shared Board'));
   await page.getByRole('button', { name: '새 보드' }).click();
+  await page.getByLabel('보드 이름').fill('Shared Board');
+  await page.getByRole('button', { name: '생성' }).click();
   await expect(page.getByText('Save')).toBeVisible();
   const boardId = new URL(page.url()).pathname.split('/')[2]; // /boards/:boardId/edit
 

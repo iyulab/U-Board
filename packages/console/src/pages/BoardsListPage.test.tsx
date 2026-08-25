@@ -27,27 +27,52 @@ describe('BoardsListPage', () => {
     expect(api.listBoards).toHaveBeenCalledWith('w1');
   });
 
-  it('creates a board via prompt and navigates to its editor', async () => {
+  it('creates a board via the create-board dialog and navigates to its editor', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
     vi.mocked(api.createBoard).mockResolvedValue({ id: 'b2', name: 'New Board', updatedAt: 't' });
-    vi.spyOn(window, 'prompt').mockReturnValue('New Board');
 
     renderPage();
-    await screen.findByRole('button', { name: '새 보드' });
-    await userEvent.click(screen.getByRole('button', { name: '새 보드' }));
+    await userEvent.click(await screen.findByRole('button', { name: '새 보드' }));
+    await userEvent.type(screen.getByLabelText('보드 이름'), 'New Board');
+    await userEvent.click(screen.getByRole('button', { name: '생성' }));
 
     await waitFor(() => expect(api.createBoard).toHaveBeenCalledWith('w1', 'New Board'));
     expect(await screen.findByText('editor page')).toBeInTheDocument();
   });
 
-  it('does not create a board when the prompt is cancelled', async () => {
+  it('does not create a board when the dialog is cancelled', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
-    vi.spyOn(window, 'prompt').mockReturnValue(null);
+
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '새 보드' }));
+    await userEvent.type(screen.getByLabelText('보드 이름'), 'Some Name');
+    await userEvent.click(screen.getByRole('button', { name: '취소' }));
+
+    expect(api.createBoard).not.toHaveBeenCalled();
+  });
+
+  it('requires a non-empty name before the dialog can be submitted', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
 
     renderPage();
     await userEvent.click(await screen.findByRole('button', { name: '새 보드' }));
 
+    expect(screen.getByLabelText('보드 이름')).toBeRequired();
+    await userEvent.click(screen.getByRole('button', { name: '생성' }));
+
     expect(api.createBoard).not.toHaveBeenCalled();
+  });
+
+  it('resets the name field the next time the dialog is opened', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
+
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '새 보드' }));
+    await userEvent.type(screen.getByLabelText('보드 이름'), 'Draft Name');
+    await userEvent.click(screen.getByRole('button', { name: '취소' }));
+
+    await userEvent.click(screen.getByRole('button', { name: '새 보드' }));
+    expect(screen.getByLabelText('보드 이름')).toHaveValue('');
   });
 
   it('deletes a board after confirmation and removes it from the list', async () => {
@@ -76,15 +101,17 @@ describe('BoardsListPage', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('shows an error when creating a board fails', async () => {
+  it('shows an error inside the dialog when creating a board fails, and leaves it open to retry', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
     vi.mocked(api.createBoard).mockRejectedValue(new Error('network down'));
-    vi.spyOn(window, 'prompt').mockReturnValue('New Board');
 
     renderPage();
     await userEvent.click(await screen.findByRole('button', { name: '새 보드' }));
+    await userEvent.type(screen.getByLabelText('보드 이름'), 'New Board');
+    await userEvent.click(screen.getByRole('button', { name: '생성' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('보드 생성에 실패했습니다');
+    expect(screen.getByLabelText('보드 이름')).toHaveValue('New Board');
   });
 
   it('shows an error when deleting a board fails', async () => {
