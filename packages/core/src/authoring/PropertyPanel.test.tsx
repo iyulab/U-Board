@@ -101,7 +101,9 @@ describe('PropertyPanel bindings', () => {
       />
     );
     expect(screen.getByText('data.value')).toBeInTheDocument();
-    expect(screen.getByText('Mock Plant API')).toBeInTheDocument();
+    // Scoped to the binding-list <span> — the data-source <select> also has an
+    // <option> with this same label text, which a plain getByText would match too.
+    expect(screen.getByText('Mock Plant API', { selector: 'span' })).toBeInTheDocument();
   });
 
   it('previews the resolved value for an HTTP connector', async () => {

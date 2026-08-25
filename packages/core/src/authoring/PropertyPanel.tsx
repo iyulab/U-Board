@@ -169,7 +169,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
             <select value={draft.connectorId} onChange={e => setDraft({ ...draft, connectorId: e.target.value })}>
               {adapters.map(a => (
                 <option key={a.id} value={a.id}>
-                  {labelFor(a.id, connectorLabels)} ({a.id})
+                  {labelFor(a.id, connectorLabels)}
                 </option>
               ))}
             </select>
