@@ -224,14 +224,14 @@ describe('PropertyPanel bindings', () => {
     await waitFor(() => expect(screen.getByText('status: "running"')).toBeInTheDocument());
 
     // Verify the tree is rendered — look for the leaf node "load: 73" which is part of metrics
-    const treeLeaf = screen.queryByText((content, element) => content.includes('load') && element?.textContent?.includes('73'));
+    const treeLeaf = screen.queryByText((content, element) => content.includes('load') && !!element?.textContent?.includes('73'));
     expect(treeLeaf).toBeInTheDocument();
 
     // Click "수정" on the second binding — this should clear the explore state
     fireEvent.click(editButtons[1]);
 
     // Verify the stale tree is no longer rendered
-    const staleTreeLeaf = screen.queryByText((content, element) => content.includes('load') && element?.textContent?.includes('73'));
+    const staleTreeLeaf = screen.queryByText((content, element) => content.includes('load') && !!element?.textContent?.includes('73'));
     expect(staleTreeLeaf).not.toBeInTheDocument();
   });
 });
