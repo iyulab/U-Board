@@ -174,4 +174,37 @@ describe('PropertyPanel bindings', () => {
     expect(screen.getByLabelText('Path')).toHaveValue('/pumps/a');
     expect(screen.getByLabelText('Value path')).toHaveValue('status');
   });
+
+  class FakeExplorableAdapter implements Adapter {
+    readonly id = 'connector-1';
+    async resolve(ref: unknown): Promise<ResolvedBinding> {
+      const r = ref as { path: string; valuePath?: string };
+      if (r.path !== '/pumps/a') return { value: undefined, quality: 'disconnected' };
+      const body = { status: 'running', metrics: { load: 73 } };
+      return { value: r.valuePath ? (body as Record<string, unknown>)[r.valuePath] : body, quality: 'live' };
+    }
+  }
+
+  it('explores the raw response and fills valuePath when a tree leaf is clicked', async () => {
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeExplorableAdapter()]} onChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/a' } });
+    fireEvent.click(screen.getByText('탐색'));
+
+    await waitFor(() => expect(screen.getByText('status: "running"')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('status: "running"'));
+
+    expect(screen.getByLabelText('Value path')).toHaveValue('status');
+  });
+
+  it('shows an inline error when explore fails, without blocking manual valuePath entry', async () => {
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeExplorableAdapter()]} onChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/wrong-path' } });
+    fireEvent.click(screen.getByText('탐색'));
+
+    await waitFor(() => expect(screen.getByText('탐색에 실패했습니다')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
+    expect(screen.getByLabelText('Value path')).toHaveValue('status');
+  });
 });

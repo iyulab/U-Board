@@ -3,6 +3,7 @@ import type { Adapter, ConnectionQuality } from '../adapter.js';
 import { DemoAdapter } from '../demo-adapter.js';
 import type { Node, Widget, Binding } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
+import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 
 export interface PropertyPanelProps {
   node: Node | null;
@@ -46,6 +47,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
   const [draft, setDraft] = useState<BindingDraft>(emptyDraft(adapters[0]?.id ?? ''));
   const [preview, setPreview] = useState<{ value: unknown; quality: ConnectionQuality } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [exploreResult, setExploreResult] = useState<unknown>(null);
+  const [exploreError, setExploreError] = useState<string | null>(null);
 
   useEffect(() => {
     setPropsText(JSON.stringify(node?.widget.props ?? {}, null, 2));
@@ -53,6 +56,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
     setDraft(emptyDraft(adapters[0]?.id ?? ''));
     setPreview(null);
     setPreviewError(null);
+    setExploreResult(null);
+    setExploreError(null);
   }, [node?.id, node?.widget, adapters]);
 
   if (!node) {
@@ -90,6 +95,23 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
     }
   };
 
+  const handleExplore = async () => {
+    if (!selectedAdapter || isDemo) return;
+    setExploreError(null);
+    try {
+      const resolved = await selectedAdapter.resolve({ path: draft.path });
+      if (resolved.quality === 'disconnected') {
+        setExploreError('탐색에 실패했습니다');
+        setExploreResult(null);
+        return;
+      }
+      setExploreResult(resolved.value);
+    } catch {
+      setExploreError('탐색에 실패했습니다');
+      setExploreResult(null);
+    }
+  };
+
   const handleSaveBinding = () => {
     if (!draft.propPath || !selectedAdapter) return;
     const bindings = { ...(node.widget.bindings ?? {}) };
@@ -97,6 +119,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
     onChange({ ...node.widget, bindings });
     setDraft(emptyDraft(adapters[0]?.id ?? ''));
     setPreview(null);
+    setExploreResult(null);
+    setExploreError(null);
   };
 
   const handleRemoveBinding = (propPath: string) => {
@@ -189,6 +213,13 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
                 Value path
                 <input value={draft.valuePath} onChange={e => setDraft({ ...draft, valuePath: e.target.value })} placeholder="status" />
               </label>
+              <button type="button" onClick={handleExplore}>
+                탐색
+              </button>
+              {exploreError && <p style={{ color: '#dc2626', fontSize: 12 }}>{exploreError}</p>}
+              {exploreResult !== null && (
+                <JsonTreeExplorer value={exploreResult} onSelectPath={path => setDraft(d => ({ ...d, valuePath: path }))} />
+              )}
             </>
           )}
           <button type="button" onClick={handlePreview}>
