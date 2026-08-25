@@ -33,6 +33,13 @@ jobs:
       - name: Test
         run: npm test
 
+      # Separate from the Test step above (not just merged into `npm test`) so it never competes
+      # for resources with everything else's parallel PGlite-per-test-file startup — see
+      # packages/server/vitest.config.ts. ubuntu-latest ships Docker preinstalled, so this needs
+      # no extra setup here.
+      - name: Test (Postgres concurrency, real container)
+        run: npm run test:postgres --workspace=packages/server
+
       - name: Build
         run: npm run build
 
