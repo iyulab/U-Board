@@ -1,6 +1,7 @@
 import { Scene } from '@canvas-kit/core';
 import type { ViewDocument, Node } from '../view-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
+import { seedWidget } from './widget-catalog.js';
 
 /** A node's placeholder fill/stroke in the designer canvas — the box being positioned, not the
  * widget itself. The real widget renders in the live preview pane (`resolveDocument` +
@@ -111,7 +112,7 @@ export function addNode(doc: ViewDocument, position: { x: number; y: number }): 
     x: position.x,
     y: position.y,
     anchored: false,
-    widget: { type: 'status', props: { data: { label: 'New node', level: 'neutral', value: 'unbound' } } },
+    widget: seedWidget('status'),
   };
   return { ...doc, nodes: [...doc.nodes, node] };
 }
