@@ -3,8 +3,8 @@
 ## In
 
 - Authoring a spatial canvas view: a background (an image, or none), nodes positioned either
-  anchored to real coordinates or freely arranged, connectors between nodes, and widgets bound to
-  live data
+  anchored to real coordinates or freely arranged, connectors between nodes, purely-visual
+  decorations (labeled frames expressing structure), and widgets bound to live data
 - A web-based viewer that renders an authored view standalone or embedded in another application
 - An author-first editing experience
 - Architectural separation between the authoring tool and the rendering runtime

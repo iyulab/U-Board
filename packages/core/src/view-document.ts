@@ -15,6 +15,41 @@ export interface ViewDocument {
   background: Background;
   nodes: Node[];
   connectors: Connector[];
+  /** Purely visual structure — a labeled frame/group border expressing hierarchy among nodes,
+   * with no widget and no binding (docs/concepts.md — "Decoration"). Absent/omitted means none;
+   * older saved documents predate this field. Domain-neutral like `Background`: U-Board does not
+   * interpret what a decoration's border or label groups. */
+  decorations?: Shape[];
+}
+
+/** A purely visual drawing primitive placed on the canvas. Deliberately its own type rather than
+ * a re-export of canvas-kit's `Shape`/`Rect`/`Text` — the renderer-agnostic principle above means
+ * this document format cannot reference the canvas engine's types (a renderer translates this
+ * into canvas-kit primitives at render time, `renderer/to-canvas-kit.tsx`, the same way it
+ * already does for `Background`/`Connector`). Only the two variants the known use case
+ * (labeled group frames) needs — extend when a real one shows up, not ahead of it. */
+export type Shape = RectShape | TextShape;
+
+export interface RectShape {
+  id: string;
+  type: 'rect';
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+}
+
+export interface TextShape {
+  id: string;
+  type: 'text';
+  x: number;
+  y: number;
+  text: string;
+  fontSize?: number;
+  fill?: string;
 }
 
 /** The media a canvas view is drawn over. The system attaches no domain meaning to it — what it

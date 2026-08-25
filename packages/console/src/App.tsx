@@ -1,4 +1,4 @@
-import { useEffect, useState, type ComponentType } from 'react';
+import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react';
 import { BrowserRouter, MemoryRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { getSession, getBootstrapStatus } from './api-client.js';
 import { SignupPage } from './pages/SignupPage.js';
@@ -7,8 +7,14 @@ import { DashboardPage } from './pages/DashboardPage.js';
 import { InvitePage } from './pages/InvitePage.js';
 import { RequireSession } from './RequireSession.js';
 import { BoardsListPage } from './pages/BoardsListPage.js';
-import { BoardEditorPage } from './pages/BoardEditorPage.js';
 import { ConnectorsPage } from './pages/ConnectorsPage.js';
+
+// The only route that pulls in canvas-kit's authoring stack (KonvaDesigner/Viewer, react-konva) —
+// code-split so `/boards` and `/connectors` don't pay for it in their own chunk (HD-28, same
+// dynamic-import-for-bundle-size pattern as HD-14's echarts split in `to-canvas-kit.tsx`).
+const BoardEditorPage = lazy(() =>
+  import('./pages/BoardEditorPage.js').then(m => ({ default: m.BoardEditorPage }))
+);
 
 type RootStatus = 'loading' | 'authenticated' | 'needs-bootstrap-signup' | 'needs-login';
 
@@ -59,7 +65,11 @@ export function App({
         />
         <Route
           path="/boards/:boardId/edit"
-          element={<RequireSession>{s => <BoardEditorPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</RequireSession>}
+          element={
+            <Suspense fallback={<p>불러오는 중...</p>}>
+              <RequireSession>{s => <BoardEditorPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</RequireSession>
+            </Suspense>
+          }
         />
         <Route
           path="/connectors"

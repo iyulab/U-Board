@@ -149,11 +149,12 @@ interface Widget {
   `props` at that path — copying, never mutating, the objects along the way — so the same static
   `props` object safely provides defaults for any key that isn't bound, or that failed to resolve.
 
-### `Node`, `Connector`, `Background`, `ViewDocument`
+### `Node`, `Connector`, `Background`, `Shape`, `ViewDocument`
 
 These carry no resolution logic — see [`concepts.md`](concepts.md) for what each represents, and
 the exported TypeScript types themselves for the exact fields (`Node.anchored`,
-`Connector.fromNodeId`/`toNodeId`, `Background.image`, `ViewDocument.kind`/`nodes`/`connectors`).
+`Connector.fromNodeId`/`toNodeId`, `Background.image`, `Shape` (`RectShape`/`TextShape`, the
+`decorations` array's element type), `ViewDocument.kind`/`nodes`/`connectors`/`decorations`).
 They are included in the walkthrough above for context, not repeated field-by-field here since
 none of them have a resolution-time contract to document.
 

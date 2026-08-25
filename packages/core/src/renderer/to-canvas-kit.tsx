@@ -81,6 +81,10 @@ export function toCanvasKit(doc: ResolvedViewDocument): CanvasKitRenderOutput {
     });
   }
 
+  for (const shape of doc.decorations ?? []) {
+    scene.add(shape);
+  }
+
   const nodesById = new Map(doc.nodes.map(node => [node.id, node]));
   for (const connector of doc.connectors) {
     const from = nodesById.get(connector.fromNodeId);

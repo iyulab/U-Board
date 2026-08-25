@@ -42,7 +42,23 @@ describe('toCanvasKit', () => {
     expect(objects[0]).toMatchObject({ type: 'image', src: 'plan.png', width: 800, height: 600 });
   });
 
-  it('adds no scene objects for a document with no background and no connectors', () => {
+  it('adds a rect/text DrawingObject for each decoration, ahead of nodes', () => {
+    const { scene } = toCanvasKit(
+      doc({
+        decorations: [
+          { id: 'deco-1', type: 'rect', x: 0, y: 0, width: 400, height: 300, stroke: '#334155' },
+          { id: 'deco-2', type: 'text', x: 8, y: 8, text: 'Core Banking' },
+        ],
+      })
+    );
+
+    const objects = scene.getObjects();
+    expect(objects).toHaveLength(2);
+    expect(objects[0]).toMatchObject({ type: 'rect', width: 400, height: 300, stroke: '#334155' });
+    expect(objects[1]).toMatchObject({ type: 'text', text: 'Core Banking' });
+  });
+
+  it('adds no scene objects for a document with no background, decorations, or connectors', () => {
     const { scene, overlays } = toCanvasKit(doc());
     expect(scene.getObjects()).toHaveLength(0);
     expect(overlays).toHaveLength(0);

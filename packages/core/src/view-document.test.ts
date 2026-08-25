@@ -32,6 +32,10 @@ const example: ViewDocument = {
     },
   ],
   connectors: [{ id: 'conn-1', fromNodeId: 'node-1', toNodeId: 'node-2' }],
+  decorations: [
+    { id: 'deco-1', type: 'rect', x: 0, y: 0, width: 400, height: 300, stroke: '#334155' },
+    { id: 'deco-2', type: 'text', x: 8, y: 8, text: 'Core Banking' },
+  ],
 };
 
 describe('ViewDocument', () => {
@@ -40,7 +44,7 @@ describe('ViewDocument', () => {
     expect(example.nodes).toHaveLength(2);
   });
 
-  it('accepts a minimal document with no background and no bindings', () => {
+  it('accepts a minimal document with no background, no bindings, and no decorations', () => {
     const minimal: ViewDocument = {
       kind: 'canvas',
       background: {},
@@ -48,6 +52,7 @@ describe('ViewDocument', () => {
       connectors: [],
     };
     expect(minimal.background.image).toBeUndefined();
+    expect(minimal.decorations).toBeUndefined();
   });
 
   it('round-trips through JSON without losing or changing data', () => {

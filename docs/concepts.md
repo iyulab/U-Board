@@ -19,6 +19,11 @@ fixed coordinate or placed without an anchor.
 **Connector** — a line drawn between two nodes, used when the relationship between them needs to
 be shown (for example, a network link).
 
+**Decoration** — a purely visual shape (a rectangle or a text label) placed on a canvas view to
+express structure — grouping related nodes inside a labeled frame, for example. A decoration
+carries no widget and no binding; like a background, the system does not interpret what it
+depicts.
+
 **Widget** — the visual content a node displays (a chart, a status indicator, a numeric value,
 and so on). Widget rendering is provided by an external library the view consumes, not by the
 canvas layer itself.
