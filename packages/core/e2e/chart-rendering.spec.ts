@@ -5,8 +5,8 @@ import { test, expect, type Page } from '@playwright/test';
 // whose widget.type starts with "chart." silently renders as a "u-widget" custom element with
 // its built-in "Unknown widget: <type>" fallback instead of a chart, and nothing in the
 // jsdom-based unit suite can tell the two apart (jsdom doesn't implement <canvas> rendering, so
-// it can't distinguish "a chart drew a canvas" from "nothing drew a canvas"). This happened once
-// already (cycle-20, U-Board commit `b3db522`) and was found only by looking at a browser.
+// it can't distinguish "a chart drew a canvas" from "nothing drew a canvas"). This has happened
+// before and was found only by looking at a browser.
 
 /** Wait until <u-widget> is registered and this project's demo document has rendered. */
 async function waitForWidgets(page: Page) {

@@ -17,7 +17,7 @@ export interface Adapter {
  * showing a previously-live value as last-known. `disconnected` — no value has ever been
  * reached (no matching adapter, or the source has never resolved). SCADA/HMI practice treats
  * these as distinct operator-facing states rather than one binary flag — a renderer decides how
- * to show each (ROADMAP's L1 "연결 끊김 가시화" requirement hangs off this field). */
+ * to show each. */
 export type ConnectionQuality = 'live' | 'stale' | 'disconnected';
 
 export interface ResolvedBinding {
@@ -43,9 +43,9 @@ export interface ResolvedWidget {
  * network timeout, for example) — is reported `disconnected` and its prop is left at whatever
  * static value (or absence) it already had, never overwritten with a missing value. One
  * binding's adapter failing never fails the others: connectivity problems are data to show, not
- * exceptions to propagate (ROADMAP's L1 "연결 끊김 가시화" requirement is exactly this — a widget
- * that can't reach its source should render disconnected, not take the rest of the document
- * down with it). A `stale` reading only ever comes from the adapter itself — `resolveWidget`
+ * exceptions to propagate — a widget that can't reach its source should render disconnected, not
+ * take the rest of the document down with it. A `stale` reading only ever comes from the adapter
+ * itself — `resolveWidget`
  * has no memory of past calls, so it cannot infer staleness on its own.
  *
  * A binding key may be a dotted path (e.g. `"data.status"`) to reach a field nested inside a

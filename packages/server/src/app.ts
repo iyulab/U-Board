@@ -18,9 +18,9 @@ export interface AppConfig {
    *  same-origin dev proxy makes CORS a no-op anyway. */
   corsOrigins?: string[];
   /** Key the auth rate limiter off Cloudflare's `CF-Connecting-IP` header instead of `req.ip`.
-   *  Enable ONLY once Container App ingress is locked to Cloudflare-only traffic (deployment
-   *  routing plan's infra checklist, HD-24) — otherwise the header is client-spoofable and the
-   *  limiter is worse than doing nothing. Unset in dev/test, where the header doesn't exist. */
+   *  Enable ONLY once the deployment's ingress is locked to Cloudflare-only traffic — otherwise
+   *  the header is client-spoofable and the limiter is worse than doing nothing. Unset in
+   *  dev/test, where the header doesn't exist. */
   trustCloudflareProxy?: boolean;
 }
 
