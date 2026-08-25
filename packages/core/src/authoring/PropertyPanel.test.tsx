@@ -82,6 +82,32 @@ describe('PropertyPanel', () => {
     expect(screen.getByText('올바른 JSON이 아닙니다')).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it('does not discard an invalid-JSON props edit (and its error) when a binding is saved afterwards', () => {
+    const onChange = vi.fn();
+    let node = statusNode();
+    const { rerender } = render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+
+    const textarea = screen.getByLabelText('정적 props (JSON)');
+    fireEvent.change(textarea, { target: { value: '{not valid' } });
+    fireEvent.blur(textarea);
+    expect(screen.getByText('올바른 JSON이 아닙니다')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/a' } });
+    fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
+    fireEvent.click(screen.getByText('바인딩 저장'));
+
+    // Simulate the real app's parent: it applies the onChange'd widget and re-renders with it —
+    // props stayed untouched (the invalid edit never applied), so the returned widget's `props`
+    // is the same reference the panel already derived `propsText` from.
+    expect(onChange).toHaveBeenCalledTimes(1);
+    node = { ...node, widget: onChange.mock.calls[0][0] };
+    rerender(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+
+    expect(screen.getByLabelText('정적 props (JSON)')).toHaveValue('{not valid');
+    expect(screen.getByText('올바른 JSON이 아닙니다')).toBeInTheDocument();
+  });
 });
 
 describe('PropertyPanel bindings', () => {
@@ -175,6 +201,21 @@ describe('PropertyPanel bindings', () => {
     expect(screen.getByLabelText('Value path')).toHaveValue('status');
   });
 
+  it('removes the old binding key when its prop path is edited, instead of leaving an orphaned duplicate', () => {
+    const onChange = vi.fn();
+    const node = statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });
+    render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+
+    fireEvent.click(screen.getByText('수정'));
+    fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.label' } });
+    fireEvent.click(screen.getByText('바인딩 저장'));
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    const { bindings } = onChange.mock.calls[0][0];
+    expect(bindings).toEqual({ 'data.label': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });
+    expect(Object.keys(bindings)).toEqual(['data.label']);
+  });
+
   class FakeExplorableAdapter implements Adapter {
     readonly id = 'connector-1';
     async resolve(ref: unknown): Promise<ResolvedBinding> {
@@ -224,14 +265,12 @@ describe('PropertyPanel bindings', () => {
     await waitFor(() => expect(screen.getByText('status: "running"')).toBeInTheDocument());
 
     // Verify the tree is rendered — look for the leaf node "load: 73" which is part of metrics
-    const treeLeaf = screen.queryByText((content, element) => content.includes('load') && !!element?.textContent?.includes('73'));
-    expect(treeLeaf).toBeInTheDocument();
+    expect(screen.queryByText('load: 73')).toBeInTheDocument();
 
     // Click "수정" on the second binding — this should clear the explore state
     fireEvent.click(editButtons[1]);
 
     // Verify the stale tree is no longer rendered
-    const staleTreeLeaf = screen.queryByText((content, element) => content.includes('load') && !!element?.textContent?.includes('73'));
-    expect(staleTreeLeaf).not.toBeInTheDocument();
+    expect(screen.queryByText('load: 73')).not.toBeInTheDocument();
   });
 });

@@ -90,10 +90,10 @@ export function applySceneToDocument(doc: ViewDocument, scene: Scene): ViewDocum
 }
 
 /** Appends a new node at `position` with a placeholder widget. Bindings are deliberately absent
- * — wiring a new node to a live source is the next scope (HANDOFF.md — CMMS binding), not this
- * one. `value` is included even though it's static and unbound: u-widgets' status widget renders
- * nothing at all when `data.value` is absent (it treats a valueless item as not an item), so a
- * new node needs a placeholder value to be visible before it's ever bound. */
+ * — a newly added node starts unbound and is wired up afterward via the property panel. `value`
+ * is included even though it's static and unbound: u-widgets' status widget renders nothing at
+ * all when `data.value` is absent (it treats a valueless item as not an item), so a new node
+ * needs a placeholder value to be visible before it's ever bound. */
 const NEW_NODE_BASE_OFFSET = 40;
 const NEW_NODE_CASCADE_STEP = 24;
 const NEW_NODE_CASCADE_WRAP = 8; // after this many nodes, the cascade wraps back to the base offset

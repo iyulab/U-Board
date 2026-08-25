@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { Adapter, ConnectionQuality } from '../adapter.js';
-import { DemoAdapter } from '../demo-adapter.js';
 import type { Node, Widget, Binding } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
+
+// Must match `DemoAdapter.id` in ../demo-adapter.js. Not imported as `DemoAdapter` itself so this
+// check stays an id comparison (robust across a duplicate-module-instance scenario, where
+// `instanceof` could silently return false) rather than a class-identity check.
+const DEMO_ADAPTER_ID = 'demo-cmms';
 
 export interface PropertyPanelProps {
   node: Node | null;
@@ -33,6 +37,15 @@ function emptyDraft(connectorId: string): BindingDraft {
   return { propPath: '', connectorId, path: '', valuePath: '', demoRef: '' };
 }
 
+/** Picks which adapter the binding form should default to: the first non-demo adapter when one
+ * exists (so the real HTTP path/valuePath form — the headline feature this panel exists for — is
+ * what the author sees on first open), falling back to `adapters[0]` (which may be the demo
+ * adapter) only when no non-demo adapter is connected. */
+function initialConnectorId(adapters: readonly Adapter[]): string {
+  const nonDemo = adapters.find(a => a.id !== DEMO_ADAPTER_ID);
+  return (nonDemo ?? adapters[0])?.id ?? '';
+}
+
 function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
   const ref = binding.ref as { path?: string; valuePath?: string } | string;
   if (typeof ref === 'string') {
@@ -44,28 +57,49 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
 export function PropertyPanel({ node, adapters, connectorLabels, onChange }: PropertyPanelProps) {
   const [propsText, setPropsText] = useState('{}');
   const [propsError, setPropsError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<BindingDraft>(emptyDraft(adapters[0]?.id ?? ''));
+  const [draft, setDraft] = useState<BindingDraft>(emptyDraft(initialConnectorId(adapters)));
+  // The propPath of the binding currently being edited, so a save can remove its old key when the
+  // author changes the prop path instead of leaving the old binding orphaned. `null` while adding
+  // a new binding (nothing to remove).
+  const [editingPropPath, setEditingPropPath] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ value: unknown; quality: ConnectionQuality } | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [exploreResult, setExploreResult] = useState<unknown>(null);
   const [exploreError, setExploreError] = useState<string | null>(null);
 
+  // Resets the static-props editor. Keyed on the node and the specific `props` reference — not on
+  // the whole widget — so a binding-only change (which spreads `{...node.widget, bindings}` and
+  // leaves `props` untouched) doesn't re-derive/discard in-progress props-editor text.
   useEffect(() => {
     setPropsText(JSON.stringify(node?.widget.props ?? {}, null, 2));
     setPropsError(null);
-    setDraft(emptyDraft(adapters[0]?.id ?? ''));
+  }, [node?.id, node?.widget.props]);
+
+  // Resets the binding draft/preview/explore state. Keyed on the node and the widget *type* — not
+  // the whole widget — so it fires on node-switch or an actual type change (which should discard
+  // an in-progress binding edit) but not on every props-only or binding-only save.
+  useEffect(() => {
+    setDraft(emptyDraft(initialConnectorId(adapters)));
+    setEditingPropPath(null);
     setPreview(null);
     setPreviewError(null);
     setExploreResult(null);
     setExploreError(null);
-  }, [node?.id, node?.widget, adapters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `adapters` intentionally excluded:
+    // depend on its content (length), not its reference, so a caller passing a fresh array
+    // literal on every render doesn't spuriously wipe the in-progress draft.
+  }, [node?.id, node?.widget.type, adapters.length]);
 
   if (!node) {
     return <p>노드를 선택하세요.</p>;
   }
 
   const selectedAdapter = adapters.find(a => a.id === draft.connectorId);
-  const isDemo = selectedAdapter instanceof DemoAdapter;
+  // Scoped v1 extension seam: exactly two adapter ref-shapes exist today (the demo adapter's
+  // plain string ref, and every other adapter's `{path, valuePath}` HTTP shape), so an id check
+  // is enough. A real second connector *type* would need this to grow into something more
+  // general, but none exists yet — don't build that generality ahead of a second real case.
+  const isDemo = selectedAdapter?.id === DEMO_ADAPTER_ID;
 
   const draftRef = (): unknown =>
     isDemo ? draft.demoRef : { path: draft.path, valuePath: draft.valuePath || undefined };
@@ -116,8 +150,12 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
     if (!draft.propPath || !selectedAdapter) return;
     const bindings = { ...(node.widget.bindings ?? {}) };
     bindings[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef() };
+    if (editingPropPath !== null && editingPropPath !== draft.propPath) {
+      delete bindings[editingPropPath];
+    }
     onChange({ ...node.widget, bindings });
-    setDraft(emptyDraft(adapters[0]?.id ?? ''));
+    setDraft(emptyDraft(initialConnectorId(adapters)));
+    setEditingPropPath(null);
     setPreview(null);
     setExploreResult(null);
     setExploreError(null);
@@ -131,6 +169,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
 
   const handleEditBinding = (propPath: string, binding: Binding) => {
     setDraft(draftFromBinding(propPath, binding));
+    setEditingPropPath(propPath);
     setPreview(null);
     setPreviewError(null);
     setExploreResult(null);

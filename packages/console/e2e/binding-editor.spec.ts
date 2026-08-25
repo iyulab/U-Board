@@ -48,7 +48,7 @@ test('binds a node to a live value via the property panel and its path explorer'
 
     await page.getByText('미리보기', { exact: true }).click();
     await expect(page.getByText(/"running"/)).toBeVisible();
-    await expect(page.getByText(/live/)).toBeVisible();
+    await expect(page.getByText(/\(live\)/)).toBeVisible();
 
     await page.getByText('바인딩 저장', { exact: true }).click();
     // 하단의 "ViewDocument (debug)" <pre> 덤프에도 같은 문자열이 부분 문자열로 들어있으므로
