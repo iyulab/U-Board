@@ -133,6 +133,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
     setDraft(draftFromBinding(propPath, binding));
     setPreview(null);
     setPreviewError(null);
+    setExploreResult(null);
+    setExploreError(null);
   };
 
   const bindingEntries = Object.entries(node.widget.bindings ?? {});

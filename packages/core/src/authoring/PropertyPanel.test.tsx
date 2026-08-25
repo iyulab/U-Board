@@ -207,4 +207,31 @@ describe('PropertyPanel bindings', () => {
     fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
     expect(screen.getByLabelText('Value path')).toHaveValue('status');
   });
+
+  it('clears stale explore state when switching to edit a different binding', async () => {
+    const node = statusNode({
+      'data.a': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } },
+      'data.b': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'metrics' } },
+    });
+    render(<PropertyPanel node={node} adapters={[new FakeExplorableAdapter()]} onChange={vi.fn()} />);
+
+    // Click "수정" on first binding
+    const editButtons = screen.getAllByText('수정');
+    fireEvent.click(editButtons[0]);
+
+    // Explore the path (populates the tree)
+    fireEvent.click(screen.getByText('탐색'));
+    await waitFor(() => expect(screen.getByText('status: "running"')).toBeInTheDocument());
+
+    // Verify the tree is rendered — look for the leaf node "load: 73" which is part of metrics
+    const treeLeaf = screen.queryByText((content, element) => content.includes('load') && element?.textContent?.includes('73'));
+    expect(treeLeaf).toBeInTheDocument();
+
+    // Click "수정" on the second binding — this should clear the explore state
+    fireEvent.click(editButtons[1]);
+
+    // Verify the stale tree is no longer rendered
+    const staleTreeLeaf = screen.queryByText((content, element) => content.includes('load') && element?.textContent?.includes('73'));
+    expect(staleTreeLeaf).not.toBeInTheDocument();
+  });
 });
