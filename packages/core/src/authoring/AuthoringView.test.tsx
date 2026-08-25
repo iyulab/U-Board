@@ -138,6 +138,21 @@ describe('AuthoringView node selection', () => {
     expect(screen.getByText('노드를 선택하세요.')).toBeInTheDocument();
   });
 
+  it('clears the selection when the selected node disappears from an imported document', async () => {
+    render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} />);
+
+    fireEvent.click(screen.getByText('select-node-1'));
+    expect(screen.getByLabelText('위젯 타입')).toHaveValue('status');
+
+    // Import replaces `doc` wholesale without going through onSelectionChange — the effect at
+    // AuthoringView.tsx:51 is what has to notice node-1 is gone and reset selectedNodeId itself.
+    const input = screen.getByTestId('import-file-input');
+    const file = new File([JSON.stringify(doc())], 'empty.json', { type: 'application/json' });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByText('노드를 선택하세요.')).toBeInTheDocument());
+  });
+
   it('writes a widget-type change back onto the selected node in the document', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} onSave={onSave} />);

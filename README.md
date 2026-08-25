@@ -24,16 +24,17 @@ not assume or require a specific host platform.
 ## Status
 
 This project is in early development. The rendering pipeline (canvas-kit + u-widgets), the
-authoring UI (add/drag/resize nodes), local save (export/import), and a read-only viewer mode are
-implemented and browser-verified. Binding to a real external data source is not yet
-implemented — the adapter contract is complete and validated end-to-end against a mock adapter
-only.
+authoring UI (add/drag/resize nodes; a property panel for editing a selected node's widget type,
+static props, and data bindings, including a path explorer for HTTP-shaped adapter responses),
+local save (export/import), and a read-only viewer mode are implemented and browser-verified.
+Binding to a real external data source is not yet implemented — the adapter contract is complete
+and validated end-to-end against a mock adapter only.
 
 ## Domain layer
 
 The renderer-agnostic core — the view document schema, the adapter contract, and binding
-resolution — is available as a package entry point independent of the (not yet built) authoring
-UI and canvas rendering pipeline. This package isn't published to a registry yet, so consume it
+resolution — is available as a package entry point independent of the authoring UI and canvas
+rendering pipeline described below. This package isn't published to a registry yet, so consume it
 as a `file:` or workspace dependency:
 
 ```json
@@ -56,6 +57,23 @@ See [`docs/concepts.md`](docs/concepts.md) for the vocabulary (`ViewDocument`, `
 the system. **See [`docs/api-reference.md`](docs/api-reference.md) for the full type reference and
 a runnable example that implements an `Adapter` and inspects `resolveDocument`'s result.** Run
 `npm run build:lib` to produce the `dist/lib` output these exports point at.
+
+## Authoring UI
+
+`AuthoringView` — a canvas-kit designer for adding/dragging/resizing nodes, paired with a property
+panel for editing the selected node's widget type, static props, and data bindings (including a
+path explorer that walks an HTTP adapter's response tree) — is exported from the package's main
+entry point alongside the read-only `ViewerPage`:
+
+```ts
+import { AuthoringView, type Adapter } from '@iyulab/u-board';
+```
+
+Unlike the domain layer above, this surface depends on canvas-kit and renders to the DOM directly —
+a host application embeds it as-is rather than building its own authoring UI against the domain
+layer. `ViewerPage` alone (with none of the authoring UI's weight) is also available from the
+lighter `@iyulab/u-board/viewer` entry point, for a host that only needs to render, not author. See
+[`docs/architecture.md`](docs/architecture.md) for how this fits the editor/renderer split.
 
 ## Documentation
 

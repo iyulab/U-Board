@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Viewer } from '@canvas-kit/viewer';
 import { resolveDocument } from '../resolve-document.js';
-import { toCanvasKit } from '../renderer/to-canvas-kit.js';
+import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import type { Adapter } from '../adapter.js';
@@ -35,7 +35,14 @@ export function ViewerPage({ adapters, width, height, initialDocument }: ViewerP
     }
     let cancelled = false;
     resolveDocument(doc, adapters).then(resolved => {
-      if (!cancelled) setPreview(toCanvasKit(resolved));
+      if (cancelled) return;
+      setPreview(toCanvasKit(resolved));
+      // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
+      // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
+      // pick it up.
+      chartsReady.then(() => {
+        if (!cancelled) setPreview(toCanvasKit(resolved));
+      });
     });
     return () => {
       cancelled = true;

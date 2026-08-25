@@ -6,6 +6,7 @@ import { PropertyPanel } from './PropertyPanel.js';
 import { DemoAdapter } from '../demo-adapter.js';
 import type { Adapter, ResolvedBinding } from '../adapter.js';
 import type { Node } from '../view-document.js';
+import { QUALITY_LABEL } from '../quality-presentation.js';
 
 function statusNode(bindings?: Node['widget']['bindings']): Node {
   return {
@@ -132,6 +133,26 @@ describe('PropertyPanel bindings', () => {
     expect(screen.getByText('Mock Plant API', { selector: 'span' })).toBeInTheDocument();
   });
 
+  it('falls back to the raw adapter id when connectorLabels has no entry for it', () => {
+    const node = statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });
+    render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+    // connectorLabels omitted entirely — labelFor() has nothing to look up.
+    expect(screen.getByText('connector-1', { selector: 'span' })).toBeInTheDocument();
+  });
+
+  it('falls back to the raw adapter id when connectorLabels is provided but missing this one', () => {
+    const node = statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });
+    render(
+      <PropertyPanel
+        node={node}
+        adapters={[new FakeHttpAdapter()]}
+        connectorLabels={{ 'connector-2': 'Some Other Connector' }}
+        onChange={vi.fn()}
+      />
+    );
+    expect(screen.getByText('connector-1', { selector: 'span' })).toBeInTheDocument();
+  });
+
   it('previews the resolved value for an HTTP connector', async () => {
     render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
 
@@ -142,6 +163,17 @@ describe('PropertyPanel bindings', () => {
 
     await waitFor(() => expect(screen.getByText(/running/)).toBeInTheDocument());
     expect(screen.getByText(/live/)).toBeInTheDocument();
+  });
+
+  it('renders the preview badge with the same label the canvas frame uses for a degraded binding', async () => {
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/unknown' } });
+    fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
+    fireEvent.click(screen.getByText('미리보기'));
+
+    await waitFor(() => expect(screen.getByText(QUALITY_LABEL.disconnected!)).toBeInTheDocument());
   });
 
   it('saves a new binding with the adapter id and HTTP ref shape', () => {

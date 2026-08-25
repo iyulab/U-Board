@@ -3,6 +3,7 @@ import { AuthoringView } from './authoring/AuthoringView.js';
 import { ViewerPage } from './viewer/ViewerPage.js';
 import type { ViewDocument } from './view-document.js';
 import { DemoAdapter } from './demo-adapter.js';
+import { seedWidget } from './authoring/widget-catalog.js';
 
 const FLOOR_PLAN = `data:image/svg+xml,${encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560">
@@ -96,6 +97,32 @@ const demoDocument: ViewDocument = {
           options: { smooth: true },
         },
       },
+    },
+    {
+      // Uses widget-catalog.ts's seedWidget() verbatim — the exact static-props shape the
+      // authoring UI hands a new node the moment its type is switched, before an author has
+      // touched anything. Distinct from pump-a-load/pump-a-load-trend above, whose props are
+      // hand-authored sample data rather than the seed default — this node exists to prove the
+      // seed shape itself survives resolveDocument → canvas-kit overlay → the real u-widgets
+      // custom element without falling back to "Unknown widget" (bindings-editor final review,
+      // 2026-08-25).
+      id: 'seed-gauge-check',
+      x: 540,
+      y: 400,
+      width: 160,
+      height: 140,
+      anchored: true,
+      widget: seedWidget('gauge'),
+    },
+    {
+      // Same rationale as seed-gauge-check, for chart.line's seed shape.
+      id: 'seed-chart-line-check',
+      x: 720,
+      y: 400,
+      width: 160,
+      height: 140,
+      anchored: true,
+      widget: seedWidget('chart.line'),
     },
   ],
   connectors: [{ id: 'a-to-b', fromNodeId: 'pump-a', toNodeId: 'pump-b' }],

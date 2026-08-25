@@ -8,10 +8,24 @@ import '@iyulab/u-widgets';
 // widget.type starts with "chart." silently renders as an "Unknown widget" fallback instead of
 // the chart — this renderer doesn't otherwise restrict which widget types a document can use, so
 // it opts every u-widgets entry point in rather than special-casing chart.* as excluded.
-import '@iyulab/u-widgets/charts';
+//
+// Loaded dynamically rather than statically (HD-14, 2026-08-25): echarts alone pushes a
+// consuming app's bundle past Vite's 500kB single-chunk warning, even for documents that never
+// use a chart.* widget. This still loads unconditionally on module init — no widget-type
+// inspection, same "opt every entry point in" policy as a static import — but as its own chunk
+// fetched in parallel, so it no longer blocks parsing/evaluating the app's main chunk.
+//
+// Unlike a plain custom element, `<u-widget>` decides *whether to even emit* a `<uw-chart>` tag
+// with a one-shot `customElements.get('uw-chart')` check inside its own `render()`
+// (u-widgets' `elements/u-widget.ts`) — it does not re-check on its own once `uw-chart` registers
+// late, so a chart.* node whose `<u-widget>` already rendered before this import resolves would
+// otherwise be stuck on the "Unknown widget" fallback forever. `chartsReady` lets a consumer force
+// one more render pass after this resolves (AuthoringView/ViewerPage do) to pick it up.
+export const chartsReady: Promise<unknown> = import('@iyulab/u-widgets/charts');
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import type { ConnectionQuality } from '../adapter.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
+import { QUALITY_FRAME_STYLE, QUALITY_LABEL } from '../quality-presentation.js';
 
 // Worst-first: a node with several bindings shows whichever one needs the operator's attention
 // most (ISA-18.2 alarm-precedence convention — the least-current binding governs the indicator).
@@ -22,21 +36,6 @@ function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQua
   if (values.length === 0) return undefined;
   return values.reduce((worst, q) => (QUALITY_SEVERITY[q] > QUALITY_SEVERITY[worst] ? q : worst));
 }
-
-// `live` is deliberately unstyled (ISA-101 — color is reserved for abnormal state, not spent on
-// normal operation) and a widget with no bindings at all gets no frame. `stale`/`disconnected`
-// also use distinct border *styles* (dashed vs. dotted), not just distinct colors, so a
-// colorblind viewer — or anyone on a touch device without a hover tooltip — can still tell the
-// two abnormal states apart without relying on color perception at all.
-const QUALITY_FRAME_STYLE: Partial<Record<ConnectionQuality, CSSProperties>> = {
-  stale: { border: '2px dashed #f59e0b', boxSizing: 'border-box' },
-  disconnected: { border: '2px dotted #6b7280', boxSizing: 'border-box' },
-};
-
-const QUALITY_LABEL: Partial<Record<ConnectionQuality, string>> = {
-  stale: 'stale — showing last known value',
-  disconnected: 'disconnected — no value has been reached',
-};
 
 // Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
 // on screen. Kept off the frame `<div>` itself and off `UWidget` — each `uw-*` custom element
