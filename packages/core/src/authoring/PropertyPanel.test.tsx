@@ -1,28 +1,39 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom';
 import { PropertyPanel } from './PropertyPanel.js';
+import { DemoAdapter } from '../demo-adapter.js';
+import type { Adapter, ResolvedBinding } from '../adapter.js';
 import type { Node } from '../view-document.js';
 
-function statusNode(): Node {
+function statusNode(bindings?: Node['widget']['bindings']): Node {
   return {
     id: 'n1',
     x: 0,
     y: 0,
     anchored: false,
-    widget: { type: 'status', props: { data: { label: 'Pump A', level: 'info', value: 'running' } } },
+    widget: { type: 'status', props: { data: { label: 'Pump A', level: 'info', value: 'running' } }, bindings },
   };
+}
+
+class FakeHttpAdapter implements Adapter {
+  readonly id = 'connector-1';
+  async resolve(ref: unknown): Promise<ResolvedBinding> {
+    const r = ref as { path: string; valuePath?: string };
+    if (r.path === '/pumps/a' && r.valuePath === 'status') return { value: 'running', quality: 'live' };
+    return { value: undefined, quality: 'disconnected' };
+  }
 }
 
 describe('PropertyPanel', () => {
   it('shows a placeholder when no node is selected', () => {
-    render(<PropertyPanel node={null} onChange={vi.fn()} />);
+    render(<PropertyPanel node={null} adapters={[]} onChange={vi.fn()} />);
     expect(screen.getByText('노드를 선택하세요.')).toBeInTheDocument();
   });
 
   it("shows the selected node's widget type and static props", () => {
-    render(<PropertyPanel node={statusNode()} onChange={vi.fn()} />);
+    render(<PropertyPanel node={statusNode()} adapters={[]} onChange={vi.fn()} />);
     expect(screen.getByLabelText('위젯 타입')).toHaveValue('status');
     expect(screen.getByLabelText('정적 props (JSON)')).toHaveValue(
       JSON.stringify({ data: { label: 'Pump A', level: 'info', value: 'running' } }, null, 2)
@@ -39,7 +50,7 @@ describe('PropertyPanel', () => {
         bindings: { 'data.value': { adapter: 'a', ref: {} } },
       },
     };
-    render(<PropertyPanel node={node} onChange={onChange} />);
+    render(<PropertyPanel node={node} adapters={[]} onChange={onChange} />);
 
     fireEvent.change(screen.getByLabelText('위젯 타입'), { target: { value: 'gauge' } });
 
@@ -48,7 +59,7 @@ describe('PropertyPanel', () => {
 
   it('applies a valid JSON props edit on blur', () => {
     const onChange = vi.fn();
-    render(<PropertyPanel node={statusNode()} onChange={onChange} />);
+    render(<PropertyPanel node={statusNode()} adapters={[]} onChange={onChange} />);
 
     const textarea = screen.getByLabelText('정적 props (JSON)');
     fireEvent.change(textarea, { target: { value: '{"data":{"label":"Pump A","level":"info","value":"stopped"}}' } });
@@ -62,7 +73,7 @@ describe('PropertyPanel', () => {
 
   it('shows an inline error and keeps the last value when the props edit is invalid JSON', () => {
     const onChange = vi.fn();
-    render(<PropertyPanel node={statusNode()} onChange={onChange} />);
+    render(<PropertyPanel node={statusNode()} adapters={[]} onChange={onChange} />);
 
     const textarea = screen.getByLabelText('정적 props (JSON)');
     fireEvent.change(textarea, { target: { value: '{not valid' } });
@@ -70,5 +81,95 @@ describe('PropertyPanel', () => {
 
     expect(screen.getByText('올바른 JSON이 아닙니다')).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('PropertyPanel bindings', () => {
+  it('shows "연결된 데이터소스가 없습니다" when there are no adapters', () => {
+    render(<PropertyPanel node={statusNode()} adapters={[]} onChange={vi.fn()} />);
+    expect(screen.getByText('연결된 데이터소스가 없습니다.')).toBeInTheDocument();
+  });
+
+  it('lists existing bindings with a human-readable connector label', () => {
+    const node = statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });
+    render(
+      <PropertyPanel
+        node={node}
+        adapters={[new FakeHttpAdapter()]}
+        connectorLabels={{ 'connector-1': 'Mock Plant API' }}
+        onChange={vi.fn()}
+      />
+    );
+    expect(screen.getByText('data.value')).toBeInTheDocument();
+    expect(screen.getByText('Mock Plant API')).toBeInTheDocument();
+  });
+
+  it('previews the resolved value for an HTTP connector', async () => {
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/a' } });
+    fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
+    fireEvent.click(screen.getByText('미리보기'));
+
+    await waitFor(() => expect(screen.getByText(/running/)).toBeInTheDocument());
+    expect(screen.getByText(/live/)).toBeInTheDocument();
+  });
+
+  it('saves a new binding with the adapter id and HTTP ref shape', () => {
+    const onChange = vi.fn();
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/a' } });
+    fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
+    fireEvent.click(screen.getByText('바인딩 저장'));
+
+    expect(onChange).toHaveBeenCalledWith({
+      type: 'status',
+      props: { data: { label: 'Pump A', level: 'info', value: 'running' } },
+      bindings: { 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } },
+    });
+  });
+
+  it('uses a plain string ref for the demo adapter instead of the HTTP path/valuePath form', () => {
+    const onChange = vi.fn();
+    render(<PropertyPanel node={statusNode()} adapters={[new DemoAdapter()]} onChange={onChange} />);
+
+    expect(screen.queryByLabelText('Path')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('참조 키'), { target: { value: 'pump-a.state' } });
+    fireEvent.click(screen.getByText('바인딩 저장'));
+
+    expect(onChange).toHaveBeenCalledWith({
+      type: 'status',
+      props: { data: { label: 'Pump A', level: 'info', value: 'running' } },
+      bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-a.state' } },
+    });
+  });
+
+  it('removes a binding', () => {
+    const onChange = vi.fn();
+    const node = statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });
+    render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+
+    fireEvent.click(screen.getByText('제거'));
+
+    expect(onChange).toHaveBeenCalledWith({
+      type: 'status',
+      props: { data: { label: 'Pump A', level: 'info', value: 'running' } },
+      bindings: {},
+    });
+  });
+
+  it('populates the draft form from an existing binding when "수정" is clicked', () => {
+    const node = statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });
+    render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+
+    fireEvent.click(screen.getByText('수정'));
+
+    expect(screen.getByLabelText('프롭 경로')).toHaveValue('data.value');
+    expect(screen.getByLabelText('Path')).toHaveValue('/pumps/a');
+    expect(screen.getByLabelText('Value path')).toHaveValue('status');
   });
 });
