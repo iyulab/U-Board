@@ -24,9 +24,10 @@ not assume or require a specific host platform.
 ## Status
 
 This project is in early development. The rendering pipeline (canvas-kit + u-widgets), the
-authoring UI (add/drag/resize nodes; a property panel for editing a selected node's widget type,
-static props, and data bindings, including a path explorer for HTTP-shaped adapter responses),
-local save (export/import), and a read-only viewer mode are implemented and browser-verified.
+authoring UI (add/drag/resize nodes and rect/text decorations; a property panel for editing the
+selected node's widget type, static props, and data bindings, including a path explorer for
+HTTP-shaped adapter responses; a label editor for the selected text decoration), local save
+(export/import), and a read-only viewer mode are implemented and browser-verified.
 Binding to a real external data source is not yet implemented — the adapter contract is complete
 and validated end-to-end against a mock adapter only.
 
@@ -60,10 +61,11 @@ a runnable example that implements an `Adapter` and inspects `resolveDocument`'s
 
 ## Authoring UI
 
-`AuthoringView` — a canvas-kit designer for adding/dragging/resizing nodes, paired with a property
-panel for editing the selected node's widget type, static props, and data bindings (including a
-path explorer that walks an HTTP adapter's response tree) — is exported from the package's main
-entry point alongside the read-only `ViewerPage`:
+`AuthoringView` — a canvas-kit designer for adding/dragging/resizing nodes and decorations, paired
+with a property panel for editing the selected node's widget type, static props, and data bindings
+(including a path explorer that walks an HTTP adapter's response tree) or the selected text
+decoration's label — is exported from the package's main entry point alongside the read-only
+`ViewerPage`:
 
 ```ts
 import { AuthoringView, type Adapter } from '@iyulab/u-board';

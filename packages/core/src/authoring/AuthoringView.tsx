@@ -2,14 +2,22 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { KonvaDesigner } from '@canvas-kit/designer';
 import { Viewer } from '@canvas-kit/viewer';
 import type { Scene, DrawingObject } from '@canvas-kit/core';
-import { documentToScene, applySceneToDocument, addNode, nextNodePosition } from './scene-mapping.js';
+import {
+  documentToScene,
+  applySceneToDocument,
+  addNode,
+  nextNodePosition,
+  addDecoration,
+  nextDecorationPosition,
+} from './scene-mapping.js';
 import { resolveDocument } from '../resolve-document.js';
 import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import { PropertyPanel } from './PropertyPanel.js';
+import { DecorationPanel } from './DecorationPanel.js';
 import type { Adapter } from '../adapter.js';
-import type { ViewDocument, Widget } from '../view-document.js';
+import type { ViewDocument, Widget, Shape } from '../view-document.js';
 
 export interface AuthoringViewProps {
   initialDocument: ViewDocument;
@@ -35,6 +43,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scene = useMemo(() => documentToScene(doc), [doc]);
 
@@ -59,18 +68,30 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     if (selectedNodeId && !doc.nodes.some(n => n.id === selectedNodeId)) {
       setSelectedNodeId(null);
     }
-  }, [doc, selectedNodeId]);
+    if (selectedDecorationId && !doc.decorations?.some(d => d.id === selectedDecorationId)) {
+      setSelectedDecorationId(null);
+    }
+  }, [doc, selectedNodeId, selectedDecorationId]);
 
   const handleSceneChange = (newScene: Scene) => {
     setDoc(prev => applySceneToDocument(prev, newScene));
   };
 
+  // A decoration can be a scene `rect`, same as a node — told apart by which array of the
+  // document actually contains the selected id, not by the DrawingObject's own `type`.
   const handleSelectionChange = (selection: DrawingObject[]) => {
-    setSelectedNodeId(selection[0]?.id ?? null);
+    const id = selection[0]?.id ?? null;
+    setSelectedNodeId(id && doc.nodes.some(n => n.id === id) ? id : null);
+    setSelectedDecorationId(id && doc.decorations?.some(d => d.id === id) ? id : null);
   };
 
   const handleAddNode = () => {
     setDoc(prev => addNode(prev, nextNodePosition(prev)));
+    setImportError(null);
+  };
+
+  const handleAddDecoration = (type: Shape['type']) => {
+    setDoc(prev => addDecoration(prev, type, nextDecorationPosition(prev)));
     setImportError(null);
   };
 
@@ -112,12 +133,26 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     }));
   };
 
+  const handleDecorationChange = (decoration: Shape) => {
+    setDoc(prev => ({
+      ...prev,
+      decorations: prev.decorations?.map(d => (d.id === selectedDecorationId ? decoration : d)),
+    }));
+  };
+
   const selectedNode = doc.nodes.find(n => n.id === selectedNodeId) ?? null;
+  const selectedDecoration = doc.decorations?.find(d => d.id === selectedDecorationId) ?? null;
 
   return (
     <div>
       <button onClick={handleAddNode} style={{ marginBottom: 8 }}>
         Add node
+      </button>{' '}
+      <button onClick={() => handleAddDecoration('rect')} style={{ marginBottom: 8 }}>
+        Add rect decoration
+      </button>{' '}
+      <button onClick={() => handleAddDecoration('text')} style={{ marginBottom: 8 }}>
+        Add text decoration
       </button>{' '}
       <button onClick={handleSave} style={{ marginBottom: 8 }}>
         {onSave ? 'Save' : 'Export'}
@@ -154,7 +189,11 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           )}
         </div>
         <div>
-          <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} />
+          {selectedDecoration ? (
+            <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} />
+          ) : (
+            <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} />
+          )}
         </div>
       </div>
       <details style={{ marginTop: 16 }}>

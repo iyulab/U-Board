@@ -15,6 +15,9 @@ vi.mock('@canvas-kit/designer', () => ({
       <button onClick={() => onSelectionChange?.([{ type: 'rect', id: 'node-1', x: 0, y: 0, width: 10, height: 10 }])}>
         select-node-1
       </button>
+      <button onClick={() => onSelectionChange?.([{ type: 'text', id: 'decoration-1', x: 0, y: 0, text: 'Zone A' }])}>
+        select-decoration-1
+      </button>
       <button onClick={() => onSelectionChange?.([])}>deselect</button>
     </div>
   ),
@@ -169,5 +172,77 @@ describe('AuthoringView node selection', () => {
         connectors: [],
       })
     );
+  });
+});
+
+describe('AuthoringView decoration authoring', () => {
+  it('adds a rect decoration to the document when "Add rect decoration" is clicked', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText('Add rect decoration'));
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.decorations).toHaveLength(1);
+    expect(saved.decorations[0]).toMatchObject({ type: 'rect' });
+  });
+
+  it('adds a text decoration to the document when "Add text decoration" is clicked', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText('Add text decoration'));
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const saved = onSave.mock.calls[0][0];
+    expect(saved.decorations).toHaveLength(1);
+    expect(saved.decorations[0]).toMatchObject({ type: 'text' });
+  });
+
+  function docWithTextDecoration(): ViewDocument {
+    return {
+      kind: 'canvas',
+      background: {},
+      nodes: [],
+      connectors: [],
+      decorations: [{ id: 'decoration-1', type: 'text', x: 0, y: 0, text: 'Zone A' }],
+    };
+  }
+
+  it('shows the decoration panel (not the node property panel) when a decoration is selected', () => {
+    render(<AuthoringView initialDocument={docWithTextDecoration()} adapters={[]} width={400} height={300} />);
+
+    fireEvent.click(screen.getByText('select-decoration-1'));
+
+    expect(screen.getByLabelText('라벨')).toHaveValue('Zone A');
+    expect(screen.queryByLabelText('위젯 타입')).not.toBeInTheDocument();
+  });
+
+  it("writes a label change back onto the selected text decoration", async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={docWithTextDecoration()} adapters={[]} width={400} height={300} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText('select-decoration-1'));
+    fireEvent.change(screen.getByLabelText('라벨'), { target: { value: 'Zone B' } });
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() =>
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({ decorations: [{ id: 'decoration-1', type: 'text', x: 0, y: 0, text: 'Zone B' }] })
+      )
+    );
+  });
+
+  it('a node selection still shows the property panel, not the decoration panel (no regression)', () => {
+    const withBoth: ViewDocument = { ...docWithTextDecoration(), nodes: [{ id: 'node-1', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] };
+    render(<AuthoringView initialDocument={withBoth} adapters={[]} width={400} height={300} />);
+
+    fireEvent.click(screen.getByText('select-node-1'));
+
+    expect(screen.getByLabelText('위젯 타입')).toBeInTheDocument();
+    expect(screen.queryByLabelText('라벨')).not.toBeInTheDocument();
   });
 });

@@ -3,3 +3,9 @@
  * never compute it independently and drift apart. */
 export const DEFAULT_NODE_WIDTH = 160;
 export const DEFAULT_NODE_HEIGHT = 100;
+
+/** A newly-added rect decoration's footprint — larger than a node's default so a freshly placed
+ * "labeled frame" is immediately distinguishable from a widget placeholder and roomy enough to
+ * drag around existing nodes before resizing it to fit. */
+export const DEFAULT_DECORATION_WIDTH = 240;
+export const DEFAULT_DECORATION_HEIGHT = 160;

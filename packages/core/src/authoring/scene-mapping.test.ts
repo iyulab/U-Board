@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { documentToScene, applySceneToDocument, addNode, nextNodePosition } from './scene-mapping';
+import {
+  documentToScene,
+  applySceneToDocument,
+  addNode,
+  nextNodePosition,
+  addDecoration,
+  nextDecorationPosition,
+} from './scene-mapping';
 import type { ViewDocument } from '../view-document';
 
 function doc(overrides: Partial<ViewDocument> = {}): ViewDocument {
@@ -50,6 +57,20 @@ describe('documentToScene', () => {
       documentToScene(doc({ connectors: [{ id: 'c1', fromNodeId: 'missing', toNodeId: 'also-missing' }] }))
     ).not.toThrow();
   });
+
+  it("adds a rect/text DrawingObject for each decoration, id'd and positioned/sized by it", () => {
+    const scene = documentToScene(
+      doc({
+        decorations: [
+          { id: 'd1', type: 'rect', x: 10, y: 20, width: 300, height: 150, stroke: '#f59e0b' },
+          { id: 'd2', type: 'text', x: 5, y: 5, text: 'Zone A' },
+        ],
+      })
+    );
+
+    expect(scene.getObjects().find(o => o.id === 'd1')).toMatchObject({ type: 'rect', x: 10, y: 20, width: 300, height: 150 });
+    expect(scene.getObjects().find(o => o.id === 'd2')).toMatchObject({ type: 'text', x: 5, y: 5, text: 'Zone A' });
+  });
 });
 
 describe('applySceneToDocument', () => {
@@ -88,6 +109,48 @@ describe('applySceneToDocument', () => {
 
     const updated = applySceneToDocument(original, emptyScene);
     expect(updated.nodes[0]).toMatchObject({ x: 5, y: 5 });
+  });
+
+  it("updates a rect decoration's x/y/width/height from its matching scene rect", () => {
+    const original = doc({
+      decorations: [{ id: 'd1', type: 'rect', x: 0, y: 0, width: 100, height: 50 }],
+    });
+    const scene = documentToScene(original);
+    const resized = scene.copy();
+    const rectInResized = resized.getObjects()[0];
+    if (rectInResized.type !== 'rect') throw new Error('expected a rect');
+    resized.updateObject(rectInResized, { ...rectInResized, x: 12, y: 34, width: 240, height: 130 });
+
+    const updated = applySceneToDocument(original, resized);
+    expect(updated.decorations?.[0]).toMatchObject({ x: 12, y: 34, width: 240, height: 130 });
+  });
+
+  it("updates a text decoration's x/y from its matching scene text, leaving its text untouched", () => {
+    const original = doc({
+      decorations: [{ id: 'd1', type: 'text', x: 0, y: 0, text: 'Zone A' }],
+    });
+    const scene = documentToScene(original);
+    const moved = scene.copy();
+    const textInMoved = moved.getObjects()[0];
+    moved.updateObject(textInMoved, { ...textInMoved, x: 42, y: 99 });
+
+    const updated = applySceneToDocument(original, moved);
+    expect(updated.decorations?.[0]).toMatchObject({ x: 42, y: 99, text: 'Zone A' });
+  });
+
+  it('does not confuse a node rect with a same-shaped decoration rect when folding back', () => {
+    const original = doc({
+      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status' } }],
+      decorations: [{ id: 'd1', type: 'rect', x: 0, y: 0, width: 100, height: 50 }],
+    });
+    const scene = documentToScene(original);
+    const moved = scene.copy();
+    const nodeRect = moved.getObjects().find(o => o.id === 'n1')!;
+    moved.updateObject(nodeRect, { ...nodeRect, x: 500, y: 500 });
+
+    const updated = applySceneToDocument(original, moved);
+    expect(updated.nodes[0]).toMatchObject({ x: 500, y: 500 });
+    expect(updated.decorations?.[0]).toMatchObject({ x: 0, y: 0 });
   });
 
   it('preserves widget/binding data untouched — only position moves', () => {
@@ -131,6 +194,49 @@ describe('addNode', () => {
     d = addNode(d, { x: 0, y: 0 });
     d = addNode(d, { x: 0, y: 0 });
     expect(d.nodes[0].id).not.toBe(d.nodes[1].id);
+  });
+});
+
+describe('addDecoration', () => {
+  it('appends a new rect decoration at the given position with a default size, leaving existing decorations untouched', () => {
+    const original = doc({
+      decorations: [{ id: 'd1', type: 'text', x: 0, y: 0, text: 'existing' }],
+    });
+
+    const updated = addDecoration(original, 'rect', { x: 40, y: 60 });
+
+    expect(updated.decorations).toHaveLength(2);
+    expect(updated.decorations?.[0]).toEqual(original.decorations?.[0]);
+    const added = updated.decorations?.[1];
+    expect(added).toMatchObject({ type: 'rect', x: 40, y: 60 });
+    expect((added as { width: number }).width).toBeGreaterThan(0);
+    expect((added as { height: number }).height).toBeGreaterThan(0);
+  });
+
+  it('appends a new text decoration with placeholder text', () => {
+    const updated = addDecoration(doc(), 'text', { x: 10, y: 10 });
+    expect(updated.decorations?.[0]).toMatchObject({ type: 'text', x: 10, y: 10 });
+    expect((updated.decorations?.[0] as { text: string }).text.length).toBeGreaterThan(0);
+  });
+
+  it('assigns each new decoration a distinct id', () => {
+    let d = doc();
+    d = addDecoration(d, 'rect', { x: 0, y: 0 });
+    d = addDecoration(d, 'rect', { x: 0, y: 0 });
+    expect(d.decorations?.[0].id).not.toBe(d.decorations?.[1].id);
+  });
+
+  it("a decoration id never collides with a node id (folding back can tell them apart)", () => {
+    let d = doc({ nodes: [{ id: 'shared-namespace-check', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] });
+    d = addDecoration(d, 'rect', { x: 0, y: 0 });
+    expect(d.decorations?.[0].id).not.toBe(d.nodes[0].id);
+  });
+});
+
+describe('nextDecorationPosition', () => {
+  it("cascades each subsequent decoration's position so it doesn't stack on the last one", () => {
+    const withOne = doc({ decorations: [{ id: 'd1', type: 'rect', x: 40, y: 40, width: 10, height: 10 }] });
+    expect(nextDecorationPosition(withOne)).not.toEqual({ x: 40, y: 40 });
   });
 });
 
