@@ -68,4 +68,14 @@ describe('App', () => {
     expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/share/boards/b1?token=tok');
     vi.unstubAllEnvs();
   });
+
+  it('strips a trailing slash from VITE_API_BASE_URL to avoid a double slash', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr/');
+    setLocation('?board=b1&token=tok');
+    (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+    render(<App />);
+    await screen.findByTestId('viewer-page');
+    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/share/boards/b1?token=tok');
+    vi.unstubAllEnvs();
+  });
 });

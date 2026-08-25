@@ -16,6 +16,13 @@ describe('API base URL', () => {
     await getBootstrapStatus();
     expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/auth/bootstrap-status', expect.anything());
   });
+
+  it('strips a trailing slash from VITE_API_BASE_URL to avoid a double slash', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr/');
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
+    await getBootstrapStatus();
+    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/auth/bootstrap-status', expect.anything());
+  });
 });
 
 describe('signup', () => {

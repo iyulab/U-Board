@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ViewerPage, DemoAdapter, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter } from './share-connector-adapter.js';
+import { getApiBase } from './api-base.js';
 
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
@@ -18,7 +19,7 @@ export function App() {
       setState('error');
       return;
     }
-    const base = import.meta.env.VITE_API_BASE_URL ?? '';
+    const base = getApiBase();
     fetch(`${base}/share/boards/${boardId}?token=${encodeURIComponent(token)}`)
       .then(res => {
         if (!res.ok) throw new Error('not ok');
