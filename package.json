@@ -8,6 +8,7 @@
     "postinstall": "npm run build:lib --workspace=packages/core",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:watch": "npm run test:watch --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
     "build:lib": "npm run build:lib --workspaces --if-present"
