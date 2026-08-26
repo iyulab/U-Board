@@ -64,6 +64,64 @@ describe('BoardEditorPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
   });
 
+  it('shows no unsaved-changes indicator right after loading', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    renderPage();
+
+    await screen.findByText('Save');
+
+    expect(screen.queryByText('저장되지 않은 변경 사항이 있습니다')).not.toBeInTheDocument();
+  });
+
+  it('shows an unsaved-changes indicator once the author edits the document', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    renderPage();
+
+    await userEvent.click(await screen.findByText('Add rect decoration'));
+
+    expect(await screen.findByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
+  });
+
+  it('clears the unsaved-changes indicator once the save succeeds', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
+    renderPage();
+
+    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await screen.findByText('저장되지 않은 변경 사항이 있습니다');
+    await userEvent.click(screen.getByText('Save', { exact: true }));
+
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('저장됨'));
+    expect(screen.queryByText('저장되지 않은 변경 사항이 있습니다')).not.toBeInTheDocument();
+  });
+
+  it('keeps the unsaved-changes indicator when the save fails', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockRejectedValue(new Error('network down'));
+    renderPage();
+
+    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await userEvent.click(screen.getByText('Save', { exact: true }));
+
+    await screen.findByRole('alert');
+    expect(screen.getByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
+  });
+
+  it('hides a stale "저장됨" status once the author edits again after a successful save', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
+    renderPage();
+
+    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await userEvent.click(screen.getByText('Save', { exact: true }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('저장됨'));
+
+    await userEvent.click(screen.getByText('Add text decoration'));
+
+    expect(screen.queryByText('저장됨')).not.toBeInTheDocument();
+    expect(screen.getByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
+  });
+
   it('shows an error instead of getting stuck on the loading placeholder when the board fails to load', async () => {
     vi.mocked(api.getBoard).mockRejectedValue(new Error('network down'));
     renderPage();

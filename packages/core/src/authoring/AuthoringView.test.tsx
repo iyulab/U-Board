@@ -101,6 +101,86 @@ describe('AuthoringView onSave', () => {
   });
 });
 
+describe('AuthoringView unsaved changes guard', () => {
+  function dispatchBeforeUnload(): Event {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return event;
+  }
+
+  it('does not warn before unload when nothing has changed', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
+
+    const event = dispatchBeforeUnload();
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('warns before unload once the author edits the document', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
+
+    fireEvent.click(screen.getByText('Add rect decoration'));
+    const event = dispatchBeforeUnload();
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('clears the unload guard once a save completes', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText('Add rect decoration'));
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+
+    // `onSave` resolving is a separate microtask from the click that invoked it — wait for the
+    // guard to actually clear rather than asserting immediately after the call is observed.
+    await waitFor(() => expect(dispatchBeforeUnload().defaultPrevented).toBe(false));
+  });
+
+  it('keeps warning before unload when a save fails', async () => {
+    const onSave = vi.fn().mockRejectedValue(new Error('network down'));
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText('Add rect decoration'));
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+
+    const event = dispatchBeforeUnload();
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('clears the unload guard once an export completes (no onSave)', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
+
+    fireEvent.click(screen.getByText('Add rect decoration'));
+    fireEvent.click(screen.getByText('Export'));
+
+    const event = dispatchBeforeUnload();
+
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('reports dirty state changes via onDirtyChange', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onDirtyChange = vi.fn();
+    render(
+      <AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} onDirtyChange={onDirtyChange} />
+    );
+
+    expect(onDirtyChange).toHaveBeenCalledWith(false);
+    onDirtyChange.mockClear();
+
+    fireEvent.click(screen.getByText('Add rect decoration'));
+    expect(onDirtyChange).toHaveBeenCalledWith(true);
+    onDirtyChange.mockClear();
+
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onDirtyChange).toHaveBeenCalledWith(false));
+  });
+});
+
 describe('AuthoringView node selection', () => {
   function docWithNode(): ViewDocument {
     return {

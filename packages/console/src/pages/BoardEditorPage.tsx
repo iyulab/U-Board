@@ -18,6 +18,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const [connectorsError, setConnectorsError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [isOwner, setIsOwner] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
@@ -109,10 +110,20 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       await updateBoard(workspaceId, boardId!, { document: doc });
       setSaveError(null);
       setSavedAt(new Date());
-    } catch {
+    } catch (err) {
       setSaveError('저장 실패');
       setSavedAt(null);
+      // Rethrow so `AuthoringView`'s unsaved-changes guard knows this save didn't actually
+      // happen — it awaits `onSave` and only clears the beforeunload warning on success.
+      throw err;
     }
+  }
+
+  function handleDirtyChange(dirty: boolean) {
+    setHasUnsavedChanges(dirty);
+    // A fresh edit makes the last "저장됨" stale — only an edit re-dirties the document (a
+    // successful save calls this with `false`, which must NOT clear the status it just set).
+    if (dirty) setSavedAt(null);
   }
 
   return (
@@ -120,7 +131,8 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       {connectorsError && <p role="alert">{connectorsError}</p>}
       {membersError && <p role="alert">{membersError}</p>}
       {saveError && <p role="alert">{saveError}</p>}
-      {savedAt && <p role="status">저장됨</p>}
+      {hasUnsavedChanges && <p role="status">저장되지 않은 변경 사항이 있습니다</p>}
+      {!hasUnsavedChanges && savedAt && <p role="status">저장됨</p>}
       <AuthoringView
         key={boardId}
         initialDocument={document}
@@ -128,6 +140,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         connectorLabels={connectorLabels}
         width={width}
         height={height}
+        onDirtyChange={handleDirtyChange}
         onSave={handleSave}
       />
 

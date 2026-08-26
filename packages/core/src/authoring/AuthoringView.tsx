@@ -29,6 +29,10 @@ export interface AuthoringViewProps {
   connectorLabels?: Record<string, string>;
   /** Save 버튼 동작을 오버라이드한다. 생략 시 오늘과 같은 로컬 파일 다운로드(Export). */
   onSave?: (doc: ViewDocument) => void | Promise<void>;
+  /** 미저장 변경 여부가 바뀔 때마다 호출된다 — 소비자가 자체 UI(상태 표시줄 등)에 반영할 수 있게.
+   * 이 컴포넌트 자신은 시각적 표시를 그리지 않는다(그건 소비자 몫); 브라우저 레벨 이탈 경고
+   * (`beforeunload`)만 내부적으로 처리한다. */
+  onDirtyChange?: (isDirty: boolean) => void;
 }
 
 /**
@@ -38,7 +42,7 @@ export interface AuthoringViewProps {
  * and bindings (docs/principles.md — editor/renderer separation; the designer never renders a
  * widget itself, it only owns the node's footprint and selection).
  */
-export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave }: AuthoringViewProps) {
+export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange }: AuthoringViewProps) {
   const [doc, setDoc] = useState(initialDocument);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -46,6 +50,26 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scene = useMemo(() => documentToScene(doc), [doc]);
+  // Every state-changing handler below (`setDoc`) replaces the document with a new object, so a
+  // plain reference check against the last-saved snapshot is enough to know "the author has
+  // unsaved changes" — no per-field diffing needed. Kept in state (not a ref) because updating it
+  // must trigger a re-render for `isDirty`/the beforeunload effect below to pick up the change.
+  const [lastSavedDoc, setLastSavedDoc] = useState(initialDocument);
+  const isDirty = doc !== lastSavedDoc;
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isDirty]);
+
+  useEffect(() => {
+    onDirtyChange?.(isDirty);
+  }, [isDirty, onDirtyChange]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,10 +119,16 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     setImportError(null);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setImportError(null);
     if (onSave) {
-      onSave(doc);
+      try {
+        await onSave(doc);
+        setLastSavedDoc(doc);
+      } catch {
+        // `onSave` (the consumer's save action) is responsible for surfacing the failure in its
+        // own UI — this view only needs to know not to clear the unsaved-changes guard.
+      }
       return;
     }
     const blob = new Blob([serializeViewDocument(doc)], { type: 'application/json' });
@@ -108,6 +138,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     link.download = 'view-document.json';
     link.click();
     URL.revokeObjectURL(url);
+    setLastSavedDoc(doc);
   };
 
   const handleImportClick = () => fileInputRef.current?.click();
