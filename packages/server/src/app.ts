@@ -22,6 +22,12 @@ export interface AppConfig {
    *  the header is client-spoofable and the limiter is worse than doing nothing. Unset in
    *  dev/test, where the header doesn't exist. */
   trustCloudflareProxy?: boolean;
+  /** Delivers a password-reset link/token to a user's inbox. Injected so the actual email
+   *  provider is a deployment-time choice, not a compile-time dependency — omit it and a safe
+   *  dev-mode default logs the token server-side instead of sending anything (see
+   *  `routes/auth.ts`'s `defaultSendPasswordResetEmail`). Whatever this does or doesn't do, the
+   *  token itself must never appear in an HTTP response — only ever passed to this function. */
+  sendPasswordResetEmail?: (input: { email: string; token: string }) => Promise<void>;
 }
 
 /** `req.ip` collapses to the single ingress IP behind Cloudflare -> Container Apps unless the
@@ -57,8 +63,22 @@ export function createApp(config: AppConfig): express.Express {
       ? { keyGenerator: cloudflareKeyGenerator, validate: { xForwardedForHeader: false } }
       : {}),
   });
+  // Unauthenticated liveness/readiness check — a DB round-trip, not just "the process is up", so
+  // it catches a listening-but-stuck app (e.g. an exhausted connection pool) that a bare TCP probe
+  // would miss. Registered before auth/rate-limiting so it stays cheap to poll.
+  app.get('/health', (_req, res) => {
+    config.db
+      .query('SELECT 1')
+      .then(() => res.status(200).json({ status: 'ok' }))
+      .catch(() => res.status(503).json({ status: 'error' }));
+  });
   app.use('/auth/login', authRateLimiter);
   app.use('/auth/signup', authRateLimiter);
+  // Same bucket as login/signup: an unlimited request-password-reset would let an attacker spam
+  // token generation (and, once a real email provider is wired, email-bomb a victim's inbox);
+  // reset-password shares it too for the same "auth attack surface" reasoning login/signup do.
+  app.use('/auth/request-password-reset', authRateLimiter);
+  app.use('/auth/reset-password', authRateLimiter);
   app.use('/auth', createAuthRouter(config));
   app.use('/invitations', createInvitationsRouter(config));
   app.use('/workspaces', createWorkspacesRouter(config));

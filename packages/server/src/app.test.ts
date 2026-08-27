@@ -122,6 +122,33 @@ describe('auth rate limiting', () => {
     expect(res.status).toBe(429);
   });
 
+  it('returns 429 after exceeding the request-password-reset attempt limit', async () => {
+    for (let i = 0; i < 10; i++) {
+      await request(app).post('/auth/request-password-reset').send({ email: 'x@x.com' });
+    }
+    const res = await request(app).post('/auth/request-password-reset').send({ email: 'x@x.com' });
+    expect(res.status).toBe(429);
+  });
+
+  it('returns 429 after exceeding the reset-password attempt limit', async () => {
+    for (let i = 0; i < 10; i++) {
+      await request(app).post('/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
+    }
+    const res = await request(app).post('/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
+    expect(res.status).toBe(429);
+  });
+
+  it('shares one bucket across login/signup/request-password-reset/reset-password (same IP)', async () => {
+    for (let i = 0; i < 5; i++) {
+      await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
+    }
+    for (let i = 0; i < 5; i++) {
+      await request(app).post('/auth/request-password-reset').send({ email: 'x@x.com' });
+    }
+    const res = await request(app).post('/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
+    expect(res.status).toBe(429);
+  });
+
   it('does not rate-limit unrelated routes', async () => {
     for (let i = 0; i < 10; i++) {
       await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
@@ -151,5 +178,31 @@ describe('auth rate limiting', () => {
       .set('CF-Connecting-IP', '203.0.113.2')
       .send({ email: 'x@x.com', password: 'wrong' });
     expect(otherIp.status).not.toBe(429);
+  });
+});
+
+describe('GET /health', () => {
+  it('returns 200 with an ok status when the database is reachable', async () => {
+    const res = await request(app).get('/health');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+  });
+
+  it('returns 503 when the database is unreachable, without leaking driver detail', async () => {
+    const brokenDb: DbClient = {
+      query: async () => {
+        throw new Error('connection terminated unexpectedly');
+      },
+      withTransaction: async fn => fn(brokenDb),
+    };
+    const brokenApp = createApp({ db: brokenDb, sessionSecret: SECRET });
+    const res = await request(brokenApp).get('/health');
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({ status: 'error' });
+  });
+
+  it('requires no authentication', async () => {
+    const res = await request(app).get('/health');
+    expect(res.status).not.toBe(401);
   });
 });
