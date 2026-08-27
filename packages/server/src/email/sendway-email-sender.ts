@@ -1,9 +1,15 @@
 const DEFAULT_BASE_URL = 'https://sendway.u-platform.kr';
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 export interface SendwayConfig {
   apiKey: string;
   /** Override for a non-default Sendway deployment (e.g. a local/staging one). */
   baseUrl?: string;
+  /** Aborts the request if Sendway hasn't responded within this long. Defaults to 10s — a hung
+   *  connection here would otherwise block the awaiting `/request-password-reset` handler
+   *  indefinitely, since that route always responds 202 regardless of account existence and has
+   *  nothing else gating its response. */
+  timeoutMs?: number;
 }
 
 function buildResetEmailBody(token: string): string {
@@ -22,6 +28,7 @@ export function createSendwayPasswordResetEmailSender(
   fetchFn: typeof fetch = fetch
 ): (input: { email: string; token: string }) => Promise<void> {
   const baseUrl = config.baseUrl ?? DEFAULT_BASE_URL;
+  const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   return async function sendPasswordResetEmail(input: { email: string; token: string }): Promise<void> {
     const response = await fetchFn(`${baseUrl}/messages/email`, {
@@ -38,6 +45,7 @@ export function createSendwayPasswordResetEmailSender(
         subject: 'Reset your U-Board password',
         body: buildResetEmailBody(input.token),
       }),
+      signal: AbortSignal.timeout(timeoutMs),
     });
 
     if (!response.ok) {

@@ -25,6 +25,40 @@ describe('API base URL', () => {
   });
 });
 
+describe('request timeout + retry (edge cold-start hardening)', () => {
+  it('sets an AbortSignal timeout on every request', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
+    await getBootstrapStatus();
+    const [, init] = (fetch as any).mock.calls[0];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('retries once when the first attempt times out, and resolves with the retry result', async () => {
+    (fetch as any)
+      .mockRejectedValueOnce(new DOMException('The operation timed out.', 'TimeoutError'))
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: true }) });
+
+    await expect(getBootstrapStatus()).resolves.toEqual({ hasAnyUser: true });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a non-timeout failure', async () => {
+    (fetch as any).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    await expect(getBootstrapStatus()).rejects.toThrow('Failed to fetch');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates a timeout that recurs on the retry too', async () => {
+    (fetch as any)
+      .mockRejectedValueOnce(new DOMException('The operation timed out.', 'TimeoutError'))
+      .mockRejectedValueOnce(new DOMException('The operation timed out.', 'TimeoutError'));
+
+    await expect(getBootstrapStatus()).rejects.toThrow(/timed out/);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('signup', () => {
   it('posts to /auth/signup and returns the parsed body', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ userId: 'u1', workspaceId: 'w1' }) });

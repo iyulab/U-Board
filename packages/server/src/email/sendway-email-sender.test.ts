@@ -53,4 +53,26 @@ describe('createSendwayPasswordResetEmailSender', () => {
     const [url] = fetchFn.mock.calls[0];
     expect(url).toBe('https://sendway.internal.test/messages/email');
   });
+
+  it('sets an AbortSignal timeout on the request so a hung Sendway connection cannot block the caller indefinitely', async () => {
+    const fetchFn = fakeFetch({ ok: true, status: 200 });
+    const send = createSendwayPasswordResetEmailSender({ apiKey: 'sw_test_key' }, fetchFn);
+
+    await send({ email: 'user@example.com', token: 'tok' });
+
+    const [, init] = fetchFn.mock.calls[0];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('honors a configured timeoutMs override — the signal aborts once that duration elapses (default is 10s)', async () => {
+    const fetchFn = fakeFetch({ ok: true, status: 200 });
+    const send = createSendwayPasswordResetEmailSender({ apiKey: 'sw_test_key', timeoutMs: 5 }, fetchFn);
+
+    await send({ email: 'user@example.com', token: 'tok' });
+
+    const [, init] = fetchFn.mock.calls[0];
+    expect(init.signal.aborted).toBe(false);
+    await new Promise(resolve => setTimeout(resolve, 25));
+    expect(init.signal.aborted).toBe(true);
+  });
 });

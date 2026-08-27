@@ -38,7 +38,7 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
     render(<App />);
     expect(await screen.findByTestId('viewer-page')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/share/boards/b1?token=tok');
+    expect(fetch).toHaveBeenCalledWith('/share/boards/b1?token=tok', expect.anything());
   });
 
   it('shows an error when the fetch fails', async () => {
@@ -76,7 +76,7 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
     render(<App />);
     await screen.findByTestId('viewer-page');
-    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/share/boards/b1?token=tok');
+    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/share/boards/b1?token=tok', expect.anything());
     vi.unstubAllEnvs();
   });
 
@@ -86,7 +86,7 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
     render(<App />);
     await screen.findByTestId('viewer-page');
-    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/share/boards/b1?token=tok');
+    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/share/boards/b1?token=tok', expect.anything());
     vi.unstubAllEnvs();
   });
 });

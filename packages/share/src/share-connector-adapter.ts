@@ -1,5 +1,5 @@
 import type { Adapter, ResolvedBinding } from '@iyulab/u-board/viewer';
-import { getApiBase } from './api-base.js';
+import { getApiBase, fetchWithRetry } from './api-base.js';
 
 /** Delegates to the server's public `/share` resolve proxy instead of the session-authenticated
  * one — the auth mechanism differs (query-string token vs. cookie), so this is a separate class
@@ -10,7 +10,7 @@ export class ShareConnectorAdapter implements Adapter {
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
     const base = getApiBase();
-    const res = await fetch(
+    const res = await fetchWithRetry(
       `${base}/share/boards/${this.boardId}/connectors/${this.id}/resolve?token=${encodeURIComponent(this.token)}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ref }) }
     );

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ViewerPage, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter } from './share-connector-adapter.js';
-import { getApiBase } from './api-base.js';
+import { getApiBase, fetchWithRetry } from './api-base.js';
 
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
@@ -20,7 +20,7 @@ export function App() {
       return;
     }
     const base = getApiBase();
-    fetch(`${base}/share/boards/${boardId}?token=${encodeURIComponent(token)}`)
+    fetchWithRetry(`${base}/share/boards/${boardId}?token=${encodeURIComponent(token)}`)
       .then(res => {
         if (!res.ok) throw new Error('not ok');
         return res.json();
