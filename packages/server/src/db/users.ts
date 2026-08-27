@@ -49,6 +49,10 @@ export async function findUserById(db: DbClient, id: string): Promise<User | und
   return rows[0] ? rowToUser(rows[0]) : undefined;
 }
 
+export async function updateUserPassword(db: DbClient, userId: string, passwordHash: string): Promise<void> {
+  await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, userId]);
+}
+
 export async function countUsers(db: DbClient): Promise<number> {
   // Postgres COUNT(*) returns bigint, which node-postgres/PGlite surface as a string to avoid
   // precision loss beyond Number.MAX_SAFE_INTEGER — Number(...) is safe here (user counts never

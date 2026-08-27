@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createDb } from './db.js';
 
 describe('createDb', () => {
-  it('creates all seven tables on an in-memory (PGlite) database', async () => {
+  it('creates all eight tables on an in-memory (PGlite) database', async () => {
     const db = await createDb(':memory:');
     const { rows } = await db.query<{ table_name: string }>(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`
@@ -11,6 +11,7 @@ describe('createDb', () => {
       'board_share_tokens',
       'boards',
       'connectors',
+      'password_reset_tokens',
       'users',
       'workspace_invitations',
       'workspace_users',

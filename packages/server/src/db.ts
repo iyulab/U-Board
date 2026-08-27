@@ -79,6 +79,16 @@ CREATE TABLE IF NOT EXISTS board_share_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS idx_board_share_tokens_board_id ON board_share_tokens(board_id);
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TEXT NOT NULL,
+  used_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
 `;
 
 // Distinct from routes/auth.ts's SIGNUP_BOOTSTRAP_LOCK_KEY (727100) — Postgres advisory locks

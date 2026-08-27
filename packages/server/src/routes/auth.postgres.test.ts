@@ -52,7 +52,7 @@ describe.skipIf(!dockerAvailable())('POST /auth/signup — real Postgres concurr
     // between tests instead of restarting the container. All tables in one TRUNCATE so Postgres
     // doesn't need an explicit dependency order.
     await db.query(
-      'TRUNCATE workspace_invitations, board_share_tokens, connectors, boards, workspace_users, workspaces, users'
+      'TRUNCATE password_reset_tokens, workspace_invitations, board_share_tokens, connectors, boards, workspace_users, workspaces, users'
     );
   });
 

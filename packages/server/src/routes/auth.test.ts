@@ -227,3 +227,111 @@ describe('GET /auth/bootstrap-status', () => {
     expect(res.body).toEqual({ hasAnyUser: true });
   });
 });
+
+describe('POST /auth/request-password-reset', () => {
+  it('accepts a request for an existing email and dispatches a reset token via the injected sender', async () => {
+    const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
+    const appWithSender = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
+    await request(appWithSender).post('/auth/signup').send({ email: 'reset-me@x.com', password: 'p4ssword!', name: 'R' });
+
+    const res = await request(appWithSender).post('/auth/request-password-reset').send({ email: 'reset-me@x.com' });
+
+    expect(res.status).toBe(202);
+    expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+    const call = sendPasswordResetEmail.mock.calls[0][0];
+    expect(call.email).toBe('reset-me@x.com');
+    expect(typeof call.token).toBe('string');
+    expect(call.token.length).toBeGreaterThan(20);
+  });
+
+  it('never returns the reset token in the response body', async () => {
+    const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
+    const appWithSender = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
+    await request(appWithSender).post('/auth/signup').send({ email: 'no-leak@x.com', password: 'p4ssword!', name: 'N' });
+
+    const res = await request(appWithSender).post('/auth/request-password-reset').send({ email: 'no-leak@x.com' });
+
+    expect(JSON.stringify(res.body)).not.toContain(sendPasswordResetEmail.mock.calls[0][0].token);
+  });
+
+  it('responds identically (202, no sender call) for an unknown email — no account-existence leak', async () => {
+    const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
+    const appWithSender = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
+
+    const res = await request(appWithSender).post('/auth/request-password-reset').send({ email: 'nobody@x.com' });
+
+    expect(res.status).toBe(202);
+    expect(sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+
+  it('rejects malformed input (missing email) with 400', async () => {
+    const res = await request(app).post('/auth/request-password-reset').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+  });
+
+  it('still responds 202 with no sender configured (falls back to a safe default, does not throw)', async () => {
+    await request(app).post('/auth/signup').send({ email: 'no-sender@x.com', password: 'p4ssword!', name: 'X' });
+    const res = await request(app).post('/auth/request-password-reset').send({ email: 'no-sender@x.com' });
+    expect(res.status).toBe(202);
+  });
+});
+
+describe('POST /auth/reset-password', () => {
+  async function requestReset(targetApp: import('express').Express, email: string): Promise<string> {
+    const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
+    // Re-create the app with a capturing sender wired to the *same* db, so the token this helper
+    // captures is usable against `targetApp` even though the two Express instances are distinct.
+    const capturingApp = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
+    await request(capturingApp).post('/auth/request-password-reset').send({ email });
+    return sendPasswordResetEmail.mock.calls[0][0].token as string;
+  }
+
+  it('resets the password with a valid token, and the new password works for login', async () => {
+    await request(app).post('/auth/signup').send({ email: 'reset2@x.com', password: 'old-pass!', name: 'R2' });
+    const token = await requestReset(app, 'reset2@x.com');
+
+    const res = await request(app).post('/auth/reset-password').send({ token, newPassword: 'new-pass!' });
+    expect(res.status).toBe(200);
+
+    const oldLogin = await request(app).post('/auth/login').send({ email: 'reset2@x.com', password: 'old-pass!' });
+    expect(oldLogin.status).toBe(401);
+    const newLogin = await request(app).post('/auth/login').send({ email: 'reset2@x.com', password: 'new-pass!' });
+    expect(newLogin.status).toBe(200);
+  });
+
+  it('rejects a second use of the same token with 410', async () => {
+    await request(app).post('/auth/signup').send({ email: 'reset3@x.com', password: 'old-pass!', name: 'R3' });
+    const token = await requestReset(app, 'reset3@x.com');
+
+    await request(app).post('/auth/reset-password').send({ token, newPassword: 'new-pass!' });
+    const second = await request(app).post('/auth/reset-password').send({ token, newPassword: 'another!' });
+    expect(second.status).toBe(410);
+    expect(second.body.code).toBe('RESET_TOKEN_INVALID');
+  });
+
+  it('rejects an unknown/garbage token with 410', async () => {
+    const res = await request(app).post('/auth/reset-password').send({ token: 'garbage-token', newPassword: 'new-pass!' });
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('RESET_TOKEN_INVALID');
+  });
+
+  it('rejects an expired token with 410', async () => {
+    await request(app).post('/auth/signup').send({ email: 'reset4@x.com', password: 'old-pass!', name: 'R4' });
+    const token = await requestReset(app, 'reset4@x.com');
+    await db.query('UPDATE password_reset_tokens SET expires_at = $1 WHERE user_id = (SELECT id FROM users WHERE email = $2)', [
+      new Date(Date.now() - 1000).toISOString(),
+      'reset4@x.com',
+    ]);
+
+    const res = await request(app).post('/auth/reset-password').send({ token, newPassword: 'new-pass!' });
+    expect(res.status).toBe(410);
+    expect(res.body.code).toBe('RESET_TOKEN_INVALID');
+  });
+
+  it('rejects malformed input (missing newPassword) with 400', async () => {
+    const res = await request(app).post('/auth/reset-password').send({ token: 'x' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+  });
+});

@@ -1,6 +1,13 @@
 import { Router } from 'express';
+import { randomBytes, createHash } from 'node:crypto';
 import type { AppConfig } from '../app.js';
-import { createUser, findUserByEmail, countUsers } from '../db/users.js';
+import { createUser, findUserByEmail, countUsers, updateUserPassword } from '../db/users.js';
+import {
+  createPasswordResetToken,
+  findPasswordResetTokenByHash,
+  markPasswordResetTokenUsedIfUnused,
+  isPasswordResetTokenUsable,
+} from '../db/password-reset-tokens.js';
 import {
   createWorkspace,
   addWorkspaceUser,
@@ -42,8 +49,25 @@ const UNIQUE_VIOLATION = '23505';
  * default READ COMMITTED isolation and both try to become the first owner. */
 const SIGNUP_BOOTSTRAP_LOCK_KEY = 727100;
 
+/** Same hash-what-you-store, return-the-plaintext-once idiom `routes/board-share-tokens.ts`
+ * uses for its externally-exposed secret — a DB leak yields no usable token. */
+function hashToken(plain: string): string {
+  return createHash('sha256').update(plain).digest('hex');
+}
+
+/** No email provider is wired in yet (a deployment-time decision, not this route's concern) —
+ * this keeps the reset flow fully functional and testable without one, and makes the gap loud
+ * (a server-log line an operator will actually see) rather than a silent, unexplained "email
+ * never arrives". Replace by passing `AppConfig.sendPasswordResetEmail` once a provider exists. */
+async function defaultSendPasswordResetEmail(input: { email: string; token: string }): Promise<void> {
+  console.warn(
+    `[auth] no email provider configured — password reset for ${input.email} was not sent. Token: ${input.token}`
+  );
+}
+
 export function createAuthRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
+  const sendPasswordResetEmail = config.sendPasswordResetEmail ?? defaultSendPasswordResetEmail;
   const router = Router();
 
   router.post(
@@ -155,6 +179,63 @@ export function createAuthRouter(config: AppConfig): Router {
     '/bootstrap-status',
     asyncHandler(async (_req, res) => {
       res.status(200).json({ hasAnyUser: (await countUsers(db)) > 0 });
+    })
+  );
+
+  router.post(
+    '/request-password-reset',
+    asyncHandler(async (req, res) => {
+      const { email } = req.body ?? {};
+      if (typeof email !== 'string') {
+        res.status(400).json({ code: 'INVALID_INPUT' });
+        return;
+      }
+
+      // Always 202, whether or not the account exists — the alternative (404-vs-202, or any
+      // response-time difference) lets an attacker enumerate registered emails. The token itself
+      // never appears in this response either way; it only ever reaches `sendPasswordResetEmail`.
+      const user = await findUserByEmail(db, email);
+      if (user) {
+        const plain = randomBytes(32).toString('base64url');
+        await createPasswordResetToken(db, { userId: user.id, tokenHash: hashToken(plain) });
+        try {
+          await sendPasswordResetEmail({ email: user.email, token: plain });
+        } catch (err) {
+          // A broken email provider is an operational problem to log, not a reason to fail the
+          // request or reveal to the caller that the account exists.
+          console.error('[auth] sendPasswordResetEmail failed:', err);
+        }
+      }
+      res.status(202).json({ code: 'RESET_REQUESTED' });
+    })
+  );
+
+  router.post(
+    '/reset-password',
+    asyncHandler(async (req, res) => {
+      const { token, newPassword } = req.body ?? {};
+      if (typeof token !== 'string' || typeof newPassword !== 'string') {
+        res.status(400).json({ code: 'INVALID_INPUT' });
+        return;
+      }
+
+      const found = await findPasswordResetTokenByHash(db, hashToken(token));
+      if (!found || !isPasswordResetTokenUsable(found)) {
+        res.status(410).json({ code: 'RESET_TOKEN_INVALID' });
+        return;
+      }
+      // Atomic claim, same reasoning as markInvitationAcceptedIfUnused: closes the race where
+      // two requests redeem the same token concurrently before either commits its password
+      // update.
+      const claimed = await markPasswordResetTokenUsedIfUnused(db, found.id);
+      if (!claimed) {
+        res.status(410).json({ code: 'RESET_TOKEN_INVALID' });
+        return;
+      }
+
+      const passwordHash = await hashPassword(newPassword);
+      await updateUserPassword(db, claimed.userId, passwordHash);
+      res.status(200).json({ code: 'PASSWORD_RESET' });
     })
   );
 

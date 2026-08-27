@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { DbClient } from '../db.js';
 import { createDb } from '../db.js';
-import { createUser, findUserByEmail, findUserById, countUsers } from './users.js';
+import { createUser, findUserByEmail, findUserById, countUsers, updateUserPassword } from './users.js';
 
 let db: DbClient;
 beforeEach(async () => {
@@ -40,5 +40,12 @@ describe('user repository', () => {
     expect(await countUsers(db)).toBe(0);
     await createUser(db, { email: 'c@x.com', passwordHash: 'h', name: 'C' });
     expect(await countUsers(db)).toBe(1);
+  });
+
+  it('updates a user\'s password hash', async () => {
+    const created = await createUser(db, { email: 'd@x.com', passwordHash: 'old-hash', name: 'D' });
+    await updateUserPassword(db, created.id, 'new-hash');
+    const reloaded = await findUserById(db, created.id);
+    expect(reloaded?.passwordHash).toBe('new-hash');
   });
 });
