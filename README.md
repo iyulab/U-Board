@@ -12,6 +12,14 @@ plan, a system topology, a site map — without building a spatial canvas render
 U-Board runs standalone against any external data source through its adapter surface — it does
 not assume or require a specific host platform.
 
+Several CMMS/facility-management products already ship their own interactive-floor-plan feature
+(Hippo, FMX, eMaint, and similar) — U-Board isn't meant to replace that when one system already
+covers the need. It's for the case a single vendor's built-in view can't: a live view spanning
+more than one source system (e.g. CMMS asset status next to a separate SCADA feed on the same
+floor plan), or embedding that view somewhere the source system's own UI has no reach. The
+adapter surface is what buys that — a view isn't locked to whichever vendor's floor-plan feature
+happened to be good enough.
+
 ## What this is not
 
 - Not a general business-intelligence tool. U-Board sits closer to industrial HMI/SCADA
@@ -28,8 +36,12 @@ authoring UI (add/drag/resize nodes and rect/text decorations; a property panel 
 selected node's widget type, static props, and data bindings, including a path explorer for
 HTTP-shaped adapter responses; a label editor for the selected text decoration), local save
 (export/import), and a read-only viewer mode are implemented and browser-verified.
-Binding to a real external data source is not yet implemented — the adapter contract is complete
-and validated end-to-end against a mock adapter only.
+Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
+adapter (with SSRF-safe origin pinning and bearer/header auth) is wired into both the authoring UI
+and the read-only embed viewer. A connector to a specific external system that needs its own
+domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
+until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a
+board can be wired up and previewed before any real connector is configured.
 
 ## Domain layer
 
