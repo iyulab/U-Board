@@ -20,6 +20,18 @@ function renderPage() {
 }
 
 describe('BoardsListPage', () => {
+  it('shows a loading state before the initial list resolves', async () => {
+    let resolveList!: (value: { boards: { id: string; name: string; updatedAt: string }[] }) => void;
+    vi.mocked(api.listBoards).mockReturnValue(new Promise(resolve => { resolveList = resolve; }));
+
+    renderPage();
+    expect(screen.getByText('불러오는 중...')).toBeInTheDocument();
+
+    resolveList({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: 't' }] });
+    expect(await screen.findByText('Floor 1')).toBeInTheDocument();
+    expect(screen.queryByText('불러오는 중...')).not.toBeInTheDocument();
+  });
+
   it('lists boards for the workspace', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: '2026-08-20T00:00:00.000Z' }] });
     renderPage();

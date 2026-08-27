@@ -11,6 +11,23 @@ beforeEach(() => vi.resetAllMocks());
 const CONNECTOR = { id: 'c1', name: 'Plant API', type: 'http' as const, baseUrl: 'https://plant.example.com', authType: 'none' as const, updatedAt: 't' };
 
 describe('ConnectorsPage', () => {
+  it('shows a loading state before the initial connector list resolves', async () => {
+    let resolveList!: (value: { connectors: (typeof CONNECTOR)[] }) => void;
+    vi.mocked(api.listConnectors).mockReturnValue(new Promise(resolve => { resolveList = resolve; }));
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [] });
+
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+    expect(screen.getByText('불러오는 중...')).toBeInTheDocument();
+
+    resolveList({ connectors: [CONNECTOR] });
+    expect(await screen.findByText(/Plant API/)).toBeInTheDocument();
+    expect(screen.queryByText('불러오는 중...')).not.toBeInTheDocument();
+  });
+
   it('lists connectors and hides mutation controls for a member', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [CONNECTOR] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'm@x.com', name: 'M', role: 'member' }] });

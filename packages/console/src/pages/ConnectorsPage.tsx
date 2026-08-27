@@ -3,6 +3,7 @@ import { listConnectors, createConnector, updateConnector, deleteConnector, list
 
 export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Kept separate from `error` rather than sharing it: the connector-list load resolves
@@ -21,7 +22,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
         setError(null);
         setConnectors(res.connectors);
       })
-      .catch(() => setError('데이터소스 목록을 불러오지 못했습니다'));
+      .catch(() => setError('데이터소스 목록을 불러오지 못했습니다'))
+      .finally(() => setIsLoading(false));
   }
 
   useEffect(() => {
@@ -90,6 +92,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       setError('데이터소스 삭제에 실패했습니다');
     }
   }
+
+  if (isLoading) return <p>불러오는 중...</p>;
 
   return (
     <div>

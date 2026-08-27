@@ -7,6 +7,8 @@ type Workspace = { id: string; name: string };
 
 export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -20,12 +22,15 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
   const isOwner = members.find(m => m.userId === userId)?.role === 'owner';
 
   useEffect(() => {
-    getSession().then(session => {
-      if (!session) return;
-      setWorkspaces(session.workspaces);
-      setActiveWorkspaceId(session.activeWorkspaceId);
-      setUserId(session.userId);
-    });
+    getSession()
+      .then(session => {
+        if (!session) return;
+        setWorkspaces(session.workspaces);
+        setActiveWorkspaceId(session.activeWorkspaceId);
+        setUserId(session.userId);
+      })
+      .catch(() => setSessionError('대시보드를 불러오지 못했습니다'))
+      .finally(() => setIsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -54,6 +59,9 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
     await logout();
     onLoggedOut();
   }
+
+  if (isLoading) return <p>불러오는 중...</p>;
+  if (sessionError) return <p role="alert">{sessionError}</p>;
 
   return (
     <div>

@@ -19,6 +19,26 @@ function renderDashboard(props: Parameters<typeof DashboardPage>[0]) {
 }
 
 describe('DashboardPage', () => {
+  it('shows a loading state before the initial session resolves', async () => {
+    let resolveSession!: (value: Awaited<ReturnType<typeof api.getSession>>) => void;
+    vi.mocked(api.getSession).mockReturnValue(new Promise(resolve => { resolveSession = resolve; }));
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [] });
+
+    renderDashboard({ onLoggedOut: vi.fn() });
+    expect(screen.getByText('불러오는 중...')).toBeInTheDocument();
+
+    resolveSession({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }] });
+    await waitFor(() => expect(screen.queryByText('불러오는 중...')).not.toBeInTheDocument());
+  });
+
+  it('shows an error when the initial session fetch fails, instead of a silently empty dashboard', async () => {
+    vi.mocked(api.getSession).mockRejectedValue(new Error('network down'));
+
+    renderDashboard({ onLoggedOut: vi.fn() });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('대시보드를 불러오지 못했습니다');
+  });
+
   it('loads session and renders members', async () => {
     vi.mocked(api.getSession).mockResolvedValue({
       userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }],

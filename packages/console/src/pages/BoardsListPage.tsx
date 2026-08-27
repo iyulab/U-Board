@@ -6,6 +6,7 @@ type BoardSummary = { id: string; name: string; updatedAt: string };
 
 export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   const [boards, setBoards] = useState<BoardSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -18,7 +19,8 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
     setLoadError(null);
     return listBoards(workspaceId)
       .then(res => setBoards(res.boards))
-      .catch(() => setLoadError('보드 목록을 불러오지 못했습니다'));
+      .catch(() => setLoadError('보드 목록을 불러오지 못했습니다'))
+      .finally(() => setIsLoading(false));
   }
 
   useEffect(() => {
@@ -63,6 +65,8 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
       setActionError('보드 삭제에 실패했습니다');
     }
   }
+
+  if (isLoading) return <p>불러오는 중...</p>;
 
   return (
     <div>
