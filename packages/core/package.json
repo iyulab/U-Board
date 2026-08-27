@@ -23,6 +23,10 @@
     "./domain": {
       "types": "./dist/lib/domain-entry.d.ts",
       "import": "./dist/lib/domain-entry.js"
+    },
+    "./demo": {
+      "types": "./dist/lib/demo-entry.d.ts",
+      "import": "./dist/lib/demo-entry.js"
     }
   },
   "scripts": {

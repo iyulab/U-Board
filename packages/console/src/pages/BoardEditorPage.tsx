@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { AuthoringView, DemoAdapter, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { AuthoringView, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { DemoAdapter } from '@iyulab/u-board/demo';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, listShareTokens, createShareToken, deleteShareToken, type ShareTokenSummary,

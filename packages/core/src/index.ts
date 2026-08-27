@@ -3,7 +3,6 @@ export type { Adapter, ResolvedBinding, ResolvedWidget } from './adapter.js';
 export { resolveWidget } from './adapter.js';
 export type { ResolvedNode, ResolvedViewDocument } from './resolve-document.js';
 export { resolveDocument } from './resolve-document.js';
-export { DemoAdapter } from './demo-adapter.js';
 export { AuthoringView } from './authoring/AuthoringView.js';
 export type { AuthoringViewProps } from './authoring/AuthoringView.js';
 export { ViewerPage } from './viewer/ViewerPage.js';
