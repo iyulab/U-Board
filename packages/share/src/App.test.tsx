@@ -48,7 +48,7 @@ describe('App', () => {
     expect(await screen.findByText(/더 이상 유효하지 않습니다/)).toBeInTheDocument();
   });
 
-  it('wires each returned connectorId into a ShareConnectorAdapter alongside the DemoAdapter', async () => {
+  it('wires each returned connectorId into a ShareConnectorAdapter, with no DemoAdapter mixed in', async () => {
     setLocation('?board=b1&token=tok');
     (fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -56,7 +56,18 @@ describe('App', () => {
     });
     render(<App />);
     const viewer = await screen.findByTestId('viewer-page');
-    expect(viewer.dataset.adapterIds).toBe('demo-cmms,c1,c2');
+    expect(viewer.dataset.adapterIds).toBe('c1,c2');
+  });
+
+  it('renders with no adapters when the board has no connectors, rather than falling back to DemoAdapter', async () => {
+    setLocation('?board=b1&token=tok');
+    (fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ name: 'A', document: DOC, connectorIds: [] }),
+    });
+    render(<App />);
+    const viewer = await screen.findByTestId('viewer-page');
+    expect(viewer.dataset.adapterIds).toBe('');
   });
 
   it('prefixes the board fetch with VITE_API_BASE_URL when set', async () => {

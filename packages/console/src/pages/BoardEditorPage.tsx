@@ -88,15 +88,21 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     }
   }
 
+  const demoAdapter = useMemo(() => new DemoAdapter(), []);
+
   const adapters: readonly Adapter[] = useMemo(() => {
-    const demo = new DemoAdapter();
     const real = connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id));
-    return [demo, ...real];
-  }, [workspaceId, connectors]);
+    return [demoAdapter, ...real];
+  }, [demoAdapter, workspaceId, connectors]);
 
   const connectorLabels = useMemo(
-    () => Object.fromEntries(connectors.map(c => [c.id, c.name])),
-    [connectors]
+    () => ({
+      // The demo adapter's id is never in `connectors` (a real workspace data source), so this
+      // never collides with — or gets overwritten by — a real connector's label below.
+      [demoAdapter.id]: '데모 데이터 (예시, 실제 연결 아님)',
+      ...Object.fromEntries(connectors.map(c => [c.id, c.name])),
+    }),
+    [demoAdapter, connectors]
   );
 
   if (loadError) return <p role="alert">{loadError}</p>;

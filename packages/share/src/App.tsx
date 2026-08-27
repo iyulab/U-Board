@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ViewerPage, DemoAdapter, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
+import { ViewerPage, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter } from './share-connector-adapter.js';
 import { getApiBase } from './api-base.js';
 
@@ -26,10 +26,7 @@ export function App() {
         return res.json();
       })
       .then((body: { name: string; document: ViewDocument; connectorIds: string[] }) => {
-        const adapters: Adapter[] = [
-          new DemoAdapter(),
-          ...body.connectorIds.map(id => new ShareConnectorAdapter(boardId, token, id)),
-        ];
+        const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(boardId, token, id));
         setState({ name: body.name, document: body.document, adapters });
       })
       .catch(() => setState('error'));

@@ -300,4 +300,30 @@ describe('BoardEditorPage binding editor wiring', () => {
 
     expect(await screen.findByRole('option', { name: 'Plant API' })).toBeInTheDocument();
   });
+
+  it('labels the built-in demo data source clearly, never as the raw "demo-cmms" id', async () => {
+    const doc = {
+      kind: 'canvas' as const,
+      background: {},
+      nodes: [
+        {
+          id: 'n1',
+          x: 0,
+          y: 0,
+          anchored: false,
+          widget: { type: 'status' as const, props: { data: { label: 'A', level: 'info' as const, value: 'x' } } },
+        },
+      ],
+      connectors: [],
+    };
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: doc, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    renderPage();
+
+    await screen.findByText('Save');
+    fireEvent.click(screen.getByText('select-n1'));
+
+    expect(await screen.findByRole('option', { name: '데모 데이터 (예시, 실제 연결 아님)' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'demo-cmms' })).not.toBeInTheDocument();
+  });
 });
