@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ToastProvider, useToast } from './Toast.js';
 
@@ -33,7 +33,9 @@ describe('Toast', () => {
     await user.click(screen.getByRole('button', { name: '알림 보내기' }));
     expect(screen.getByText('저장되었습니다')).toBeInTheDocument();
 
-    vi.advanceTimersByTime(5000);
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
     await waitFor(() => expect(screen.queryByText('저장되었습니다')).not.toBeInTheDocument());
   });
 
