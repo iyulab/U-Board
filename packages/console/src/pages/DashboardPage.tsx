@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { getSession, listMembers, inviteMember, switchWorkspace, logout } from '../api-client.js';
 import { AppShell } from '../design-system/AppShell.js';
+import { WorkspaceSwitcher } from '../design-system/WorkspaceSwitcher.js';
 import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
@@ -73,16 +74,11 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
     <AppShell
       onLogout={handleLogout}
       workspaceSwitcher={
-        <select
-          className="ub-workspace-select"
-          aria-label="워크스페이스"
-          value={activeWorkspaceId ?? ''}
-          onChange={e => handleSwitch(e.target.value)}
-        >
-          {workspaces.map(w => (
-            <option key={w.id} value={w.id}>{w.name}</option>
-          ))}
-        </select>
+        <WorkspaceSwitcher
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          onSwitch={handleSwitch}
+        />
       }
     >
       <h2>멤버</h2>

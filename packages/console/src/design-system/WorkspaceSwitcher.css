@@ -1,0 +1,104 @@
+.ub-workspace-switcher {
+  position: relative;
+}
+
+.ub-workspace-switcher__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ub-space-2);
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border-radius: var(--ub-radius-sm);
+  border: 1px solid var(--ub-border-strong);
+  background: var(--ub-bg-surface);
+  color: var(--ub-text-strong);
+  cursor: pointer;
+}
+
+.ub-workspace-switcher__trigger:hover {
+  background: var(--ub-bg-subtle);
+}
+
+.ub-workspace-switcher__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ub-workspace-switcher__chevron {
+  flex-shrink: 0;
+  color: var(--ub-text-muted);
+  font-size: 11px;
+}
+
+.ub-workspace-switcher__panel {
+  position: absolute;
+  top: calc(100% + var(--ub-space-1));
+  left: 0;
+  z-index: 10;
+  width: 260px;
+  max-width: calc(100vw - var(--ub-space-4) * 2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ub-space-2);
+  padding: var(--ub-space-2);
+  border-radius: var(--ub-radius-md);
+  border: 1px solid var(--ub-border-strong);
+  background: var(--ub-bg-surface);
+  box-shadow: var(--ub-shadow-md);
+}
+
+.ub-workspace-switcher__search {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border-radius: var(--ub-radius-sm);
+  border: 1px solid var(--ub-border-strong);
+  background: var(--ub-bg-app);
+  color: var(--ub-text-strong);
+}
+
+.ub-workspace-switcher__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ub-workspace-switcher__option {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border-radius: var(--ub-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ub-text-normal);
+  cursor: pointer;
+}
+
+.ub-workspace-switcher__option:hover {
+  background: var(--ub-bg-subtle);
+}
+
+.ub-workspace-switcher__option--active {
+  background: var(--ub-brand-subtle);
+  color: var(--ub-brand);
+  font-weight: 600;
+}
+
+.ub-workspace-switcher__empty {
+  padding: var(--ub-space-2) var(--ub-space-3);
+  font-size: 13px;
+  color: var(--ub-text-muted);
+}
