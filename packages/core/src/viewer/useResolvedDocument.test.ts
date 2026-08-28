@@ -203,4 +203,85 @@ describe('useResolvedDocument', () => {
     });
     expect(adapter.resolve).toHaveBeenCalledTimes(1);
   });
+
+  it('restarts the poll interval when the adapters array identity changes', async () => {
+    vi.useFakeTimers();
+    const adapter = new SpyAdapter();
+    const doc = docWithBinding();
+
+    const { rerender } = renderHook(
+      ({ adapters }: { adapters: readonly Adapter[] }) =>
+        useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }),
+      { initialProps: { adapters: [adapter] } }
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(1);
+
+    // Partway through the interval — a tick isn't due yet under the original schedule.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(1);
+
+    // Same adapter, new array identity — the effect's dependency array only compares by
+    // reference, so this must be treated the same as swapping to a different adapter set.
+    rerender({ adapters: [adapter] });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(2); // effect restart re-runs immediately
+
+    // The old schedule's remaining 400ms must be dead, not carried over.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(400);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(2);
+
+    // The new interval counts a full 1000ms from the rerender.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(3);
+  });
+
+  it('restarts the interval and re-resolves immediately when pollIntervalMs changes', async () => {
+    vi.useFakeTimers();
+    const adapter = new SpyAdapter();
+    const doc = docWithBinding();
+    const adapters = [adapter];
+
+    const { rerender } = renderHook(
+      ({ pollIntervalMs }: { pollIntervalMs: number }) =>
+        useResolvedDocument(doc, adapters, { pollIntervalMs }),
+      { initialProps: { pollIntervalMs: 1000 } }
+    );
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(1);
+
+    rerender({ pollIntervalMs: 5000 });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(2); // effect restart re-runs immediately
+
+    // The old 1000ms schedule must be dead — this would have fired a stray tick otherwise.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(2);
+
+    // The new 5000ms schedule counts from the rerender point (1000ms already elapsed above).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(adapter.resolve).toHaveBeenCalledTimes(3);
+  });
 });
