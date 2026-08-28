@@ -1,6 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { getSession, listMembers, inviteMember, switchWorkspace, logout } from '../api-client.js';
+import { AppShell } from '../design-system/AppShell.js';
+import { Alert } from '../design-system/Alert.js';
+import { Badge } from '../design-system/Badge.js';
+import { Button } from '../design-system/Button.js';
+import { FormField } from '../design-system/FormField.js';
 
 type Member = { userId: string; email: string; name: string; role: 'owner' | 'member' };
 type Workspace = { id: string; name: string };
@@ -16,9 +20,6 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
 
-  // The member list already carries each member's role, so the current user's own role in the
-  // active workspace is derivable without a second request. Inviting is owner-only server-side
-  // (403 otherwise) — this keeps the UI from offering an action that cannot succeed.
   const isOwner = members.find(m => m.userId === userId)?.role === 'owner';
 
   function reload() {
@@ -66,51 +67,42 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
   }
 
   if (isLoading) return <p>불러오는 중...</p>;
-  if (sessionError)
-    return (
-      <p role="alert">
-        {sessionError} <button onClick={reload}>다시 시도</button>
-      </p>
-    );
+  if (sessionError) return <Alert onRetry={reload}>{sessionError}</Alert>;
 
   return (
-    <div>
-      <header>
-        <select value={activeWorkspaceId ?? ''} onChange={e => handleSwitch(e.target.value)}>
+    <AppShell
+      onLogout={handleLogout}
+      workspaceSwitcher={
+        <select aria-label="워크스페이스" value={activeWorkspaceId ?? ''} onChange={e => handleSwitch(e.target.value)}>
           {workspaces.map(w => (
             <option key={w.id} value={w.id}>{w.name}</option>
           ))}
         </select>
-        <Link to="/boards">보드</Link>
-        <Link to="/connectors">커넥터</Link>
-        <button onClick={handleLogout}>로그아웃</button>
-      </header>
-
+      }
+    >
       <h2>멤버</h2>
       <ul>
         {members.map(m => (
           <li key={m.userId}>
-            <span>{m.email}</span> — <span>{m.role}</span>
+            {m.email} <Badge>{m.role}</Badge>
           </li>
         ))}
       </ul>
 
       {isOwner && (
         <form onSubmit={handleInvite}>
-          <label>
-            초대할 이메일
+          <FormField label="초대할 이메일">
             <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} required />
-          </label>
-          <button type="submit">초대</button>
+          </FormField>
+          <Button type="submit">초대</Button>
         </form>
       )}
-      {inviteError && <p role="alert">{inviteError}</p>}
+      {inviteError && <Alert>{inviteError}</Alert>}
       {inviteLink && (
-        <label>
-          초대 링크(복사해 전달)
+        <FormField label="초대 링크(복사해 전달)">
           <input type="text" readOnly value={inviteLink} onFocus={e => e.target.select()} />
-        </label>
+        </FormField>
       )}
-    </div>
+    </AppShell>
   );
 }
