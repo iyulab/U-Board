@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import type { AppConfig } from '../app.js';
-import { listWorkspacesForUser, listWorkspaceMembers, findWorkspaceUser } from '../db/workspaces.js';
+import {
+  listWorkspacesForUser,
+  listWorkspaceMembers,
+  findWorkspaceUser,
+  createWorkspace,
+  addWorkspaceUser,
+} from '../db/workspaces.js';
 import { createInvitation } from '../db/invitations.js';
 import { findUserByEmail } from '../db/users.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
@@ -19,6 +25,22 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       activeWorkspaceId: req.activeWorkspaceId,
       workspaces: await listWorkspacesForUser(db, req.userId!),
     });
+  }));
+
+  router.post('/', asyncHandler(async (req: AuthedRequest, res) => {
+    const { name } = req.body ?? {};
+    if (typeof name !== 'string' || name.trim() === '') {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    const workspace = await db.withTransaction(async tx => {
+      const workspace = await createWorkspace(tx, name.trim());
+      await addWorkspaceUser(tx, { workspaceId: workspace.id, userId: req.userId!, role: 'owner' });
+      return workspace;
+    });
+    const token = signSession({ userId: req.userId!, activeWorkspaceId: workspace.id, issuedAt: Date.now() }, sessionSecret);
+    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
+    res.status(201).json({ id: workspace.id, name: workspace.name, activeWorkspaceId: workspace.id });
   }));
 
   router.get('/:workspaceId/members', requireWorkspaceMember(db), asyncHandler(async (req, res) => {

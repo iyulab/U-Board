@@ -1,4 +1,7 @@
-import { useEffect, useId, useMemo, useRef, useState, type FocusEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type FocusEvent } from 'react';
+import { Alert } from './Alert.js';
+import { Button } from './Button.js';
+import { FormField } from './FormField.js';
 import './WorkspaceSwitcher.css';
 
 interface Workspace {
@@ -10,13 +13,19 @@ interface WorkspaceSwitcherProps {
   workspaces: Workspace[];
   activeWorkspaceId: string | null;
   onSwitch: (workspaceId: string) => void;
+  onCreate: (name: string) => Promise<void>;
 }
 
-export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch }: WorkspaceSwitcherProps) {
+export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch, onCreate }: WorkspaceSwitcherProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [mode, setMode] = useState<'browse' | 'create'>('browse');
+  const [newName, setNewName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelId = useId();
 
@@ -31,20 +40,30 @@ export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch }: W
   function close() {
     setOpen(false);
     setQuery('');
+    setMode('browse');
+    setNewName('');
+    setCreateError(null);
   }
 
   useEffect(() => {
     if (!open) return;
-    searchRef.current?.focus();
+    if (mode === 'create') nameRef.current?.focus();
+    else searchRef.current?.focus();
 
     function handlePointerDown(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) close();
     }
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        close();
-        triggerRef.current?.focus();
+      if (e.key !== 'Escape') return;
+      // In the create step, Escape steps back to the list (same as "◂ 목록으로") rather than
+      // discarding the in-progress name entirely — losing typed input to a stray Escape is
+      // surprising in a way a deliberate click on "뒤로" isn't.
+      if (mode === 'create') {
+        cancelCreate();
+        return;
       }
+      close();
+      triggerRef.current?.focus();
     }
     document.addEventListener('mousedown', handlePointerDown);
     document.addEventListener('keydown', handleKeyDown);
@@ -52,7 +71,7 @@ export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch }: W
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [open]);
+  }, [open, mode]);
 
   function handleSelect(workspaceId: string) {
     close();
@@ -62,6 +81,32 @@ export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch }: W
 
   function handleBlur(e: FocusEvent<HTMLDivElement>) {
     if (!e.currentTarget.contains(e.relatedTarget as Node | null)) close();
+  }
+
+  function startCreate() {
+    setMode('create');
+    setCreateError(null);
+  }
+
+  function cancelCreate() {
+    setMode('browse');
+    setNewName('');
+    setCreateError(null);
+  }
+
+  async function handleCreateSubmit(e: FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError(null);
+    try {
+      await onCreate(newName.trim());
+      close();
+      triggerRef.current?.focus();
+    } catch {
+      setCreateError('워크스페이스 생성에 실패했습니다.');
+    } finally {
+      setCreating(false);
+    }
   }
 
   return (
@@ -77,7 +122,7 @@ export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch }: W
         <span className="ub-workspace-switcher__label">{activeWorkspace?.name ?? '워크스페이스 선택'}</span>
         <span className="ub-workspace-switcher__chevron" aria-hidden="true">▾</span>
       </button>
-      {open && (
+      {open && mode === 'browse' && (
         <div id={panelId} className="ub-workspace-switcher__panel">
           <input
             ref={searchRef}
@@ -107,6 +152,31 @@ export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch }: W
               </li>
             ))}
           </ul>
+          <button type="button" className="ub-workspace-switcher__create-trigger" onClick={startCreate}>
+            + 새 워크스페이스
+          </button>
+        </div>
+      )}
+      {open && mode === 'create' && (
+        <div id={panelId} className="ub-workspace-switcher__panel">
+          <button type="button" className="ub-workspace-switcher__back" onClick={cancelCreate}>
+            ◂ 목록으로
+          </button>
+          <form onSubmit={handleCreateSubmit}>
+            <FormField label="워크스페이스 이름">
+              <input
+                ref={nameRef}
+                type="text"
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                required
+              />
+            </FormField>
+            {createError && <Alert>{createError}</Alert>}
+            <Button type="submit" disabled={creating || newName.trim() === ''}>
+              만들기
+            </Button>
+          </form>
         </div>
       )}
     </div>

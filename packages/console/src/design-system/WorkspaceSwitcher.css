@@ -102,3 +102,42 @@
   font-size: 13px;
   color: var(--ub-text-muted);
 }
+
+.ub-workspace-switcher__create-trigger {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border-radius: var(--ub-radius-sm);
+  border: 1px dashed var(--ub-border-strong);
+  background: transparent;
+  color: var(--ub-brand);
+  cursor: pointer;
+}
+
+.ub-workspace-switcher__create-trigger:hover {
+  background: var(--ub-brand-subtle);
+}
+
+.ub-workspace-switcher__back {
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ub-text-muted);
+  cursor: pointer;
+}
+
+.ub-workspace-switcher__back:hover {
+  color: var(--ub-text-normal);
+}
+
+.ub-workspace-switcher__panel form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ub-space-2);
+}

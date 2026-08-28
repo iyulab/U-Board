@@ -35,6 +35,48 @@ describe('GET /workspaces/me', () => {
   });
 });
 
+describe('POST /workspaces', () => {
+  it('creates a new workspace and makes the current user its owner', async () => {
+    const { agent } = await bootstrapOwner();
+    const res = await agent.post('/workspaces').send({ name: 'Second Site' });
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Second Site');
+    expect(res.body.id).toBeTruthy();
+
+    const membersRes = await agent.get(`/workspaces/${res.body.id}/members`);
+    expect(membersRes.body.members).toEqual([{ userId: expect.any(String), email: 'owner@x.com', name: 'Owner', role: 'owner' }]);
+  });
+
+  it('activates the newly created workspace on the session', async () => {
+    const { agent } = await bootstrapOwner();
+    const res = await agent.post('/workspaces').send({ name: 'Second Site' });
+    expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=/);
+
+    const meRes = await agent.get('/workspaces/me');
+    expect(meRes.body.activeWorkspaceId).toBe(res.body.id);
+  });
+
+  it('keeps the user a member of their original workspace as well', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    const res = await agent.post('/workspaces').send({ name: 'Second Site' });
+
+    const meRes = await agent.get('/workspaces/me');
+    expect(meRes.body.workspaces.map((w: { id: string }) => w.id).sort()).toEqual([workspaceId, res.body.id].sort());
+  });
+
+  it('rejects an empty name with 400', async () => {
+    const { agent } = await bootstrapOwner();
+    const res = await agent.post('/workspaces').send({ name: '   ' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    const res = await request(app).post('/workspaces').send({ name: 'Second Site' });
+    expect(res.status).toBe(401);
+  });
+});
+
 describe('GET /workspaces/:id/members', () => {
   it('lists members for a workspace the user belongs to', async () => {
     const { agent, workspaceId } = await bootstrapOwner();

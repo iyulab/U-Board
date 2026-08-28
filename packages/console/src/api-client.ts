@@ -101,6 +101,13 @@ export function switchWorkspace(workspaceId: string) {
   return request<{ activeWorkspaceId: string }>(`/workspaces/${workspaceId}/switch`, { method: 'POST' });
 }
 
+export function createWorkspace(name: string) {
+  return request<{ id: string; name: string; activeWorkspaceId: string }>('/workspaces', {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
 export function listBoards(workspaceId: string) {
   return request<{ boards: { id: string; name: string; updatedAt: string }[] }>(`/workspaces/${workspaceId}/boards`);
 }

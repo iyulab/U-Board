@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { getSession, listMembers, inviteMember, switchWorkspace, logout } from '../api-client.js';
+import { getSession, listMembers, inviteMember, switchWorkspace, createWorkspace, logout } from '../api-client.js';
 import { AppShell } from '../design-system/AppShell.js';
 import { WorkspaceSwitcher } from '../design-system/WorkspaceSwitcher.js';
 import { Alert } from '../design-system/Alert.js';
@@ -62,6 +62,12 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
     setActiveWorkspaceId(workspaceId);
   }
 
+  async function handleCreateWorkspace(name: string) {
+    const workspace = await createWorkspace(name);
+    setWorkspaces(prev => [...prev, { id: workspace.id, name: workspace.name }]);
+    setActiveWorkspaceId(workspace.activeWorkspaceId);
+  }
+
   async function handleLogout() {
     await logout();
     onLoggedOut();
@@ -78,6 +84,7 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
           workspaces={workspaces}
           activeWorkspaceId={activeWorkspaceId}
           onSwitch={handleSwitch}
+          onCreate={handleCreateWorkspace}
         />
       }
     >

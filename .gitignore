@@ -15,5 +15,9 @@ CLAUDE.md
 Thumbs.db
 
 packages/server/*.db
+# PGlite local-dev DB (UBOARD_DATABASE_URL set to a local path, e.g. .env.example's default
+# `./u-board-data`) persists as a directory, not a single file — the *.db glob above doesn't
+# cover it.
+packages/server/u-board-data*/
 packages/*/.env
 !packages/*/.env.example
