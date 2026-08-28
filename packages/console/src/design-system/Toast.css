@@ -1,0 +1,37 @@
+.ub-toast-region {
+  position: fixed;
+  bottom: var(--ub-space-5);
+  right: var(--ub-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ub-space-2);
+  z-index: 1000;
+}
+
+.ub-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--ub-space-3);
+  padding: var(--ub-space-3) var(--ub-space-4);
+  border-radius: var(--ub-radius-md);
+  box-shadow: var(--ub-shadow-md);
+  font-size: 13px;
+  color: var(--ub-text-inverse);
+}
+
+.ub-toast--success {
+  background: var(--ub-success);
+}
+
+.ub-toast--error {
+  background: var(--ub-error);
+}
+
+.ub-toast__dismiss {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
