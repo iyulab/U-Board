@@ -1,5 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { listConnectors, createConnector, updateConnector, deleteConnector, listMembers, type ConnectorSummary, type ConnectorAuthType } from '../api-client.js';
+import { Alert } from '../design-system/Alert.js';
+import { Badge } from '../design-system/Badge.js';
+import { Button } from '../design-system/Button.js';
+import { FormField } from '../design-system/FormField.js';
 
 export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
@@ -7,9 +11,6 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [isOwner, setIsOwner] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  // Kept separate from the other two rather than sharing state: the connector-list load and the
-  // permission load resolve independently, and a create/update/delete failure clearing either of
-  // them would race away an unrelated in-flight error.
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -31,8 +32,6 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   }, [workspaceId]);
 
   useEffect(() => {
-    // Without this catch a failure here is silent: `isOwner` stays false and an actual owner sees
-    // the read-only view with no explanation of where the management controls went.
     listMembers(workspaceId)
       .then(res => {
         setPermissionError(null);
@@ -98,22 +97,18 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   return (
     <div>
       <h2>데이터소스</h2>
-      {loadError && (
-        <p role="alert">
-          {loadError} <button onClick={reload}>다시 시도</button>
-        </p>
-      )}
-      {actionError && <p role="alert">{actionError}</p>}
-      {permissionError && <p role="alert">{permissionError}</p>}
+      {loadError && <Alert onRetry={reload}>{loadError}</Alert>}
+      {actionError && <Alert>{actionError}</Alert>}
+      {permissionError && <Alert>{permissionError}</Alert>}
       <ul>
         {connectors.map(c => (
           <li key={c.id}>
-            <span>{`${c.name} — ${c.baseUrl}`}</span>
+            <span>{`${c.name} — ${c.baseUrl}`}</span> <Badge>{c.authType}</Badge>
             {isOwner && (
               <>
                 {' '}
-                <button onClick={() => startEdit(c)}>수정</button>{' '}
-                <button onClick={() => handleDelete(c.id)}>삭제</button>
+                <Button variant="ghost" onClick={() => startEdit(c)}>수정</Button>{' '}
+                <Button variant="danger" onClick={() => handleDelete(c.id)}>삭제</Button>
               </>
             )}
           </li>
@@ -121,36 +116,35 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       </ul>
       {isOwner && (
         <form onSubmit={handleSubmit}>
-          <label>
-            이름
+          <FormField label="이름">
             <input value={name} onChange={e => setName(e.target.value)} required />
-          </label>
-          <label>
-            Base URL
+          </FormField>
+          <FormField label="Base URL">
             <input value={baseUrl} onChange={e => setBaseUrl(e.target.value)} required />
-          </label>
-          <label>
-            인증 방식
+          </FormField>
+          <FormField label="인증 방식">
             <select value={authType} onChange={e => setAuthType(e.target.value as ConnectorAuthType)}>
               <option value="none">없음</option>
               <option value="bearer">Bearer 토큰</option>
               <option value="header">커스텀 헤더</option>
             </select>
-          </label>
+          </FormField>
           {authType === 'header' && (
-            <label>
-              헤더 이름
+            <FormField label="헤더 이름">
               <input value={authHeaderName} onChange={e => setAuthHeaderName(e.target.value)} required />
-            </label>
+            </FormField>
           )}
           {authType !== 'none' && (
-            <label>
-              {editingId ? '값(변경 시에만 입력)' : '값'}
+            <FormField label={editingId ? '값(변경 시에만 입력)' : '값'}>
               <input type="password" value={authValue} onChange={e => setAuthValue(e.target.value)} required={!editingId} />
-            </label>
+            </FormField>
           )}
-          <button type="submit">{editingId ? '데이터소스 수정' : '데이터소스 추가'}</button>
-          {editingId && <button type="button" onClick={resetForm}>취소</button>}
+          <Button type="submit">{editingId ? '데이터소스 수정' : '데이터소스 추가'}</Button>
+          {editingId && (
+            <Button type="button" variant="ghost" onClick={resetForm}>
+              취소
+            </Button>
+          )}
         </form>
       )}
     </div>
