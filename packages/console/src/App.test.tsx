@@ -34,6 +34,16 @@ describe('App', () => {
     render(<App RouterComponent={MemoryRouter} initialEntries={['/invite/tok123']} />);
     expect(await screen.findByRole('heading', { name: '가입' })).toBeInTheDocument();
   });
+
+  it('renders ForgotPasswordPage at "/forgot-password"', async () => {
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/forgot-password']} />);
+    expect(await screen.findByRole('heading', { name: '비밀번호 재설정 요청' })).toBeInTheDocument();
+  });
+
+  it('renders ResetPasswordPage at "/reset-password"', async () => {
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/reset-password']} />);
+    expect(await screen.findByRole('heading', { name: '비밀번호 재설정' })).toBeInTheDocument();
+  });
 });
 
 describe('/boards without a session', () => {

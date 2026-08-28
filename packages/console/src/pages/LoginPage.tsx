@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { login, ApiError } from '../api-client.js';
 
 /**
@@ -40,6 +41,9 @@ export function LoginPage({ prefillEmail, onSuccess }: { prefillEmail?: string; 
       </label>
       {error && <p role="alert">{error}</p>}
       <button type="submit" disabled={submitting}>로그인</button>
+      <p>
+        <Link to="/forgot-password">비밀번호를 잊으셨나요?</Link>
+      </p>
     </form>
   );
 }

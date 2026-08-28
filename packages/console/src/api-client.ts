@@ -59,6 +59,14 @@ export function getBootstrapStatus() {
   return request<{ hasAnyUser: boolean }>('/auth/bootstrap-status');
 }
 
+export function requestPasswordReset(email: string) {
+  return request<{ code: string }>('/auth/request-password-reset', { method: 'POST', body: JSON.stringify({ email }) });
+}
+
+export function resetPassword(input: { token: string; newPassword: string }) {
+  return request<{ code: string }>('/auth/reset-password', { method: 'POST', body: JSON.stringify(input) });
+}
+
 export function getSession() {
   return request<{ userId: string; activeWorkspaceId: string; workspaces: { id: string; name: string }[] }>('/workspaces/me').catch(
     err => {

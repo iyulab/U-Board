@@ -3,6 +3,8 @@ import { BrowserRouter, MemoryRouter, Routes, Route, useNavigate, useParams } fr
 import { getSession, getBootstrapStatus } from './api-client.js';
 import { SignupPage } from './pages/SignupPage.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
+import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { DashboardPage } from './pages/DashboardPage.js';
 import { InvitePage } from './pages/InvitePage.js';
 import { RequireSession } from './RequireSession.js';
@@ -59,6 +61,8 @@ export function App({
       <Routes>
         <Route path="/" element={<RootRoute />} />
         <Route path="/invite/:token" element={<InviteRoute />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route
           path="/boards"
           element={<RequireSession>{s => <BoardsListPage workspaceId={s.activeWorkspaceId} />}</RequireSession>}

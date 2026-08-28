@@ -10,7 +10,7 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test e2e/bootstrap.spec.ts && playwright test e2e/invite-accept.spec.ts && playwright test e2e/board-crud.spec.ts && playwright test e2e/connector-crud.spec.ts && playwright test e2e/binding-editor.spec.ts && playwright test e2e/decoration-authoring.spec.ts && playwright test e2e/unsaved-changes-guard.spec.ts && playwright test e2e/share-embed.spec.ts"
+    "test:e2e": "playwright test e2e/bootstrap.spec.ts && playwright test e2e/invite-accept.spec.ts && playwright test e2e/board-crud.spec.ts && playwright test e2e/connector-crud.spec.ts && playwright test e2e/binding-editor.spec.ts && playwright test e2e/decoration-authoring.spec.ts && playwright test e2e/unsaved-changes-guard.spec.ts && playwright test e2e/share-embed.spec.ts && playwright test e2e/password-reset.spec.ts"
   },
   "repository": {
     "type": "git",
