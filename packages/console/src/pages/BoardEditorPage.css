@@ -1,0 +1,11 @@
+.ub-editor-back {
+  display: inline-block;
+  margin-bottom: var(--ub-space-3);
+  font-size: 13px;
+  color: var(--ub-text-muted);
+  text-decoration: none;
+}
+
+.ub-editor-back:hover {
+  color: var(--ub-text-normal);
+}

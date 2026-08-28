@@ -1,10 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { listBoards, createBoard, deleteBoard } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
 import { Modal } from '../design-system/Modal.js';
+import './BoardsListPage.css';
 
 type BoardSummary = { id: string; name: string; updatedAt: string };
 
@@ -16,7 +17,13 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const navigate = useNavigate();
+
+  const filteredBoards = useMemo(
+    () => boards.filter(b => b.name.toLowerCase().includes(query.trim().toLowerCase())),
+    [boards, query]
+  );
 
   function reload() {
     setLoadError(null);
@@ -61,18 +68,42 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div>
-      <h2>보드</h2>
+      <div className="ub-boards-header">
+        <h2>보드</h2>
+        <input
+          className="ub-boards-search"
+          type="search"
+          aria-label="보드 검색"
+          placeholder="보드 검색"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+        />
+        <Button onClick={openCreateDialog}>새 보드</Button>
+      </div>
       {loadError && <Alert onRetry={reload}>{loadError}</Alert>}
       {actionError && <Alert>{actionError}</Alert>}
-      <Button onClick={openCreateDialog}>새 보드</Button>
-      <ul>
-        {boards.map(b => (
-          <li key={b.id}>
-            <Link to={`/boards/${b.id}/edit`}>{b.name}</Link> — {b.updatedAt}{' '}
-            <Button variant="danger" onClick={() => handleDelete(b.id)}>삭제</Button>
-          </li>
-        ))}
-      </ul>
+      {boards.length === 0 ? (
+        <div className="ub-empty-state">
+          <p>아직 보드가 없습니다.</p>
+          <Button onClick={openCreateDialog}>첫 보드 만들기</Button>
+        </div>
+      ) : filteredBoards.length === 0 ? (
+        <div className="ub-empty-state">
+          <p>검색 결과가 없습니다.</p>
+        </div>
+      ) : (
+        <ul className="ub-boards-grid">
+          {filteredBoards.map(b => (
+            <li className="ub-board-card" key={b.id}>
+              <Link className="ub-board-card__link" to={`/boards/${b.id}/edit`}>{b.name}</Link>
+              <span className="ub-board-card__meta">{b.updatedAt}</span>
+              <div className="ub-board-card__footer">
+                <Button variant="danger" aria-label={`${b.name} 삭제`} onClick={() => handleDelete(b.id)}>삭제</Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
       <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} labelledBy="create-board-heading">
         <h3 id="create-board-heading">새 보드</h3>
         <form onSubmit={handleCreateSubmit}>

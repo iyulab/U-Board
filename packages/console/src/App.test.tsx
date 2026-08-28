@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { App } from './App.js';
 import * as api from './api-client.js';
@@ -44,6 +45,19 @@ describe('App', () => {
   it('renders ResetPasswordPage at "/reset-password"', async () => {
     render(<App RouterComponent={MemoryRouter} initialEntries={['/reset-password']} />);
     expect(await screen.findByRole('heading', { name: '비밀번호 재설정' })).toBeInTheDocument();
+  });
+
+  it('shows a retryable error instead of hanging forever when the initial session check fails at "/"', async () => {
+    vi.mocked(api.getSession)
+      .mockRejectedValueOnce(new Error('network error'))
+      .mockResolvedValueOnce(null);
+    vi.mocked(api.getBootstrapStatus).mockResolvedValue({ hasAnyUser: true });
+    const user = userEvent.setup();
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/']} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('세션을 확인하지 못했습니다');
+    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument();
   });
 });
 

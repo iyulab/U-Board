@@ -28,6 +28,7 @@ function renderPage(boardId = 'b1') {
     <MemoryRouter initialEntries={[`/boards/${boardId}/edit`]}>
       <Routes>
         <Route path="/boards/:boardId/edit" element={<BoardEditorPage workspaceId="w1" userId="u1" />} />
+        <Route path="/boards" element={<div>boards list page</div>} />
       </Routes>
     </MemoryRouter>
   );
@@ -122,12 +123,49 @@ describe('BoardEditorPage', () => {
     expect(screen.getByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
   });
 
+  it('navigates back to the boards list when there are no unsaved changes', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    renderPage();
+    await screen.findByText('Save');
+
+    await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
+
+    expect(await screen.findByText('boards list page')).toBeInTheDocument();
+  });
+
+  it('confirms before navigating back when there are unsaved changes, and stays on the editor if declined', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    renderPage();
+    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await screen.findByText('저장되지 않은 변경 사항이 있습니다');
+
+    await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(screen.queryByText('boards list page')).not.toBeInTheDocument();
+    expect(screen.getByText('Save')).toBeInTheDocument();
+  });
+
+  it('navigates back after confirming, when there are unsaved changes', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    renderPage();
+    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await screen.findByText('저장되지 않은 변경 사항이 있습니다');
+
+    await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
+
+    expect(await screen.findByText('boards list page')).toBeInTheDocument();
+  });
+
   it('shows an error instead of getting stuck on the loading placeholder when the board fails to load', async () => {
     vi.mocked(api.getBoard).mockRejectedValue(new Error('network down'));
     renderPage();
 
     expect(await screen.findByRole('alert')).toHaveTextContent('보드를 불러오지 못했습니다');
     expect(screen.queryByText('불러오는 중...')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '◂ 보드 목록으로' })).toBeInTheDocument();
   });
 
   it('shows an error when the member list fails to load, and keeps the owner-only share panel hidden', async () => {

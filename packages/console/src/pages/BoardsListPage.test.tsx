@@ -94,7 +94,7 @@ describe('BoardsListPage', () => {
 
     renderPage();
     await screen.findByText('Floor 1');
-    await userEvent.click(screen.getByRole('button', { name: '삭제' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Floor 1 삭제' }));
 
     await waitFor(() => expect(api.deleteBoard).toHaveBeenCalledWith('w1', 'b1'));
     expect(screen.queryByText('Floor 1')).not.toBeInTheDocument();
@@ -126,6 +126,56 @@ describe('BoardsListPage', () => {
     expect(screen.getByLabelText('보드 이름')).toHaveValue('New Board');
   });
 
+  it('shows an empty state with a call-to-action when the workspace has no boards yet', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
+    renderPage();
+
+    expect(await screen.findByText('아직 보드가 없습니다.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '첫 보드 만들기' })).toBeInTheDocument();
+  });
+
+  it('filters the board list by name as the search query changes', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({
+      boards: [
+        { id: 'b1', name: 'Factory Floor 1', updatedAt: 't' },
+        { id: 'b2', name: 'Warehouse Overview', updatedAt: 't' },
+      ],
+    });
+    renderPage();
+    await screen.findByText('Factory Floor 1');
+
+    await userEvent.type(screen.getByLabelText('보드 검색'), 'floor');
+
+    expect(screen.getByText('Factory Floor 1')).toBeInTheDocument();
+    expect(screen.queryByText('Warehouse Overview')).not.toBeInTheDocument();
+  });
+
+  it('shows a no-results empty state when the search query matches nothing, without hiding the create action', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Factory Floor 1', updatedAt: 't' }] });
+    renderPage();
+    await screen.findByText('Factory Floor 1');
+
+    await userEvent.type(screen.getByLabelText('보드 검색'), 'nonexistent');
+
+    expect(await screen.findByText('검색 결과가 없습니다.')).toBeInTheDocument();
+    expect(screen.queryByText('Factory Floor 1')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '새 보드' })).toBeInTheDocument();
+  });
+
+  it('gives each board card delete button a distinct accessible name', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({
+      boards: [
+        { id: 'b1', name: 'Factory Floor 1', updatedAt: 't' },
+        { id: 'b2', name: 'Warehouse Overview', updatedAt: 't' },
+      ],
+    });
+    renderPage();
+    await screen.findByText('Factory Floor 1');
+
+    expect(screen.getByRole('button', { name: 'Factory Floor 1 삭제' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Warehouse Overview 삭제' })).toBeInTheDocument();
+  });
+
   it('shows an error when deleting a board fails', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: 't' }] });
     vi.mocked(api.deleteBoard).mockRejectedValue(new Error('network down'));
@@ -133,7 +183,7 @@ describe('BoardsListPage', () => {
 
     renderPage();
     await screen.findByText('Floor 1');
-    await userEvent.click(screen.getByRole('button', { name: '삭제' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Floor 1 삭제' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('보드 삭제에 실패했습니다');
     expect(screen.getByText('Floor 1')).toBeInTheDocument();

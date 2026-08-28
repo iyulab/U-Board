@@ -21,8 +21,10 @@ test('create a board, add a node, save, and see it persisted after reopening', a
   await page.getByText('Save').click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
-  // 목록으로 돌아가 재진입해도 저장된 상태(추가한 노드)가 남아있는지 확인
-  await page.goto('/boards');
+  // 목록으로 돌아가 재진입해도 저장된 상태(추가한 노드)가 남아있는지 확인 — 저장 직후라
+  // 미저장 변경 사항이 없으므로 편집기의 "목록으로" 링크가 확인창 없이 바로 이동해야 한다.
+  await page.getByRole('link', { name: '◂ 보드 목록으로' }).click();
+  await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
   await page.getByRole('link', { name: 'E2E Board' }).click();
   await expect(page.getByText('Save')).toBeVisible();
   // NOTE: 보드 편집기 페이지에는 owner에게 렌더링되는 공유 패널도 <details>이므로(공유

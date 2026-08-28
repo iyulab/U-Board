@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { AuthoringView, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import { DemoAdapter } from '@iyulab/u-board/demo';
 import {
@@ -7,6 +7,7 @@ import {
   listMembers, listShareTokens, createShareToken, deleteShareToken, type ShareTokenSummary,
 } from '../api-client.js';
 import { HttpConnectorAdapter } from '../http-connector-adapter.js';
+import './BoardEditorPage.css';
 
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
@@ -106,8 +107,35 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     [demoAdapter, connectors]
   );
 
-  if (loadError) return <p role="alert">{loadError}</p>;
-  if (!document) return <p>불러오는 중...</p>;
+  function handleBackClick(e: MouseEvent) {
+    // AuthoringView's unsaved-changes guard is a native `beforeunload` listener, which only
+    // fires on a real page navigation — a client-side <Link> navigation would bypass it
+    // silently, so this link needs its own guard for the in-app case.
+    if (hasUnsavedChanges && !window.confirm('저장되지 않은 변경 사항이 있습니다. 목록으로 돌아갈까요?')) {
+      e.preventDefault();
+    }
+  }
+
+  const backLink = (
+    <Link className="ub-editor-back" to="/boards" onClick={handleBackClick}>
+      ◂ 보드 목록으로
+    </Link>
+  );
+
+  if (loadError)
+    return (
+      <>
+        {backLink}
+        <p role="alert">{loadError}</p>
+      </>
+    );
+  if (!document)
+    return (
+      <>
+        {backLink}
+        <p>불러오는 중...</p>
+      </>
+    );
 
   const width = document.background.image?.width ?? DEFAULT_WIDTH;
   const height = document.background.image?.height ?? DEFAULT_HEIGHT;
@@ -135,6 +163,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
 
   return (
     <>
+      {backLink}
       {connectorsError && <p role="alert">{connectorsError}</p>}
       {membersError && <p role="alert">{membersError}</p>}
       {saveError && <p role="alert">{saveError}</p>}
