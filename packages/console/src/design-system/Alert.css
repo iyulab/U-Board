@@ -1,0 +1,13 @@
+.ub-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ub-space-3);
+  margin: 0 0 var(--ub-space-3);
+  padding: var(--ub-space-3) var(--ub-space-4);
+  background: var(--ub-error-bg);
+  border: 1px solid var(--ub-error-border);
+  border-radius: var(--ub-radius-md);
+  color: var(--ub-error);
+  font-size: 13px;
+}
