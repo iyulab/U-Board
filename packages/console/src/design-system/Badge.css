@@ -1,0 +1,25 @@
+.ub-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--ub-space-2);
+  border-radius: var(--ub-radius-lg);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ub-badge--neutral {
+  background: var(--ub-bg-subtle);
+  color: var(--ub-text-muted);
+}
+
+.ub-badge--success {
+  background: var(--ub-success-bg);
+  color: var(--ub-success);
+}
+
+.ub-badge--warning {
+  background: var(--ub-warning-bg);
+  color: var(--ub-warning);
+}
