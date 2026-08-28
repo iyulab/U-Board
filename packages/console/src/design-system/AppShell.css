@@ -1,0 +1,54 @@
+.ub-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--ub-bg-app);
+}
+
+.ub-shell__sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ub-space-4);
+  padding: var(--ub-space-5) var(--ub-space-4);
+  background: var(--ub-bg-sidebar);
+  border-right: 1px solid var(--ub-border);
+}
+
+.ub-shell__workspace {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ub-text-strong);
+}
+
+.ub-shell__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ub-space-1);
+  flex: 1;
+}
+
+.ub-shell__nav-link {
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border-radius: var(--ub-radius-sm);
+  color: var(--ub-text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ub-shell__nav-link:hover {
+  background: var(--ub-bg-subtle);
+}
+
+.ub-shell__nav-link--active {
+  background: var(--ub-brand-subtle);
+  color: var(--ub-brand);
+  font-weight: 600;
+}
+
+.ub-shell__main {
+  flex: 1;
+  padding: var(--ub-space-6);
+  overflow-y: auto;
+}
