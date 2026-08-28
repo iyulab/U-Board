@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { listBoards, createBoard, deleteBoard } from '../api-client.js';
+import { Alert } from '../design-system/Alert.js';
+import { Button } from '../design-system/Button.js';
+import { FormField } from '../design-system/FormField.js';
+import { Modal } from '../design-system/Modal.js';
 
 type BoardSummary = { id: string; name: string; updatedAt: string };
 
@@ -12,7 +16,6 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const navigate = useNavigate();
 
   function reload() {
@@ -27,16 +30,6 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
     reload();
   }, [workspaceId]);
 
-  // `<dialog>` (native modal — focus trap, Escape-to-close, and top-layer rendering come for
-  // free from the platform, none of which a plain positioned `<div>` gives you without hand-
-  // rolling it) is driven imperatively per the HTML spec — `open` as a JSX prop alone would
-  // render it non-modal. `onClose` below covers every way it can close (Cancel, Escape, and
-  // after a successful create) so the two stay in sync regardless of which one happened.
-  useEffect(() => {
-    if (isCreateOpen) dialogRef.current?.showModal();
-    else dialogRef.current?.close();
-  }, [isCreateOpen]);
-
   function openCreateDialog() {
     setNewBoardName('');
     setCreateError(null);
@@ -50,8 +43,6 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
       setIsCreateOpen(false);
       navigate(`/boards/${created.id}/edit`);
     } catch {
-      // Left open — same "fix and resubmit without retyping" pattern ConnectorsPage's inline
-      // form uses on a failed create.
       setCreateError('보드 생성에 실패했습니다');
     }
   }
@@ -71,35 +62,30 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   return (
     <div>
       <h2>보드</h2>
-      {loadError && (
-        <p role="alert">
-          {loadError} <button onClick={reload}>다시 시도</button>
-        </p>
-      )}
-      {actionError && <p role="alert">{actionError}</p>}
-      <button onClick={openCreateDialog}>새 보드</button>
+      {loadError && <Alert onRetry={reload}>{loadError}</Alert>}
+      {actionError && <Alert>{actionError}</Alert>}
+      <Button onClick={openCreateDialog}>새 보드</Button>
       <ul>
         {boards.map(b => (
           <li key={b.id}>
             <Link to={`/boards/${b.id}/edit`}>{b.name}</Link> — {b.updatedAt}{' '}
-            <button onClick={() => handleDelete(b.id)}>삭제</button>
+            <Button variant="danger" onClick={() => handleDelete(b.id)}>삭제</Button>
           </li>
         ))}
       </ul>
-      <dialog ref={dialogRef} onClose={() => setIsCreateOpen(false)} aria-labelledby="create-board-heading">
+      <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} labelledBy="create-board-heading">
         <h3 id="create-board-heading">새 보드</h3>
         <form onSubmit={handleCreateSubmit}>
-          <label>
-            보드 이름
+          <FormField label="보드 이름">
             <input value={newBoardName} onChange={e => setNewBoardName(e.target.value)} required autoFocus />
-          </label>
-          {createError && <p role="alert">{createError}</p>}
-          <button type="submit">생성</button>{' '}
-          <button type="button" onClick={() => setIsCreateOpen(false)}>
+          </FormField>
+          {createError && <Alert>{createError}</Alert>}
+          <Button type="submit">생성</Button>{' '}
+          <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>
             취소
-          </button>
+          </Button>
         </form>
-      </dialog>
+      </Modal>
     </div>
   );
 }
