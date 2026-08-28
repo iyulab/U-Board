@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Viewer } from '@canvas-kit/viewer';
-import { resolveDocument } from '../resolve-document.js';
+import { useResolvedDocument } from './useResolvedDocument.js';
 import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
@@ -14,6 +14,9 @@ export interface ViewerPageProps {
   /** 주어지면 Import UI 없이 이 문서를 즉시 렌더한다(공개 임베드 뷰용). 생략 시 오늘과 같은
    * 로컬 파일 Import 데모 동작. */
   initialDocument?: ViewDocument;
+  /** 주어지면 이 주기(ms)로 바인딩을 재해석해 연결 품질을 다시 반영한다. 생략 시 오늘과 같은
+   * 1회 해석(하위호환). */
+  pollIntervalMs?: number;
 }
 
 /**
@@ -22,32 +25,37 @@ export interface ViewerPageProps {
  * deployment would ship with (docs/principles.md — editor/renderer separation): the authoring
  * tool's weight can never leak in here, because it isn't a dependency of this file.
  */
-export function ViewerPage({ adapters, width, height, initialDocument }: ViewerPageProps) {
+export function ViewerPage({
+  adapters,
+  width,
+  height,
+  initialDocument,
+  pollIntervalMs,
+}: ViewerPageProps) {
   const [doc, setDoc] = useState<ViewDocument | null>(initialDocument ?? null);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { resolved } = useResolvedDocument(doc, adapters, { pollIntervalMs });
+
   useEffect(() => {
-    if (!doc) {
+    if (!resolved) {
       setPreview(null);
       return;
     }
     let cancelled = false;
-    resolveDocument(doc, adapters).then(resolved => {
-      if (cancelled) return;
-      setPreview(toCanvasKit(resolved));
-      // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
-      // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
-      // pick it up.
-      chartsReady.then(() => {
-        if (!cancelled) setPreview(toCanvasKit(resolved));
-      });
+    setPreview(toCanvasKit(resolved));
+    // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
+    // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
+    // pick it up.
+    chartsReady.then(() => {
+      if (!cancelled) setPreview(toCanvasKit(resolved));
     });
     return () => {
       cancelled = true;
     };
-  }, [doc, adapters]);
+  }, [resolved]);
 
   const handleImportClick = () => fileInputRef.current?.click();
 
