@@ -20,11 +20,11 @@
 }
 
 .ub-toast--success {
-  background: var(--ub-success);
+  background: var(--ub-success-solid);
 }
 
 .ub-toast--error {
-  background: var(--ub-error);
+  background: var(--ub-error-solid);
 }
 
 .ub-toast__dismiss {

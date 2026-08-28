@@ -3,7 +3,8 @@
 
   --ub-brand: #0f766e;
   --ub-brand-end: #0e7490;
-  --ub-brand-gradient: linear-gradient(135deg, var(--ub-brand), var(--ub-brand-end));
+  --ub-brand-solid: #0f766e;
+  --ub-brand-gradient: linear-gradient(135deg, var(--ub-brand-solid), var(--ub-brand-end));
   --ub-brand-subtle: rgba(15, 118, 110, 0.08);
 
   --ub-bg-app: #f8fafd;
@@ -21,11 +22,13 @@
 
   --ub-success: #047857;
   --ub-success-bg: #ecfdf5;
+  --ub-success-solid: #047857;
   --ub-warning: #b45309;
   --ub-warning-bg: #fffbeb;
   --ub-error: #b91c1c;
   --ub-error-bg: #fef2f2;
   --ub-error-border: #fecaca;
+  --ub-error-solid: #b91c1c;
 
   --ub-focus-color: #0f766e;
   --ub-focus-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
@@ -49,6 +52,10 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    /* --ub-*-solid intentionally not overridden here: they back solid fills that always
+       carry white text (Button--solid, Toast), and the light-mode shades already clear
+       4.5:1 against white in both themes — unlike --ub-brand/-success/-error, which are
+       tuned per theme for use as text color on a light/subtle background. */
     --ub-brand: #2dd4bf;
     --ub-success: #34d399;
     --ub-warning: #fbbf24;
