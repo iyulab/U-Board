@@ -19,6 +19,7 @@ describe('AppShell', () => {
     renderShell();
     expect(screen.getByRole('link', { name: '보드' })).toHaveAttribute('href', '/boards');
     expect(screen.getByRole('link', { name: '커넥터' })).toHaveAttribute('href', '/connectors');
+    expect(screen.getByRole('link', { name: '설정' })).toHaveAttribute('href', '/settings');
   });
 
   it('marks the link matching the current route as active', () => {

@@ -18,7 +18,8 @@ test('create a connector via the UI, then resolve a live value through the real 
     await page.getByLabel('비밀번호').fill('p4ssword!');
     await page.getByLabel('이름').fill('E2E Connector Owner');
     await page.getByRole('button', { name: '가입' }).click();
-    await expect(page.getByText('멤버')).toBeVisible();
+    // "/"는 인증된 세션을 즉시 /boards로 리다이렉트한다.
+    await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
 
     // 커넥터 생성(UI) — ConnectorsPage 자체가 실제 서버와 왕복해 동작하는지 검증
     await page.getByRole('link', { name: '커넥터' }).click();
@@ -48,8 +49,7 @@ test('create a connector via the UI, then resolve a live value through the real 
     await expect(page.getByRole('alert')).toHaveCount(0);
 
     // 보드 편집기가 이 커넥터를 어댑터 목록 로딩에서 실패 없이 받아들이는지 확인
-    // ConnectorsPage에는 대시보드로 돌아가는 네비게이션 링크가 없으므로 직접 이동한다.
-    await page.goto('/boards');
+    await page.getByRole('link', { name: '보드' }).click();
     await page.getByRole('button', { name: '새 보드' }).click();
     await page.getByLabel('보드 이름').fill('Connector Board');
     await page.getByRole('button', { name: '생성' }).click();

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { RequireSession } from './RequireSession.js';
 import * as api from './api-client.js';
@@ -32,5 +33,16 @@ describe('RequireSession', () => {
     vi.mocked(api.getSession).mockResolvedValue(null);
     renderAt('/protected');
     expect(await screen.findByText('root')).toBeInTheDocument();
+  });
+
+  it('shows a retryable error instead of hanging forever when the session check fails', async () => {
+    vi.mocked(api.getSession).mockRejectedValueOnce(new Error('network down'));
+    renderAt('/protected');
+    expect(await screen.findByRole('alert')).toHaveTextContent('세션을 확인하지 못했습니다');
+
+    vi.mocked(api.getSession).mockResolvedValueOnce({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [] });
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+
+    expect(await screen.findByText('welcome u1')).toBeInTheDocument();
   });
 });

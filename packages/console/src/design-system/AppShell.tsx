@@ -12,6 +12,7 @@ interface AppShellProps {
 const NAV_ITEMS = [
   { to: '/boards', label: '보드' },
   { to: '/connectors', label: '커넥터' },
+  { to: '/settings', label: '설정' },
 ];
 
 export function AppShell({ workspaceSwitcher, onLogout, children }: AppShellProps) {

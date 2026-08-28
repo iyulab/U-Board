@@ -17,7 +17,8 @@ test('binds a node to a live value via the property panel and its path explorer'
     await page.getByLabel('비밀번호').fill('p4ssword!');
     await page.getByLabel('이름').fill('E2E Binding Owner');
     await page.getByRole('button', { name: '가입' }).click();
-    await expect(page.getByText('멤버')).toBeVisible();
+    // "/"는 인증된 세션을 즉시 /boards로 리다이렉트한다.
+    await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
 
     await page.getByRole('link', { name: '커넥터' }).click();
     await page.getByLabel('이름').fill('Mock Plant API');
@@ -25,7 +26,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await page.getByRole('button', { name: '데이터소스 추가' }).click();
     await expect(page.getByText('Mock Plant API')).toBeVisible();
 
-    await page.goto('/boards');
+    await page.getByRole('link', { name: '보드' }).click();
     await page.getByRole('button', { name: '새 보드' }).click();
     await page.getByLabel('보드 이름').fill('Binding Board');
     await page.getByRole('button', { name: '생성' }).click();

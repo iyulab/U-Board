@@ -22,11 +22,12 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: '가입' })).toBeInTheDocument();
   });
 
-  it('shows DashboardPage at "/" when a session exists', async () => {
+  it('redirects "/" to /boards (inside the authenticated shell) when a session exists', async () => {
     vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }] });
-    vi.mocked(api.listMembers).mockResolvedValue({ members: [] });
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
     render(<App RouterComponent={MemoryRouter} initialEntries={['/']} />);
-    expect(await screen.findByText('멤버')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '보드' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Default/ })).toBeInTheDocument();
   });
 
   it('renders InvitePage at "/invite/:token"', async () => {
@@ -52,5 +53,17 @@ describe('/boards without a session', () => {
     vi.mocked(api.getBootstrapStatus).mockResolvedValue({ hasAnyUser: true });
     render(<App RouterComponent={MemoryRouter} initialEntries={['/boards']} />);
     expect(await screen.findByRole('heading', { name: '로그인' })).toBeInTheDocument();
+  });
+});
+
+describe('/settings', () => {
+  it('renders SettingsPage inside the authenticated shell', async () => {
+    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'owner@x.com', name: 'Owner', role: 'owner' }] });
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/settings']} />);
+
+    expect(await screen.findByText('owner@x.com')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '설정' })).toHaveClass('ub-shell__nav-link--active');
+    expect(screen.getByRole('button', { name: /Default/ })).toBeInTheDocument();
   });
 });

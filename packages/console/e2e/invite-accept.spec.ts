@@ -19,6 +19,9 @@ test('an invited email with no account signs up through the invite link and join
   await page.getByLabel('이름').fill('Invitee');
   await page.getByRole('button', { name: '가입' }).click();
 
-  await expect(page.getByText('멤버')).toBeVisible();
+  // Joining redirects to "/", which in turn redirects an authenticated session to /boards —
+  // membership itself is verified on /settings, where the member list now lives.
+  await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
+  await page.getByRole('link', { name: '설정' }).click();
   await expect(page.getByText('e2e-invitee@test.com')).toBeVisible();
 });

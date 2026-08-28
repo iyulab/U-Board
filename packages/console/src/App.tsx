@@ -1,16 +1,18 @@
-import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react';
-import { BrowserRouter, MemoryRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { getSession, getBootstrapStatus } from './api-client.js';
+import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
+import { BrowserRouter, MemoryRouter, Navigate, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { getSession, getBootstrapStatus, switchWorkspace, createWorkspace, logout } from './api-client.js';
 import { SignupPage } from './pages/SignupPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
-import { DashboardPage } from './pages/DashboardPage.js';
+import { SettingsPage } from './pages/SettingsPage.js';
 import { InvitePage } from './pages/InvitePage.js';
 import { RequireSession } from './RequireSession.js';
 import { BoardsListPage } from './pages/BoardsListPage.js';
 import { ConnectorsPage } from './pages/ConnectorsPage.js';
 import { ToastProvider } from './design-system/Toast.js';
+import { AppShell } from './design-system/AppShell.js';
+import { WorkspaceSwitcher } from './design-system/WorkspaceSwitcher.js';
 
 // The only route that pulls in canvas-kit's authoring stack (KonvaDesigner/Viewer, react-konva) —
 // code-split so `/boards` and `/connectors` don't pay for it in their own chunk (HD-28, same
@@ -38,7 +40,7 @@ function RootRoute() {
   }, []);
 
   if (status === 'loading') return <p>불러오는 중...</p>;
-  if (status === 'authenticated') return <DashboardPage onLoggedOut={() => navigate(0)} />;
+  if (status === 'authenticated') return <Navigate to="/boards" replace />;
   if (status === 'needs-bootstrap-signup') return <SignupPage onSuccess={() => navigate(0)} />;
   return <LoginPage onSuccess={() => navigate(0)} />;
 }
@@ -47,6 +49,51 @@ function InviteRoute() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   return <InvitePage token={token!} onJoined={() => navigate('/')} />;
+}
+
+// Shared authenticated shell (sidebar nav, workspace switcher, logout) for every route except
+// the board editor, which wants the full viewport for its canvas rather than a fixed sidebar.
+// Workspace switch/create/logout all reload (`navigate(0)`) instead of lifting `workspaces`/
+// `activeWorkspaceId` into shared state across routes — the same "session changed, refresh
+// everything" pattern login/signup/logout already use, and it keeps every wrapped page's own
+// `workspaceId`/`userId` props exactly as they were before this shell existed.
+function AuthedLayout({ children }: { children: (session: NonNullable<Awaited<ReturnType<typeof getSession>>>) => ReactNode }) {
+  const navigate = useNavigate();
+
+  async function handleSwitch(workspaceId: string) {
+    await switchWorkspace(workspaceId);
+    navigate(0);
+  }
+
+  async function handleCreate(name: string) {
+    await createWorkspace(name);
+    navigate(0);
+  }
+
+  async function handleLogout() {
+    await logout();
+    navigate(0);
+  }
+
+  return (
+    <RequireSession>
+      {session => (
+        <AppShell
+          onLogout={handleLogout}
+          workspaceSwitcher={
+            <WorkspaceSwitcher
+              workspaces={session.workspaces}
+              activeWorkspaceId={session.activeWorkspaceId}
+              onSwitch={handleSwitch}
+              onCreate={handleCreate}
+            />
+          }
+        >
+          {children(session)}
+        </AppShell>
+      )}
+    </RequireSession>
+  );
 }
 
 export function App({
@@ -67,7 +114,7 @@ export function App({
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
             path="/boards"
-            element={<RequireSession>{s => <BoardsListPage workspaceId={s.activeWorkspaceId} />}</RequireSession>}
+            element={<AuthedLayout>{s => <BoardsListPage workspaceId={s.activeWorkspaceId} />}</AuthedLayout>}
           />
           <Route
             path="/boards/:boardId/edit"
@@ -79,7 +126,11 @@ export function App({
           />
           <Route
             path="/connectors"
-            element={<RequireSession>{s => <ConnectorsPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</RequireSession>}
+            element={<AuthedLayout>{s => <ConnectorsPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</AuthedLayout>}
+          />
+          <Route
+            path="/settings"
+            element={<AuthedLayout>{s => <SettingsPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</AuthedLayout>}
           />
         </Routes>
       </RouterComponent>

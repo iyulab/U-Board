@@ -6,9 +6,9 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   await page.getByLabel('비밀번호').fill('p4ssword!');
   await page.getByLabel('이름').fill('E2E Decoration Owner');
   await page.getByRole('button', { name: '가입' }).click();
-  await expect(page.getByText('멤버')).toBeVisible();
+  // "/"는 인증된 세션을 즉시 /boards로 리다이렉트한다.
+  await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
 
-  await page.goto('/boards');
   await page.getByRole('button', { name: '새 보드' }).click();
   await page.getByLabel('보드 이름').fill('Decoration Board');
   await page.getByRole('button', { name: '생성' }).click();
