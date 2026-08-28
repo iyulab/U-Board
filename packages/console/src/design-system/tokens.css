@@ -1,0 +1,86 @@
+:root {
+  --ub-brand: #0f766e;
+  --ub-brand-end: #0e7490;
+  --ub-brand-gradient: linear-gradient(135deg, var(--ub-brand), var(--ub-brand-end));
+  --ub-brand-subtle: rgba(15, 118, 110, 0.08);
+
+  --ub-bg-app: #f8fafd;
+  --ub-bg-sidebar: linear-gradient(180deg, #ffffff, #eef3fb);
+  --ub-bg-surface: #ffffff;
+  --ub-bg-subtle: #f1f5f9;
+
+  --ub-border: #e2e8f0;
+  --ub-border-strong: #dbe5ee;
+
+  --ub-text-strong: #0f172a;
+  --ub-text-normal: #334155;
+  --ub-text-muted: #64748b;
+  --ub-text-inverse: #ffffff;
+
+  --ub-success: #047857;
+  --ub-success-bg: #ecfdf5;
+  --ub-warning: #b45309;
+  --ub-warning-bg: #fffbeb;
+  --ub-error: #b91c1c;
+  --ub-error-bg: #fef2f2;
+  --ub-error-border: #fecaca;
+
+  --ub-focus-color: #0f766e;
+  --ub-focus-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+
+  --ub-radius-sm: 6px;
+  --ub-radius-md: 10px;
+  --ub-radius-lg: 14px;
+
+  --ub-space-1: 4px;
+  --ub-space-2: 8px;
+  --ub-space-3: 12px;
+  --ub-space-4: 16px;
+  --ub-space-5: 20px;
+  --ub-space-6: 24px;
+
+  --ub-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --ub-shadow-md: 0 10px 24px rgba(15, 23, 42, 0.1);
+
+  --ub-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard, 'Noto Sans KR', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ub-bg-app: #0b1220;
+    --ub-bg-sidebar: linear-gradient(180deg, #111b2f, #0f1a2b);
+    --ub-bg-surface: #111b2f;
+    --ub-bg-subtle: #16243a;
+
+    --ub-border: #22324a;
+    --ub-border-strong: #2b3f5c;
+
+    --ub-text-strong: #e2e8f0;
+    --ub-text-normal: #cbd5e1;
+    --ub-text-muted: #94a3b8;
+
+    --ub-success-bg: #052e21;
+    --ub-warning-bg: #2d1d05;
+    --ub-error-bg: #2d1318;
+    --ub-error-border: #5c2530;
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--ub-bg-app);
+  color: var(--ub-text-normal);
+  font-family: var(--ub-font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ub-focus-shadow);
+  border-color: var(--ub-focus-color);
+}
