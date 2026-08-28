@@ -1,0 +1,19 @@
+.ub-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--ub-space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ub-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ub-space-2);
+  padding: var(--ub-space-4);
+  border-radius: var(--ub-radius-md);
+  border: 1px solid var(--ub-border);
+  background: var(--ub-bg-surface);
+  box-shadow: var(--ub-shadow-sm);
+}

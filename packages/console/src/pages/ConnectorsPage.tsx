@@ -4,6 +4,9 @@ import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
+import { Card, CardGrid } from '../design-system/Card.js';
+import { EmptyState } from '../design-system/EmptyState.js';
+import './ConnectorsPage.css';
 
 export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
@@ -100,20 +103,27 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       {loadError && <Alert onRetry={reload}>{loadError}</Alert>}
       {actionError && <Alert>{actionError}</Alert>}
       {permissionError && <Alert>{permissionError}</Alert>}
-      <ul>
-        {connectors.map(c => (
-          <li key={c.id}>
-            <span>{`${c.name} — ${c.baseUrl}`}</span> <Badge>{c.authType}</Badge>
-            {isOwner && (
-              <>
-                {' '}
-                <Button variant="ghost" onClick={() => startEdit(c)}>수정</Button>{' '}
-                <Button variant="danger" onClick={() => handleDelete(c.id)}>삭제</Button>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
+      {connectors.length === 0 ? (
+        <EmptyState>
+          <p>아직 데이터소스가 없습니다.</p>
+        </EmptyState>
+      ) : (
+        <CardGrid>
+          {connectors.map(c => (
+            <Card key={c.id}>
+              <span className="ub-connector-card__name">{c.name}</span>
+              <span className="ub-connector-card__meta">{c.baseUrl}</span>
+              <Badge>{c.authType}</Badge>
+              {isOwner && (
+                <div className="ub-connector-card__footer">
+                  <Button variant="ghost" aria-label={`${c.name} 수정`} onClick={() => startEdit(c)}>수정</Button>
+                  <Button variant="danger" aria-label={`${c.name} 삭제`} onClick={() => handleDelete(c.id)}>삭제</Button>
+                </div>
+              )}
+            </Card>
+          ))}
+        </CardGrid>
+      )}
       {isOwner && (
         <form onSubmit={handleSubmit}>
           <FormField label="이름">

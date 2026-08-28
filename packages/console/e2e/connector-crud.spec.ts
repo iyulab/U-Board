@@ -41,7 +41,7 @@ test('create a connector via the UI, then resolve a live value through the real 
     await expect(page.getByText('Secured API')).toBeVisible();
 
     const securedRow = page.getByRole('listitem').filter({ hasText: 'Secured API' });
-    await securedRow.getByRole('button', { name: '수정' }).click();
+    await securedRow.getByRole('button', { name: 'Secured API 수정' }).click();
     await expect(page.getByLabel('값(변경 시에만 입력)')).toHaveValue('');
     await page.getByLabel('이름', { exact: true }).fill('Secured API Renamed');
     await page.getByRole('button', { name: '데이터소스 수정' }).click();

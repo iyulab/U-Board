@@ -5,6 +5,8 @@ import { Alert } from '../design-system/Alert.js';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
 import { Modal } from '../design-system/Modal.js';
+import { Card, CardGrid } from '../design-system/Card.js';
+import { EmptyState } from '../design-system/EmptyState.js';
 import './BoardsListPage.css';
 
 type BoardSummary = { id: string; name: string; updatedAt: string };
@@ -83,26 +85,26 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
       {loadError && <Alert onRetry={reload}>{loadError}</Alert>}
       {actionError && <Alert>{actionError}</Alert>}
       {boards.length === 0 ? (
-        <div className="ub-empty-state">
+        <EmptyState>
           <p>아직 보드가 없습니다.</p>
           <Button onClick={openCreateDialog}>첫 보드 만들기</Button>
-        </div>
+        </EmptyState>
       ) : filteredBoards.length === 0 ? (
-        <div className="ub-empty-state">
+        <EmptyState>
           <p>검색 결과가 없습니다.</p>
-        </div>
+        </EmptyState>
       ) : (
-        <ul className="ub-boards-grid">
+        <CardGrid>
           {filteredBoards.map(b => (
-            <li className="ub-board-card" key={b.id}>
+            <Card key={b.id}>
               <Link className="ub-board-card__link" to={`/boards/${b.id}/edit`}>{b.name}</Link>
               <span className="ub-board-card__meta">{b.updatedAt}</span>
               <div className="ub-board-card__footer">
                 <Button variant="danger" aria-label={`${b.name} 삭제`} onClick={() => handleDelete(b.id)}>삭제</Button>
               </div>
-            </li>
+            </Card>
           ))}
-        </ul>
+        </CardGrid>
       )}
       <Modal open={isCreateOpen} onClose={() => setIsCreateOpen(false)} labelledBy="create-board-heading">
         <h3 id="create-board-heading">새 보드</h3>

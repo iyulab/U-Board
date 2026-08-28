@@ -62,6 +62,35 @@ describe('ConnectorsPage', () => {
     }));
   });
 
+  it('shows an empty state when the workspace has no connectors yet', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('아직 데이터소스가 없습니다.')).toBeInTheDocument();
+  });
+
+  it('gives each connector card its edit and delete buttons a distinct accessible name', async () => {
+    const other = { id: 'c9', name: 'Warehouse API', type: 'http' as const, baseUrl: 'https://warehouse.example.com', authType: 'none' as const, updatedAt: 't' };
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [CONNECTOR, other] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/Plant API/);
+    expect(screen.getByRole('button', { name: 'Plant API 수정' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Plant API 삭제' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Warehouse API 수정' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Warehouse API 삭제' })).toBeInTheDocument();
+  });
+
   it('shows an error when the connector list fails to load', async () => {
     vi.mocked(api.listConnectors).mockRejectedValue(new Error('network'));
     vi.mocked(api.listMembers).mockResolvedValue({ members: [] });
@@ -103,8 +132,8 @@ describe('ConnectorsPage', () => {
       </MemoryRouter>
     );
 
-    await screen.findByRole('button', { name: '수정' });
-    fireEvent.click(screen.getByRole('button', { name: '수정' }));
+    await screen.findByRole('button', { name: 'Legacy API 수정' });
+    fireEvent.click(screen.getByRole('button', { name: 'Legacy API 수정' }));
 
     expect((screen.getByLabelText('이름') as HTMLInputElement).value).toBe('Legacy API');
     expect((screen.getByLabelText('Base URL') as HTMLInputElement).value).toBe('https://legacy.example.com');
@@ -132,7 +161,7 @@ describe('ConnectorsPage', () => {
     );
 
     await screen.findByText(/Plant API/);
-    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Plant API 삭제' }));
 
     await waitFor(() => expect(api.deleteConnector).toHaveBeenCalledWith('w1', 'c1'));
     expect(screen.queryByText(/Plant API/)).not.toBeInTheDocument();
@@ -173,7 +202,7 @@ describe('ConnectorsPage', () => {
       </MemoryRouter>
     );
 
-    fireEvent.click(await screen.findByRole('button', { name: '수정' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Plant API 수정' }));
     // The secret field starts blank on edit and is left untouched here.
     expect((screen.getByLabelText('값(변경 시에만 입력)') as HTMLInputElement).value).toBe('');
     fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Renamed API' } });
@@ -210,7 +239,7 @@ describe('ConnectorsPage', () => {
     );
 
     await screen.findByText(/Plant API/);
-    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Plant API 삭제' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 삭제에 실패했습니다');
   });
