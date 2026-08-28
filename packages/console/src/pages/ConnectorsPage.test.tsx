@@ -74,6 +74,24 @@ describe('ConnectorsPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 목록을 불러오지 못했습니다');
   });
 
+  it('shows a retry button when the connector list fails to load, and recovers on retry', async () => {
+    vi.mocked(api.listConnectors).mockRejectedValueOnce(new Error('network'));
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [] });
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 목록을 불러오지 못했습니다');
+
+    vi.mocked(api.listConnectors).mockResolvedValueOnce({ connectors: [CONNECTOR] });
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+
+    expect(await screen.findByText(/Plant API/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('prefills form with connector data and omits authValue on edit', async () => {
     const headerConnector = { id: 'c2', name: 'Legacy API', type: 'http' as const, baseUrl: 'https://legacy.example.com', authType: 'header' as const, authHeaderName: 'X-API-Key', updatedAt: 't' };
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [headerConnector] });

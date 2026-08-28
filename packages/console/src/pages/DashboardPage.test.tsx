@@ -39,6 +39,24 @@ describe('DashboardPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('대시보드를 불러오지 못했습니다');
   });
 
+  it('recovers from a session load failure via the retry button', async () => {
+    vi.mocked(api.getSession).mockRejectedValueOnce(new Error('network down'));
+    vi.mocked(api.listMembers).mockResolvedValue({
+      members: [{ userId: 'u1', email: 'owner@x.com', name: 'Owner', role: 'owner' }],
+    });
+
+    renderDashboard({ onLoggedOut: vi.fn() });
+    expect(await screen.findByRole('alert')).toHaveTextContent('대시보드를 불러오지 못했습니다');
+
+    vi.mocked(api.getSession).mockResolvedValueOnce({
+      userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }],
+    });
+    await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
+
+    expect(await screen.findByText('owner@x.com')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('loads session and renders members', async () => {
     vi.mocked(api.getSession).mockResolvedValue({
       userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }],

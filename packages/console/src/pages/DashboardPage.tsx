@@ -21,8 +21,9 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
   // (403 otherwise) — this keeps the UI from offering an action that cannot succeed.
   const isOwner = members.find(m => m.userId === userId)?.role === 'owner';
 
-  useEffect(() => {
-    getSession()
+  function reload() {
+    setSessionError(null);
+    return getSession()
       .then(session => {
         if (!session) return;
         setWorkspaces(session.workspaces);
@@ -31,6 +32,10 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
       })
       .catch(() => setSessionError('대시보드를 불러오지 못했습니다'))
       .finally(() => setIsLoading(false));
+  }
+
+  useEffect(() => {
+    reload();
   }, []);
 
   useEffect(() => {
@@ -61,7 +66,12 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
   }
 
   if (isLoading) return <p>불러오는 중...</p>;
-  if (sessionError) return <p role="alert">{sessionError}</p>;
+  if (sessionError)
+    return (
+      <p role="alert">
+        {sessionError} <button onClick={reload}>다시 시도</button>
+      </p>
+    );
 
   return (
     <div>

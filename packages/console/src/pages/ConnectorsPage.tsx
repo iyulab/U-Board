@@ -5,9 +5,11 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOwner, setIsOwner] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Kept separate from `error` rather than sharing it: the connector-list load resolves
-  // independently and clears `error` on success, which would race away a permission-load failure.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Kept separate from the other two rather than sharing state: the connector-list load and the
+  // permission load resolve independently, and a create/update/delete failure clearing either of
+  // them would race away an unrelated in-flight error.
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
@@ -17,12 +19,10 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [authValue, setAuthValue] = useState('');
 
   function reload() {
+    setLoadError(null);
     return listConnectors(workspaceId)
-      .then(res => {
-        setError(null);
-        setConnectors(res.connectors);
-      })
-      .catch(() => setError('데이터소스 목록을 불러오지 못했습니다'))
+      .then(res => setConnectors(res.connectors))
+      .catch(() => setLoadError('데이터소스 목록을 불러오지 못했습니다'))
       .finally(() => setIsLoading(false));
   }
 
@@ -74,11 +74,11 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       } else {
         await createConnector(workspaceId, input);
       }
-      setError(null);
+      setActionError(null);
       resetForm();
       await reload();
     } catch {
-      setError(editingId ? '데이터소스 수정에 실패했습니다' : '데이터소스 생성에 실패했습니다');
+      setActionError(editingId ? '데이터소스 수정에 실패했습니다' : '데이터소스 생성에 실패했습니다');
     }
   }
 
@@ -86,10 +86,10 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     if (!window.confirm('이 데이터소스를 삭제할까요?')) return;
     try {
       await deleteConnector(workspaceId, connectorId);
-      setError(null);
+      setActionError(null);
       setConnectors(prev => prev.filter(c => c.id !== connectorId));
     } catch {
-      setError('데이터소스 삭제에 실패했습니다');
+      setActionError('데이터소스 삭제에 실패했습니다');
     }
   }
 
@@ -98,7 +98,12 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   return (
     <div>
       <h2>데이터소스</h2>
-      {error && <p role="alert">{error}</p>}
+      {loadError && (
+        <p role="alert">
+          {loadError} <button onClick={reload}>다시 시도</button>
+        </p>
+      )}
+      {actionError && <p role="alert">{actionError}</p>}
       {permissionError && <p role="alert">{permissionError}</p>}
       <ul>
         {connectors.map(c => (
