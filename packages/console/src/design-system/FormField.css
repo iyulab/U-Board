@@ -1,0 +1,23 @@
+.ub-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ub-space-1);
+  margin-bottom: var(--ub-space-4);
+}
+
+.ub-field__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ub-text-muted);
+}
+
+.ub-field input,
+.ub-field select {
+  font-family: inherit;
+  font-size: 13px;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border-radius: var(--ub-radius-sm);
+  border: 1px solid var(--ub-border-strong);
+  background: var(--ub-bg-surface);
+  color: var(--ub-text-strong);
+}
