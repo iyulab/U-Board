@@ -73,7 +73,12 @@ export function DashboardPage({ onLoggedOut }: { onLoggedOut: () => void }) {
     <AppShell
       onLogout={handleLogout}
       workspaceSwitcher={
-        <select aria-label="워크스페이스" value={activeWorkspaceId ?? ''} onChange={e => handleSwitch(e.target.value)}>
+        <select
+          className="ub-workspace-select"
+          aria-label="워크스페이스"
+          value={activeWorkspaceId ?? ''}
+          onChange={e => handleSwitch(e.target.value)}
+        >
           {workspaces.map(w => (
             <option key={w.id} value={w.id}>{w.name}</option>
           ))}

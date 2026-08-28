@@ -1,4 +1,6 @@
 :root {
+  color-scheme: light dark;
+
   --ub-brand: #0f766e;
   --ub-brand-end: #0e7490;
   --ub-brand-gradient: linear-gradient(135deg, var(--ub-brand), var(--ub-brand-end));
@@ -47,6 +49,11 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --ub-brand: #2dd4bf;
+    --ub-success: #34d399;
+    --ub-warning: #fbbf24;
+    --ub-error: #f87171;
+
     --ub-bg-app: #0b1220;
     --ub-bg-sidebar: linear-gradient(180deg, #111b2f, #0f1a2b);
     --ub-bg-surface: #111b2f;

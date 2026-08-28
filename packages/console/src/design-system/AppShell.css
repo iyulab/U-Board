@@ -21,6 +21,17 @@
   color: var(--ub-text-strong);
 }
 
+.ub-workspace-select {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border-radius: var(--ub-radius-sm);
+  border: 1px solid var(--ub-border-strong);
+  background: var(--ub-bg-surface);
+  color: var(--ub-text-strong);
+}
+
 .ub-shell__nav {
   display: flex;
   flex-direction: column;
