@@ -130,6 +130,41 @@ describe('useResolvedDocument', () => {
     expect(resolveMock).toHaveBeenCalledTimes(2);
   });
 
+  it('resolves a newly-swapped document even while the previous document is still resolving', async () => {
+    const docA = docWithBinding();
+    const docB = docWithBinding();
+    const adapters: Adapter[] = [];
+
+    let releaseA!: (result: ResolvedBinding) => void;
+    const pendingA = new Promise<ResolvedBinding>(resolve => {
+      releaseA = resolve;
+    });
+    const resolveMock = vi
+      .fn<Adapter['resolve']>()
+      .mockImplementationOnce(() => pendingA)
+      .mockResolvedValue({ value: 'from-b', quality: 'live' });
+    adapters.push({ id: 'cmms', resolve: resolveMock });
+
+    const { result, rerender } = renderHook(
+      ({ doc }: { doc: ViewDocument }) => useResolvedDocument(doc, adapters),
+      { initialProps: { doc: docA } }
+    );
+
+    await waitFor(() => expect(resolveMock).toHaveBeenCalledTimes(1)); // docA, left pending
+
+    rerender({ doc: docB });
+
+    await waitFor(() => expect(resolveMock).toHaveBeenCalledTimes(2)); // docB must not be starved
+    await waitFor(() =>
+      expect(result.current.resolved?.nodes[0].widget.props.value).toBe('from-b')
+    );
+
+    // docA's stale, never-released call must not corrupt state once it eventually settles.
+    releaseA({ value: 'from-a', quality: 'live' });
+    await flushMicrotasks();
+    expect(result.current.resolved?.nodes[0].widget.props.value).toBe('from-b');
+  });
+
   it('refresh() manually triggers a re-resolve outside of any polling', async () => {
     const adapter = new SpyAdapter();
     const doc = docWithBinding();

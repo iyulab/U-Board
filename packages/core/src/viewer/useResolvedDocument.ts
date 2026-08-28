@@ -27,12 +27,15 @@ export interface UseResolvedDocumentResult {
  */
 export function useResolvedDocument(
   doc: ViewDocument | null,
+  /** Keep this array's identity stable across renders a poll should span (e.g. `useMemo`, or a
+   * reference held outside the component) — a new array on every render restarts the interval
+   * before it completes a cycle. Same applies to `options.pollIntervalMs`'s numeric value, which
+   * is fine since primitives compare by value. */
   adapters: readonly Adapter[],
   options?: UseResolvedDocumentOptions
 ): UseResolvedDocumentResult {
   const [resolved, setResolved] = useState<ResolvedViewDocument | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const inFlightRef = useRef(false);
   const runRef = useRef<() => void>(() => {});
   const pollIntervalMs = options?.pollIntervalMs;
 
@@ -43,13 +46,17 @@ export function useResolvedDocument(
       return;
     }
     let cancelled = false;
+    // Scoped to this effect instance (one per doc/adapters/pollIntervalMs identity) rather than
+    // a hook-level ref — a still-pending resolve from a document that's since been swapped out
+    // must never block the new document's own first resolve.
+    let inFlight = false;
 
     const run = () => {
-      if (inFlightRef.current) return;
-      inFlightRef.current = true;
+      if (inFlight) return;
+      inFlight = true;
       setIsRefreshing(true);
       resolveDocument(doc, adapters).then(result => {
-        inFlightRef.current = false;
+        inFlight = false;
         if (cancelled) return;
         setResolved(result);
         setIsRefreshing(false);
