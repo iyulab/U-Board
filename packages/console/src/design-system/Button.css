@@ -1,0 +1,47 @@
+.ub-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ub-space-2);
+  padding: var(--ub-space-2) var(--ub-space-4);
+  border-radius: var(--ub-radius-sm);
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, filter 0.15s ease;
+}
+
+.ub-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ub-button--solid {
+  background: var(--ub-brand-gradient);
+  color: var(--ub-text-inverse);
+}
+
+.ub-button--solid:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.ub-button--ghost {
+  background: transparent;
+  border-color: var(--ub-border-strong);
+  color: var(--ub-text-normal);
+}
+
+.ub-button--ghost:hover:not(:disabled) {
+  background: var(--ub-bg-subtle);
+}
+
+.ub-button--danger {
+  background: var(--ub-error-bg);
+  border-color: var(--ub-error-border);
+  color: var(--ub-error);
+}
+
+.ub-button--danger:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
