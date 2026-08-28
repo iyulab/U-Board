@@ -1,0 +1,14 @@
+.ub-modal {
+  border: none;
+  border-radius: var(--ub-radius-lg);
+  padding: var(--ub-space-6);
+  background: var(--ub-bg-surface);
+  color: var(--ub-text-normal);
+  box-shadow: var(--ub-shadow-md);
+  max-width: 420px;
+  width: 100%;
+}
+
+.ub-modal::backdrop {
+  background: rgba(15, 23, 42, 0.32);
+}
