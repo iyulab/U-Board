@@ -26,7 +26,17 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Cheapest check first — fail fast before the slower test/build steps.
+      # Cheapest checks first — fail fast before the slower test/build steps.
+      - name: Tooling script tests
+        run: npm run test:tooling
+
+      # Catches a sibling-package pin (`@iyulab/u-widgets`, `@canvas-kit/*`) sitting behind its
+      # already-published version — `npm install`/`npm ci` doesn't re-resolve an already-
+      # satisfying lockfile entry, so this drift is otherwise silent (see
+      # scripts/check-pin-drift.mjs and the umbrella's HISTORY.md, cycle-61).
+      - name: Pin drift (sibling packages)
+        run: npm run check:pin-drift
+
       - name: Typecheck
         run: npm run typecheck
 

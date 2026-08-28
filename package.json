@@ -11,6 +11,8 @@
     "test:watch": "npm run test:watch --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspaces --if-present",
     "build": "npm run build --workspaces --if-present",
-    "build:lib": "npm run build:lib --workspaces --if-present"
+    "build:lib": "npm run build:lib --workspaces --if-present",
+    "test:tooling": "node --test scripts/*.test.mjs",
+    "check:pin-drift": "node scripts/check-pin-drift.mjs --strict"
   }
 }
