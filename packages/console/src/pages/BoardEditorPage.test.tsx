@@ -309,6 +309,82 @@ describe('BoardEditorPage share panel', () => {
     fireEvent.click(await screen.findByText('공유'));
     expect(await screen.findByRole('alert')).toHaveTextContent('공유 링크 목록을 불러오지 못했습니다');
   });
+
+  const DEMO_BOUND_NODE = {
+    id: 'n1', x: 0, y: 0, anchored: false,
+    widget: {
+      type: 'status' as const,
+      props: { data: { label: 'A', level: 'info' as const, value: 'x' } },
+      bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-a.state' } },
+    },
+  };
+
+  it('warns in the share panel when the loaded document has a demo-adapter binding', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({
+      id: 'b1', name: 'A', updatedAt: 't',
+      document: { kind: 'canvas' as const, background: {}, nodes: [DEMO_BOUND_NODE], connectors: [] },
+    });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    renderPage();
+
+    fireEvent.click(await screen.findByText('공유'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('데모 데이터로 바인딩된 위젯이 있습니다');
+  });
+
+  it('does not warn when bindings only reference a real connector', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({
+      id: 'b1', name: 'A', updatedAt: 't',
+      document: {
+        kind: 'canvas' as const, background: {}, connectors: [],
+        nodes: [{
+          id: 'n1', x: 0, y: 0, anchored: false,
+          widget: {
+            type: 'status' as const,
+            props: { data: { label: 'A', level: 'info' as const, value: 'x' } },
+            bindings: { 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a' } } },
+          },
+        }],
+      },
+    });
+    vi.mocked(api.listConnectors).mockResolvedValue({
+      connectors: [{ id: 'connector-1', name: 'Plant API', type: 'http', baseUrl: 'https://plant.example.com', authType: 'none', updatedAt: 't' }],
+    });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    renderPage();
+
+    fireEvent.click(await screen.findByText('공유'));
+    await screen.findByText('새 공유 링크 생성'); // wait for the panel to finish rendering
+    expect(screen.queryByText(/데모 데이터로 바인딩된 위젯이 있습니다/)).not.toBeInTheDocument();
+  });
+
+  it('starts showing the warning as soon as a demo binding is saved, without a reload', async () => {
+    const unboundDoc = {
+      kind: 'canvas' as const, background: {}, connectors: [],
+      nodes: [{
+        id: 'n1', x: 0, y: 0, anchored: false,
+        widget: { type: 'status' as const, props: { data: { label: 'A', level: 'info' as const, value: 'x' } } },
+      }],
+    };
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: unboundDoc, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'A', updatedAt: 't2' });
+    renderPage();
+
+    fireEvent.click(await screen.findByText('공유'));
+    await screen.findByText('새 공유 링크 생성');
+    expect(screen.queryByRole('alert', { name: /데모 데이터로 바인딩된 위젯이 있습니다/ })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('select-n1'));
+    fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('참조 키'), { target: { value: 'pump-a.state' } });
+    fireEvent.click(screen.getByText('바인딩 저장'));
+    await userEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => expect(api.updateBoard).toHaveBeenCalled());
+    expect(await screen.findByRole('alert')).toHaveTextContent('데모 데이터로 바인딩된 위젯이 있습니다');
+  });
 });
 
 describe('BoardEditorPage binding editor wiring', () => {

@@ -17,13 +17,27 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await expect(page.getByText('Save')).toBeVisible();
   const boardId = new URL(page.url()).pathname.split('/')[2]; // /boards/:boardId/edit
 
-  // 공유 패널 열고 링크 생성
+  // 데모 데이터로 바인딩한 노드 하나 추가 — 아래 공유 패널 경고(ISSUE-U-Board-20260829-*)가
+  // 실 브라우저에서도 뜨는지 확인하기 위함. binding-editor.spec.ts와 동일 패턴, 데이터소스만
+  // 실 커넥터 대신 데모(HTTP Path/Value path 대신 참조 키 하나).
+  await page.getByText('Add node').click();
+  await page.locator('canvas').first().click({ position: { x: 120, y: 90 } });
+  await page.getByLabel('프롭 경로').fill('data.value');
+  await page.getByLabel('참조 키').fill('pump-a.state');
+  await page.getByText('바인딩 저장', { exact: true }).click();
+  await page.getByText('Save', { exact: true }).click();
+  await expect(page.getByText('저장됨')).toBeVisible();
+
+  // 공유 패널 열고 경고 확인 → 링크 생성
   // NOTE: 버튼 텍스트 '새 공유 링크 생성'이 '공유'를 부분 문자열로 포함해 non-exact
   // getByText('공유')는 <summary>와 <button> 둘 다에 매치되어 strict-mode violation을
   // 일으킨다(실측). exact match로 <summary> 하나만 특정한다.
   await page.getByText('공유', { exact: true }).click();
+  await expect(page.getByText('데모 데이터로 바인딩된 위젯이 있습니다')).toBeVisible();
   await page.getByRole('button', { name: '새 공유 링크 생성' }).click();
-  const urlText = await page.locator('code').textContent();
+  // `<code>`가 이제 두 개다 — 위 바인딩 목록의 `data.value`와 이 공유 URL. 후자만 특정하려면
+  // 감싸는 문단으로 스코프한다.
+  const urlText = await page.getByText('다시 볼 수 없습니다').locator('code').textContent();
   expect(urlText).toMatch(new RegExp(`board=${boardId}&token=`));
   const shareUrl = urlText!;
 

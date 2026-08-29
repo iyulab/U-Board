@@ -12,6 +12,16 @@ import './BoardEditorPage.css';
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
 
+/** True when any node's widget binds to `adapterId`. Used to warn before sharing a document bound
+ * to the demo adapter: the server drops that adapter id from the share viewer's connector list
+ * (`packages/server/src/routes/share.ts`, by design — a client-side mock must never reach a real
+ * data path), so every such binding renders as `disconnected` there with no other indication. */
+function documentHasBindingFor(doc: ViewDocument, adapterId: string): boolean {
+  return doc.nodes.some(node =>
+    Object.values(node.widget.bindings ?? {}).some(binding => binding.adapter === adapterId)
+  );
+}
+
 export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const { boardId } = useParams<{ boardId: string }>();
   const [document, setDocument] = useState<ViewDocument | null>(null);
@@ -27,14 +37,23 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const [shareTokens, setShareTokens] = useState<ShareTokenSummary[]>([]);
   const [shareError, setShareError] = useState<string | null>(null);
   const [newShareUrl, setNewShareUrl] = useState<string | null>(null);
+  // Tracks the last *saved* document, not whatever AuthoringView holds mid-edit — a share link
+  // is always generated from the server's copy (Task 4's `share.ts` reads `board.document`), so
+  // this must reflect exactly what a new share link would actually serve.
+  const [hasDemoBinding, setHasDemoBinding] = useState(false);
+
+  const demoAdapter = useMemo(() => new DemoAdapter(), []);
 
   useEffect(() => {
     setDocument(null);
     setLoadError(null);
     getBoard(workspaceId, boardId!)
-      .then(board => setDocument(board.document))
+      .then(board => {
+        setDocument(board.document);
+        setHasDemoBinding(documentHasBindingFor(board.document, demoAdapter.id));
+      })
       .catch(() => setLoadError('보드를 불러오지 못했습니다'));
-  }, [workspaceId, boardId]);
+  }, [workspaceId, boardId, demoAdapter]);
 
   useEffect(() => {
     listConnectors(workspaceId)
@@ -90,8 +109,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     }
   }
 
-  const demoAdapter = useMemo(() => new DemoAdapter(), []);
-
   const adapters: readonly Adapter[] = useMemo(() => {
     const real = connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id));
     return [demoAdapter, ...real];
@@ -145,6 +162,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       await updateBoard(workspaceId, boardId!, { document: doc });
       setSaveError(null);
       setSavedAt(new Date());
+      setHasDemoBinding(documentHasBindingFor(doc, demoAdapter.id));
     } catch (err) {
       setSaveError('저장 실패');
       setSavedAt(null);
@@ -184,6 +202,12 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         <details>
           <summary>공유</summary>
           {shareError && <p role="alert">{shareError}</p>}
+          {hasDemoBinding && (
+            <p role="alert">
+              이 보드에는 데모 데이터로 바인딩된 위젯이 있습니다 — 공유 링크에서는 해당 위젯이
+              "연결 끊김"으로 보입니다(데모 데이터는 저작 화면에서만 미리보기용으로 동작합니다).
+            </p>
+          )}
           <ul>
             {shareTokens.map(t => (
               <li key={t.id}>
