@@ -153,6 +153,24 @@ describe('toCanvasKit', () => {
       expect(frame.props.title).toMatch(/disconnected/);
     });
 
+    it('keeps the plain label when only one binding is abnormal, even alongside live ones', () => {
+      const frame = overlayFor({ state: 'live', load: 'live', mode: 'disconnected' });
+      expect(frame.props.title).toBe('disconnected — no value has been reached');
+    });
+
+    it('lists each abnormal binding by its own prop path when more than one is at fault (BD-20260828-03)', () => {
+      const frame = overlayFor({
+        'data.value': 'live',
+        'data.threshold': 'disconnected',
+        'data.zone': 'disconnected',
+        'data.lastKnown': 'stale',
+      });
+      expect(frame.props.title).toBe(
+        'disconnected — no value has been reached (data.threshold, data.zone) · ' +
+          'stale — showing last known value (data.lastKnown)'
+      );
+    });
+
     it('gives stale and disconnected distinct border *styles*, not just distinct colors', () => {
       const stale = overlayFor({ state: 'stale' });
       const disconnected = overlayFor({ state: 'disconnected' });
@@ -188,6 +206,11 @@ describe('toCanvasKit', () => {
 
     it('announces the same explanatory text as the title when disconnected', () => {
       expect(liveRegionFor({ state: 'disconnected' }).props.children).toMatch(/disconnected/);
+    });
+
+    it('announces the same per-property breakdown as the title when several bindings are at fault', () => {
+      const quality = { 'data.value': 'live', 'data.threshold': 'disconnected', 'data.lastKnown': 'stale' } as const;
+      expect(liveRegionFor(quality).props.children).toBe(overlayFor(quality).props.title);
     });
   });
 });

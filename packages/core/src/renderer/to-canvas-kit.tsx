@@ -23,19 +23,8 @@ import '@iyulab/u-widgets';
 // one more render pass after this resolves (AuthoringView/ViewerPage do) to pick it up.
 export const chartsReady: Promise<unknown> = import('@iyulab/u-widgets/charts');
 import type { ResolvedViewDocument } from '../resolve-document.js';
-import type { ConnectionQuality } from '../adapter.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
-import { QUALITY_FRAME_STYLE, QUALITY_LABEL } from '../quality-presentation.js';
-
-// Worst-first: a node with several bindings shows whichever one needs the operator's attention
-// most (ISA-18.2 alarm-precedence convention — the least-current binding governs the indicator).
-const QUALITY_SEVERITY: Record<ConnectionQuality, number> = { live: 0, stale: 1, disconnected: 2 };
-
-function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined {
-  const values = Object.values(quality);
-  if (values.length === 0) return undefined;
-  return values.reduce((worst, q) => (QUALITY_SEVERITY[q] > QUALITY_SEVERITY[worst] ? q : worst));
-}
+import { QUALITY_FRAME_STYLE, worstQuality, qualityTooltip } from '../quality-presentation.js';
 
 // Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
 // on screen. Kept off the frame `<div>` itself and off `UWidget` — each `uw-*` custom element
@@ -111,7 +100,7 @@ export function toCanvasKit(doc: ResolvedViewDocument): CanvasKitRenderOutput {
   const overlays: ViewerOverlayItem[] = doc.nodes.map(node => {
     const quality = worstQuality(node.widget.quality);
     const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
-    const label = quality ? QUALITY_LABEL[quality] : undefined;
+    const label = qualityTooltip(node.widget.quality);
 
     return {
       id: node.id,

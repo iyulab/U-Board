@@ -44,6 +44,19 @@ one specific external system. The core binding surface is generic; adapters for 
 are separate, pluggable packages, not part of the core. This keeps U-Board usable standalone
 against any data source, with no host platform assumed by the core.
 
+## Connection-quality visualization
+
+A node can carry several bindings at once. The shipped renderer frames the node by the worst
+connection quality among them (ISA-18.2 alarm-precedence convention — the least-current binding
+governs the indicator), using a distinct border *style* per abnormal state (not just color), so
+the two are still distinguishable without relying on color perception or a hover tooltip. `live`
+is left unstyled — color is reserved for the abnormal states, not spent on normal operation.
+
+The frame's title (and, for assistive technology, an accompanying live-region announcement) names
+the cause. When only one binding is at fault, that binding's own state is enough. When more than
+one is, the summary is broken out per bound prop path — so a binding that plays no part in what
+the widget actually displays cannot mark an otherwise-live widget's cause of trouble unclear.
+
 ## Deployment
 
 The viewer runs in a standard web browser and can be embedded in another web application.
