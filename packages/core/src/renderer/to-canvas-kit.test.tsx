@@ -13,10 +13,12 @@ function doc(overrides: Partial<ResolvedViewDocument> = {}): ResolvedViewDocumen
   };
 }
 
-function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>) {
+// 'unknown-widget' has no primary data field known to u-widgets, so `frameQuality` falls back to
+// worst-first-across-all-bindings — the pre-BD-20260828-04 behavior these existing fixtures test.
+function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>, widgetType = 'unknown-widget') {
   const { overlays } = toCanvasKit(
     doc({
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', props: {}, quality } }],
+      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: widgetType, props: {}, quality } }],
     })
   );
   return overlays[0].content as ReactElement<{
@@ -26,8 +28,8 @@ function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>) 
   }>;
 }
 
-function liveRegionFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>) {
-  const [, liveRegion] = overlayFor(quality).props.children ?? [];
+function liveRegionFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>, widgetType = 'unknown-widget') {
+  const [, liveRegion] = overlayFor(quality, widgetType).props.children ?? [];
   return liveRegion as ReactElement<{ role?: string; 'aria-live'?: string; children?: string }>;
 }
 
@@ -178,6 +180,50 @@ describe('toCanvasKit', () => {
       expect(stale.props.style?.border).not.toContain('dotted');
       expect(disconnected.props.style?.border).toContain('dotted');
       expect(disconnected.props.style?.border).not.toContain('dashed');
+    });
+
+    describe('primary-field frame scoping (BD-20260828-04)', () => {
+      // gauge's only bound-able data field is `value` — u-widgets knows this is the headline
+      // value actually shown on the gauge.
+      it('adds no border when a secondary binding fails but the primary (data.value) is live', () => {
+        const frame = overlayFor(
+          { 'data.value': 'live', 'data.threshold': 'disconnected', 'data.zone': 'disconnected' },
+          'gauge'
+        );
+        expect(frame.props.style?.border).toBeUndefined();
+      });
+
+      it('still borders the frame when the primary binding itself is the one that failed', () => {
+        const frame = overlayFor({ 'data.value': 'disconnected', 'data.threshold': 'live' }, 'gauge');
+        expect(frame.props.style?.border).toContain('dotted');
+      });
+
+      it('adds no border when the primary field is unbound, even if a secondary binding failed', () => {
+        const frame = overlayFor({ 'data.threshold': 'disconnected' }, 'gauge');
+        expect(frame.props.style?.border).toBeUndefined();
+      });
+
+      it('picks "value" as status\'s primary field, not the also-required "label"', () => {
+        const frame = overlayFor({ 'data.label': 'disconnected', 'data.value': 'live' }, 'status');
+        expect(frame.props.style?.border).toBeUndefined();
+      });
+
+      it('still shows the per-property breakdown in the title, even when the frame has no border', () => {
+        // The frame (summary/master-caution) and the tooltip (drill-down) answer different
+        // questions — a live-but-not-primary binding failure stays visible on hover even once it
+        // stops driving the frame.
+        const frame = overlayFor(
+          { 'data.value': 'live', 'data.threshold': 'disconnected', 'data.zone': 'disconnected' },
+          'gauge'
+        );
+        expect(frame.props.style?.border).toBeUndefined();
+        expect(frame.props.title).toMatch(/disconnected/);
+      });
+
+      it('keeps the pre-existing worst-first behavior for a widget type with no known primary field', () => {
+        const frame = overlayFor({ x: 'live', y: 'disconnected' }, 'chart.line');
+        expect(frame.props.style?.border).toContain('dotted');
+      });
     });
   });
 

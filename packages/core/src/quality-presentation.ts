@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { ConnectionQuality } from './adapter.js';
+import { getPrimaryDataField } from '@iyulab/u-widgets';
 
 // `live` is deliberately unstyled (ISA-101 — color is reserved for abnormal state, not spent on
 // normal operation) and a widget with no bindings at all gets no frame. `stale`/`disconnected`
@@ -24,6 +25,32 @@ export function worstQuality(quality: Record<string, ConnectionQuality>): Connec
   const values = Object.values(quality);
   if (values.length === 0) return undefined;
   return values.reduce((worst, q) => (QUALITY_SEVERITY[q] > QUALITY_SEVERITY[worst] ? q : worst));
+}
+
+/**
+ * The quality that should drive a node's *frame* (border/color) — as opposed to `worstQuality`,
+ * which `qualityTooltip` still uses to describe every abnormal binding for drill-down detail.
+ * u-widgets knows, per widget type, which bound field is the headline value actually shown on
+ * screen (`getPrimaryDataField`, e.g. `gauge`/`status` → `"value"`) — when that's known, only
+ * that field's own connectivity should raise an alarm on the frame. A secondary binding (e.g. a
+ * threshold config value) failing no longer marks an otherwise-live widget as "disconnected"
+ * (BD-20260828-04 — the aircraft master-caution / individual-annunciator split: the frame is the
+ * summary, `qualityTooltip`'s per-property breakdown remains the drill-down).
+ *
+ * Bindings are keyed by dotted prop path (`adapter.ts`), and u-widgets nests bindable fields
+ * under `data` — so the primary field's binding key is always `data.<field>`.
+ *
+ * Widget types u-widgets has no fixed headline field for (`chart.*`, `table`, `list`, ... — free
+ * user-defined mapping) fall back to `worstQuality` unchanged, preserving prior behavior for
+ * anything this can't yet answer.
+ */
+export function frameQuality(
+  quality: Record<string, ConnectionQuality>,
+  widgetType: string
+): ConnectionQuality | undefined {
+  const primaryField = getPrimaryDataField(widgetType);
+  if (primaryField === undefined) return worstQuality(quality);
+  return quality[`data.${primaryField}`];
 }
 
 /**
