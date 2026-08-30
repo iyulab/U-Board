@@ -50,7 +50,7 @@
     "@canvas-kit/core": "^0.2.0",
     "@canvas-kit/designer": "^0.3.0",
     "@canvas-kit/viewer": "^0.2.0",
-    "@iyulab/u-widgets": "^0.16.1",
+    "@iyulab/u-widgets": "^0.17.0",
     "@lit/react": "^1.0.8",
     "echarts": "^6.1.0",
     "react": "^19.0.0",
