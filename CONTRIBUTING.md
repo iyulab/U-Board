@@ -77,5 +77,4 @@ locally before opening a pull request.
 ## Reporting issues
 
 Bug reports and design questions are welcome via GitHub Issues. For anything involving a potential
-security vulnerability, please do not open a public issue — report it privately through GitHub's
-security advisory form for this repository instead.
+security vulnerability, do not open a public issue — see [`SECURITY.md`](SECURITY.md) instead.
