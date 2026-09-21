@@ -100,7 +100,15 @@ lighter `@iyulab/u-board/viewer` entry point, for a host that only needs to rend
 | Core concepts and terms | [`docs/concepts.md`](docs/concepts.md) |
 | Domain layer API reference | [`docs/api-reference.md`](docs/api-reference.md) |
 
+## Contributing
+
+Bug reports and design questions are welcome. Because U-Board is dual-licensed, external code
+contributions need a signed CLA before they can be merged — it is one file you add in your own
+pull request. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CLA.md`](CLA.md).
+
 ## License
+
+Copyright (c) 2026 iyulab.
 
 AGPL-3.0. A commercial license is available for organizations that cannot adopt AGPL-3.0 terms.
 See [`LICENSE`](LICENSE).
