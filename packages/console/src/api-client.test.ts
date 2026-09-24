@@ -11,17 +11,17 @@ describe('API base URL', () => {
   });
 
   it('prefixes requests with VITE_API_BASE_URL when set', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
     await getBootstrapStatus();
-    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/auth/bootstrap-status', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/auth/bootstrap-status', expect.anything());
   });
 
   it('strips a trailing slash from VITE_API_BASE_URL to avoid a double slash', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr/');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
     await getBootstrapStatus();
-    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/auth/bootstrap-status', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/auth/bootstrap-status', expect.anything());
   });
 });
 

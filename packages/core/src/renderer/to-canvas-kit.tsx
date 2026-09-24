@@ -9,7 +9,7 @@ import '@iyulab/u-widgets';
 // the chart — this renderer doesn't otherwise restrict which widget types a document can use, so
 // it opts every u-widgets entry point in rather than special-casing chart.* as excluded.
 //
-// Loaded dynamically rather than statically (HD-14, 2026-08-25): echarts alone pushes a
+// Loaded dynamically rather than statically: echarts alone pushes a
 // consuming app's bundle past Vite's 500kB single-chunk warning, even for documents that never
 // use a chart.* widget. This still loads unconditionally on module init — no widget-type
 // inspection, same "opt every entry point in" policy as a static import — but as its own chunk

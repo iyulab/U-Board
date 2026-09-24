@@ -8,7 +8,7 @@ describe('EmptyState', () => {
     expect(screen.getByText('Nothing here yet.')).toBeInTheDocument();
   });
 
-  it('announces itself to screen readers as a status region (HD-16 pattern)', () => {
+  it('announces itself to screen readers as a status region', () => {
     render(<EmptyState>Nothing here yet.</EmptyState>);
     expect(screen.getByRole('status')).toHaveTextContent('Nothing here yet.');
   });

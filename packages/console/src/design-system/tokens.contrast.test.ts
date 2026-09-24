@@ -46,12 +46,12 @@ const darkOverrides = parseCustomProperties(darkBlocks.join(''));
 
 // These back solid fills (Button--solid, Toast) that always pair with white text
 // (--ub-text-inverse), unlike --ub-brand/-success/-error which are text-role tokens
-// re-tuned per theme. A regression here is exactly what broke HD-43: a theme edit to
+// re-tuned per theme. The regression this guards against: a theme edit to
 // one of these silently drops the white-text-on-solid-fill contrast below WCAG AA.
 const SOLID_TOKENS = ['--ub-brand-solid', '--ub-success-solid', '--ub-error-solid'];
 const WCAG_AA_NORMAL_TEXT = 4.5;
 
-describe('design-system tokens.css — solid-fill contrast (HD-43 regression guard)', () => {
+describe('design-system tokens.css — solid-fill contrast', () => {
   const inverseText = lightTokens['--ub-text-inverse'];
 
   it('found --ub-text-inverse in tokens.css', () => {
@@ -72,7 +72,7 @@ describe('design-system tokens.css — solid-fill contrast (HD-43 regression gua
 });
 
 // The pairs actually combined by component CSS (Alert.css/Badge.css) as text-on-tint — the
-// exact role HD-43 broke (a theme edit re-tunes one side of the pair but not the other).
+// role a theme edit can break (re-tuning one side of the pair but not the other).
 // Only pairs where BOTH tokens are plain hex are covered: alpha-blended tokens like
 // `--ub-brand-subtle` (rgba, used by AppShell's active nav link) composite against whatever
 // sits behind them, which this parser — reading tokens.css in isolation — cannot resolve.
@@ -87,7 +87,7 @@ function effectiveColor(tokens: Record<string, string>, overrides: Record<string
   return overrides[token] ?? tokens[token];
 }
 
-describe('design-system tokens.css — text-role tint contrast (HD-43 regression guard)', () => {
+describe('design-system tokens.css — text-role tint contrast', () => {
   it.each(TEXT_ROLE_PAIRS)('%s on %s clears WCAG AA 4.5:1 in light mode', (text, background) => {
     expect(lightTokens[text]).toBeDefined();
     expect(lightTokens[background]).toBeDefined();

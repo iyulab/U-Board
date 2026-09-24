@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { isTrackedPackage, exceedsThreshold, classify, readWorkspacePackageNames } from './check-pin-drift.mjs';
 
-test('isTrackedPackage matches only this umbrella\'s own sibling packages', () => {
+test('isTrackedPackage matches only the sibling package scopes', () => {
   assert.equal(isTrackedPackage('@iyulab/u-widgets'), true);
   assert.equal(isTrackedPackage('@canvas-kit/core'), true);
   assert.equal(isTrackedPackage('@iyulab/other-lib'), true);

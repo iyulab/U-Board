@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 // check-pin-drift.mjs
 // Detects npm version drift between this repo's installed pin and the currently-published
-// version of the packages produced by this umbrella's sibling submodules
-// (`@iyulab/u-widgets`, `@canvas-kit/*`).
+// version of the sibling packages this project builds on (`@iyulab/u-widgets`, `@canvas-kit/*`).
 //
 // Background: a caret range (e.g. "^0.16.1") already accepts a newer patch/minor once published,
 // but `npm install`/`npm ci` does not re-resolve an already-satisfying lockfile entry — only
-// `npm update` does. That gap let this repo's `@iyulab/u-widgets` pin sit one commit behind its
-// own published version, caught only by a manual `npm outdated` sweep (umbrella HISTORY.md,
-// 2026-08-28, cycle-61). This script automates that sweep.
+// `npm update` does. That gap once let this repo's `@iyulab/u-widgets` pin sit behind its own
+// published version, caught only by a manual `npm outdated` sweep. This script automates that
+// sweep.
 //
 // A pin can also be legitimately behind `latest` because the declared semver range doesn't cover
 // it yet (e.g. a new major, or a not-yet-adopted minor) — that is a deliberate range decision, not
@@ -23,8 +22,8 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-// Packages produced by this umbrella's own submodules (`upstream/canvas-kit`, `upstream/u-widgets`)
-// — third-party packages are out of scope for this check. This repo's own workspace packages share
+// Sibling packages (`@iyulab/*`, `@canvas-kit/*`) — third-party packages are out of scope for
+// this check. This repo's own workspace packages share
 // the `@iyulab/` scope but are excluded: they always resolve to the local source, so their
 // "current" version is the local one and legitimately runs ahead of the registry on the commit
 // that bumps it for release.

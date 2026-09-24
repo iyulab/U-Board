@@ -11,13 +11,13 @@ describe('getApiBase', () => {
   });
 
   it('returns VITE_API_BASE_URL as-is when it has no trailing slash', () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr');
-    expect(getApiBase()).toBe('https://api.board.u-platform.kr');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
+    expect(getApiBase()).toBe('https://api.example.com');
   });
 
   it('strips a trailing slash so callers can concatenate a leading-slash path safely', () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr/');
-    expect(getApiBase()).toBe('https://api.board.u-platform.kr');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
+    expect(getApiBase()).toBe('https://api.example.com');
   });
 });
 

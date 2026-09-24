@@ -16,8 +16,8 @@ import { AppShell } from './design-system/AppShell.js';
 import { WorkspaceSwitcher } from './design-system/WorkspaceSwitcher.js';
 
 // The only route that pulls in canvas-kit's authoring stack (KonvaDesigner/Viewer, react-konva) —
-// code-split so `/boards` and `/connectors` don't pay for it in their own chunk (HD-28, same
-// dynamic-import-for-bundle-size pattern as HD-14's echarts split in `to-canvas-kit.tsx`).
+// code-split so `/boards` and `/connectors` don't pay for it in their own chunk (the same
+// dynamic-import-for-bundle-size pattern as the echarts split in `to-canvas-kit.tsx`).
 const BoardEditorPage = lazy(() =>
   import('./pages/BoardEditorPage.js').then(m => ({ default: m.BoardEditorPage }))
 );

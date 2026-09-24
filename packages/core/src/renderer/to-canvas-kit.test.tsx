@@ -14,7 +14,7 @@ function doc(overrides: Partial<ResolvedViewDocument> = {}): ResolvedViewDocumen
 }
 
 // 'unknown-widget' has no primary data field known to u-widgets, so `frameQuality` falls back to
-// worst-first-across-all-bindings — the pre-BD-20260828-04 behavior these existing fixtures test.
+// worst-first-across-all-bindings — the behavior these fixtures test.
 function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>, widgetType = 'unknown-widget') {
   const { overlays } = toCanvasKit(
     doc({
@@ -160,7 +160,7 @@ describe('toCanvasKit', () => {
       expect(frame.props.title).toBe('disconnected — no value has been reached');
     });
 
-    it('lists each abnormal binding by its own prop path when more than one is at fault (BD-20260828-03)', () => {
+    it('lists each abnormal binding by its own prop path when more than one is at fault', () => {
       const frame = overlayFor({
         'data.value': 'live',
         'data.threshold': 'disconnected',
@@ -182,7 +182,7 @@ describe('toCanvasKit', () => {
       expect(disconnected.props.style?.border).not.toContain('dashed');
     });
 
-    describe('primary-field frame scoping (BD-20260828-04)', () => {
+    describe('primary-field frame scoping', () => {
       // gauge's only bound-able data field is `value` — u-widgets knows this is the headline
       // value actually shown on the gauge.
       it('adds no border when a secondary binding fails but the primary (data.value) is live', () => {

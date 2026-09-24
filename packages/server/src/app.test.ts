@@ -81,14 +81,14 @@ describe('errorHandler / body size limit', () => {
 
 describe('CORS', () => {
   it('reflects an allowed origin and marks credentials allowed', async () => {
-    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://board.u-platform.kr'] });
-    const res = await request(corsApp).get('/auth/bootstrap-status').set('Origin', 'https://board.u-platform.kr');
-    expect(res.headers['access-control-allow-origin']).toBe('https://board.u-platform.kr');
+    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
+    const res = await request(corsApp).get('/auth/bootstrap-status').set('Origin', 'https://app.example.com');
+    expect(res.headers['access-control-allow-origin']).toBe('https://app.example.com');
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
 
   it('omits CORS headers for an origin not on the allowlist', async () => {
-    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://board.u-platform.kr'] });
+    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
     const res = await request(corsApp).get('/auth/bootstrap-status').set('Origin', 'https://evil.example.com');
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
@@ -99,17 +99,17 @@ describe('CORS', () => {
   });
 
   it('still carries CORS headers on a 413 PAYLOAD_TOO_LARGE response (CORS must run before express.json())', async () => {
-    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://board.u-platform.kr'] });
+    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
     // Well over the 10mb express.json() limit configured in createApp — triggers the same
     // entity.too.large path exercised in the 'errorHandler / body size limit' suite above.
     const hugeBody = { email: 'x@x.com', password: 'A'.repeat(11 * 1024 * 1024) };
     const res = await request(corsApp)
       .post('/auth/login')
-      .set('Origin', 'https://board.u-platform.kr')
+      .set('Origin', 'https://app.example.com')
       .send(hugeBody);
     expect(res.status).toBe(413);
     expect(res.body.code).toBe('PAYLOAD_TOO_LARGE');
-    expect(res.headers['access-control-allow-origin']).toBe('https://board.u-platform.kr');
+    expect(res.headers['access-control-allow-origin']).toBe('https://app.example.com');
   });
 });
 

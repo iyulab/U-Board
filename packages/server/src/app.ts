@@ -30,7 +30,7 @@ export interface AppConfig {
   sendPasswordResetEmail?: (input: { email: string; token: string }) => Promise<void>;
 }
 
-/** `req.ip` collapses to the single ingress IP behind Cloudflare -> Container Apps unless the
+/** `req.ip` collapses to the single ingress IP behind Cloudflare -> the hosting platform unless the
  *  exact hop count is configured via Express's `trust proxy`, which is fragile (a platform-side
  *  change to that chain silently reopens the shared-bucket DoS). `CF-Connecting-IP` sidesteps the
  *  hop-count question entirely — Cloudflare always sets it to the real client IP, and it's only

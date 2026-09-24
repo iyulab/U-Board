@@ -71,22 +71,22 @@ describe('App', () => {
   });
 
   it('prefixes the board fetch with VITE_API_BASE_URL when set', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
     setLocation('?board=b1&token=tok');
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
     render(<App />);
     await screen.findByTestId('viewer-page');
-    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/share/boards/b1?token=tok', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/share/boards/b1?token=tok', expect.anything());
     vi.unstubAllEnvs();
   });
 
   it('strips a trailing slash from VITE_API_BASE_URL to avoid a double slash', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr/');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
     setLocation('?board=b1&token=tok');
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
     render(<App />);
     await screen.findByTestId('viewer-page');
-    expect(fetch).toHaveBeenCalledWith('https://api.board.u-platform.kr/share/boards/b1?token=tok', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/share/boards/b1?token=tok', expect.anything());
     vi.unstubAllEnvs();
   });
 });

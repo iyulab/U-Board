@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { ViewDocument } from './view-document';
 
-// A Walking-Skeleton-shaped example (docs/../kickoff §9): a background image, one anchored node
+// A minimal realistic document: a background image, one anchored node
 // carrying a status widget bound to an external value, one freely-placed node with no binding,
 // and a connector between them. Exercises every field the type declares.
 const example: ViewDocument = {

@@ -34,7 +34,7 @@ export function worstQuality(quality: Record<string, ConnectionQuality>): Connec
  * screen (`getPrimaryDataField`, e.g. `gauge`/`status` → `"value"`) — when that's known, only
  * that field's own connectivity should raise an alarm on the frame. A secondary binding (e.g. a
  * threshold config value) failing no longer marks an otherwise-live widget as "disconnected"
- * (BD-20260828-04 — the aircraft master-caution / individual-annunciator split: the frame is the
+ * (the aircraft master-caution / individual-annunciator split: the frame is the
  * summary, `qualityTooltip`'s per-property breakdown remains the drill-down).
  *
  * Bindings are keyed by dotted prop path (`adapter.ts`), and u-widgets nests bindable fields
@@ -60,7 +60,7 @@ export function frameQuality(
  * them back out per property, grouped by quality (worst first), keyed by the binding's own prop
  * path (e.g. `data.threshold`). Otherwise a binding that never reaches the widget's displayed
  * value (an unused threshold, say) can mark an otherwise-live widget "disconnected" with no way
- * to see why (BD-20260828-03 — ISA-18.2 alarm-rationalization: alarms should be configured on
+ * to see why (ISA-18.2 alarm rationalization: alarms should be configured on
  * the best indicator of root cause, not merged into the single most severe symptom).
  */
 export function qualityTooltip(quality: Record<string, ConnectionQuality>): string | undefined {

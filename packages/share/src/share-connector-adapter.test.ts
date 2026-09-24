@@ -30,24 +30,24 @@ describe('ShareConnectorAdapter', () => {
   });
 
   it('prefixes the resolve URL with VITE_API_BASE_URL when set', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ value: 1, quality: 'live' }) });
     const adapter = new ShareConnectorAdapter('b1', 'tok', 'c1');
     await adapter.resolve({ path: '/status' });
     expect(fetch).toHaveBeenCalledWith(
-      'https://api.board.u-platform.kr/share/boards/b1/connectors/c1/resolve?token=tok',
+      'https://api.example.com/share/boards/b1/connectors/c1/resolve?token=tok',
       expect.anything()
     );
     vi.unstubAllEnvs();
   });
 
   it('strips a trailing slash from VITE_API_BASE_URL to avoid a double slash', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.board.u-platform.kr/');
+    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ value: 1, quality: 'live' }) });
     const adapter = new ShareConnectorAdapter('b1', 'tok', 'c1');
     await adapter.resolve({ path: '/status' });
     expect(fetch).toHaveBeenCalledWith(
-      'https://api.board.u-platform.kr/share/boards/b1/connectors/c1/resolve?token=tok',
+      'https://api.example.com/share/boards/b1/connectors/c1/resolve?token=tok',
       expect.anything()
     );
     vi.unstubAllEnvs();

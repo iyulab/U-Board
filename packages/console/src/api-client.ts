@@ -7,7 +7,7 @@ export class ApiError extends Error {
   }
 }
 
-// A production Container Apps cold start (scale-to-zero) has been observed to exceed 20s before
+// A scale-to-zero production host's cold start has been observed to exceed 20s before
 // the first byte arrives — longer than a typical client-side timeout — so a plain `fetch` here
 // can read as "just broken" rather than "slow". One retry after the timeout absorbs exactly that
 // case (the instance is warm by the second attempt) without masking a genuinely dead backend.

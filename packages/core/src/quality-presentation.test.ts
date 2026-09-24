@@ -4,8 +4,8 @@ import { frameQuality } from './quality-presentation.js';
 describe('frameQuality', () => {
   it("uses the widget's own primary-field quality when the widget type has a known one (gauge → value)", () => {
     // Secondary bindings failing must not alarm the frame when the primary (displayed) value is
-    // live — BD-20260828-04: worst-first-across-all-bindings hides root cause and raises nuisance
-    // alarms on a widget whose headline value is fine.
+    // live — worst-first-across-all-bindings hides root cause and raises nuisance alarms on a
+    // widget whose headline value is fine.
     const quality = {
       'data.value': 'live',
       'data.threshold': 'disconnected',

@@ -25,8 +25,7 @@ function dockerAvailable(): boolean {
  * `auth.test.ts` already has these same three scenarios, but PGlite is a single connection that
  * serializes every query internally — it can't exercise a genuine multi-connection race, so
  * those tests would still pass even if the advisory-lock/atomic-UPDATE concurrency control in
- * `routes/auth.ts` were silently broken (`ROADMAP.md` "회원가입 동시성의 실 Postgres 검증
- * 공백"). This file re-runs the same scenarios against a real Postgres instance via
+ * `routes/auth.ts` were silently broken. This file re-runs the same scenarios against a real Postgres instance via
  * testcontainers, with real concurrent connections, to actually prove it.
  *
  * Skipped automatically when Docker isn't reachable, so `npm test` still passes on a machine

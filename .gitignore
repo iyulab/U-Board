@@ -6,7 +6,7 @@ playwright-report/
 .worktrees/
 .superpowers/
 
-# Local dev tracking — see AGENTS.md ("Documentation split"). Tracking lives in the umbrella,
+# Local dev tracking — see AGENTS.md ("Documentation split"). Tracking lives in the enclosing workspace,
 # not here.
 claudedocs/
 CLAUDE.md

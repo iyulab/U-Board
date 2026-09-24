@@ -35,7 +35,7 @@ jobs:
       # Catches a sibling-package pin (`@iyulab/u-widgets`, `@canvas-kit/*`) sitting behind its
       # already-published version — `npm install`/`npm ci` doesn't re-resolve an already-
       # satisfying lockfile entry, so this drift is otherwise silent (see
-      # scripts/check-pin-drift.mjs and the umbrella's HISTORY.md, cycle-61).
+      # scripts/check-pin-drift.mjs).
       - name: Pin drift (sibling packages)
         run: npm run check:pin-drift
 
