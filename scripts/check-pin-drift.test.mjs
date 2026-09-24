@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { isTrackedPackage, exceedsThreshold, classify } from './check-pin-drift.mjs';
+import { fileURLToPath } from 'node:url';
+import { isTrackedPackage, exceedsThreshold, classify, readWorkspacePackageNames } from './check-pin-drift.mjs';
 
 test('isTrackedPackage matches only this umbrella\'s own sibling packages', () => {
   assert.equal(isTrackedPackage('@iyulab/u-widgets'), true);
@@ -8,6 +9,16 @@ test('isTrackedPackage matches only this umbrella\'s own sibling packages', () =
   assert.equal(isTrackedPackage('@iyulab/other-lib'), true);
   assert.equal(isTrackedPackage('react'), false);
   assert.equal(isTrackedPackage('@testing-library/react'), false);
+});
+
+test("isTrackedPackage excludes this repo's own workspace packages", () => {
+  // A workspace package always resolves to the local source, so its "current" version is the
+  // local one and can legitimately run ahead of the registry (the commit that bumps it is the
+  // one that publishes it). Treating that as drift would fail CI on every release commit.
+  const workspaces = new Set(['@iyulab/u-board', '@iyulab/u-board-server']);
+  assert.equal(isTrackedPackage('@iyulab/u-board', workspaces), false);
+  assert.equal(isTrackedPackage('@iyulab/u-board-server', workspaces), false);
+  assert.equal(isTrackedPackage('@iyulab/u-widgets', workspaces), true);
 });
 
 test('exceedsThreshold: a major version difference always exceeds', () => {
@@ -45,4 +56,13 @@ test('classify: current === wanted but latest is a range-gated major bump exceed
 test('classify: current === wanted, latest outside range but within threshold — stale, not drift', () => {
   const result = classify({ current: '0.16.2', wanted: '0.16.2', latest: '0.18.0' });
   assert.equal(result.verdict, 'stale-in-range');
+});
+
+test('readWorkspacePackageNames lists every package under the root workspaces', () => {
+  const names = readWorkspacePackageNames(fileURLToPath(new URL('..', import.meta.url)));
+  assert.ok(names.has('@iyulab/u-board'));
+  assert.ok(names.has('@iyulab/u-board-server'));
+  assert.ok(names.has('@iyulab/u-board-console'));
+  assert.ok(names.has('@iyulab/u-board-share'));
+  assert.equal(names.has('@iyulab/u-widgets'), false);
 });

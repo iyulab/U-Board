@@ -19,11 +19,36 @@
 //   node scripts/check-pin-drift.mjs --strict    # exit 1 if drift found (used in CI)
 
 import { execSync } from 'node:child_process';
+import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 // Packages produced by this umbrella's own submodules (`upstream/canvas-kit`, `upstream/u-widgets`)
-// — third-party packages are out of scope for this check.
-export const isTrackedPackage = name => name.startsWith('@iyulab/') || name.startsWith('@canvas-kit/');
+// — third-party packages are out of scope for this check. This repo's own workspace packages share
+// the `@iyulab/` scope but are excluded: they always resolve to the local source, so their
+// "current" version is the local one and legitimately runs ahead of the registry on the commit
+// that bumps it for release.
+export const isTrackedPackage = (name, workspacePackages = new Set()) =>
+  !workspacePackages.has(name) && (name.startsWith('@iyulab/') || name.startsWith('@canvas-kit/'));
+
+// Names of the packages under the root package.json's `workspaces` entries. Only the `dir/*`
+// form is expanded, which is the only form this repo uses.
+export function readWorkspacePackageNames(rootDir = process.cwd()) {
+  const { workspaces = [] } = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
+  const names = new Set();
+  for (const pattern of workspaces) {
+    const dirs = pattern.endsWith('/*')
+      ? readdirSync(join(rootDir, pattern.slice(0, -2)), { withFileTypes: true })
+          .filter(d => d.isDirectory())
+          .map(d => join(rootDir, pattern.slice(0, -2), d.name))
+      : [join(rootDir, pattern)];
+    for (const dir of dirs) {
+      const manifest = join(dir, 'package.json');
+      if (existsSync(manifest)) names.add(JSON.parse(readFileSync(manifest, 'utf8')).name);
+    }
+  }
+  return names;
+}
 
 // A pin more than one major version behind, or 5+ minors behind, is treated as neglect rather
 // than a deliberate not-yet-adopted range — mirrors the central pin-drift policy's threshold
@@ -76,11 +101,12 @@ function readOutdated() {
 function main() {
   const strict = process.argv.includes('--strict');
   const outdated = readOutdated();
+  const workspacePackages = readWorkspacePackageNames();
   const drift = [];
   const staleButInRange = [];
 
   for (const [name, value] of Object.entries(outdated)) {
-    if (!isTrackedPackage(name)) continue;
+    if (!isTrackedPackage(name, workspacePackages)) continue;
     const entries = Array.isArray(value) ? value : [value];
     for (const entry of entries) {
       const { current, wanted, latest, dependent } = entry;
@@ -105,7 +131,7 @@ function main() {
     console.log('\n확인할 것: (1) 이 격차가 알려진 breaking change 때문인가 (2) 그냥 npm update를 안 돌린 것인가.');
     if (strict) process.exitCode = 1;
   } else {
-    console.log('드리프트 없음 — 추적 대상 패키지(@iyulab/*, @canvas-kit/*) 전부 최신 또는 임계치 이내.');
+    console.log('드리프트 없음 — 추적 대상 패키지(@iyulab/*, @canvas-kit/* — 이 리포의 워크스페이스 패키지 제외) 전부 최신 또는 임계치 이내.');
   }
 }
 
