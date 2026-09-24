@@ -8,7 +8,9 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded PR runs are cancelled; runs on main are not, because a run on main may be in the
+  # middle of the `publish` job below.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
@@ -69,3 +71,58 @@ jobs:
 
       - name: E2E
         run: npm run test:e2e
+
+  # Publishes the library package (packages/core, @iyulab/u-board) once `verify` has passed on a
+  # push to main, if its version isn't on the registry yet. Kept in this workflow rather than a
+  # separate one so the commit that gets published is exactly the commit that was verified — and
+  # so provenance records that commit. The server, console and share workspaces are applications
+  # and stay private.
+  publish:
+    name: publish
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for `npm publish --provenance` (set through publishConfig).
+      id-token: write
+    defaults:
+      run:
+        working-directory: packages/core
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Check whether this version is already published
+        id: check
+        run: |
+          NAME=$(node -p 'require("./package.json").name')
+          VERSION=$(node -p 'require("./package.json").version')
+          echo "spec=${NAME}@${VERSION}" >> "$GITHUB_OUTPUT"
+          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "### Skipped — ${NAME}@${VERSION} is already published" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install
+        if: steps.check.outputs.exists == 'false'
+        run: npm ci
+        working-directory: .
+
+      # `prepack` (packages/core/scripts/prepack.mjs) rebuilds dist/lib from clean and copies in
+      # the LICENSE.
+      - name: Publish
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          npm publish
+          echo "### Published ${{ steps.check.outputs.spec }}" >> "$GITHUB_STEP_SUMMARY"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

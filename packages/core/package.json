@@ -1,15 +1,33 @@
 {
   "name": "@iyulab/u-board",
   "version": "0.2.0",
-  "private": true,
   "description": "Spatial dashboard authoring middleware",
   "type": "module",
   "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iyulab/U-Board.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/iyulab/U-Board/issues"
+  },
+  "homepage": "https://github.com/iyulab/U-Board#readme",
+  "keywords": [
+    "dashboard",
+    "canvas",
+    "spatial",
+    "hmi",
+    "data-binding",
+    "react"
+  ],
   "main": "./dist/lib/index.js",
   "module": "./dist/lib/index.js",
   "types": "./dist/lib/index.d.ts",
   "files": [
-    "dist/lib"
+    "dist/lib",
+    "LICENSE",
+    "README.md"
   ],
   "exports": {
     ".": {
@@ -36,12 +54,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/iyulab/U-Board",
-    "directory": "packages/core"
+    "test:e2e": "playwright test",
+    "prepack": "node scripts/prepack.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -52,9 +66,7 @@
     "@canvas-kit/viewer": "^0.2.0",
     "@iyulab/u-widgets": "^0.21.0",
     "@lit/react": "^1.0.8",
-    "echarts": "^6.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "echarts": "^6.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -65,8 +77,18 @@
     "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^6.0.5",
     "jsdom": "^29.1.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "typescript": "^5.7.0",
     "vite": "^8.2.1",
     "vitest": "^4.1.6"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }

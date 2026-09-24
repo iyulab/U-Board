@@ -21,3 +21,6 @@ packages/server/*.db
 packages/server/u-board-data*/
 packages/*/.env
 !packages/*/.env.example
+
+# Copied in from the repository root by packages/core/scripts/prepack.mjs at pack time.
+packages/core/LICENSE

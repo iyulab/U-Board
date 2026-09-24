@@ -47,15 +47,16 @@ board can be wired up and previewed before any real connector is configured.
 
 The renderer-agnostic core — the view document schema, the adapter contract, and binding
 resolution — is available as a package entry point independent of the authoring UI and canvas
-rendering pipeline described below. This package isn't published to a registry yet, so consume it
-as a `file:` or workspace dependency:
+rendering pipeline described below. It is published to npm as
+[`@iyulab/u-board`](https://www.npmjs.com/package/@iyulab/u-board); import it from the
+`/domain` subpath to leave the React and canvas stack out entirely:
 
-```json
-{ "dependencies": { "@iyulab/u-board": "file:../path/to/U-Board" } }
+```sh
+npm install @iyulab/u-board react react-dom
 ```
 
 ```ts
-import { resolveDocument, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { resolveDocument, type ViewDocument, type Adapter } from '@iyulab/u-board/domain';
 
 const doc: ViewDocument = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
 const adapters: Adapter[] = [/* your Adapter implementations */];
