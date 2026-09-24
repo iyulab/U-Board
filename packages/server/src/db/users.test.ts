@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { DbClient } from '../db.js';
-import { createDb } from '../db.js';
+import { createTestDb } from '../test-support/test-db.js';
 import { createUser, findUserByEmail, findUserById, countUsers, updateUserPassword } from './users.js';
 
 let db: DbClient;
 beforeEach(async () => {
-  db = await createDb(':memory:');
+  db = await createTestDb();
 });
 
 describe('user repository', () => {

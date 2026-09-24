@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { DbClient } from '../db.js';
-import { createDb } from '../db.js';
+import { createTestDb } from '../test-support/test-db.js';
 import { createWorkspace } from './workspaces.js';
 import { createConnector, listConnectorsForWorkspace, findConnector, updateConnector, deleteConnector } from './connectors.js';
 
 let db: DbClient;
 let workspaceId: string;
 beforeEach(async () => {
-  db = await createDb(':memory:');
+  db = await createTestDb();
   workspaceId = (await createWorkspace(db, 'W1')).id;
 });
 

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import type { DbClient } from '../db.js';
-import { createDb } from '../db.js';
+import { createTestDb } from '../test-support/test-db.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { requireWorkspaceMember, requireWorkspaceOwner } from './require-workspace-role.js';
@@ -15,7 +15,7 @@ let memberId: string;
 let workspaceId: string;
 
 beforeEach(async () => {
-  db = await createDb(':memory:');
+  db = await createTestDb();
   const owner = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
   const member = await createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
   const workspace = await createWorkspace(db, 'W1');

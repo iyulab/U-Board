@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { DbClient } from '../db.js';
-import { createDb } from '../db.js';
+import { createTestDb } from '../test-support/test-db.js';
 import { createUser } from './users.js';
 import { createWorkspace } from './workspaces.js';
 import { createInvitation, findInvitationByToken, markInvitationAccepted, markInvitationAcceptedIfUnused, isInvitationUsable } from './invitations.js';
@@ -10,7 +10,7 @@ let workspaceId: string;
 let userId: string;
 
 beforeEach(async () => {
-  db = await createDb(':memory:');
+  db = await createTestDb();
   const user = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
   userId = user.id;
   const workspace = await createWorkspace(db, 'W1');

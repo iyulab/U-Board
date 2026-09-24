@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import type { DbClient } from './db.js';
 import type express from 'express';
-import { createDb } from './db.js';
+import { createTestDb } from './test-support/test-db.js';
 import { createApp } from './app.js';
 
 // The realistic trigger: an async route handler whose awaited work rejects. Express 4 does not
@@ -18,7 +18,7 @@ let db: DbClient;
 let app: express.Express;
 
 beforeEach(async () => {
-  db = await createDb(':memory:');
+  db = await createTestDb();
   app = createApp({ db, sessionSecret: SECRET });
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });

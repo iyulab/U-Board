@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import type { DbClient } from '../db.js';
 import type express from 'express';
-import { createDb } from '../db.js';
+import { createTestDb } from '../test-support/test-db.js';
 import { createApp } from '../app.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
@@ -23,7 +23,7 @@ function cookieFor(userId: string, activeWorkspaceId: string) {
 }
 
 beforeEach(async () => {
-  db = await createDb(':memory:');
+  db = await createTestDb();
   app = createApp({ db, sessionSecret: SECRET });
 
   const owner = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });

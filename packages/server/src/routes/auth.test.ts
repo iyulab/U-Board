@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
-import type { DbClient } from '../db.js';
-import { createDb } from '../db.js';
+import { createDb, type DbClient } from '../db.js';
+import { createTestDb } from '../test-support/test-db.js';
 import { createApp } from '../app.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
@@ -13,7 +13,7 @@ let db: DbClient;
 let app: import('express').Express;
 
 beforeEach(async () => {
-  db = await createDb(':memory:');
+  db = await createTestDb();
   app = createApp({ db, sessionSecret: SECRET });
 });
 
@@ -103,7 +103,10 @@ describe('POST /auth/signup', () => {
   it('rolls the entire signup back when a write inside the transaction fails', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     // Makes `addWorkspaceUser` — the last write of the sequence — fail, after the workspace and
-    // the user rows have already been inserted within the same transaction.
+    // the user rows have already been inserted within the same transaction. Dropping a table
+    // changes the schema, so this test gets its own database instead of the shared one.
+    db = await createDb(':memory:');
+    app = createApp({ db, sessionSecret: SECRET });
     await db.query('DROP TABLE workspace_users');
 
     const res = await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });

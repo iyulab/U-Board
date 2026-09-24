@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { DbClient } from '../db.js';
-import { createDb } from '../db.js';
+import { createTestDb } from '../test-support/test-db.js';
 import { createUser } from './users.js';
 import { createWorkspace, addWorkspaceUser, findWorkspaceUser, listWorkspacesForUser, listWorkspaceMembers } from './workspaces.js';
 
 let db: DbClient;
 beforeEach(async () => {
-  db = await createDb(':memory:');
+  db = await createTestDb();
 });
 
 describe('workspace repository', () => {
