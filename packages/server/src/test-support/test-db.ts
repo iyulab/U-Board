@@ -13,6 +13,16 @@ async function listTables(db: DbClient): Promise<string[]> {
   return rows.map(r => r.tablename);
 }
 
+/** Empties every table in the public schema. The table list comes from the catalog rather than
+ *  a hard-coded list, so a table added to the schema later is covered — works against PGlite and a
+ *  real Postgres alike. */
+export async function truncateAllTables(db: DbClient): Promise<void> {
+  const tables = await listTables(db);
+  if (tables.length > 0) {
+    await db.query(`TRUNCATE ${tables.map(t => `"${t}"`).join(', ')} CASCADE`);
+  }
+}
+
 /** A database with the full schema and no rows. Every call in the same test file returns the
  *  same client, emptied — so call it once per test (e.g. in `beforeEach`), not once per suite.
  *
@@ -27,8 +37,6 @@ export async function createTestDb(): Promise<DbClient> {
   })();
   const { db, tables } = await shared;
 
-  // Read the table list from the catalog rather than hard-coding it, so a table added to the
-  // schema later is emptied too.
   const current = await listTables(db);
   if (current.join(',') !== tables) {
     shared = undefined;
@@ -37,6 +45,6 @@ export async function createTestDb(): Promise<DbClient> {
         "can't be reused. Give that test its own database with createDb(':memory:')."
     );
   }
-  await db.query(`TRUNCATE ${current.map(t => `"${t}"`).join(', ')} CASCADE`);
+  await truncateAllTables(db);
   return db;
 }

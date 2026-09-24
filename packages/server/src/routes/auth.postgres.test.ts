@@ -9,6 +9,7 @@ import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { createInvitation } from '../db/invitations.js';
 import { hashPassword } from '../auth/password.js';
+import { truncateAllTables } from '../test-support/test-db.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
 
@@ -48,11 +49,8 @@ describe.skipIf(!dockerAvailable())('POST /auth/signup — real Postgres concurr
 
   afterEach(async () => {
     // One schema for the whole file (container startup is the expensive part) — reset data
-    // between tests instead of restarting the container. All tables in one TRUNCATE so Postgres
-    // doesn't need an explicit dependency order.
-    await db.query(
-      'TRUNCATE password_reset_tokens, workspace_invitations, board_share_tokens, connectors, boards, workspace_users, workspaces, users'
-    );
+    // between tests instead of restarting the container.
+    await truncateAllTables(db);
   });
 
   it('serializes two concurrent open bootstrap signups — only one becomes owner', async () => {
