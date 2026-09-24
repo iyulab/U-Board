@@ -41,7 +41,22 @@ adapter (with SSRF-safe origin pinning and bearer/header auth) is wired into bot
 and the read-only embed viewer. A connector to a specific external system that needs its own
 domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
 until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a
-board can be wired up and previewed before any real connector is configured.
+board can be wired up and previewed before any real connector is configured. The hosted
+applications (see [Repository layout](#repository-layout)) add workspaces with members,
+server-side board storage, managed connectors, and read-only share links.
+
+## Repository layout
+
+| Workspace | Package | What it is |
+|---|---|---|
+| `packages/core` | `@iyulab/u-board` (npm) | The library: view document schema, adapter contract, binding resolution, the canvas rendering pipeline, the authoring UI and the read-only viewer. Everything below this section documents it. |
+| `packages/server` | private | HTTP API for workspaces, members and invitations, sign-in, boards, data connectors, and share links. Stores data in Postgres. |
+| `packages/console` | private | Web console for that API: sign-in, members, board editing (with the authoring UI above), connectors, and issuing share links. |
+| `packages/share` | private | Read-only embed viewer that opens a board from a share link, using only the library's `viewer` entry point. |
+
+The three applications are how U-Board runs as a hosted service; a host application that only
+needs the library does not need any of them. [`CONTRIBUTING.md`](CONTRIBUTING.md) covers building
+and testing the whole workspace.
 
 ## Domain layer
 
