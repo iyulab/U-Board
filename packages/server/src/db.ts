@@ -6,7 +6,8 @@ export interface DbClient {
   withTransaction<T>(fn: (tx: DbClient) => Promise<T>): Promise<T>;
 }
 
-const SCHEMA_SQL = `
+// Exported for the upgrade-path test only, which replays it over a database in an older shape.
+export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
@@ -58,12 +59,38 @@ CREATE TABLE IF NOT EXISTS connectors (
   name TEXT NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('http')),
   base_url TEXT NOT NULL,
-  auth_type TEXT NOT NULL CHECK (auth_type IN ('none', 'bearer', 'header')),
+  auth_type TEXT NOT NULL CHECK (auth_type IN ('none', 'bearer', 'header', 'oauth2-client-credentials')),
   auth_header_name TEXT,
   auth_value TEXT,
+  oauth_token_url TEXT,
+  oauth_client_id TEXT,
+  oauth_scope TEXT,
+  oauth_client_auth TEXT CHECK (oauth_client_auth IN ('basic', 'body')),
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+-- Brings a connectors table created before OAuth2 client credentials support up to the shape
+-- above. Every statement is idempotent, so it runs on every bootstrap: a no-op on a new database
+-- and on one already upgraded. The auth_type CHECK is replaced only while it still lacks the new
+-- value, so an up-to-date database is not re-validated on each start.
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_token_url TEXT;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_client_id TEXT;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_scope TEXT;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_client_auth TEXT CHECK (oauth_client_auth IN ('basic', 'body'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'connectors'::regclass AND conname = 'connectors_auth_type_check'
+      AND pg_get_constraintdef(oid) LIKE '%oauth2-client-credentials%'
+  ) THEN
+    ALTER TABLE connectors DROP CONSTRAINT IF EXISTS connectors_auth_type_check;
+    ALTER TABLE connectors ADD CONSTRAINT connectors_auth_type_check
+      CHECK (auth_type IN ('none', 'bearer', 'header', 'oauth2-client-credentials'));
+  END IF;
+END
+$$;
 
 CREATE INDEX IF NOT EXISTS idx_connectors_workspace_id ON connectors(workspace_id);
 

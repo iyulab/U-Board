@@ -136,9 +136,21 @@ export function deleteBoard(workspaceId: string, boardId: string) {
   return request<void>(`/workspaces/${workspaceId}/boards/${boardId}`, { method: 'DELETE' });
 }
 
-export type ConnectorAuthType = 'none' | 'bearer' | 'header';
+export type ConnectorAuthType = 'none' | 'bearer' | 'header' | 'oauth2-client-credentials';
 
-export interface ConnectorSummary {
+/** How an `oauth2-client-credentials` connector authenticates to its token endpoint: HTTP Basic
+ * (the server default), or client id/secret as form parameters. */
+export type ConnectorOAuthClientAuth = 'basic' | 'body';
+
+/** Non-secret OAuth settings; the client secret travels as `authValue`, like other secrets. */
+export interface ConnectorOAuthSettings {
+  oauthTokenUrl?: string;
+  oauthClientId?: string;
+  oauthScope?: string;
+  oauthClientAuth?: ConnectorOAuthClientAuth;
+}
+
+export interface ConnectorSummary extends ConnectorOAuthSettings {
   id: string;
   name: string;
   type: 'http';
@@ -154,7 +166,7 @@ export function listConnectors(workspaceId: string) {
 
 export function createConnector(
   workspaceId: string,
-  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authValue?: string }
+  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authValue?: string } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors`, {
     method: 'POST',
@@ -165,7 +177,7 @@ export function createConnector(
 export function updateConnector(
   workspaceId: string,
   connectorId: string,
-  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authValue?: string }
+  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authValue?: string } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors/${connectorId}`, {
     method: 'PUT',

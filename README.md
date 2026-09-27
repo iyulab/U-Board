@@ -37,7 +37,8 @@ selected node's widget type, static props, and data bindings, including a path e
 HTTP-shaped adapter responses; a label editor for the selected text decoration), local save
 (export/import), and a read-only viewer mode are implemented and browser-verified.
 Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
-adapter (with SSRF-safe origin pinning and bearer/header auth) is wired into both the authoring UI
+adapter (with SSRF-safe origin pinning, and either static bearer/header credentials or OAuth 2.0
+client credentials with cached, auto-renewed access tokens) is wired into both the authoring UI
 and the read-only embed viewer. A connector to a specific external system that needs its own
 domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
 until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a

@@ -343,3 +343,68 @@ describe('connectors CRUD routes', () => {
     expect((await findConnector(db, workspaceId, connectorId))?.baseUrl).toBe('https://api.example.com');
   });
 });
+
+describe('oauth2-client-credentials connectors', () => {
+  const OAUTH_BODY = {
+    name: 'Platform API', baseUrl: 'https://platform.example.com/api', authType: 'oauth2-client-credentials',
+    oauthTokenUrl: 'https://auth.example.com/token', oauthClientId: 'board-reader', authValue: 'client-secret',
+  };
+
+  function create(body: Record<string, unknown> = OAUTH_BODY) {
+    return request(app).post(`/workspaces/${workspaceId}/connectors`).set('Cookie', ownerCookie).send(body);
+  }
+  function update(id: string, body: Record<string, unknown>) {
+    return request(app).put(`/workspaces/${workspaceId}/connectors/${id}`).set('Cookie', ownerCookie).send(body);
+  }
+
+  it('creates one with HTTP Basic client authentication by default and never returns the secret', async () => {
+    const res = await create({ ...OAUTH_BODY, oauthScope: '  asset.read  ' });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      authType: 'oauth2-client-credentials', oauthTokenUrl: 'https://auth.example.com/token',
+      oauthClientId: 'board-reader', oauthScope: 'asset.read', oauthClientAuth: 'basic',
+    });
+    expect(res.body).not.toHaveProperty('authValue');
+    const list = await request(app).get(`/workspaces/${workspaceId}/connectors`).set('Cookie', memberCookie);
+    expect(list.body.connectors[0]).toMatchObject({ oauthClientId: 'board-reader', oauthClientAuth: 'basic' });
+    expect(list.body.connectors[0]).not.toHaveProperty('authValue');
+    expect((await findConnector(db, workspaceId, res.body.id))?.authValue).toBe('client-secret');
+  });
+
+  it.each([
+    ['no token URL', { oauthTokenUrl: undefined }],
+    ['a token URL that is not absolute http(s)', { oauthTokenUrl: 'ftp://auth.example.com/token' }],
+    ['no client id', { oauthClientId: undefined }],
+    ['no client secret', { authValue: undefined }],
+    ['an unknown client authentication method', { oauthClientAuth: 'private_key_jwt' }],
+  ])('rejects creation with %s', async (_label, override) => {
+    const res = await create({ ...OAUTH_BODY, ...override });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+  });
+
+  it('renames one without re-sending the client id or secret', async () => {
+    const { body: created } = await create();
+    const res = await update(created.id, { name: 'Renamed', authType: 'oauth2-client-credentials' });
+    expect(res.status).toBe(200);
+    const stored = await findConnector(db, workspaceId, created.id);
+    expect(stored).toMatchObject({ name: 'Renamed', oauthClientId: 'board-reader', authValue: 'client-secret' });
+  });
+
+  it('does not reuse a bearer token as the client secret when switching to OAuth', async () => {
+    const { body: created } = await create({ name: 'A', baseUrl: 'https://a.example.com', authType: 'bearer', authValue: 'bearer-token' });
+    const res = await update(created.id, {
+      authType: 'oauth2-client-credentials', oauthTokenUrl: 'https://auth.example.com/token', oauthClientId: 'c',
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('clears the OAuth settings when switching to bearer', async () => {
+    const { body: created } = await create();
+    const res = await update(created.id, { authType: 'bearer', authValue: 'new-token' });
+    expect(res.status).toBe(200);
+    expect(res.body).not.toHaveProperty('oauthTokenUrl');
+    const stored = await findConnector(db, workspaceId, created.id);
+    expect(stored).toMatchObject({ authType: 'bearer', authValue: 'new-token', oauthTokenUrl: undefined, oauthClientId: undefined });
+  });
+});

@@ -1,30 +1,50 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
+import type { ClientAuthMethod } from '../oauth-client-credentials.js';
 
-export interface Connector {
+export type ConnectorAuthType = 'none' | 'bearer' | 'header' | 'oauth2-client-credentials';
+
+/** The non-secret half of an `oauth2-client-credentials` connector's configuration. The client
+ * secret lives in `authValue`, like every other connector secret, so it gets the same handling
+ * (never listed, kept on edit when omitted). */
+export interface ConnectorOAuthSettings {
+  oauthTokenUrl?: string;
+  oauthClientId?: string;
+  oauthScope?: string;
+  oauthClientAuth?: ClientAuthMethod;
+}
+
+export interface Connector extends ConnectorOAuthSettings {
   id: string;
   workspaceId: string;
   name: string;
   type: 'http';
   baseUrl: string;
-  authType: 'none' | 'bearer' | 'header';
+  authType: ConnectorAuthType;
   authHeaderName?: string;
   authValue?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface ConnectorSummary {
+export interface ConnectorSummary extends ConnectorOAuthSettings {
   id: string;
   name: string;
   type: 'http';
   baseUrl: string;
-  authType: 'none' | 'bearer' | 'header';
+  authType: ConnectorAuthType;
   authHeaderName?: string;
   updatedAt: string;
 }
 
-interface ConnectorRow {
+interface OAuthColumns {
+  oauth_token_url: string | null;
+  oauth_client_id: string | null;
+  oauth_scope: string | null;
+  oauth_client_auth: string | null;
+}
+
+interface ConnectorRow extends OAuthColumns {
   id: string;
   workspace_id: string;
   name: string;
@@ -37,7 +57,7 @@ interface ConnectorRow {
   updated_at: string;
 }
 
-interface ConnectorSummaryRow {
+interface ConnectorSummaryRow extends OAuthColumns {
   id: string;
   name: string;
   type: string;
@@ -47,6 +67,15 @@ interface ConnectorSummaryRow {
   updated_at: string;
 }
 
+function oauthSettingsFromRow(row: OAuthColumns): ConnectorOAuthSettings {
+  return {
+    oauthTokenUrl: row.oauth_token_url ?? undefined,
+    oauthClientId: row.oauth_client_id ?? undefined,
+    oauthScope: row.oauth_scope ?? undefined,
+    oauthClientAuth: (row.oauth_client_auth as ClientAuthMethod | null) ?? undefined,
+  };
+}
+
 function rowToConnector(row: ConnectorRow): Connector {
   return {
     id: row.id,
@@ -54,9 +83,10 @@ function rowToConnector(row: ConnectorRow): Connector {
     name: row.name,
     type: row.type as 'http',
     baseUrl: row.base_url,
-    authType: row.auth_type as Connector['authType'],
+    authType: row.auth_type as ConnectorAuthType,
     authHeaderName: row.auth_header_name ?? undefined,
     authValue: row.auth_value ?? undefined,
+    ...oauthSettingsFromRow(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -68,10 +98,10 @@ export async function createConnector(
     workspaceId: string;
     name: string;
     baseUrl: string;
-    authType: 'none' | 'bearer' | 'header';
+    authType: ConnectorAuthType;
     authHeaderName?: string;
     authValue?: string;
-  }
+  } & ConnectorOAuthSettings
 ): Promise<Connector> {
   const now = new Date().toISOString();
   const connector: Connector = {
@@ -83,16 +113,22 @@ export async function createConnector(
     authType: input.authType,
     authHeaderName: input.authHeaderName,
     authValue: input.authValue,
+    oauthTokenUrl: input.oauthTokenUrl,
+    oauthClientId: input.oauthClientId,
+    oauthScope: input.oauthScope,
+    oauthClientAuth: input.oauthClientAuth,
     createdAt: now,
     updatedAt: now,
   };
   await db.query(
-    `INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_header_name, auth_value, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    `INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_header_name, auth_value,
+       oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
     [
       connector.id, connector.workspaceId, connector.name, connector.type, connector.baseUrl,
       connector.authType, connector.authHeaderName ?? null, connector.authValue ?? null,
-      connector.createdAt, connector.updatedAt,
+      connector.oauthTokenUrl ?? null, connector.oauthClientId ?? null, connector.oauthScope ?? null,
+      connector.oauthClientAuth ?? null, connector.createdAt, connector.updatedAt,
     ]
   );
   return connector;
@@ -100,7 +136,9 @@ export async function createConnector(
 
 export async function listConnectorsForWorkspace(db: DbClient, workspaceId: string): Promise<ConnectorSummary[]> {
   const { rows } = await db.query<ConnectorSummaryRow>(
-    `SELECT id, name, type, base_url, auth_type, auth_header_name, updated_at FROM connectors WHERE workspace_id = $1`,
+    `SELECT id, name, type, base_url, auth_type, auth_header_name,
+            oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, updated_at
+     FROM connectors WHERE workspace_id = $1`,
     [workspaceId]
   );
   return rows.map(r => ({
@@ -108,8 +146,9 @@ export async function listConnectorsForWorkspace(db: DbClient, workspaceId: stri
     name: r.name,
     type: r.type as 'http',
     baseUrl: r.base_url,
-    authType: r.auth_type as Connector['authType'],
+    authType: r.auth_type as ConnectorAuthType,
     authHeaderName: r.auth_header_name ?? undefined,
+    ...oauthSettingsFromRow(r),
     updatedAt: r.updated_at,
   }));
 }
@@ -126,9 +165,12 @@ export async function updateConnector(
   input: {
     name?: string;
     baseUrl?: string;
-    authType?: 'none' | 'bearer' | 'header';
+    authType?: ConnectorAuthType;
     authHeaderName?: string | null;
     authValue?: string | null;
+    /** `undefined` leaves the stored OAuth settings alone; `null` clears them (the connector is
+     * leaving OAuth); an object replaces them as a set. */
+    oauth?: ConnectorOAuthSettings | null;
   }
 ): Promise<Connector | undefined> {
   const existing = await findConnector(db, workspaceId, connectorId);
@@ -137,6 +179,13 @@ export async function updateConnector(
   // Distinguish undefined (don't touch) from null (explicitly clear)
   const authHeaderName = input.authHeaderName === undefined ? existing.authHeaderName : (input.authHeaderName ?? undefined);
   const authValue = input.authValue === undefined ? existing.authValue : (input.authValue ?? undefined);
+  const oauthSource = input.oauth === undefined ? existing : (input.oauth ?? {});
+  const oauth: ConnectorOAuthSettings = {
+    oauthTokenUrl: oauthSource.oauthTokenUrl,
+    oauthClientId: oauthSource.oauthClientId,
+    oauthScope: oauthSource.oauthScope,
+    oauthClientAuth: oauthSource.oauthClientAuth,
+  };
 
   const updated: Connector = {
     ...existing,
@@ -145,12 +194,18 @@ export async function updateConnector(
     authType: input.authType ?? existing.authType,
     authHeaderName,
     authValue,
+    ...oauth,
     updatedAt: new Date().toISOString(),
   };
   await db.query(
-    `UPDATE connectors SET name = $1, base_url = $2, auth_type = $3, auth_header_name = $4, auth_value = $5, updated_at = $6
-     WHERE id = $7 AND workspace_id = $8`,
-    [updated.name, updated.baseUrl, updated.authType, authHeaderName ?? null, authValue ?? null, updated.updatedAt, connectorId, workspaceId]
+    `UPDATE connectors SET name = $1, base_url = $2, auth_type = $3, auth_header_name = $4, auth_value = $5,
+       oauth_token_url = $6, oauth_client_id = $7, oauth_scope = $8, oauth_client_auth = $9, updated_at = $10
+     WHERE id = $11 AND workspace_id = $12`,
+    [
+      updated.name, updated.baseUrl, updated.authType, authHeaderName ?? null, authValue ?? null,
+      oauth.oauthTokenUrl ?? null, oauth.oauthClientId ?? null, oauth.oauthScope ?? null, oauth.oauthClientAuth ?? null,
+      updated.updatedAt, connectorId, workspaceId,
+    ]
   );
   return updated;
 }

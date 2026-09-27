@@ -1,10 +1,19 @@
 import type { Connector } from './db/connectors.js';
+import type { ClientCredentials, ClientCredentialsTokens } from './oauth-client-credentials.js';
 
 export type ResolveQuality = 'live' | 'stale' | 'disconnected';
 
 export interface ResolveResult {
   value: unknown;
   quality: ResolveQuality;
+}
+
+/** Process-wide state the resolve proxy keeps between requests. */
+export interface ResolveState {
+  /** Last value resolved per connector and ref, so a failure can degrade to `stale`. */
+  values: Map<string, unknown>;
+  /** Access tokens for `oauth2-client-credentials` connectors. */
+  tokens: ClientCredentialsTokens;
 }
 
 function getByPath(obj: unknown, path: string): unknown {
@@ -59,38 +68,70 @@ export function buildResolveTarget(connector: Connector, ref: { path: string }):
   return target;
 }
 
+function clientCredentialsOf(connector: Connector): ClientCredentials {
+  if (!connector.oauthTokenUrl || !connector.oauthClientId || !connector.authValue) {
+    throw new Error('connector is missing its OAuth client credentials');
+  }
+  return {
+    cacheKey: connector.id,
+    tokenUrl: connector.oauthTokenUrl,
+    clientId: connector.oauthClientId,
+    clientSecret: connector.authValue,
+    scope: connector.oauthScope,
+    clientAuth: connector.oauthClientAuth ?? 'basic',
+  };
+}
+
+async function authHeaders(connector: Connector, tokens: ClientCredentialsTokens): Promise<Record<string, string>> {
+  switch (connector.authType) {
+    case 'bearer':
+      return { Authorization: `Bearer ${connector.authValue}` };
+    case 'header':
+      return connector.authHeaderName ? { [connector.authHeaderName]: connector.authValue ?? '' } : {};
+    case 'oauth2-client-credentials':
+      return { Authorization: `Bearer ${await tokens.get(clientCredentialsOf(connector))}` };
+    default:
+      return {};
+  }
+}
+
 /** Fetches `target` with `connector`'s auth headers, caching the last-known value so a failure
  * can degrade to `stale` instead of `disconnected` when something was resolved before. Never
  * throws — a fetch/parse failure becomes a `disconnected`/`stale` result, not an exception,
- * because resolve is a status-carrying endpoint. */
+ * because resolve is a status-carrying endpoint. That includes failing to obtain an OAuth access
+ * token: the binding is as unavailable as if the data source itself had not answered.
+ *
+ * An OAuth connector whose token is rejected (401) gets one fresh token and one retry — the
+ * authorization server may revoke a token before the expiry it advertised. */
 export async function resolveConnectorValue(
   connector: Connector,
   target: URL,
   ref: { path: string; valuePath?: string },
-  cache: Map<string, unknown>
+  state: ResolveState
 ): Promise<ResolveResult> {
   const cacheKey = `${connector.id}:${JSON.stringify(ref)}`;
 
-  const headers: Record<string, string> = {};
-  if (connector.authType === 'bearer') headers.Authorization = `Bearer ${connector.authValue}`;
-  if (connector.authType === 'header' && connector.authHeaderName) {
-    headers[connector.authHeaderName] = connector.authValue ?? '';
-  }
+  // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
+  // compromised upstream must not be able to bounce the credentialed request to a host of its
+  // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
+  const send = async () =>
+    fetch(target, { headers: await authHeaders(connector, state.tokens), redirect: 'manual', signal: AbortSignal.timeout(5000) });
 
   try {
-    // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
-    // compromised upstream must not be able to bounce the credentialed request to a host of its
-    // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
-    const response = await fetch(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
+    let response = await send();
+    if (response.status === 401 && connector.authType === 'oauth2-client-credentials') {
+      state.tokens.invalidate(connector.id);
+      response = await send();
+    }
     if (!response.ok) throw new Error(`upstream responded ${response.status}`);
     const contentType = response.headers.get('content-type') ?? '';
     const body = contentType.includes('json') ? await response.json() : await response.text();
     const value = ref.valuePath ? getByPath(body, ref.valuePath) : body;
-    cache.set(cacheKey, value);
+    state.values.set(cacheKey, value);
     return { value, quality: 'live' };
   } catch {
-    if (cache.has(cacheKey)) {
-      return { value: cache.get(cacheKey), quality: 'stale' };
+    if (state.values.has(cacheKey)) {
+      return { value: state.values.get(cacheKey), quality: 'stale' };
     }
     return { value: undefined, quality: 'disconnected' };
   }

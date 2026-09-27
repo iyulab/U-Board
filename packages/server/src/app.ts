@@ -10,6 +10,8 @@ import { createBoardsRouter } from './routes/boards.js';
 import { createBoardShareTokensRouter } from './routes/board-share-tokens.js';
 import { createConnectorsRouter } from './routes/connectors.js';
 import { createShareRouter } from './routes/share.js';
+import { ClientCredentialsTokens } from './oauth-client-credentials.js';
+import type { ResolveState } from './resolve-connector.js';
 
 export interface AppConfig {
   db: DbClient;
@@ -53,7 +55,9 @@ export function createApp(config: AppConfig): express.Express {
   // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
   app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
-  const resolveCache = new Map<string, unknown>();
+  // Per-process resolve state shared by the member and share-link resolve routes: last-known values
+  // (so a failure can degrade to `stale`) and OAuth access tokens.
+  const resolveState: ResolveState = { values: new Map(), tokens: new ClientCredentialsTokens() };
   const authRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,
@@ -84,8 +88,8 @@ export function createApp(config: AppConfig): express.Express {
   app.use('/workspaces', createWorkspacesRouter(config));
   app.use('/workspaces/:workspaceId/boards', createBoardsRouter(config));
   app.use('/workspaces/:workspaceId/boards/:boardId/share-tokens', createBoardShareTokensRouter(config));
-  app.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveCache));
-  app.use('/share', createShareRouter(config, resolveCache));
+  app.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveState));
+  app.use('/share', createShareRouter(config, resolveState));
   // Must stay last: Express only reaches an error handler registered AFTER the layer that
   // failed, so anything mounted below this line would bypass it.
   app.use(errorHandler);

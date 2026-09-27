@@ -165,3 +165,66 @@ describe('connector resolve proxy', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('connector resolve proxy with an oauth2-client-credentials connector', () => {
+  let oauthConnectorId: string;
+  const TOKEN_URL = 'https://auth.example.com/token';
+
+  function tokenResponse(accessToken: string) {
+    return { ok: true, status: 200, json: async () => ({ access_token: accessToken, token_type: 'Bearer', expires_in: 3600 }) };
+  }
+  function resolve() {
+    return request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${oauthConnectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/assets/7', valuePath: 'status' } });
+  }
+
+  beforeEach(async () => {
+    const owner = (await db.query<{ id: string }>(`SELECT id FROM users WHERE email = 'owner@x.com'`)).rows[0];
+    const create = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors`)
+      .set('Cookie', cookieFor(owner.id, workspaceId))
+      .send({
+        name: 'Platform', baseUrl: 'https://platform.example.com', authType: 'oauth2-client-credentials',
+        oauthTokenUrl: TOKEN_URL, oauthClientId: 'board-reader', authValue: 'client-secret',
+      });
+    oauthConnectorId = create.body.id;
+  });
+
+  it('obtains a token and sends it as a Bearer credential, reusing it for the next resolve', async () => {
+    (fetch as any)
+      .mockResolvedValueOnce(tokenResponse('tok-1'))
+      .mockResolvedValueOnce(jsonResponse({ status: 'running' }))
+      .mockResolvedValueOnce(jsonResponse({ status: 'stopped' }));
+
+    expect((await resolve()).body).toEqual({ value: 'running', quality: 'live' });
+    expect((await resolve()).body).toEqual({ value: 'stopped', quality: 'live' });
+
+    const calls = (fetch as any).mock.calls;
+    expect(calls).toHaveLength(3);
+    expect(calls[0][0]).toBe(TOKEN_URL);
+    expect(String(calls[1][0])).toBe('https://platform.example.com/assets/7');
+    expect(calls[1][1].headers).toEqual({ Authorization: 'Bearer tok-1' });
+    expect(calls[2][1].headers).toEqual({ Authorization: 'Bearer tok-1' });
+  });
+
+  it('gets a fresh token and retries once when the data source rejects the token', async () => {
+    (fetch as any)
+      .mockResolvedValueOnce(tokenResponse('revoked'))
+      .mockResolvedValueOnce({ ok: false, status: 401, headers: { get: () => null } })
+      .mockResolvedValueOnce(tokenResponse('tok-2'))
+      .mockResolvedValueOnce(jsonResponse({ status: 'running' }));
+
+    expect((await resolve()).body).toEqual({ value: 'running', quality: 'live' });
+    expect((fetch as any).mock.calls[3][1].headers).toEqual({ Authorization: 'Bearer tok-2' });
+  });
+
+  it('reports disconnected, not an error, when no token can be obtained', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: 'invalid_client' }) });
+    const res = await resolve();
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
+    expect(fetch).toHaveBeenCalledTimes(1); // the data source is never called without a token
+  });
+});

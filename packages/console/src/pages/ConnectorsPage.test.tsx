@@ -243,4 +243,57 @@ describe('ConnectorsPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 삭제에 실패했습니다');
   });
+
+  it('creates an OAuth 2.0 client credentials connector with its token endpoint settings', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.createConnector).mockResolvedValue(CONNECTOR);
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    const addButton = await screen.findByRole('button', { name: '데이터소스 추가' });
+    fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Platform' } });
+    fireEvent.change(screen.getByLabelText('Base URL'), { target: { value: 'https://platform.example.com' } });
+    fireEvent.change(screen.getByLabelText('인증 방식'), { target: { value: 'oauth2-client-credentials' } });
+    fireEvent.change(screen.getByLabelText('토큰 URL'), { target: { value: 'https://auth.example.com/token' } });
+    fireEvent.change(screen.getByLabelText('클라이언트 ID'), { target: { value: 'board-reader' } });
+    fireEvent.change(screen.getByLabelText('클라이언트 시크릿'), { target: { value: 's3cret' } });
+    fireEvent.change(screen.getByLabelText('스코프(선택)'), { target: { value: 'asset.read' } });
+    fireEvent.click(addButton);
+
+    await waitFor(() => expect(api.createConnector).toHaveBeenCalledWith('w1', {
+      name: 'Platform', baseUrl: 'https://platform.example.com', authType: 'oauth2-client-credentials',
+      authValue: 's3cret', oauthTokenUrl: 'https://auth.example.com/token', oauthClientId: 'board-reader',
+      oauthScope: 'asset.read', oauthClientAuth: 'basic',
+    }));
+  });
+
+  it('prefills OAuth settings on edit, and asks for a new secret when switching a bearer connector to OAuth', async () => {
+    const oauthConnector = {
+      id: 'c3', name: 'Platform', type: 'http' as const, baseUrl: 'https://platform.example.com',
+      authType: 'oauth2-client-credentials' as const, oauthTokenUrl: 'https://auth.example.com/token',
+      oauthClientId: 'board-reader', oauthClientAuth: 'body' as const, updatedAt: 't',
+    };
+    const bearerConnector = { ...CONNECTOR, id: 'c4', name: 'Bearer API', authType: 'bearer' as const };
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [oauthConnector, bearerConnector] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Platform 수정' }));
+    expect((screen.getByLabelText('토큰 URL') as HTMLInputElement).value).toBe('https://auth.example.com/token');
+    expect((screen.getByLabelText('클라이언트 ID') as HTMLInputElement).value).toBe('board-reader');
+    expect((screen.getByLabelText('클라이언트 인증 방식') as HTMLSelectElement).value).toBe('body');
+    expect(screen.getByLabelText('클라이언트 시크릿(변경 시에만 입력)')).not.toBeRequired();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bearer API 수정' }));
+    fireEvent.change(screen.getByLabelText('인증 방식'), { target: { value: 'oauth2-client-credentials' } });
+    expect(screen.getByLabelText('클라이언트 시크릿')).toBeRequired();
+  });
 });

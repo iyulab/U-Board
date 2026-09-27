@@ -10,15 +10,22 @@ import {
   updateConnector,
   deleteConnector,
   type Connector,
+  type ConnectorOAuthSettings,
+  type ConnectorSummary,
 } from '../db/connectors.js';
-import { isValidRef, buildResolveTarget, resolveConnectorValue } from '../resolve-connector.js';
+import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from '../resolve-connector.js';
 
-const AUTH_TYPES = new Set(['none', 'bearer', 'header']);
+const OAUTH = 'oauth2-client-credentials';
+const AUTH_TYPES = new Set(['none', 'bearer', 'header', OAUTH]);
+const CLIENT_AUTH_METHODS = new Set(['basic', 'body']);
 
 /**
- * A connector's baseUrl must be an absolute http(s) URL. The scheme allowlist is load-bearing,
- * not cosmetic: the resolve proxy pins the request target to the baseUrl's origin, and a
- * non-special scheme has the opaque origin `"null"`, which would make that comparison vacuous.
+ * A connector's baseUrl (and an OAuth connector's token URL) must be an absolute http(s) URL. The
+ * scheme allowlist is load-bearing, not cosmetic: the resolve proxy pins the request target to the
+ * baseUrl's origin, and a non-special scheme has the opaque origin `"null"`, which would make that
+ * comparison vacuous. The token URL is deliberately *not* pinned to the baseUrl's origin — an
+ * authorization server commonly lives on its own host — and needs no pinning: unlike `ref.path`,
+ * it is set only by the workspace owner, who also supplied the secret it receives.
  */
 function parseBaseUrl(value: unknown): URL | null {
   if (typeof value !== 'string' || value.trim() === '') return null;
@@ -52,13 +59,44 @@ function validateAuthFields(body: any, existing?: Connector): string | null {
     if (!authFieldSatisfied(body.authHeaderName, storedHeaderName)) return 'INVALID_INPUT';
   }
   if (body.authType !== 'none') {
-    const storedValue = existing?.authType === 'none' ? undefined : existing?.authValue;
+    // A bearer token and a header value are the same kind of secret, so switching between those
+    // two may keep it; an OAuth client secret is not, so crossing into or out of OAuth needs a
+    // new one.
+    const sameKindOfSecret = existing !== undefined && existing.authType !== 'none' && (existing.authType === OAUTH) === (body.authType === OAUTH);
+    const storedValue = sameKindOfSecret ? existing.authValue : undefined;
     if (!authFieldSatisfied(body.authValue, storedValue)) return 'INVALID_INPUT';
+  }
+  if (body.authType === OAUTH) {
+    const stored = existing?.authType === OAUTH ? existing : undefined;
+    if (body.oauthTokenUrl === undefined ? !stored?.oauthTokenUrl : !parseBaseUrl(body.oauthTokenUrl)) return 'INVALID_INPUT';
+    if (!authFieldSatisfied(body.oauthClientId, stored?.oauthClientId)) return 'INVALID_INPUT';
+    if (body.oauthScope !== undefined && body.oauthScope !== null && typeof body.oauthScope !== 'string') return 'INVALID_INPUT';
+    if (body.oauthClientAuth !== undefined && !CLIENT_AUTH_METHODS.has(body.oauthClientAuth)) return 'INVALID_INPUT';
   }
   return null;
 }
 
-export function createConnectorsRouter(config: AppConfig, resolveCache: Map<string, unknown>): Router {
+/** The OAuth settings to store for a validated `oauth2-client-credentials` request: supplied
+ * fields win, omitted ones keep what an OAuth connector already had. The client authentication
+ * method defaults to HTTP Basic, the one every authorization server must support (RFC 6749
+ * §2.3.1); a blank scope means "no scope parameter". */
+function oauthSettings(body: any, existing?: Connector): ConnectorOAuthSettings {
+  const stored = existing?.authType === OAUTH ? existing : undefined;
+  const scope = body.oauthScope === undefined ? stored?.oauthScope : body.oauthScope;
+  return {
+    oauthTokenUrl: body.oauthTokenUrl ?? stored?.oauthTokenUrl,
+    oauthClientId: body.oauthClientId ?? stored?.oauthClientId,
+    oauthScope: typeof scope === 'string' && scope.trim() !== '' ? scope.trim() : undefined,
+    oauthClientAuth: body.oauthClientAuth ?? stored?.oauthClientAuth ?? 'basic',
+  };
+}
+
+function toSummary(connector: Connector): ConnectorSummary {
+  const { workspaceId: _workspaceId, authValue: _authValue, createdAt: _createdAt, ...summary } = connector;
+  return summary;
+}
+
+export function createConnectorsRouter(config: AppConfig, resolveState: ResolveState): Router {
   const { db, sessionSecret } = config;
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent mount path
   router.use(requireAuth(db, sessionSecret));
@@ -89,11 +127,9 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       authType: body.authType,
       authHeaderName: body.authType === 'header' ? body.authHeaderName : undefined,
       authValue: body.authType === 'none' ? undefined : body.authValue,
+      ...(body.authType === OAUTH ? oauthSettings(body) : {}),
     });
-    res.status(201).json({
-      id: connector.id, name: connector.name, type: connector.type, baseUrl: connector.baseUrl,
-      authType: connector.authType, authHeaderName: connector.authHeaderName, updatedAt: connector.updatedAt,
-    });
+    res.status(201).json(toSummary(connector));
   }));
 
   router.put('/:connectorId', requireWorkspaceOwner(db), asyncHandler(async (req, res) => {
@@ -126,8 +162,12 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
     // - authType === 'none': explicitly clear both authHeaderName and authValue
     // - authType === 'header': set authHeaderName to new value, clear authValue if not provided
     // - authType === 'bearer': clear authHeaderName, keep or set authValue if provided
+    // - authType === OAUTH: clear authHeaderName, keep or set authValue (the client secret)
+    // Leaving OAuth for any other type clears the OAuth settings along with it.
     let authHeaderName: string | null | undefined;
     let authValue: string | null | undefined;
+    let oauth: ConnectorOAuthSettings | null | undefined;
+    if (body.authType !== undefined) oauth = body.authType === OAUTH ? oauthSettings(body, existing) : null;
     if (body.authType === undefined) {
       authHeaderName = undefined;
       authValue = undefined;
@@ -137,7 +177,7 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
     } else if (body.authType === 'header') {
       authHeaderName = body.authHeaderName;
       authValue = body.authValue ?? undefined;
-    } else if (body.authType === 'bearer') {
+    } else if (body.authType === 'bearer' || body.authType === OAUTH) {
       authHeaderName = null;
       authValue = body.authValue ?? undefined;
     }
@@ -147,15 +187,13 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       authType: body.authType,
       authHeaderName,
       authValue,
+      oauth,
     });
     if (!updated) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    res.status(200).json({
-      id: updated.id, name: updated.name, type: updated.type, baseUrl: updated.baseUrl,
-      authType: updated.authType, authHeaderName: updated.authHeaderName, updatedAt: updated.updatedAt,
-    });
+    res.status(200).json(toSummary(updated));
   }));
 
   router.delete('/:connectorId', requireWorkspaceOwner(db), asyncHandler(async (req, res) => {
@@ -183,7 +221,7 @@ export function createConnectorsRouter(config: AppConfig, resolveCache: Map<stri
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    const result = await resolveConnectorValue(connector, target, ref, resolveCache);
+    const result = await resolveConnectorValue(connector, target, ref, resolveState);
     res.status(200).json(result);
   }));
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createDb } from './db.js';
+import { PGlite } from '@electric-sql/pglite';
+import { createDb, SCHEMA_SQL } from './db.js';
 
 describe('createDb', () => {
   it('creates all eight tables on an in-memory (PGlite) database', async () => {
@@ -76,5 +77,40 @@ describe('createDb', () => {
         new Promise((_, reject) => setTimeout(() => reject(new Error('timed out — likely deadlocked')), 2000)),
       ])
     ).rejects.toThrow(/nested transactions are not supported/);
+  });
+
+  it('upgrades a connectors table from before OAuth2 support without losing rows, idempotently', async () => {
+    const pglite = new PGlite();
+    await pglite.exec(SCHEMA_SQL);
+    // Put the table back in its earlier shape: no oauth columns, auth_type limited to three values.
+    await pglite.exec(`
+      ALTER TABLE connectors DROP COLUMN oauth_token_url, DROP COLUMN oauth_client_id,
+        DROP COLUMN oauth_scope, DROP COLUMN oauth_client_auth;
+      ALTER TABLE connectors DROP CONSTRAINT connectors_auth_type_check;
+      ALTER TABLE connectors ADD CONSTRAINT connectors_auth_type_check CHECK (auth_type IN ('none', 'bearer', 'header'));
+      INSERT INTO workspaces (id, name, created_at) VALUES ('w1', 'W', now());
+      INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_value, created_at, updated_at)
+        VALUES ('c1', 'w1', 'Old', 'http', 'https://a.example.com', 'bearer', 'tok', 't', 't');
+    `);
+
+    await pglite.exec(SCHEMA_SQL);
+    await pglite.exec(SCHEMA_SQL); // a second start against the upgraded database is a no-op
+
+    const old = await pglite.query<{ auth_type: string; auth_value: string }>(`SELECT auth_type, auth_value FROM connectors WHERE id = 'c1'`);
+    expect(old.rows).toEqual([{ auth_type: 'bearer', auth_value: 'tok' }]);
+    await pglite.exec(`
+      INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_value,
+        oauth_token_url, oauth_client_id, oauth_client_auth, created_at, updated_at)
+      VALUES ('c2', 'w1', 'New', 'http', 'https://a.example.com', 'oauth2-client-credentials', 'secret',
+        'https://auth.example.com/token', 'client', 'basic', 't', 't');
+    `);
+    await expect(
+      pglite.exec(`UPDATE connectors SET auth_type = 'bogus' WHERE id = 'c1'`)
+    ).rejects.toThrow(/connectors_auth_type_check/);
+    await expect(
+      pglite.exec(`UPDATE connectors SET oauth_client_auth = 'bogus' WHERE id = 'c2'`)
+    ).rejects.toThrow(/check constraint/);
+    const constraints = await pglite.query(`SELECT 1 FROM pg_constraint WHERE conrelid = 'connectors'::regclass AND conname = 'connectors_auth_type_check'`);
+    expect(constraints.rows).toHaveLength(1);
   });
 });

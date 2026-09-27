@@ -6,7 +6,7 @@ import { findBoard } from '../db/boards.js';
 import { findConnector } from '../db/connectors.js';
 import { findBoardShareTokenByHash, touchBoardShareTokenLastUsed, type BoardShareToken } from '../db/board-share-tokens.js';
 import { hashShareToken } from './board-share-tokens.js';
-import { isValidRef, buildResolveTarget, resolveConnectorValue } from '../resolve-connector.js';
+import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from '../resolve-connector.js';
 
 /** Every `(connectorId, ref)` pair a document's widgets declare via their bindings — the single
  * traversal `referencedConnectorIds` and `isDeclaredBinding` below both build on, so the
@@ -53,7 +53,7 @@ function isDeclaredBinding(doc: ViewDocument, connectorId: string, ref: unknown)
   return false;
 }
 
-export function createShareRouter(config: AppConfig, resolveCache: Map<string, unknown>): Router {
+export function createShareRouter(config: AppConfig, resolveState: ResolveState): Router {
   const { db } = config;
   const router = Router();
 
@@ -116,7 +116,7 @@ export function createShareRouter(config: AppConfig, resolveCache: Map<string, u
       return;
     }
     await touchBoardShareTokenLastUsed(db, token.id);
-    const result = await resolveConnectorValue(connector, target, ref, resolveCache);
+    const result = await resolveConnectorValue(connector, target, ref, resolveState);
     res.status(200).json(result);
   }));
 
