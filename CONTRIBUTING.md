@@ -62,9 +62,12 @@ npm run build        # all packages
 npm run test:e2e     # Playwright (canvas rendering, console flows)
 ```
 
-CI runs the same checks plus a real-Postgres concurrency suite; see
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml). Run `npm run typecheck` and `npm test`
-locally before opening a pull request.
+CI runs the same checks plus a real-Postgres concurrency suite and two repository checks:
+`npm run check:pin-drift` (sibling packages not left behind their published versions) and
+`npm run check:public-text` (no private tracking ids, local paths, or hosts outside the
+allowlist in [`scripts/check-public-text.mjs`](scripts/check-public-text.mjs) — a link to a new
+public site means adding it there). See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Run `npm run typecheck` and `npm test` locally before opening a pull request.
 
 ## Pull requests
 

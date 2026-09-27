@@ -39,6 +39,13 @@ jobs:
       - name: Pin drift (sibling packages)
         run: npm run check:pin-drift
 
+      # This repository is public: tracked text must not carry work-tracking ids, paths into
+      # private notes or a local machine, or hosts of real deployments. Hosts are checked against
+      # an allowlist rather than a denylist, which would itself publish them (see
+      # scripts/check-public-text.mjs).
+      - name: Public text (no private context)
+        run: npm run check:public-text
+
       - name: Typecheck
         run: npm run typecheck
 

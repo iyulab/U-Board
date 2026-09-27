@@ -50,8 +50,8 @@ export function readWorkspacePackageNames(rootDir = process.cwd()) {
 }
 
 // A pin more than one major version behind, or 5+ minors behind, is treated as neglect rather
-// than a deliberate not-yet-adopted range — mirrors the central pin-drift policy's threshold
-// (`~/.claude/CLAUDE.md` §2: major diff, or a minor gap past a configured count).
+// than a deliberate not-yet-adopted range: small gaps are tolerated, and anything past this
+// threshold fails.
 export const MINOR_GAP_THRESHOLD = 5;
 
 export function parseVersion(v) {
