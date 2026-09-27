@@ -14,6 +14,22 @@ export interface ResolveState {
   values: Map<string, unknown>;
   /** Access tokens for `oauth2-client-credentials` connectors. */
   tokens: ClientCredentialsTokens;
+  /** The failure currently logged per connector and ref (same key as `values`). A binding polled
+   * against a data source that is down fails on every poll; logging only when the failure starts,
+   * changes, or clears keeps the log a record of what happened rather than a repeat of it. */
+  failures: Map<string, string>;
+}
+
+type ResolveStage = 'token' | 'request' | 'response';
+
+/** A loggable reason for a failure — never the request itself, whose headers carry credentials. */
+function describeFailure(err: unknown): string {
+  if (err instanceof Error) {
+    if (err.name === 'TimeoutError') return 'timed out';
+    const code = (err.cause as { code?: unknown } | undefined)?.code;
+    return typeof code === 'string' ? `${err.message} (${code})` : err.message;
+  }
+  return String(err);
 }
 
 function getByPath(obj: unknown, path: string): unknown {
@@ -114,8 +130,14 @@ export async function resolveConnectorValue(
   // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
   // compromised upstream must not be able to bounce the credentialed request to a host of its
   // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
-  const send = async () =>
-    fetch(target, { headers: await authHeaders(connector, state.tokens), redirect: 'manual', signal: AbortSignal.timeout(5000) });
+  let stage: ResolveStage = 'request';
+  const send = async () => {
+    stage = 'token';
+    const headers = await authHeaders(connector, state.tokens);
+    stage = 'request';
+    return fetch(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
+  };
+  const where = `[resolve] connector ${connector.id} ${ref.path}`;
 
   try {
     let response = await send();
@@ -124,15 +146,20 @@ export async function resolveConnectorValue(
       response = await send();
     }
     if (!response.ok) throw new Error(`upstream responded ${response.status}`);
+    stage = 'response';
     const contentType = response.headers.get('content-type') ?? '';
     const body = contentType.includes('json') ? await response.json() : await response.text();
     const value = ref.valuePath ? getByPath(body, ref.valuePath) : body;
     state.values.set(cacheKey, value);
+    if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
     return { value, quality: 'live' };
-  } catch {
-    if (state.values.has(cacheKey)) {
-      return { value: state.values.get(cacheKey), quality: 'stale' };
+  } catch (err) {
+    const stale = state.values.has(cacheKey);
+    const failure = `${stage} failed: ${describeFailure(err)}`;
+    if (state.failures.get(cacheKey) !== failure) {
+      state.failures.set(cacheKey, failure);
+      console.warn(`${where}: ${failure} — ${stale ? 'serving the last value as stale' : 'no value to serve'}`);
     }
-    return { value: undefined, quality: 'disconnected' };
+    return stale ? { value: state.values.get(cacheKey), quality: 'stale' } : { value: undefined, quality: 'disconnected' };
   }
 }

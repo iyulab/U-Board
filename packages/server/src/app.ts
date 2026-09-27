@@ -56,8 +56,8 @@ export function createApp(config: AppConfig): express.Express {
   app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
   // Per-process resolve state shared by the member and share-link resolve routes: last-known values
-  // (so a failure can degrade to `stale`) and OAuth access tokens.
-  const resolveState: ResolveState = { values: new Map(), tokens: new ClientCredentialsTokens() };
+  // (so a failure can degrade to `stale`), OAuth access tokens, and which failures are already logged.
+  const resolveState: ResolveState = { values: new Map(), tokens: new ClientCredentialsTokens(), failures: new Map() };
   const authRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,

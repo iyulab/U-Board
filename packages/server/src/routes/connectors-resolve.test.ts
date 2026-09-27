@@ -26,6 +26,8 @@ function jsonResponse(body: unknown) {
 
 beforeEach(async () => {
   vi.stubGlobal('fetch', vi.fn());
+  vi.restoreAllMocks();
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
   db = await createTestDb();
   app = createApp({ db, sessionSecret: SECRET });
 
@@ -226,5 +228,55 @@ describe('connector resolve proxy with an oauth2-client-credentials connector', 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
     expect(fetch).toHaveBeenCalledTimes(1); // the data source is never called without a token
+    expect((console.warn as any).mock.calls.map((c: unknown[]) => String(c[0]))).toEqual([
+      `[resolve] connector ${oauthConnectorId} /assets/7: token failed: token endpoint responded 401 — no value to serve`,
+    ]);
+  });
+});
+
+describe('resolve failure logging', () => {
+  function resolve(path = '/pumps/a') {
+    return request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path, valuePath: 'status' } });
+  }
+  const warnings = () => (console.warn as any).mock.calls.map((c: unknown[]) => String(c[0]));
+
+  it('logs a failure once when it starts, not on every repeated poll, and logs the recovery', async () => {
+    (fetch as any)
+      .mockResolvedValueOnce({ ok: false, status: 503, headers: { get: () => null } })
+      .mockResolvedValueOnce({ ok: false, status: 503, headers: { get: () => null } })
+      .mockResolvedValueOnce(jsonResponse({ status: 'running' }));
+    await resolve();
+    await resolve();
+    await resolve();
+    expect(warnings()).toEqual([
+      `[resolve] connector ${connectorId} /pumps/a: request failed: upstream responded 503 — no value to serve`,
+      `[resolve] connector ${connectorId} /pumps/a: recovered`,
+    ]);
+  });
+
+  it('logs again when the reason changes, and says a stale value is being served', async () => {
+    (fetch as any)
+      .mockResolvedValueOnce(jsonResponse({ status: 'running' }))
+      .mockResolvedValueOnce({ ok: false, status: 503, headers: { get: () => null } })
+      .mockRejectedValueOnce(Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' }));
+    await resolve();
+    await resolve();
+    await resolve();
+    expect(warnings()).toEqual([
+      `[resolve] connector ${connectorId} /pumps/a: request failed: upstream responded 503 — serving the last value as stale`,
+      `[resolve] connector ${connectorId} /pumps/a: request failed: timed out — serving the last value as stale`,
+    ]);
+  });
+
+  it('names the network error code and never logs the credential', async () => {
+    (fetch as any).mockRejectedValueOnce(new TypeError('fetch failed', { cause: { code: 'ECONNREFUSED' } }));
+    await resolve();
+    expect(warnings()).toEqual([
+      `[resolve] connector ${connectorId} /pumps/a: request failed: fetch failed (ECONNREFUSED) — no value to serve`,
+    ]);
+    expect(warnings().join(' ')).not.toContain('secret-token');
   });
 });
