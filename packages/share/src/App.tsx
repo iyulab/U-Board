@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ViewerPage, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
-import { ShareConnectorAdapter } from './share-connector-adapter.js';
+import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
 import { getApiBase, fetchWithRetry } from './api-base.js';
 
 const DEFAULT_WIDTH = 1200;
@@ -26,7 +26,8 @@ export function App() {
         return res.json();
       })
       .then((body: { name: string; document: ViewDocument; connectorIds: string[] }) => {
-        const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(boardId, token, id));
+        const batcher = new ShareResolveBatcher(boardId, token);
+        const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id));
         setState({ name: body.name, document: body.document, adapters });
       })
       .catch(() => setState('error'));

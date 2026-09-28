@@ -6,7 +6,14 @@ import { findBoard } from '../db/boards.js';
 import { findConnector } from '../db/connectors.js';
 import { findBoardShareTokenByHash, touchBoardShareTokenLastUsed, type BoardShareToken } from '../db/board-share-tokens.js';
 import { hashShareToken } from './board-share-tokens.js';
-import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from '../resolve-connector.js';
+import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState, type ResolveResult } from '../resolve-connector.js';
+import type { Connector } from '../db/connectors.js';
+
+/** Upper bound on one batch resolve request. A board's own bindings are the only entries that
+ * resolve, so this only bounds the work a malformed or hostile request can make the server do. */
+const MAX_BATCH_BINDINGS = 500;
+
+const DISCONNECTED: ResolveResult = { value: undefined, quality: 'disconnected' };
 
 /** Every `(connectorId, ref)` pair a document's widgets declare via their bindings — the single
  * traversal `referencedConnectorIds` and `isDeclaredBinding` below both build on, so the
@@ -118,6 +125,52 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     await touchBoardShareTokenLastUsed(db, token.id);
     const result = await resolveConnectorValue(connector, target, ref, resolveState);
     res.status(200).json(result);
+  }));
+
+  /** Resolves many of a board's bindings in one request, answering in request order. The viewer
+   * sends every binding it renders here at once, so opening a board costs the same number of
+   * requests however many bindings it has — the per-binding route above made that number grow with
+   * the board, against an edge rate limit that counts every request. Each entry passes the same
+   * gate as the per-binding route; an entry that fails it (not declared by this board, unknown
+   * connector) answers `disconnected` — what the viewer already shows for a refused single resolve
+   * — rather than failing the entries around it. */
+  router.post('/boards/:boardId/resolve', asyncHandler(async (req, res) => {
+    const boardId = req.params.boardId;
+    const token = await authenticate(boardId, req.query.token);
+    if (!token) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return;
+    }
+    const bindings: unknown = req.body?.bindings;
+    if (
+      !Array.isArray(bindings) || bindings.length > MAX_BATCH_BINDINGS ||
+      !bindings.every(b => b && typeof b === 'object' && typeof (b as { connectorId?: unknown }).connectorId === 'string')
+    ) {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    const board = await findBoard(db, token.workspaceId, boardId);
+    if (!board) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return;
+    }
+    await touchBoardShareTokenLastUsed(db, token.id);
+
+    const connectors = new Map<string, Promise<Connector | undefined>>();
+    const connectorOf = (id: string) => {
+      if (!connectors.has(id)) connectors.set(id, findConnector(db, token.workspaceId, id));
+      return connectors.get(id)!;
+    };
+    const results = await Promise.all(
+      (bindings as { connectorId: string; ref?: unknown }[]).map(async ({ connectorId, ref }) => {
+        if (!isValidRef(ref) || !isDeclaredBinding(board.document, connectorId, ref)) return DISCONNECTED;
+        const connector = await connectorOf(connectorId);
+        const target = connector && buildResolveTarget(connector, ref);
+        if (!connector || !target) return DISCONNECTED;
+        return resolveConnectorValue(connector, target, ref, resolveState);
+      })
+    );
+    res.status(200).json({ results });
   }));
 
   return router;

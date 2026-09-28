@@ -153,6 +153,78 @@ describe('public share routes', () => {
     expect(res.body).toEqual({ value: 'running', quality: 'live' });
   });
 
+  it('resolves every declared binding of a board in one batch request, in request order', async () => {
+    const a = await createConnector(db, { workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
+    const b = await createConnector(db, { workspaceId, name: 'B', baseUrl: 'https://b.example.com', authType: 'none' });
+    const doc = {
+      kind: 'canvas' as const, background: {},
+      nodes: [
+        { id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: a.id, ref: { path: '/assets', valuePath: 'value.0.Status' } } } } },
+        { id: 'n2', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: a.id, ref: { path: '/assets', valuePath: 'value.1.Status' } } } } },
+        { id: 'n3', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: b.id, ref: { path: '/pump', valuePath: 'on' } } } } },
+      ],
+      connectors: [],
+    };
+    await updateBoard(db, workspaceId, boardId, { document: doc });
+    const token = await createShareToken();
+    (fetch as any).mockImplementation(async (url: URL) => new URL(String(url)).hostname === 'a.example.com'
+      ? jsonResponse({ value: [{ Status: 'Running' }, { Status: 'Fault' }] })
+      : jsonResponse({ on: true }));
+
+    const res = await request(app)
+      .post(`/share/boards/${boardId}/resolve?token=${token}`)
+      .send({ bindings: [
+        { connectorId: b.id, ref: { path: '/pump', valuePath: 'on' } },
+        { connectorId: a.id, ref: { path: '/assets', valuePath: 'value.1.Status' } },
+        { connectorId: a.id, ref: { path: '/assets', valuePath: 'value.0.Status' } },
+      ] });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ results: [
+      { value: true, quality: 'live' },
+      { value: 'Fault', quality: 'live' },
+      { value: 'Running', quality: 'live' },
+    ] });
+    // The two bindings on one URL share a single upstream request.
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('answers disconnected for a batch entry the document does not declare, without calling its upstream', async () => {
+    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const doc = {
+      kind: 'canvas' as const, background: {},
+      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
+      connectors: [],
+    };
+    await updateBoard(db, workspaceId, boardId, { document: doc });
+    const token = await createShareToken();
+    (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
+
+    const res = await request(app)
+      .post(`/share/boards/${boardId}/resolve?token=${token}`)
+      .send({ bindings: [
+        { connectorId: connector.id, ref: { path: '/status', valuePath: 'status' } },
+        { connectorId: connector.id, ref: { path: '/other-metric' } },
+        { connectorId: 'missing', ref: { path: '/status' } },
+      ] });
+    expect(res.status).toBe(200);
+    expect(res.body.results).toEqual([
+      { value: 'running', quality: 'live' },
+      { quality: 'disconnected' },
+      { quality: 'disconnected' },
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a batch request without a valid token, a bindings array, or within the size cap', async () => {
+    const token = await createShareToken();
+    expect((await request(app).post(`/share/boards/${boardId}/resolve?token=wrong`).send({ bindings: [] })).status).toBe(404);
+    expect((await request(app).post(`/share/boards/${boardId}/resolve?token=${token}`).send({})).status).toBe(400);
+    expect((await request(app).post(`/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: ['x'] })).status).toBe(400);
+    const tooMany = Array.from({ length: 501 }, () => ({ connectorId: 'c', ref: { path: '/a' } }));
+    expect((await request(app).post(`/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: tooMany })).status).toBe(400);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('returns 404 resolving a connector the board document does not reference', async () => {
     const referenced = await createConnector(db, { workspaceId, name: 'Referenced', baseUrl: 'https://a.example.com', authType: 'none' });
     const other = await createConnector(db, { workspaceId, name: 'Other', baseUrl: 'https://b.example.com', authType: 'none' });
