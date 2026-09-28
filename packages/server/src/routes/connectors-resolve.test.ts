@@ -135,6 +135,40 @@ describe('connector resolve proxy', () => {
     expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
   });
 
+  it('shares one upstream request among concurrent resolves of the same URL, each reading its own valuePath', async () => {
+    let answer!: (response: unknown) => void;
+    (fetch as any).mockReturnValueOnce(new Promise(resolve => { answer = resolve; }));
+    const resolveAt = (valuePath: string) => request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/assets', valuePath } })
+      .then(res => res.body);
+
+    const first = resolveAt('value.0.Status');
+    const second = resolveAt('value.1.Status');
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+    // Let the second request reach the server while the first upstream call is still open.
+    await new Promise(r => setTimeout(r, 50));
+    answer(jsonResponse({ value: [{ Status: 'Running' }, { Status: 'Fault' }] }));
+
+    expect(await first).toEqual({ value: 'Running', quality: 'live' });
+    expect(await second).toEqual({ value: 'Fault', quality: 'live' });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('fetches again for a resolve that starts after the previous one finished', async () => {
+    (fetch as any)
+      .mockResolvedValueOnce(jsonResponse({ status: 'running' }))
+      .mockResolvedValueOnce(jsonResponse({ status: 'stopped' }));
+    const resolveOnce = () => request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
+    expect((await resolveOnce()).body.value).toBe('running');
+    expect((await resolveOnce()).body.value).toBe('stopped');
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
   it('returns 404 for an unknown connectorId', async () => {
     const res = await request(app)
       .post(`/workspaces/${workspaceId}/connectors/nonexistent/resolve`)

@@ -50,14 +50,18 @@ export function createApp(config: AppConfig): express.Express {
   // error responses would ship without CORS headers and the browser would block the client from
   // ever reading them.
   if (config.corsOrigins && config.corsOrigins.length > 0) {
-    app.use(cors({ origin: config.corsOrigins, credentials: true }));
+    // `maxAge`: every share-viewer resolve is a cross-origin JSON POST and so needs a preflight;
+    // without it browsers cache that answer for seconds only, and each binding's poll pays an extra
+    // round trip that also counts against the edge rate limit on `/share/*`. Browsers cap it lower
+    // on their own (Chromium at 2 hours), so 10 minutes applies as written everywhere.
+    app.use(cors({ origin: config.corsOrigins, credentials: true, maxAge: 600 }));
   }
   // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
   app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
   // Per-process resolve state shared by the member and share-link resolve routes: last-known values
   // (so a failure can degrade to `stale`), OAuth access tokens, and which failures are already logged.
-  const resolveState: ResolveState = { values: new Map(), tokens: new ClientCredentialsTokens(), failures: new Map() };
+  const resolveState: ResolveState = { values: new Map(), tokens: new ClientCredentialsTokens(), failures: new Map(), inflight: new Map() };
   const authRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,

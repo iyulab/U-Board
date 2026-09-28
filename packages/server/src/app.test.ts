@@ -87,6 +87,17 @@ describe('CORS', () => {
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
 
+  it('lets browsers cache a preflight so a viewer resolving many bindings does not preflight each one', async () => {
+    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
+    const res = await request(corsApp)
+      .options('/share/boards/b1/connectors/c1/resolve')
+      .set('Origin', 'https://app.example.com')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'content-type');
+    expect(res.status).toBe(204);
+    expect(res.headers['access-control-max-age']).toBe('600');
+  });
+
   it('omits CORS headers for an origin not on the allowlist', async () => {
     const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
     const res = await request(corsApp).get('/auth/bootstrap-status').set('Origin', 'https://evil.example.com');

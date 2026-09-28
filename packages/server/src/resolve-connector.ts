@@ -18,6 +18,10 @@ export interface ResolveState {
    * against a data source that is down fails on every poll; logging only when the failure starts,
    * changes, or clears keeps the log a record of what happened rather than a repeat of it. */
   failures: Map<string, string>;
+  /** Upstream requests currently open, per connector and URL. Bindings that read different
+   * `valuePath`s of the same response (one collection, many assets) share one request instead of
+   * each fetching it — the upstream sees one call per distinct URL, however many nodes read it. */
+  inflight: Map<string, Promise<unknown>>;
 }
 
 type ResolveStage = 'token' | 'request' | 'response';
@@ -116,14 +120,49 @@ async function authHeaders(connector: Connector, tokens: ClientCredentialsTokens
   }
 }
 
-/** Fetches `target` with `connector`'s auth headers, caching the last-known value so a failure
- * can degrade to `stale` instead of `disconnected` when something was resolved before. Never
- * throws — a fetch/parse failure becomes a `disconnected`/`stale` result, not an exception,
- * because resolve is a status-carrying endpoint. That includes failing to obtain an OAuth access
- * token: the binding is as unavailable as if the data source itself had not answered.
- *
- * An OAuth connector whose token is rejected (401) gets one fresh token and one retry — the
- * authorization server may revoke a token before the expiry it advertised. */
+/** A failure tagged with the stage it happened in, so a shared request's failure is reported
+ * the same way to every binding waiting on it. */
+class StageError extends Error {
+  constructor(readonly stage: ResolveStage, readonly reason: unknown) {
+    super(describeFailure(reason));
+  }
+}
+
+/** Fetches and parses `target` with `connector`'s auth headers. An OAuth connector whose token is
+ * rejected (401) gets one fresh token and one retry — the authorization server may revoke a token
+ * before the expiry it advertised. */
+async function fetchBody(connector: Connector, target: URL, tokens: ClientCredentialsTokens): Promise<unknown> {
+  // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
+  // compromised upstream must not be able to bounce the credentialed request to a host of its
+  // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
+  let stage: ResolveStage = 'request';
+  const send = async () => {
+    stage = 'token';
+    const headers = await authHeaders(connector, tokens);
+    stage = 'request';
+    return fetch(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
+  };
+  try {
+    let response = await send();
+    if (response.status === 401 && connector.authType === 'oauth2-client-credentials') {
+      tokens.invalidate(connector.id);
+      response = await send();
+    }
+    if (!response.ok) throw new Error(`upstream responded ${response.status}`);
+    stage = 'response';
+    const contentType = response.headers.get('content-type') ?? '';
+    return contentType.includes('json') ? await response.json() : await response.text();
+  } catch (err) {
+    throw new StageError(stage, err);
+  }
+}
+
+/** Resolves one binding against `target`, caching the last-known value so a failure can degrade
+ * to `stale` instead of `disconnected` when something was resolved before. Never throws — a
+ * fetch/parse failure becomes a `disconnected`/`stale` result, not an exception, because resolve
+ * is a status-carrying endpoint. That includes failing to obtain an OAuth access token: the
+ * binding is as unavailable as if the data source itself had not answered. Concurrent resolves of
+ * the same URL share one upstream request (`ResolveState.inflight`). */
 export async function resolveConnectorValue(
   connector: Connector,
   target: URL,
@@ -131,41 +170,37 @@ export async function resolveConnectorValue(
   state: ResolveState
 ): Promise<ResolveResult> {
   const cacheKey = `${connector.id}:${JSON.stringify(ref)}`;
-
-  // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
-  // compromised upstream must not be able to bounce the credentialed request to a host of its
-  // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
-  let stage: ResolveStage = 'request';
-  const send = async () => {
-    stage = 'token';
-    const headers = await authHeaders(connector, state.tokens);
-    stage = 'request';
-    return fetch(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
-  };
+  const requestKey = `${connector.id} ${target.href}`;
   const where = `[resolve] connector ${connector.id} ${ref.path}`;
 
+  let request = state.inflight.get(requestKey);
+  if (!request) {
+    request = fetchBody(connector, target, state.tokens).finally(() => state.inflight.delete(requestKey));
+    state.inflight.set(requestKey, request);
+  }
+
   try {
-    let response = await send();
-    if (response.status === 401 && connector.authType === 'oauth2-client-credentials') {
-      state.tokens.invalidate(connector.id);
-      response = await send();
+    let body: unknown;
+    try {
+      body = await request;
+    } catch (err) {
+      throw err instanceof StageError ? err : new StageError('request', err);
     }
-    if (!response.ok) throw new Error(`upstream responded ${response.status}`);
-    stage = 'response';
-    const contentType = response.headers.get('content-type') ?? '';
-    const body = contentType.includes('json') ? await response.json() : await response.text();
     let value: unknown = body;
     if (ref.valuePath) {
       const extracted = getByPath(body, ref.valuePath);
-      if (!extracted.found) throw new Error(`valuePath "${ref.valuePath}" not found in the response`);
+      if (!extracted.found) {
+        throw new StageError('response', new Error(`valuePath "${ref.valuePath}" not found in the response`));
+      }
       value = extracted.value;
     }
     state.values.set(cacheKey, value);
     if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
     return { value, quality: 'live' };
   } catch (err) {
+    const { stage, message } = err as StageError;
     const stale = state.values.has(cacheKey);
-    const failure = `${stage} failed: ${describeFailure(err)}`;
+    const failure = `${stage} failed: ${message}`;
     if (state.failures.get(cacheKey) !== failure) {
       state.failures.set(cacheKey, failure);
       console.warn(`${where}: ${failure} — ${stale ? 'serving the last value as stale' : 'no value to serve'}`);
