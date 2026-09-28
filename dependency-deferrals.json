@@ -1,6 +1,4 @@
 {
   "about": "New majors not yet adopted, each with why and until when. Read by scripts/check-pin-drift.mjs: an entry past its reviewBy date, or one matching nothing outdated, fails the check. Remove an entry in the commit that adopts the major.",
-  "deferrals": [
-    {"package": "typescript", "major": 7, "reason": "adoption in progress — baseUrl removed and types no longer implied", "reviewBy": "2026-10-12"}
-  ]
+  "deferrals": []
 }

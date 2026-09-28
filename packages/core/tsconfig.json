@@ -11,7 +11,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "baseUrl": ".",
     "paths": {
       // Lets in-repo code (the docs walkthrough example, its test) import the package by its
       // published name and exercise the same entry point a real consumer would, instead of
