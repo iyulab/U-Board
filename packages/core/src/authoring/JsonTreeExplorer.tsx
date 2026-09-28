@@ -1,8 +1,10 @@
 export interface JsonTreeExplorerProps {
   /** The raw value to browse — typically a `/resolve` response body fetched without `valuePath`. */
   value: unknown;
-  /** Called with the dotted path to the clicked leaf (e.g. `"metrics.load"`), or `""` when the
-   * author picks the root value itself (root is a primitive, or they want the whole response). */
+  /** Called with an RFC 6901 JSON Pointer to the clicked leaf (e.g. `"/metrics/load"`), or `""`
+   * when the author picks the root value itself (root is a primitive, or they want the whole
+   * response). A pointer, not a dotted path, so a key that itself contains a dot — `@odata.count`
+   * — is still one step (`"/@odata.count"`). */
   onSelectPath: (path: string) => void;
 }
 
@@ -16,7 +18,7 @@ function renderEntries(value: unknown, path: string, onSelectPath: (path: string
       ? value.map((v, i) => [String(i), v])
       : Object.entries(value as Record<string, unknown>);
     return entries.map(([key, child]) => {
-      const childPath = path ? `${path}.${key}` : key;
+      const childPath = `${path}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`;
       const isLeaf = child === null || typeof child !== 'object';
       return (
         <li key={childPath}>

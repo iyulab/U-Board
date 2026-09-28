@@ -190,6 +190,32 @@ describe('connector resolve proxy', () => {
     expect(res.body).toEqual({ value: 'running', quality: 'live' });
   });
 
+  it('reads valuePath as an RFC 6901 JSON Pointer when it starts with a slash', async () => {
+    const body = { '@odata.count': 2, value: [{ Status: 'Running' }, { Status: 'Fault' }], 'a/b': { 'c~d': 7 } };
+    const cases: [string, unknown][] = [['/@odata.count', 2], ['/value/1/Status', 'Fault'], ['/a~1b/c~0d', 7]];
+    for (const [valuePath, expected] of cases) {
+      (fetch as any).mockResolvedValueOnce(jsonResponse(body));
+      const res = await request(app)
+        .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+        .set('Cookie', memberCookie)
+        .send({ ref: { path: `/pointer-${expected}`, valuePath } });
+      expect(res.body, valuePath).toEqual({ value: expected, quality: 'live' });
+    }
+  });
+
+  it('reports a JSON Pointer that does not resolve as a binding that points nowhere', async () => {
+    const body = { value: [{ Status: 'Running' }], constructor: undefined };
+    // Past the end, a leading-zero index, the append token "-", and an inherited property name.
+    for (const valuePath of ['/value/1/Status', '/value/00/Status', '/value/-', '/toString']) {
+      (fetch as any).mockResolvedValueOnce(jsonResponse(body));
+      const res = await request(app)
+        .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+        .set('Cookie', memberCookie)
+        .send({ ref: { path: `/missing${valuePath}`, valuePath } });
+      expect(res.body, valuePath).toEqual({ quality: 'disconnected', reason: 'address' });
+    }
+  });
+
   it('returns 404 for an unknown connectorId', async () => {
     const res = await request(app)
       .post(`/workspaces/${workspaceId}/connectors/nonexistent/resolve`)

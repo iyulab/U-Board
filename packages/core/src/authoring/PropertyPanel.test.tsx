@@ -281,7 +281,7 @@ describe('PropertyPanel bindings', () => {
     await waitFor(() => expect(screen.getByText('status: "running"')).toBeInTheDocument());
     fireEvent.click(screen.getByText('status: "running"'));
 
-    expect(screen.getByLabelText('Value path')).toHaveValue('status');
+    expect(screen.getByLabelText('Value path')).toHaveValue('/status');
   });
 
   it('shows an inline error when explore fails, without blocking manual valuePath entry', async () => {

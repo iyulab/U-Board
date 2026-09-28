@@ -41,16 +41,31 @@ function describeFailure(err: unknown): string {
   return String(err);
 }
 
+/** The keys `valuePath` names, in order. A path starting with `/` is an RFC 6901 JSON Pointer —
+ * the form the authoring path explorer writes, and the only one that can name a key containing a
+ * dot (`/@odata.count`) or a slash (`/a~1b`). Anything else is the older dot-separated form
+ * (`value.0.Status`), still read so bindings saved before pointers keep resolving. */
+function pathTokens(path: string): string[] {
+  if (!path.startsWith('/')) return path.split('.');
+  return path.slice(1).split('/').map(token => token.replace(/~1/g, '/').replace(/~0/g, '~'));
+}
+
 /** Follows `path` through `obj`, telling "the path ends at `null`/`undefined`" (a value the source
  * sent) apart from "the path leads nowhere" (a response that does not contain what the binding
- * addresses — an empty result set, a renamed field). Only the first is a live reading. */
+ * addresses — an empty result set, a renamed field). Only the first is a live reading. Only the
+ * response's own keys count, and an array index is a plain decimal without leading zeros
+ * (RFC 6901 §4) — never an inherited property or the append token `-`. */
 function getByPath(obj: unknown, path: string): { found: true; value: unknown } | { found: false } {
   let cursor = obj;
-  for (const key of path.split('.')) {
-    if (!cursor || typeof cursor !== 'object' || !(key in (cursor as Record<string, unknown>))) {
+  for (const token of pathTokens(path)) {
+    if (Array.isArray(cursor)) {
+      if (!/^(0|[1-9][0-9]*)$/.test(token) || Number(token) >= cursor.length) return { found: false };
+      cursor = cursor[Number(token)];
+    } else if (cursor && typeof cursor === 'object' && Object.prototype.hasOwnProperty.call(cursor, token)) {
+      cursor = (cursor as Record<string, unknown>)[token];
+    } else {
       return { found: false };
     }
-    cursor = (cursor as Record<string, unknown>)[key];
   }
   return { found: true, value: cursor };
 }

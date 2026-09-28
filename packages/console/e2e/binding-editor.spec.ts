@@ -46,7 +46,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await page.getByText('탐색', { exact: true }).click();
     await expect(page.getByText('load: 73')).toBeVisible();
     await page.getByText('status: "running"').click();
-    await expect(page.getByLabel('Value path')).toHaveValue('status');
+    await expect(page.getByLabel('Value path')).toHaveValue('/status');
 
     await page.getByText('미리보기', { exact: true }).click();
     await expect(page.getByText(/"running"/)).toBeVisible();

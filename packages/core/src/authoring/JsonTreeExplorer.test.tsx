@@ -11,13 +11,13 @@ describe('JsonTreeExplorer', () => {
     expect(screen.getByText('load: 73')).toBeInTheDocument();
   });
 
-  it('calls onSelectPath with the dotted path when a nested leaf is clicked', () => {
+  it('calls onSelectPath with a JSON Pointer (RFC 6901) when a nested leaf is clicked', () => {
     const onSelectPath = vi.fn();
     render(<JsonTreeExplorer value={{ metrics: { load: 73 } }} onSelectPath={onSelectPath} />);
 
     fireEvent.click(screen.getByText('load: 73'));
 
-    expect(onSelectPath).toHaveBeenCalledWith('metrics.load');
+    expect(onSelectPath).toHaveBeenCalledWith('/metrics/load');
   });
 
   it('renders array entries by index', () => {
@@ -26,7 +26,7 @@ describe('JsonTreeExplorer', () => {
 
     fireEvent.click(screen.getByText('1: "b"'));
 
-    expect(onSelectPath).toHaveBeenCalledWith('items.1');
+    expect(onSelectPath).toHaveBeenCalledWith('/items/1');
   });
 
   it('lets the author select the entire response when the root value is a primitive', () => {
@@ -36,5 +36,14 @@ describe('JsonTreeExplorer', () => {
     fireEvent.click(screen.getByText('(전체 응답): 42'));
 
     expect(onSelectPath).toHaveBeenCalledWith('');
+  });
+
+  it('escapes keys that contain / or ~, and keeps keys that contain dots whole', () => {
+    const onSelectPath = vi.fn();
+    render(<JsonTreeExplorer value={{ '@odata.count': 3, 'a/b': 1, 'c~d': 2 }} onSelectPath={onSelectPath} />);
+    fireEvent.click(screen.getByText('@odata.count: 3'));
+    fireEvent.click(screen.getByText('a/b: 1'));
+    fireEvent.click(screen.getByText('c~d: 2'));
+    expect(onSelectPath.mock.calls.map(c => c[0])).toEqual(['/@odata.count', '/a~1b', '/c~0d']);
   });
 });

@@ -168,6 +168,11 @@ describe('generic HTTP connector against an OData v4 source behind OAuth 2.0 cli
       .toEqual({ quality: 'disconnected', reason: 'address' });
   });
 
+  it('reads a count through a JSON Pointer, whose key contains a dot', async () => {
+    expect(await resolve({ path: "/Assets?$filter=AssetNo eq 'P-101'&$count=true&$top=0", valuePath: '/@odata.count' }))
+      .toEqual({ value: 1, quality: 'live' });
+  });
+
   it('keeps a null the source sent as a live value', async () => {
     expect(await resolve({ path: "/Assets('P-102')", valuePath: 'Temp' })).toEqual({ value: null, quality: 'live' });
   });

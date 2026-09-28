@@ -258,7 +258,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
               </label>
               <label>
                 Value path
-                <input value={draft.valuePath} onChange={e => setDraft({ ...draft, valuePath: e.target.value })} placeholder="status" />
+                <input value={draft.valuePath} onChange={e => setDraft({ ...draft, valuePath: e.target.value })} placeholder="/status" />
               </label>
               <button type="button" onClick={handleExplore}>
                 탐색
