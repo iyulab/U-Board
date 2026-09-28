@@ -31,7 +31,7 @@ export function AppShell({ workspaceSwitcher, onLogout, children }: AppShellProp
             </NavLink>
           ))}
         </nav>
-        <Button variant="ghost" onClick={onLogout} className="ub-shell__logout">
+        <Button variant="ghost" onClick={onLogout}>
           로그아웃
         </Button>
       </aside>

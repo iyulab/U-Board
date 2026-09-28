@@ -15,7 +15,7 @@
   padding: var(--ub-space-3) var(--ub-space-4);
   border-radius: var(--ub-radius-md);
   box-shadow: var(--ub-shadow-md);
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   color: var(--ub-text-inverse);
 }
 
@@ -32,6 +32,6 @@
   border: none;
   color: inherit;
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--ub-font-size-base);
   line-height: 1;
 }

@@ -9,5 +9,5 @@
   border: 1px solid var(--ub-error-border);
   border-radius: var(--ub-radius-md);
   color: var(--ub-error);
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
 }

@@ -8,3 +8,4 @@ export { WorkspaceSwitcher } from './WorkspaceSwitcher.js';
 export { ToastProvider, useToast } from './Toast.js';
 export { Card, CardGrid } from './Card.js';
 export { EmptyState } from './EmptyState.js';
+export { Loading } from './Loading.js';

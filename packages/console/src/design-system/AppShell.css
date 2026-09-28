@@ -27,7 +27,7 @@
   border-radius: var(--ub-radius-sm);
   color: var(--ub-text-muted);
   text-decoration: none;
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   font-weight: 500;
 }
 

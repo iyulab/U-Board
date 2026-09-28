@@ -8,13 +8,13 @@ describe('Badge', () => {
     expect(screen.getByText('owner')).toBeInTheDocument();
   });
 
-  it('applies the neutral tone class by default', () => {
+  it('applies the neutral variant class by default', () => {
     render(<Badge>owner</Badge>);
     expect(screen.getByText('owner')).toHaveClass('ub-badge--neutral');
   });
 
-  it('applies the requested tone class', () => {
-    render(<Badge tone="success">live</Badge>);
+  it('applies the requested variant class', () => {
+    render(<Badge variant="success">live</Badge>);
     expect(screen.getByText('live')).toHaveClass('ub-badge--success');
   });
 });

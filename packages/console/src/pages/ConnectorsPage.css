@@ -1,11 +1,11 @@
 .ub-connector-card__name {
-  font-size: 15px;
+  font-size: var(--ub-font-size-lg);
   font-weight: 600;
   color: var(--ub-text-strong);
 }
 
 .ub-connector-card__meta {
-  font-size: 12px;
+  font-size: var(--ub-font-size-sm);
   color: var(--ub-text-muted);
   word-break: break-all;
 }

@@ -8,6 +8,7 @@ import {
 } from '../api-client.js';
 import { HttpConnectorAdapter } from '../http-connector-adapter.js';
 import './BoardEditorPage.css';
+import { Loading } from '../design-system/Loading.js';
 
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
@@ -150,7 +151,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     return (
       <>
         {backLink}
-        <p>불러오는 중...</p>
+        <Loading />
       </>
     );
 

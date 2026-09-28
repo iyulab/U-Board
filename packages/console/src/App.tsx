@@ -14,6 +14,7 @@ import { ConnectorsPage } from './pages/ConnectorsPage.js';
 import { ToastProvider } from './design-system/Toast.js';
 import { AppShell } from './design-system/AppShell.js';
 import { WorkspaceSwitcher } from './design-system/WorkspaceSwitcher.js';
+import { Loading } from './design-system/Loading.js';
 
 // The only route that pulls in canvas-kit's authoring stack (KonvaDesigner/Viewer, react-konva) —
 // code-split so `/boards` and `/connectors` don't pay for it in their own chunk (the same
@@ -47,7 +48,7 @@ function RootRoute() {
     load();
   }, []);
 
-  if (status === 'loading') return <p>불러오는 중...</p>;
+  if (status === 'loading') return <Loading />;
   if (status === 'error') return <Alert onRetry={load}>세션을 확인하지 못했습니다</Alert>;
   if (status === 'authenticated') return <Navigate to="/boards" replace />;
   if (status === 'needs-bootstrap-signup') return <SignupPage onSuccess={() => navigate(0)} />;
@@ -128,7 +129,7 @@ export function App({
           <Route
             path="/boards/:boardId/edit"
             element={
-              <Suspense fallback={<p>불러오는 중...</p>}>
+              <Suspense fallback={<Loading />}>
                 <RequireSession>{s => <BoardEditorPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</RequireSession>
               </Suspense>
             }

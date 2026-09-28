@@ -47,6 +47,15 @@
   --ub-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
   --ub-shadow-md: 0 10px 24px rgba(15, 23, 42, 0.1);
 
+  --ub-font-size-xs: 11px;
+  --ub-font-size-sm: 12px;
+  --ub-font-size-md: 13px;
+  --ub-font-size-base: 14px;
+  --ub-font-size-lg: 15px;
+
+  /* Behind a modal dialog. Dimmer in the dark theme, where the light value would barely show. */
+  --ub-backdrop: rgba(15, 23, 42, 0.32);
+
   --ub-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard, 'Noto Sans KR', sans-serif;
 }
 
@@ -77,6 +86,8 @@
     --ub-warning-bg: #2d1d05;
     --ub-error-bg: #2d1318;
     --ub-error-border: #5c2530;
+
+    --ub-backdrop: rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -89,12 +100,15 @@ body {
   background: var(--ub-bg-app);
   color: var(--ub-text-normal);
   font-family: var(--ub-font-sans);
-  font-size: 14px;
+  font-size: var(--ub-font-size-base);
   line-height: 1.5;
 }
 
 :focus-visible {
-  outline: none;
+  /* A transparent outline rather than none: invisible here (the box-shadow ring shows focus),
+     but forced-colors modes such as Windows High Contrast drop box-shadows and paint outlines in
+     a system color, so keyboard focus stays visible there too. */
+  outline: 2px solid transparent;
   box-shadow: var(--ub-focus-shadow);
   border-color: var(--ub-focus-color);
 }

@@ -40,4 +40,25 @@ describe('Modal', () => {
     );
     expect(container.querySelector('dialog')).toHaveAttribute('aria-labelledby', 'my-title');
   });
+
+  it('opens and closes the dialog as the open prop changes', () => {
+    const { container, rerender } = render(
+      <Modal open={false} onClose={vi.fn()} labelledBy="title">
+        <h3 id="title">제목</h3>
+      </Modal>
+    );
+    const dialog = container.querySelector('dialog')!;
+    rerender(
+      <Modal open onClose={vi.fn()} labelledBy="title">
+        <h3 id="title">제목</h3>
+      </Modal>
+    );
+    expect(dialog).toHaveAttribute('open');
+    rerender(
+      <Modal open={false} onClose={vi.fn()} labelledBy="title">
+        <h3 id="title">제목</h3>
+      </Modal>
+    );
+    expect(dialog).not.toHaveAttribute('open');
+  });
 });

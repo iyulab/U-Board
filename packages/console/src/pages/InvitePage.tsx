@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getInvitation, acceptInvitation, switchWorkspace } from '../api-client.js';
 import { SignupPage } from './SignupPage.js';
 import { LoginPage } from './LoginPage.js';
+import { Loading } from '../design-system/Loading.js';
 
 export function InvitePage({ token, onJoined }: { token: string; onJoined: (workspaceId: string) => void }) {
   const [invitation, setInvitation] = useState<{ email: string; workspaceId: string; hasAccount: boolean } | null>(null);
@@ -34,7 +35,7 @@ export function InvitePage({ token, onJoined }: { token: string; onJoined: (work
   }
 
   if (error) return <p role="alert">{error}</p>;
-  if (!invitation) return <p>불러오는 중...</p>;
+  if (!invitation) return <Loading />;
 
   return invitation.hasAccount ? (
     <LoginPage prefillEmail={invitation.email} onSuccess={handleLoginSuccess} />

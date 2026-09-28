@@ -7,6 +7,7 @@ import { FormField } from '../design-system/FormField.js';
 import { Card, CardGrid } from '../design-system/Card.js';
 import { EmptyState } from '../design-system/EmptyState.js';
 import './ConnectorsPage.css';
+import { Loading } from '../design-system/Loading.js';
 
 /** One label per auth type, shared by the form's select and each card's badge. */
 const AUTH_TYPE_LABELS: Record<ConnectorAuthType, string> = {
@@ -125,7 +126,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     }
   }
 
-  if (isLoading) return <p>불러오는 중...</p>;
+  if (isLoading) return <Loading />;
 
   return (
     <div>

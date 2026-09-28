@@ -11,7 +11,7 @@
   width: 240px;
   max-width: 100%;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   padding: var(--ub-space-2) var(--ub-space-3);
   border-radius: var(--ub-radius-sm);
   border: 1px solid var(--ub-border-strong);
@@ -20,7 +20,7 @@
 }
 
 .ub-board-card__link {
-  font-size: 15px;
+  font-size: var(--ub-font-size-lg);
   font-weight: 600;
   color: var(--ub-text-strong);
   text-decoration: none;
@@ -31,7 +31,7 @@
 }
 
 .ub-board-card__meta {
-  font-size: 12px;
+  font-size: var(--ub-font-size-sm);
   color: var(--ub-text-muted);
 }
 

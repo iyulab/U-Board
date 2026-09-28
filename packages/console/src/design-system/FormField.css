@@ -6,7 +6,7 @@
 }
 
 .ub-field__label {
-  font-size: 12px;
+  font-size: var(--ub-font-size-sm);
   font-weight: 600;
   color: var(--ub-text-muted);
 }
@@ -14,7 +14,7 @@
 .ub-field input,
 .ub-field select {
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   padding: var(--ub-space-2) var(--ub-space-3);
   border-radius: var(--ub-radius-sm);
   border: 1px solid var(--ub-border-strong);

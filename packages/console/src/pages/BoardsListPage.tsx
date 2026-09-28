@@ -8,6 +8,7 @@ import { Modal } from '../design-system/Modal.js';
 import { Card, CardGrid } from '../design-system/Card.js';
 import { EmptyState } from '../design-system/EmptyState.js';
 import './BoardsListPage.css';
+import { Loading } from '../design-system/Loading.js';
 
 type BoardSummary = { id: string; name: string; updatedAt: string };
 
@@ -66,7 +67,7 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
     }
   }
 
-  if (isLoading) return <p>불러오는 중...</p>;
+  if (isLoading) return <Loading />;
 
   return (
     <div>

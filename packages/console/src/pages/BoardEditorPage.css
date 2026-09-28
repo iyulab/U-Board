@@ -1,7 +1,7 @@
 .ub-editor-back {
   display: inline-block;
   margin-bottom: var(--ub-space-3);
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   color: var(--ub-text-muted);
   text-decoration: none;
 }

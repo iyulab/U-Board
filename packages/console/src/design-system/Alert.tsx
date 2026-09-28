@@ -13,7 +13,7 @@ export function Alert({ children, onRetry, retryLabel = '다시 시도' }: Alert
     <p role="alert" className="ub-alert">
       <span>{children}</span>
       {onRetry && (
-        <Button variant="ghost" onClick={onRetry} className="ub-alert__retry">
+        <Button variant="ghost" onClick={onRetry}>
           {retryLabel}
         </Button>
       )}

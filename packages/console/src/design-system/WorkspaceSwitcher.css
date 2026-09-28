@@ -9,7 +9,7 @@
   gap: var(--ub-space-2);
   width: 100%;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   font-weight: 600;
   padding: var(--ub-space-2) var(--ub-space-3);
   border-radius: var(--ub-radius-sm);
@@ -32,7 +32,7 @@
 .ub-workspace-switcher__chevron {
   flex-shrink: 0;
   color: var(--ub-text-muted);
-  font-size: 11px;
+  font-size: var(--ub-font-size-xs);
 }
 
 .ub-workspace-switcher__panel {
@@ -55,7 +55,7 @@
 .ub-workspace-switcher__search {
   width: 100%;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   padding: var(--ub-space-2) var(--ub-space-3);
   border-radius: var(--ub-radius-sm);
   border: 1px solid var(--ub-border-strong);
@@ -78,7 +78,7 @@
   width: 100%;
   text-align: left;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   padding: var(--ub-space-2) var(--ub-space-3);
   border-radius: var(--ub-radius-sm);
   border: 1px solid transparent;
@@ -99,7 +99,7 @@
 
 .ub-workspace-switcher__empty {
   padding: var(--ub-space-2) var(--ub-space-3);
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   color: var(--ub-text-muted);
 }
 
@@ -107,7 +107,7 @@
   width: 100%;
   text-align: left;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--ub-font-size-md);
   font-weight: 600;
   padding: var(--ub-space-2) var(--ub-space-3);
   border-radius: var(--ub-radius-sm);
@@ -124,7 +124,7 @@
 .ub-workspace-switcher__back {
   align-self: flex-start;
   font-family: inherit;
-  font-size: 12px;
+  font-size: var(--ub-font-size-sm);
   padding: 0;
   border: none;
   background: transparent;

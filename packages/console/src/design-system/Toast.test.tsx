@@ -56,4 +56,36 @@ describe('Toast', () => {
     expect(() => render(<Trigger />)).toThrow('useToast must be used within a ToastProvider');
     consoleError.mockRestore();
   });
+
+  it('shows an error toast with the error variant', async () => {
+    function ErrorTrigger() {
+      const { show } = useToast();
+      return <button onClick={() => show('저장에 실패했습니다', 'error')}>오류 알림</button>;
+    }
+    const user = userEvent.setup({ delay: null });
+    render(
+      <ToastProvider>
+        <ErrorTrigger />
+      </ToastProvider>
+    );
+    await user.click(screen.getByRole('button', { name: '오류 알림' }));
+    expect(screen.getByText('저장에 실패했습니다').closest('.ub-toast')).toHaveClass('ub-toast--error');
+  });
+
+  it('stacks several toasts and dismisses each on its own timer', async () => {
+    const user = userEvent.setup({ delay: null });
+    render(
+      <ToastProvider>
+        <Trigger />
+      </ToastProvider>
+    );
+    await user.click(screen.getByRole('button', { name: '알림 보내기' }));
+    act(() => vi.advanceTimersByTime(2000));
+    await user.click(screen.getByRole('button', { name: '알림 보내기' }));
+    expect(screen.getAllByText('저장되었습니다')).toHaveLength(2);
+    act(() => vi.advanceTimersByTime(2100));
+    await waitFor(() => expect(screen.getAllByText('저장되었습니다')).toHaveLength(1));
+    act(() => vi.advanceTimersByTime(2000));
+    await waitFor(() => expect(screen.queryByText('저장되었습니다')).not.toBeInTheDocument());
+  });
 });
