@@ -1,9 +1,6 @@
 {
   "about": "New majors not yet adopted, each with why and until when. Read by scripts/check-pin-drift.mjs: an entry past its reviewBy date, or one matching nothing outdated, fails the check. Remove an entry in the commit that adopts the major.",
   "deferrals": [
-    {"package": "@types/supertest", "major": 7, "reason": "adoption in progress — types only, matches the installed supertest 7", "reviewBy": "2026-10-12"},
-    {"package": "@testing-library/jest-dom", "major": 7, "reason": "adoption in progress — needs @testing-library/dom declared as a direct dependency", "reviewBy": "2026-10-12"},
-    {"package": "vitest", "major": 5, "reason": "adoption in progress — vite becomes a required peer in every package", "reviewBy": "2026-10-12"},
     {"package": "typescript", "major": 7, "reason": "adoption in progress — baseUrl removed and types no longer implied", "reviewBy": "2026-10-12"}
   ]
 }

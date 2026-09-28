@@ -11,8 +11,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    // matches upstream/canvas-kit's designer & viewer packages — required for
-    // `@testing-library/jest-dom`'s plain (non-jest-globals) entry point to find `expect`.
+    // `@testing-library/react` unmounts rendered trees after each test only when it finds a
+    // global `afterEach`; without globals, renders would leak from one test into the next.
     globals: true,
     // Without this, vitest's default glob also picks up e2e/*.spec.ts — those use
     // @playwright/test's own `test`/`expect`, which vitest can't run (see playwright.config.ts;

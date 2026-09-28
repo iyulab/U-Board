@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import '@testing-library/jest-dom';
+import '@testing-library/jest-dom/vitest';
 import { ViewerPage } from './ViewerPage';
 import type { ViewDocument } from '../view-document';
 import type { Adapter, ResolvedBinding } from '../adapter';
