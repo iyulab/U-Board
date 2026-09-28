@@ -39,7 +39,10 @@ HTTP-shaped adapter responses; a label editor for the selected text decoration),
 Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
 adapter (with SSRF-safe origin pinning, and either static bearer/header credentials or OAuth 2.0
 client credentials with cached, auto-renewed access tokens) is wired into both the authoring UI
-and the read-only embed viewer. A connector to a specific external system that needs its own
+and the read-only embed viewer. It picks a value out of a JSON response with an RFC 6901 JSON
+Pointer, reports why a binding is not live (source unreachable, credentials refused, value not
+found at the source, rate limited), and the embed viewer resolves all of a board's bindings in one
+request. A connector to a specific external system that needs its own
 domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
 until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a
 board can be wired up and previewed before any real connector is configured. The hosted
@@ -92,7 +95,8 @@ a runnable example that implements an `Adapter` and inspects `resolveDocument`'s
 
 `AuthoringView` — a canvas-kit designer for adding/dragging/resizing nodes and decorations, paired
 with a property panel for editing the selected node's widget type, static props, and data bindings
-(including a path explorer that walks an HTTP adapter's response tree) or the selected text
+(including a path explorer that walks an HTTP adapter's response tree and writes a JSON Pointer
+to the picked value) or the selected text
 decoration's label — is exported from the package's main entry point alongside the read-only
 `ViewerPage`:
 
