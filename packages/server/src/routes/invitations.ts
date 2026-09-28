@@ -5,13 +5,12 @@ import { findUserByEmail, findUserById } from '../db/users.js';
 import { normalizeEmail } from '../db/email.js';
 import { addWorkspaceUser, findWorkspaceUser } from '../db/workspaces.js';
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
-import { asyncHandler } from '../middleware/async-handler.js';
 
 export function createInvitationsRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
   const router = Router();
 
-  router.get('/:token', asyncHandler(async (req, res) => {
+  router.get('/:token', async (req, res) => {
     const invitation = await findInvitationByToken(db, req.params.token);
     if (!invitation) {
       res.status(404).json({ code: 'NOT_FOUND' });
@@ -26,9 +25,9 @@ export function createInvitationsRouter(config: AppConfig): Router {
       workspaceId: invitation.workspaceId,
       hasAccount: Boolean(await findUserByEmail(db, invitation.email)),
     });
-  }));
+  });
 
-  router.post('/:token/accept', requireAuth(db, sessionSecret), asyncHandler(async (req: AuthedRequest, res) => {
+  router.post('/:token/accept', requireAuth(db, sessionSecret), async (req: AuthedRequest<{ token: string }>, res) => {
     const invitation = await findInvitationByToken(db, req.params.token);
     if (!invitation) {
       res.status(404).json({ code: 'NOT_FOUND' });
@@ -54,7 +53,7 @@ export function createInvitationsRouter(config: AppConfig): Router {
     await addWorkspaceUser(db, { workspaceId: invitation.workspaceId, userId: req.userId!, role: invitation.role });
     await markInvitationAccepted(db, invitation.id);
     res.status(200).json({ workspaceId: invitation.workspaceId });
-  }));
+  });
 
   return router;
 }

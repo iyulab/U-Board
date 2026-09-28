@@ -28,7 +28,6 @@ import {
   sessionCookieOptions,
   clearSessionCookieOptions,
 } from '../middleware/require-auth.js';
-import { asyncHandler } from '../middleware/async-handler.js';
 
 /** A signup gate that only the transaction can evaluate; carries the response it maps to. */
 class SignupRejected extends Error {
@@ -72,7 +71,7 @@ export function createAuthRouter(config: AppConfig): Router {
 
   router.post(
     '/signup',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const { email, password, name, invitationToken } = req.body ?? {};
       if (typeof email !== 'string' || typeof password !== 'string' || typeof name !== 'string') {
         res.status(400).json({ code: 'INVALID_INPUT' });
@@ -145,12 +144,12 @@ export function createAuthRouter(config: AppConfig): Router {
       );
       res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
       res.status(201).json(signedUp);
-    })
+    }
   );
 
   router.post(
     '/login',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const { email, password } = req.body ?? {};
       if (typeof email !== 'string' || typeof password !== 'string') {
         res.status(400).json({ code: 'INVALID_INPUT' });
@@ -165,7 +164,7 @@ export function createAuthRouter(config: AppConfig): Router {
       const token = signSession({ userId: user.id, activeWorkspaceId, issuedAt: Date.now() }, sessionSecret);
       res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
       res.status(200).json({ userId: user.id, activeWorkspaceId });
-    })
+    }
   );
 
   router.post('/logout', (_req, res) => {
@@ -177,14 +176,14 @@ export function createAuthRouter(config: AppConfig): Router {
 
   router.get(
     '/bootstrap-status',
-    asyncHandler(async (_req, res) => {
+    async (_req, res) => {
       res.status(200).json({ hasAnyUser: (await countUsers(db)) > 0 });
-    })
+    }
   );
 
   router.post(
     '/request-password-reset',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const { email } = req.body ?? {};
       if (typeof email !== 'string') {
         res.status(400).json({ code: 'INVALID_INPUT' });
@@ -207,12 +206,12 @@ export function createAuthRouter(config: AppConfig): Router {
         }
       }
       res.status(202).json({ code: 'RESET_REQUESTED' });
-    })
+    }
   );
 
   router.post(
     '/reset-password',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const { token, newPassword } = req.body ?? {};
       if (typeof token !== 'string' || typeof newPassword !== 'string') {
         res.status(400).json({ code: 'INVALID_INPUT' });
@@ -236,7 +235,7 @@ export function createAuthRouter(config: AppConfig): Router {
       const passwordHash = await hashPassword(newPassword);
       await updateUserPassword(db, claimed.userId, passwordHash);
       res.status(200).json({ code: 'PASSWORD_RESET' });
-    })
+    }
   );
 
   return router;

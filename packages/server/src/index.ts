@@ -30,6 +30,8 @@ const db = await createDb(databaseUrl);
 const app = createApp({ db, sessionSecret, corsOrigins, trustCloudflareProxy, sendPasswordResetEmail });
 
 const port = Number(process.env.PORT ?? 4000);
-app.listen(port, () => {
+// Express 5 hands a startup failure (e.g. the port is taken) to this callback instead of throwing.
+app.listen(port, (err?: Error) => {
+  if (err) throw err;
   console.log(`@iyulab/u-board-server listening on :${port} (db: ${redactDatabaseUrl(databaseUrl)})`);
 });

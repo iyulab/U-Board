@@ -1,7 +1,7 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { DbClient } from './db.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createInvitationsRouter } from './routes/invitations.js';
@@ -36,10 +36,15 @@ export interface AppConfig {
  *  exact hop count is configured via Express's `trust proxy`, which is fragile (a platform-side
  *  change to that chain silently reopens the shared-bucket DoS). `CF-Connecting-IP` sidesteps the
  *  hop-count question entirely — Cloudflare always sets it to the real client IP, and it's only
- *  trustworthy once ingress rejects traffic that didn't come through Cloudflare. */
-function cloudflareKeyGenerator(req: Request): string {
+ *  trustworthy once ingress rejects traffic that didn't come through Cloudflare.
+ *
+ *  The address goes through `ipKeyGenerator`, which keys an IPv6 client by its /56 subnet: a single
+ *  IPv6 subscriber typically holds a whole /64 or larger, so keying the full address would let one
+ *  client rotate through addresses and never hit the limit. */
+export function cloudflareKeyGenerator(req: Request): string {
   const cfIp = req.headers['cf-connecting-ip'];
-  return typeof cfIp === 'string' && cfIp.length > 0 ? cfIp : (req.ip ?? 'unknown');
+  const ip = typeof cfIp === 'string' && cfIp.length > 0 ? cfIp : req.ip;
+  return ip ? ipKeyGenerator(ip) : 'unknown';
 }
 
 export function createApp(config: AppConfig): express.Express {
@@ -101,8 +106,8 @@ export function createApp(config: AppConfig): express.Express {
 }
 
 /**
- * Catch-all for anything a route forwards via `next(err)` (async handlers reach here through
- * `asyncHandler`). Answers with an opaque code so an internal failure never leaks stack or
+ * Catch-all for anything a route forwards via `next(err)`, including a rejected promise from an
+ * async handler (Express 5 forwards those itself). Answers with an opaque code so an internal failure never leaks stack or
  * driver detail to the client.
  */
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction): void {

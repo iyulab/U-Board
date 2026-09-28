@@ -2,7 +2,6 @@ import type { CookieOptions, Request, Response, NextFunction, RequestHandler } f
 import type { DbClient } from '../db.js';
 import { verifySession } from '../auth/session.js';
 import { findUserById } from '../db/users.js';
-import { asyncHandler } from './async-handler.js';
 
 export const SESSION_COOKIE_NAME = 'ub_session';
 
@@ -39,13 +38,13 @@ export function clearSessionCookieOptions(): CookieOptions {
   };
 }
 
-export interface AuthedRequest extends Request {
+export interface AuthedRequest<P = Request['params']> extends Request<P> {
   userId?: string;
   activeWorkspaceId?: string;
 }
 
 export function requireAuth(db: DbClient, sessionSecret: string): RequestHandler {
-  return asyncHandler(async (req: AuthedRequest, res: Response, next: NextFunction) => {
+  return async (req: AuthedRequest, res: Response, next: NextFunction) => {
     const cookieValue = req.cookies?.[SESSION_COOKIE_NAME];
     if (!cookieValue) {
       res.status(401).json({ code: 'UNAUTHENTICATED' });
@@ -64,5 +63,5 @@ export function requireAuth(db: DbClient, sessionSecret: string): RequestHandler
     req.userId = payload.userId;
     req.activeWorkspaceId = payload.activeWorkspaceId;
     next();
-  });
+  };
 }

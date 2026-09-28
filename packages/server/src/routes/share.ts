@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import type { ViewDocument } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
-import { asyncHandler } from '../middleware/async-handler.js';
 import { findBoard } from '../db/boards.js';
 import { findConnector } from '../db/connectors.js';
 import { findBoardShareTokenByHash, touchBoardShareTokenLastUsed, type BoardShareToken } from '../db/board-share-tokens.js';
@@ -71,7 +70,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     return token;
   }
 
-  router.get('/boards/:boardId', asyncHandler(async (req, res) => {
+  router.get('/boards/:boardId', async (req, res) => {
     const boardId = req.params.boardId;
     const token = await authenticate(boardId, req.query.token);
     if (!token) {
@@ -89,9 +88,9 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       document: board.document,
       connectorIds: await referencedConnectorIds(db, token.workspaceId, board.document),
     });
-  }));
+  });
 
-  router.post('/boards/:boardId/connectors/:connectorId/resolve', asyncHandler(async (req, res) => {
+  router.post('/boards/:boardId/connectors/:connectorId/resolve', async (req, res) => {
     const boardId = req.params.boardId;
     const token = await authenticate(boardId, req.query.token);
     if (!token) {
@@ -125,7 +124,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     await touchBoardShareTokenLastUsed(db, token.id);
     const result = await resolveConnectorValue(connector, target, ref, resolveState);
     res.status(200).json(result);
-  }));
+  });
 
   /** Resolves many of a board's bindings in one request, answering in request order. The viewer
    * sends every binding it renders here at once, so opening a board costs the same number of
@@ -134,7 +133,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
    * gate as the per-binding route; an entry that fails it (not declared by this board, unknown
    * connector) answers `disconnected` — what the viewer already shows for a refused single resolve
    * — rather than failing the entries around it. */
-  router.post('/boards/:boardId/resolve', asyncHandler(async (req, res) => {
+  router.post('/boards/:boardId/resolve', async (req, res) => {
     const boardId = req.params.boardId;
     const token = await authenticate(boardId, req.query.token);
     if (!token) {
@@ -171,7 +170,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       })
     );
     res.status(200).json({ results });
-  }));
+  });
 
   return router;
 }

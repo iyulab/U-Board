@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { AppConfig } from '../app.js';
 import { requireAuth } from '../middleware/require-auth.js';
-import { asyncHandler } from '../middleware/async-handler.js';
+import { pathParam } from '../middleware/path-param.js';
 import { requireWorkspaceMember, requireWorkspaceOwner } from '../middleware/require-workspace-role.js';
 import {
   createConnector,
@@ -101,11 +101,11 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent mount path
   router.use(requireAuth(db, sessionSecret));
 
-  router.get('/', requireWorkspaceMember(db), asyncHandler(async (req, res) => {
-    res.status(200).json({ connectors: await listConnectorsForWorkspace(db, req.params.workspaceId) });
-  }));
+  router.get('/', requireWorkspaceMember(db), async (req, res) => {
+    res.status(200).json({ connectors: await listConnectorsForWorkspace(db, pathParam(req, 'workspaceId')) });
+  });
 
-  router.post('/', requireWorkspaceOwner(db), asyncHandler(async (req, res) => {
+  router.post('/', requireWorkspaceOwner(db), async (req, res) => {
     const body = req.body ?? {};
     if (typeof body.name !== 'string' || body.name.trim() === '') {
       res.status(400).json({ code: 'INVALID_INPUT' });
@@ -121,7 +121,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       return;
     }
     const connector = await createConnector(db, {
-      workspaceId: req.params.workspaceId,
+      workspaceId: pathParam(req, 'workspaceId'),
       name: body.name,
       baseUrl: body.baseUrl,
       authType: body.authType,
@@ -130,9 +130,9 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       ...(body.authType === OAUTH ? oauthSettings(body) : {}),
     });
     res.status(201).json(toSummary(connector));
-  }));
+  });
 
-  router.put('/:connectorId', requireWorkspaceOwner(db), asyncHandler(async (req, res) => {
+  router.put('/:connectorId', requireWorkspaceOwner(db), async (req, res) => {
     const body = req.body ?? {};
     if (body.name !== undefined && (typeof body.name !== 'string' || body.name.trim() === '')) {
       res.status(400).json({ code: 'INVALID_INPUT' });
@@ -145,7 +145,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
     // Auth validation runs against the *merged* state, so the existing connector has to be read
     // first: `{authType: 'bearer'}` with no `authValue` is valid when a secret is already stored
     // (a rename that leaves the secret alone) and invalid when there is none to fall back on.
-    const existing = await findConnector(db, req.params.workspaceId, req.params.connectorId);
+    const existing = await findConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId);
     if (!existing) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
@@ -181,7 +181,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       authHeaderName = null;
       authValue = body.authValue ?? undefined;
     }
-    const updated = await updateConnector(db, req.params.workspaceId, req.params.connectorId, {
+    const updated = await updateConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId, {
       name: body.name,
       baseUrl: body.baseUrl,
       authType: body.authType,
@@ -194,19 +194,19 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       return;
     }
     res.status(200).json(toSummary(updated));
-  }));
+  });
 
-  router.delete('/:connectorId', requireWorkspaceOwner(db), asyncHandler(async (req, res) => {
-    const deleted = await deleteConnector(db, req.params.workspaceId, req.params.connectorId);
+  router.delete('/:connectorId', requireWorkspaceOwner(db), async (req, res) => {
+    const deleted = await deleteConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId);
     if (!deleted) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
     res.status(204).send();
-  }));
+  });
 
-  router.post('/:connectorId/resolve', requireWorkspaceMember(db), asyncHandler(async (req, res) => {
-    const connector = await findConnector(db, req.params.workspaceId, req.params.connectorId);
+  router.post('/:connectorId/resolve', requireWorkspaceMember(db), async (req, res) => {
+    const connector = await findConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId);
     if (!connector) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
@@ -223,7 +223,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
     }
     const result = await resolveConnectorValue(connector, target, ref, resolveState);
     res.status(200).json(result);
-  }));
+  });
 
   return router;
 }

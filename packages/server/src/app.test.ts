@@ -190,6 +190,28 @@ describe('auth rate limiting', () => {
       .send({ email: 'x@x.com', password: 'wrong' });
     expect(otherIp.status).not.toBe(429);
   });
+
+  it('keys an IPv6 CF-Connecting-IP by its /56 subnet, so rotating addresses shares one bucket', async () => {
+    const cfApp = createApp({ db, sessionSecret: SECRET, trustCloudflareProxy: true });
+    // Ten different addresses inside one /56 — one subscriber rotating through its allocation.
+    for (let i = 0; i < 10; i++) {
+      await request(cfApp)
+        .post('/auth/login')
+        .set('CF-Connecting-IP', `2001:db8:0:${i.toString(16)}::1`)
+        .send({ email: 'x@x.com', password: 'wrong' });
+    }
+    const sameSubnet = await request(cfApp)
+      .post('/auth/login')
+      .set('CF-Connecting-IP', '2001:db8:0:ff::2')
+      .send({ email: 'x@x.com', password: 'wrong' });
+    expect(sameSubnet.status).toBe(429);
+
+    const otherSubnet = await request(cfApp)
+      .post('/auth/login')
+      .set('CF-Connecting-IP', '2001:db8:0:100::1')
+      .send({ email: 'x@x.com', password: 'wrong' });
+    expect(otherSubnet.status).not.toBe(429);
+  });
 });
 
 describe('GET /health', () => {

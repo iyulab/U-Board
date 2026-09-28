@@ -5,9 +5,9 @@ import type express from 'express';
 import { createTestDb } from './test-support/test-db.js';
 import { createApp } from './app.js';
 
-// The realistic trigger: an async route handler whose awaited work rejects. Express 4 does not
-// forward such a rejection on its own, so without `asyncHandler` plus the app's error
-// middleware it would surface as an unhandled rejection and terminate the process.
+// The realistic trigger: an async route handler whose awaited work rejects. Express 5 forwards
+// such a rejection to the error middleware; were that ever lost, it would surface as an
+// unhandled rejection and terminate the process.
 vi.mock('./auth/password.js', () => ({
   hashPassword: vi.fn().mockRejectedValue(new Error('hashing backend unavailable')),
   verifyPassword: vi.fn().mockRejectedValue(new Error('hashing backend unavailable')),

@@ -12,22 +12,21 @@ import { findUserByEmail } from '../db/users.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
 import { requireWorkspaceOwner, requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { signSession } from '../auth/session.js';
-import { asyncHandler } from '../middleware/async-handler.js';
 
 export function createWorkspacesRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
   const router = Router();
   router.use(requireAuth(db, sessionSecret));
 
-  router.get('/me', asyncHandler(async (req: AuthedRequest, res) => {
+  router.get('/me', async (req: AuthedRequest, res) => {
     res.status(200).json({
       userId: req.userId,
       activeWorkspaceId: req.activeWorkspaceId,
       workspaces: await listWorkspacesForUser(db, req.userId!),
     });
-  }));
+  });
 
-  router.post('/', asyncHandler(async (req: AuthedRequest, res) => {
+  router.post('/', async (req: AuthedRequest, res) => {
     const { name } = req.body ?? {};
     if (typeof name !== 'string' || name.trim() === '') {
       res.status(400).json({ code: 'INVALID_INPUT' });
@@ -41,13 +40,13 @@ export function createWorkspacesRouter(config: AppConfig): Router {
     const token = signSession({ userId: req.userId!, activeWorkspaceId: workspace.id, issuedAt: Date.now() }, sessionSecret);
     res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
     res.status(201).json({ id: workspace.id, name: workspace.name, activeWorkspaceId: workspace.id });
-  }));
+  });
 
-  router.get('/:workspaceId/members', requireWorkspaceMember(db), asyncHandler(async (req, res) => {
+  router.get('/:workspaceId/members', requireWorkspaceMember(db), async (req, res) => {
     res.status(200).json({ members: await listWorkspaceMembers(db, req.params.workspaceId) });
-  }));
+  });
 
-  router.post('/:workspaceId/invitations', requireWorkspaceOwner(db), asyncHandler(async (req: AuthedRequest, res) => {
+  router.post('/:workspaceId/invitations', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string }>, res) => {
     const { email, role } = req.body ?? {};
     if (typeof email !== 'string' || (role !== 'owner' && role !== 'member')) {
       res.status(400).json({ code: 'INVALID_INPUT' });
@@ -62,9 +61,9 @@ export function createWorkspacesRouter(config: AppConfig): Router {
     }
     const invitation = await createInvitation(db, { workspaceId: req.params.workspaceId, email, role, invitedByUserId: req.userId! });
     res.status(201).json({ token: invitation.token, expiresAt: invitation.expiresAt });
-  }));
+  });
 
-  router.post('/:workspaceId/switch', requireWorkspaceMember(db), (req: AuthedRequest, res) => {
+  router.post('/:workspaceId/switch', requireWorkspaceMember(db), (req: AuthedRequest<{ workspaceId: string }>, res) => {
     const token = signSession({ userId: req.userId!, activeWorkspaceId: req.params.workspaceId, issuedAt: Date.now() }, sessionSecret);
     res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
     res.status(200).json({ activeWorkspaceId: req.params.workspaceId });

@@ -2,9 +2,9 @@ import { Router, type Request } from 'express';
 import { isViewDocumentShape } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
+import { pathParam } from '../middleware/path-param.js';
 import { requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from '../db/boards.js';
-import { asyncHandler } from '../middleware/async-handler.js';
 
 export function createBoardsRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
@@ -12,13 +12,13 @@ export function createBoardsRouter(config: AppConfig): Router {
   router.use(requireAuth(db, sessionSecret));
   router.use(requireWorkspaceMember(db));
 
-  router.get('/', asyncHandler(async (req: AuthedRequest, res) => {
-    const workspaceId = (req.params as { workspaceId: string }).workspaceId;
+  router.get('/', async (req: AuthedRequest, res) => {
+    const workspaceId = pathParam(req, 'workspaceId');
     res.status(200).json({ boards: await listBoardsForWorkspace(db, workspaceId) });
-  }));
+  });
 
-  router.post('/', asyncHandler(async (req: AuthedRequest, res) => {
-    const workspaceId = (req.params as { workspaceId: string }).workspaceId;
+  router.post('/', async (req: AuthedRequest, res) => {
+    const workspaceId = pathParam(req, 'workspaceId');
     const { name } = req.body ?? {};
     if (typeof name !== 'string' || name.trim() === '') {
       res.status(400).json({ code: 'INVALID_INPUT' });
@@ -26,20 +26,22 @@ export function createBoardsRouter(config: AppConfig): Router {
     }
     const board = await createBoard(db, { workspaceId, name });
     res.status(201).json({ id: board.id, name: board.name, updatedAt: board.updatedAt });
-  }));
+  });
 
-  router.get('/:boardId', asyncHandler(async (req: AuthedRequest, res) => {
-    const { workspaceId, boardId } = req.params as { workspaceId: string; boardId: string };
+  router.get('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {
+    const workspaceId = pathParam(req, 'workspaceId');
+    const { boardId } = req.params;
     const board = await findBoard(db, workspaceId, boardId);
     if (!board) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
     res.status(200).json({ id: board.id, name: board.name, document: board.document, updatedAt: board.updatedAt });
-  }));
+  });
 
-  router.put('/:boardId', asyncHandler(async (req: AuthedRequest, res) => {
-    const { workspaceId, boardId } = req.params as { workspaceId: string; boardId: string };
+  router.put('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {
+    const workspaceId = pathParam(req, 'workspaceId');
+    const { boardId } = req.params;
     const { name, document } = req.body ?? {};
     if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
       res.status(400).json({ code: 'INVALID_INPUT' });
@@ -55,17 +57,18 @@ export function createBoardsRouter(config: AppConfig): Router {
       return;
     }
     res.status(200).json({ id: updated.id, name: updated.name, updatedAt: updated.updatedAt });
-  }));
+  });
 
-  router.delete('/:boardId', asyncHandler(async (req: AuthedRequest, res) => {
-    const { workspaceId, boardId } = req.params as { workspaceId: string; boardId: string };
+  router.delete('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {
+    const workspaceId = pathParam(req, 'workspaceId');
+    const { boardId } = req.params;
     const deleted = await deleteBoard(db, workspaceId, boardId);
     if (!deleted) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
     res.status(204).send();
-  }));
+  });
 
   return router;
 }
