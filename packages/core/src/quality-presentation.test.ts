@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { frameQuality } from './quality-presentation.js';
+import { frameQuality, qualityTooltip } from './quality-presentation.js';
 
 describe('frameQuality', () => {
   it("uses the widget's own primary-field quality when the widget type has a known one (gauge → value)", () => {
@@ -47,5 +47,29 @@ describe('frameQuality', () => {
   it('returns undefined for a widget with no bindings at all', () => {
     expect(frameQuality({}, 'gauge')).toBeUndefined();
     expect(frameQuality({}, 'chart.line')).toBeUndefined();
+  });
+});
+
+describe('qualityTooltip with reasons', () => {
+  it('adds the cause to a single abnormal binding', () => {
+    expect(qualityTooltip({ 'data.value': 'disconnected' }, { 'data.value': 'address' }))
+      .toBe('disconnected — no value has been reached (bound value not found at the source)');
+    expect(qualityTooltip({ 'data.value': 'stale' }, { 'data.value': 'throttled' }))
+      .toBe('stale — showing last known value (rate limited)');
+  });
+
+  it('keeps the label unchanged when no cause is known', () => {
+    expect(qualityTooltip({ 'data.value': 'disconnected' }, {})).toBe('disconnected — no value has been reached');
+    expect(qualityTooltip({ 'data.value': 'disconnected' })).toBe('disconnected — no value has been reached');
+  });
+
+  it('names the cause per property when several bindings are at fault', () => {
+    expect(qualityTooltip(
+      { 'data.value': 'disconnected', 'data.threshold': 'disconnected', 'data.label': 'stale' },
+      { 'data.value': 'auth', 'data.label': 'transport' }
+    )).toBe(
+      'disconnected — no value has been reached (data.value: credentials refused, data.threshold) · ' +
+        'stale — showing last known value (data.label: data source unreachable)'
+    );
   });
 });

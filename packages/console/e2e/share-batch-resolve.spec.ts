@@ -32,6 +32,12 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
       id: `n${i}`, x: 40 + (i % 4) * 180, y: 40 + Math.floor(i / 4) * 120, anchored: false,
       widget: { type: 'status', bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${i}.Status` } } } },
     }));
+    // One more node bound past the end of the collection: the source answers, but not with what
+    // this binding points at — the viewer must say so rather than show an empty widget as fine.
+    nodes.push({
+      id: 'missing', x: 40, y: 420, anchored: false,
+      widget: { type: 'status', bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${BINDINGS}.Status` } } } },
+    });
     const saved = await page.request.put(`/workspaces/${workspaceId}/boards/${board.id}`, {
       data: { document: { kind: 'canvas', background: {}, nodes, connectors: [] } },
     });
@@ -50,10 +56,12 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
     const batch = await batchResponse;
     expect(batch.status()).toBe(200);
     const { results } = await batch.json();
-    expect(results).toHaveLength(BINDINGS);
-    expect(results.every((r: { quality: string }) => r.quality === 'live')).toBe(true);
+    expect(results).toHaveLength(BINDINGS + 1);
+    expect(results.slice(0, BINDINGS).every((r: { quality: string }) => r.quality === 'live')).toBe(true);
     expect(results[1]).toEqual({ value: 'Fault', quality: 'live' });
+    expect(results[BINDINGS]).toEqual({ quality: 'disconnected', reason: 'address' });
     await expect(sharePage.getByTestId('canvas')).toBeVisible();
+    await expect(sharePage.locator('[title="disconnected — no value has been reached (bound value not found at the source)"]')).toHaveCount(1);
 
     // One resolve request per board load, whatever the binding count. The dev server renders under
     // React StrictMode, which runs the load effect twice — so "per load" rather than a literal 1+1.

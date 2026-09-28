@@ -32,7 +32,9 @@ canvas layer itself.
 binding; it does not store the value it resolves to. A resolved binding carries a connection
 quality alongside its value — `live` (the adapter reached the source just now), `stale` (the
 adapter couldn't reach it, but is showing a previously-live value as last-known), or
-`disconnected` (no value has ever been reached). This is deliberately narrower than a full alarm
+`disconnected` (no value has been reached) — and, when the adapter can tell, the reason it is
+not live (the source unreachable, credentials refused, the bound value not found at the source, or
+rate limiting). This is deliberately narrower than a full alarm
 model (priority, acknowledgement, shelving) — that belongs to the system a binding points at, not
 to the binding surface itself.
 

@@ -1,4 +1,5 @@
 import type { ViewDocument } from '@iyulab/u-board';
+import type { ResolvedBinding } from '@iyulab/u-board';
 
 export class ApiError extends Error {
   constructor(public code: string, public status: number) {
@@ -190,7 +191,7 @@ export function deleteConnector(workspaceId: string, connectorId: string) {
 }
 
 export function resolveConnector(workspaceId: string, connectorId: string, ref: { path: string; valuePath?: string }) {
-  return request<{ value: unknown; quality: 'live' | 'stale' | 'disconnected' }>(
+  return request<ResolvedBinding>(
     `/workspaces/${workspaceId}/connectors/${connectorId}/resolve`,
     { method: 'POST', body: JSON.stringify({ ref }) }
   );

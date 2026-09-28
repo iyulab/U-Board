@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { HttpStatusError } from './http-status-error.js';
 
 /** How the client authenticates to the token endpoint — the two password-based methods of
  * RFC 6749 §2.3.1, named as OpenID Connect's `token_endpoint_auth_method` values name them. The
@@ -98,7 +99,7 @@ export class ClientCredentialsTokens {
       redirect: 'manual',
       signal: AbortSignal.timeout(5000),
     });
-    if (!response.ok) throw new Error(`token endpoint responded ${response.status}`);
+    if (!response.ok) throw new HttpStatusError(response.status, `token endpoint responded ${response.status}`);
     const body = (await response.json()) as { access_token?: unknown; token_type?: unknown; expires_in?: unknown };
     if (typeof body.access_token !== 'string' || body.access_token === '') {
       throw new Error('token response has no access_token');

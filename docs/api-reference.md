@@ -94,10 +94,12 @@ interface Adapter {
 interface ResolvedBinding {
   value: unknown;
   quality: ConnectionQuality;
+  reason?: QualityReason;
 }
 ```
 
-What an `Adapter.resolve()` call returns — the current value plus how current it is.
+What an `Adapter.resolve()` call returns — the current value, how current it is, and, when it is
+not `live` and the adapter can tell, why. `reason` is ignored on a `live` reading.
 
 ### `ConnectionQuality`
 
@@ -108,14 +110,33 @@ type ConnectionQuality = 'live' | 'stale' | 'disconnected';
 - `live` — the adapter reached the source system just now.
 - `stale` — the adapter could not reach the source, but is showing a previously-live value as
   last-known.
-- `disconnected` — no value has ever been reached (no matching adapter, the adapter rejected, or
-  the source has never resolved).
+- `disconnected` — no value has been reached (no matching adapter, the adapter rejected, the
+  source could not be reached, or it answered without the value the binding points at).
 
 This is deliberately narrower than a full alarm model (priority, acknowledgement, shelving) — see
 [`concepts.md`](concepts.md#binding). A `stale` reading only ever comes from the adapter itself;
 `resolveWidget` has no memory of past calls and cannot infer staleness on its own — an adapter that
 wants to report `stale` must track "have I seen this value before, and can I still reach the
 source" itself.
+
+### `QualityReason`
+
+```ts
+type QualityReason = 'transport' | 'auth' | 'address' | 'throttled';
+```
+
+Why a binding is not `live`, reported by the adapter when it can tell. Each names a different fix,
+so an operator reading "disconnected" knows where to look:
+
+- `transport` — the source could not be reached (network, timeout, server error).
+- `auth` — the source refused the credentials.
+- `address` — the source answered, but not with what the binding points at (an unknown path, an
+  empty result, a renamed field). The binding needs attention, not the network.
+- `throttled` — requests are being rate limited.
+
+A reason annotates `quality`; it never changes it. A binding with no matching adapter, or whose
+adapter rejected, carries no reason — the core cannot tell a misconfiguration from a host that
+simply did not provide that adapter.
 
 ### `Binding`
 
@@ -187,6 +208,7 @@ interface ResolvedWidget {
   type: string;
   props: Record<string, unknown>;
   quality: Record<string, ConnectionQuality>;
+  reasons?: Record<string, QualityReason>;
 }
 ```
 
@@ -200,6 +222,8 @@ a `ResolvedWidget`. `background` and `connectors` pass through unchanged — the
   props that had a binding; a static-only prop carries no entry, since quality doesn't apply to
   it. This is what a renderer reads to show an operator which values are live, stale, or
   disconnected — see [`architecture.md`](architecture.md) for how the shipped renderer does this.
+- `ResolvedWidget.reasons` — the `QualityReason` per bound prop path, for bindings whose adapter
+  reported one on a non-`live` reading. Absent when none did.
 
 ### `resolveWidget(widget, adapters)`
 

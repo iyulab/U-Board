@@ -72,7 +72,7 @@ describe('connector resolve proxy', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a' } });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
+    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'transport' });
   });
 
   it('returns stale quality with the last-known value on failure after a prior success', async () => {
@@ -88,7 +88,7 @@ describe('connector resolve proxy', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: 'running', quality: 'stale' });
+    expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'transport' });
   });
 
   it('returns disconnected when valuePath does not exist in a successful response', async () => {
@@ -98,7 +98,7 @@ describe('connector resolve proxy', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/assets', valuePath: 'value.0.Status' } });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
+    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'address' });
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('valuePath "value.0.Status" not found'));
   });
 
@@ -114,7 +114,7 @@ describe('connector resolve proxy', () => {
       .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
-    expect(res.body).toEqual({ value: 'running', quality: 'stale' });
+    expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'address' });
   });
 
   it('keeps an explicit null at the end of valuePath as a live value', async () => {
@@ -132,7 +132,7 @@ describe('connector resolve proxy', () => {
       .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
+    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'address' });
   });
 
   it('shares one upstream request among concurrent resolves of the same URL, each reading its own valuePath', async () => {
@@ -167,6 +167,27 @@ describe('connector resolve proxy', () => {
     expect((await resolveOnce()).body.value).toBe('running');
     expect((await resolveOnce()).body.value).toBe('stopped');
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('says why a resolve failed, by what the data source answered', async () => {
+    const cases: [number, string][] = [[503, 'transport'], [401, 'auth'], [403, 'auth'], [404, 'address'], [410, 'address'], [429, 'throttled']];
+    for (const [status, reason] of cases) {
+      (fetch as any).mockResolvedValueOnce({ ok: false, status, headers: { get: () => null } });
+      const res = await request(app)
+        .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+        .set('Cookie', memberCookie)
+        .send({ ref: { path: `/status-${status}` } });
+      expect(res.body, `upstream ${status}`).toEqual({ quality: 'disconnected', reason });
+    }
+  });
+
+  it('carries no reason on a live result', async () => {
+    (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
+    const res = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
+    expect(res.body).toEqual({ value: 'running', quality: 'live' });
   });
 
   it('returns 404 for an unknown connectorId', async () => {
@@ -304,7 +325,7 @@ describe('connector resolve proxy with an oauth2-client-credentials connector', 
     (fetch as any).mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: 'invalid_client' }) });
     const res = await resolve();
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
+    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'auth' });
     expect(fetch).toHaveBeenCalledTimes(1); // the data source is never called without a token
     expect((console.warn as any).mock.calls.map((c: unknown[]) => String(c[0]))).toEqual([
       `[resolve] connector ${oauthConnectorId} /assets/7: token failed: token endpoint responded 401 — no value to serve`,

@@ -100,7 +100,7 @@ export function toCanvasKit(doc: ResolvedViewDocument): CanvasKitRenderOutput {
   const overlays: ViewerOverlayItem[] = doc.nodes.map(node => {
     const quality = frameQuality(node.widget.quality, node.widget.type);
     const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
-    const label = qualityTooltip(node.widget.quality);
+    const label = qualityTooltip(node.widget.quality, node.widget.reasons);
 
     return {
       id: node.id,

@@ -20,9 +20,19 @@ export interface Adapter {
  * to show each. */
 export type ConnectionQuality = 'live' | 'stale' | 'disconnected';
 
+/** Why a binding is not `live`, when the adapter can tell — each names a different fix, so an
+ * operator reading "disconnected" knows whom to call. `transport` — the source could not be reached
+ * (network, timeout, server error). `auth` — the source refused the credentials. `address` — the
+ * source answered, but not with what the binding points at (unknown path, empty result, renamed
+ * field): the binding, not the network, needs attention. `throttled` — requests are being rate
+ * limited. It annotates `quality` and never changes it. */
+export type QualityReason = 'transport' | 'auth' | 'address' | 'throttled';
+
 export interface ResolvedBinding {
   value: unknown;
   quality: ConnectionQuality;
+  /** Why `quality` is not `live`, if the adapter knows. Ignored on a `live` reading. */
+  reason?: QualityReason;
 }
 
 export interface ResolvedWidget {
@@ -34,6 +44,10 @@ export interface ResolvedWidget {
   /** Connection quality per bound prop key. A key is present only for props that had a
    * binding — unbound (static-only) props carry no entry, since quality doesn't apply to them. */
   quality: Record<string, ConnectionQuality>;
+  /** Why a bound prop is not `live`, per prop path, for the bindings whose adapter reported a
+   * cause. Absent when none did — a binding with no matching adapter, or whose adapter rejected,
+   * carries no cause: the core cannot tell a misconfiguration from a host that did not wire it. */
+  reasons?: Record<string, QualityReason>;
 }
 
 /**
@@ -58,6 +72,7 @@ export async function resolveWidget(
 ): Promise<ResolvedWidget> {
   const props = { ...(widget.props ?? {}) };
   const quality: Record<string, ConnectionQuality> = {};
+  const reasons: Record<string, QualityReason> = {};
 
   const bindingEntries = Object.entries(widget.bindings ?? {});
   await Promise.all(
@@ -71,13 +86,14 @@ export async function resolveWidget(
         const resolved = await adapter.resolve(binding.ref);
         setPath(props, propPath, resolved.value);
         quality[propPath] = resolved.quality;
+        if (resolved.reason && resolved.quality !== 'live') reasons[propPath] = resolved.reason;
       } catch {
         quality[propPath] = 'disconnected';
       }
     })
   );
 
-  return { type: widget.type, props, quality };
+  return Object.keys(reasons).length > 0 ? { type: widget.type, props, quality, reasons } : { type: widget.type, props, quality };
 }
 
 /** Sets `path` (dot-separated) on `target`, copying each object along the way so the caller's

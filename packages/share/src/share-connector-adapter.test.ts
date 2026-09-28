@@ -75,14 +75,20 @@ describe('ShareConnectorAdapter', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('answers disconnected for every binding when the batch request is refused', async () => {
+  it('answers disconnected for every binding when the batch request is refused, saying why', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({}) });
     const batcher = new ShareResolveBatcher('b1', 'tok');
     const adapter = new ShareConnectorAdapter(batcher, 'c1');
     await expect(Promise.all([adapter.resolve({ path: '/a' }), adapter.resolve({ path: '/b' })])).resolves.toEqual([
-      { value: undefined, quality: 'disconnected' },
-      { value: undefined, quality: 'disconnected' },
+      { value: undefined, quality: 'disconnected', reason: 'throttled' },
+      { value: undefined, quality: 'disconnected', reason: 'throttled' },
     ]);
+  });
+
+  it('reports any other refusal of the batch request as the source being unreachable', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({}) });
+    const adapter = new ShareConnectorAdapter(new ShareResolveBatcher('b1', 'tok'), 'c1');
+    await expect(adapter.resolve({ path: '/a' })).resolves.toEqual({ value: undefined, quality: 'disconnected', reason: 'transport' });
   });
 
   it('rejects every binding of the batch when the request cannot be made at all', async () => {

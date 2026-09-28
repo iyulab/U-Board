@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { ConnectionQuality } from './adapter.js';
+import type { ConnectionQuality, QualityReason } from './adapter.js';
 import { getPrimaryDataField } from '@iyulab/u-widgets';
 
 // `live` is deliberately unstyled (ISA-101 — color is reserved for abnormal state, not spent on
@@ -15,6 +15,15 @@ export const QUALITY_FRAME_STYLE: Partial<Record<ConnectionQuality, CSSPropertie
 export const QUALITY_LABEL: Partial<Record<ConnectionQuality, string>> = {
   stale: 'stale — showing last known value',
   disconnected: 'disconnected — no value has been reached',
+};
+
+// The cause, when an adapter reported one — text only. It changes whom an operator calls, not how
+// urgent the state is, so it gets no frame style of its own (ISA-101, as above).
+export const REASON_LABEL: Record<QualityReason, string> = {
+  transport: 'data source unreachable',
+  auth: 'credentials refused',
+  address: 'bound value not found at the source',
+  throttled: 'rate limited',
 };
 
 // Worst-first: a node with several bindings shows whichever one needs the operator's attention
@@ -63,18 +72,26 @@ export function frameQuality(
  * to see why (ISA-18.2 alarm rationalization: alarms should be configured on
  * the best indicator of root cause, not merged into the single most severe symptom).
  */
-export function qualityTooltip(quality: Record<string, ConnectionQuality>): string | undefined {
+export function qualityTooltip(
+  quality: Record<string, ConnectionQuality>,
+  reasons: Record<string, QualityReason> = {}
+): string | undefined {
   const worst = worstQuality(quality);
   if (!worst) return undefined;
   const baseLabel = QUALITY_LABEL[worst];
   if (!baseLabel) return undefined;
 
   const abnormal = Object.entries(quality).filter(([, q]) => q !== 'live') as [string, ConnectionQuality][];
-  if (abnormal.length <= 1) return baseLabel;
+  if (abnormal.length <= 1) {
+    const reason = abnormal[0] && reasons[abnormal[0][0]];
+    return reason ? `${baseLabel} (${REASON_LABEL[reason]})` : baseLabel;
+  }
 
   return (['disconnected', 'stale'] as const)
     .map(q => {
-      const keys = abnormal.filter(([, eq]) => eq === q).map(([key]) => key);
+      const keys = abnormal
+        .filter(([, eq]) => eq === q)
+        .map(([key]) => (reasons[key] ? `${key}: ${REASON_LABEL[reasons[key]]}` : key));
       return keys.length > 0 ? `${QUALITY_LABEL[q]} (${keys.join(', ')})` : undefined;
     })
     .filter((entry): entry is string => entry !== undefined)

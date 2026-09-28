@@ -62,6 +62,29 @@ describe('resolveWidget', () => {
     expect(resolved.quality.value).toBe('stale');
   });
 
+  it('records the cause an adapter gives for a binding that is not live', async () => {
+    const source = new InMemoryAdapter('src', {
+      a: { value: undefined, quality: 'disconnected', reason: 'address' },
+      b: { value: 3, quality: 'stale', reason: 'transport' },
+      c: { value: 1, quality: 'live', reason: 'throttled' },
+    });
+    const widget: Widget = {
+      type: 'gauge',
+      bindings: { 'data.a': { adapter: 'src', ref: 'a' }, 'data.b': { adapter: 'src', ref: 'b' }, 'data.c': { adapter: 'src', ref: 'c' } },
+    };
+    const resolved = await resolveWidget(widget, [source]);
+    // A cause only means something next to an abnormal reading, so one on a live reading is dropped.
+    expect(resolved.reasons).toEqual({ 'data.a': 'address', 'data.b': 'transport' });
+  });
+
+  it('carries no reasons at all when no binding reported a cause', async () => {
+    const widget: Widget = { type: 'gauge', bindings: { 'data.value': { adapter: 'missing', ref: 'x' } } };
+    const resolved = await resolveWidget(widget, []);
+    // No matching adapter says nothing about why — the host may simply not have wired one.
+    expect(resolved).toEqual({ type: 'gauge', props: {}, quality: { 'data.value': 'disconnected' } });
+    expect('reasons' in resolved).toBe(false);
+  });
+
   it('marks a binding disconnected and leaves props untouched when no adapter matches its id', async () => {
     const widget: Widget = {
       type: 'uw-status',

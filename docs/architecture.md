@@ -56,6 +56,9 @@ The frame's title (and, for assistive technology, an accompanying live-region an
 the cause. When only one binding is at fault, that binding's own state is enough. When more than
 one is, the summary is broken out per bound prop path — so a binding that plays no part in what
 the widget actually displays cannot mark an otherwise-live widget's cause of trouble unclear.
+When an adapter reports *why* a binding is not live (source unreachable, credentials refused, bound
+value not found at the source, rate limited), the title and announcement carry that too. The cause
+is text only: it changes who needs to act, not how urgent the state is, so it adds no frame style.
 
 ## Deployment
 

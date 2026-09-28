@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import type { Adapter, ConnectionQuality } from '../adapter.js';
+import type { Adapter, ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
-import { QUALITY_FRAME_STYLE, QUALITY_LABEL } from '../quality-presentation.js';
+import { QUALITY_FRAME_STYLE, qualityTooltip } from '../quality-presentation.js';
 
 // Must match `DemoAdapter.id` in ../demo-adapter.js. Not imported as `DemoAdapter` itself so this
 // check stays an id comparison (robust across a duplicate-module-instance scenario, where
@@ -63,7 +63,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
   // author changes the prop path instead of leaving the old binding orphaned. `null` while adding
   // a new binding (nothing to remove).
   const [editingPropPath, setEditingPropPath] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ value: unknown; quality: ConnectionQuality } | null>(null);
+  const [preview, setPreview] = useState<ResolvedBinding | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [exploreResult, setExploreResult] = useState<unknown>(null);
   const [exploreError, setExploreError] = useState<string | null>(null);
@@ -129,6 +129,11 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
       setPreviewError('미리보기 호출에 실패했습니다');
     }
   };
+
+  // The same wording the canvas frame's tooltip uses for this binding, cause included.
+  const previewLabel = preview
+    ? qualityTooltip({ binding: preview.quality }, preview.reason ? { binding: preview.reason } : {})
+    : undefined;
 
   const handleExplore = async () => {
     if (!selectedAdapter || isDemo) return;
@@ -276,9 +281,9 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
               <span>
                 값: {JSON.stringify(preview.value)} ({preview.quality})
               </span>
-              {QUALITY_LABEL[preview.quality] && (
+              {previewLabel && (
                 <span style={{ ...QUALITY_FRAME_STYLE[preview.quality], borderRadius: 4, padding: '0 4px', fontSize: 11 }}>
-                  {QUALITY_LABEL[preview.quality]}
+                  {previewLabel}
                 </span>
               )}
             </p>

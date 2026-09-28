@@ -6,6 +6,15 @@ const MAX_BATCH_BINDINGS = 500;
 
 const DISCONNECTED: ResolvedBinding = { value: undefined, quality: 'disconnected' };
 
+/** Why the viewer's own batch request was refused, as the cause every binding in it inherits — the
+ * edge rate limit (429) and an unavailable server (5xx) are named; any other refusal (a revoked
+ * link, say) says nothing about the data source, so it carries no cause. */
+function refusalReason(status: number): ResolvedBinding['reason'] {
+  if (status === 429) return 'throttled';
+  if (status >= 500) return 'transport';
+  return undefined;
+}
+
 type Pending = { connectorId: string; ref: unknown; settle: (result: Promise<ResolvedBinding>) => void };
 
 /** Collects every resolve a board's render asks for in the same turn and sends them as one request
@@ -52,7 +61,10 @@ export class ShareResolveBatcher {
       `${getApiBase()}/share/boards/${this.boardId}/resolve?token=${encodeURIComponent(this.token)}`,
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindings }) }
     );
-    if (!res.ok) return bindings.map(() => DISCONNECTED);
+    if (!res.ok) {
+      const refused = { ...DISCONNECTED, reason: refusalReason(res.status) };
+      return bindings.map(() => refused);
+    }
     const body = (await res.json()) as { results: ResolvedBinding[] };
     return body.results;
   }

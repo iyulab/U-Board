@@ -1,11 +1,16 @@
 import type { Connector } from './db/connectors.js';
 import type { ClientCredentials, ClientCredentialsTokens } from './oauth-client-credentials.js';
+import { HttpStatusError } from './http-status-error.js';
 
 export type ResolveQuality = 'live' | 'stale' | 'disconnected';
+
+/** Why a resolve is not `live` — the core's `QualityReason`, same four words. */
+export type ResolveReason = 'transport' | 'auth' | 'address' | 'throttled';
 
 export interface ResolveResult {
   value: unknown;
   quality: ResolveQuality;
+  reason?: ResolveReason;
 }
 
 /** Process-wide state the resolve proxy keeps between requests. */
@@ -123,9 +128,25 @@ async function authHeaders(connector: Connector, tokens: ClientCredentialsTokens
 /** A failure tagged with the stage it happened in, so a shared request's failure is reported
  * the same way to every binding waiting on it. */
 class StageError extends Error {
-  constructor(readonly stage: ResolveStage, readonly reason: unknown) {
-    super(describeFailure(reason));
+  readonly reason: ResolveReason;
+  constructor(readonly stage: ResolveStage, cause: unknown, reason?: ResolveReason) {
+    super(describeFailure(cause));
+    this.reason = reason ?? reasonFor(stage, cause);
   }
+}
+
+/** What an upstream failure means for whoever has to fix it. A status the data source or token
+ * endpoint answered with says it; anything else (network, timeout, 5xx, a redirect not followed,
+ * an unparseable body) means the source could not be used at all. */
+function reasonFor(stage: ResolveStage, cause: unknown): ResolveReason {
+  if (!(cause instanceof HttpStatusError)) return 'transport';
+  const { status } = cause;
+  if (status === 429) return 'throttled';
+  if (status === 401 || status === 403) return 'auth';
+  // RFC 6749 §5.2: the token endpoint answers a bad client or grant with 400 as well.
+  if (stage === 'token' && status === 400) return 'auth';
+  if (stage !== 'token' && (status === 404 || status === 410)) return 'address';
+  return 'transport';
 }
 
 /** Fetches and parses `target` with `connector`'s auth headers. An OAuth connector whose token is
@@ -148,7 +169,7 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
       tokens.invalidate(connector.id);
       response = await send();
     }
-    if (!response.ok) throw new Error(`upstream responded ${response.status}`);
+    if (!response.ok) throw new HttpStatusError(response.status, `upstream responded ${response.status}`);
     stage = 'response';
     const contentType = response.headers.get('content-type') ?? '';
     return contentType.includes('json') ? await response.json() : await response.text();
@@ -190,7 +211,7 @@ export async function resolveConnectorValue(
     if (ref.valuePath) {
       const extracted = getByPath(body, ref.valuePath);
       if (!extracted.found) {
-        throw new StageError('response', new Error(`valuePath "${ref.valuePath}" not found in the response`));
+        throw new StageError('response', new Error(`valuePath "${ref.valuePath}" not found in the response`), 'address');
       }
       value = extracted.value;
     }
@@ -198,13 +219,13 @@ export async function resolveConnectorValue(
     if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
     return { value, quality: 'live' };
   } catch (err) {
-    const { stage, message } = err as StageError;
+    const { stage, message, reason } = err as StageError;
     const stale = state.values.has(cacheKey);
     const failure = `${stage} failed: ${message}`;
     if (state.failures.get(cacheKey) !== failure) {
       state.failures.set(cacheKey, failure);
       console.warn(`${where}: ${failure} — ${stale ? 'serving the last value as stale' : 'no value to serve'}`);
     }
-    return stale ? { value: state.values.get(cacheKey), quality: 'stale' } : { value: undefined, quality: 'disconnected' };
+    return stale ? { value: state.values.get(cacheKey), quality: 'stale', reason } : { value: undefined, quality: 'disconnected', reason };
   }
 }

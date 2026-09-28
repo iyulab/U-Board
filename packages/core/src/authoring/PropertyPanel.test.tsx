@@ -6,7 +6,7 @@ import { PropertyPanel } from './PropertyPanel.js';
 import { DemoAdapter } from '../demo-adapter.js';
 import type { Adapter, ResolvedBinding } from '../adapter.js';
 import type { Node } from '../view-document.js';
-import { QUALITY_LABEL } from '../quality-presentation.js';
+import { QUALITY_LABEL, REASON_LABEL } from '../quality-presentation.js';
 
 function statusNode(bindings?: Node['widget']['bindings']): Node {
   return {
@@ -23,6 +23,7 @@ class FakeHttpAdapter implements Adapter {
   async resolve(ref: unknown): Promise<ResolvedBinding> {
     const r = ref as { path: string; valuePath?: string };
     if (r.path === '/pumps/a' && r.valuePath === 'status') return { value: 'running', quality: 'live' };
+    if (r.path === '/pumps/a') return { value: undefined, quality: 'disconnected', reason: 'address' };
     return { value: undefined, quality: 'disconnected' };
   }
 }
@@ -174,6 +175,19 @@ describe('PropertyPanel bindings', () => {
     fireEvent.click(screen.getByText('미리보기'));
 
     await waitFor(() => expect(screen.getByText(QUALITY_LABEL.disconnected!)).toBeInTheDocument());
+  });
+
+  it('says why a preview is not live when the adapter reports a cause', async () => {
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/a' } });
+    fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'stauts' } });
+    fireEvent.click(screen.getByText('미리보기'));
+
+    await waitFor(() => expect(
+      screen.getByText(`${QUALITY_LABEL.disconnected} (${REASON_LABEL.address})`)
+    ).toBeInTheDocument());
   });
 
   it('saves a new binding with the adapter id and HTTP ref shape', () => {
