@@ -91,6 +91,50 @@ describe('connector resolve proxy', () => {
     expect(res.body).toEqual({ value: 'running', quality: 'stale' });
   });
 
+  it('returns disconnected when valuePath does not exist in a successful response', async () => {
+    (fetch as any).mockResolvedValueOnce(jsonResponse({ value: [] }));
+    const res = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/assets', valuePath: 'value.0.Status' } });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('valuePath "value.0.Status" not found'));
+  });
+
+  it('serves the last value as stale when a previously resolvable valuePath stops resolving', async () => {
+    (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
+    await request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
+
+    (fetch as any).mockResolvedValueOnce(jsonResponse({ state: 'running' }));
+    const res = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
+    expect(res.body).toEqual({ value: 'running', quality: 'stale' });
+  });
+
+  it('keeps an explicit null at the end of valuePath as a live value', async () => {
+    (fetch as any).mockResolvedValueOnce(jsonResponse({ value: [{ Temp: null }] }));
+    const res = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/assets', valuePath: 'value.0.Temp' } });
+    expect(res.body).toEqual({ value: null, quality: 'live' });
+  });
+
+  it('returns disconnected when valuePath is given but the response is not JSON', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => 'text/plain' }, text: async () => 'running' });
+    const res = await request(app)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
+    expect(res.body).toEqual({ value: undefined, quality: 'disconnected' });
+  });
+
   it('returns 404 for an unknown connectorId', async () => {
     const res = await request(app)
       .post(`/workspaces/${workspaceId}/connectors/nonexistent/resolve`)

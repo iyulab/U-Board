@@ -32,13 +32,18 @@ function describeFailure(err: unknown): string {
   return String(err);
 }
 
-function getByPath(obj: unknown, path: string): unknown {
-  return path.split('.').reduce<unknown>((cursor, key) => {
-    if (cursor && typeof cursor === 'object' && key in (cursor as Record<string, unknown>)) {
-      return (cursor as Record<string, unknown>)[key];
+/** Follows `path` through `obj`, telling "the path ends at `null`/`undefined`" (a value the source
+ * sent) apart from "the path leads nowhere" (a response that does not contain what the binding
+ * addresses — an empty result set, a renamed field). Only the first is a live reading. */
+function getByPath(obj: unknown, path: string): { found: true; value: unknown } | { found: false } {
+  let cursor = obj;
+  for (const key of path.split('.')) {
+    if (!cursor || typeof cursor !== 'object' || !(key in (cursor as Record<string, unknown>))) {
+      return { found: false };
     }
-    return undefined;
-  }, obj);
+    cursor = (cursor as Record<string, unknown>)[key];
+  }
+  return { found: true, value: cursor };
 }
 
 /** `ref.path` is caller-controlled and the request carries the connector's credentials, so it
@@ -149,7 +154,12 @@ export async function resolveConnectorValue(
     stage = 'response';
     const contentType = response.headers.get('content-type') ?? '';
     const body = contentType.includes('json') ? await response.json() : await response.text();
-    const value = ref.valuePath ? getByPath(body, ref.valuePath) : body;
+    let value: unknown = body;
+    if (ref.valuePath) {
+      const extracted = getByPath(body, ref.valuePath);
+      if (!extracted.found) throw new Error(`valuePath "${ref.valuePath}" not found in the response`);
+      value = extracted.value;
+    }
     state.values.set(cacheKey, value);
     if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
     return { value, quality: 'live' };
