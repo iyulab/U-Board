@@ -18,7 +18,7 @@
     "directory": "packages/console"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "@iyulab/u-board": "*",

@@ -79,14 +79,42 @@ jobs:
       - name: E2E
         run: npm run test:e2e
 
-  # Publishes the library package (packages/core, @iyulab/u-board) once `verify` has passed on a
+  # The packages declare `engines.node >=22.12.0` — the oldest supported Node line, and the floor
+  # Vite itself requires. `verify` runs on the current line only, so without this job the declared
+  # floor would be a claim nothing checks. Unit tests, typecheck and the library build are what a
+  # consumer on that line relies on; the browser e2e suite does not depend on the Node version.
+  node-floor:
+    name: node-floor (22.12)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22.12"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build library entry
+        run: npm run build:lib
+
+  # Publishes the library package (packages/core, @iyulab/u-board) once `verify` and `node-floor` have passed on a
   # push to main, if its version isn't on the registry yet. Kept in this workflow rather than a
   # separate one so the commit that gets published is exactly the commit that was verified — and
   # so provenance records that commit. The server, console and share workspaces are applications
   # and stay private.
   publish:
     name: publish
-    needs: verify
+    needs: [verify, node-floor]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
