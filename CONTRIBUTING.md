@@ -71,6 +71,12 @@ allowlist in [`scripts/check-public-text.mjs`](scripts/check-public-text.mjs) â€
 public site means adding it there). See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 Run `npm run typecheck` and `npm test` locally before opening a pull request.
 
+When upgrading a dependency that several workspaces share, install it for all of them in one
+command (`npm install -D <pkg>@<version> --workspace=packages/a --workspace=packages/b â€¦`) and
+finish with `npm dedupe`. Upgrading one workspace at a time can leave a second copy nested under
+a package, and a second copy of a test runner silently splits type augmentation (such as
+jest-dom's matchers) from the instance the tests use.
+
 ## Pull requests
 
 - One logical change per pull request. Keep unrelated refactors out of it.
