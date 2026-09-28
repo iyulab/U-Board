@@ -1,0 +1,29 @@
+name: Dependency drift
+
+# The same check runs in CI on every push, but drift grows with time, not with commits: a quiet
+# month would otherwise pass unnoticed until the next push. This weekly run makes it visible as a
+# failed run on main, and catches deferrals in dependency-deferrals.json passing their review date.
+on:
+  schedule:
+    - cron: "17 0 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Dependency drift
+        run: npm run check:pin-drift

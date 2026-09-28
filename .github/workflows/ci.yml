@@ -32,11 +32,12 @@ jobs:
       - name: Tooling script tests
         run: npm run test:tooling
 
-      # Catches a sibling-package pin (`@iyulab/u-widgets`, `@canvas-kit/*`) sitting behind its
-      # already-published version — `npm install`/`npm ci` doesn't re-resolve an already-
-      # satisfying lockfile entry, so this drift is otherwise silent (see
-      # scripts/check-pin-drift.mjs).
-      - name: Pin drift (sibling packages)
+      # Catches dependencies sitting behind already-published versions — `npm install`/`npm ci`
+      # doesn't re-resolve an already-satisfying lockfile entry, so this drift is otherwise
+      # silent. New majors must be adopted or deferred with a review date in
+      # dependency-deferrals.json (see scripts/check-pin-drift.mjs). Also runs weekly
+      # (dependency-drift.yml).
+      - name: Dependency drift
         run: npm run check:pin-drift
 
       # This repository is public: tracked text must not carry work-tracking ids, paths into

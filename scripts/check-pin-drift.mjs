@@ -1,37 +1,39 @@
 #!/usr/bin/env node
 // check-pin-drift.mjs
-// Detects npm version drift between this repo's installed pin and the currently-published
-// version of the sibling packages this project builds on (`@iyulab/u-widgets`, `@canvas-kit/*`).
+// Detects dependency drift: an installed version sitting behind what is already published.
 //
 // Background: a caret range (e.g. "^0.16.1") already accepts a newer patch/minor once published,
 // but `npm install`/`npm ci` does not re-resolve an already-satisfying lockfile entry — only
-// `npm update` does. That gap once let this repo's `@iyulab/u-widgets` pin sit behind its own
-// published version, caught only by a manual `npm outdated` sweep. This script automates that
-// sweep.
+// `npm update` does. Nothing else notices, so without this check in-range drift accumulates
+// silently (it once let a sibling pin sit behind its own published version, and later let a
+// month of third-party updates pile up).
 //
-// A pin can also be legitimately behind `latest` because the declared semver range doesn't cover
-// it yet (e.g. a new major, or a not-yet-adopted minor) — that is a deliberate range decision, not
-// drift, so it is not treated as a hard failure unless it crosses the threshold below.
+// Rules, per direct dependency reported by `npm outdated`:
+// - Sibling packages (`@iyulab/*`, `@canvas-kit/*`, excluding this repo's own workspaces): any
+//   in-range gap fails — they move together with this repo.
+// - Third-party packages: an in-range gap of two or more minors fails; a patch or single-minor
+//   gap is reported only, so routine upstream churn does not turn CI red.
+// - Outside the declared range: a new major is a deliberate adoption decision, so it fails
+//   unless `dependency-deferrals.json` records why it is deferred and until when. An expired
+//   deferral fails, and so does one that no longer matches anything (a stale ledger entry would
+//   silently excuse the next major of the same number). A gap of five or more minors within the
+//   same major fails regardless.
 //
 // Usage:
 //   node scripts/check-pin-drift.mjs            # report only, exit 0
-//   node scripts/check-pin-drift.mjs --strict    # exit 1 if drift found (used in CI)
+//   node scripts/check-pin-drift.mjs --strict    # exit 1 on any failure above (used in CI)
 
 import { execSync } from 'node:child_process';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 
-// Sibling packages (`@iyulab/*`, `@canvas-kit/*`) — third-party packages are out of scope for
-// this check. This repo's own workspace packages share
-// the `@iyulab/` scope but are excluded: they always resolve to the local source, so their
-// "current" version is the local one and legitimately runs ahead of the registry on the commit
-// that bumps it for release.
-export const isTrackedPackage = (name, workspacePackages = new Set()) =>
-  !workspacePackages.has(name) && (name.startsWith('@iyulab/') || name.startsWith('@canvas-kit/'));
+export const isSiblingPackage = (name) => name.startsWith('@iyulab/') || name.startsWith('@canvas-kit/');
 
 // Names of the packages under the root package.json's `workspaces` entries. Only the `dir/*`
-// form is expanded, which is the only form this repo uses.
+// form is expanded, which is the only form this repo uses. They are skipped entirely: a
+// workspace package always resolves to the local source, so its "current" version is the local
+// one and legitimately runs ahead of the registry on the commit that bumps it for release.
 export function readWorkspacePackageNames(rootDir = process.cwd()) {
   const { workspaces = [] } = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
   const names = new Set();
@@ -49,37 +51,69 @@ export function readWorkspacePackageNames(rootDir = process.cwd()) {
   return names;
 }
 
-// A pin more than one major version behind, or 5+ minors behind, is treated as neglect rather
-// than a deliberate not-yet-adopted range: small gaps are tolerated, and anything past this
-// threshold fails.
+// Within one major, a gap of this many minors to the newest release outside the declared range
+// is neglect rather than a deliberate not-yet-adopted range.
 export const MINOR_GAP_THRESHOLD = 5;
+// A third-party in-range gap of this many minors fails; smaller gaps are reported only.
+export const THIRD_PARTY_IN_RANGE_MINOR_GAP = 2;
 
 export function parseVersion(v) {
   const [major, minor] = v.split('.').map(n => parseInt(n, 10));
   return { major, minor };
 }
 
-export function exceedsThreshold(current, latest) {
-  const c = parseVersion(current);
-  const l = parseVersion(latest);
-  if (l.major !== c.major) return true;
-  return l.minor - c.minor >= MINOR_GAP_THRESHOLD;
+// Minors from one version to another of the same major; Infinity across majors.
+export function minorGap(from, to) {
+  const a = parseVersion(from);
+  const b = parseVersion(to);
+  return a.major === b.major ? b.minor - a.minor : Infinity;
 }
 
-// Classifies one `npm outdated --json` entry into a drift/stale/clean verdict. Pure function —
-// the actual `npm outdated` call is kept out of this so the classification rules are testable
-// without shelling out.
-export function classify({ current, wanted, latest }) {
+export function findDeferral(deferrals, name, latest) {
+  const { major } = parseVersion(latest);
+  return deferrals.find(d => d.package === name && d.major === major);
+}
+
+// Classifies one `npm outdated --json` entry. Pure — the ledger and `today` (YYYY-MM-DD) are
+// passed in, so the rules are testable without the registry or the clock.
+// Verdicts: 'clean' | 'info' (reported only) | 'deferred' | 'drift' (fails under --strict).
+export function classify({ name, current, wanted, latest }, { sibling = false, deferrals = [], today = '' } = {}) {
   if (current !== wanted) {
-    return { verdict: 'drift', reason: 'npm update 로 즉시 해소 가능(현재 pin < 선언된 range 안의 최신)' };
+    if (sibling) {
+      return { verdict: 'drift', reason: '`npm update` would pick up a newer in-range version' };
+    }
+    if (minorGap(current, wanted) >= THIRD_PARTY_IN_RANGE_MINOR_GAP) {
+      return { verdict: 'drift', reason: `in-range gap of ${THIRD_PARTY_IN_RANGE_MINOR_GAP}+ minors — run \`npm update\`` };
+    }
+    return { verdict: 'info', reason: 'small in-range gap' };
   }
-  if (current !== latest && exceedsThreshold(current, latest)) {
-    return { verdict: 'drift', reason: `range 밖 최신(${latest})과의 격차가 임계치(major 차이 또는 minor ${MINOR_GAP_THRESHOLD}+) 초과` };
+  if (current === latest) return { verdict: 'clean', reason: null };
+  if (parseVersion(latest).major !== parseVersion(current).major) {
+    const deferral = findDeferral(deferrals, name, latest);
+    if (!deferral) {
+      return { verdict: 'drift', reason: `new major ${latest} — adopt it, or record why not in dependency-deferrals.json` };
+    }
+    if (deferral.reviewBy < today) {
+      return { verdict: 'drift', reason: `deferral expired on ${deferral.reviewBy} — adopt ${latest} or renew it with a current reason` };
+    }
+    return { verdict: 'deferred', reason: `until ${deferral.reviewBy}: ${deferral.reason}` };
   }
-  if (current !== latest) {
-    return { verdict: 'stale-in-range', reason: null };
+  if (minorGap(current, latest) >= MINOR_GAP_THRESHOLD) {
+    return { verdict: 'drift', reason: `${MINOR_GAP_THRESHOLD}+ minors behind the newest release (outside the declared range)` };
   }
-  return { verdict: 'clean', reason: null };
+  return { verdict: 'info', reason: 'newer release outside the declared range, within tolerance' };
+}
+
+// Ledger entries that excuse nothing currently outdated.
+export function staleDeferrals(deferrals, entries) {
+  return deferrals.filter(d => !entries.some(e =>
+    e.name === d.package && e.current === e.wanted
+    && parseVersion(e.latest).major === d.major && parseVersion(e.current).major !== d.major));
+}
+
+export function readDeferrals(file = fileURLToPath(new URL('../dependency-deferrals.json', import.meta.url))) {
+  if (!existsSync(file)) return [];
+  return JSON.parse(readFileSync(file, 'utf8')).deferrals ?? [];
 }
 
 function readOutdated() {
@@ -99,38 +133,43 @@ function readOutdated() {
 
 function main() {
   const strict = process.argv.includes('--strict');
-  const outdated = readOutdated();
+  const today = new Date().toISOString().slice(0, 10);
   const workspacePackages = readWorkspacePackageNames();
-  const drift = [];
-  const staleButInRange = [];
-
-  for (const [name, value] of Object.entries(outdated)) {
-    if (!isTrackedPackage(name, workspacePackages)) continue;
-    const entries = Array.isArray(value) ? value : [value];
-    for (const entry of entries) {
-      const { current, wanted, latest, dependent } = entry;
-      const { verdict, reason } = classify({ current, wanted, latest });
-      if (verdict === 'drift') drift.push({ name, dependent, current, wanted, latest, reason });
-      else if (verdict === 'stale-in-range') staleButInRange.push({ name, dependent, current, latest });
-    }
+  const deferrals = readDeferrals();
+  const entries = [];
+  for (const [name, value] of Object.entries(readOutdated())) {
+    if (workspacePackages.has(name)) continue;
+    for (const entry of Array.isArray(value) ? value : [value]) entries.push({ name, ...entry });
   }
 
-  if (staleButInRange.length > 0) {
-    console.log('range 밖 최신 버전이 있지만 임계치 이내(정보 제공용, 실패 아님):');
-    for (const s of staleButInRange) {
-      console.log(`  ${s.name} (${s.dependent}): ${s.current} → ${s.latest}`);
-    }
+  const found = { info: [], deferred: [], drift: [] };
+  for (const e of entries) {
+    const { verdict, reason } = classify(e, { sibling: isSiblingPackage(e.name), deferrals, today });
+    if (verdict !== 'clean') found[verdict].push({ ...e, reason });
   }
+  const stale = staleDeferrals(deferrals, entries);
 
-  if (drift.length > 0) {
-    console.log('\nPIN DRIFT DETECTED — 다음 패키지가 이미 사용 가능한 상류 버전보다 뒤처져 있습니다:');
-    for (const d of drift) {
-      console.log(`  ${d.name} (${d.dependent}): ${d.current} → ${d.wanted !== d.current ? d.wanted : d.latest} — ${d.reason}`);
-    }
-    console.log('\n확인할 것: (1) 이 격차가 알려진 breaking change 때문인가 (2) 그냥 npm update를 안 돌린 것인가.');
-    if (strict) process.exitCode = 1;
-  } else {
-    console.log('드리프트 없음 — 추적 대상 패키지(@iyulab/*, @canvas-kit/* — 이 리포의 워크스페이스 패키지 제외) 전부 최신 또는 임계치 이내.');
+  const line = e => `  ${e.name} (${e.dependent}): ${e.current} → ${e.current !== e.wanted ? e.wanted : e.latest} — ${e.reason}`;
+  if (found.info.length > 0) {
+    console.log('Behind, within tolerance (not a failure):');
+    found.info.forEach(e => console.log(line(e)));
+  }
+  if (found.deferred.length > 0) {
+    console.log('\nDeferred majors (dependency-deferrals.json):');
+    found.deferred.forEach(e => console.log(line(e)));
+  }
+  if (stale.length > 0) {
+    console.log('\nSTALE DEFERRALS — these entries match nothing outdated; remove them:');
+    stale.forEach(d => console.log(`  ${d.package}@${d.major}`));
+  }
+  if (found.drift.length > 0) {
+    console.log('\nDEPENDENCY DRIFT:');
+    found.drift.forEach(e => console.log(line(e)));
+  }
+  if (found.drift.length === 0 && stale.length === 0) {
+    console.log('\nNo dependency drift beyond tolerance.');
+  } else if (strict) {
+    process.exitCode = 1;
   }
 }
 
