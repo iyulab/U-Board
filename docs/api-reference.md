@@ -166,9 +166,10 @@ interface Widget {
   passed through to the renderer without interpretation.
 - `props` — static configuration in whatever shape that widget kind expects.
 - `bindings` — a map from a dotted path into `props` (e.g. `'data.value'`, or a nested path like
-  `'data.status'`) to a `Binding`. At resolution time, each entry's resolved value is written into
-  `props` at that path — copying, never mutating, the objects along the way — so the same static
-  `props` object safely provides defaults for any key that isn't bound, or that failed to resolve.
+  `'data.status'`, or an array element like `'items.1.value'`) to a `Binding`. At resolution time,
+  each entry's resolved value is written into `props` at that path — copying, never mutating, the
+  objects and arrays along the way — so the same static `props` object safely provides defaults for
+  any key that isn't bound, or whose binding is `disconnected`.
 
 ### `Node`, `Connector`, `Background`, `Shape`, `ViewDocument`
 
@@ -216,8 +217,9 @@ interface ResolvedWidget {
 a `ResolvedWidget`. `background` and `connectors` pass through unchanged — they carry no bindings.
 
 - `ResolvedWidget.type` — carried through unchanged from the source `Widget`.
-- `ResolvedWidget.props` — the widget's static `props` merged with every binding that resolved
-  successfully, at the dotted path each `Binding` named.
+- `ResolvedWidget.props` — the widget's static `props` merged with every binding whose reading has
+  a value to show (`live`, or `stale` with its last-known value), at the dotted path each `Binding`
+  named. A `disconnected` reading is never merged, even if the adapter returned a `value`.
 - `ResolvedWidget.quality` — connection quality per bound prop path. A key is present only for
   props that had a binding; a static-only prop carries no entry, since quality doesn't apply to
   it. This is what a renderer reads to show an operator which values are live, stale, or

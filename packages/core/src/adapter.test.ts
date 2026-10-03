@@ -85,6 +85,35 @@ describe('resolveWidget', () => {
     expect('reasons' in resolved).toBe(false);
   });
 
+  it('keeps the static default when an adapter reports a binding disconnected, whatever value it returns', async () => {
+    const source = new InMemoryAdapter('src', {
+      missing: { value: undefined, quality: 'disconnected', reason: 'address' },
+      leftover: { value: 7, quality: 'disconnected' },
+    });
+    const widget: Widget = {
+      type: 'gauge',
+      props: { data: { value: '--', max: '--' } },
+      bindings: { 'data.value': { adapter: 'src', ref: 'missing' }, 'data.max': { adapter: 'src', ref: 'leftover' } },
+    };
+
+    const resolved = await resolveWidget(widget, [source]);
+
+    // A disconnected reading has no current value to show — the placeholder the author set stays,
+    // and the cause still comes through for the renderer to explain it.
+    expect(resolved.props).toEqual({ data: { value: '--', max: '--' } });
+    expect(resolved.quality).toEqual({ 'data.value': 'disconnected', 'data.max': 'disconnected' });
+    expect(resolved.reasons).toEqual({ 'data.value': 'address' });
+  });
+
+  it('adds no key for a disconnected binding that has no static default', async () => {
+    const source = new InMemoryAdapter('src', { missing: { value: undefined, quality: 'disconnected' } });
+    const widget: Widget = { type: 'status', props: { data: { label: 'Pump A' } }, bindings: { 'data.value': { adapter: 'src', ref: 'missing' } } };
+
+    const resolved = await resolveWidget(widget, [source]);
+
+    expect(resolved.props).toStrictEqual({ data: { label: 'Pump A' } });
+  });
+
   it('marks a binding disconnected and leaves props untouched when no adapter matches its id', async () => {
     const widget: Widget = {
       type: 'uw-status',
@@ -194,5 +223,16 @@ describe('resolveWidget', () => {
 
     expect(originalData).toEqual({ label: 'Pump A' });
     expect('status' in originalData).toBe(false);
+  });
+  it('writes through a numeric path segment into an array without turning it into an object', async () => {
+    const cmms = new InMemoryAdapter('cmms', { load: { value: 9, quality: 'live' } });
+    const items = [{ v: 0 }, { v: 0 }];
+    const widget: Widget = { type: 'chart.bar', props: { items }, bindings: { 'items.1.v': { adapter: 'cmms', ref: 'load' } } };
+
+    const resolved = await resolveWidget(widget, [cmms]);
+
+    expect(resolved.props).toEqual({ items: [{ v: 0 }, { v: 9 }] });
+    expect(Array.isArray(resolved.props.items)).toBe(true);
+    expect(items).toEqual([{ v: 0 }, { v: 0 }]);
   });
 });

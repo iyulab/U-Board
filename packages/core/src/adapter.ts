@@ -39,7 +39,8 @@ export interface ResolvedWidget {
   /** Carried through unchanged from the source Widget — resolution only touches `props`, and a
    * renderer still needs to know which widget kind to hand these props to. */
   type: string;
-  /** The widget's static `props` merged with every binding that resolved successfully. */
+  /** The widget's static `props` merged with every binding whose reading has a value to show —
+   * `live` or `stale`. A `disconnected` binding leaves its static value (or absence) in place. */
   props: Record<string, unknown>;
   /** Connection quality per bound prop key. A key is present only for props that had a
    * binding — unbound (static-only) props carry no entry, since quality doesn't apply to them. */
@@ -55,7 +56,8 @@ export interface ResolvedWidget {
  * hands to the widget library plus per-prop connection quality. A binding whose adapter id
  * doesn't match any given Adapter — or whose adapter rejects instead of returning a result (a
  * network timeout, for example) — is reported `disconnected` and its prop is left at whatever
- * static value (or absence) it already had, never overwritten with a missing value. One
+ * static value (or absence) it already had, never overwritten with a missing value. The same holds
+ * when the adapter itself reports `disconnected`: its reason is recorded, its value is not merged. One
  * binding's adapter failing never fails the others: connectivity problems are data to show, not
  * exceptions to propagate — a widget that can't reach its source should render disconnected, not
  * take the rest of the document down with it. A `stale` reading only ever comes from the adapter
@@ -64,7 +66,8 @@ export interface ResolvedWidget {
  *
  * A binding key may be a dotted path (e.g. `"data.status"`) to reach a field nested inside a
  * widget library's own config shape (u-widgets nests bindable fields under `data`) — resolution
- * writes into that path without disturbing the rest of the object it lives in.
+ * writes into that path without disturbing the rest of the object it lives in. A numeric segment
+ * indexes into an array that is already there (`"items.1.value"`).
  */
 export async function resolveWidget(
   widget: Widget,
@@ -84,7 +87,10 @@ export async function resolveWidget(
       }
       try {
         const resolved = await adapter.resolve(binding.ref);
-        setPath(props, propPath, resolved.value);
+        // Only a reading that has a value to show replaces the static one: `live` is current,
+        // `stale` is the last-known value by definition. A `disconnected` reading has none — any
+        // `value` it carries is meaningless — so the author's placeholder stays.
+        if (resolved.quality !== 'disconnected') setPath(props, propPath, resolved.value);
         quality[propPath] = resolved.quality;
         if (resolved.reason && resolved.quality !== 'live') reasons[propPath] = resolved.reason;
       } catch {
@@ -96,20 +102,22 @@ export async function resolveWidget(
   return Object.keys(reasons).length > 0 ? { type: widget.type, props, quality, reasons } : { type: widget.type, props, quality };
 }
 
-/** Sets `path` (dot-separated) on `target`, copying each object along the way so the caller's
- * original nested objects are never mutated in place. */
+/** Sets `path` (dot-separated) on `target`, copying each object or array along the way so the
+ * caller's original nested values are never mutated in place. A segment that lands on an existing
+ * array indexes into a copy of it, so `items.1.v` updates one element and keeps the array an array. */
 function setPath(target: Record<string, unknown>, path: string, value: unknown): void {
   const keys = path.split('.');
-  let cursor = target;
+  let cursor: Record<string, unknown> = target;
   for (let i = 0; i < keys.length - 1; i++) {
     const key = keys[i];
     const existing = cursor[key];
-    const next =
-      typeof existing === 'object' && existing !== null && !Array.isArray(existing)
+    const next = Array.isArray(existing)
+      ? [...existing]
+      : typeof existing === 'object' && existing !== null
         ? { ...(existing as Record<string, unknown>) }
         : {};
     cursor[key] = next;
-    cursor = next;
+    cursor = next as Record<string, unknown>;
   }
   cursor[keys[keys.length - 1]] = value;
 }

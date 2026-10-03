@@ -102,7 +102,9 @@ describe('resolveDocument', () => {
 
     const resolved = await resolveDocument(doc, [cmms]);
 
-    expect(resolved.nodes[0].widget.props.value).toBe('stopped');
+    // The node stays; a disconnected reading's value is not shown, even though the adapter sent one.
+    expect(resolved.nodes).toHaveLength(1);
+    expect(resolved.nodes[0].widget.props).not.toHaveProperty('value');
     expect(resolved.nodes[0].widget.quality.value).toBe('disconnected');
   });
 
