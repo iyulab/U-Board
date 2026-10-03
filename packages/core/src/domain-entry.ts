@@ -3,4 +3,6 @@ export type { Adapter, ConnectionQuality, QualityReason, ResolvedBinding, Resolv
 export { resolveWidget } from './adapter.js';
 export type { ResolvedNode, ResolvedViewDocument } from './resolve-document.js';
 export { resolveDocument } from './resolve-document.js';
-export { parseViewDocument, isViewDocumentShape, InvalidViewDocumentError } from './persistence/view-document-file.js';
+export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
+export { validateViewDocument, isViewDocumentShape } from './validate-view-document.js';
+export type { ViewDocumentIssue } from './validate-view-document.js';

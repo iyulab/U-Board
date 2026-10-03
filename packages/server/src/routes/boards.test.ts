@@ -82,6 +82,21 @@ describe('boards routes', () => {
     expect(res.body.code).toBe('INVALID_DOCUMENT');
   });
 
+  it('refuses a document whose binding is not an object, and says where', async () => {
+    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
+    const document = {
+      kind: 'canvas', background: {}, connectors: [],
+      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', props: {}, bindings: { value: null } } }],
+    };
+    const res = await request(app)
+      .put(`/workspaces/${workspaceId}/boards/${create.body.id}`)
+      .set('Cookie', memberCookie)
+      .send({ document });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_DOCUMENT');
+    expect(res.body.issues).toEqual([{ path: '/nodes/0/widget/bindings/value', message: expect.any(String) }]);
+  });
+
   it('returns 404 for a board id that belongs to a different workspace', async () => {
     const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
 

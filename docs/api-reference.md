@@ -236,3 +236,47 @@ function resolveWidget(widget: Widget, adapters: readonly Adapter[]): Promise<Re
 The single-widget building block `resolveDocument` calls once per node. Exported directly for a
 consumer that resolves widgets outside the `ViewDocument`/`resolveDocument` flow (for example, a
 custom renderer resolving one widget at a time).
+
+## Reading and checking documents
+
+A `ViewDocument` that comes from outside your own code — a file the author picked, a request
+body — should be checked before anything renders it. These functions do that, and the hosted
+server applies the same check to every document it stores.
+
+### `validateViewDocument(value)` / `isViewDocumentShape(value)`
+
+```ts
+interface ViewDocumentIssue { path: string; message: string }
+function validateViewDocument(value: unknown): ViewDocumentIssue[];
+function isViewDocumentShape(value: unknown): value is ViewDocument;
+```
+
+`validateViewDocument` checks every field the `ViewDocument` type promises — nodes, each widget
+and binding, connectors, decorations, the background — and returns every problem it finds, each
+located by an RFC 6901 JSON Pointer into the value
+(`""` is the value itself). An empty array means the value is a valid document;
+`isViewDocumentShape` is that test as a type guard.
+
+It checks structure only: a binding's `ref` belongs to its adapter and a widget's `type`/`props`
+to its widget library, so their contents are not inspected; references between parts of a
+document (a connector naming a node that is not there) are not judged; fields it does not know
+are ignored.
+
+```ts
+validateViewDocument({
+  kind: 'canvas', background: {}, connectors: [],
+  nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', bindings: { value: null } } }],
+});
+// → [{ path: '/nodes/0/widget/bindings/value', message: 'expected a binding object ({ adapter, ref })' }]
+```
+
+### `parseViewDocument(text)` / `InvalidViewDocumentError`
+
+```ts
+function parseViewDocument(text: string): ViewDocument;
+class InvalidViewDocumentError extends Error { readonly issues: ViewDocumentIssue[] }
+```
+
+Parses JSON **text** (for example a file's contents — not an already-parsed object) and validates
+it. Throws `InvalidViewDocumentError` when the text is not JSON or the result is not a valid
+document; the message names the first problem, and `issues` lists them all.

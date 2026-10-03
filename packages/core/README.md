@@ -19,7 +19,7 @@ them at runtime, but npm installs peer dependencies by default.
 
 | Import | Contents | Depends on React / canvas |
 |---|---|---|
-| `@iyulab/u-board/domain` | View document types, the `Adapter` contract, `resolveDocument`, `parseViewDocument` | No |
+| `@iyulab/u-board/domain` | View document types, the `Adapter` contract, `resolveDocument`, `validateViewDocument`/`parseViewDocument` | No |
 | `@iyulab/u-board/viewer` | Read-only `ViewerPage` and the `useResolvedDocument` hook | Yes |
 | `@iyulab/u-board` | Everything in `domain`, plus `AuthoringView` and `ViewerPage` | Yes |
 | `@iyulab/u-board/demo` | `DemoAdapter`, an adapter that serves fixed sample values | No |

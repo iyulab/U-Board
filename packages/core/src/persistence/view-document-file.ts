@@ -1,21 +1,22 @@
 import type { ViewDocument } from '../view-document.js';
+import { validateViewDocument, type ViewDocumentIssue } from '../validate-view-document.js';
 
-/** Thrown when a file selected for import isn't a ViewDocument — the file-open boundary is the
- * one place this app validates untrusted input (docs/architecture.md — internal data is
- * trusted; a file picked by the author could be anything). */
-export class InvalidViewDocumentError extends Error {}
+/** Thrown when a file selected for import isn't a ViewDocument — the file-open boundary is one of
+ * the places untrusted input enters (docs/architecture.md — internal data is trusted; a file picked
+ * by the author could be anything). `issues` says what is wrong and where. */
+export class InvalidViewDocumentError extends Error {
+  constructor(message: string, readonly issues: ViewDocumentIssue[] = []) {
+    super(message);
+  }
+}
 
 export function serializeViewDocument(doc: ViewDocument): string {
   return JSON.stringify(doc, null, 2);
 }
 
-/** Parses and shape-checks a ViewDocument from file contents. Checks structure only (the
- * top-level fields, plus that each node actually has a `widget`) — not every widget field — matching
- * this app's boundary-only validation policy; a structurally valid but semantically odd document
- * (e.g. an unknown widget type) is a renderer concern, not a parse-time one. `Node.widget` is
- * non-optional in the type, so a node missing it entirely is a structural defect, not a semantic
- * one — letting it through would let `node.widget` accesses elsewhere (e.g. the public share
- * routes) throw on data this function already had the field to reject. */
+/** Parses a ViewDocument from file contents (JSON text) and validates it with
+ * `validateViewDocument` — every structural problem is rejected here rather than surfacing later
+ * as a crash in a renderer or route that trusted the type. */
 export function parseViewDocument(text: string): ViewDocument {
   let value: unknown;
   try {
@@ -24,30 +25,15 @@ export function parseViewDocument(text: string): ViewDocument {
     throw new InvalidViewDocumentError('File is not valid JSON.');
   }
 
-  if (!isViewDocumentShape(value)) {
+  const issues = validateViewDocument(value);
+  if (issues.length > 0) {
+    const [first] = issues;
+    const more = issues.length > 1 ? ` (and ${issues.length - 1} more)` : '';
     throw new InvalidViewDocumentError(
-      'File is not a ViewDocument (expected kind/background/nodes/connectors).'
+      `File is not a valid view document: ${first.path || 'document'} — ${first.message}${more}.`,
+      issues
     );
   }
 
-  return value;
-}
-
-export function isViewDocumentShape(value: unknown): value is ViewDocument {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    v.kind === 'canvas' &&
-    typeof v.background === 'object' &&
-    v.background !== null &&
-    Array.isArray(v.nodes) &&
-    v.nodes.every(hasWidget) &&
-    Array.isArray(v.connectors)
-  );
-}
-
-function hasWidget(node: unknown): boolean {
-  if (typeof node !== 'object' || node === null) return false;
-  const widget = (node as Record<string, unknown>).widget;
-  return typeof widget === 'object' && widget !== null;
+  return value as ViewDocument;
 }

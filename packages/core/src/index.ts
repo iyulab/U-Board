@@ -7,4 +7,6 @@ export { AuthoringView } from './authoring/AuthoringView.js';
 export type { AuthoringViewProps } from './authoring/AuthoringView.js';
 export { ViewerPage } from './viewer/ViewerPage.js';
 export type { ViewerPageProps } from './viewer/ViewerPage.js';
-export { parseViewDocument, isViewDocumentShape, InvalidViewDocumentError } from './persistence/view-document-file.js';
+export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
+export { validateViewDocument, isViewDocumentShape } from './validate-view-document.js';
+export type { ViewDocumentIssue } from './validate-view-document.js';
