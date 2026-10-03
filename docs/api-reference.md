@@ -90,7 +90,11 @@ interface Adapter {
   an adapter is free to expect a string, an object, anything its own integration needs. Returning
   a rejected promise (a thrown error, a network timeout) is a valid outcome — `resolveWidget`
   treats it the same as no matching adapter: the prop is left unresolved and its quality is
-  recorded as `disconnected`. One binding's adapter failing never fails the others.
+  recorded as `disconnected`. One binding's adapter failing never fails the others. To say *why*
+  a binding has no value, return `{ value: undefined, quality: 'disconnected', reason }` instead of
+  rejecting: the reason reaches the renderer, and the widget keeps its static value.
+  The core does not look inside the source's answer — only the adapter knows whether the value a
+  `ref` points at was there, so reporting `address` when it was not is the adapter's job.
 
 ### `ResolvedBinding`
 
@@ -141,6 +145,30 @@ so an operator reading "disconnected" knows where to look:
 A reason annotates `quality`; it never changes it. A binding with no matching adapter, or whose
 adapter rejected, carries no reason — the core cannot tell a misconfiguration from a host that
 simply did not provide that adapter.
+
+### Describing connection quality
+
+```ts
+const QUALITY_LABEL: Partial<Record<ConnectionQuality, string>>; // stale, disconnected
+const REASON_LABEL: Record<QualityReason, string>;
+function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined;
+function describeQuality(
+  quality: Record<string, ConnectionQuality>,
+  reasons?: Record<string, QualityReason>
+): string | undefined;
+```
+
+The words the shipped renderer uses, for a host that renders its own UI from a `ResolvedWidget`.
+`worstQuality` is the least current of a widget's bindings (`disconnected`, then `stale`, then
+`live`). `describeQuality(widget.quality, widget.reasons)` is one line of text for a widget — the
+renderer's tooltip and screen-reader announcement — or `undefined` when every binding is `live`:
+
+```ts
+describeQuality({ 'data.value': 'disconnected' }, { 'data.value': 'address' });
+// → 'disconnected — no value has been reached (bound value not found at the source)'
+```
+
+`live` has no label on purpose: normal operation is not announced, only departures from it.
 
 ### `Binding`
 

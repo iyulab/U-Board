@@ -6,7 +6,7 @@ import { PropertyPanel } from './PropertyPanel.js';
 import { DemoAdapter } from '../demo-adapter.js';
 import type { Adapter, ResolvedBinding } from '../adapter.js';
 import type { Node } from '../view-document.js';
-import { QUALITY_LABEL, REASON_LABEL } from '../quality-presentation.js';
+import { QUALITY_LABEL, REASON_LABEL } from '../quality-text.js';
 
 function statusNode(bindings?: Node['widget']['bindings']): Node {
   return {

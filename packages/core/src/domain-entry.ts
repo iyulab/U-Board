@@ -6,3 +6,4 @@ export { resolveDocument } from './resolve-document.js';
 export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
 export { validateViewDocument, isViewDocumentShape } from './validate-view-document.js';
 export type { ViewDocumentIssue } from './validate-view-document.js';
+export { QUALITY_LABEL, REASON_LABEL, worstQuality, describeQuality } from './quality-text.js';

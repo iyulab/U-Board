@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
-import type { ConnectionQuality, QualityReason } from './adapter.js';
+import type { ConnectionQuality } from './adapter.js';
+import { worstQuality } from './quality-text.js';
 import { getPrimaryDataField } from '@iyulab/u-widgets';
 
 // `live` is deliberately unstyled (ISA-101 — color is reserved for abnormal state, not spent on
@@ -12,39 +13,15 @@ export const QUALITY_FRAME_STYLE: Partial<Record<ConnectionQuality, CSSPropertie
   disconnected: { border: '2px dotted #6b7280', boxSizing: 'border-box' },
 };
 
-export const QUALITY_LABEL: Partial<Record<ConnectionQuality, string>> = {
-  stale: 'stale — showing last known value',
-  disconnected: 'disconnected — no value has been reached',
-};
-
-// The cause, when an adapter reported one — text only. It changes whom an operator calls, not how
-// urgent the state is, so it gets no frame style of its own (ISA-101, as above).
-export const REASON_LABEL: Record<QualityReason, string> = {
-  transport: 'data source unreachable',
-  auth: 'credentials refused',
-  address: 'bound value not found at the source',
-  throttled: 'rate limited',
-};
-
-// Worst-first: a node with several bindings shows whichever one needs the operator's attention
-// most (ISA-18.2 alarm-precedence convention — the least-current binding governs the indicator).
-const QUALITY_SEVERITY: Record<ConnectionQuality, number> = { live: 0, stale: 1, disconnected: 2 };
-
-export function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined {
-  const values = Object.values(quality);
-  if (values.length === 0) return undefined;
-  return values.reduce((worst, q) => (QUALITY_SEVERITY[q] > QUALITY_SEVERITY[worst] ? q : worst));
-}
-
 /**
  * The quality that should drive a node's *frame* (border/color) — as opposed to `worstQuality`,
- * which `qualityTooltip` still uses to describe every abnormal binding for drill-down detail.
+ * which `describeQuality` still uses to describe every abnormal binding for drill-down detail.
  * u-widgets knows, per widget type, which bound field is the headline value actually shown on
  * screen (`getPrimaryDataField`, e.g. `gauge`/`status` → `"value"`) — when that's known, only
  * that field's own connectivity should raise an alarm on the frame. A secondary binding (e.g. a
  * threshold config value) failing no longer marks an otherwise-live widget as "disconnected"
  * (the aircraft master-caution / individual-annunciator split: the frame is the
- * summary, `qualityTooltip`'s per-property breakdown remains the drill-down).
+ * summary, `describeQuality`'s per-property breakdown remains the drill-down).
  *
  * Bindings are keyed by dotted prop path (`adapter.ts`), and u-widgets nests bindable fields
  * under `data` — so the primary field's binding key is always `data.<field>`.
@@ -60,40 +37,4 @@ export function frameQuality(
   const primaryField = getPrimaryDataField(widgetType);
   if (primaryField === undefined) return worstQuality(quality);
   return quality[`data.${primaryField}`];
-}
-
-/**
- * A widget's title/tooltip and screen-reader announcement. When only one binding is abnormal,
- * this is just that binding's label (unchanged from the single-binding case). Once more than one
- * binding is at fault, the worst-first frame collapses them to one indicator — so this breaks
- * them back out per property, grouped by quality (worst first), keyed by the binding's own prop
- * path (e.g. `data.threshold`). Otherwise a binding that never reaches the widget's displayed
- * value (an unused threshold, say) can mark an otherwise-live widget "disconnected" with no way
- * to see why (ISA-18.2 alarm rationalization: alarms should be configured on
- * the best indicator of root cause, not merged into the single most severe symptom).
- */
-export function qualityTooltip(
-  quality: Record<string, ConnectionQuality>,
-  reasons: Record<string, QualityReason> = {}
-): string | undefined {
-  const worst = worstQuality(quality);
-  if (!worst) return undefined;
-  const baseLabel = QUALITY_LABEL[worst];
-  if (!baseLabel) return undefined;
-
-  const abnormal = Object.entries(quality).filter(([, q]) => q !== 'live') as [string, ConnectionQuality][];
-  if (abnormal.length <= 1) {
-    const reason = abnormal[0] && reasons[abnormal[0][0]];
-    return reason ? `${baseLabel} (${REASON_LABEL[reason]})` : baseLabel;
-  }
-
-  return (['disconnected', 'stale'] as const)
-    .map(q => {
-      const keys = abnormal
-        .filter(([, eq]) => eq === q)
-        .map(([key]) => (reasons[key] ? `${key}: ${REASON_LABEL[reasons[key]]}` : key));
-      return keys.length > 0 ? `${QUALITY_LABEL[q]} (${keys.join(', ')})` : undefined;
-    })
-    .filter((entry): entry is string => entry !== undefined)
-    .join(' · ');
 }

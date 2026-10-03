@@ -20,7 +20,7 @@ not `require`) and needs Node 22.12 or later.
 
 | Import | Contents | Depends on React / canvas |
 |---|---|---|
-| `@iyulab/u-board/domain` | View document types, the `Adapter` contract, `resolveDocument`, `validateViewDocument`/`parseViewDocument` | No |
+| `@iyulab/u-board/domain` | View document types, the `Adapter` contract, `resolveDocument`, `validateViewDocument`/`parseViewDocument`, connection-quality text (`describeQuality`) | No |
 | `@iyulab/u-board/viewer` | Read-only `ViewerPage` and the `useResolvedDocument` hook | Yes |
 | `@iyulab/u-board` | Everything in `domain`, plus `AuthoringView` and `ViewerPage` | Yes |
 | `@iyulab/u-board/demo` | `DemoAdapter` (id `demo-cmms`), fixed sample values for refs `pump-a.state`, `pump-a.load` (live) and `pump-b.state` (stale); any other ref is disconnected | No |

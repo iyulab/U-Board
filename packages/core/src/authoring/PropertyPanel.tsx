@@ -3,7 +3,8 @@ import type { Adapter, ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
-import { QUALITY_FRAME_STYLE, qualityTooltip } from '../quality-presentation.js';
+import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
+import { describeQuality } from '../quality-text.js';
 
 // Must match `DemoAdapter.id` in ../demo-adapter.js. Not imported as `DemoAdapter` itself so this
 // check stays an id comparison (robust across a duplicate-module-instance scenario, where
@@ -132,7 +133,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
 
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
   const previewLabel = preview
-    ? qualityTooltip({ binding: preview.quality }, preview.reason ? { binding: preview.reason } : {})
+    ? describeQuality({ binding: preview.quality }, preview.reason ? { binding: preview.reason } : {})
     : undefined;
 
   const handleExplore = async () => {

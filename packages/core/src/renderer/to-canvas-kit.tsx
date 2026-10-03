@@ -24,7 +24,8 @@ import '@iyulab/u-widgets';
 export const chartsReady: Promise<unknown> = import('@iyulab/u-widgets/charts');
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
-import { QUALITY_FRAME_STYLE, frameQuality, qualityTooltip } from '../quality-presentation.js';
+import { QUALITY_FRAME_STYLE, frameQuality } from '../quality-presentation.js';
+import { describeQuality } from '../quality-text.js';
 
 // Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
 // on screen. Kept off the frame `<div>` itself and off `UWidget` — each `uw-*` custom element
@@ -100,7 +101,7 @@ export function toCanvasKit(doc: ResolvedViewDocument): CanvasKitRenderOutput {
   const overlays: ViewerOverlayItem[] = doc.nodes.map(node => {
     const quality = frameQuality(node.widget.quality, node.widget.type);
     const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
-    const label = qualityTooltip(node.widget.quality, node.widget.reasons);
+    const label = describeQuality(node.widget.quality, node.widget.reasons);
 
     return {
       id: node.id,
