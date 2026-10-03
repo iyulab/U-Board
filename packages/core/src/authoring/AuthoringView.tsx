@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { KonvaDesigner, type DesignerHandle } from '@canvas-kit/designer';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { KonvaDesigner } from '@canvas-kit/designer';
 import { Viewer } from '@canvas-kit/viewer';
 import { viewToScene } from '@canvas-kit/core';
-import type { Scene, DrawingObject, Transform } from '@canvas-kit/core';
+import type { Scene, DrawingObject } from '@canvas-kit/core';
 import {
   documentToScene,
   applySceneToDocument,
@@ -17,11 +17,10 @@ import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { DecorationPanel } from './DecorationPanel.js';
-import { documentExtent, DOCUMENT_FIT_OPTIONS } from '../viewer/document-extent.js';
+import { documentExtent } from '../viewer/document-extent.js';
+import { useFittedView } from '../viewer/use-fitted-view.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument, Widget, Shape } from '../view-document.js';
-
-const IDENTITY: Transform = { x: 0, y: 0, scale: 1 };
 
 export interface AuthoringViewProps {
   initialDocument: ViewDocument;
@@ -51,7 +50,8 @@ export interface AuthoringViewProps {
  *
  * The editor and the preview share one pan/zoom — moving either moves both, so the preview stays a
  * mirror of what is being edited. A document opens fitted into view (shrunk to fit, never
- * magnified), "Fit to view" restores that, and a new node or decoration is placed in view.
+ * magnified) and stays fitted as the panes resize until the author pans or zooms; "Fit to view"
+ * restores that, and a new node or decoration is placed in view.
  */
 export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange }: AuthoringViewProps) {
   const [doc, setDoc] = useState(initialDocument);
@@ -60,8 +60,8 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const designerRef = useRef<DesignerHandle>(null);
-  const [transform, setTransform] = useState<Transform>(IDENTITY);
+  const view = useFittedView();
+  const { fitTo, transform } = view;
   // The document most recently opened (the initial one, or an import) — fitting into view happens
   // when a document is opened, not on every edit.
   const [openedDoc, setOpenedDoc] = useState(initialDocument);
@@ -89,13 +89,10 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   }, [isDirty, onDirtyChange]);
 
   useEffect(() => {
-    const opened = documentExtent(openedDoc);
-    if (opened) designerRef.current?.fitToRect(opened, DOCUMENT_FIT_OPTIONS);
-  }, [openedDoc]);
+    fitTo(documentExtent(openedDoc));
+  }, [fitTo, openedDoc]);
 
-  const handleFitToView = useCallback(() => {
-    if (extent) designerRef.current?.fitToRect(extent, DOCUMENT_FIT_OPTIONS);
-  }, [extent]);
+  const handleFitToView = () => fitTo(extent);
 
   // The scene point at the top-left of the editor's view — where a newly added item is offset from.
   const visibleOrigin = () => {
@@ -254,12 +251,12 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>Editor</h2>
           <div style={{ flex: 1, minHeight: 0 }}>
             <KonvaDesigner
-              ref={designerRef}
               width={width}
               height={height}
               scene={scene}
               transform={transform}
-              onTransformChange={setTransform}
+              onTransformChange={view.onUserTransform}
+              onViewportResize={view.onViewportResize}
               onSceneChange={handleSceneChange}
               onSelectionChange={handleSelectionChange}
             />
@@ -275,7 +272,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
                 scene={preview.scene}
                 overlays={preview.overlays}
                 transform={transform}
-                onTransformChange={setTransform}
+                onTransformChange={view.onUserTransform}
               />
             </div>
           ) : (

@@ -54,14 +54,14 @@ import { ViewerPage } from '@iyulab/u-board/viewer';
 </div>;
 ```
 
-The board opens fitted into view — shrunk to fit, never magnified past its natural size — and a
-"Fit to view" control restores that after panning or zooming. Pass `width`/`height` (CSS px) for a
+The board opens fitted into view — shrunk to fit, never magnified past its natural size — and stays
+fitted as the view resizes until the viewer pans or zooms; a "Fit to view" control restores that. Pass `width`/`height` (CSS px) for a
 fixed-size view instead.
 
 `AuthoringView` sizes the same way: without `width`/`height` the editor and its live preview split
 the parent's width and fill its height. Both share one pan/zoom (drag empty space to pan, wheel to
-zoom), the document opens fitted into view, and a new node or decoration is placed where the author
-is looking.
+zoom), the document opens fitted into view the same way, and a new node or decoration is placed
+where the author is looking.
 
 The full type reference, with examples that are compiled and run as tests, is in
 [`docs/api-reference.md`](https://github.com/iyulab/U-Board/blob/main/docs/api-reference.md).

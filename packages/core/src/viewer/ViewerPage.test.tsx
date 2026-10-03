@@ -7,24 +7,20 @@ import type { ViewDocument } from '../view-document';
 import type { Adapter, ResolvedBinding } from '../adapter';
 
 const viewerProps = vi.fn();
-const fitToRect = vi.fn();
 
-vi.mock('@canvas-kit/viewer', async () => {
-  const { forwardRef, useImperativeHandle } = await import('react');
-  return {
-    Viewer: forwardRef((props: Record<string, unknown>, ref) => {
-      useImperativeHandle(ref, () => ({ fitToRect }));
-      viewerProps(props);
-      return <div data-testid="viewer" />;
-    }),
-  };
-});
+vi.mock('@canvas-kit/viewer', () => ({
+  Viewer: (props: Record<string, unknown>) => {
+    viewerProps(props);
+    return <div data-testid="viewer" />;
+  },
+}));
 
 afterEach(() => {
   vi.useRealTimers();
   viewerProps.mockClear();
-  fitToRect.mockClear();
 });
+
+const lastViewerProps = () => viewerProps.mock.lastCall![0] as Record<string, any>;
 
 function doc(): ViewDocument {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [] };
@@ -116,24 +112,42 @@ describe('ViewerPage', () => {
       expect(props.height).toBe(300);
     });
 
-    it('fits the whole document into view when it opens', async () => {
+    it('fits the whole document into view when it opens, once the viewport size is known', async () => {
       render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
       await screen.findByTestId('viewer');
-      expect(fitToRect).toHaveBeenCalledTimes(1);
-      expect(fitToRect.mock.lastCall![0]).toEqual({ x: 0, y: 0, width: 1200, height: 800 });
-      // Shrinks a large board to fit but never magnifies a small one past its natural size.
-      expect(fitToRect.mock.lastCall![1]).toMatchObject({ maxScale: 1 });
+      act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
+      // (632 - 2×16) / 1200 = 0.5, centered
+      expect(lastViewerProps().transform).toEqual({ x: 16, y: 16, scale: 0.5 });
+    });
+
+    it('never magnifies a board smaller than the view', async () => {
+      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      await screen.findByTestId('viewer');
+      act(() => lastViewerProps().onViewportResize({ width: 4000, height: 3000 }));
+      expect(lastViewerProps().transform.scale).toBe(1);
+    });
+
+    it('keeps the board fitted as the view resizes, until the user pans or zooms', async () => {
+      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      await screen.findByTestId('viewer');
+      act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
+      act(() => lastViewerProps().onViewportResize({ width: 332, height: 232 }));
+      expect(lastViewerProps().transform.scale).toBeCloseTo(0.25);
+
+      act(() => lastViewerProps().onTransformChange({ x: 1, y: 2, scale: 0.7 }));
+      act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
+      expect(lastViewerProps().transform).toEqual({ x: 1, y: 2, scale: 0.7 });
     });
 
     it('fits again on demand from the "Fit to view" control', async () => {
       render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
       await screen.findByTestId('viewer');
-      fitToRect.mockClear();
+      act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
+      act(() => lastViewerProps().onTransformChange({ x: 1, y: 2, scale: 0.7 }));
 
       fireEvent.click(screen.getByRole('button', { name: 'Fit to view' }));
 
-      expect(fitToRect).toHaveBeenCalledTimes(1);
-      expect(fitToRect.mock.lastCall![0]).toEqual({ x: 0, y: 0, width: 1200, height: 800 });
+      expect(lastViewerProps().transform).toEqual({ x: 16, y: 16, scale: 0.5 });
     });
 
     it("does not re-fit when a poll refreshes the values, so the user's pan/zoom survives", async () => {
@@ -142,19 +156,21 @@ describe('ViewerPage', () => {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
-      expect(fitToRect).toHaveBeenCalledTimes(1);
+      act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
+      act(() => lastViewerProps().onTransformChange({ x: 1, y: 2, scale: 0.7 }));
 
       await act(async () => {
         await vi.advanceTimersByTimeAsync(1000);
       });
-      expect(fitToRect).toHaveBeenCalledTimes(1);
+      expect(lastViewerProps().transform).toEqual({ x: 1, y: 2, scale: 0.7 });
     });
 
-    it('offers no fit control for an empty document', async () => {
+    it('offers no fit control for an empty document, and leaves its view at identity', async () => {
       render(<ViewerPage adapters={[]} initialDocument={doc()} />);
       await screen.findByTestId('viewer');
+      act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
       expect(screen.queryByRole('button', { name: 'Fit to view' })).not.toBeInTheDocument();
-      expect(fitToRect).not.toHaveBeenCalled();
+      expect(lastViewerProps().transform).toEqual({ x: 0, y: 0, scale: 1 });
     });
   });
 });

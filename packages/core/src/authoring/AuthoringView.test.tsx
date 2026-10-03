@@ -11,13 +11,10 @@ import type { ViewDocument } from '../view-document';
 // react-konva rather than exercising real canvas rendering.
 const designerProps = vi.fn();
 const viewerProps = vi.fn();
-const fitToRect = vi.fn();
 
 vi.mock('@canvas-kit/designer', async () => {
-  const { forwardRef, useImperativeHandle } = await import('react');
   return {
-    KonvaDesigner: forwardRef(({ onSelectionChange, ...props }: any, ref) => {
-      useImperativeHandle(ref, () => ({ fitToRect }));
+    KonvaDesigner: ({ onSelectionChange, ...props }: any) => {
       designerProps({ onSelectionChange, ...props });
       return (
         <div data-testid="konva-designer">
@@ -30,7 +27,7 @@ vi.mock('@canvas-kit/designer', async () => {
           <button onClick={() => onSelectionChange?.([])}>deselect</button>
         </div>
       );
-    }),
+    },
   };
 });
 vi.mock('@canvas-kit/viewer', () => ({
@@ -43,8 +40,9 @@ vi.mock('@canvas-kit/viewer', () => ({
 afterEach(() => {
   designerProps.mockClear();
   viewerProps.mockClear();
-  fitToRect.mockClear();
 });
+
+const lastDesignerProps = () => designerProps.mock.lastCall![0] as Record<string, any>;
 
 function doc(): ViewDocument {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [] };
@@ -369,29 +367,42 @@ describe('AuthoringView viewport', () => {
 
   it('opens the document fitted into the editor, shrunk to fit and never magnified', () => {
     render(<AuthoringView initialDocument={docWithBackground()} adapters={[]} />);
-    expect(fitToRect).toHaveBeenCalledTimes(1);
-    expect(fitToRect.mock.lastCall![0]).toEqual({ x: 0, y: 0, width: 3000, height: 2000 });
-    expect(fitToRect.mock.lastCall![1]).toMatchObject({ maxScale: 1 });
+    act(() => lastDesignerProps().onViewportResize({ width: 632, height: 432 }));
+    // (632 - 2×16) / 3000 = 0.2, centered on the 3000×2000 background
+    expect(lastDesignerProps().transform).toEqual({ x: 16, y: 16, scale: 0.2 });
+  });
+
+  it('keeps the document fitted as the panes resize, until the author pans or zooms', () => {
+    render(<AuthoringView initialDocument={docWithBackground()} adapters={[]} />);
+    act(() => lastDesignerProps().onViewportResize({ width: 632, height: 432 }));
+    act(() => lastDesignerProps().onViewportResize({ width: 332, height: 232 }));
+    expect(lastDesignerProps().transform.scale).toBeCloseTo(0.1);
+
+    act(() => lastDesignerProps().onTransformChange({ x: 3, y: 4, scale: 0.5 }));
+    act(() => lastDesignerProps().onViewportResize({ width: 632, height: 432 }));
+    expect(lastDesignerProps().transform).toEqual({ x: 3, y: 4, scale: 0.5 });
   });
 
   it('does not fit an empty document, and offers no fit control for it', () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} />);
-    expect(fitToRect).not.toHaveBeenCalled();
+    act(() => lastDesignerProps().onViewportResize({ width: 632, height: 432 }));
+    expect(lastDesignerProps().transform).toEqual({ x: 0, y: 0, scale: 1 });
     expect(screen.queryByRole('button', { name: 'Fit to view' })).not.toBeInTheDocument();
   });
 
   it('fits again on demand from the "Fit to view" control', () => {
     render(<AuthoringView initialDocument={docWithBackground()} adapters={[]} />);
-    fitToRect.mockClear();
+    act(() => lastDesignerProps().onViewportResize({ width: 632, height: 432 }));
+    act(() => lastDesignerProps().onTransformChange({ x: 3, y: 4, scale: 0.5 }));
     fireEvent.click(screen.getByRole('button', { name: 'Fit to view' }));
-    expect(fitToRect).toHaveBeenCalledTimes(1);
+    expect(lastDesignerProps().transform).toEqual({ x: 16, y: 16, scale: 0.2 });
   });
 
   it('keeps the preview on the same pan/zoom as the editor, whichever pane moves it', async () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} />);
     await screen.findByTestId('viewer');
 
-    act(() => designerProps.mock.lastCall![0].onTransformChange({ x: -30, y: -20, scale: 0.5 }));
+    act(() => lastDesignerProps().onTransformChange({ x: -30, y: -20, scale: 0.5 }));
     expect(designerProps.mock.lastCall![0].transform).toEqual({ x: -30, y: -20, scale: 0.5 });
     expect(viewerProps.mock.lastCall![0].transform).toEqual({ x: -30, y: -20, scale: 0.5 });
 
@@ -403,7 +414,7 @@ describe('AuthoringView viewport', () => {
     const onSave = vi.fn();
     render(<AuthoringView initialDocument={doc()} adapters={[]} onSave={onSave} />);
     // the author has panned to the scene region starting at (1000, 500)
-    act(() => designerProps.mock.lastCall![0].onTransformChange({ x: -1000, y: -500, scale: 1 }));
+    act(() => lastDesignerProps().onTransformChange({ x: -1000, y: -500, scale: 1 }));
 
     fireEvent.click(screen.getByText('Add node'));
     fireEvent.click(screen.getByText('Save'));

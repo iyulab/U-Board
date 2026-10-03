@@ -84,6 +84,20 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   // 작은 보드는 확대하지 않는다 — 기본 크기(160×100) 노드가 1:1 그대로.
   expect(nodeBox.width).toBeLessThanOrEqual(161);
   await expect(sharePage.getByRole('button', { name: 'Fit to view' })).toBeVisible();
+
+  // 창이 줄면(태블릿 회전·분할 화면) 사용자가 아직 움직이지 않은 보드는 새 크기에 다시 맞춰진다 —
+  // 줄어든 캔버스 안에서 노드가 여전히 가운데 근처에 있다.
+  await sharePage.setViewportSize({ width: 640, height: 480 });
+  await expect
+    .poll(async () => (await sharePage.getByTestId('canvas').boundingBox())!.width)
+    .toBeLessThan(viewport.width * 0.6);
+  const smallCanvas = (await sharePage.getByTestId('canvas').boundingBox())!;
+  const movedNode = (await sharePage
+    .locator('[data-testid^="overlay-"]:not([data-testid="overlay-layer"])')
+    .first()
+    .boundingBox())!;
+  const nodeCenterX = movedNode.x + movedNode.width / 2;
+  expect(Math.abs(nodeCenterX - (smallCanvas.x + smallCanvas.width / 2))).toBeLessThan(2);
   await shareContext.close();
 
   // 콘솔에서 회수

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Viewer, type ViewerHandle } from '@canvas-kit/viewer';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Viewer } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
-import { documentExtent, DOCUMENT_FIT_OPTIONS } from './document-extent.js';
+import { documentExtent } from './document-extent.js';
+import { useFittedView } from './use-fitted-view.js';
 import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
@@ -24,8 +25,9 @@ export interface ViewerPageProps {
 
 /**
  * A read-only view of an imported ViewDocument — no `KonvaDesigner`, no editing controls. It opens
- * with the whole document fitted into view (shrunk to fit, never magnified), and "Fit to view" brings it back after panning or
- * zooming; refreshed binding values (polling) leave the user's pan/zoom alone. This
+ * with the whole document fitted into view (shrunk to fit, never magnified) and keeps it fitted as
+ * the view resizes until the user pans or zooms; "Fit to view" brings that back. Refreshed binding
+ * values (polling) leave the user's pan/zoom alone. This
  * module never imports `@canvas-kit/designer` at all, so it stays what a real standalone viewer
  * deployment would ship with (docs/principles.md — editor/renderer separation): the authoring
  * tool's weight can never leak in here, because it isn't a dependency of this file.
@@ -41,20 +43,18 @@ export function ViewerPage({
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const viewerRef = useRef<ViewerHandle>(null);
 
   const { resolved } = useResolvedDocument(doc, adapters, { pollIntervalMs });
 
   const extent = useMemo(() => (doc ? documentExtent(doc) : null), [doc]);
-  const fitToDocument = useCallback(() => {
-    if (extent) viewerRef.current?.fitToRect(extent, DOCUMENT_FIT_OPTIONS);
-  }, [extent]);
-  // Fit when the viewer first appears and whenever a different document is loaded — not on every
-  // preview refresh, which is only new values for the same document.
-  const viewerShown = preview !== null;
+  const view = useFittedView();
+  const { fitTo } = view;
+  // Fit whenever a document is loaded — not on a preview refresh, which is only new values for the
+  // same document.
   useEffect(() => {
-    if (viewerShown) fitToDocument();
-  }, [viewerShown, fitToDocument]);
+    fitTo(extent);
+  }, [fitTo, extent]);
+  const viewerShown = preview !== null;
 
   useEffect(() => {
     if (!resolved) {
@@ -107,7 +107,7 @@ export function ViewerPage({
               />
             </>
           )}
-          {showFit && <button onClick={fitToDocument}>Fit to view</button>}
+          {showFit && <button onClick={() => fitTo(extent)}>Fit to view</button>}
         </div>
       )}
       {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
@@ -116,11 +116,13 @@ export function ViewerPage({
       ) : preview ? (
         <div style={{ flex: 1, minHeight: 0 }}>
           <Viewer
-            ref={viewerRef}
             width={width}
             height={height}
             scene={preview.scene}
             overlays={preview.overlays}
+            transform={view.transform}
+            onTransformChange={view.onUserTransform}
+            onViewportResize={view.onViewportResize}
           />
         </div>
       ) : (
