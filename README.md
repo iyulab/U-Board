@@ -90,8 +90,8 @@ something paintable — it has no opinion on canvas-kit, u-widgets, or any other
 See [`docs/concepts.md`](docs/concepts.md) for the vocabulary (`ViewDocument`, `Binding`,
 `Adapter`) and [`docs/architecture.md`](docs/architecture.md) for how this layer fits the rest of
 the system. **See [`docs/api-reference.md`](docs/api-reference.md) for the full type reference and
-a runnable example that implements an `Adapter` and inspects `resolveDocument`'s result.** Run
-`npm run build:lib` to produce the `dist/lib` output these exports point at.
+a runnable example that implements an `Adapter` and inspects `resolveDocument`'s result.** The
+package is ESM-only and needs Node 22.12 or later.
 
 ## Authoring UI
 
@@ -137,5 +137,6 @@ pull request. See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CLA.md`](CLA.md).
 
 Copyright (c) 2026 iyulab.
 
-AGPL-3.0. A commercial license is available for organizations that cannot adopt AGPL-3.0 terms.
+AGPL-3.0-or-later. A commercial license is available for organizations that cannot adopt AGPL-3.0
+terms.
 See [`LICENSE`](LICENSE).

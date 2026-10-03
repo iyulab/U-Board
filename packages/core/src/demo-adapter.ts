@@ -1,8 +1,9 @@
 import type { Adapter, ResolvedBinding } from './adapter.js';
 
-/** A stand-in for a real CMMS adapter (실제 CMMS adapter 구현은 그 시스템 접근이 필요해 별도).
- * Exercises the resolution/connection-quality pipeline end-to-end without a real system — one
- * live value, one stale (last-known) value, and one that's never connected. */
+/** An adapter that serves fixed sample values, for previewing a board before a real data source is
+ * connected. Its id is `demo-cmms`; a binding's `ref` is one of the string keys below —
+ * `pump-a.state` and `pump-a.load` are live, `pump-b.state` is stale (a last-known value), and any
+ * other key is disconnected. Exercises the resolution and connection-quality pipeline end to end. */
 export class DemoAdapter implements Adapter {
   readonly id = 'demo-cmms';
   private data: Record<string, ResolvedBinding> = {

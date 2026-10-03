@@ -6,6 +6,9 @@ export default defineConfig({
     alias: {
       // Mirrors tsconfig.json's "paths" entry — vitest resolves modules through Vite, which
       // doesn't read tsconfig "paths" on its own, so the alias has to be declared here too.
+      // The subpath comes first: a string alias also matches as a prefix, so the bare package
+      // name listed first would turn '@iyulab/u-board/domain' into 'src/index.ts/domain'.
+      '@iyulab/u-board/domain': fileURLToPath(new URL('./src/domain-entry.ts', import.meta.url)),
       '@iyulab/u-board': fileURLToPath(new URL('./src/index.ts', import.meta.url)),
     },
   },

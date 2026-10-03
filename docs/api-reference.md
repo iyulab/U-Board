@@ -9,11 +9,14 @@ concrete shapes and a runnable example so a consumer — human or automated — 
 ## Walkthrough
 
 A minimal end-to-end example: one `ViewDocument` with a single bound node, one `Adapter`
-implementation, and the resolved result a renderer would consume.
+implementation, and the resolved result a renderer would consume. It is an ES module (the package
+ships ESM only) using top-level `await` — save it as `walkthrough.mts`, or in a project with
+`"type": "module"`, and run it with `npx tsx walkthrough.mts` (or plain `node` on a version that strips
+TypeScript types by default).
 
 ```ts
-import type { Adapter, ResolvedBinding, ViewDocument } from '@iyulab/u-board';
-import { resolveDocument } from '@iyulab/u-board';
+import type { Adapter, ResolvedBinding, ViewDocument } from '@iyulab/u-board/domain';
+import { resolveDocument } from '@iyulab/u-board/domain';
 
 // 1. An Adapter resolves this system's own reference shape to a value + connection quality.
 //    Nothing about `ref`'s shape is fixed by the core — each adapter defines and interprets it.
@@ -57,12 +60,13 @@ export const doc: ViewDocument = {
 //    current each bound prop is.
 export const resolved = await resolveDocument(doc, [new ExampleAdapter()]);
 
-resolved.nodes[0].widget.props; //   { data: { label: 'Pump A', value: 'running' } }
-resolved.nodes[0].widget.quality; // { 'data.value': 'live' }
+const [pumpA] = resolved.nodes;
+console.log(pumpA?.widget.props); //   { data: { label: 'Pump A', value: 'running' } }
+console.log(pumpA?.widget.quality); // { 'data.value': 'live' }
 ```
 
-This exact file also lives at [`src/examples/walkthrough.ts`](../src/examples/walkthrough.ts), where a
-test (`walkthrough.test.ts`) re-runs it and asserts on the two values above — so if a future change to
+This exact file also lives at [`packages/core/src/examples/walkthrough.ts`](../packages/core/src/examples/walkthrough.ts),
+where a test (`walkthrough.test.ts`) re-runs it and asserts on the two values printed above — so if a future change to
 `resolveDocument`'s behavior or this package's exports makes either wrong, that test fails instead of
 this page silently drifting. A second test in the same file checks this code block is byte-identical
 to that source file, so the two can't quietly diverge from each other either.
@@ -114,7 +118,7 @@ type ConnectionQuality = 'live' | 'stale' | 'disconnected';
   source could not be reached, or it answered without the value the binding points at).
 
 This is deliberately narrower than a full alarm model (priority, acknowledgement, shelving) — see
-[`concepts.md`](concepts.md#binding). A `stale` reading only ever comes from the adapter itself;
+[`concepts.md`](concepts.md) ("Binding"). A `stale` reading only ever comes from the adapter itself;
 `resolveWidget` has no memory of past calls and cannot infer staleness on its own — an adapter that
 wants to report `stale` must track "have I seen this value before, and can I still reach the
 source" itself.

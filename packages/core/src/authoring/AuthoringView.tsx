@@ -34,11 +34,11 @@ export interface AuthoringViewProps {
   /** Adapter id → human-readable label for the binding editor's connector picker. Falls back to
    * the raw adapter id when a given adapter has no entry (or this prop is omitted entirely). */
   connectorLabels?: Record<string, string>;
-  /** Save 버튼 동작을 오버라이드한다. 생략 시 오늘과 같은 로컬 파일 다운로드(Export). */
+  /** What the Save button does. Omitted, Save downloads the document as a local file (Export). */
   onSave?: (doc: ViewDocument) => void | Promise<void>;
-  /** 미저장 변경 여부가 바뀔 때마다 호출된다 — 소비자가 자체 UI(상태 표시줄 등)에 반영할 수 있게.
-   * 이 컴포넌트 자신은 시각적 표시를 그리지 않는다(그건 소비자 몫); 브라우저 레벨 이탈 경고
-   * (`beforeunload`)만 내부적으로 처리한다. */
+  /** Called whenever the editor gains or loses unsaved changes, so the host can show it in its own
+   * UI (a status bar, a tab marker). The editor draws no indicator itself; it only asks the
+   * browser to confirm leaving the page (`beforeunload`) while changes are unsaved. */
   onDirtyChange?: (isDirty: boolean) => void;
 }
 

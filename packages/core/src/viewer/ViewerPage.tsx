@@ -16,11 +16,11 @@ export interface ViewerPageProps {
    * `ViewerPage` then fills its parent, so give the parent a definite size. */
   width?: number;
   height?: number;
-  /** 주어지면 Import UI 없이 이 문서를 즉시 렌더한다(공개 임베드 뷰용). 생략 시 오늘과 같은
-   * 로컬 파일 Import 데모 동작. */
+  /** The document to show. Given, it renders at once with no import control (the embed case);
+   * omitted, the page offers an Import button that opens a local document file. */
   initialDocument?: ViewDocument;
-  /** 주어지면 이 주기(ms)로 바인딩을 재해석해 연결 품질을 다시 반영한다. 생략 시 오늘과 같은
-   * 1회 해석(하위호환). */
+  /** Re-resolve the bindings every this many milliseconds, so values and connection quality stay
+   * current. Omitted, bindings resolve once when the document opens. */
   pollIntervalMs?: number;
   /** Accessible name of the board view — e.g. the board's name. The view is focusable: arrow keys
    * pan, `+`/`-` zoom. Default "Board". */

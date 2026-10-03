@@ -13,7 +13,8 @@ npm install @iyulab/u-board react react-dom
 ```
 
 `react` and `react-dom` (19.x) are peer dependencies. The domain entry point below does not use
-them at runtime, but npm installs peer dependencies by default.
+them at runtime, but npm installs peer dependencies by default. The package is ESM-only (`import`,
+not `require`) and needs Node 22.12 or later.
 
 ## Entry points
 
@@ -22,7 +23,7 @@ them at runtime, but npm installs peer dependencies by default.
 | `@iyulab/u-board/domain` | View document types, the `Adapter` contract, `resolveDocument`, `validateViewDocument`/`parseViewDocument` | No |
 | `@iyulab/u-board/viewer` | Read-only `ViewerPage` and the `useResolvedDocument` hook | Yes |
 | `@iyulab/u-board` | Everything in `domain`, plus `AuthoringView` and `ViewerPage` | Yes |
-| `@iyulab/u-board/demo` | `DemoAdapter`, an adapter that serves fixed sample values | No |
+| `@iyulab/u-board/demo` | `DemoAdapter` (id `demo-cmms`), fixed sample values for refs `pump-a.state`, `pump-a.load` (live) and `pump-b.state` (stale); any other ref is disconnected | No |
 
 Code that only reads or writes view documents, or implements an adapter for an external system,
 should import from `@iyulab/u-board/domain` so it never pulls in the rendering stack.

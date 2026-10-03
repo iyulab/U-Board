@@ -1,5 +1,5 @@
-import type { Adapter, ResolvedBinding, ViewDocument } from '@iyulab/u-board';
-import { resolveDocument } from '@iyulab/u-board';
+import type { Adapter, ResolvedBinding, ViewDocument } from '@iyulab/u-board/domain';
+import { resolveDocument } from '@iyulab/u-board/domain';
 
 // 1. An Adapter resolves this system's own reference shape to a value + connection quality.
 //    Nothing about `ref`'s shape is fixed by the core — each adapter defines and interprets it.
@@ -43,5 +43,6 @@ export const doc: ViewDocument = {
 //    current each bound prop is.
 export const resolved = await resolveDocument(doc, [new ExampleAdapter()]);
 
-resolved.nodes[0].widget.props; //   { data: { label: 'Pump A', value: 'running' } }
-resolved.nodes[0].widget.quality; // { 'data.value': 'live' }
+const [pumpA] = resolved.nodes;
+console.log(pumpA?.widget.props); //   { data: { label: 'Pump A', value: 'running' } }
+console.log(pumpA?.widget.quality); // { 'data.value': 'live' }

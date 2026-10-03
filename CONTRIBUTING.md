@@ -62,6 +62,10 @@ npm run build        # all packages
 npm run test:e2e     # Playwright (canvas rendering, console flows)
 ```
 
+The server and the other applications import `@iyulab/u-board` from `packages/core/dist/lib`,
+which `npm install` builds once. After changing `packages/core`, run `npm run build:lib` before
+testing them, or they keep running against the previous build.
+
 CI runs the same checks plus a real-Postgres concurrency suite and two repository checks:
 `npm run check:pin-drift` (dependencies not left behind their published versions; a breaking
 release — a new major, or below 1.0 a new minor — is either adopted or recorded in
