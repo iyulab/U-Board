@@ -63,9 +63,10 @@ npm run test:e2e     # Playwright (canvas rendering, console flows)
 ```
 
 CI runs the same checks plus a real-Postgres concurrency suite and two repository checks:
-`npm run check:pin-drift` (dependencies not left behind their published versions; a new major
-is either adopted or recorded in [`dependency-deferrals.json`](dependency-deferrals.json) with a
-reason and a review date, after which the check fails again) and
+`npm run check:pin-drift` (dependencies not left behind their published versions; a breaking
+release — a new major, or below 1.0 a new minor — is either adopted or recorded in
+[`dependency-deferrals.json`](dependency-deferrals.json) with a reason and a review date, after
+which the check fails again) and
 `npm run check:public-text` (no private tracking ids, local paths, or hosts outside the
 allowlist in [`scripts/check-public-text.mjs`](scripts/check-public-text.mjs) — a link to a new
 public site means adding it there). See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).

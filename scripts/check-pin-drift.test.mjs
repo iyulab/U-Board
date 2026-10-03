@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import {
-  isSiblingPackage, minorGap, classify, staleDeferrals, readDeferrals, readWorkspacePackageNames,
+  isSiblingPackage, minorGap, breakingLine, classify, staleDeferrals, readDeferrals, readWorkspacePackageNames,
 } from './check-pin-drift.mjs';
 
 const today = '2026-10-01';
@@ -75,9 +75,43 @@ test('a deferral for one major does not excuse the next', () => {
   assert.equal(r.verdict, 'drift');
 });
 
-test('same major, five or more minors past the declared range is drift; fewer is reported', () => {
-  assert.equal(classify({ name: '@iyulab/u-widgets', current: '0.16.2', wanted: '0.16.2', latest: '0.21.0' }, { sibling: true, today }).verdict, 'drift');
-  assert.equal(classify({ name: '@iyulab/u-widgets', current: '0.16.2', wanted: '0.16.2', latest: '0.20.9' }, { sibling: true, today }).verdict, 'info');
+test('same major, five or more minors past a narrower-than-caret range is drift; fewer is reported', () => {
+  // only a tilde or exact pin can leave a same-major release outside the range at 1.x and up
+  assert.equal(classify({ name: 'vite', current: '8.0.2', wanted: '8.0.2', latest: '8.5.0' }, { today }).verdict, 'drift');
+  assert.equal(classify({ name: 'vite', current: '8.0.2', wanted: '8.0.2', latest: '8.4.9' }, { today }).verdict, 'info');
+});
+
+test('breakingLine is the major from 1.0 on, and major.minor below it', () => {
+  assert.equal(breakingLine('5.2.1'), '5');
+  assert.equal(breakingLine('0.24.0'), '0.24');
+  assert.equal(breakingLine('0.0.3'), '0.0');
+});
+
+test('a 0.x minor past the caret range is a breaking release: drift without a deferral, sibling or not', () => {
+  // ^0.22.1 stops at 0.22.x precisely because 0.23 may break — the same adoption decision a new major is
+  const sibling = classify({ name: '@iyulab/u-widgets', current: '0.22.1', wanted: '0.22.1', latest: '0.23.0' }, { sibling: true, today });
+  assert.equal(sibling.verdict, 'drift');
+  const thirdParty = classify({ name: 'some-lib', current: '0.4.2', wanted: '0.4.2', latest: '0.5.0' }, { today });
+  assert.equal(thirdParty.verdict, 'drift');
+  assert.match(thirdParty.reason, /dependency-deferrals\.json/);
+});
+
+test('a 0.x breaking release is deferred by an entry for that exact minor line only', () => {
+  const deferrals = [{ package: 'some-lib', major: 0, minor: 5, reason: 'api rename pending', reviewBy: '2026-10-15' }];
+  assert.equal(classify({ name: 'some-lib', current: '0.4.2', wanted: '0.4.2', latest: '0.5.1' }, { deferrals, today }).verdict, 'deferred');
+  assert.equal(classify({ name: 'some-lib', current: '0.4.2', wanted: '0.4.2', latest: '0.6.0' }, { deferrals, today }).verdict, 'drift');
+});
+
+test('staleDeferrals: a 0.x line already adopted, or no longer the latest, is stale', () => {
+  const deferrals = [{ package: 'some-lib', major: 0, minor: 5, reason: 'x', reviewBy: '2027-01-01' }];
+  assert.equal(staleDeferrals(deferrals, [{ name: 'some-lib', current: '0.4.2', wanted: '0.4.2', latest: '0.5.1' }]).length, 0);
+  assert.equal(staleDeferrals(deferrals, [{ name: 'some-lib', current: '0.5.0', wanted: '0.5.1', latest: '0.5.1' }]).length, 1);
+  assert.equal(staleDeferrals(deferrals, [{ name: 'some-lib', current: '0.4.2', wanted: '0.4.2', latest: '0.6.0' }]).length, 1);
+});
+
+test('an installed 0.x version ahead of the registry latest tag is reported, not drift', () => {
+  const r = classify({ name: 'some-lib', current: '0.6.0', wanted: '0.6.0', latest: '0.5.1' }, { today });
+  assert.equal(r.verdict, 'info');
 });
 
 test('staleDeferrals flags entries that match nothing outdated', () => {
@@ -99,6 +133,7 @@ test("the repository's deferral ledger is well-formed", () => {
   for (const d of readDeferrals()) {
     assert.equal(typeof d.package, 'string');
     assert.ok(Number.isInteger(d.major), `${d.package}: major must be an integer`);
+    if (d.major === 0) assert.ok(Number.isInteger(d.minor), `${d.package}: a 0.x entry names its minor line`);
     assert.ok(typeof d.reason === 'string' && d.reason.length > 0, `${d.package}: reason required`);
     assert.match(d.reviewBy, /^\d{4}-\d{2}-\d{2}$/, `${d.package}: reviewBy must be YYYY-MM-DD`);
   }
