@@ -65,6 +65,28 @@ the parent's width and fill its height. Both share one pan/zoom (drag empty spac
 zoom), the document opens fitted into view the same way, and a new node or decoration is placed
 where the author is looking.
 
+## Widgets
+
+A node's widget is drawn by [`@iyulab/u-widgets`](https://github.com/iyulab/u-widgets): the renderer
+hands it the spec `{ widget: widget.type, ...widget.props }`. So `type` is a u-widgets widget name
+and `props` is the rest of that widget's u-widgets spec (`data`, `mapping`, `options`) — any widget
+u-widgets renders works, including `chart.*`, whose code the viewer loads on its own. A binding
+replaces one value inside `props`; u-widgets keeps bindable values under `data`, so a typical
+binding key is `data.value`.
+
+The authoring UI's widget picker offers these, each starting from props that already render:
+
+| `type` | Starting `props` | Headline field |
+|---|---|---|
+| `status` | `{ data: { label, level, value } }` | `data.value` |
+| `gauge` | `{ data: { value } }` | `data.value` |
+| `chart.line` | `{ data: [{ t, value }], mapping: { x: 't', y: 'value' } }` | none |
+
+The headline field is the value the widget shows most prominently. When its binding is not live,
+the node's frame shows it (dashed for stale, dotted for disconnected), while a problem in any other
+binding of the same widget is reported only in its tooltip. A widget with no headline field
+(charts, tables) frames on its least current binding.
+
 The full type reference, with examples that are compiled and run as tests, is in
 [`docs/api-reference.md`](https://github.com/iyulab/U-Board/blob/main/docs/api-reference.md).
 Concepts and architecture: [`docs/concepts.md`](https://github.com/iyulab/U-Board/blob/main/docs/concepts.md),

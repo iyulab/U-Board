@@ -196,7 +196,10 @@ interface Widget {
 - `type` — identifies which widget kind to render (for example, a specific
   [`@iyulab/u-widgets`](https://github.com/iyulab/u-widgets) element). Opaque to U-Board — it is
   passed through to the renderer without interpretation.
-- `props` — static configuration in whatever shape that widget kind expects.
+- `props` — static configuration in whatever shape that widget kind expects. The shipped renderer
+  passes `{ widget: type, ...props }` to u-widgets — the
+  [package README](../packages/core/README.md#widgets) lists the widgets the authoring UI offers and
+  their props.
 - `bindings` — a map from a dotted path into `props` (e.g. `'data.value'`, or a nested path like
   `'data.status'`, or an array element like `'items.1.value'`) to a `Binding`. At resolution time,
   each entry's resolved value is written into `props` at that path — copying, never mutating, the
