@@ -47,9 +47,8 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   // 사라짐)만으로는 완전히 빈 페이지도 통과한다(실측 — 이전 로컬 실행에서 5176 포트에 고장난
   // 잔여 서버가 붙어 있었을 때 이 두 assertion은 그대로 통과했고, 회수 후 단계의 positive
   // assertion에서야 실패가 드러났다). 그래서 board-info GET 응답이 실제로 200을 반환하는지
-  // 먼저 positive하게 검증한다 — connectorId resolve 엔드포인트(`/share/boards/:id/connectors/
-  // :cid/resolve`)와 경로가 겹치므로 정확히 board-info 엔드포인트만 매치하도록 정규식으로
-  // 구분한다.
+  // 먼저 positive하게 검증한다 — 배치 resolve 엔드포인트(`/share/boards/:id/resolve`)와 경로 앞부분이
+  // 겹치므로 정확히 board-info 엔드포인트(GET)만 매치하도록 정규식으로 구분한다.
   const shareContext = await browser.newContext();
   const sharePage = await shareContext.newPage();
   const [boardInfoResp] = await Promise.all([

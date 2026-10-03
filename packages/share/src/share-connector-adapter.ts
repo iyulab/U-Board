@@ -54,8 +54,8 @@ export class ShareResolveBatcher {
     }
   }
 
-  /** Rejects only when the request itself cannot be made (network failure) — the same outcome a
-   * failed per-binding request had, which `resolveWidget` reports as `disconnected`. */
+  /** Rejects only when the request itself cannot be made (network failure), which `resolveWidget`
+   * reports as `disconnected` for every binding in the request. */
   private async send(bindings: { connectorId: string; ref: unknown }[]): Promise<ResolvedBinding[]> {
     const res = await fetchWithRetry(
       `${getApiBase()}/share/boards/${this.boardId}/resolve?token=${encodeURIComponent(this.token)}`,

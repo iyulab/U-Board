@@ -98,30 +98,6 @@ describe('public share routes', () => {
     expect(wrongBoardToken.body).toEqual({ code: 'NOT_FOUND' });
   });
 
-  it('returns 404 for a missing or garbage token on the resolve route', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: '/status' } } } }],
-      connectors: [],
-    };
-    await updateBoard(db, workspaceId, boardId, { document: doc });
-
-    const noToken = await request(app)
-      .post(`/share/boards/${boardId}/connectors/${connector.id}/resolve`)
-      .send({ ref: { path: '/status' } });
-    expect(noToken.status).toBe(404);
-    expect(noToken.body).toEqual({ code: 'NOT_FOUND' });
-
-    const garbageToken = await request(app)
-      .post(`/share/boards/${boardId}/connectors/${connector.id}/resolve?token=garbage`)
-      .send({ ref: { path: '/status' } });
-    expect(garbageToken.status).toBe(404);
-    expect(garbageToken.body).toEqual({ code: 'NOT_FOUND' });
-
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
   it('updates lastUsedAt on a successful access', async () => {
     const token = await createShareToken();
     await request(app).get(`/share/boards/${boardId}?token=${token}`);
@@ -129,28 +105,6 @@ describe('public share routes', () => {
       .get(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
     expect(list.body.tokens[0].lastUsedAt).toBeTruthy();
-  });
-
-  it('resolves a referenced connector and returns live quality', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
-    // The document's binding.ref must be the exact `{path, valuePath?}` shape the resolve
-    // endpoint expects — that's what `HttpConnectorAdapter.resolve` forwards unmodified
-    // (packages/console/src/http-connector-adapter.ts), and what `isDeclaredBinding` compares
-    // against by value.
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
-      connectors: [],
-    };
-    await updateBoard(db, workspaceId, boardId, { document: doc });
-    const token = await createShareToken();
-    (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
-
-    const res = await request(app)
-      .post(`/share/boards/${boardId}/connectors/${connector.id}/resolve?token=${token}`)
-      .send({ ref: { path: '/status', valuePath: 'status' } });
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: 'running', quality: 'live' });
   });
 
   it('resolves every declared binding of a board in one batch request, in request order', async () => {
@@ -190,6 +144,7 @@ describe('public share routes', () => {
 
   it('answers disconnected for a batch entry the document does not declare, without calling its upstream', async () => {
     const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const unreferenced = await createConnector(db, { workspaceId, name: 'Other', baseUrl: 'https://other.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
@@ -203,12 +158,20 @@ describe('public share routes', () => {
       .post(`/share/boards/${boardId}/resolve?token=${token}`)
       .send({ bindings: [
         { connectorId: connector.id, ref: { path: '/status', valuePath: 'status' } },
+        // The connector this board uses, with a ref it never declared: the gate compares the exact
+        // (connectorId, ref) pair, or a share link would open the connector's whole origin.
         { connectorId: connector.id, ref: { path: '/other-metric' } },
+        // A real connector of this workspace that the board does not reference.
+        { connectorId: unreferenced.id, ref: { path: '/status', valuePath: 'status' } },
         { connectorId: 'missing', ref: { path: '/status' } },
+        // Not a valid ref at all.
+        { connectorId: connector.id, ref: { path: '@attacker.example/' } },
       ] });
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual([
       { value: 'running', quality: 'live' },
+      { quality: 'disconnected' },
+      { quality: 'disconnected' },
       { quality: 'disconnected' },
       { quality: 'disconnected' },
     ]);
@@ -217,6 +180,7 @@ describe('public share routes', () => {
 
   it('rejects a batch request without a valid token, a bindings array, or within the size cap', async () => {
     const token = await createShareToken();
+    expect((await request(app).post(`/share/boards/${boardId}/resolve`).send({ bindings: [] })).status).toBe(404);
     expect((await request(app).post(`/share/boards/${boardId}/resolve?token=wrong`).send({ bindings: [] })).status).toBe(404);
     expect((await request(app).post(`/share/boards/${boardId}/resolve?token=${token}`).send({})).status).toBe(400);
     expect((await request(app).post(`/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: ['x'] })).status).toBe(400);
@@ -225,67 +189,7 @@ describe('public share routes', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('returns 404 resolving a connector the board document does not reference', async () => {
-    const referenced = await createConnector(db, { workspaceId, name: 'Referenced', baseUrl: 'https://a.example.com', authType: 'none' });
-    const other = await createConnector(db, { workspaceId, name: 'Other', baseUrl: 'https://b.example.com', authType: 'none' });
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: referenced.id, ref: '/status' } } } }],
-      connectors: [],
-    };
-    await updateBoard(db, workspaceId, boardId, { document: doc });
-    const token = await createShareToken();
-
-    const res = await request(app)
-      .post(`/share/boards/${boardId}/connectors/${other.id}/resolve?token=${token}`)
-      .send({ ref: { path: '/status' } });
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual({ code: 'NOT_FOUND' });
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it('returns 404 resolving a connector the document uses, with a ref it does not declare', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
-    // Declares one specific ref (`/status`) for this connector. The resolve request below sends
-    // a *differently-shaped but still individually valid* ref (`/other-metric`) for the SAME
-    // connector, so a pass here would only be possible if the gate checks exact ref equality —
-    // not just that the connector id is referenced somewhere in the document.
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
-      connectors: [],
-    };
-    await updateBoard(db, workspaceId, boardId, { document: doc });
-    const token = await createShareToken();
-
-    // Same connector as the document's own binding, but a ref the document never declared — the
-    // gate must check the exact (connectorId, ref) pair, not just connector membership, or a
-    // share link would grant free-form access to the connector's whole origin.
-    const res = await request(app)
-      .post(`/share/boards/${boardId}/connectors/${connector.id}/resolve?token=${token}`)
-      .send({ ref: { path: '/other-metric' } });
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual({ code: 'NOT_FOUND' });
-    expect(fetch).not.toHaveBeenCalled();
-  });
-
-  it('returns 400 for a malformed ref', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: '/status' } } } }],
-      connectors: [],
-    };
-    await updateBoard(db, workspaceId, boardId, { document: doc });
-    const token = await createShareToken();
-
-    const res = await request(app)
-      .post(`/share/boards/${boardId}/connectors/${connector.id}/resolve?token=${token}`)
-      .send({ ref: { path: '@attacker.example/' } });
-    expect(res.status).toBe(400);
-  });
-
-  it('resolves a binding using the exact (connectorId, ref) round-tripped through save -> DB -> share GET -> resolve', async () => {
+  it('resolves a binding using the exact (connectorId, ref) round-tripped through save -> DB -> share GET -> batch resolve', async () => {
     // Unlike the other tests in this file, the document here is saved through the real
     // PUT /workspaces/:id/boards/:id route (not the updateBoard() DB helper directly), and the
     // ref used against the resolve route is read back out of the share GET response rather than
@@ -315,9 +219,9 @@ describe('public share routes', () => {
 
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
     const resolveRes = await request(app)
-      .post(`/share/boards/${boardId}/connectors/${binding.adapter}/resolve?token=${token}`)
-      .send({ ref: binding.ref });
+      .post(`/share/boards/${boardId}/resolve?token=${token}`)
+      .send({ bindings: [{ connectorId: binding.adapter, ref: binding.ref }] });
     expect(resolveRes.status).toBe(200);
-    expect(resolveRes.body).toEqual({ value: 'running', quality: 'live' });
+    expect(resolveRes.body).toEqual({ results: [{ value: 'running', quality: 'live' }] });
   });
 });

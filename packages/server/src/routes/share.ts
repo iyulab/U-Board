@@ -90,49 +90,13 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     });
   });
 
-  router.post('/boards/:boardId/connectors/:connectorId/resolve', async (req, res) => {
-    const boardId = req.params.boardId;
-    const token = await authenticate(boardId, req.query.token);
-    if (!token) {
-      res.status(404).json({ code: 'NOT_FOUND' });
-      return;
-    }
-    const board = await findBoard(db, token.workspaceId, boardId);
-    if (!board) {
-      res.status(404).json({ code: 'NOT_FOUND' });
-      return;
-    }
-    const ref = req.body?.ref;
-    if (!isValidRef(ref)) {
-      res.status(400).json({ code: 'INVALID_INPUT' });
-      return;
-    }
-    if (!isDeclaredBinding(board.document, req.params.connectorId, ref)) {
-      res.status(404).json({ code: 'NOT_FOUND' });
-      return;
-    }
-    const connector = await findConnector(db, token.workspaceId, req.params.connectorId);
-    if (!connector) {
-      res.status(404).json({ code: 'NOT_FOUND' });
-      return;
-    }
-    const target = buildResolveTarget(connector, ref);
-    if (!target) {
-      res.status(400).json({ code: 'INVALID_INPUT' });
-      return;
-    }
-    await touchBoardShareTokenLastUsed(db, token.id);
-    const result = await resolveConnectorValue(connector, target, ref, resolveState);
-    res.status(200).json(result);
-  });
-
-  /** Resolves many of a board's bindings in one request, answering in request order. The viewer
-   * sends every binding it renders here at once, so opening a board costs the same number of
-   * requests however many bindings it has — the per-binding route above made that number grow with
-   * the board, against an edge rate limit that counts every request. Each entry passes the same
-   * gate as the per-binding route; an entry that fails it (not declared by this board, unknown
-   * connector) answers `disconnected` — what the viewer already shows for a refused single resolve
-   * — rather than failing the entries around it. */
+  /** Resolves many of a board's bindings in one request, answering in request order — the only
+   * resolve route a share link has. The viewer sends every binding it renders here at once, so
+   * opening a board costs the same number of requests however many bindings it has, against an edge
+   * rate limit that counts every request. Each entry must be a valid ref that this board's document
+   * declares for an existing connector (`isDeclaredBinding`); an entry that is not answers
+   * `disconnected` — what the viewer shows for any binding it cannot resolve — rather than failing
+   * the entries around it, and its upstream is never called. */
   router.post('/boards/:boardId/resolve', async (req, res) => {
     const boardId = req.params.boardId;
     const token = await authenticate(boardId, req.query.token);

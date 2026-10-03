@@ -71,7 +71,7 @@ describe('errorHandler / body size limit', () => {
     expect(malformed.body.code).toBe('INVALID_JSON');
 
     const malformedPublicRoute = await request(app)
-      .post('/share/boards/nonexistent/connectors/nonexistent/resolve')
+      .post('/share/boards/nonexistent/resolve')
       .set('Content-Type', 'application/json')
       .send('{not json');
     expect(malformedPublicRoute.status).toBe(400);
@@ -90,7 +90,7 @@ describe('CORS', () => {
   it('lets browsers cache a preflight so a viewer resolving many bindings does not preflight each one', async () => {
     const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
     const res = await request(corsApp)
-      .options('/share/boards/b1/connectors/c1/resolve')
+      .options('/share/boards/b1/resolve')
       .set('Origin', 'https://app.example.com')
       .set('Access-Control-Request-Method', 'POST')
       .set('Access-Control-Request-Headers', 'content-type');
