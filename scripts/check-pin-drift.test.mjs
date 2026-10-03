@@ -46,6 +46,13 @@ test('a new major without a deferral is drift', () => {
   assert.match(r.reason, /dependency-deferrals\.json/);
 });
 
+test('an installed version ahead of the registry latest tag is not a new major', () => {
+  // happens with a stale local metadata cache, or when a package moves its latest tag back
+  const r = classify({ name: 'jsdom', current: '30.1.1', wanted: '30.1.1', latest: '29.1.1' }, { today });
+  assert.equal(r.verdict, 'info');
+  assert.doesNotMatch(r.reason, /new major/);
+});
+
 test('a new major with a live deferral is deferred', () => {
   const deferrals = [{ package: 'express', major: 5, reason: 'routing rewrite pending', reviewBy: '2026-10-15' }];
   const r = classify({ name: 'express', current: '4.22.3', wanted: '4.22.3', latest: '5.2.1' }, { deferrals, today });

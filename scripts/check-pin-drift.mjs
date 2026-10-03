@@ -88,7 +88,14 @@ export function classify({ name, current, wanted, latest }, { sibling = false, d
     return { verdict: 'info', reason: 'small in-range gap' };
   }
   if (current === latest) return { verdict: 'clean', reason: null };
-  if (parseVersion(latest).major !== parseVersion(current).major) {
+  const currentMajor = parseVersion(current).major;
+  const latestMajor = parseVersion(latest).major;
+  // `latest` can sit behind what is installed (a stale local metadata cache, or a tag moved
+  // back) — nothing newer exists to adopt, so it is reported, never drift.
+  if (latestMajor < currentMajor) {
+    return { verdict: 'info', reason: `installed ahead of the registry latest tag (${latest})` };
+  }
+  if (latestMajor !== currentMajor) {
     const deferral = findDeferral(deferrals, name, latest);
     if (!deferral) {
       return { verdict: 'drift', reason: `new major ${latest} — adopt it, or record why not in dependency-deferrals.json` };
