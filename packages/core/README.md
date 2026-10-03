@@ -41,6 +41,23 @@ const adapters: Adapter[] = [/* your Adapter implementations */];
 const resolved = await resolveDocument(doc, adapters);
 ```
 
+## Showing a board
+
+`ViewerPage` renders a view document read-only. Without `width`/`height` it fills its parent and
+follows its size, so give the parent a definite height:
+
+```tsx
+import { ViewerPage } from '@iyulab/u-board/viewer';
+
+<div style={{ height: '100vh' }}>
+  <ViewerPage initialDocument={doc} adapters={adapters} pollIntervalMs={30_000} />
+</div>;
+```
+
+The board opens fitted into view — shrunk to fit, never magnified past its natural size — and a
+"Fit to view" control restores that after panning or zooming. Pass `width`/`height` (CSS px) for a
+fixed-size view instead.
+
 The full type reference, with examples that are compiled and run as tests, is in
 [`docs/api-reference.md`](https://github.com/iyulab/U-Board/blob/main/docs/api-reference.md).
 Concepts and architecture: [`docs/concepts.md`](https://github.com/iyulab/U-Board/blob/main/docs/concepts.md),

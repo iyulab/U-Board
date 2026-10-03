@@ -3,9 +3,6 @@ import { ViewerPage, type ViewDocument, type Adapter } from '@iyulab/u-board/vie
 import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
 import { getApiBase, fetchWithRetry } from './api-base.js';
 
-const DEFAULT_WIDTH = 1200;
-const DEFAULT_HEIGHT = 800;
-
 type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[] };
 
 export function App() {
@@ -36,7 +33,5 @@ export function App() {
   if (state === 'loading') return <p>불러오는 중...</p>;
   if (state === 'error') return <p>이 링크는 더 이상 유효하지 않습니다.</p>;
 
-  const width = state.document.background.image?.width ?? DEFAULT_WIDTH;
-  const height = state.document.background.image?.height ?? DEFAULT_HEIGHT;
-  return <ViewerPage initialDocument={state.document} adapters={state.adapters} width={width} height={height} />;
+  return <ViewerPage initialDocument={state.document} adapters={state.adapters} />;
 }

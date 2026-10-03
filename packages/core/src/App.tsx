@@ -164,7 +164,9 @@ export function App() {
             through the same path a standalone viewer app would use, with no editing controls and
             no dependency on the designer.
           </p>
-          <ViewerPage adapters={adapters} width={900} height={560} />
+          <div style={{ height: 560, maxWidth: 900 }}>
+            <ViewerPage adapters={adapters} />
+          </div>
         </>
       )}
     </div>

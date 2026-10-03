@@ -6,6 +6,11 @@
          so the secret is never leaked to any origin a rendered widget happens to request. -->
     <meta name="referrer" content="no-referrer" />
     <title>U-Board — 공유 보드</title>
+    <style>
+      /* The board view fills the window and follows its size. */
+      html, body, #root { height: 100%; margin: 0; }
+      #root { box-sizing: border-box; padding: 8px; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

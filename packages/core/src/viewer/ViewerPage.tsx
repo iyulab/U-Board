@@ -1,16 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
-import { Viewer } from '@canvas-kit/viewer';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Viewer, type ViewerHandle } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
+import { documentExtent } from './document-extent.js';
 import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument } from '../view-document.js';
 
+/** Fitting the document into view: space (CSS px) kept clear around it, and never magnified past
+ * its natural size — a small board stays legible at 1:1 instead of blowing its widgets and a raster
+ * background up to fill the screen; a large one shrinks to fit. */
+const FIT_OPTIONS = { padding: 16, maxScale: 1 };
+
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
-  width: number;
-  height: number;
+  /** Viewport size in CSS px. Omit either to have the view follow its container along that axis —
+   * `ViewerPage` then fills its parent, so give the parent a definite size. */
+  width?: number;
+  height?: number;
   /** 주어지면 Import UI 없이 이 문서를 즉시 렌더한다(공개 임베드 뷰용). 생략 시 오늘과 같은
    * 로컬 파일 Import 데모 동작. */
   initialDocument?: ViewDocument;
@@ -20,7 +28,9 @@ export interface ViewerPageProps {
 }
 
 /**
- * A read-only view of an imported ViewDocument — no `KonvaDesigner`, no editing controls. This
+ * A read-only view of an imported ViewDocument — no `KonvaDesigner`, no editing controls. It opens
+ * with the whole document fitted into view (shrunk to fit, never magnified), and "Fit to view" brings it back after panning or
+ * zooming; refreshed binding values (polling) leave the user's pan/zoom alone. This
  * module never imports `@canvas-kit/designer` at all, so it stays what a real standalone viewer
  * deployment would ship with (docs/principles.md — editor/renderer separation): the authoring
  * tool's weight can never leak in here, because it isn't a dependency of this file.
@@ -36,8 +46,20 @@ export function ViewerPage({
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const viewerRef = useRef<ViewerHandle>(null);
 
   const { resolved } = useResolvedDocument(doc, adapters, { pollIntervalMs });
+
+  const extent = useMemo(() => (doc ? documentExtent(doc) : null), [doc]);
+  const fitToDocument = useCallback(() => {
+    if (extent) viewerRef.current?.fitToRect(extent, FIT_OPTIONS);
+  }, [extent]);
+  // Fit when the viewer first appears and whenever a different document is loaded — not on every
+  // preview refresh, which is only new values for the same document.
+  const viewerShown = preview !== null;
+  useEffect(() => {
+    if (viewerShown) fitToDocument();
+  }, [viewerShown, fitToDocument]);
 
   useEffect(() => {
     if (!resolved) {
@@ -72,27 +94,40 @@ export function ViewerPage({
     }
   };
 
+  const showFit = viewerShown && extent !== null;
+
   return (
-    <div>
-      {!initialDocument && (
-        <>
-          <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
-            Import
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json"
-            onChange={handleImportFile}
-            style={{ display: 'none' }}
-          />
-        </>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {(!initialDocument || showFit) && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          {!initialDocument && (
+            <>
+              <button onClick={handleImportClick}>Import</button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                onChange={handleImportFile}
+                style={{ display: 'none' }}
+              />
+            </>
+          )}
+          {showFit && <button onClick={fitToDocument}>Fit to view</button>}
+        </div>
       )}
       {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
       {!doc ? (
         <p style={{ color: '#64748b' }}>No document loaded — Import one to view it.</p>
       ) : preview ? (
-        <Viewer width={width} height={height} scene={preview.scene} overlays={preview.overlays} />
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <Viewer
+            ref={viewerRef}
+            width={width}
+            height={height}
+            scene={preview.scene}
+            overlays={preview.overlays}
+          />
+        </div>
       ) : (
         <p>Resolving…</p>
       )}

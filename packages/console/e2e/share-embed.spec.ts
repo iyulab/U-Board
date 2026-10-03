@@ -66,6 +66,24 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   // 완료 후에만 preview state를 세팅하고, Viewer는 그때만 canvas를 마운트하므로(canvas-kit
   // viewer 패키지 확인) 이 엘리먼트의 가시성이 실제 렌더 성공의 positive 증거가 된다.
   await expect(sharePage.getByTestId('canvas')).toBeVisible();
+
+  // 뷰어는 창을 채우고(컨테이너 추종), 열릴 때 문서 전체가 보이도록 맞춘다 — 노드 하나뿐인
+  // 보드라 그 노드가 화면 안에 들어와 있어야 한다.
+  const viewport = sharePage.viewportSize()!;
+  const canvasBox = (await sharePage.getByTestId('canvas').boundingBox())!;
+  expect(canvasBox.width).toBeGreaterThan(viewport.width * 0.9);
+  expect(canvasBox.height).toBeGreaterThan(viewport.height * 0.8);
+  const nodeBox = (await sharePage
+    .locator('[data-testid^="overlay-"]:not([data-testid="overlay-layer"])')
+    .first()
+    .boundingBox())!;
+  expect(nodeBox.x).toBeGreaterThanOrEqual(canvasBox.x);
+  expect(nodeBox.y).toBeGreaterThanOrEqual(canvasBox.y);
+  expect(nodeBox.x + nodeBox.width).toBeLessThanOrEqual(canvasBox.x + canvasBox.width + 1);
+  expect(nodeBox.y + nodeBox.height).toBeLessThanOrEqual(canvasBox.y + canvasBox.height + 1);
+  // 작은 보드는 확대하지 않는다 — 기본 크기(160×100) 노드가 1:1 그대로.
+  expect(nodeBox.width).toBeLessThanOrEqual(161);
+  await expect(sharePage.getByRole('button', { name: 'Fit to view' })).toBeVisible();
   await shareContext.close();
 
   // 콘솔에서 회수
