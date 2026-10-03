@@ -47,6 +47,11 @@ jobs:
       - name: Public text (no private context)
         run: npm run check:public-text
 
+      # Relative links in the Markdown docs must reach a file (and heading) that exists — nothing
+      # else follows them, so a moved file leaves them broken silently (scripts/check-doc-links.mjs).
+      - name: Doc links
+        run: npm run check:doc-links
+
       - name: Typecheck
         run: npm run typecheck
 

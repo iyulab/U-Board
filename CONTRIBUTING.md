@@ -66,14 +66,15 @@ The server and the other applications import `@iyulab/u-board` from `packages/co
 which `npm install` builds once. After changing `packages/core`, run `npm run build:lib` before
 testing them, or they keep running against the previous build.
 
-CI runs the same checks plus a real-Postgres concurrency suite and two repository checks:
+CI runs the same checks plus a real-Postgres concurrency suite and three repository checks:
 `npm run check:pin-drift` (dependencies not left behind their published versions; a breaking
 release — a new major, or below 1.0 a new minor — is either adopted or recorded in
 [`dependency-deferrals.json`](dependency-deferrals.json) with a reason and a review date, after
 which the check fails again) and
 `npm run check:public-text` (no private tracking ids, local paths, or hosts outside the
 allowlist in [`scripts/check-public-text.mjs`](scripts/check-public-text.mjs) — a link to a new
-public site means adding it there). See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+public site means adding it there), and `npm run check:doc-links` (every relative link in the
+Markdown docs reaches a file and heading that exist). See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 Run `npm run typecheck` and `npm test` locally before opening a pull request.
 
 When upgrading a dependency that several workspaces share, install it for all of them in one
