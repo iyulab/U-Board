@@ -9,7 +9,7 @@ vi.mock('@iyulab/u-board/viewer', async () => {
   return {
     ...actual,
     ViewerPage: (props: any) => (
-      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')}>
+      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')} data-label={props.ariaLabel}>
         {props.initialDocument.background ? 'rendered' : ''}
       </div>
     ),
@@ -39,6 +39,13 @@ describe('App', () => {
     render(<App />);
     expect(await screen.findByTestId('viewer-page')).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('/share/boards/b1?token=tok', expect.anything());
+  });
+
+  it('names the board view after the board', async () => {
+    setLocation('?board=b1&token=tok');
+    (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'Line 2 floor', document: DOC, connectorIds: [] }) });
+    render(<App />);
+    expect((await screen.findByTestId('viewer-page')).dataset.label).toBe('Line 2 floor');
   });
 
   it('shows an error when the fetch fails', async () => {

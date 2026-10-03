@@ -104,6 +104,13 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await sharePage.keyboard.press('Enter');
   const nodeOverlay = sharePage.locator('[data-testid^="overlay-"]:not([data-testid="overlay-layer"])').first();
   await expect.poll(async () => (await nodeOverlay.boundingBox())!.width).toBeGreaterThan(movedNode.width * 1.2);
+
+  // 팬도 키보드로 — 보드 뷰(보드 이름으로 불린다)에 포커스하고 →: 보기가 오른쪽으로 가 노드는 왼쪽으로 40px.
+  const boardView = sharePage.getByRole('region', { name: 'Shared Board' });
+  await boardView.focus();
+  const beforePan = (await nodeOverlay.boundingBox())!;
+  await sharePage.keyboard.press('ArrowRight');
+  await expect.poll(async () => Math.round((await nodeOverlay.boundingBox())!.x)).toBe(Math.round(beforePan.x - 40));
   await shareContext.close();
 
   // 콘솔에서 회수

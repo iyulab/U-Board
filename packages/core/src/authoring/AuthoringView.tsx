@@ -271,6 +271,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
                 overlays={preview.overlays}
                 transform={transform}
                 onTransformChange={view.onUserTransform}
+                ariaLabel="Live preview"
               />
             </div>
           ) : (

@@ -22,6 +22,9 @@ export interface ViewerPageProps {
   /** 주어지면 이 주기(ms)로 바인딩을 재해석해 연결 품질을 다시 반영한다. 생략 시 오늘과 같은
    * 1회 해석(하위호환). */
   pollIntervalMs?: number;
+  /** Accessible name of the board view — e.g. the board's name. The view is focusable: arrow keys
+   * pan, `+`/`-` zoom. Default "Board". */
+  ariaLabel?: string;
 }
 
 /**
@@ -39,6 +42,7 @@ export function ViewerPage({
   height,
   initialDocument,
   pollIntervalMs,
+  ariaLabel = 'Board',
 }: ViewerPageProps) {
   const [doc, setDoc] = useState<ViewDocument | null>(initialDocument ?? null);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
@@ -122,6 +126,7 @@ export function ViewerPage({
             transform={view.transform}
             onTransformChange={view.onUserTransform}
             onViewportResize={view.onViewportResize}
+            ariaLabel={ariaLabel}
           />
         </div>
       ) : (

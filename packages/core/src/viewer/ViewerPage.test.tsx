@@ -165,6 +165,21 @@ describe('ViewerPage', () => {
       expect(lastViewerProps().transform).toEqual({ x: 1, y: 2, scale: 0.7 });
     });
 
+    it('names the board view for assistive technology', async () => {
+      render(<ViewerPage adapters={[]} initialDocument={doc()} ariaLabel="Line 2 floor" />);
+      await screen.findByTestId('viewer');
+      expect(lastViewerProps().ariaLabel).toBe('Line 2 floor');
+    });
+
+    it('lets a keyboard pan or zoom in the view end following, like a pointer one', async () => {
+      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      await screen.findByTestId('viewer');
+      act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
+      act(() => lastViewerProps().onTransformChange({ x: -24, y: 16, scale: 0.5 })); // an arrow press
+      act(() => lastViewerProps().onViewportResize({ width: 332, height: 232 }));
+      expect(lastViewerProps().transform).toEqual({ x: -24, y: 16, scale: 0.5 });
+    });
+
     it('zooms in and out from keyboard-operable controls, around the middle of the view', async () => {
       render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
       await screen.findByTestId('viewer');
