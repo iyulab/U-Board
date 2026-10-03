@@ -80,17 +80,17 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
   // Resets the binding draft/preview/explore state. Keyed on the node and the widget *type* — not
   // the whole widget — so it fires on node-switch or an actual type change (which should discard
   // an in-progress binding edit) but not on every props-only or binding-only save.
+  // Depends on the default connector id — a string — rather than the `adapters` array, so a caller
+  // passing a fresh array literal on every render doesn't wipe the in-progress draft.
+  const defaultConnectorId = initialConnectorId(adapters);
   useEffect(() => {
-    setDraft(emptyDraft(initialConnectorId(adapters)));
+    setDraft(emptyDraft(defaultConnectorId));
     setEditingPropPath(null);
     setPreview(null);
     setPreviewError(null);
     setExploreResult(null);
     setExploreError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `adapters` intentionally excluded:
-    // depend on its content (length), not its reference, so a caller passing a fresh array
-    // literal on every render doesn't spuriously wipe the in-progress draft.
-  }, [node?.id, node?.widget.type, adapters.length]);
+  }, [node?.id, node?.widget.type, defaultConnectorId]);
 
   if (!node) {
     return <p>노드를 선택하세요.</p>;
@@ -155,7 +155,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
 
   const handleSaveBinding = () => {
     if (!draft.propPath || !selectedAdapter) return;
-    const bindings = { ...(node.widget.bindings ?? {}) };
+    const bindings = { ...node.widget.bindings };
     bindings[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef() };
     if (editingPropPath !== null && editingPropPath !== draft.propPath) {
       delete bindings[editingPropPath];
@@ -169,7 +169,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
   };
 
   const handleRemoveBinding = (propPath: string) => {
-    const bindings = { ...(node.widget.bindings ?? {}) };
+    const bindings = { ...node.widget.bindings };
     delete bindings[propPath];
     onChange({ ...node.widget, bindings });
   };

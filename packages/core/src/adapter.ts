@@ -73,7 +73,7 @@ export async function resolveWidget(
   widget: Widget,
   adapters: readonly Adapter[]
 ): Promise<ResolvedWidget> {
-  const props = { ...(widget.props ?? {}) };
+  const props = { ...widget.props };
   const quality: Record<string, ConnectionQuality> = {};
   const reasons: Record<string, QualityReason> = {};
 

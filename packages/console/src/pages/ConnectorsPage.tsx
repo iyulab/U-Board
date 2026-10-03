@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { listConnectors, createConnector, updateConnector, deleteConnector, listMembers, type ConnectorSummary, type ConnectorAuthType, type ConnectorOAuthClientAuth } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
@@ -42,17 +42,17 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const canKeepStoredSecret =
     editingAuthType !== null && editingAuthType !== 'none' && (editingAuthType === 'oauth2-client-credentials') === isOAuth;
 
-  function reload() {
+  const reload = useCallback(() => {
     setLoadError(null);
     return listConnectors(workspaceId)
       .then(res => setConnectors(res.connectors))
       .catch(() => setLoadError('데이터소스 목록을 불러오지 못했습니다'))
       .finally(() => setIsLoading(false));
-  }
+  }, [workspaceId]);
 
   useEffect(() => {
     reload();
-  }, [workspaceId]);
+  }, [reload]);
 
   useEffect(() => {
     listMembers(workspaceId)

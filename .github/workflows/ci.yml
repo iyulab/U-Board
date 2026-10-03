@@ -55,6 +55,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      # oxlint, not ESLint: typescript-eslint cannot load the native TypeScript 7 compiler this
+      # workspace uses (.oxlintrc.json).
+      - name: Lint
+        run: npm run lint
+
       - name: Test
         run: npm test
 

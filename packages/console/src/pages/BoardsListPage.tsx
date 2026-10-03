@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { listBoards, createBoard, deleteBoard } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
@@ -28,17 +28,17 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
     [boards, query]
   );
 
-  function reload() {
+  const reload = useCallback(() => {
     setLoadError(null);
     return listBoards(workspaceId)
       .then(res => setBoards(res.boards))
       .catch(() => setLoadError('보드 목록을 불러오지 못했습니다'))
       .finally(() => setIsLoading(false));
-  }
+  }, [workspaceId]);
 
   useEffect(() => {
     reload();
-  }, [workspaceId]);
+  }, [reload]);
 
   function openCreateDialog() {
     setNewBoardName('');

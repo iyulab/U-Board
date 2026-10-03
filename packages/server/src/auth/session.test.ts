@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { signSession, verifySession, type SessionPayload } from './session.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
@@ -19,7 +19,7 @@ describe('session cookie signing', () => {
   it('rejects a tampered payload', () => {
     const payload: SessionPayload = { userId: 'u1', activeWorkspaceId: 'w1', issuedAt: Date.now() };
     const token = signSession(payload, SECRET);
-    const [body, signature] = token.split('.');
+    const [, signature] = token.split('.');
     const tamperedPayload = Buffer.from(
       JSON.stringify({ ...payload, userId: 'attacker' })
     ).toString('base64url');

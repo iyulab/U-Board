@@ -57,6 +57,7 @@ an issue first if you think an exception is warranted.
 ```bash
 npm install
 npm run typecheck    # tsc --noEmit across the workspace
+npm run lint         # oxlint — correctness rules plus the React hooks rules
 npm test             # vitest
 npm run build        # all packages
 npm run test:e2e     # Playwright (canvas rendering, console flows)

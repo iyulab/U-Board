@@ -7,6 +7,7 @@
   "scripts": {
     "postinstall": "npm run build:lib --workspace=packages/core",
     "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "oxlint packages scripts",
     "test": "npm run test --workspaces --if-present",
     "test:watch": "npm run test:watch --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspaces --if-present",
@@ -16,5 +17,8 @@
     "check:pin-drift": "node scripts/check-pin-drift.mjs --strict",
     "check:public-text": "node scripts/check-public-text.mjs",
     "check:doc-links": "node scripts/check-doc-links.mjs"
+  },
+  "devDependencies": {
+    "oxlint": "^1.86.0"
   }
 }

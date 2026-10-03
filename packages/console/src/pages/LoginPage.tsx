@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { login, ApiError } from '../api-client.js';
+import { login } from '../api-client.js';
 
 /**
  * `onSuccess` is fire-and-forget: it is called after the credentials are accepted and is not

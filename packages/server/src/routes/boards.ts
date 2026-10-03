@@ -1,4 +1,4 @@
-import { Router, type Request } from 'express';
+import { Router } from 'express';
 import { validateViewDocument } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';

@@ -216,7 +216,7 @@ describe('addDecoration', () => {
   it('appends a new text decoration with placeholder text', () => {
     const updated = addDecoration(doc(), 'text', { x: 10, y: 10 });
     expect(updated.decorations?.[0]).toMatchObject({ type: 'text', x: 10, y: 10 });
-    expect((updated.decorations?.[0] as { text: string }).text.length).toBeGreaterThan(0);
+    expect((updated.decorations![0] as { text: string }).text.length).toBeGreaterThan(0);
   });
 
   it('assigns each new decoration a distinct id', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { AuthoringView, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import { DemoAdapter } from '@iyulab/u-board/demo';
@@ -65,21 +65,21 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       .catch(() => setMembersError('구성원 정보를 불러오지 못했습니다'));
   }, [workspaceId, userId]);
 
-  function reloadShareTokens() {
+  const reloadShareTokens = useCallback(() => {
     return listShareTokens(workspaceId, boardId!)
       .then(res => {
         setShareError(null);
         setShareTokens(res.tokens);
       })
       .catch(() => setShareError('공유 링크 목록을 불러오지 못했습니다'));
-  }
+  }, [workspaceId, boardId]);
 
   useEffect(() => {
     // Gated on `isOwner`, not just the panel's visibility: the server's list route is
     // owner-only too (Task 3), so firing this for a member would 403 and show a spurious
     // "failed to load" alert on a page that member never sees the share panel on at all.
     if (isOwner) reloadShareTokens();
-  }, [workspaceId, boardId, isOwner]);
+  }, [isOwner, reloadShareTokens]);
 
   async function handleCreateShareToken() {
     try {
