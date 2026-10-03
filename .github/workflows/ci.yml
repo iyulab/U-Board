@@ -90,10 +90,12 @@ jobs:
       - name: E2E
         run: npm run test:e2e
 
-  # The packages declare `engines.node >=22.12.0` — the oldest supported Node line, and the floor
-  # Vite itself requires. `verify` runs on the current line only, so without this job the declared
-  # floor would be a claim nothing checks. Unit tests, typecheck and the library build are what a
-  # consumer on that line relies on; the browser e2e suite does not depend on the Node version.
+  # The packages declare `engines.node >=22.12.0` — the oldest supported Node line. `verify` runs on
+  # the current line only, so without this job the declared floor would be a claim nothing checks.
+  # It runs the product on that Node, not the test toolchain: the published library's entry point
+  # (scripts/smoke-library.mjs) and the server's suite, which runs on Node in production. Browser
+  # code is unit-tested under jsdom in `verify` — its Node version is the tooling's, not the product's,
+  # and the test toolchain (jsdom among it) needs a newer Node than the floor.
   node-floor:
     name: node-floor (22.12)
     runs-on: ubuntu-latest
@@ -109,14 +111,14 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Test
-        run: npm test
-
       - name: Build library entry
         run: npm run build:lib
+
+      - name: Library smoke
+        run: node scripts/smoke-library.mjs
+
+      - name: Server tests
+        run: npm test --workspace=packages/server
 
   # Publishes the library package (packages/core, @iyulab/u-board) once `verify` and `node-floor` have passed on a
   # push to main, if its version isn't on the registry yet. Kept in this workflow rather than a

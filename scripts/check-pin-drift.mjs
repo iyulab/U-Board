@@ -106,10 +106,15 @@ export function classify({ name, current, wanted, latest }, { sibling = false, d
     return { verdict: 'info', reason: 'small in-range gap' };
   }
   if (current === latest) return { verdict: 'clean', reason: null };
-  // `latest` can sit behind what is installed (a stale local metadata cache, or a tag moved
-  // back) — nothing newer exists to adopt, so it is reported, never drift.
+  // `latest` can sit behind what is installed: the package manager reports the newest version
+  // whose `engines` accept the Node running this check, so a release that needs a newer Node is
+  // left out (as are a stale metadata cache and a tag moved back). Nothing newer exists to adopt
+  // here, so it is reported, never drift — and the message says which of these to suspect.
   if (compareVersions(latest, current) < 0) {
-    return { verdict: 'info', reason: `installed ahead of the registry latest tag (${latest})` };
+    return {
+      verdict: 'info',
+      reason: `installed ahead of ${latest}, the newest version offered for this Node — the installed one may need a newer Node (check its engines)`,
+    };
   }
   if (breakingLine(latest) !== breakingLine(current)) {
     const deferral = findDeferral(deferrals, name, latest);
