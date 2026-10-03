@@ -54,4 +54,34 @@ describe('useFittedView', () => {
     act(() => result.current.onViewportResize({ width: 282, height: 400 }));
     expect(result.current.transform).toEqual({ x: 10, y: 20, scale: 0.8 });
   });
+
+  it('zooms by a step around the middle of the view, as a user move that ends following', () => {
+    const { result } = renderHook(() => useFittedView());
+    act(() => result.current.fitTo(BOARD));
+    act(() => result.current.onViewportResize({ width: 532, height: 400 }));
+    const before = result.current.transform;
+    const middleInScene = { x: (266 - before.x) / before.scale, y: (200 - before.y) / before.scale };
+
+    act(() => result.current.zoomIn());
+    const after = result.current.transform;
+    expect(after.scale).toBeCloseTo(before.scale * 1.25);
+    // the scene point in the middle of the view stays there
+    expect(middleInScene.x * after.scale + after.x).toBeCloseTo(266);
+    expect(middleInScene.y * after.scale + after.y).toBeCloseTo(200);
+
+    act(() => result.current.onViewportResize({ width: 282, height: 400 }));
+    expect(result.current.transform).toEqual(after);
+  });
+
+  it('stops at the zoom bounds and says so', () => {
+    const { result } = renderHook(() => useFittedView());
+    act(() => result.current.onViewportResize({ width: 400, height: 300 }));
+    for (let i = 0; i < 30; i++) act(() => result.current.zoomIn());
+    expect(result.current.transform.scale).toBe(10);
+    expect(result.current.canZoomIn).toBe(false);
+    expect(result.current.canZoomOut).toBe(true);
+    for (let i = 0; i < 40; i++) act(() => result.current.zoomOut());
+    expect(result.current.transform.scale).toBe(0.1);
+    expect(result.current.canZoomOut).toBe(false);
+  });
 });

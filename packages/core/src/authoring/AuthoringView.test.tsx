@@ -398,6 +398,14 @@ describe('AuthoringView viewport', () => {
     expect(lastDesignerProps().transform).toEqual({ x: 16, y: 16, scale: 0.2 });
   });
 
+  it('zooms the editor and preview together from keyboard-operable controls', () => {
+    render(<AuthoringView initialDocument={docWithBackground()} adapters={[]} />);
+    act(() => lastDesignerProps().onViewportResize({ width: 632, height: 432 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+    expect(lastDesignerProps().transform.scale).toBeCloseTo(0.25);
+    expect(screen.getByRole('button', { name: 'Zoom out' })).toBeEnabled();
+  });
+
   it('keeps the preview on the same pan/zoom as the editor, whichever pane moves it', async () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} />);
     await screen.findByTestId('viewer');

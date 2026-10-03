@@ -3,6 +3,7 @@ import { Viewer } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
 import { documentExtent } from './document-extent.js';
 import { useFittedView } from './use-fitted-view.js';
+import { ViewControls } from './ViewControls.js';
 import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
@@ -89,11 +90,9 @@ export function ViewerPage({
     }
   };
 
-  const showFit = viewerShown && extent !== null;
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {(!initialDocument || showFit) && (
+      {(!initialDocument || viewerShown) && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           {!initialDocument && (
             <>
@@ -107,7 +106,7 @@ export function ViewerPage({
               />
             </>
           )}
-          {showFit && <button onClick={() => fitTo(extent)}>Fit to view</button>}
+          {viewerShown && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} />}
         </div>
       )}
       {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}

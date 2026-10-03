@@ -165,6 +165,17 @@ describe('ViewerPage', () => {
       expect(lastViewerProps().transform).toEqual({ x: 1, y: 2, scale: 0.7 });
     });
 
+    it('zooms in and out from keyboard-operable controls, around the middle of the view', async () => {
+      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      await screen.findByTestId('viewer');
+      act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
+
+      fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+      expect(lastViewerProps().transform.scale).toBeCloseTo(0.625);
+      fireEvent.click(screen.getByRole('button', { name: 'Zoom out' }));
+      expect(lastViewerProps().transform.scale).toBeCloseTo(0.5);
+    });
+
     it('offers no fit control for an empty document, and leaves its view at identity', async () => {
       render(<ViewerPage adapters={[]} initialDocument={doc()} />);
       await screen.findByTestId('viewer');

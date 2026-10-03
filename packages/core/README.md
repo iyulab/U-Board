@@ -55,7 +55,8 @@ import { ViewerPage } from '@iyulab/u-board/viewer';
 ```
 
 The board opens fitted into view — shrunk to fit, never magnified past its natural size — and stays
-fitted as the view resizes until the viewer pans or zooms; a "Fit to view" control restores that. Pass `width`/`height` (CSS px) for a
+fitted as the view resizes until the viewer pans or zooms; a "Fit to view" control restores that,
+and zoom in/out controls do what the wheel does from the keyboard. Pass `width`/`height` (CSS px) for a
 fixed-size view instead.
 
 `AuthoringView` sizes the same way: without `width`/`height` the editor and its live preview split

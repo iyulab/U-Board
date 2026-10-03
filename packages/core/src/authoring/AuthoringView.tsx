@@ -19,6 +19,7 @@ import { PropertyPanel } from './PropertyPanel.js';
 import { DecorationPanel } from './DecorationPanel.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
+import { ViewControls } from '../viewer/ViewControls.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument, Widget, Shape } from '../view-document.js';
 
@@ -92,7 +93,6 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     fitTo(documentExtent(openedDoc));
   }, [fitTo, openedDoc]);
 
-  const handleFitToView = () => fitTo(extent);
 
   // The scene point at the top-left of the editor's view — where a newly added item is offset from.
   const visibleOrigin = () => {
@@ -228,14 +228,12 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
         <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
           Import
         </button>
-        {extent && (
-          <>
-            {' '}
-            <button onClick={handleFitToView} style={{ marginBottom: 8 }}>
-              Fit to view
-            </button>
-          </>
-        )}
+        {' '}
+        <ViewControls
+          view={view}
+          onFit={extent ? () => fitTo(extent) : undefined}
+          buttonStyle={{ marginBottom: 8, marginRight: 4 }}
+        />
         <input
           ref={fileInputRef}
           type="file"

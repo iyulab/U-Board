@@ -98,6 +98,12 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
     .boundingBox())!;
   const nodeCenterX = movedNode.x + movedNode.width / 2;
   expect(Math.abs(nodeCenterX - (smallCanvas.x + smallCanvas.width / 2))).toBeLessThan(2);
+
+  // 확대/축소는 키보드로도 된다(WCAG 2.1.1) — 버튼에 포커스하고 Enter.
+  await sharePage.getByRole('button', { name: 'Zoom in' }).focus();
+  await sharePage.keyboard.press('Enter');
+  const nodeOverlay = sharePage.locator('[data-testid^="overlay-"]:not([data-testid="overlay-layer"])').first();
+  await expect.poll(async () => (await nodeOverlay.boundingBox())!.width).toBeGreaterThan(movedNode.width * 1.2);
   await shareContext.close();
 
   // 콘솔에서 회수

@@ -1,11 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
-import { fitTransform } from '@canvas-kit/core';
+import { fitTransform, zoomAt } from '@canvas-kit/core';
 import type { Transform, Size } from '@canvas-kit/core';
 import { DOCUMENT_FIT_OPTIONS, type DocumentRect } from './document-extent.js';
 
 const IDENTITY: Transform = { x: 0, y: 0, scale: 1 };
-// canvas-kit's own default zoom floor — a fit never goes below what the user could zoom out to.
+// canvas-kit's own default zoom bounds — the wheel, the zoom controls and a fit all stay within them.
 const MIN_SCALE = 0.1;
+const MAX_SCALE = 10;
+// One press of a zoom control.
+const ZOOM_STEP = 1.25;
 
 export interface FittedView {
   /** The transform to render with (pass it to a controlled canvas-kit Viewer/KonvaDesigner). */
@@ -17,6 +20,13 @@ export interface FittedView {
   onViewportResize(size: Size): void;
   /** Wire to the canvas's `onTransformChange` — a pan or zoom by the user, which ends following. */
   onUserTransform(transform: Transform): void;
+  /** One zoom step in or out around the middle of the view — the keyboard-operable counterpart of
+   * the wheel. Like any user move, it ends following. */
+  zoomIn(): void;
+  zoomOut(): void;
+  /** Whether a step is still possible before the zoom bounds. */
+  canZoomIn: boolean;
+  canZoomOut: boolean;
 }
 
 /**
@@ -51,5 +61,25 @@ export function useFittedView(): FittedView {
     setTransform(next);
   }, []);
 
-  return { transform, fitTo, onViewportResize, onUserTransform };
+  const zoomBy = useCallback((factor: number) => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    targetRef.current = null;
+    setTransform(current =>
+      zoomAt(current, { x: viewport.width / 2, y: viewport.height / 2 }, factor, { minScale: MIN_SCALE, maxScale: MAX_SCALE })
+    );
+  }, []);
+  const zoomIn = useCallback(() => zoomBy(ZOOM_STEP), [zoomBy]);
+  const zoomOut = useCallback(() => zoomBy(1 / ZOOM_STEP), [zoomBy]);
+
+  return {
+    transform,
+    fitTo,
+    onViewportResize,
+    onUserTransform,
+    zoomIn,
+    zoomOut,
+    canZoomIn: transform.scale < MAX_SCALE,
+    canZoomOut: transform.scale > MIN_SCALE,
+  };
 }
