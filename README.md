@@ -35,7 +35,9 @@ This project is in early development. The rendering pipeline (canvas-kit + u-wid
 authoring UI (add/drag/resize nodes and rect/text decorations; a property panel for editing the
 selected node's widget type, static props, and data bindings, including a path explorer for
 HTTP-shaped adapter responses; a label editor for the selected text decoration), local save
-(export/import), and a read-only viewer mode are implemented and browser-verified.
+(export/import), and a read-only viewer mode are implemented and browser-verified. The editor and
+the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
+or keyboard.
 Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
 adapter (with SSRF-safe origin pinning, and either static bearer/header credentials or OAuth 2.0
 client credentials with cached, auto-renewed access tokens) is wired into both the authoring UI
@@ -103,6 +105,10 @@ decoration's label — is exported from the package's main entry point alongside
 ```ts
 import { AuthoringView, type Adapter } from '@iyulab/u-board';
 ```
+
+The editor and its live preview share one pan/zoom; without a `width`/`height` both fill the
+parent, which needs a definite height. The [package README](packages/core/README.md) covers sizing
+and view controls.
 
 Unlike the domain layer above, this surface depends on canvas-kit and renders to the DOM directly —
 a host application embeds it as-is rather than building its own authoring UI against the domain
