@@ -1,6 +1,12 @@
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import type { ViewDocument } from '../view-document.js';
 
+/** Fitting a document into view: space (CSS px) kept clear around it, and never magnified past its
+ * natural size — a small board stays legible at 1:1 instead of blowing its widgets and a raster
+ * background up to fill the screen; a large one shrinks to fit. Shared by the viewer and the editor
+ * so a board opens framed the same way in both. */
+export const DOCUMENT_FIT_OPTIONS = { padding: 16, maxScale: 1 };
+
 /** An axis-aligned rect in the document's own (scene) coordinates. */
 export interface DocumentRect {
   x: number;

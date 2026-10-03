@@ -155,7 +155,9 @@ export function App() {
             as a local
             file — there's no backend yet, so a file is the save mechanism for now.
           </p>
-          <AuthoringView initialDocument={demoDocument} adapters={adapters} width={900} height={560} />
+          <div style={{ height: 620 }}>
+            <AuthoringView initialDocument={demoDocument} adapters={adapters} />
+          </div>
         </>
       ) : (
         <>

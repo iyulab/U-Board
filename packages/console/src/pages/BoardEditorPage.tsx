@@ -10,9 +10,6 @@ import { HttpConnectorAdapter } from '../http-connector-adapter.js';
 import './BoardEditorPage.css';
 import { Loading } from '../design-system/Loading.js';
 
-const DEFAULT_WIDTH = 1200;
-const DEFAULT_HEIGHT = 800;
-
 /** True when any node's widget binds to `adapterId`. Used to warn before sharing a document bound
  * to the demo adapter: the server drops that adapter id from the share viewer's connector list
  * (`packages/server/src/routes/share.ts`, by design — a client-side mock must never reach a real
@@ -155,9 +152,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       </>
     );
 
-  const width = document.background.image?.width ?? DEFAULT_WIDTH;
-  const height = document.background.image?.height ?? DEFAULT_HEIGHT;
-
   async function handleSave(doc: ViewDocument) {
     try {
       await updateBoard(workspaceId, boardId!, { document: doc });
@@ -188,16 +182,16 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       {saveError && <p role="alert">{saveError}</p>}
       {hasUnsavedChanges && <p role="status">저장되지 않은 변경 사항이 있습니다</p>}
       {!hasUnsavedChanges && savedAt && <p role="status">저장됨</p>}
-      <AuthoringView
-        key={boardId}
-        initialDocument={document}
-        adapters={adapters}
-        connectorLabels={connectorLabels}
-        width={width}
-        height={height}
-        onDirtyChange={handleDirtyChange}
-        onSave={handleSave}
-      />
+      <div className="ub-editor-canvas">
+        <AuthoringView
+          key={boardId}
+          initialDocument={document}
+          adapters={adapters}
+          connectorLabels={connectorLabels}
+          onDirtyChange={handleDirtyChange}
+          onSave={handleSave}
+        />
+      </div>
 
       {isOwner && (
         <details>

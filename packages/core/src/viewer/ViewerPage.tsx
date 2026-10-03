@@ -1,17 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Viewer, type ViewerHandle } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
-import { documentExtent } from './document-extent.js';
+import { documentExtent, DOCUMENT_FIT_OPTIONS } from './document-extent.js';
 import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument } from '../view-document.js';
-
-/** Fitting the document into view: space (CSS px) kept clear around it, and never magnified past
- * its natural size — a small board stays legible at 1:1 instead of blowing its widgets and a raster
- * background up to fill the screen; a large one shrinks to fit. */
-const FIT_OPTIONS = { padding: 16, maxScale: 1 };
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -52,7 +47,7 @@ export function ViewerPage({
 
   const extent = useMemo(() => (doc ? documentExtent(doc) : null), [doc]);
   const fitToDocument = useCallback(() => {
-    if (extent) viewerRef.current?.fitToRect(extent, FIT_OPTIONS);
+    if (extent) viewerRef.current?.fitToRect(extent, DOCUMENT_FIT_OPTIONS);
   }, [extent]);
   // Fit when the viewer first appears and whenever a different document is loaded — not on every
   // preview refresh, which is only new values for the same document.

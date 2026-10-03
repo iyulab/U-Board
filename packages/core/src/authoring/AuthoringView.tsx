@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { KonvaDesigner } from '@canvas-kit/designer';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { KonvaDesigner, type DesignerHandle } from '@canvas-kit/designer';
 import { Viewer } from '@canvas-kit/viewer';
-import type { Scene, DrawingObject } from '@canvas-kit/core';
+import { viewToScene } from '@canvas-kit/core';
+import type { Scene, DrawingObject, Transform } from '@canvas-kit/core';
 import {
   documentToScene,
   applySceneToDocument,
@@ -16,14 +17,20 @@ import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { DecorationPanel } from './DecorationPanel.js';
+import { documentExtent, DOCUMENT_FIT_OPTIONS } from '../viewer/document-extent.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument, Widget, Shape } from '../view-document.js';
+
+const IDENTITY: Transform = { x: 0, y: 0, scale: 1 };
 
 export interface AuthoringViewProps {
   initialDocument: ViewDocument;
   adapters: readonly Adapter[];
-  width: number;
-  height: number;
+  /** Size (CSS px) of the editor and of the live preview beside it. Omit either and the two panes
+   * split the available width and fill the height — `AuthoringView` then fills its parent, so give
+   * the parent a definite height. */
+  width?: number;
+  height?: number;
   /** Adapter id → human-readable label for the binding editor's connector picker. Falls back to
    * the raw adapter id when a given adapter has no entry (or this prop is omitted entirely). */
   connectorLabels?: Record<string, string>;
@@ -41,6 +48,10 @@ export interface AuthoringViewProps {
  * `toCanvasKit`), and a `PropertyPanel` for editing the selected node's widget type, static props,
  * and bindings (docs/principles.md — editor/renderer separation; the designer never renders a
  * widget itself, it only owns the node's footprint and selection).
+ *
+ * The editor and the preview share one pan/zoom — moving either moves both, so the preview stays a
+ * mirror of what is being edited. A document opens fitted into view (shrunk to fit, never
+ * magnified), "Fit to view" restores that, and a new node or decoration is placed in view.
  */
 export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange }: AuthoringViewProps) {
   const [doc, setDoc] = useState(initialDocument);
@@ -49,7 +60,13 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const designerRef = useRef<DesignerHandle>(null);
+  const [transform, setTransform] = useState<Transform>(IDENTITY);
+  // The document most recently opened (the initial one, or an import) — fitting into view happens
+  // when a document is opened, not on every edit.
+  const [openedDoc, setOpenedDoc] = useState(initialDocument);
   const scene = useMemo(() => documentToScene(doc), [doc]);
+  const extent = useMemo(() => documentExtent(doc), [doc]);
   // Every state-changing handler below (`setDoc`) replaces the document with a new object, so a
   // plain reference check against the last-saved snapshot is enough to know "the author has
   // unsaved changes" — no per-field diffing needed. Kept in state (not a ref) because updating it
@@ -70,6 +87,21 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   useEffect(() => {
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
+
+  useEffect(() => {
+    const opened = documentExtent(openedDoc);
+    if (opened) designerRef.current?.fitToRect(opened, DOCUMENT_FIT_OPTIONS);
+  }, [openedDoc]);
+
+  const handleFitToView = useCallback(() => {
+    if (extent) designerRef.current?.fitToRect(extent, DOCUMENT_FIT_OPTIONS);
+  }, [extent]);
+
+  // The scene point at the top-left of the editor's view — where a newly added item is offset from.
+  const visibleOrigin = () => {
+    const origin = viewToScene(transform, { x: 0, y: 0 });
+    return { x: Math.round(origin.x), y: Math.round(origin.y) };
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -110,12 +142,12 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   };
 
   const handleAddNode = () => {
-    setDoc(prev => addNode(prev, nextNodePosition(prev)));
+    setDoc(prev => addNode(prev, nextNodePosition(prev, visibleOrigin())));
     setImportError(null);
   };
 
   const handleAddDecoration = (type: Shape['type']) => {
-    setDoc(prev => addDecoration(prev, type, nextDecorationPosition(prev)));
+    setDoc(prev => addDecoration(prev, type, nextDecorationPosition(prev, visibleOrigin())));
     setImportError(null);
   };
 
@@ -151,6 +183,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     try {
       const imported = parseViewDocument(await file.text());
       setDoc(imported);
+      setOpenedDoc(imported);
       setImportError(null);
     } catch (err) {
       setImportError(err instanceof InvalidViewDocumentError ? err.message : 'Import failed.');
@@ -174,47 +207,77 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const selectedNode = doc.nodes.find(n => n.id === selectedNodeId) ?? null;
   const selectedDecoration = doc.decorations?.find(d => d.id === selectedDecorationId) ?? null;
 
+  // Sized panes stay at their size; container-sized ones split the row and fill its height.
+  const followsContainer = width === undefined || height === undefined;
+  const paneStyle: React.CSSProperties = followsContainer
+    ? { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }
+    : { display: 'flex', flexDirection: 'column' };
+
   return (
-    <div>
-      <button onClick={handleAddNode} style={{ marginBottom: 8 }}>
-        Add node
-      </button>{' '}
-      <button onClick={() => handleAddDecoration('rect')} style={{ marginBottom: 8 }}>
-        Add rect decoration
-      </button>{' '}
-      <button onClick={() => handleAddDecoration('text')} style={{ marginBottom: 8 }}>
-        Add text decoration
-      </button>{' '}
-      <button onClick={handleSave} style={{ marginBottom: 8 }}>
-        {onSave ? 'Save' : 'Export'}
-      </button>{' '}
-      <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
-        Import
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json"
-        onChange={handleImportFile}
-        style={{ display: 'none' }}
-        data-testid="import-file-input"
-      />
-      {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
-      <div style={{ display: 'flex', gap: 24 }}>
-        <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div>
+        <button onClick={handleAddNode} style={{ marginBottom: 8 }}>
+          Add node
+        </button>{' '}
+        <button onClick={() => handleAddDecoration('rect')} style={{ marginBottom: 8 }}>
+          Add rect decoration
+        </button>{' '}
+        <button onClick={() => handleAddDecoration('text')} style={{ marginBottom: 8 }}>
+          Add text decoration
+        </button>{' '}
+        <button onClick={handleSave} style={{ marginBottom: 8 }}>
+          {onSave ? 'Save' : 'Export'}
+        </button>{' '}
+        <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
+          Import
+        </button>
+        {extent && (
+          <>
+            {' '}
+            <button onClick={handleFitToView} style={{ marginBottom: 8 }}>
+              Fit to view
+            </button>
+          </>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          onChange={handleImportFile}
+          style={{ display: 'none' }}
+          data-testid="import-file-input"
+        />
+        {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
+      </div>
+      <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0 }}>
+        <div style={paneStyle}>
           <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>Editor</h2>
-          <KonvaDesigner
-            width={width}
-            height={height}
-            scene={scene}
-            onSceneChange={handleSceneChange}
-            onSelectionChange={handleSelectionChange}
-          />
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <KonvaDesigner
+              ref={designerRef}
+              width={width}
+              height={height}
+              scene={scene}
+              transform={transform}
+              onTransformChange={setTransform}
+              onSceneChange={handleSceneChange}
+              onSelectionChange={handleSelectionChange}
+            />
+          </div>
         </div>
-        <div>
+        <div style={paneStyle}>
           <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>Live preview</h2>
           {preview ? (
-            <Viewer width={width} height={height} scene={preview.scene} overlays={preview.overlays} />
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <Viewer
+                width={width}
+                height={height}
+                scene={preview.scene}
+                overlays={preview.overlays}
+                transform={transform}
+                onTransformChange={setTransform}
+              />
+            </div>
           ) : (
             <p>Resolving…</p>
           )}

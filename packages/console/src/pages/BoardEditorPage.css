@@ -9,3 +9,9 @@
 .ub-editor-back:hover {
   color: var(--ub-text-normal);
 }
+
+/* The editor and its live preview fill this box and follow its size — most of the window, so a large
+   background is worked on in view (pan/zoom inside), not by scrolling the page. */
+.ub-editor-canvas {
+  height: max(480px, calc(100dvh - 14rem));
+}

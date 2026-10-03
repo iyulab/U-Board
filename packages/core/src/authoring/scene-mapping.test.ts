@@ -245,6 +245,11 @@ describe('nextNodePosition', () => {
     expect(nextNodePosition(doc())).toEqual({ x: 40, y: 40 });
   });
 
+  it('offsets from a given origin — the scene point at the top-left of what the author sees', () => {
+    expect(nextNodePosition(doc(), { x: 1000, y: 500 })).toEqual({ x: 1040, y: 540 });
+    expect(nextDecorationPosition(doc(), { x: -20, y: 10 })).toEqual({ x: 20, y: 50 });
+  });
+
   it("cascades each subsequent node's position so it doesn't stack on the last one", () => {
     const withOneNode = doc({ nodes: [{ id: 'n1', x: 40, y: 40, anchored: false, widget: { type: 'status' } }] });
     const position = nextNodePosition(withOneNode);

@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { AuthoringView } from './AuthoringView';
 import type { ViewDocument } from '../view-document';
@@ -9,22 +9,42 @@ import type { ViewDocument } from '../view-document';
 // tested in their own repo (canvas-kit). Stubbing them here keeps this test focused on
 // AuthoringView's own state (import error handling), matching how canvas-kit's own tests stub
 // react-konva rather than exercising real canvas rendering.
-vi.mock('@canvas-kit/designer', () => ({
-  KonvaDesigner: ({ onSelectionChange }: any) => (
-    <div data-testid="konva-designer">
-      <button onClick={() => onSelectionChange?.([{ type: 'rect', id: 'node-1', x: 0, y: 0, width: 10, height: 10 }])}>
-        select-node-1
-      </button>
-      <button onClick={() => onSelectionChange?.([{ type: 'text', id: 'decoration-1', x: 0, y: 0, text: 'Zone A' }])}>
-        select-decoration-1
-      </button>
-      <button onClick={() => onSelectionChange?.([])}>deselect</button>
-    </div>
-  ),
-}));
+const designerProps = vi.fn();
+const viewerProps = vi.fn();
+const fitToRect = vi.fn();
+
+vi.mock('@canvas-kit/designer', async () => {
+  const { forwardRef, useImperativeHandle } = await import('react');
+  return {
+    KonvaDesigner: forwardRef(({ onSelectionChange, ...props }: any, ref) => {
+      useImperativeHandle(ref, () => ({ fitToRect }));
+      designerProps({ onSelectionChange, ...props });
+      return (
+        <div data-testid="konva-designer">
+          <button onClick={() => onSelectionChange?.([{ type: 'rect', id: 'node-1', x: 0, y: 0, width: 10, height: 10 }])}>
+            select-node-1
+          </button>
+          <button onClick={() => onSelectionChange?.([{ type: 'text', id: 'decoration-1', x: 0, y: 0, text: 'Zone A' }])}>
+            select-decoration-1
+          </button>
+          <button onClick={() => onSelectionChange?.([])}>deselect</button>
+        </div>
+      );
+    }),
+  };
+});
 vi.mock('@canvas-kit/viewer', () => ({
-  Viewer: () => <div data-testid="viewer" />,
+  Viewer: (props: any) => {
+    viewerProps(props);
+    return <div data-testid="viewer" />;
+  },
 }));
+
+afterEach(() => {
+  designerProps.mockClear();
+  viewerProps.mockClear();
+  fitToRect.mockClear();
+});
 
 function doc(): ViewDocument {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [] };
@@ -324,5 +344,72 @@ describe('AuthoringView decoration authoring', () => {
 
     expect(screen.getByLabelText('위젯 타입')).toBeInTheDocument();
     expect(screen.queryByLabelText('라벨')).not.toBeInTheDocument();
+  });
+});
+
+describe('AuthoringView viewport', () => {
+  function docWithBackground(): ViewDocument {
+    return { kind: 'canvas', background: { image: { src: 'plan.png', width: 3000, height: 2000 } }, nodes: [], connectors: [] };
+  }
+
+  it('lets the editor and preview follow their panes when width/height are omitted', async () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} />);
+    await screen.findByTestId('viewer');
+    expect(designerProps.mock.lastCall![0].width).toBeUndefined();
+    expect(designerProps.mock.lastCall![0].height).toBeUndefined();
+    expect(viewerProps.mock.lastCall![0].width).toBeUndefined();
+  });
+
+  it('passes an explicit width/height through to both panes', async () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
+    await screen.findByTestId('viewer');
+    expect(designerProps.mock.lastCall![0]).toMatchObject({ width: 400, height: 300 });
+    expect(viewerProps.mock.lastCall![0]).toMatchObject({ width: 400, height: 300 });
+  });
+
+  it('opens the document fitted into the editor, shrunk to fit and never magnified', () => {
+    render(<AuthoringView initialDocument={docWithBackground()} adapters={[]} />);
+    expect(fitToRect).toHaveBeenCalledTimes(1);
+    expect(fitToRect.mock.lastCall![0]).toEqual({ x: 0, y: 0, width: 3000, height: 2000 });
+    expect(fitToRect.mock.lastCall![1]).toMatchObject({ maxScale: 1 });
+  });
+
+  it('does not fit an empty document, and offers no fit control for it', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} />);
+    expect(fitToRect).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Fit to view' })).not.toBeInTheDocument();
+  });
+
+  it('fits again on demand from the "Fit to view" control', () => {
+    render(<AuthoringView initialDocument={docWithBackground()} adapters={[]} />);
+    fitToRect.mockClear();
+    fireEvent.click(screen.getByRole('button', { name: 'Fit to view' }));
+    expect(fitToRect).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the preview on the same pan/zoom as the editor, whichever pane moves it', async () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} />);
+    await screen.findByTestId('viewer');
+
+    act(() => designerProps.mock.lastCall![0].onTransformChange({ x: -30, y: -20, scale: 0.5 }));
+    expect(designerProps.mock.lastCall![0].transform).toEqual({ x: -30, y: -20, scale: 0.5 });
+    expect(viewerProps.mock.lastCall![0].transform).toEqual({ x: -30, y: -20, scale: 0.5 });
+
+    act(() => viewerProps.mock.lastCall![0].onTransformChange({ x: 5, y: 6, scale: 2 }));
+    expect(designerProps.mock.lastCall![0].transform).toEqual({ x: 5, y: 6, scale: 2 });
+  });
+
+  it('adds a node where the author is looking, not at the scene origin', async () => {
+    const onSave = vi.fn();
+    render(<AuthoringView initialDocument={doc()} adapters={[]} onSave={onSave} />);
+    // the author has panned to the scene region starting at (1000, 500)
+    act(() => designerProps.mock.lastCall![0].onTransformChange({ x: -1000, y: -500, scale: 1 }));
+
+    fireEvent.click(screen.getByText('Add node'));
+    fireEvent.click(screen.getByText('Save'));
+
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [node] = onSave.mock.lastCall![0].nodes;
+    expect(node).toMatchObject({ x: 1040, y: 540 });
   });
 });

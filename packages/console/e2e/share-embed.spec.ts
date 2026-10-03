@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickFirstNode } from './support/authoring';
 
 test('create a share link, view the board unauthenticated, then revoke it', async ({ page, browser }) => {
   // 부트스트랩: 이 invocation의 첫(그리고 유일한) 가입 — owner + 기본 워크스페이스 자동생성
@@ -21,7 +22,7 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   // 실 브라우저에서도 뜨는지 확인하기 위함. binding-editor.spec.ts와 동일 패턴, 데이터소스만
   // 실 커넥터 대신 데모(HTTP Path/Value path 대신 참조 키 하나).
   await page.getByText('Add node').click();
-  await page.locator('canvas').first().click({ position: { x: 120, y: 90 } });
+  await clickFirstNode(page);
   await page.getByLabel('프롭 경로').fill('data.value');
   await page.getByLabel('참조 키').fill('pump-a.state');
   await page.getByText('바인딩 저장', { exact: true }).click();

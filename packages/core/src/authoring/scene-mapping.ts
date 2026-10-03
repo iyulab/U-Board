@@ -136,11 +136,13 @@ const NEW_NODE_CASCADE_STEP = 24;
 const NEW_NODE_CASCADE_WRAP = 8; // after this many nodes, the cascade wraps back to the base offset
 
 /** Where to place the next node the author adds, so repeated "Add node" clicks don't stack every
- * node exactly on top of the last one. Cascades diagonally by node count, wrapping so positions
- * stay on-canvas even after many additions — the author can still drag it wherever they want. */
-export function nextNodePosition(doc: ViewDocument): { x: number; y: number } {
+ * node exactly on top of the last one. Cascades diagonally by node count from `origin` — the scene
+ * point at the top-left of what the author currently sees, so a node added while panned or zoomed
+ * into part of a large background lands in view — wrapping so positions stay near it even after
+ * many additions. The author can still drag it wherever they want. */
+export function nextNodePosition(doc: ViewDocument, origin: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
   const offset = (doc.nodes.length % NEW_NODE_CASCADE_WRAP) * NEW_NODE_CASCADE_STEP;
-  return { x: NEW_NODE_BASE_OFFSET + offset, y: NEW_NODE_BASE_OFFSET + offset };
+  return { x: origin.x + NEW_NODE_BASE_OFFSET + offset, y: origin.y + NEW_NODE_BASE_OFFSET + offset };
 }
 
 export function addNode(doc: ViewDocument, position: { x: number; y: number }): ViewDocument {
@@ -158,10 +160,10 @@ export function addNode(doc: ViewDocument, position: { x: number; y: number }): 
  * `nextNodePosition`, kept as its own function (rather than sharing a counter with nodes) so
  * adding several decorations in a row doesn't stack them on top of unrelated nodes placed at the
  * same cascade step. */
-export function nextDecorationPosition(doc: ViewDocument): { x: number; y: number } {
+export function nextDecorationPosition(doc: ViewDocument, origin: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
   const count = doc.decorations?.length ?? 0;
   const offset = (count % NEW_NODE_CASCADE_WRAP) * NEW_NODE_CASCADE_STEP;
-  return { x: NEW_NODE_BASE_OFFSET + offset, y: NEW_NODE_BASE_OFFSET + offset };
+  return { x: origin.x + NEW_NODE_BASE_OFFSET + offset, y: origin.y + NEW_NODE_BASE_OFFSET + offset };
 }
 
 /** Appends a new decoration at `position` with a default size/placeholder label — the "draw" step

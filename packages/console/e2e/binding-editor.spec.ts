@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { clickFirstNode } from './support/authoring';
 
 test('binds a node to a live value via the property panel and its path explorer', async ({ page }) => {
   // 어떤 경로로 요청이 와도 같은 JSON을 돌려주는 로컬 mock — connector-crud.spec.ts와 동일 패턴.
@@ -33,9 +34,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await expect(page.getByText('Save')).toBeVisible();
 
     await page.getByText('Add node').click();
-    // 첫 노드는 scene 좌표 (40, 40)에, 기본 160x100 크기로 생성된다
-    // (packages/core/src/layout-defaults.ts) — 중심(120, 90)을 클릭해 선택한다.
-    await page.locator('canvas').first().click({ position: { x: 120, y: 90 } });
+    await clickFirstNode(page);
     await expect(page.getByLabel('위젯 타입')).toHaveValue('status');
 
     await page.getByLabel('프롭 경로').fill('data.value');
@@ -63,7 +62,8 @@ test('binds a node to a live value via the property panel and its path explorer'
     await expect(page.getByText('저장됨')).toBeVisible();
     await page.reload();
 
-    await page.locator('canvas').first().click({ position: { x: 120, y: 90 } });
+    // 다시 열린 보드는 내용에 맞춰 fit된 상태로 열린다 — 노드의 화면 위치가 처음과 다르다.
+    await clickFirstNode(page);
     await expect(page.getByLabel('위젯 타입')).toHaveValue('status');
     await expect(page.getByText('data.value', { exact: true })).toBeVisible();
   } finally {

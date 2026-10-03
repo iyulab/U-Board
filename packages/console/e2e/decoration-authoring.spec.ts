@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { clickScenePoint } from './support/authoring';
 
 test('draws a rect and a text decoration, selects each by clicking its interior, edits the text label, and it survives a reload', async ({ page }) => {
   await page.goto('/');
@@ -32,6 +33,8 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   await expect(page.getByText('저장됨')).toBeVisible();
   await page.reload();
 
-  await page.locator('canvas').first().click({ position: { x: 85, y: 72 } });
+  // The reopened board is fitted into view, so the text no longer sits at its first-session pixel —
+  // click the same scene point (the text at scene (64, 64)) under the current view.
+  await clickScenePoint(page, { x: 85, y: 72 });
   await expect(page.getByLabel('라벨')).toHaveValue('Zone A');
 });
