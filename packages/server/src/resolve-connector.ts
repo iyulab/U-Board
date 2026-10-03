@@ -161,7 +161,28 @@ function reasonFor(stage: ResolveStage, cause: unknown): ResolveReason {
   // RFC 6749 §5.2: the token endpoint answers a bad client or grant with 400 as well.
   if (stage === 'token' && status === 400) return 'auth';
   if (stage !== 'token' && (status === 404 || status === 410)) return 'address';
+  // An OData service answers a query naming a property its entity type does not have (a renamed
+  // field) with 400 and an OData error body, not 404 — the binding points nowhere, like a 404. A 400
+  // without that body (from a proxy, say) says nothing about the binding and stays a transport fault.
+  if (stage !== 'token' && status === 400 && isODataError(cause.body)) return 'address';
   return 'transport';
+}
+
+/** The OData v4 JSON error shape (OData JSON Format, "Error Response"): `{ error: { code, message } }`. */
+function isODataError(body: unknown): boolean {
+  const error = (body as { error?: unknown } | null | undefined)?.error;
+  return typeof error === 'object' && error !== null && typeof (error as { code?: unknown }).code === 'string' && 'message' in error;
+}
+
+/** A failed response's body, if it is JSON — read only to diagnose the failure, so any problem
+ * reading it just means "no body". */
+async function errorBody(response: Response): Promise<unknown> {
+  if (!(response.headers.get('content-type') ?? '').includes('json')) return undefined;
+  try {
+    return await response.json();
+  } catch {
+    return undefined;
+  }
 }
 
 /** Fetches and parses `target` with `connector`'s auth headers. An OAuth connector whose token is
@@ -184,7 +205,10 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
       tokens.invalidate(connector.id);
       response = await send();
     }
-    if (!response.ok) throw new HttpStatusError(response.status, `upstream responded ${response.status}`);
+    if (!response.ok) {
+      const body = response.status === 400 ? await errorBody(response) : undefined;
+      throw new HttpStatusError(response.status, `upstream responded ${response.status}`, body);
+    }
     stage = 'response';
     const contentType = response.headers.get('content-type') ?? '';
     return contentType.includes('json') ? await response.json() : await response.text();

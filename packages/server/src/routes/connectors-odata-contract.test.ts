@@ -74,6 +74,22 @@ beforeAll(async () => {
       else odataJson(res, 200, { '@odata.context': '$metadata#Assets/$entity', ...asset });
       return;
     }
+    if (url.pathname === '/data/Broken') {
+      // A 400 from something in front of the service (a proxy, a gateway) — not an OData error body.
+      res.statusCode = 400;
+      res.setHeader('Content-Type', 'text/plain');
+      res.end('Bad Request');
+      return;
+    }
+    // OData v4 answers a query naming a property the entity type does not have with 400 and an
+    // error whose target is that property (OData JSON Format, "Error Response").
+    const unknownProperty = (url.searchParams.get('$select') ?? '').split(',').find(p => p && !(p in ASSETS[0]));
+    if (url.pathname === '/data/Assets' && unknownProperty) {
+      odataJson(res, 400, {
+        error: { code: 'BadRequest', message: `Could not find a property named '${unknownProperty}' on type 'Asset'.`, target: unknownProperty },
+      });
+      return;
+    }
     if (url.pathname === '/data/Assets') {
       const filter = url.searchParams.get('$filter')?.match(/^AssetNo eq '([^']+)'$/);
       const value = filter ? ASSETS.filter(a => a.AssetNo === filter[1]) : ASSETS;
@@ -161,6 +177,15 @@ describe('generic HTTP connector against an OData v4 source behind OAuth 2.0 cli
   it('reads an entity by key, and reports an unknown key as a binding that points nowhere', async () => {
     expect(await resolve({ path: "/Assets('P-101')", valuePath: 'Status' })).toEqual({ value: 'Running', quality: 'live' });
     expect(await resolve({ path: "/Assets('P-999')", valuePath: 'Status' })).toEqual({ quality: 'disconnected', reason: 'address' });
+  });
+
+  it('reports a property the source does not have (a renamed field) as a binding that points nowhere', async () => {
+    expect(await resolve({ path: '/Assets?$select=AssetNo,Statuss', valuePath: '/value/0/Statuss' }))
+      .toEqual({ quality: 'disconnected', reason: 'address' });
+  });
+
+  it('keeps a 400 that is not an OData error a transport failure', async () => {
+    expect(await resolve({ path: '/Broken', valuePath: '/x' })).toEqual({ quality: 'disconnected', reason: 'transport' });
   });
 
   it('reports a $filter that matches nothing as a binding that points nowhere, not as a live empty value', async () => {
