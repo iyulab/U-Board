@@ -10,18 +10,26 @@ export const SESSION_COOKIE_NAME = 'ub_session';
 export const SESSION_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
+ * Whether the browser reached this server over HTTPS — directly, or through a proxy that
+ * terminated TLS and said so in `X-Forwarded-Proto`. A `Secure` cookie is dropped by the browser on
+ * a plain-HTTP page, so the session cookie is `Secure` exactly when the page is HTTPS: a plain-HTTP
+ * installation (dev, or an intranet without TLS) can still sign in. A client that forges the
+ * header only changes the attributes of its own cookie.
+ */
+function isHttps(req: Request): boolean {
+  return req.secure || req.get('X-Forwarded-Proto')?.split(',')[0].trim() === 'https';
+}
+
+/**
  * The single definition of how the session cookie is written. Every set-site uses this so the
  * attributes can never drift apart between signup, login and workspace switch.
- *
- * `secure` is on outside development only, because a dev/test server is plain HTTP and the
- * browser would silently drop a `Secure` cookie there.
  */
-export function sessionCookieOptions(): CookieOptions {
+export function sessionCookieOptions(req: Request): CookieOptions {
   return {
     httpOnly: true,
     maxAge: SESSION_COOKIE_MAX_AGE_MS,
     sameSite: 'lax' as const,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps(req),
   };
 }
 
@@ -31,10 +39,10 @@ export function sessionCookieOptions(): CookieOptions {
  * into the clearing cookie, so carrying `maxAge` over would re-issue a 30-day expiry instead
  * of expiring it.
  */
-export function clearSessionCookieOptions(): CookieOptions {
+export function clearSessionCookieOptions(req: Request): CookieOptions {
   return {
     sameSite: 'lax' as const,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isHttps(req),
   };
 }
 

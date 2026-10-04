@@ -38,7 +38,7 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       return workspace;
     });
     const token = signSession({ userId: req.userId!, activeWorkspaceId: workspace.id, issuedAt: Date.now() }, sessionSecret);
-    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
+    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions(req));
     res.status(201).json({ id: workspace.id, name: workspace.name, activeWorkspaceId: workspace.id });
   });
 
@@ -65,7 +65,7 @@ export function createWorkspacesRouter(config: AppConfig): Router {
 
   router.post('/:workspaceId/switch', requireWorkspaceMember(db), (req: AuthedRequest<{ workspaceId: string }>, res) => {
     const token = signSession({ userId: req.userId!, activeWorkspaceId: req.params.workspaceId, issuedAt: Date.now() }, sessionSecret);
-    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
+    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions(req));
     res.status(200).json({ activeWorkspaceId: req.params.workspaceId });
   });
 

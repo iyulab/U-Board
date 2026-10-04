@@ -142,7 +142,7 @@ export function createAuthRouter(config: AppConfig): Router {
         { userId: signedUp.userId, activeWorkspaceId: signedUp.workspaceId, issuedAt: Date.now() },
         sessionSecret
       );
-      res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
+      res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions(req));
       res.status(201).json(signedUp);
     }
   );
@@ -162,15 +162,15 @@ export function createAuthRouter(config: AppConfig): Router {
       }
       const activeWorkspaceId = (await listWorkspacesForUser(db, user.id))[0]?.id ?? '';
       const token = signSession({ userId: user.id, activeWorkspaceId, issuedAt: Date.now() }, sessionSecret);
-      res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions());
+      res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions(req));
       res.status(200).json({ userId: user.id, activeWorkspaceId });
     }
   );
 
-  router.post('/logout', (_req, res) => {
+  router.post('/logout', (req, res) => {
     // The clearing cookie must repeat the attributes the cookie was set with, or some browsers
     // treat it as a different cookie and keep the session alive.
-    res.clearCookie(SESSION_COOKIE_NAME, clearSessionCookieOptions());
+    res.clearCookie(SESSION_COOKIE_NAME, clearSessionCookieOptions(req));
     res.status(204).end();
   });
 

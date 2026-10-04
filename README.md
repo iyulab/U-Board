@@ -74,7 +74,7 @@ server-side board storage, managed connectors, and read-only share links.
 The three applications are how U-Board runs as a hosted service; a host application that only
 needs the library does not need any of them. They ship as one container image
 (`packages/server/Dockerfile`) serving one origin: the API under `/api`, the share viewer under
-`/share/`, and the console at every other path. [`CONTRIBUTING.md`](CONTRIBUTING.md) covers building
+`/share/`, and the console at every other path — see [`docs/self-hosting.md`](docs/self-hosting.md). [`CONTRIBUTING.md`](CONTRIBUTING.md) covers building
 and testing the whole workspace.
 
 ## Domain layer
@@ -139,6 +139,7 @@ lighter `@iyulab/u-board/viewer` entry point, for a host that only needs to rend
 | System structure | [`docs/architecture.md`](docs/architecture.md) |
 | Core concepts and terms | [`docs/concepts.md`](docs/concepts.md) |
 | Domain layer API reference | [`docs/api-reference.md`](docs/api-reference.md) |
+| Running the server, console and share viewer | [`docs/self-hosting.md`](docs/self-hosting.md) |
 
 ## Contributing
 

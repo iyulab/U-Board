@@ -30,7 +30,9 @@ export function App() {
       })
       .then((body?: { name: string; document: ViewDocument; connectorIds: string[] }) => {
         if (!body) return;
-        const batcher = new ShareResolveBatcher(boardId, token);
+        // A link that expires while the board is open says so, rather than leaving every value
+        // to turn "disconnected" with no explanation.
+        const batcher = new ShareResolveBatcher(boardId, token, () => setState('expired'));
         const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id));
         setState({ name: body.name, document: body.document, adapters });
       })

@@ -26,7 +26,9 @@ type Pending = { connectorId: string; ref: unknown; settle: (result: Promise<Res
 export class ShareResolveBatcher {
   private pending: Pending[] = [];
 
-  constructor(private boardId: string, private token: string) {}
+  /** `onExpired` runs when the server says the share link has expired (410) — the board is open,
+   * and from now on every binding would only read `disconnected`. */
+  constructor(private boardId: string, private token: string, private onExpired?: () => void) {}
 
   resolve(connectorId: string, ref: unknown): Promise<ResolvedBinding> {
     return new Promise<ResolvedBinding>(settle => {
@@ -66,6 +68,7 @@ export class ShareResolveBatcher {
         body: JSON.stringify({ bindings }),
       }
     );
+    if (res.status === 410) this.onExpired?.();
     if (!res.ok) {
       const refused = { ...DISCONNECTED, reason: refusalReason(res.status) };
       return bindings.map(() => refused);

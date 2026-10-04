@@ -181,6 +181,22 @@ describe('POST /auth/login', () => {
     expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=/);
   });
 
+  it('marks the session cookie Secure exactly when the browser reached the server over HTTPS', async () => {
+    await request(app).post('/api/auth/signup').send({ email: 'tls@x.com', password: 'p4ssword!', name: 'A' });
+    const login = (proto?: string) => {
+      const req = request(app).post('/api/auth/login');
+      return (proto ? req.set('X-Forwarded-Proto', proto) : req).send({ email: 'tls@x.com', password: 'p4ssword!' });
+    };
+    // Plain HTTP (dev, or an installation without TLS): a Secure cookie would be dropped by the
+    // browser and sign-in would silently fail.
+    expect((await login()).headers['set-cookie']?.[0]).not.toMatch(/; Secure/);
+    expect((await login('https')).headers['set-cookie']?.[0]).toMatch(/; Secure/);
+    expect((await login('https, http')).headers['set-cookie']?.[0]).toMatch(/; Secure/);
+    expect((await login('http')).headers['set-cookie']?.[0]).not.toMatch(/; Secure/);
+    const logout = await request(app).post('/api/auth/logout').set('X-Forwarded-Proto', 'https');
+    expect(logout.headers['set-cookie']?.[0]).toMatch(/; Secure/);
+  });
+
   it('rejects an unknown email with 401 (no enumeration)', async () => {
     const res = await request(app).post('/api/auth/login').send({ email: 'nobody@x.com', password: 'x' });
     expect(res.status).toBe(401);
