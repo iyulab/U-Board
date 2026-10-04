@@ -12,6 +12,7 @@ import {
 } from '../db/workspaces.js';
 import { createInvitation, listPendingInvitations, revokeInvitation } from '../db/invitations.js';
 import { findUserByEmail, findUserById } from '../db/users.js';
+import { isPlausibleEmail } from '../db/email.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
 import { requireWorkspaceOwner, requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { signSession } from '../auth/session.js';
@@ -93,7 +94,7 @@ export function createWorkspacesRouter(config: AppConfig): Router {
 
   router.post('/:workspaceId/invitations', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string }>, res) => {
     const { email, role } = req.body ?? {};
-    if (typeof email !== 'string' || !isWorkspaceRole(role)) {
+    if (typeof email !== 'string' || !isPlausibleEmail(email) || !isWorkspaceRole(role)) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }

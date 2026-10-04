@@ -10,3 +10,12 @@
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
+
+/** A deliberately loose shape check — one `@`, something on each side, a dot in the domain, no
+ *  whitespace, within the 254-character limit for an address. It catches typos and garbage at the
+ *  boundary (an invitation emailed to `alice` would fail at the provider, and an account under it
+ *  could never receive a reset code); whether the mailbox exists is only learned by sending. */
+export function isPlausibleEmail(value: string): boolean {
+  const email = value.trim();
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}

@@ -115,6 +115,14 @@ describe('POST /workspaces/:id/invitations', () => {
     expect((await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM workspace_invitations')).rows[0]).toEqual(invitationsBefore);
   });
 
+  it('rejects an address that is not an email with 400, minting nothing', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    const res = await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'alice', role: 'member' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect(Number((await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM workspace_invitations')).rows[0].c)).toBe(0);
+  });
+
   it('rejects re-inviting an existing member regardless of email casing', async () => {
     const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
     const res = await ownerAgent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'OWNER@X.com', role: 'member' });

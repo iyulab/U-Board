@@ -62,6 +62,13 @@ describe('POST /auth/signup', () => {
     expect(res.body.code).toBe('INVALID_INPUT');
   });
 
+  it('rejects an address that is not an email with 400, creating no account', async () => {
+    const res = await request(app).post('/api/auth/signup').send({ email: 'alice', password: 'p4ssword!', name: 'A' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
+    expect((await request(app).get('/api/auth/bootstrap-status')).body.hasAnyUser).toBe(false);
+  });
+
   it('rejects an unknown/garbage invitation token with 410', async () => {
     await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
     const res = await request(app).post('/api/auth/signup').send({

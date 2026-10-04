@@ -20,7 +20,7 @@ import {
   isInvitationUsable,
   type WorkspaceInvitation,
 } from '../db/invitations.js';
-import { normalizeEmail } from '../db/email.js';
+import { isPlausibleEmail, normalizeEmail } from '../db/email.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
 import { signSession } from '../auth/session.js';
 import {
@@ -73,7 +73,7 @@ export function createAuthRouter(config: AppConfig): Router {
     '/signup',
     async (req, res) => {
       const { email, password, name, invitationToken } = req.body ?? {};
-      if (typeof email !== 'string' || typeof password !== 'string' || typeof name !== 'string') {
+      if (typeof email !== 'string' || !isPlausibleEmail(email) || typeof password !== 'string' || typeof name !== 'string') {
         res.status(400).json({ code: 'INVALID_INPUT' });
         return;
       }
