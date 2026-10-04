@@ -10,6 +10,8 @@ export interface BoardShareToken {
   createdByUserId: string;
   createdAt: string;
   lastUsedAt?: string;
+  /** When the link stops working (ISO 8601). Absent: it works until it is revoked. */
+  expiresAt?: string;
 }
 
 export interface BoardShareTokenSummary {
@@ -17,6 +19,7 @@ export interface BoardShareTokenSummary {
   tokenMask: string;
   createdAt: string;
   lastUsedAt?: string;
+  expiresAt?: string;
 }
 
 interface BoardShareTokenRow {
@@ -28,6 +31,7 @@ interface BoardShareTokenRow {
   created_by_user_id: string;
   created_at: string;
   last_used_at: string | null;
+  expires_at: string | null;
 }
 
 function rowToToken(row: BoardShareTokenRow): BoardShareToken {
@@ -40,12 +44,13 @@ function rowToToken(row: BoardShareTokenRow): BoardShareToken {
     createdByUserId: row.created_by_user_id,
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at ?? undefined,
+    expiresAt: row.expires_at ?? undefined,
   };
 }
 
 export async function createBoardShareToken(
   db: DbClient,
-  input: { boardId: string; workspaceId: string; tokenHash: string; tokenMask: string; createdByUserId: string }
+  input: { boardId: string; workspaceId: string; tokenHash: string; tokenMask: string; createdByUserId: string; expiresAt?: string }
 ): Promise<BoardShareToken> {
   const token: BoardShareToken = {
     id: randomUUID(),
@@ -55,11 +60,12 @@ export async function createBoardShareToken(
     tokenMask: input.tokenMask,
     createdByUserId: input.createdByUserId,
     createdAt: new Date().toISOString(),
+    ...(input.expiresAt && { expiresAt: input.expiresAt }),
   };
   await db.query(
-    `INSERT INTO board_share_tokens (id, board_id, workspace_id, token_hash, token_mask, created_by_user_id, created_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [token.id, token.boardId, token.workspaceId, token.tokenHash, token.tokenMask, token.createdByUserId, token.createdAt]
+    `INSERT INTO board_share_tokens (id, board_id, workspace_id, token_hash, token_mask, created_by_user_id, created_at, expires_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [token.id, token.boardId, token.workspaceId, token.tokenHash, token.tokenMask, token.createdByUserId, token.createdAt, token.expiresAt ?? null]
   );
   return token;
 }
@@ -69,11 +75,17 @@ export async function listBoardShareTokensForBoard(
   workspaceId: string,
   boardId: string
 ): Promise<BoardShareTokenSummary[]> {
-  const { rows } = await db.query<{ id: string; token_mask: string; created_at: string; last_used_at: string | null }>(
-    `SELECT id, token_mask, created_at, last_used_at FROM board_share_tokens WHERE board_id = $1 AND workspace_id = $2`,
+  const { rows } = await db.query<{ id: string; token_mask: string; created_at: string; last_used_at: string | null; expires_at: string | null }>(
+    `SELECT id, token_mask, created_at, last_used_at, expires_at FROM board_share_tokens WHERE board_id = $1 AND workspace_id = $2`,
     [boardId, workspaceId]
   );
-  return rows.map(r => ({ id: r.id, tokenMask: r.token_mask, createdAt: r.created_at, lastUsedAt: r.last_used_at ?? undefined }));
+  return rows.map(r => ({
+    id: r.id,
+    tokenMask: r.token_mask,
+    createdAt: r.created_at,
+    lastUsedAt: r.last_used_at ?? undefined,
+    expiresAt: r.expires_at ?? undefined,
+  }));
 }
 
 export async function findBoardShareTokenByHash(db: DbClient, tokenHash: string): Promise<BoardShareToken | undefined> {

@@ -279,8 +279,32 @@ describe('BoardEditorPage share panel', () => {
     const createButton = await screen.findByRole('button', { name: '새 공유 링크 생성' });
     fireEvent.click(createButton);
 
-    await waitFor(() => expect(api.createShareToken).toHaveBeenCalledWith('w1', 'b1'));
+    await waitFor(() => expect(api.createShareToken).toHaveBeenCalledWith('w1', 'b1', undefined));
     expect(await screen.findByText(/plaintext-secret-value/)).toBeInTheDocument();
+  });
+
+  it('owner picks how long a new share link lasts, and sees which links expire or have expired', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.listShareTokens).mockResolvedValue({ tokens: [
+      { id: 'old', tokenMask: 'old00000', createdAt: 't', expiresAt: '2020-01-01T00:00:00.000Z' },
+      { id: 'new', tokenMask: 'new00000', createdAt: 't', expiresAt: '2999-01-01T00:00:00.000Z' },
+    ] });
+    vi.mocked(api.createShareToken).mockResolvedValue({ id: 't1', token: 'tok', tokenMask: 'x', createdAt: 't' });
+
+    renderPage();
+    fireEvent.click(await screen.findByText('공유'));
+    expect(await screen.findByText(/old00000.*\(만료됨\)/)).toBeInTheDocument();
+    expect(screen.getByText(/new00000.*\(만료: 2999-01-01T00:00:00.000Z\)/)).toBeInTheDocument();
+
+    const before = Date.now();
+    fireEvent.change(screen.getByLabelText(/유효 기간/), { target: { value: '30' } });
+    fireEvent.click(screen.getByRole('button', { name: '새 공유 링크 생성' }));
+    await waitFor(() => expect(api.createShareToken).toHaveBeenCalled());
+    const expiresAt = Date.parse(vi.mocked(api.createShareToken).mock.calls[0][2]!);
+    expect(expiresAt - before).toBeGreaterThanOrEqual(30 * 86_400_000);
+    expect(expiresAt - before).toBeLessThan(30 * 86_400_000 + 60_000);
   });
 
   it('owner revokes a share link', async () => {

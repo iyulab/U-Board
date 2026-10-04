@@ -43,11 +43,27 @@ export function createBoardShareTokensRouter(config: AppConfig): Router {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
+    // Optional: when the link stops working. A link without one works until it is revoked.
+    const expiresAt: unknown = req.body?.expiresAt;
+    if (expiresAt !== undefined && expiresAt !== null) {
+      const time = typeof expiresAt === 'string' ? Date.parse(expiresAt) : NaN;
+      if (Number.isNaN(time) || time <= Date.now()) {
+        res.status(400).json({ code: 'INVALID_INPUT' });
+        return;
+      }
+    }
     const { plain, hash, mask } = generateShareToken();
     const created = await createBoardShareToken(db, {
       boardId, workspaceId, tokenHash: hash, tokenMask: mask, createdByUserId: req.userId!,
+      ...(typeof expiresAt === 'string' && { expiresAt: new Date(expiresAt).toISOString() }),
     });
-    res.status(201).json({ id: created.id, token: plain, tokenMask: created.tokenMask, createdAt: created.createdAt });
+    res.status(201).json({
+      id: created.id,
+      token: plain,
+      tokenMask: created.tokenMask,
+      createdAt: created.createdAt,
+      ...(created.expiresAt && { expiresAt: created.expiresAt }),
+    });
   });
 
   router.delete('/:tokenId', async (req, res) => {

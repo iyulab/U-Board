@@ -11,6 +11,7 @@ const DISCONNECTED: ResolvedBinding = { value: undefined, quality: 'disconnected
  * link, say) says nothing about the data source, so it carries no cause. */
 function refusalReason(status: number): ResolvedBinding['reason'] {
   if (status === 429) return 'throttled';
+  if (status === 410) return 'auth'; // the share link expired while the board was open
   if (status >= 500) return 'transport';
   return undefined;
 }
@@ -58,8 +59,12 @@ export class ShareResolveBatcher {
    * reports as `disconnected` for every binding in the request. */
   private async send(bindings: { connectorId: string; ref: unknown }[]): Promise<ResolvedBinding[]> {
     const res = await fetchWithRetry(
-      `${getApiBase()}/share/boards/${this.boardId}/resolve?token=${encodeURIComponent(this.token)}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bindings }) }
+      `${getApiBase()}/share/boards/${this.boardId}/resolve`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.token}` },
+        body: JSON.stringify({ bindings }),
+      }
     );
     if (!res.ok) {
       const refused = { ...DISCONNECTED, reason: refusalReason(res.status) };
@@ -72,7 +77,7 @@ export class ShareResolveBatcher {
 
 /** One board connector as the viewer's `Adapter`, resolving through the board's shared batcher —
  * the server's public `/share` proxy rather than the session-authenticated one. The auth mechanism
- * differs (query-string token vs. cookie), so this is a separate class from console's
+ * differs (share-link bearer token vs. cookie), so this is a separate class from console's
  * `HttpConnectorAdapter` rather than a forced shared abstraction over two different auth models. */
 export class ShareConnectorAdapter implements Adapter {
   constructor(private batcher: ShareResolveBatcher, readonly id: string) {}

@@ -102,8 +102,12 @@ CREATE TABLE IF NOT EXISTS board_share_tokens (
   token_mask TEXT NOT NULL,
   created_by_user_id TEXT NOT NULL REFERENCES users(id),
   created_at TEXT NOT NULL,
-  last_used_at TEXT
+  last_used_at TEXT,
+  expires_at TEXT
 );
+
+-- Brings a share-token table created before optional expiry up to the shape above (idempotent).
+ALTER TABLE board_share_tokens ADD COLUMN IF NOT EXISTS expires_at TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_board_share_tokens_board_id ON board_share_tokens(board_id);
 

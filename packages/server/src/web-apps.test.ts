@@ -61,6 +61,7 @@ describe('serving the console and share viewer next to the API', () => {
     expect(res.status).toBe(200);
     expect(res.text).toContain('<title>share</title>');
     expect(res.headers['content-security-policy']).toBe("script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors https:");
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
     const asset = await request(app).get('/share/assets/index-abc123.js');
     expect(asset.text).toContain('"share"');
   });
@@ -86,6 +87,14 @@ describe('serving the console and share viewer next to the API', () => {
     expect((await request(app).post('/boards').set('Accept', 'text/html')).status).toBe(404);
     expect((await request(app).get('/boards').set('Accept', 'application/json')).status).toBe(404);
     expect((await request(app).get('/share/missing.js').set('Accept', 'text/html')).status).toBe(404);
+  });
+
+  it("answers a file the build doesn't have with 404, not the console — however the browser asks", async () => {
+    // What a tab still holding the previous build's file names asks for after a redeploy.
+    const res = await request(app).get('/assets/index-oldhash.js').set('Accept', '*/*');
+    expect(res.status).toBe(404);
+    expect((await request(app).get('/favicon.ico').set('Accept', '*/*')).status).toBe(404);
+    expect((await request(app).get('/')).headers['x-powered-by']).toBeUndefined();
   });
 
   it('takes the list of pages allowed to embed the share viewer', async () => {

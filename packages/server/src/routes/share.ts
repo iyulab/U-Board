@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import type { ViewDocument } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { findBoard } from '../db/boards.js';
@@ -63,20 +63,28 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
   const { db } = config;
   const router = Router();
 
-  async function authenticate(boardId: string, tokenPlain: unknown): Promise<BoardShareToken | undefined> {
-    if (typeof tokenPlain !== 'string' || tokenPlain === '') return undefined;
-    const token = await findBoardShareTokenByHash(db, hashShareToken(tokenPlain));
-    if (!token || token.boardId !== boardId) return undefined;
+  /** The share link's token for this board, from `Authorization: Bearer <token>` — a header, so it
+   * stays out of URLs and the logs that record them. Answers the request itself when there is no
+   * usable token: 404 for a missing, unknown or revoked one (no hint which), 410 for an expired one. */
+  async function authenticate(req: Request, res: Response): Promise<BoardShareToken | undefined> {
+    const boardId = req.params.boardId;
+    const match = /^Bearer (\S+)$/.exec(req.get('Authorization') ?? '');
+    const token = match ? await findBoardShareTokenByHash(db, hashShareToken(match[1])) : undefined;
+    if (!token || token.boardId !== boardId) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return undefined;
+    }
+    if (token.expiresAt && Date.parse(token.expiresAt) <= Date.now()) {
+      res.status(410).json({ code: 'SHARE_LINK_EXPIRED' });
+      return undefined;
+    }
     return token;
   }
 
   router.get('/boards/:boardId', async (req, res) => {
     const boardId = req.params.boardId;
-    const token = await authenticate(boardId, req.query.token);
-    if (!token) {
-      res.status(404).json({ code: 'NOT_FOUND' });
-      return;
-    }
+    const token = await authenticate(req, res);
+    if (!token) return;
     const board = await findBoard(db, token.workspaceId, boardId);
     if (!board) {
       res.status(404).json({ code: 'NOT_FOUND' });
@@ -99,11 +107,8 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
    * the entries around it, and its upstream is never called. */
   router.post('/boards/:boardId/resolve', async (req, res) => {
     const boardId = req.params.boardId;
-    const token = await authenticate(boardId, req.query.token);
-    if (!token) {
-      res.status(404).json({ code: 'NOT_FOUND' });
-      return;
-    }
+    const token = await authenticate(req, res);
+    if (!token) return;
     const bindings: unknown = req.body?.bindings;
     if (
       !Array.isArray(bindings) || bindings.length > MAX_BATCH_BINDINGS ||

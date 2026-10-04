@@ -38,7 +38,14 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
     render(<App />);
     expect(await screen.findByTestId('viewer-page')).toBeInTheDocument();
-    expect(fetch).toHaveBeenCalledWith('/api/share/boards/b1?token=tok', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('/api/share/boards/b1', expect.objectContaining({ headers: { Authorization: 'Bearer tok' } }));
+  });
+
+  it('says the link has expired when the server answers 410', async () => {
+    setLocation('?board=b1&token=tok');
+    (fetch as any).mockResolvedValueOnce({ ok: false, status: 410 });
+    render(<App />);
+    expect(await screen.findByText(/만료되었습니다/)).toBeInTheDocument();
   });
 
   it('names the board view after the board', async () => {
@@ -83,7 +90,7 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
     render(<App />);
     await screen.findByTestId('viewer-page');
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/share/boards/b1?token=tok', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/share/boards/b1', expect.anything());
     vi.unstubAllEnvs();
   });
 
@@ -93,7 +100,7 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
     render(<App />);
     await screen.findByTestId('viewer-page');
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/share/boards/b1?token=tok', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/share/boards/b1', expect.anything());
     vi.unstubAllEnvs();
   });
 });

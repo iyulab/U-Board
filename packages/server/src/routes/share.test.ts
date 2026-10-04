@@ -57,7 +57,7 @@ describe('public share routes', () => {
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
-    const res = await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
+    const res = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Board A');
     expect(res.body.document).toEqual(doc);
@@ -73,7 +73,7 @@ describe('public share routes', () => {
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
-    const res = await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
+    const res = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
     expect(res.body.connectorIds).toEqual([]);
   });
 
@@ -89,18 +89,60 @@ describe('public share routes', () => {
     expect(noToken.status).toBe(404);
     expect(noToken.body).toEqual({ code: 'NOT_FOUND' });
 
-    const garbageToken = await request(app).get(`/api/share/boards/${boardId}?token=garbage`);
+    const garbageToken = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer garbage`);
     expect(garbageToken.status).toBe(404);
     expect(garbageToken.body).toEqual({ code: 'NOT_FOUND' });
 
-    const wrongBoardToken = await request(app).get(`/api/share/boards/${otherBoardId}?token=${token}`);
+    const wrongBoardToken = await request(app).get(`/api/share/boards/${otherBoardId}`).set('Authorization', `Bearer ${token}`);
     expect(wrongBoardToken.status).toBe(404);
     expect(wrongBoardToken.body).toEqual({ code: 'NOT_FOUND' });
   });
 
+  it('takes the token only from the Authorization header, never from the URL', async () => {
+    const token = await createShareToken();
+    const inQuery = await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
+    expect(inQuery.status).toBe(404);
+    expect((await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', token)).status).toBe(404);
+  });
+
+  it('answers 410 once a link with an expiry has expired, on both share routes', async () => {
+    const expiresAt = new Date(Date.now() + 7 * 86_400_000).toISOString();
+    const created = await request(app)
+      .post(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+      .set('Cookie', ownerCookie)
+      .send({ expiresAt });
+    expect(created.status).toBe(201);
+    expect(created.body.expiresAt).toBe(expiresAt);
+    const list = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`).set('Cookie', ownerCookie);
+    expect(list.body.tokens[0].expiresAt).toBe(expiresAt);
+
+    const auth = `Bearer ${created.body.token}`;
+    expect((await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', auth)).status).toBe(200);
+
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse(expiresAt) + 1);
+    const expired = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', auth);
+    expect(expired.status).toBe(410);
+    expect(expired.body).toEqual({ code: 'SHARE_LINK_EXPIRED' });
+    const resolve = await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', auth).send({ bindings: [] });
+    expect(resolve.status).toBe(410);
+    vi.restoreAllMocks();
+  });
+
+  it('keeps a link without an expiry working, and refuses an expiry that is not a future time', async () => {
+    const created = await request(app).post(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`).set('Cookie', ownerCookie);
+    expect(created.body.expiresAt).toBeUndefined();
+    for (const expiresAt of ['2020-01-01T00:00:00Z', 'next week', 7]) {
+      const res = await request(app)
+        .post(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+        .set('Cookie', ownerCookie)
+        .send({ expiresAt });
+      expect(res.status).toBe(400);
+    }
+  });
+
   it('updates lastUsedAt on a successful access', async () => {
     const token = await createShareToken();
-    await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
+    await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
     const list = await request(app)
       .get(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
@@ -126,7 +168,7 @@ describe('public share routes', () => {
       : jsonResponse({ on: true }));
 
     const res = await request(app)
-      .post(`/api/share/boards/${boardId}/resolve?token=${token}`)
+      .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
       .send({ bindings: [
         { connectorId: b.id, ref: { path: '/pump', valuePath: 'on' } },
         { connectorId: a.id, ref: { path: '/assets', valuePath: 'value.1.Status' } },
@@ -155,7 +197,7 @@ describe('public share routes', () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
 
     const res = await request(app)
-      .post(`/api/share/boards/${boardId}/resolve?token=${token}`)
+      .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
       .send({ bindings: [
         { connectorId: connector.id, ref: { path: '/status', valuePath: 'status' } },
         // The connector this board uses, with a ref it never declared: the gate compares the exact
@@ -181,11 +223,11 @@ describe('public share routes', () => {
   it('rejects a batch request without a valid token, a bindings array, or within the size cap', async () => {
     const token = await createShareToken();
     expect((await request(app).post(`/api/share/boards/${boardId}/resolve`).send({ bindings: [] })).status).toBe(404);
-    expect((await request(app).post(`/api/share/boards/${boardId}/resolve?token=wrong`).send({ bindings: [] })).status).toBe(404);
-    expect((await request(app).post(`/api/share/boards/${boardId}/resolve?token=${token}`).send({})).status).toBe(400);
-    expect((await request(app).post(`/api/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: ['x'] })).status).toBe(400);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer wrong`).send({ bindings: [] })).status).toBe(404);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`).send({})).status).toBe(400);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`).send({ bindings: ['x'] })).status).toBe(400);
     const tooMany = Array.from({ length: 501 }, () => ({ connectorId: 'c', ref: { path: '/a' } }));
-    expect((await request(app).post(`/api/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: tooMany })).status).toBe(400);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`).send({ bindings: tooMany })).status).toBe(400);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -210,7 +252,7 @@ describe('public share routes', () => {
     expect(saveRes.status).toBe(200);
 
     const token = await createShareToken();
-    const getRes = await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
+    const getRes = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
     expect(getRes.status).toBe(200);
     expect(getRes.body.connectorIds).toEqual([connector.id]);
 
@@ -219,7 +261,7 @@ describe('public share routes', () => {
 
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
     const resolveRes = await request(app)
-      .post(`/api/share/boards/${boardId}/resolve?token=${token}`)
+      .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
       .send({ bindings: [{ connectorId: binding.adapter, ref: binding.ref }] });
     expect(resolveRes.status).toBe(200);
     expect(resolveRes.body).toEqual({ results: [{ value: 'running', quality: 'live', observedAt: expect.any(String) }] });

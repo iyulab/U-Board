@@ -34,8 +34,12 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const [isOwner, setIsOwner] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [shareTokens, setShareTokens] = useState<ShareTokenSummary[]>([]);
+  // When the list was loaded — what "expired" is judged against, so a render stays a pure function.
+  const [shareTokensListedAt, setShareTokensListedAt] = useState(0);
   const [shareError, setShareError] = useState<string | null>(null);
   const [newShareUrl, setNewShareUrl] = useState<string | null>(null);
+  // Days until a new share link expires; 0 for a link that works until it is revoked.
+  const [shareLifetimeDays, setShareLifetimeDays] = useState(0);
   // Tracks the last *saved* document, not whatever AuthoringView holds mid-edit — a share link
   // is always generated from the server's copy (Task 4's `share.ts` reads `board.document`), so
   // this must reflect exactly what a new share link would actually serve.
@@ -71,6 +75,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       .then(res => {
         setShareError(null);
         setShareTokens(res.tokens);
+        setShareTokensListedAt(Date.now());
       })
       .catch(() => setShareError('공유 링크 목록을 불러오지 못했습니다'));
   }, [workspaceId, boardId]);
@@ -84,7 +89,8 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
 
   async function handleCreateShareToken() {
     try {
-      const created = await createShareToken(workspaceId, boardId!);
+      const expiresAt = shareLifetimeDays > 0 ? new Date(Date.now() + shareLifetimeDays * 86_400_000).toISOString() : undefined;
+      const created = await createShareToken(workspaceId, boardId!, expiresAt);
       setShareError(null);
       // The server serves the share viewer under `/share/` on this same origin; a deployment that
       // hosts the viewer elsewhere points `VITE_SHARE_BASE_URL` at it.
@@ -208,11 +214,21 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
             {shareTokens.map(t => (
               <li key={t.id}>
                 {`•••• ${t.tokenMask}`} — {t.createdAt}
-                {t.lastUsedAt ? ` (마지막 사용: ${t.lastUsedAt})` : ' (미사용)'}{' '}
+                {t.lastUsedAt ? ` (마지막 사용: ${t.lastUsedAt})` : ' (미사용)'}
+                {t.expiresAt && (Date.parse(t.expiresAt) <= shareTokensListedAt ? ' (만료됨)' : ` (만료: ${t.expiresAt})`)}{' '}
                 <button onClick={() => handleRevokeShareToken(t.id)}>회수</button>
               </li>
             ))}
           </ul>
+          <label>
+            유효 기간{' '}
+            <select value={shareLifetimeDays} onChange={e => setShareLifetimeDays(Number(e.target.value))}>
+              <option value={0}>만료 없음</option>
+              <option value={7}>7일</option>
+              <option value={30}>30일</option>
+              <option value={90}>90일</option>
+            </select>
+          </label>{' '}
           <button onClick={handleCreateShareToken}>새 공유 링크 생성</button>
           {newShareUrl && (
             <p>

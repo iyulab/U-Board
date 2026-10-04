@@ -174,11 +174,18 @@ describe('share token endpoints', () => {
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ credentials: 'include' }));
   });
 
-  it('createShareToken POSTs with no body', async () => {
+  it('createShareToken POSTs, with an expiry only when one is given', async () => {
     const created = { id: 't1', token: 'plaintext-token-value', tokenMask: 'ab12cd34', createdAt: 't' };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => created });
     await expect(createShareToken('w1', 'b1')).resolves.toEqual(created);
-    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ method: 'POST' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ method: 'POST', body: '{}' }));
+
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => created });
+    await createShareToken('w1', 'b1', '2999-01-01T00:00:00.000Z');
+    expect(fetch).toHaveBeenLastCalledWith(
+      '/api/workspaces/w1/boards/b1/share-tokens',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ expiresAt: '2999-01-01T00:00:00.000Z' }) })
+    );
   });
 
   it('deleteShareToken DELETEs and resolves with no body', async () => {

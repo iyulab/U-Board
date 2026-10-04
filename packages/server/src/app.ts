@@ -58,6 +58,7 @@ export function cloudflareKeyGenerator(req: Request): string {
 
 export function createApp(config: AppConfig): express.Express {
   const app = express();
+  app.disable('x-powered-by');
   // CORS must be registered before express.json(): when express.json() throws (413 for an
   // oversized body, 400 for malformed JSON), Express skips every remaining non-error middleware
   // and jumps straight to errorHandler — a cors() mounted after it would never run, so those

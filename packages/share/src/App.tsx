@@ -10,7 +10,7 @@ export function App() {
   const params = new URLSearchParams(window.location.search);
   const boardId = params.get('board');
   const token = params.get('token');
-  const [state, setState] = useState<'loading' | 'error' | LoadedState>('loading');
+  const [state, setState] = useState<'loading' | 'error' | 'expired' | LoadedState>('loading');
 
   useEffect(() => {
     if (!boardId || !token) {
@@ -18,12 +18,18 @@ export function App() {
       return;
     }
     const base = getApiBase();
-    fetchWithRetry(`${base}/share/boards/${boardId}?token=${encodeURIComponent(token)}`)
+    // The token travels in a header from here on: the page URL is the only place it appears.
+    fetchWithRetry(`${base}/share/boards/${boardId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => {
+        if (res.status === 410) {
+          setState('expired');
+          return undefined;
+        }
         if (!res.ok) throw new Error('not ok');
         return res.json();
       })
-      .then((body: { name: string; document: ViewDocument; connectorIds: string[] }) => {
+      .then((body?: { name: string; document: ViewDocument; connectorIds: string[] }) => {
+        if (!body) return;
         const batcher = new ShareResolveBatcher(boardId, token);
         const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id));
         setState({ name: body.name, document: body.document, adapters });
@@ -33,6 +39,7 @@ export function App() {
 
   if (state === 'loading') return <p>불러오는 중...</p>;
   if (state === 'error') return <p>이 링크는 더 이상 유효하지 않습니다.</p>;
+  if (state === 'expired') return <p>이 공유 링크는 만료되었습니다. 보드를 공유한 사람에게 새 링크를 요청하세요.</p>;
 
   return <ViewerPage initialDocument={state.document} adapters={state.adapters} ariaLabel={state.name} labels={KO_LABELS} />;
 }

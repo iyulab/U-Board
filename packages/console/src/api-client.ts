@@ -204,16 +204,20 @@ export interface ShareTokenSummary {
   tokenMask: string;
   createdAt: string;
   lastUsedAt?: string;
+  /** When the link stops working (ISO 8601); absent for a link that works until revoked. */
+  expiresAt?: string;
 }
 
 export function listShareTokens(workspaceId: string, boardId: string) {
   return request<{ tokens: ShareTokenSummary[] }>(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`);
 }
 
-export function createShareToken(workspaceId: string, boardId: string) {
-  return request<{ id: string; token: string; tokenMask: string; createdAt: string }>(
+/** `expiresAt` (ISO 8601, in the future) makes the link stop working then; omit it for a link that
+ * works until revoked. */
+export function createShareToken(workspaceId: string, boardId: string, expiresAt?: string) {
+  return request<{ id: string; token: string; tokenMask: string; createdAt: string; expiresAt?: string }>(
     `/workspaces/${workspaceId}/boards/${boardId}/share-tokens`,
-    { method: 'POST' }
+    { method: 'POST', body: JSON.stringify(expiresAt ? { expiresAt } : {}) }
   );
 }
 
