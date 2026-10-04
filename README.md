@@ -70,6 +70,7 @@ server-side board storage, managed connectors, and read-only share links.
 | `packages/server` | private | HTTP API for workspaces, members and invitations, sign-in, boards, data connectors, and share links. Stores data in Postgres. |
 | `packages/console` | private | Web console for that API: sign-in, members, board editing (with the authoring UI above), connectors, and issuing share links. |
 | `packages/share` | private | Read-only embed viewer that opens a board from a share link, using only the library's `viewer` entry point. |
+| `packages/site` | private | The introduction site at board.u-platform.kr (Korean at `/`, English at `/en/`). Every statement it makes about the product has a row in its `claims.tsv` — status and the files that back it — checked against the pages by its tests. |
 
 The three applications are how U-Board runs as a hosted service; a host application that only
 needs the library does not need any of them. They ship as one container image

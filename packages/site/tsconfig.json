@@ -1,0 +1,8 @@
+{
+  // `astro check` needs the TypeScript 5/6 JavaScript API, which TypeScript 7 (this workspace's
+  // compiler) no longer has. The site keeps its logic in .ts files that tsc checks; the .astro
+  // files only lay out what those files export.
+  "extends": "astro/tsconfigs/strict",
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["dist"]
+}

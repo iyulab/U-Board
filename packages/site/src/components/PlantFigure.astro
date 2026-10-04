@@ -1,0 +1,172 @@
+---
+// A drawn floor plan with values placed on it — the product's own idea, in its own visual language:
+// a live value has no frame, a stale one a dashed amber frame, a disconnected one a dotted grey frame
+// (the same styles the U-Board renderer uses).
+import type { Copy } from '../copy';
+
+interface Props {
+  figure: Copy['figure'];
+}
+
+const { figure } = Astro.props;
+const n = figure.nodes;
+---
+
+<figure class="plant">
+  <svg viewBox="0 0 600 400" role="img" aria-labelledby="plant-title plant-caption" xmlns="http://www.w3.org/2000/svg">
+    <title id="plant-title">{figure.plant}</title>
+    <defs>
+      <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M 20 0 L 0 0 0 20" fill="none" class="grid" />
+      </pattern>
+    </defs>
+    <rect width="600" height="400" fill="url(#grid)" class="sheet" />
+
+    <!-- walls -->
+    <path class="wall" d="M 30 40 H 570 V 360 H 30 Z" />
+    <path class="wall" d="M 300 40 V 150 M 340 210 V 360 M 30 230 H 160 M 220 230 H 340" />
+    <!-- equipment and piping -->
+    <rect class="equip" x="70" y="80" width="80" height="50" rx="4" />
+    <circle class="equip" cx="400" cy="110" r="34" />
+    <path class="pipe" d="M 150 105 H 366 M 434 110 H 540 V 300 H 520" />
+    <path class="equip" d="M 380 280 H 520 V 320 H 380 Z" />
+    <path class="pipe" d="M 110 130 V 276 H 170" />
+    <text class="room" x="44" y="62">{figure.plant}</text>
+
+    <!-- live: no frame -->
+    <g class="node">
+      <rect x="54" y="150" width="128" height="52" rx="3" class="panel" />
+      <text x="66" y="172" class="label">{n.pump}</text>
+      <text x="66" y="192" class="value">{n.running}</text>
+    </g>
+    <g class="node">
+      <rect x="436" y="44" width="118" height="52" rx="3" class="panel" />
+      <text x="448" y="66" class="label">{n.temp}</text>
+      <text x="448" y="86" class="value">23.4 °C</text>
+    </g>
+    <!-- stale: dashed amber -->
+    <g class="node">
+      <rect x="170" y="250" width="128" height="52" rx="3" class="panel stale" />
+      <text x="182" y="272" class="label">{n.pressure}</text>
+      <text x="182" y="292" class="value">4.1 bar</text>
+    </g>
+    <!-- disconnected: dotted grey -->
+    <g class="node">
+      <rect x="400" y="200" width="128" height="52" rx="3" class="panel disconnected" />
+      <text x="412" y="222" class="label">{n.conveyor}</text>
+      <text x="412" y="242" class="value muted">—</text>
+    </g>
+    <text x="170" y="320" class="note">
+      {figure.staleNote.split(', ').map((line, i) => <tspan x="170" dy={i === 0 ? 0 : 14}>{line}</tspan>)}
+    </text>
+  </svg>
+  <figcaption id="plant-caption">
+    <span class="legend"><span class="swatch live" aria-hidden="true"></span>{figure.live}</span>
+    <span class="legend"><span class="swatch stale" aria-hidden="true"></span>{figure.stale}</span>
+    <span class="legend"><span class="swatch disconnected" aria-hidden="true"></span>{figure.disconnected}</span>
+    <span class="caption" data-claim="figure">{figure.caption}</span>
+  </figcaption>
+</figure>
+
+<style>
+  .plant {
+    margin: 0;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 6px;
+    background: var(--sheet);
+  }
+  .grid {
+    stroke: var(--grid);
+    stroke-width: 1;
+  }
+  .wall {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 6;
+    stroke-linecap: square;
+  }
+  .equip {
+    fill: none;
+    stroke: var(--drawing);
+    stroke-width: 2;
+  }
+  .pipe {
+    fill: none;
+    stroke: var(--drawing);
+    stroke-width: 2;
+    stroke-dasharray: 0;
+  }
+  .room {
+    font-size: 13px;
+    fill: var(--drawing);
+  }
+  .panel {
+    fill: #fff;
+  }
+  .panel.stale {
+    stroke: var(--stale);
+    stroke-width: 2;
+    stroke-dasharray: 7 4;
+  }
+  .panel.disconnected {
+    stroke: var(--disconnected);
+    stroke-width: 2;
+    stroke-dasharray: 2 3;
+  }
+  .label {
+    font-size: 12px;
+    fill: var(--drawing-strong);
+  }
+  .value {
+    font-size: 17px;
+    font-weight: 600;
+    fill: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .value.muted {
+    fill: var(--disconnected);
+  }
+  .note {
+    font-size: 11.5px;
+    fill: var(--stale-text);
+  }
+  figcaption {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1.25rem;
+    margin-top: 0.875rem;
+    font-size: 0.875rem;
+    color: var(--muted);
+  }
+  .legend {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ink);
+  }
+  .swatch {
+    width: 1.75rem;
+    height: 1rem;
+    border-radius: 2px;
+    background: #fff;
+    border: 2px solid transparent;
+  }
+  .swatch.live {
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px var(--grid);
+  }
+  .swatch.stale {
+    border: 2px dashed var(--stale);
+  }
+  .swatch.disconnected {
+    border: 2px dotted var(--disconnected);
+  }
+  .caption {
+    flex-basis: 100%;
+  }
+</style>

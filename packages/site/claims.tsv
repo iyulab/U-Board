@@ -1,0 +1,18 @@
+# Every statement the site makes about U-Board, its status, and where this repository backs it.
+# Not published: it sits outside public/ and the build never reads it. test/claims.test.ts matches its ids against
+# the data-claim ids in src/ (both ways) and checks that every ref exists. Change a sentence, change its row in the same commit.
+# status: works = works today · design = how it is built (a principle or a boundary) · vision = a goal, not built yet · promise = an operating commitment
+# ref: one or more repository paths, joined with " · ".
+claim	status	ref	context
+lede	works	README.md	Values on a background drawing, embedded elsewhere, read from the owning system when shown
+figure	works	packages/core/src/quality-presentation.ts · packages/core/src/quality-text.ts	Live unframed, stale dashed amber, disconnected dotted grey; reason and age in the text
+quality	works	README.md · packages/core/src/quality-text.ts	Per-value quality, the four reasons, the age of a stale value, no whole-view error
+connect	works	README.md · packages/server/src/resolve-connector.ts	Generic HTTP connector: static token/header or OAuth 2.0 client credentials, JSON Pointer, credentials server-side
+embed	works	docs/self-hosting.md · packages/server/src/routes/share.ts	Share link: read-only without sign-in, iframe embedding, optional expiry, revocation
+delivery-hosted	promise	README.md	The instance iyulab operates — an operating commitment, not something the code proves
+delivery-container	works	docs/self-hosting.md · packages/server/Dockerfile	One image with server, console and share viewer; PostgreSQL
+delivery-library	works	README.md · packages/core/package.json	The npm package @iyulab/u-board with the authoring view and the viewer
+not-hmi	design	README.md	No symbol library, alarms, control output or screen navigation
+not-data	design	README.md · docs/scope.md · docs/overview.md	Boards store binding references, not values
+not-bi	design	README.md · docs/scope.md	No warehouse charts or pivot tables
+license	works	LICENSE · README.md	AGPL-3.0-or-later, commercial license available

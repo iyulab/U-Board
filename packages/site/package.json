@@ -1,0 +1,32 @@
+{
+  "name": "@iyulab/u-board-site",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The U-Board introduction site",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "typecheck": "tsc --noEmit",
+    "preview": "astro preview",
+    "test": "vitest run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iyulab/U-Board",
+    "directory": "packages/site"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "devDependencies": {
+    "vitest": "^5.0.3",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans-kr": "^5.3.0",
+    "astro": "^7.3.5",
+    "cookie": "^2.0.1"
+  }
+}

@@ -1,0 +1,252 @@
+:root {
+  --paper: #eef1f0;
+  --sheet: #f8faf9;
+  --grid: #dce3e2;
+  --ink: #17252b;
+  --drawing: #7f8f94;
+  --drawing-strong: #4d5d63;
+  --muted: #4f5f65;
+  --rule: #c9d2d1;
+  /* The renderer's own frame colours for a stale and a disconnected value. */
+  --stale: #f59e0b;
+  --stale-text: #8a5300;
+  --disconnected: #6b7280;
+  --focus: #0b6bcb;
+
+  --measure: 38rem;
+  --gutter: clamp(1.25rem, 4vw, 3rem);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans KR', system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 0.2em;
+}
+
+a:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+h1,
+h2 {
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(2rem, 4.2vw, 2.9rem);
+  line-height: 1.22;
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+p {
+  margin: 0;
+}
+
+.bar,
+main,
+.foot {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1.25rem;
+  padding-bottom: 1.25rem;
+}
+
+.mark {
+  font-weight: 600;
+  font-size: 1.125rem;
+  text-decoration: none;
+}
+
+.bar nav {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.9375rem;
+}
+
+/* Hero: the claim on the left, the drawing that shows it on the right. */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(2rem, 5vw, 4.5rem);
+  align-items: center;
+  padding: clamp(2rem, 6vw, 4.5rem) 0 clamp(3rem, 7vw, 5.5rem);
+}
+
+.hero-text {
+  max-width: var(--measure);
+}
+
+.lede {
+  margin-top: 1.5rem;
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.actions a {
+  display: inline-block;
+  padding: 0.7rem 1.2rem;
+  border-radius: 4px;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.actions .primary {
+  background: var(--ink);
+  color: #fff;
+}
+
+.actions .primary:hover {
+  background: #263840;
+}
+
+.actions .secondary {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.actions .secondary:hover {
+  background: #e2e7e6;
+}
+
+/* Three facts, side by side and unboxed — they are of equal weight. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  padding: clamp(2.5rem, 6vw, 4rem) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.facts p,
+.delivery dd,
+.not li,
+.license p {
+  color: var(--muted);
+}
+
+.facts p {
+  margin-top: 0.75rem;
+}
+
+/* Ways to run it: three alternatives, so three columns under one heading. */
+.delivery {
+  padding: clamp(2.5rem, 6vw, 4rem) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.delivery dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  margin: 1.5rem 0 0;
+}
+
+.delivery dt {
+  font-weight: 600;
+}
+
+.delivery dd {
+  margin: 0.5rem 0 0;
+}
+
+.not {
+  padding: clamp(2.5rem, 6vw, 4rem) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.not ul {
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  max-width: 48rem;
+}
+
+.not li + li {
+  margin-top: 1rem;
+}
+
+.not strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.license {
+  padding: clamp(2.5rem, 6vw, 4rem) 0 clamp(3rem, 7vw, 5rem);
+  border-top: 1px solid var(--rule);
+}
+
+.license p {
+  margin-top: 0.75rem;
+  max-width: var(--measure);
+}
+
+.foot {
+  padding-bottom: 2.5rem;
+}
+
+.foot-inner {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.9375rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.foot-inner nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+@media (max-width: 56rem) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .facts,
+  .delivery dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

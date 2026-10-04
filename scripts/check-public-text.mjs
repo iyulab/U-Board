@@ -28,6 +28,12 @@ const ALLOWED_HOSTS = new Set([
   'www.w3.org',
   'keepachangelog.com',
   'semver.org',
+  'www.sitemaps.org',
+  // The product's public hosts: the introduction site, the hosted service, and the brand site it
+  // links to (packages/site).
+  'board.u-platform.kr',
+  'board-app.u-platform.kr',
+  'u-platform.kr',
   // Domains of made-up email addresses in test fixtures (`owner@x.com`).
   'x.com',
   'test.com',
