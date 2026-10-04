@@ -11,12 +11,22 @@ export interface ResolveResult {
   value: unknown;
   quality: ResolveQuality;
   reason?: ResolveReason;
+  /** When `value` was read from the data source (ISO 8601) — now for `live`, the last
+   * successful read for `stale`; absent for `disconnected`. The core's `ResolvedBinding.observedAt`. */
+  observedAt?: string;
+}
+
+/** A last-known value and when it was read from the data source (ISO 8601). */
+export interface CachedValue {
+  value: unknown;
+  observedAt: string;
 }
 
 /** Process-wide state the resolve proxy keeps between requests. */
 export interface ResolveState {
-  /** Last value resolved per connector and ref, so a failure can degrade to `stale`. */
-  values: Map<string, unknown>;
+  /** Last value resolved per connector and ref, so a failure can degrade to `stale` — and say how
+   * old the value it serves is. */
+  values: Map<string, CachedValue>;
   /** Access tokens for `oauth2-client-credentials` connectors. */
   tokens: ClientCredentialsTokens;
   /** The failure currently logged per connector and ref (same key as `values`). A binding polled
@@ -254,17 +264,21 @@ export async function resolveConnectorValue(
       }
       value = extracted.value;
     }
-    state.values.set(cacheKey, value);
+    const observedAt = new Date().toISOString();
+    state.values.set(cacheKey, { value, observedAt });
     if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
-    return { value, quality: 'live' };
+    return { value, quality: 'live', observedAt };
   } catch (err) {
     const { stage, message, reason } = err as StageError;
-    const stale = state.values.has(cacheKey);
+    const cached = state.values.get(cacheKey);
+    const stale = cached !== undefined;
     const failure = `${stage} failed: ${message}`;
     if (state.failures.get(cacheKey) !== failure) {
       state.failures.set(cacheKey, failure);
       console.warn(`${where}: ${failure} — ${stale ? 'serving the last value as stale' : 'no value to serve'}`);
     }
-    return stale ? { value: state.values.get(cacheKey), quality: 'stale', reason } : { value: undefined, quality: 'disconnected', reason };
+    return cached
+      ? { value: cached.value, quality: 'stale', reason, observedAt: cached.observedAt }
+      : { value: undefined, quality: 'disconnected', reason };
   }
 }

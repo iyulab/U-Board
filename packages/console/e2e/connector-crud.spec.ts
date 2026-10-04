@@ -66,7 +66,7 @@ test('create a connector via the UI, then resolve a live value through the real 
       data: { ref: { path: '/status', valuePath: 'status' } },
     });
     expect(resolveRes.ok()).toBe(true);
-    expect(await resolveRes.json()).toEqual({ value: 'running', quality: 'live' });
+    expect(await resolveRes.json()).toEqual({ value: 'running', quality: 'live', observedAt: expect.any(String) });
   } finally {
     mockServer.close();
   }

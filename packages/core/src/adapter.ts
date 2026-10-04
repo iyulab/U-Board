@@ -33,6 +33,10 @@ export interface ResolvedBinding {
   quality: ConnectionQuality;
   /** Why `quality` is not `live`, if the adapter knows. Ignored on a `live` reading. */
   reason?: QualityReason;
+  /** When `value` was obtained from the source (ISO 8601), if the adapter knows — the time of
+   * this reading when `live`, the time of the last successful one when `stale`. It tells a
+   * last-known value of seconds ago from one of days ago. Ignored on a `disconnected` reading. */
+  observedAt?: string;
 }
 
 export interface ResolvedWidget {
@@ -49,6 +53,9 @@ export interface ResolvedWidget {
    * cause. Absent when none did — a binding with no matching adapter, or whose adapter rejected,
    * carries no cause: the core cannot tell a misconfiguration from a host that did not wire it. */
   reasons?: Record<string, QualityReason>;
+  /** When each bound prop's value was obtained from its source (ISO 8601), per prop path, for the
+   * `live` and `stale` bindings whose adapter reported it. Absent when none did. */
+  observedAt?: Record<string, string>;
 }
 
 /**
@@ -76,6 +83,7 @@ export async function resolveWidget(
   const props = { ...widget.props };
   const quality: Record<string, ConnectionQuality> = {};
   const reasons: Record<string, QualityReason> = {};
+  const observedAt: Record<string, string> = {};
 
   const bindingEntries = Object.entries(widget.bindings ?? {});
   await Promise.all(
@@ -93,13 +101,17 @@ export async function resolveWidget(
         if (resolved.quality !== 'disconnected') setPath(props, propPath, resolved.value);
         quality[propPath] = resolved.quality;
         if (resolved.reason && resolved.quality !== 'live') reasons[propPath] = resolved.reason;
+        if (resolved.observedAt && resolved.quality !== 'disconnected') observedAt[propPath] = resolved.observedAt;
       } catch {
         quality[propPath] = 'disconnected';
       }
     })
   );
 
-  return Object.keys(reasons).length > 0 ? { type: widget.type, props, quality, reasons } : { type: widget.type, props, quality };
+  const result: ResolvedWidget = { type: widget.type, props, quality };
+  if (Object.keys(reasons).length > 0) result.reasons = reasons;
+  if (Object.keys(observedAt).length > 0) result.observedAt = observedAt;
+  return result;
 }
 
 /** Sets `path` (dot-separated) on `target`, copying each object or array along the way so the

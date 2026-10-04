@@ -236,3 +236,28 @@ describe('resolveWidget', () => {
     expect(items).toEqual([{ v: 0 }, { v: 0 }]);
   });
 });
+
+describe('resolveWidget observedAt', () => {
+  const at = '2026-10-04T09:00:00.000Z';
+  const fixed = (id: string, reading: ResolvedBinding): Adapter => ({ id, resolve: async () => reading });
+
+  it('records when each live or stale value was observed, per prop path', async () => {
+    const widget: Widget = {
+      type: 'status',
+      bindings: { 'data.value': { adapter: 'live', ref: 'a' }, 'data.limit': { adapter: 'stale', ref: 'b' } },
+    };
+    const resolved = await resolveWidget(widget, [
+      fixed('live', { value: 1, quality: 'live', observedAt: at }),
+      fixed('stale', { value: 2, quality: 'stale', reason: 'transport', observedAt: '2026-10-01T00:00:00.000Z' }),
+    ]);
+    expect(resolved.observedAt).toEqual({ 'data.value': at, 'data.limit': '2026-10-01T00:00:00.000Z' });
+  });
+
+  it('ignores observedAt on a disconnected reading, and is absent when no adapter reports one', async () => {
+    const widget: Widget = { type: 'status', bindings: { 'data.value': { adapter: 'gone', ref: 'a' } } };
+    const disconnected = await resolveWidget(widget, [fixed('gone', { value: undefined, quality: 'disconnected', observedAt: at })]);
+    expect(disconnected.observedAt).toBeUndefined();
+    const unknown = await resolveWidget(widget, [fixed('gone', { value: 1, quality: 'live' })]);
+    expect('observedAt' in unknown).toBe(false);
+  });
+});

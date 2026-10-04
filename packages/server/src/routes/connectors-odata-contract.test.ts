@@ -158,7 +158,7 @@ beforeEach(async () => {
 describe('generic HTTP connector against an OData v4 source behind OAuth 2.0 client credentials', () => {
   it('reads one entity picked by $filter, with the grant and the query sent as the standards expect', async () => {
     const result = await resolve({ path: "/Assets?$filter=AssetNo eq 'P-102'&$select=AssetNo,Status", valuePath: 'value.0.Status' });
-    expect(result).toEqual({ value: 'Fault', quality: 'live' });
+    expect(result).toEqual({ value: 'Fault', quality: 'live', observedAt: expect.any(String) });
 
     // RFC 6749 §4.4 with HTTP Basic client authentication (§2.3.1: form-encoded, then base64).
     expect(source.tokenRequests).toHaveLength(1);
@@ -175,7 +175,7 @@ describe('generic HTTP connector against an OData v4 source behind OAuth 2.0 cli
   });
 
   it('reads an entity by key, and reports an unknown key as a binding that points nowhere', async () => {
-    expect(await resolve({ path: "/Assets('P-101')", valuePath: 'Status' })).toEqual({ value: 'Running', quality: 'live' });
+    expect(await resolve({ path: "/Assets('P-101')", valuePath: 'Status' })).toEqual({ value: 'Running', quality: 'live', observedAt: expect.any(String) });
     expect(await resolve({ path: "/Assets('P-999')", valuePath: 'Status' })).toEqual({ quality: 'disconnected', reason: 'address' });
   });
 
@@ -195,24 +195,24 @@ describe('generic HTTP connector against an OData v4 source behind OAuth 2.0 cli
 
   it('reads a count through a JSON Pointer, whose key contains a dot', async () => {
     expect(await resolve({ path: "/Assets?$filter=AssetNo eq 'P-101'&$count=true&$top=0", valuePath: '/@odata.count' }))
-      .toEqual({ value: 1, quality: 'live' });
+      .toEqual({ value: 1, quality: 'live', observedAt: expect.any(String) });
   });
 
   it('keeps a null the source sent as a live value', async () => {
-    expect(await resolve({ path: "/Assets('P-102')", valuePath: 'Temp' })).toEqual({ value: null, quality: 'live' });
+    expect(await resolve({ path: "/Assets('P-102')", valuePath: 'Temp' })).toEqual({ value: null, quality: 'live', observedAt: expect.any(String) });
   });
 
   it('serves many bindings on one collection with one token grant and one data request', async () => {
     const results = await Promise.all(ASSETS.map((_, i) => resolve({ path: '/Assets', valuePath: `value.${i}.Status` })));
-    expect(results).toEqual([{ value: 'Running', quality: 'live' }, { value: 'Fault', quality: 'live' }]);
+    expect(results).toEqual([{ value: 'Running', quality: 'live', observedAt: expect.any(String) }, { value: 'Fault', quality: 'live', observedAt: expect.any(String) }]);
     expect(source.tokenRequests).toHaveLength(1);
     expect(source.dataRequests).toHaveLength(1);
   });
 
   it('takes a fresh token and retries once when the source revokes the one in use', async () => {
-    expect(await resolve({ path: "/Assets('P-101')", valuePath: 'Status' })).toEqual({ value: 'Running', quality: 'live' });
+    expect(await resolve({ path: "/Assets('P-101')", valuePath: 'Status' })).toEqual({ value: 'Running', quality: 'live', observedAt: expect.any(String) });
     source.revoked.add('tok-1');
-    expect(await resolve({ path: "/Assets('P-101')", valuePath: 'Status' })).toEqual({ value: 'Running', quality: 'live' });
+    expect(await resolve({ path: "/Assets('P-101')", valuePath: 'Status' })).toEqual({ value: 'Running', quality: 'live', observedAt: expect.any(String) });
     expect(source.issued).toEqual(['tok-1', 'tok-2']);
     expect(source.dataRequests.map(r => r.authorization)).toEqual(['Bearer tok-1', 'Bearer tok-1', 'Bearer tok-2']);
   });

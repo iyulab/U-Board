@@ -134,9 +134,9 @@ describe('public share routes', () => {
       ] });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ results: [
-      { value: true, quality: 'live' },
-      { value: 'Fault', quality: 'live' },
-      { value: 'Running', quality: 'live' },
+      { value: true, quality: 'live', observedAt: expect.any(String) },
+      { value: 'Fault', quality: 'live', observedAt: expect.any(String) },
+      { value: 'Running', quality: 'live', observedAt: expect.any(String) },
     ] });
     // The two bindings on one URL share a single upstream request.
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -169,7 +169,7 @@ describe('public share routes', () => {
       ] });
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual([
-      { value: 'running', quality: 'live' },
+      { value: 'running', quality: 'live', observedAt: expect.any(String) },
       { quality: 'disconnected' },
       { quality: 'disconnected' },
       { quality: 'disconnected' },
@@ -222,6 +222,6 @@ describe('public share routes', () => {
       .post(`/share/boards/${boardId}/resolve?token=${token}`)
       .send({ bindings: [{ connectorId: binding.adapter, ref: binding.ref }] });
     expect(resolveRes.status).toBe(200);
-    expect(resolveRes.body).toEqual({ results: [{ value: 'running', quality: 'live' }] });
+    expect(resolveRes.body).toEqual({ results: [{ value: 'running', quality: 'live', observedAt: expect.any(String) }] });
   });
 });

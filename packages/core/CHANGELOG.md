@@ -13,6 +13,9 @@ All notable changes to this package are documented here. The format follows
   RFC 6901 pointer with a message (`ViewDocumentIssue`). It leaves a binding's `ref` and a widget's
   `type`/`props` opaque and ignores unknown fields. `parseViewDocument` reports the same issues
   through `InvalidViewDocumentError.issues`.
+- `ResolvedBinding.observedAt` and `ResolvedWidget.observedAt` (ISO 8601): when a `live` or
+  `stale` value was obtained from its source, so a host can tell a last-known value of seconds ago
+  from one of days ago. The hosted HTTP connector reports it.
 - Connection-quality text for hosts that render their own UI: `QUALITY_LABEL`, `REASON_LABEL`,
   `worstQuality` and `describeQuality`, exported from the package root and from
   `@iyulab/u-board/domain`.

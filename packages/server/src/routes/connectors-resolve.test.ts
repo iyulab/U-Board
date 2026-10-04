@@ -55,7 +55,7 @@ describe('connector resolve proxy', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'data.status' } });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: 'running', quality: 'live' });
+    expect(res.body).toEqual({ value: 'running', quality: 'live', observedAt: expect.any(String) });
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, options] = (fetch as any).mock.calls[0];
     expect(String(url)).toBe('https://plant.example.com/pumps/a');
@@ -77,10 +77,12 @@ describe('connector resolve proxy', () => {
 
   it('returns stale quality with the last-known value on failure after a prior success', async () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
-    await request(app)
+    const live = await request(app)
       .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
+    expect(Number.isNaN(Date.parse(live.body.observedAt))).toBe(false);
+    await new Promise(resolve => setTimeout(resolve, 5)); // so "now" would differ from the live reading
 
     (fetch as any).mockRejectedValueOnce(new Error('network error'));
     const res = await request(app)
@@ -88,7 +90,9 @@ describe('connector resolve proxy', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'transport' });
+    expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'transport', observedAt: expect.any(String) });
+    // The stale value says when it was last read — the earlier live reading, not now.
+    expect(res.body.observedAt).toBe(live.body.observedAt);
   });
 
   it('returns disconnected when valuePath does not exist in a successful response', async () => {
@@ -114,7 +118,7 @@ describe('connector resolve proxy', () => {
       .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
-    expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'address' });
+    expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'address', observedAt: expect.any(String) });
   });
 
   it('keeps an explicit null at the end of valuePath as a live value', async () => {
@@ -123,7 +127,7 @@ describe('connector resolve proxy', () => {
       .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/assets', valuePath: 'value.0.Temp' } });
-    expect(res.body).toEqual({ value: null, quality: 'live' });
+    expect(res.body).toEqual({ value: null, quality: 'live', observedAt: expect.any(String) });
   });
 
   it('returns disconnected when valuePath is given but the response is not JSON', async () => {
@@ -151,8 +155,8 @@ describe('connector resolve proxy', () => {
     await new Promise(r => setTimeout(r, 50));
     answer(jsonResponse({ value: [{ Status: 'Running' }, { Status: 'Fault' }] }));
 
-    expect(await first).toEqual({ value: 'Running', quality: 'live' });
-    expect(await second).toEqual({ value: 'Fault', quality: 'live' });
+    expect(await first).toEqual({ value: 'Running', quality: 'live', observedAt: expect.any(String) });
+    expect(await second).toEqual({ value: 'Fault', quality: 'live', observedAt: expect.any(String) });
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -187,7 +191,7 @@ describe('connector resolve proxy', () => {
       .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
-    expect(res.body).toEqual({ value: 'running', quality: 'live' });
+    expect(res.body).toEqual({ value: 'running', quality: 'live', observedAt: expect.any(String) });
   });
 
   it('reads valuePath as an RFC 6901 JSON Pointer when it starts with a slash', async () => {
@@ -199,7 +203,7 @@ describe('connector resolve proxy', () => {
         .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
         .set('Cookie', memberCookie)
         .send({ ref: { path: `/pointer-${expected}`, valuePath } });
-      expect(res.body, valuePath).toEqual({ value: expected, quality: 'live' });
+      expect(res.body, valuePath).toEqual({ value: expected, quality: 'live', observedAt: expect.any(String) });
     }
   });
 
@@ -325,8 +329,8 @@ describe('connector resolve proxy with an oauth2-client-credentials connector', 
       .mockResolvedValueOnce(jsonResponse({ status: 'running' }))
       .mockResolvedValueOnce(jsonResponse({ status: 'stopped' }));
 
-    expect((await resolve()).body).toEqual({ value: 'running', quality: 'live' });
-    expect((await resolve()).body).toEqual({ value: 'stopped', quality: 'live' });
+    expect((await resolve()).body).toEqual({ value: 'running', quality: 'live', observedAt: expect.any(String) });
+    expect((await resolve()).body).toEqual({ value: 'stopped', quality: 'live', observedAt: expect.any(String) });
 
     const calls = (fetch as any).mock.calls;
     expect(calls).toHaveLength(3);
@@ -343,7 +347,7 @@ describe('connector resolve proxy with an oauth2-client-credentials connector', 
       .mockResolvedValueOnce(tokenResponse('tok-2'))
       .mockResolvedValueOnce(jsonResponse({ status: 'running' }));
 
-    expect((await resolve()).body).toEqual({ value: 'running', quality: 'live' });
+    expect((await resolve()).body).toEqual({ value: 'running', quality: 'live', observedAt: expect.any(String) });
     expect((fetch as any).mock.calls[3][1].headers).toEqual({ Authorization: 'Bearer tok-2' });
   });
 

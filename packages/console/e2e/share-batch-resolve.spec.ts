@@ -58,7 +58,7 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
     const { results } = await batch.json();
     expect(results).toHaveLength(BINDINGS + 1);
     expect(results.slice(0, BINDINGS).every((r: { quality: string }) => r.quality === 'live')).toBe(true);
-    expect(results[1]).toEqual({ value: 'Fault', quality: 'live' });
+    expect(results[1]).toEqual({ value: 'Fault', quality: 'live', observedAt: expect.any(String) });
     expect(results[BINDINGS]).toEqual({ quality: 'disconnected', reason: 'address' });
     await expect(sharePage.getByTestId('canvas')).toBeVisible();
     await expect(sharePage.locator('[title="연결 끊김 — 값을 받지 못함 (바인딩한 값이 원천에 없음)"]')).toHaveCount(1);

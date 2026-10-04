@@ -103,11 +103,15 @@ interface ResolvedBinding {
   value: unknown;
   quality: ConnectionQuality;
   reason?: QualityReason;
+  observedAt?: string; // ISO 8601
 }
 ```
 
 What an `Adapter.resolve()` call returns — the current value, how current it is, and, when it is
-not `live` and the adapter can tell, why. `reason` is ignored on a `live` reading.
+not `live` and the adapter can tell, why. `reason` is ignored on a `live` reading. `observedAt`, when
+the adapter knows it, is when `value` was obtained from the source: the time of this reading for
+`live`, of the last successful one for `stale` — what tells a last-known value of seconds ago from
+one of days ago. It is ignored on a `disconnected` reading. The hosted HTTP connector reports it.
 
 ### `ConnectionQuality`
 
@@ -254,6 +258,7 @@ interface ResolvedWidget {
   props: Record<string, unknown>;
   quality: Record<string, ConnectionQuality>;
   reasons?: Record<string, QualityReason>;
+  observedAt?: Record<string, string>;
 }
 ```
 
@@ -270,6 +275,8 @@ a `ResolvedWidget`. `background` and `connectors` pass through unchanged — the
   disconnected — see [`architecture.md`](architecture.md) for how the shipped renderer does this.
 - `ResolvedWidget.reasons` — the `QualityReason` per bound prop path, for bindings whose adapter
   reported one on a non-`live` reading. Absent when none did.
+- `ResolvedWidget.observedAt` — when each `live` or `stale` value was obtained from its source,
+  per bound prop path, for bindings whose adapter reported it. Absent when none did.
 
 ### `resolveWidget(widget, adapters)`
 
