@@ -1,16 +1,21 @@
 #!/usr/bin/env node
-// check-pin-drift.mjs
+// check-dependency-drift.mjs
 // Detects dependency drift: an installed version sitting behind what is already published.
 //
 // Background: a caret range (e.g. "^0.16.1") already accepts a newer patch/minor once published,
-// but `npm install`/`npm ci` does not re-resolve an already-satisfying lockfile entry — only
-// `npm update` does. Nothing else notices, so without this check in-range drift accumulates
-// silently (it once let a sibling pin sit behind its own published version, and later let a
-// month of third-party updates pile up).
+// but a frozen install (`npm ci`, `pnpm install --frozen-lockfile`) reinstalls exactly what the
+// lockfile says — only an update picks up a newer in-range version, and nothing announces a new
+// major at all. Without this check in-range drift accumulates silently (it once let a sibling pin
+// sit behind its own published version, and later let a month of third-party updates pile up).
 //
-// Rules, per direct dependency reported by `npm outdated`:
-// - Sibling packages (`@iyulab/*`, `@canvas-kit/*`, excluding this repo's own workspaces): any
-//   in-range gap fails — they move together with this repo.
+// Works in an npm workspace (package-lock.json) and a pnpm workspace (pnpm-lock.yaml) alike. The
+// same file is kept in every repository that uses it, so the rules cannot diverge between them.
+//
+// Rules, per direct dependency the package manager reports as outdated (the repository's own
+// workspace packages are skipped — they resolve to the local source, which legitimately runs ahead
+// of the registry on the commit that bumps them for release):
+// - Sibling packages (`@iyulab/*`, `@canvas-kit/*`): any in-range gap fails — they move together
+//   with this repo.
 // - Third-party packages: an in-range gap of two or more minors fails; a patch or single-minor
 //   gap is reported only, so routine upstream churn does not turn CI red.
 // - Outside the declared range: a breaking release — a new major, or below 1.0 a new minor (the
@@ -23,8 +28,8 @@
 //   regardless.
 //
 // Usage:
-//   node scripts/check-pin-drift.mjs            # report only, exit 0
-//   node scripts/check-pin-drift.mjs --strict    # exit 1 on any failure above (used in CI)
+//   node scripts/check-dependency-drift.mjs            # report only, exit 0
+//   node scripts/check-dependency-drift.mjs --strict   # exit 1 on any failure above (used in CI)
 
 import { execSync } from 'node:child_process';
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
@@ -33,10 +38,23 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 
 export const isSiblingPackage = (name) => name.startsWith('@iyulab/') || name.startsWith('@canvas-kit/');
 
-// Names of the packages under the root package.json's `workspaces` entries. Only the `dir/*`
-// form is expanded, which is the only form this repo uses. They are skipped entirely: a
-// workspace package always resolves to the local source, so its "current" version is the local
-// one and legitimately runs ahead of the registry on the commit that bumps it for release.
+// Within one major, a gap of this many minors to the newest release outside the declared range
+// is neglect rather than a deliberate not-yet-adopted range.
+export const MINOR_GAP_THRESHOLD = 5;
+// A third-party in-range gap of this many minors fails; smaller gaps are reported only.
+export const THIRD_PARTY_IN_RANGE_MINOR_GAP = 2;
+
+/** 'pnpm' when the repository root has a pnpm lockfile, otherwise 'npm'. */
+export function detectPackageManager(rootDir = process.cwd()) {
+  return existsSync(join(rootDir, 'pnpm-lock.yaml')) ? 'pnpm' : 'npm';
+}
+
+/** The command that picks up newer in-range versions, for the drift message. */
+export const updateCommand = (packageManager) => (packageManager === 'pnpm' ? 'pnpm update -r' : 'npm update');
+
+// Names of the packages under the root package.json's `workspaces` entries (npm). Only the
+// `dir/*` form is expanded, which is the only form these repositories use. pnpm leaves workspace
+// packages out of its report by itself.
 export function readWorkspacePackageNames(rootDir = process.cwd()) {
   const { workspaces = [] } = JSON.parse(readFileSync(join(rootDir, 'package.json'), 'utf8'));
   const names = new Set();
@@ -53,12 +71,6 @@ export function readWorkspacePackageNames(rootDir = process.cwd()) {
   }
   return names;
 }
-
-// Within one major, a gap of this many minors to the newest release outside the declared range
-// is neglect rather than a deliberate not-yet-adopted range.
-export const MINOR_GAP_THRESHOLD = 5;
-// A third-party in-range gap of this many minors fails; smaller gaps are reported only.
-export const THIRD_PARTY_IN_RANGE_MINOR_GAP = 2;
 
 export function parseVersion(v) {
   const [major, minor, patch] = v.split('.').map(n => parseInt(n, 10));
@@ -92,16 +104,19 @@ export function findDeferral(deferrals, name, latest) {
   return deferrals.find(d => d.package === name && deferralLine(d) === line);
 }
 
-// Classifies one `npm outdated --json` entry. Pure — the ledger and `today` (YYYY-MM-DD) are
-// passed in, so the rules are testable without the registry or the clock.
+// Classifies one outdated entry. Pure — the ledger and `today` (YYYY-MM-DD) are passed in, so the
+// rules are testable without the registry or the clock.
 // Verdicts: 'clean' | 'info' (reported only) | 'deferred' | 'drift' (fails under --strict).
-export function classify({ name, current, wanted, latest }, { sibling = false, deferrals = [], today = '' } = {}) {
+export function classify(
+  { name, current, wanted, latest },
+  { sibling = false, deferrals = [], today = '', update = 'npm update' } = {}
+) {
   if (current !== wanted) {
     if (sibling) {
-      return { verdict: 'drift', reason: '`npm update` would pick up a newer in-range version' };
+      return { verdict: 'drift', reason: `\`${update}\` would pick up a newer in-range version` };
     }
     if (minorGap(current, wanted) >= THIRD_PARTY_IN_RANGE_MINOR_GAP) {
-      return { verdict: 'drift', reason: `in-range gap of ${THIRD_PARTY_IN_RANGE_MINOR_GAP}+ minors — run \`npm update\`` };
+      return { verdict: 'drift', reason: `in-range gap of ${THIRD_PARTY_IN_RANGE_MINOR_GAP}+ minors — run \`${update}\`` };
     }
     return { verdict: 'info', reason: 'small in-range gap' };
   }
@@ -145,16 +160,39 @@ export function readDeferrals(file = fileURLToPath(new URL('../dependency-deferr
   return JSON.parse(readFileSync(file, 'utf8')).deferrals ?? [];
 }
 
-function readOutdated() {
+// `npm outdated --json` keys entries by package name, with one entry — or, in a workspace, an
+// array of them, one per dependent — per name.
+export function entriesFromNpm(outdated, workspacePackages = new Set()) {
+  const entries = [];
+  for (const [name, value] of Object.entries(outdated)) {
+    if (workspacePackages.has(name)) continue;
+    for (const e of Array.isArray(value) ? value : [value]) {
+      entries.push({ name, current: e.current, wanted: e.wanted, latest: e.latest, dependents: e.dependent ?? '' });
+    }
+  }
+  return entries;
+}
+
+// `pnpm outdated -r --format json` keys entries by package name; one entry covers every workspace
+// package that depends on it.
+export function entriesFromPnpm(outdated) {
+  return Object.entries(outdated).map(([name, e]) => ({
+    name,
+    current: e.current,
+    wanted: e.wanted,
+    latest: e.latest,
+    dependents: (e.dependentPackages ?? []).map(p => p.name).join(', '),
+  }));
+}
+
+function readOutdated(packageManager) {
+  // A fixed literal command, never user input. `execSync` rather than `execFileSync`: on Windows
+  // `npm`/`pnpm` are `.cmd` shims that `execFileSync` cannot spawn without a shell.
+  const command = packageManager === 'pnpm' ? 'pnpm outdated -r --format json' : 'npm outdated --json';
   try {
-    // `npm outdated --json` exits 1 whenever anything anywhere in the workspace is outdated —
-    // that is normal, not a failure of this script. Its stdout is what we actually want.
-    // `execSync` (a fixed literal command, never user input) rather than `execFileSync` — on
-    // Windows, `npm` resolves to `npm.cmd`, a batch script that `execFileSync` cannot spawn
-    // without a shell.
-    const out = execSync('npm outdated --json', { encoding: 'utf8' });
-    return JSON.parse(out || '{}');
+    return JSON.parse(execSync(command, { encoding: 'utf8' }) || '{}');
   } catch (err) {
+    // Both exit 1 whenever anything is outdated — normal, not a failure of this script.
     if (err.stdout) return JSON.parse(err.stdout || '{}');
     throw err;
   }
@@ -163,22 +201,22 @@ function readOutdated() {
 function main() {
   const strict = process.argv.includes('--strict');
   const today = new Date().toISOString().slice(0, 10);
-  const workspacePackages = readWorkspacePackageNames();
+  const packageManager = detectPackageManager();
+  const update = updateCommand(packageManager);
   const deferrals = readDeferrals();
-  const entries = [];
-  for (const [name, value] of Object.entries(readOutdated())) {
-    if (workspacePackages.has(name)) continue;
-    for (const entry of Array.isArray(value) ? value : [value]) entries.push({ name, ...entry });
-  }
+  const outdated = readOutdated(packageManager);
+  const entries = packageManager === 'pnpm'
+    ? entriesFromPnpm(outdated)
+    : entriesFromNpm(outdated, readWorkspacePackageNames());
 
   const found = { info: [], deferred: [], drift: [] };
   for (const e of entries) {
-    const { verdict, reason } = classify(e, { sibling: isSiblingPackage(e.name), deferrals, today });
+    const { verdict, reason } = classify(e, { sibling: isSiblingPackage(e.name), deferrals, today, update });
     if (verdict !== 'clean') found[verdict].push({ ...e, reason });
   }
   const stale = staleDeferrals(deferrals, entries);
 
-  const line = e => `  ${e.name} (${e.dependent}): ${e.current} → ${e.current !== e.wanted ? e.wanted : e.latest} — ${e.reason}`;
+  const line = e => `  ${e.name} (${e.dependents}): ${e.current} → ${e.current !== e.wanted ? e.wanted : e.latest} — ${e.reason}`;
   if (found.info.length > 0) {
     console.log('Behind, within tolerance (not a failure):');
     found.info.forEach(e => console.log(line(e)));
@@ -203,7 +241,7 @@ function main() {
 }
 
 // Only run the CLI when this file is the entry point — lets the test file import the pure
-// functions above without shelling out to `npm outdated`.
+// functions above without shelling out to the package manager.
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main();
 }

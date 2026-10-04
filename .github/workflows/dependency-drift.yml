@@ -26,4 +26,4 @@ jobs:
         run: npm ci
 
       - name: Dependency drift
-        run: npm run check:pin-drift
+        run: npm run check:dependency-drift

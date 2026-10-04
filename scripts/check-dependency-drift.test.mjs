@@ -1,9 +1,22 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   isSiblingPackage, minorGap, breakingLine, classify, staleDeferrals, readDeferrals, readWorkspacePackageNames,
-} from './check-pin-drift.mjs';
+  detectPackageManager, updateCommand, entriesFromNpm, entriesFromPnpm,
+} from './check-dependency-drift.mjs';
+
+// A throwaway repository root with the given files (path → contents).
+function fixtureRoot(files) {
+  const root = mkdtempSync(join(tmpdir(), 'dependency-drift-'));
+  for (const [path, contents] of Object.entries(files)) {
+    mkdirSync(join(root, path, '..'), { recursive: true });
+    writeFileSync(join(root, path), contents);
+  }
+  return root;
+}
 
 const today = '2026-10-01';
 
@@ -140,10 +153,54 @@ test("the repository's deferral ledger is well-formed", () => {
 });
 
 test('readWorkspacePackageNames lists every package under the root workspaces', () => {
-  const names = readWorkspacePackageNames(fileURLToPath(new URL('..', import.meta.url)));
-  assert.ok(names.has('@iyulab/u-board'));
-  assert.ok(names.has('@iyulab/u-board-server'));
-  assert.ok(names.has('@iyulab/u-board-console'));
-  assert.ok(names.has('@iyulab/u-board-share'));
-  assert.equal(names.has('@iyulab/u-widgets'), false);
+  const root = fixtureRoot({
+    'package.json': JSON.stringify({ workspaces: ['packages/*', 'tools'] }),
+    'packages/a/package.json': JSON.stringify({ name: '@scope/a' }),
+    'packages/b/package.json': JSON.stringify({ name: '@scope/b' }),
+    'packages/not-a-package/README.md': '',
+    'tools/package.json': JSON.stringify({ name: 'tools' }),
+  });
+  try {
+    assert.deepEqual([...readWorkspacePackageNames(root)].sort(), ['@scope/a', '@scope/b', 'tools']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('detectPackageManager picks pnpm by its lockfile, npm otherwise', () => {
+  const pnpmRoot = fixtureRoot({ 'pnpm-lock.yaml': '', 'package.json': '{}' });
+  const npmRoot = fixtureRoot({ 'package-lock.json': '{}', 'package.json': '{}' });
+  try {
+    assert.equal(detectPackageManager(pnpmRoot), 'pnpm');
+    assert.equal(detectPackageManager(npmRoot), 'npm');
+  } finally {
+    rmSync(pnpmRoot, { recursive: true, force: true });
+    rmSync(npmRoot, { recursive: true, force: true });
+  }
+});
+
+test('the drift message names the update command of the package manager in use', () => {
+  const entry = { name: 'vite', current: '8.0.1', wanted: '8.2.0', latest: '8.2.0' };
+  assert.match(classify(entry, { today, update: updateCommand('pnpm') }).reason, /pnpm update -r/);
+  assert.match(classify(entry, { today, update: updateCommand('npm') }).reason, /npm update/);
+});
+
+test('entriesFromNpm reads the npm outdated JSON shape, one entry per dependent, skipping workspace packages', () => {
+  const entries = entriesFromNpm({
+    vite: [
+      { current: '8.0.1', wanted: '8.2.0', latest: '8.2.0', dependent: 'core' },
+      { current: '8.0.1', wanted: '8.2.0', latest: '8.2.0', dependent: 'console' },
+    ],
+    react: { current: '19.0.0', wanted: '19.1.0', latest: '19.1.0', dependent: 'core' },
+    '@scope/own': { current: '0.3.0', wanted: '0.3.0', latest: '0.2.0', dependent: 'server' },
+  }, new Set(['@scope/own']));
+  assert.deepEqual(entries.map(e => [e.name, e.dependents]), [['vite', 'core'], ['vite', 'console'], ['react', 'core']]);
+  assert.deepEqual(entries[2], { name: 'react', current: '19.0.0', wanted: '19.1.0', latest: '19.1.0', dependents: 'core' });
+});
+
+test('entriesFromPnpm reads the pnpm outdated JSON shape', () => {
+  const entries = entriesFromPnpm({
+    vitest: { current: '4.1.11', wanted: '4.1.11', latest: '5.0.2', dependentPackages: [{ name: '@canvas-kit/core', location: 'x' }, { name: '@canvas-kit/viewer', location: 'y' }] },
+  });
+  assert.deepEqual(entries, [{ name: 'vitest', current: '4.1.11', wanted: '4.1.11', latest: '5.0.2', dependents: '@canvas-kit/core, @canvas-kit/viewer' }]);
 });

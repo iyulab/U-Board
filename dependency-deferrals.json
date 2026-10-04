@@ -1,4 +1,4 @@
 {
-  "about": "Breaking releases not yet adopted — a new major, or below 1.0 a new minor (give `minor` too) — each with why and until when. Read by scripts/check-pin-drift.mjs: an entry past its reviewBy date, or one matching nothing outdated, fails the check. Remove an entry in the commit that adopts the major.",
+  "about": "Breaking releases not yet adopted — a new major, or below 1.0 a new minor (give `minor` too) — each with why and until when. Read by scripts/check-dependency-drift.mjs: an entry past its reviewBy date, or one matching nothing outdated, fails the check. Remove an entry in the commit that adopts the major.",
   "deferrals": []
 }

@@ -14,7 +14,7 @@
     "build": "npm run build --workspaces --if-present",
     "build:lib": "npm run build:lib --workspaces --if-present",
     "test:tooling": "node --test scripts/*.test.mjs",
-    "check:pin-drift": "node scripts/check-pin-drift.mjs --strict",
+    "check:dependency-drift": "node scripts/check-dependency-drift.mjs --strict",
     "check:public-text": "node scripts/check-public-text.mjs",
     "check:doc-links": "node scripts/check-doc-links.mjs",
     "check:package-types": "attw --pack packages/core --profile esm-only"

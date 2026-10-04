@@ -70,7 +70,7 @@ testing them, or they keep running against the previous build.
 CI runs the same checks plus a real-Postgres concurrency suite, `npm run check:package-types`
 (the published package's type declarations resolve for ESM consumers — `attw`), and three
 repository checks:
-`npm run check:pin-drift` (dependencies not left behind their published versions; a breaking
+`npm run check:dependency-drift` (dependencies not left behind their published versions; a breaking
 release — a new major, or below 1.0 a new minor — is either adopted or recorded in
 [`dependency-deferrals.json`](dependency-deferrals.json) with a reason and a review date, after
 which the check fails again) and
