@@ -76,6 +76,11 @@ jobs:
       - name: Build library entry
         run: npm run build:lib
 
+      # The published package is ESM-only; its declarations must resolve for ESM consumers
+      # under both node16 and bundler module resolution.
+      - name: Package types (attw)
+        run: npm run check:package-types
+
       # Slowest/most expensive check last. jsdom (the `Test` step above) can't render <canvas> or
       # custom-element shadow DOM at all, so it can't tell a real chart from a silent fallback —
       # only a real browser can catch that regression class (see e2e/chart-rendering.spec.ts).

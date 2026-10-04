@@ -16,9 +16,11 @@
     "test:tooling": "node --test scripts/*.test.mjs",
     "check:pin-drift": "node scripts/check-pin-drift.mjs --strict",
     "check:public-text": "node scripts/check-public-text.mjs",
-    "check:doc-links": "node scripts/check-doc-links.mjs"
+    "check:doc-links": "node scripts/check-doc-links.mjs",
+    "check:package-types": "attw --pack packages/core --profile esm-only"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
     "oxlint": "^1.86.0"
   }
 }
