@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ViewerPage, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
 import { getApiBase, fetchWithRetry } from './api-base.js';
+import { KO_LABELS } from './u-board-labels.js';
 
 type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[] };
 
@@ -33,5 +34,5 @@ export function App() {
   if (state === 'loading') return <p>불러오는 중...</p>;
   if (state === 'error') return <p>이 링크는 더 이상 유효하지 않습니다.</p>;
 
-  return <ViewerPage initialDocument={state.document} adapters={state.adapters} ariaLabel={state.name} />;
+  return <ViewerPage initialDocument={state.document} adapters={state.adapters} ariaLabel={state.name} labels={KO_LABELS} />;
 }

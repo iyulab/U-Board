@@ -7,6 +7,7 @@ import {
   listMembers, listShareTokens, createShareToken, deleteShareToken, type ShareTokenSummary,
 } from '../api-client.js';
 import { HttpConnectorAdapter } from '../http-connector-adapter.js';
+import { KO_LABELS } from '../u-board-labels.js';
 import './BoardEditorPage.css';
 import { Loading } from '../design-system/Loading.js';
 
@@ -190,6 +191,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           connectorLabels={connectorLabels}
           onDirtyChange={handleDirtyChange}
           onSave={handleSave}
+          labels={KO_LABELS}
         />
       </div>
 

@@ -219,7 +219,7 @@ describe('AuthoringView node selection', () => {
 
   it('shows the placeholder when nothing is selected', () => {
     render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} />);
-    expect(screen.getByText('노드를 선택하세요.')).toBeInTheDocument();
+    expect(screen.getByText('Select a node.')).toBeInTheDocument();
   });
 
   it('shows the selected node in the property panel', () => {
@@ -227,7 +227,7 @@ describe('AuthoringView node selection', () => {
 
     fireEvent.click(screen.getByText('select-node-1'));
 
-    expect(screen.getByLabelText('위젯 타입')).toHaveValue('status');
+    expect(screen.getByLabelText('Widget type')).toHaveValue('status');
   });
 
   it('returns to the placeholder when the selection is cleared', () => {
@@ -236,14 +236,14 @@ describe('AuthoringView node selection', () => {
     fireEvent.click(screen.getByText('select-node-1'));
     fireEvent.click(screen.getByText('deselect'));
 
-    expect(screen.getByText('노드를 선택하세요.')).toBeInTheDocument();
+    expect(screen.getByText('Select a node.')).toBeInTheDocument();
   });
 
   it('clears the selection when the selected node disappears from an imported document', async () => {
     render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} />);
 
     fireEvent.click(screen.getByText('select-node-1'));
-    expect(screen.getByLabelText('위젯 타입')).toHaveValue('status');
+    expect(screen.getByLabelText('Widget type')).toHaveValue('status');
 
     // Import replaces `doc` wholesale without going through onSelectionChange — the effect at
     // AuthoringView.tsx:51 is what has to notice node-1 is gone and reset selectedNodeId itself.
@@ -251,7 +251,7 @@ describe('AuthoringView node selection', () => {
     const file = new File([JSON.stringify(doc())], 'empty.json', { type: 'application/json' });
     fireEvent.change(input, { target: { files: [file] } });
 
-    await waitFor(() => expect(screen.getByText('노드를 선택하세요.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Select a node.')).toBeInTheDocument());
   });
 
   it('writes a widget-type change back onto the selected node in the document', async () => {
@@ -259,7 +259,7 @@ describe('AuthoringView node selection', () => {
     render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} onSave={onSave} />);
 
     fireEvent.click(screen.getByText('select-node-1'));
-    fireEvent.change(screen.getByLabelText('위젯 타입'), { target: { value: 'gauge' } });
+    fireEvent.change(screen.getByLabelText('Widget type'), { target: { value: 'gauge' } });
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() =>
@@ -315,8 +315,8 @@ describe('AuthoringView decoration authoring', () => {
 
     fireEvent.click(screen.getByText('select-decoration-1'));
 
-    expect(screen.getByLabelText('라벨')).toHaveValue('Zone A');
-    expect(screen.queryByLabelText('위젯 타입')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Text')).toHaveValue('Zone A');
+    expect(screen.queryByLabelText('Widget type')).not.toBeInTheDocument();
   });
 
   it("writes a label change back onto the selected text decoration", async () => {
@@ -324,7 +324,7 @@ describe('AuthoringView decoration authoring', () => {
     render(<AuthoringView initialDocument={docWithTextDecoration()} adapters={[]} width={400} height={300} onSave={onSave} />);
 
     fireEvent.click(screen.getByText('select-decoration-1'));
-    fireEvent.change(screen.getByLabelText('라벨'), { target: { value: 'Zone B' } });
+    fireEvent.change(screen.getByLabelText('Text'), { target: { value: 'Zone B' } });
     fireEvent.click(screen.getByText('Save'));
 
     await waitFor(() =>
@@ -340,8 +340,8 @@ describe('AuthoringView decoration authoring', () => {
 
     fireEvent.click(screen.getByText('select-node-1'));
 
-    expect(screen.getByLabelText('위젯 타입')).toBeInTheDocument();
-    expect(screen.queryByLabelText('라벨')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Widget type')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Text')).not.toBeInTheDocument();
   });
 });
 

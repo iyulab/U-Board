@@ -151,10 +151,16 @@ simply did not provide that adapter.
 ```ts
 const QUALITY_LABEL: Partial<Record<ConnectionQuality, string>>; // stale, disconnected
 const REASON_LABEL: Record<QualityReason, string>;
+interface QualityText {
+  quality: Partial<Record<ConnectionQuality, string>>;
+  reason: Record<QualityReason, string>;
+}
+const DEFAULT_QUALITY_TEXT: QualityText; // { quality: QUALITY_LABEL, reason: REASON_LABEL }
 function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined;
 function describeQuality(
   quality: Record<string, ConnectionQuality>,
-  reasons?: Record<string, QualityReason>
+  reasons?: Record<string, QualityReason>,
+  text?: QualityText
 ): string | undefined;
 ```
 
@@ -169,6 +175,9 @@ describeQuality({ 'data.value': 'disconnected' }, { 'data.value': 'address' });
 ```
 
 `live` has no label on purpose: normal operation is not announced, only departures from it.
+
+Pass `text` to describe quality in another language; it defaults to `DEFAULT_QUALITY_TEXT`. The
+shipped components take the same words through their `labels` prop (`labels.qualityText`).
 
 ### `Binding`
 

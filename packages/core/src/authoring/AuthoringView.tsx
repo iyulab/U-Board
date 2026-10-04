@@ -22,6 +22,8 @@ import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument, Widget, Shape } from '../view-document.js';
+import type { UBoardLabels } from '../labels.js';
+import { useLabels } from '../use-labels.js';
 
 export interface AuthoringViewProps {
   initialDocument: ViewDocument;
@@ -40,6 +42,8 @@ export interface AuthoringViewProps {
    * UI (a status bar, a tab marker). The editor draws no indicator itself; it only asks the
    * browser to confirm leaving the page (`beforeunload`) while changes are unsaved. */
   onDirtyChange?: (isDirty: boolean) => void;
+  /** Text to show instead of the English defaults — any subset of `UBoardLabels`. */
+  labels?: Partial<UBoardLabels>;
 }
 
 /**
@@ -54,7 +58,8 @@ export interface AuthoringViewProps {
  * magnified) and stays fitted as the panes resize until the author pans or zooms; "Fit to view"
  * restores that, and a new node or decoration is placed in view.
  */
-export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange }: AuthoringViewProps) {
+export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp }: AuthoringViewProps) {
+  const labels = useLabels(labelsProp);
   const [doc, setDoc] = useState(initialDocument);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -104,18 +109,18 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     let cancelled = false;
     resolveDocument(doc, adapters).then(resolved => {
       if (cancelled) return;
-      setPreview(toCanvasKit(resolved));
+      setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText }));
       // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
       // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
       // pick it up.
       chartsReady.then(() => {
-        if (!cancelled) setPreview(toCanvasKit(resolved));
+        if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText }));
       });
     });
     return () => {
       cancelled = true;
     };
-  }, [doc, adapters]);
+  }, [doc, adapters, labels]);
 
   useEffect(() => {
     if (selectedNodeId && !doc.nodes.some(n => n.id === selectedNodeId)) {
@@ -144,7 +149,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   };
 
   const handleAddDecoration = (type: Shape['type']) => {
-    setDoc(prev => addDecoration(prev, type, nextDecorationPosition(prev, visibleOrigin())));
+    setDoc(prev => addDecoration(prev, type, nextDecorationPosition(prev, visibleOrigin()), labels.newTextDecoration));
     setImportError(null);
   };
 
@@ -183,7 +188,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
       setOpenedDoc(imported);
       setImportError(null);
     } catch (err) {
-      setImportError(err instanceof InvalidViewDocumentError ? err.message : 'Import failed.');
+      setImportError(err instanceof InvalidViewDocumentError ? err.message : labels.importFailed);
     }
   };
 
@@ -214,25 +219,26 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div>
         <button onClick={handleAddNode} style={{ marginBottom: 8 }}>
-          Add node
+          {labels.addNode}
         </button>{' '}
         <button onClick={() => handleAddDecoration('rect')} style={{ marginBottom: 8 }}>
-          Add rect decoration
+          {labels.addRectDecoration}
         </button>{' '}
         <button onClick={() => handleAddDecoration('text')} style={{ marginBottom: 8 }}>
-          Add text decoration
+          {labels.addTextDecoration}
         </button>{' '}
         <button onClick={handleSave} style={{ marginBottom: 8 }}>
-          {onSave ? 'Save' : 'Export'}
+          {onSave ? labels.save : labels.export}
         </button>{' '}
         <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
-          Import
+          {labels.import}
         </button>
         {' '}
         <ViewControls
           view={view}
           onFit={extent ? () => fitTo(extent) : undefined}
           buttonStyle={{ marginBottom: 8, marginRight: 4 }}
+          labels={labels}
         />
         <input
           ref={fileInputRef}
@@ -246,7 +252,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
       </div>
       <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0 }}>
         <div style={paneStyle}>
-          <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>Editor</h2>
+          <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.editorHeading}</h2>
           <div style={{ flex: 1, minHeight: 0 }}>
             <KonvaDesigner
               width={width}
@@ -261,7 +267,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           </div>
         </div>
         <div style={paneStyle}>
-          <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>Live preview</h2>
+          <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.previewHeading}</h2>
           {preview ? (
             <div style={{ flex: 1, minHeight: 0 }}>
               <Viewer
@@ -271,23 +277,23 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
                 overlays={preview.overlays}
                 transform={transform}
                 onTransformChange={view.onUserTransform}
-                ariaLabel="Live preview"
+                ariaLabel={labels.previewRegion}
               />
             </div>
           ) : (
-            <p>Resolving…</p>
+            <p>{labels.resolving}</p>
           )}
         </div>
         <div>
           {selectedDecoration ? (
-            <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} />
+            <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} labels={labels} />
           ) : (
-            <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} />
+            <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} labels={labels} />
           )}
         </div>
       </div>
       <details style={{ marginTop: 16 }}>
-        <summary>ViewDocument (debug)</summary>
+        <summary>{labels.debugDocument}</summary>
         <pre style={{ fontSize: 11, maxWidth: 900, overflowX: 'auto' }}>{JSON.stringify(doc, null, 2)}</pre>
       </details>
     </div>

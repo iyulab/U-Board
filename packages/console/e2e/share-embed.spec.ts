@@ -15,18 +15,18 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await page.getByRole('button', { name: '새 보드' }).click();
   await page.getByLabel('보드 이름').fill('Shared Board');
   await page.getByRole('button', { name: '생성' }).click();
-  await expect(page.getByText('Save')).toBeVisible();
+  await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
   const boardId = new URL(page.url()).pathname.split('/')[2]; // /boards/:boardId/edit
 
   // 데모 데이터로 바인딩한 노드 하나 추가 — 아래 공유 패널 경고(ISSUE-U-Board-20260829-*)가
   // 실 브라우저에서도 뜨는지 확인하기 위함. binding-editor.spec.ts와 동일 패턴, 데이터소스만
   // 실 커넥터 대신 데모(HTTP Path/Value path 대신 참조 키 하나).
-  await page.getByText('Add node').click();
+  await page.getByText('노드 추가').click();
   await clickFirstNode(page);
   await page.getByLabel('프롭 경로').fill('data.value');
   await page.getByLabel('참조 키').fill('pump-a.state');
   await page.getByText('바인딩 저장', { exact: true }).click();
-  await page.getByText('Save', { exact: true }).click();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
   // 공유 패널 열고 경고 확인 → 링크 생성
@@ -83,7 +83,7 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   expect(nodeBox.y + nodeBox.height).toBeLessThanOrEqual(canvasBox.y + canvasBox.height + 1);
   // 작은 보드는 확대하지 않는다 — 기본 크기(160×100) 노드가 1:1 그대로.
   expect(nodeBox.width).toBeLessThanOrEqual(161);
-  await expect(sharePage.getByRole('button', { name: 'Fit to view' })).toBeVisible();
+  await expect(sharePage.getByRole('button', { name: '화면에 맞추기' })).toBeVisible();
 
   // 창이 줄면(태블릿 회전·분할 화면) 사용자가 아직 움직이지 않은 보드는 새 크기에 다시 맞춰진다 —
   // 줄어든 캔버스 안에서 노드가 여전히 가운데 근처에 있다.
@@ -100,7 +100,7 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   expect(Math.abs(nodeCenterX - (smallCanvas.x + smallCanvas.width / 2))).toBeLessThan(2);
 
   // 확대/축소는 키보드로도 된다(WCAG 2.1.1) — 버튼에 포커스하고 Enter.
-  await sharePage.getByRole('button', { name: 'Zoom in' }).focus();
+  await sharePage.getByRole('button', { name: '확대' }).focus();
   await sharePage.keyboard.press('Enter');
   const nodeOverlay = sharePage.locator('[data-testid^="overlay-"]:not([data-testid="overlay-layer"])').first();
   await expect.poll(async () => (await nodeOverlay.boundingBox())!.width).toBeGreaterThan(movedNode.width * 1.2);

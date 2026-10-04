@@ -23,12 +23,18 @@ All notable changes to this package are documented here. The format follows
   board view (default "Board").
 - In `AuthoringView`, the editor and the live preview share one pan/zoom, and a new node or
   decoration is placed where the author is looking.
+- `labels` on `AuthoringView` and `ViewerPage` replaces any of the text they show (`UBoardLabels`,
+  English defaults in `DEFAULT_LABELS`), including the words for connection quality.
+  `describeQuality` takes the same words as an optional third argument (`QualityText`,
+  `DEFAULT_QUALITY_TEXT`).
 
 ### Changed
 
 - `isViewDocumentShape` is now the type guard for `validateViewDocument` — it checks the whole
   document, not only the top-level fields, so it rejects documents it used to accept.
 - Requires `@iyulab/u-widgets` 0.24.
+- The node property panel and the decoration panel show English by default, like the rest of the
+  components; they used to be in Korean. Pass `labels` to show another language.
 
 ### Fixed
 

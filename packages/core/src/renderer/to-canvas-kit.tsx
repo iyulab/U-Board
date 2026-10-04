@@ -25,7 +25,7 @@ export const chartsReady: Promise<unknown> = import('@iyulab/u-widgets/charts');
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { QUALITY_FRAME_STYLE, frameQuality } from '../quality-presentation.js';
-import { describeQuality } from '../quality-text.js';
+import { describeQuality, DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
 
 // Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
 // on screen. Kept off the frame `<div>` itself and off `UWidget` — each `uw-*` custom element
@@ -50,6 +50,11 @@ export interface CanvasKitRenderOutput {
   overlays: ViewerOverlayItem[];
 }
 
+export interface ToCanvasKitOptions {
+  /** Words for each node's connection-quality tooltip and announcement (English by default). */
+  qualityText?: QualityText;
+}
+
 /**
  * Translates a resolved View Document into canvas-kit primitives: a Scene holding the
  * background and connectors, and an overlay list for the Viewer to position each node's widget
@@ -57,7 +62,7 @@ export interface CanvasKitRenderOutput {
  * (docs/principles.md) — it depends on canvas-kit and u-widgets so the document format itself
  * doesn't have to.
  */
-export function toCanvasKit(doc: ResolvedViewDocument): CanvasKitRenderOutput {
+export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_QUALITY_TEXT }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
   const scene = new Scene();
 
   if (doc.background.image) {
@@ -101,7 +106,7 @@ export function toCanvasKit(doc: ResolvedViewDocument): CanvasKitRenderOutput {
   const overlays: ViewerOverlayItem[] = doc.nodes.map(node => {
     const quality = frameQuality(node.widget.quality, node.widget.type);
     const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
-    const label = describeQuality(node.widget.quality, node.widget.reasons);
+    const label = describeQuality(node.widget.quality, node.widget.reasons, qualityText);
 
     return {
       id: node.id,

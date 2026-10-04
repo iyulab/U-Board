@@ -172,11 +172,11 @@ export function nextDecorationPosition(doc: ViewDocument, origin: { x: number; y
  * establishes for widget nodes (docs/concepts.md — "Decoration"). The `decoration-` id prefix
  * (vs. `node-` for nodes) is cosmetic only — `applySceneToDocument` tells the two apart by
  * membership in `doc.nodes`/`doc.decorations`, not by parsing the id. */
-export function addDecoration(doc: ViewDocument, type: Shape['type'], position: { x: number; y: number }): ViewDocument {
+export function addDecoration(doc: ViewDocument, type: Shape['type'], position: { x: number; y: number }, text = 'Label'): ViewDocument {
   const id = `decoration-${crypto.randomUUID()}`;
   const shape: Shape =
     type === 'rect'
       ? { id, type: 'rect', x: position.x, y: position.y, width: DEFAULT_DECORATION_WIDTH, height: DEFAULT_DECORATION_HEIGHT, stroke: DECORATION_STROKE }
-      : { id, type: 'text', x: position.x, y: position.y, text: 'Label' };
+      : { id, type: 'text', x: position.x, y: position.y, text };
   return { ...doc, decorations: [...(doc.decorations ?? []), shape] };
 }

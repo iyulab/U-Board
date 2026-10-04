@@ -31,32 +31,32 @@ test('binds a node to a live value via the property panel and its path explorer'
     await page.getByRole('button', { name: '새 보드' }).click();
     await page.getByLabel('보드 이름').fill('Binding Board');
     await page.getByRole('button', { name: '생성' }).click();
-    await expect(page.getByText('Save')).toBeVisible();
+    await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
 
-    await page.getByText('Add node').click();
+    await page.getByText('노드 추가').click();
     await clickFirstNode(page);
     await expect(page.getByLabel('위젯 타입')).toHaveValue('status');
 
     await page.getByLabel('프롭 경로').fill('data.value');
     await page.getByLabel('데이터소스').selectOption({ label: 'Mock Plant API' });
-    // '프롭 경로'/'데이터소스'와 달리 'Path'는 'Value path' 라벨의 부분 문자열이라 exact 매칭이 필요하다
+    // '데이터소스'와 달리 '요청 경로'·'값 경로'는 서로 '경로'를 공유하고 '프롭 경로'와도 겹쳐 exact 매칭이 필요하다
     // (connector-crud.spec.ts의 '이름'/'헤더 이름'과 같은 종류의 문제).
-    await page.getByLabel('Path', { exact: true }).fill('/status');
+    await page.getByLabel('요청 경로', { exact: true }).fill('/status');
     await page.getByText('탐색', { exact: true }).click();
     await expect(page.getByText('load: 73')).toBeVisible();
     await page.getByText('status: "running"').click();
-    await expect(page.getByLabel('Value path')).toHaveValue('/status');
+    await expect(page.getByLabel('값 경로')).toHaveValue('/status');
 
     await page.getByText('미리보기', { exact: true }).click();
     await expect(page.getByText(/"running"/)).toBeVisible();
     await expect(page.getByText(/\(live\)/)).toBeVisible();
 
     await page.getByText('바인딩 저장', { exact: true }).click();
-    // 하단의 "ViewDocument (debug)" <pre> 덤프에도 같은 문자열이 부분 문자열로 들어있으므로
+    // 하단의 "ViewDocument (디버그)" <pre> 덤프에도 같은 문자열이 부분 문자열로 들어있으므로
     // 바인딩 목록의 <code>data.value</code> 항목만 골라내려면 exact 매칭이 필요하다.
     await expect(page.getByText('data.value', { exact: true })).toBeVisible();
 
-    await page.getByText('Save', { exact: true }).click();
+    await page.getByRole('button', { name: '저장', exact: true }).click();
     // board-crud.spec.ts와 동일한 패턴: 저장 PUT이 실제로 반영됐다는 신호(저장됨)를 기다린 뒤에만
     // reload한다 — 그렇지 않으면 저장 요청이 아직 진행 중일 때 reload가 그것을 취소할 수 있다.
     await expect(page.getByText('저장됨')).toBeVisible();

@@ -5,6 +5,7 @@ import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
 import { describeQuality } from '../quality-text.js';
+import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 
 // Must match `DemoAdapter.id` in ../demo-adapter.js. Not imported as `DemoAdapter` itself so this
 // check stays an id comparison (robust across a duplicate-module-instance scenario, where
@@ -17,6 +18,7 @@ export interface PropertyPanelProps {
   /** Adapter id → human-readable label. Falls back to the raw id when absent. */
   connectorLabels?: Record<string, string>;
   onChange: (widget: Widget) => void;
+  labels?: UBoardLabels;
 }
 
 function isWidgetType(value: string): value is WidgetType {
@@ -56,7 +58,7 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
   return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', demoRef: '' };
 }
 
-export function PropertyPanel({ node, adapters, connectorLabels, onChange }: PropertyPanelProps) {
+export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS }: PropertyPanelProps) {
   const [propsText, setPropsText] = useState('{}');
   const [propsError, setPropsError] = useState<string | null>(null);
   const [draft, setDraft] = useState<BindingDraft>(emptyDraft(initialConnectorId(adapters)));
@@ -93,7 +95,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
   }, [node?.id, node?.widget.type, defaultConnectorId]);
 
   if (!node) {
-    return <p>노드를 선택하세요.</p>;
+    return <p>{labels.selectNode}</p>;
   }
 
   const selectedAdapter = adapters.find(a => a.id === draft.connectorId);
@@ -117,7 +119,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
       setPropsError(null);
       onChange({ ...node.widget, props: parsed });
     } catch {
-      setPropsError('올바른 JSON이 아닙니다');
+      setPropsError(labels.invalidJson);
     }
   };
 
@@ -127,13 +129,13 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
     try {
       setPreview(await selectedAdapter.resolve(draftRef()));
     } catch {
-      setPreviewError('미리보기 호출에 실패했습니다');
+      setPreviewError(labels.previewFailed);
     }
   };
 
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
   const previewLabel = preview
-    ? describeQuality({ binding: preview.quality }, preview.reason ? { binding: preview.reason } : {})
+    ? describeQuality({ binding: preview.quality }, preview.reason ? { binding: preview.reason } : {}, labels.qualityText)
     : undefined;
 
   const handleExplore = async () => {
@@ -142,13 +144,13 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
     try {
       const resolved = await selectedAdapter.resolve({ path: draft.path });
       if (resolved.quality === 'disconnected') {
-        setExploreError('탐색에 실패했습니다');
+        setExploreError(labels.exploreFailed);
         setExploreResult(null);
         return;
       }
       setExploreResult(resolved.value);
     } catch {
-      setExploreError('탐색에 실패했습니다');
+      setExploreError(labels.exploreFailed);
       setExploreResult(null);
     }
   };
@@ -187,9 +189,9 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
 
   return (
     <div>
-      <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>Properties</h2>
+      <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.propertiesHeading}</h2>
       <label>
-        위젯 타입
+        {labels.widgetType}
         <select value={node.widget.type} onChange={handleTypeChange}>
           {WIDGET_TYPES.map(t => (
             <option key={t} value={t}>
@@ -199,7 +201,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
         </select>
       </label>
       <div>
-        <label htmlFor="property-panel-props">정적 props (JSON)</label>
+        <label htmlFor="property-panel-props">{labels.staticProps}</label>
         <textarea
           id="property-panel-props"
           value={propsText}
@@ -211,33 +213,33 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
         {propsError && <p style={{ color: '#dc2626', fontSize: 12 }}>{propsError}</p>}
       </div>
 
-      <h3 style={{ fontSize: 13, margin: '12px 0 4px' }}>바인딩</h3>
-      {bindingEntries.length === 0 && <p style={{ fontSize: 12 }}>바인딩 없음</p>}
+      <h3 style={{ fontSize: 13, margin: '12px 0 4px' }}>{labels.bindingsHeading}</h3>
+      {bindingEntries.length === 0 && <p style={{ fontSize: 12 }}>{labels.noBindings}</p>}
       <ul>
         {bindingEntries.map(([propPath, binding]) => (
           <li key={propPath}>
             <code>{propPath}</code> {'→ '}
             <span>{labelFor(binding.adapter, connectorLabels)}</span>{' '}
             <button type="button" onClick={() => handleEditBinding(propPath, binding)}>
-              수정
+              {labels.editBinding}
             </button>{' '}
             <button type="button" onClick={() => handleRemoveBinding(propPath)}>
-              제거
+              {labels.removeBinding}
             </button>
           </li>
         ))}
       </ul>
 
       {adapters.length === 0 ? (
-        <p style={{ fontSize: 12 }}>연결된 데이터소스가 없습니다.</p>
+        <p style={{ fontSize: 12 }}>{labels.noDataSources}</p>
       ) : (
         <div>
           <label>
-            프롭 경로
+            {labels.propPath}
             <input value={draft.propPath} onChange={e => setDraft({ ...draft, propPath: e.target.value })} placeholder="data.value" />
           </label>
           <label>
-            데이터소스
+            {labels.dataSource}
             <select value={draft.connectorId} onChange={e => setDraft({ ...draft, connectorId: e.target.value })}>
               {adapters.map(a => (
                 <option key={a.id} value={a.id}>
@@ -248,21 +250,21 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
           </label>
           {isDemo ? (
             <label>
-              참조 키
+              {labels.demoReference}
               <input value={draft.demoRef} onChange={e => setDraft({ ...draft, demoRef: e.target.value })} placeholder="pump-a.state" />
             </label>
           ) : (
             <>
               <label>
-                Path
+                {labels.path}
                 <input value={draft.path} onChange={e => setDraft({ ...draft, path: e.target.value })} placeholder="/pumps/a" />
               </label>
               <label>
-                Value path
+                {labels.valuePath}
                 <input value={draft.valuePath} onChange={e => setDraft({ ...draft, valuePath: e.target.value })} placeholder="/status" />
               </label>
               <button type="button" onClick={handleExplore}>
-                탐색
+                {labels.explore}
               </button>
               {exploreError && <p style={{ color: '#dc2626', fontSize: 12 }}>{exploreError}</p>}
               {exploreResult !== null && (
@@ -271,16 +273,16 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange }: Pro
             </>
           )}
           <button type="button" onClick={handlePreview}>
-            미리보기
+            {labels.previewBinding}
           </button>
           <button type="button" onClick={handleSaveBinding} disabled={!draft.propPath}>
-            바인딩 저장
+            {labels.saveBinding}
           </button>
           {previewError && <p style={{ color: '#dc2626', fontSize: 12 }}>{previewError}</p>}
           {preview && (
             <p style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }} data-quality={preview.quality}>
               <span>
-                값: {JSON.stringify(preview.value)} ({preview.quality})
+                {labels.previewValue}: {JSON.stringify(preview.value)} ({preview.quality})
               </span>
               {previewLabel && (
                 <span style={{ ...QUALITY_FRAME_STYLE[preview.quality], borderRadius: 4, padding: '0 4px', fontSize: 11 }}>

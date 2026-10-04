@@ -200,3 +200,49 @@ describe('ViewerPage', () => {
     });
   });
 });
+
+describe('ViewerPage labels', () => {
+  class FailingAdapter implements Adapter {
+    readonly id = 'cmms';
+    resolve = vi.fn(async (): Promise<ResolvedBinding> => ({ value: undefined, quality: 'disconnected', reason: 'auth' }));
+  }
+  const ko = {
+    zoomIn: '확대',
+    zoomOut: '축소',
+    fitToView: '화면에 맞추기',
+    boardRegion: '보드',
+    qualityText: {
+      quality: { stale: '갱신 지연', disconnected: '연결 끊김' },
+      reason: { transport: '연결 불가', auth: '자격 거부', address: '값 없음', throttled: '한도 초과' },
+    },
+  };
+
+  it('shows the given text on its controls, view and quality tooltips', async () => {
+    render(<ViewerPage adapters={[new FailingAdapter()]} initialDocument={docWithBinding()} labels={ko} />);
+    await screen.findByTestId('viewer');
+    expect(screen.getByRole('button', { name: '확대' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '축소' })).toBeInTheDocument();
+    expect(lastViewerProps().ariaLabel).toBe('보드');
+    await vi.waitFor(() => {
+      const content = lastViewerProps().overlays[0].content as React.ReactElement<{ title?: string }>;
+      expect(content.props.title).toBe('연결 끊김 (자격 거부)');
+    });
+  });
+
+  it('keeps English for any label not given', async () => {
+    render(<ViewerPage adapters={[new SpyAdapter()]} initialDocument={docWithBinding()} labels={{ zoomIn: '확대' }} />);
+    await screen.findByTestId('viewer');
+    expect(screen.getByRole('button', { name: 'Zoom out' })).toBeInTheDocument();
+    expect(lastViewerProps().ariaLabel).toBe('Board');
+  });
+
+  it('settles when labels are passed as a new object on every render', async () => {
+    const { rerender } = render(<ViewerPage adapters={[new SpyAdapter()]} initialDocument={docWithBinding()} labels={{ ...ko }} />);
+    await screen.findByTestId('viewer');
+    rerender(<ViewerPage adapters={[new SpyAdapter()]} initialDocument={docWithBinding()} labels={{ ...ko }} />);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const calls = viewerProps.mock.calls.length;
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(viewerProps.mock.calls.length).toBe(calls);
+  });
+});

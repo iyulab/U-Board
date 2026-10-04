@@ -53,7 +53,7 @@ test('create a connector via the UI, then resolve a live value through the real 
     await page.getByRole('button', { name: '새 보드' }).click();
     await page.getByLabel('보드 이름').fill('Connector Board');
     await page.getByRole('button', { name: '생성' }).click();
-    await expect(page.getByText('Save')).toBeVisible();
+    await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
 
     // UI를 통한 resolve 왕복은 binding-editor.spec.ts가 검증한다 — 여기서는 API 계층 자체를
     // 독립적으로(UI 무관하게) 확인한다.

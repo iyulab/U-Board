@@ -1,11 +1,13 @@
 import type { CSSProperties } from 'react';
 import type { FittedView } from './use-fitted-view.js';
+import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 
 export interface ViewControlsProps {
   view: FittedView;
   /** Fits the document into view; omitted when there is nothing to fit (an empty document). */
   onFit?: () => void;
   buttonStyle?: CSSProperties;
+  labels?: Pick<UBoardLabels, 'zoomIn' | 'zoomOut' | 'fitToView'>;
 }
 
 /**
@@ -13,13 +15,13 @@ export interface ViewControlsProps {
  * keyboard too (WCAG 2.1.1). Zooming steps around the middle of the view and is disabled at the
  * zoom bounds.
  */
-export function ViewControls({ view, onFit, buttonStyle }: ViewControlsProps) {
+export function ViewControls({ view, onFit, buttonStyle, labels = DEFAULT_LABELS }: ViewControlsProps) {
   return (
     <>
       <button
         type="button"
-        aria-label="Zoom out"
-        title="Zoom out"
+        aria-label={labels.zoomOut}
+        title={labels.zoomOut}
         onClick={view.zoomOut}
         disabled={!view.canZoomOut}
         style={buttonStyle}
@@ -28,8 +30,8 @@ export function ViewControls({ view, onFit, buttonStyle }: ViewControlsProps) {
       </button>
       <button
         type="button"
-        aria-label="Zoom in"
-        title="Zoom in"
+        aria-label={labels.zoomIn}
+        title={labels.zoomIn}
         onClick={view.zoomIn}
         disabled={!view.canZoomIn}
         style={buttonStyle}
@@ -38,7 +40,7 @@ export function ViewControls({ view, onFit, buttonStyle }: ViewControlsProps) {
       </button>
       {onFit && (
         <button type="button" onClick={onFit} style={buttonStyle}>
-          Fit to view
+          {labels.fitToView}
         </button>
       )}
     </>

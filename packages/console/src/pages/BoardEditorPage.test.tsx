@@ -41,7 +41,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
     renderPage();
     expect(api.getBoard).toHaveBeenCalledWith('w1', 'b1');
-    expect(await screen.findByText('Save')).toBeInTheDocument();
+    expect(await screen.findByText('저장')).toBeInTheDocument();
   });
 
   it('saves via updateBoard when Save is clicked', async () => {
@@ -49,7 +49,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
     renderPage();
 
-    await userEvent.click(await screen.findByText('Save'));
+    await userEvent.click(await screen.findByText('저장'));
 
     await waitFor(() => expect(api.updateBoard).toHaveBeenCalledWith('w1', 'b1', { document: EMPTY_DOC }));
     expect(await screen.findByRole('status')).toHaveTextContent('저장됨');
@@ -60,7 +60,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockRejectedValue(new Error('network down'));
     renderPage();
 
-    await userEvent.click(await screen.findByText('Save'));
+    await userEvent.click(await screen.findByText('저장'));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
   });
@@ -69,7 +69,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
     renderPage();
 
-    await screen.findByText('Save');
+    await screen.findByText('저장');
 
     expect(screen.queryByText('저장되지 않은 변경 사항이 있습니다')).not.toBeInTheDocument();
   });
@@ -78,7 +78,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
     renderPage();
 
-    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await userEvent.click(await screen.findByText('사각형 장식 추가'));
 
     expect(await screen.findByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
   });
@@ -88,9 +88,9 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
     renderPage();
 
-    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await userEvent.click(await screen.findByText('사각형 장식 추가'));
     await screen.findByText('저장되지 않은 변경 사항이 있습니다');
-    await userEvent.click(screen.getByText('Save', { exact: true }));
+    await userEvent.click(screen.getByText('저장', { exact: true }));
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('저장됨'));
     expect(screen.queryByText('저장되지 않은 변경 사항이 있습니다')).not.toBeInTheDocument();
@@ -101,8 +101,8 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockRejectedValue(new Error('network down'));
     renderPage();
 
-    await userEvent.click(await screen.findByText('Add rect decoration'));
-    await userEvent.click(screen.getByText('Save', { exact: true }));
+    await userEvent.click(await screen.findByText('사각형 장식 추가'));
+    await userEvent.click(screen.getByText('저장', { exact: true }));
 
     await screen.findByRole('alert');
     expect(screen.getByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
@@ -113,11 +113,11 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
     renderPage();
 
-    await userEvent.click(await screen.findByText('Add rect decoration'));
-    await userEvent.click(screen.getByText('Save', { exact: true }));
+    await userEvent.click(await screen.findByText('사각형 장식 추가'));
+    await userEvent.click(screen.getByText('저장', { exact: true }));
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('저장됨'));
 
-    await userEvent.click(screen.getByText('Add text decoration'));
+    await userEvent.click(screen.getByText('텍스트 장식 추가'));
 
     expect(screen.queryByText('저장됨')).not.toBeInTheDocument();
     expect(screen.getByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe('BoardEditorPage', () => {
   it('navigates back to the boards list when there are no unsaved changes', async () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
     renderPage();
-    await screen.findByText('Save');
+    await screen.findByText('저장');
 
     await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
 
@@ -137,21 +137,21 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderPage();
-    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await userEvent.click(await screen.findByText('사각형 장식 추가'));
     await screen.findByText('저장되지 않은 변경 사항이 있습니다');
 
     await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
 
     expect(confirmSpy).toHaveBeenCalled();
     expect(screen.queryByText('boards list page')).not.toBeInTheDocument();
-    expect(screen.getByText('Save')).toBeInTheDocument();
+    expect(screen.getByText('저장')).toBeInTheDocument();
   });
 
   it('navigates back after confirming, when there are unsaved changes', async () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderPage();
-    await userEvent.click(await screen.findByText('Add rect decoration'));
+    await userEvent.click(await screen.findByText('사각형 장식 추가'));
     await screen.findByText('저장되지 않은 변경 사항이 있습니다');
 
     await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
@@ -201,15 +201,15 @@ describe('BoardEditorPage', () => {
         </Routes>
       </MemoryRouter>
     );
-    await screen.findByText('Save');
+    await screen.findByText('저장');
 
     fireEvent.click(screen.getByText('Go to b2'));
 
-    expect(screen.queryByText('Save')).not.toBeInTheDocument();
+    expect(screen.queryByText('저장')).not.toBeInTheDocument();
     expect(screen.getByText('불러오는 중...')).toBeInTheDocument();
 
     resolveB2!({ id: 'b2', name: 'B', document: EMPTY_DOC, updatedAt: 't2' });
-    await screen.findByText('Save');
+    await screen.findByText('저장');
   });
 
   it('clears the "saved" status when a save fails after a previous successful save', async () => {
@@ -217,11 +217,11 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockResolvedValueOnce({ id: 'b1', name: 'A', updatedAt: 't2' });
     renderPage();
 
-    await userEvent.click(await screen.findByText('Save'));
+    await userEvent.click(await screen.findByText('저장'));
     await screen.findByRole('status');
 
     vi.mocked(api.updateBoard).mockRejectedValueOnce(new Error('network down'));
-    await userEvent.click(screen.getByText('Save'));
+    await userEvent.click(screen.getByText('저장'));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
@@ -236,7 +236,7 @@ describe('BoardEditorPage connector wiring', () => {
     });
     renderPage();
 
-    expect(await screen.findByText('Save')).toBeInTheDocument();
+    expect(await screen.findByText('저장')).toBeInTheDocument();
     expect(api.listConnectors).toHaveBeenCalledWith('w1');
   });
 
@@ -245,7 +245,7 @@ describe('BoardEditorPage connector wiring', () => {
     vi.mocked(api.listConnectors).mockRejectedValue(new Error('network'));
     renderPage();
 
-    expect(await screen.findByText('Save')).toBeInTheDocument();
+    expect(await screen.findByText('저장')).toBeInTheDocument();
     expect(await screen.findByRole('alert')).toHaveTextContent('데이터소스 목록을 불러오지 못했습니다');
   });
 });
@@ -259,7 +259,7 @@ describe('BoardEditorPage share panel', () => {
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'm@x.com', name: 'M', role: 'member' }] });
     renderPage();
 
-    await screen.findByText('Save'); // wait for the page to finish its initial loads
+    await screen.findByText('저장'); // wait for the page to finish its initial loads
     expect(screen.queryByText('공유')).not.toBeInTheDocument();
     expect(api.listShareTokens).not.toHaveBeenCalled();
   });
@@ -380,7 +380,7 @@ describe('BoardEditorPage share panel', () => {
     fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
     fireEvent.change(screen.getByLabelText('참조 키'), { target: { value: 'pump-a.state' } });
     fireEvent.click(screen.getByText('바인딩 저장'));
-    await userEvent.click(screen.getByText('Save'));
+    await userEvent.click(screen.getByText('저장'));
 
     await waitFor(() => expect(api.updateBoard).toHaveBeenCalled());
     expect(await screen.findByRole('alert')).toHaveTextContent('데모 데이터로 바인딩된 위젯이 있습니다');
@@ -409,7 +409,7 @@ describe('BoardEditorPage binding editor wiring', () => {
     });
     renderPage();
 
-    await screen.findByText('Save');
+    await screen.findByText('저장');
     fireEvent.click(screen.getByText('select-n1'));
 
     expect(await screen.findByRole('option', { name: 'Plant API' })).toBeInTheDocument();
@@ -434,7 +434,7 @@ describe('BoardEditorPage binding editor wiring', () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     renderPage();
 
-    await screen.findByText('Save');
+    await screen.findByText('저장');
     fireEvent.click(screen.getByText('select-n1'));
 
     expect(await screen.findByRole('option', { name: '데모 데이터 (예시, 실제 연결 아님)' })).toBeInTheDocument();

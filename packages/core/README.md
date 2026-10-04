@@ -65,6 +65,21 @@ the parent's width and fill its height. Both share one pan/zoom (drag empty spac
 zoom), the document opens fitted into view the same way, and a new node or decoration is placed
 where the author is looking.
 
+### Text in another language
+
+The components show English text by default. Pass `labels` — any subset of `UBoardLabels`, the
+rest stays English — to show your own; `DEFAULT_LABELS` lists every key with its English text.
+`labels.qualityText` holds the words for connection quality (the node tooltip and screen-reader
+announcement):
+
+```tsx
+import { ViewerPage, type UBoardLabels } from '@iyulab/u-board/viewer';
+
+const labels: Partial<UBoardLabels> = { zoomIn: '확대', zoomOut: '축소', fitToView: '화면에 맞추기' };
+
+<ViewerPage initialDocument={doc} adapters={adapters} labels={labels} />;
+```
+
 ## Widgets
 
 A node's widget is drawn by [`@iyulab/u-widgets`](https://github.com/iyulab/u-widgets): the renderer

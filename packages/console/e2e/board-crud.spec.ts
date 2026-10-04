@@ -16,9 +16,9 @@ test('create a board, add a node, save, and see it persisted after reopening', a
   await page.getByRole('button', { name: '생성' }).click();
 
   // 편집기로 이동, 노드 추가, 저장
-  await expect(page.getByText('Save')).toBeVisible();
-  await page.getByText('Add node').click();
-  await page.getByText('Save').click();
+  await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
+  await page.getByText('노드 추가').click();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
   // 목록으로 돌아가 재진입해도 저장된 상태(추가한 노드)가 남아있는지 확인 — 저장 직후라
@@ -26,12 +26,12 @@ test('create a board, add a node, save, and see it persisted after reopening', a
   await page.getByRole('link', { name: '◂ 보드 목록으로' }).click();
   await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
   await page.getByRole('link', { name: 'E2E Board' }).click();
-  await expect(page.getByText('Save')).toBeVisible();
+  await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
   // NOTE: 보드 편집기 페이지에는 owner에게 렌더링되는 공유 패널도 <details>이므로(공유
   // 태스크 이후 실측), 텍스트로 ViewDocument 디버그 패널을 특정해 strict-mode violation을
   // 피한다.
-  const debugPanel = page.locator('details').filter({ hasText: 'ViewDocument (debug)' });
-  await expect(debugPanel.locator('summary')).toHaveText('ViewDocument (debug)');
+  const debugPanel = page.locator('details').filter({ hasText: 'ViewDocument (디버그)' });
+  await expect(debugPanel.locator('summary')).toHaveText('ViewDocument (디버그)');
   await debugPanel.locator('summary').click(); // <details> 펼치기
   await expect(page.locator('pre')).toContainText('"widget"'); // 추가한 노드가 document에 남아있음
 });

@@ -9,6 +9,8 @@ import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument } from '../view-document.js';
+import type { UBoardLabels } from '../labels.js';
+import { useLabels } from '../use-labels.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -23,8 +25,10 @@ export interface ViewerPageProps {
    * current. Omitted, bindings resolve once when the document opens. */
   pollIntervalMs?: number;
   /** Accessible name of the board view — e.g. the board's name. The view is focusable: arrow keys
-   * pan, `+`/`-` zoom. Default "Board". */
+   * pan, `+`/`-` zoom. Default `labels.boardRegion` ("Board"). */
   ariaLabel?: string;
+  /** Text to show instead of the English defaults — any subset of `UBoardLabels`. */
+  labels?: Partial<UBoardLabels>;
 }
 
 /**
@@ -42,8 +46,10 @@ export function ViewerPage({
   height,
   initialDocument,
   pollIntervalMs,
-  ariaLabel = 'Board',
+  ariaLabel,
+  labels: labelsProp,
 }: ViewerPageProps) {
+  const labels = useLabels(labelsProp);
   const [doc, setDoc] = useState<ViewDocument | null>(initialDocument ?? null);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -67,17 +73,17 @@ export function ViewerPage({
       return;
     }
     let cancelled = false;
-    setPreview(toCanvasKit(resolved));
+    setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText }));
     // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
     // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
     // pick it up.
     chartsReady.then(() => {
-      if (!cancelled) setPreview(toCanvasKit(resolved));
+      if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText }));
     });
     return () => {
       cancelled = true;
     };
-  }, [resolved]);
+  }, [resolved, labels]);
 
   const handleImportClick = () => fileInputRef.current?.click();
 
@@ -90,7 +96,7 @@ export function ViewerPage({
       setDoc(parseViewDocument(await file.text()));
       setImportError(null);
     } catch (err) {
-      setImportError(err instanceof InvalidViewDocumentError ? err.message : 'Import failed.');
+      setImportError(err instanceof InvalidViewDocumentError ? err.message : labels.importFailed);
     }
   };
 
@@ -100,7 +106,7 @@ export function ViewerPage({
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           {!initialDocument && (
             <>
-              <button onClick={handleImportClick}>Import</button>
+              <button onClick={handleImportClick}>{labels.import}</button>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -110,12 +116,12 @@ export function ViewerPage({
               />
             </>
           )}
-          {viewerShown && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} />}
+          {viewerShown && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
         </div>
       )}
       {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
       {!doc ? (
-        <p style={{ color: '#64748b' }}>No document loaded — Import one to view it.</p>
+        <p style={{ color: '#64748b' }}>{labels.noDocument}</p>
       ) : preview ? (
         <div style={{ flex: 1, minHeight: 0 }}>
           <Viewer
@@ -126,11 +132,11 @@ export function ViewerPage({
             transform={view.transform}
             onTransformChange={view.onUserTransform}
             onViewportResize={view.onViewportResize}
-            ariaLabel={ariaLabel}
+            ariaLabel={ariaLabel ?? labels.boardRegion}
           />
         </div>
       ) : (
-        <p>Resolving…</p>
+        <p>{labels.resolving}</p>
       )}
     </div>
   );

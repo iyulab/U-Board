@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { describeQuality, worstQuality } from './quality-text.js';
+import { describeQuality, worstQuality, DEFAULT_QUALITY_TEXT } from './quality-text.js';
 
 describe('describeQuality', () => {
   it('adds the cause to a single abnormal binding', () => {
@@ -34,5 +34,21 @@ describe('worstQuality', () => {
 
   it('says nothing when every binding is live', () => {
     expect(describeQuality({ a: 'live' })).toBeUndefined();
+  });
+});
+
+describe('describeQuality with other words', () => {
+  const text = {
+    quality: { stale: 'S', disconnected: 'D' },
+    reason: { transport: 'T', auth: 'A', address: 'AD', throttled: 'TH' },
+  };
+
+  it('builds the line from the given text', () => {
+    expect(describeQuality({ 'data.value': 'disconnected' }, { 'data.value': 'auth' }, text)).toBe('D (A)');
+    expect(describeQuality({ a: 'disconnected', b: 'stale' }, { a: 'address' }, text)).toBe('D (a: AD) · S (b)');
+  });
+
+  it('defaults to the English text', () => {
+    expect(describeQuality({ v: 'stale' }, {}, DEFAULT_QUALITY_TEXT)).toBe(describeQuality({ v: 'stale' }));
   });
 });

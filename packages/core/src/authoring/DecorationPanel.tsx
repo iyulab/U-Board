@@ -1,8 +1,10 @@
 import type { Shape } from '../view-document.js';
+import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 
 export interface DecorationPanelProps {
   decoration: Shape;
   onChange: (decoration: Shape) => void;
+  labels?: UBoardLabels;
 }
 
 /**
@@ -12,17 +14,17 @@ export interface DecorationPanelProps {
  * (`scene-mapping.ts`), so this panel only exposes what dragging can't: a text decoration's
  * label. A rect decoration has nothing else to edit yet (docs/concepts.md — "Decoration").
  */
-export function DecorationPanel({ decoration, onChange }: DecorationPanelProps) {
+export function DecorationPanel({ decoration, onChange, labels = DEFAULT_LABELS }: DecorationPanelProps) {
   return (
     <div>
-      <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>Decoration</h2>
+      <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.decorationHeading}</h2>
       {decoration.type === 'text' ? (
         <label>
-          라벨
+          {labels.decorationText}
           <input value={decoration.text} onChange={e => onChange({ ...decoration, text: e.target.value })} />
         </label>
       ) : (
-        <p style={{ fontSize: 12 }}>캔버스에서 드래그/리사이즈로 위치와 크기를 조정하세요.</p>
+        <p style={{ fontSize: 12 }}>{labels.decorationHint}</p>
       )}
     </div>
   );
