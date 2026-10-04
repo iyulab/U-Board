@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import type { AppConfig } from '../app.js';
 import {
   listWorkspacesForUser,
@@ -6,8 +6,10 @@ import {
   findWorkspaceUser,
   createWorkspace,
   addWorkspaceUser,
+  changeWorkspaceMembership,
+  type WorkspaceRole,
 } from '../db/workspaces.js';
-import { createInvitation } from '../db/invitations.js';
+import { createInvitation, listPendingInvitations, revokeInvitation } from '../db/invitations.js';
 import { findUserByEmail } from '../db/users.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
 import { requireWorkspaceOwner, requireWorkspaceMember } from '../middleware/require-workspace-role.js';
@@ -19,11 +21,14 @@ export function createWorkspacesRouter(config: AppConfig): Router {
   router.use(requireAuth(db, sessionSecret));
 
   router.get('/me', async (req: AuthedRequest, res) => {
-    res.status(200).json({
-      userId: req.userId,
-      activeWorkspaceId: req.activeWorkspaceId,
-      workspaces: await listWorkspacesForUser(db, req.userId!),
-    });
+    const workspaces = await listWorkspacesForUser(db, req.userId!);
+    // The session names the workspace it last switched to, but membership can end while the session
+    // lives on (an owner removed this user, or they left). Answer with one they still belong to —
+    // or none — instead of a workspace every request would then refuse.
+    const activeWorkspaceId = workspaces.some(w => w.id === req.activeWorkspaceId)
+      ? req.activeWorkspaceId
+      : (workspaces[0]?.id ?? '');
+    res.status(200).json({ userId: req.userId, activeWorkspaceId, workspaces });
   });
 
   router.post('/', async (req: AuthedRequest, res) => {
@@ -46,9 +51,42 @@ export function createWorkspacesRouter(config: AppConfig): Router {
     res.status(200).json({ members: await listWorkspaceMembers(db, req.params.workspaceId) });
   });
 
+  // An owner removes anyone; any member may remove themselves (leaving). Either way the workspace
+  // keeps at least one owner.
+  router.delete('/:workspaceId/members/:userId', requireWorkspaceMember(db), async (req: AuthedRequest<{ workspaceId: string; userId: string }>, res) => {
+    const { workspaceId, userId } = req.params;
+    if (userId !== req.userId && (await findWorkspaceUser(db, workspaceId, req.userId!))?.role !== 'owner') {
+      res.status(403).json({ code: 'FORBIDDEN' });
+      return;
+    }
+    sendMembershipResult(res, await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'remove' } }));
+  });
+
+  router.patch('/:workspaceId/members/:userId', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string; userId: string }>, res) => {
+    const { role } = req.body ?? {};
+    if (!isWorkspaceRole(role)) {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    const { workspaceId, userId } = req.params;
+    sendMembershipResult(res, await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'set-role', role } }));
+  });
+
+  router.get('/:workspaceId/invitations', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string }>, res) => {
+    res.status(200).json({ invitations: await listPendingInvitations(db, req.params.workspaceId) });
+  });
+
+  router.delete('/:workspaceId/invitations/:invitationId', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string; invitationId: string }>, res) => {
+    if (!(await revokeInvitation(db, req.params.workspaceId, req.params.invitationId))) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return;
+    }
+    res.status(204).end();
+  });
+
   router.post('/:workspaceId/invitations', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string }>, res) => {
     const { email, role } = req.body ?? {};
-    if (typeof email !== 'string' || (role !== 'owner' && role !== 'member')) {
+    if (typeof email !== 'string' || !isWorkspaceRole(role)) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
@@ -70,4 +108,14 @@ export function createWorkspacesRouter(config: AppConfig): Router {
   });
 
   return router;
+}
+
+function isWorkspaceRole(value: unknown): value is WorkspaceRole {
+  return value === 'owner' || value === 'member';
+}
+
+function sendMembershipResult(res: Response, result: Awaited<ReturnType<typeof changeWorkspaceMembership>>): void {
+  if (result === 'not-member') res.status(404).json({ code: 'NOT_FOUND' });
+  else if (result === 'last-owner') res.status(409).json({ code: 'LAST_OWNER' });
+  else res.status(204).end();
 }

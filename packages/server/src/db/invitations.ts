@@ -67,10 +67,6 @@ export async function findInvitationByToken(db: DbClient, token: string): Promis
   return rows[0] ? rowToInvitation(rows[0]) : undefined;
 }
 
-export async function markInvitationAccepted(db: DbClient, id: string): Promise<void> {
-  await db.query(`UPDATE workspace_invitations SET accepted_at = $1 WHERE id = $2`, [new Date().toISOString(), id]);
-}
-
 /** Atomically claims an invitation only if nobody has accepted it yet — the WHERE clause and the
  * write happen as one statement, so two concurrent redemptions of the same token can't both
  * succeed (the loser gets zero rows back). This is what actually makes concurrent signup safe
@@ -87,4 +83,31 @@ export async function markInvitationAcceptedIfUnused(db: DbClient, id: string): 
 export function isInvitationUsable(invitation: WorkspaceInvitation): boolean {
   if (invitation.acceptedAt !== null) return false;
   return new Date(invitation.expiresAt).getTime() > Date.now();
+}
+
+/** Invitations that can still be redeemed — not accepted, not expired. Tokens stay out of the
+ * result: the link is shown once when it is created, like a share token. */
+export async function listPendingInvitations(
+  db: DbClient,
+  workspaceId: string
+): Promise<Array<Omit<WorkspaceInvitation, 'token' | 'acceptedAt'>>> {
+  const { rows } = await db.query<InvitationRow>(
+    `SELECT * FROM workspace_invitations
+     WHERE workspace_id = $1 AND accepted_at IS NULL AND expires_at > $2
+     ORDER BY expires_at ASC, id ASC`,
+    [workspaceId, new Date().toISOString()]
+  );
+  return rows.map(row => {
+    const { token: _token, acceptedAt: _acceptedAt, ...rest } = rowToInvitation(row);
+    return rest;
+  });
+}
+
+/** Deletes an unaccepted invitation of this workspace; `false` when there is none to revoke. */
+export async function revokeInvitation(db: DbClient, workspaceId: string, invitationId: string): Promise<boolean> {
+  const { rowCount } = await db.query(
+    `DELETE FROM workspace_invitations WHERE id = $1 AND workspace_id = $2 AND accepted_at IS NULL`,
+    [invitationId, workspaceId]
+  );
+  return (rowCount ?? 0) > 0;
 }

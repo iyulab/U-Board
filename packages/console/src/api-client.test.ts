@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector, listShareTokens, createShareToken, deleteShareToken } from './api-client.js';
+import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector, listShareTokens, createShareToken, deleteShareToken, removeMember, setMemberRole, listInvitations, revokeInvitation } from './api-client.js';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
@@ -126,6 +126,38 @@ describe('board endpoints', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
     await expect(deleteBoard('w1', 'b1')).resolves.toBeUndefined();
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ method: 'DELETE' }));
+  });
+});
+
+describe('membership endpoints', () => {
+  it('removeMember DELETEs the membership', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await expect(removeMember('w1', 'u2')).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/members/u2', expect.objectContaining({ method: 'DELETE' }));
+  });
+
+  it('removeMember surfaces LAST_OWNER', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ code: 'LAST_OWNER' }) });
+    await expect(removeMember('w1', 'u1')).rejects.toMatchObject({ code: 'LAST_OWNER', status: 409 });
+  });
+
+  it('setMemberRole PATCHes {role}', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await setMemberRole('w1', 'u2', 'owner');
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/workspaces/w1/members/u2',
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ role: 'owner' }) })
+    );
+  });
+
+  it('listInvitations GETs and revokeInvitation DELETEs', async () => {
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ invitations: [] }) });
+    await expect(listInvitations('w1')).resolves.toEqual({ invitations: [] });
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/invitations', expect.objectContaining({ credentials: 'include' }));
+
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    await revokeInvitation('w1', 'i1');
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/invitations/i1', expect.objectContaining({ method: 'DELETE' }));
   });
 });
 

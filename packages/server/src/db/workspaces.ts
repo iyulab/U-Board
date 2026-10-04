@@ -79,3 +79,38 @@ export async function listWorkspaceMembers(
   );
   return rows.map(r => ({ userId: r.user_id, email: r.email, name: r.name, role: r.role }));
 }
+
+export type MembershipChange = { kind: 'remove' } | { kind: 'set-role'; role: WorkspaceRole };
+
+/**
+ * Removes a member or changes their role while keeping the workspace's one invariant: at least
+ * one owner remains. The workspace row is locked first so two concurrent changes (two owners each
+ * removing the other) serialize — under READ COMMITTED both would otherwise count two owners and
+ * both succeed, leaving none.
+ */
+export async function changeWorkspaceMembership(
+  db: DbClient,
+  input: { workspaceId: string; userId: string; change: MembershipChange }
+): Promise<'changed' | 'not-member' | 'last-owner'> {
+  return db.withTransaction(async tx => {
+    await tx.query(`SELECT id FROM workspaces WHERE id = $1 FOR UPDATE`, [input.workspaceId]);
+    const target = await findWorkspaceUser(tx, input.workspaceId, input.userId);
+    if (!target) return 'not-member';
+
+    const losesOwner = target.role === 'owner' && (input.change.kind === 'remove' || input.change.role !== 'owner');
+    if (losesOwner) {
+      const { rows } = await tx.query<{ owners: number }>(
+        `SELECT COUNT(*)::int AS owners FROM workspace_users WHERE workspace_id = $1 AND role = 'owner'`,
+        [input.workspaceId]
+      );
+      if ((rows[0]?.owners ?? 0) <= 1) return 'last-owner';
+    }
+
+    if (input.change.kind === 'remove') {
+      await tx.query(`DELETE FROM workspace_users WHERE id = $1`, [target.id]);
+    } else {
+      await tx.query(`UPDATE workspace_users SET role = $1 WHERE id = $2`, [input.change.role, target.id]);
+    }
+    return 'changed';
+  });
+}

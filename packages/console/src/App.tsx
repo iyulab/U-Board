@@ -15,6 +15,7 @@ import { ToastProvider } from './design-system/Toast.js';
 import { AppShell } from './design-system/AppShell.js';
 import { WorkspaceSwitcher } from './design-system/WorkspaceSwitcher.js';
 import { Loading } from './design-system/Loading.js';
+import { EmptyState } from './design-system/EmptyState.js';
 
 // The only route that pulls in canvas-kit's authoring stack (KonvaDesigner/Viewer, react-konva) —
 // code-split so `/boards` and `/connectors` don't pay for it in their own chunk (the same
@@ -99,11 +100,26 @@ function AuthedLayout({ children }: { children: (session: NonNullable<Awaited<Re
             />
           }
         >
-          {children(session)}
+          {session.activeWorkspaceId ? (
+            children(session)
+          ) : (
+            // Removed from (or left) every workspace: no page has a workspace to show, so offer the
+            // two ways back in instead of rendering pages against an empty id.
+            <EmptyState>
+              소속된 워크스페이스가 없습니다. 위의 워크스페이스 메뉴에서 새로 만들거나, 받은 초대 링크로 참여하세요.
+            </EmptyState>
+          )}
         </AppShell>
       )}
     </RequireSession>
   );
+}
+
+// Leaving changes which workspaces the session can open — reload, as switching does, so the shell
+// and page re-read the session (the server then answers with a workspace the user still belongs to).
+function SettingsRoute({ workspaceId, userId }: { workspaceId: string; userId: string }) {
+  const navigate = useNavigate();
+  return <SettingsPage workspaceId={workspaceId} userId={userId} onLeft={() => navigate(0)} />;
 }
 
 export function App({
@@ -130,7 +146,15 @@ export function App({
             path="/boards/:boardId/edit"
             element={
               <Suspense fallback={<Loading />}>
-                <RequireSession>{s => <BoardEditorPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</RequireSession>
+                <RequireSession>
+                  {s =>
+                    s.activeWorkspaceId ? (
+                      <BoardEditorPage workspaceId={s.activeWorkspaceId} userId={s.userId} />
+                    ) : (
+                      <Navigate to="/boards" replace />
+                    )
+                  }
+                </RequireSession>
               </Suspense>
             }
           />
@@ -140,7 +164,7 @@ export function App({
           />
           <Route
             path="/settings"
-            element={<AuthedLayout>{s => <SettingsPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</AuthedLayout>}
+            element={<AuthedLayout>{s => <SettingsRoute workspaceId={s.activeWorkspaceId} userId={s.userId} />}</AuthedLayout>}
           />
         </Routes>
       </RouterComponent>

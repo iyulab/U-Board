@@ -6,6 +6,6 @@ import { defineConfig } from 'vitest/config';
 // test` in the first place.
 export default defineConfig({
   test: {
-    include: ['src/routes/auth.postgres.test.ts'],
+    include: ['src/**/*.postgres.test.ts'],
   },
 });

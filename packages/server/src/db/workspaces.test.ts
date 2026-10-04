@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { DbClient } from '../db.js';
 import { createTestDb } from '../test-support/test-db.js';
 import { createUser } from './users.js';
-import { createWorkspace, addWorkspaceUser, findWorkspaceUser, listWorkspacesForUser, listWorkspaceMembers } from './workspaces.js';
+import {
+  createWorkspace,
+  addWorkspaceUser,
+  findWorkspaceUser,
+  listWorkspacesForUser,
+  listWorkspaceMembers,
+  changeWorkspaceMembership,
+} from './workspaces.js';
 
 let db: DbClient;
 beforeEach(async () => {
@@ -48,5 +55,63 @@ describe('workspace repository', () => {
     const members = await listWorkspaceMembers(db, ws.id);
     expect(members).toHaveLength(2);
     expect(members.find(m => m.userId === owner.id)?.role).toBe('owner');
+  });
+});
+
+describe('changeWorkspaceMembership', () => {
+  async function workspaceWith(roles: Array<'owner' | 'member'>) {
+    const ws = await createWorkspace(db, 'W');
+    const userIds: string[] = [];
+    for (const [i, role] of roles.entries()) {
+      const user = await createUser(db, { email: `u${i}@x.com`, passwordHash: 'h', name: `U${i}` });
+      await addWorkspaceUser(db, { workspaceId: ws.id, userId: user.id, role });
+      userIds.push(user.id);
+    }
+    return { workspaceId: ws.id, userIds };
+  }
+
+  it('removes a member', async () => {
+    const { workspaceId, userIds } = await workspaceWith(['owner', 'member']);
+    expect(await changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'remove' } })).toBe('changed');
+    expect(await findWorkspaceUser(db, workspaceId, userIds[1])).toBeUndefined();
+  });
+
+  it('changes a role in both directions', async () => {
+    const { workspaceId, userIds } = await workspaceWith(['owner', 'member']);
+    await changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'set-role', role: 'owner' } });
+    expect((await findWorkspaceUser(db, workspaceId, userIds[1]))?.role).toBe('owner');
+    await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'member' } });
+    expect((await findWorkspaceUser(db, workspaceId, userIds[0]))?.role).toBe('member');
+  });
+
+  it('refuses to remove or demote the last owner', async () => {
+    const { workspaceId, userIds } = await workspaceWith(['owner', 'member']);
+    expect(await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'remove' } })).toBe('last-owner');
+    expect(
+      await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'member' } })
+    ).toBe('last-owner');
+    expect((await findWorkspaceUser(db, workspaceId, userIds[0]))?.role).toBe('owner');
+  });
+
+  it('lets the last owner keep the owner role (a no-op is not a demotion)', async () => {
+    const { workspaceId, userIds } = await workspaceWith(['owner']);
+    expect(
+      await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'owner' } })
+    ).toBe('changed');
+  });
+
+  it('reports a user who is not a member', async () => {
+    const { workspaceId } = await workspaceWith(['owner']);
+    expect(await changeWorkspaceMembership(db, { workspaceId, userId: 'nobody', change: { kind: 'remove' } })).toBe('not-member');
+  });
+
+  it('leaves one owner when two owners remove each other at once', async () => {
+    const { workspaceId, userIds } = await workspaceWith(['owner', 'owner']);
+    const results = await Promise.all([
+      changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'remove' } }),
+      changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'remove' } }),
+    ]);
+    expect(results.sort()).toEqual(['changed', 'last-owner']);
+    expect((await listWorkspaceMembers(db, workspaceId)).filter(m => m.role === 'owner')).toHaveLength(1);
   });
 });

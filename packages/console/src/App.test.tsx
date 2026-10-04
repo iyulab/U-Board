@@ -31,6 +31,20 @@ describe('App', () => {
     expect(screen.getByRole('button', { name: /Default/ })).toBeInTheDocument();
   });
 
+  it('shows a way back in, not workspace pages, when the user belongs to no workspace', async () => {
+    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: '', workspaces: [] });
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/boards']} />);
+    expect(await screen.findByText(/소속된 워크스페이스가 없습니다/)).toBeInTheDocument();
+    expect(api.listBoards).not.toHaveBeenCalled();
+  });
+
+  it('sends the board editor back to /boards when the user belongs to no workspace', async () => {
+    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: '', workspaces: [] });
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/boards/b1/edit']} />);
+    expect(await screen.findByText(/소속된 워크스페이스가 없습니다/)).toBeInTheDocument();
+    expect(api.getBoard).not.toHaveBeenCalled();
+  });
+
   it('renders InvitePage at "/invite/:token"', async () => {
     vi.mocked(api.getInvitation as any).mockResolvedValue({ email: 'a@x.com', workspaceId: 'w1', hasAccount: false });
     render(<App RouterComponent={MemoryRouter} initialEntries={['/invite/tok123']} />);
@@ -74,6 +88,7 @@ describe('/settings', () => {
   it('renders SettingsPage inside the authenticated shell', async () => {
     vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'owner@x.com', name: 'Owner', role: 'owner' }] });
+    vi.mocked(api.listInvitations).mockResolvedValue({ invitations: [] });
     render(<App RouterComponent={MemoryRouter} initialEntries={['/settings']} />);
 
     expect(await screen.findByText('owner@x.com')).toBeInTheDocument();

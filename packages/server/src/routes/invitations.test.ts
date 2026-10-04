@@ -101,4 +101,35 @@ describe('POST /invitations/:token/accept', () => {
     const secondAttempt = await cookie.post(`/api/invitations/${invitation.token}/accept`);
     expect(secondAttempt.status).toBe(410);
   });
+
+  it('admits once when the same invitation is accepted twice at the same time', async () => {
+    const owner = await createUser(db, { email: 'owner@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
+    const workspace = await createWorkspace(db, 'W1');
+    await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
+    const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'x@x.com', role: 'member', invitedByUserId: owner.id });
+    await createUser(db, { email: 'x@x.com', passwordHash: await hashPassword('p4ssword!'), name: 'X' });
+    const agent = request.agent(app);
+    await agent.post('/api/auth/login').send({ email: 'x@x.com', password: 'p4ssword!' });
+
+    const statuses = (
+      await Promise.all([agent.post(`/api/invitations/${invitation.token}/accept`), agent.post(`/api/invitations/${invitation.token}/accept`)])
+    ).map(r => r.status);
+
+    expect(statuses.sort()).toEqual([200, 410]);
+  });
+
+  it('lets someone who left rejoin through a new invitation', async () => {
+    const ownerAgent = request.agent(app);
+    const signup = await ownerAgent.post('/api/auth/signup').send({ email: 'owner@x.com', password: 'p4ssword!', name: 'Owner' });
+    const workspaceId = signup.body.workspaceId as string;
+    const first = await ownerAgent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'x@x.com', role: 'member' });
+    const member = request.agent(app);
+    const joined = await member.post('/api/auth/signup').send({ email: 'x@x.com', password: 'p4ssword!', name: 'X', invitationToken: first.body.token });
+    await member.delete(`/api/workspaces/${workspaceId}/members/${joined.body.userId}`);
+
+    const second = await ownerAgent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'x@x.com', role: 'member' });
+    expect(second.status).toBe(201);
+    expect((await member.post(`/api/invitations/${second.body.token}/accept`)).status).toBe(200);
+    expect((await member.get(`/api/workspaces/${workspaceId}/members`)).status).toBe(200);
+  });
 });

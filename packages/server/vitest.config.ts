@@ -2,7 +2,7 @@ import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    // `auth.postgres.test.ts` starts a real Postgres container via testcontainers — running it
+    // `*.postgres.test.ts` files start a real Postgres container via testcontainers — running them
     // in the same parallel batch as every other file's PGlite startup starves both (PGlite is
     // WASM and CPU-hungry to spin up, one instance per test file — see
     // src/test-support/test-db.ts — and a Docker container startup in that same window turned

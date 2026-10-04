@@ -142,3 +142,171 @@ describe('POST /workspaces/:id/switch', () => {
     expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=/);
   });
 });
+
+type Agent = ReturnType<typeof request.agent>;
+
+async function joinAs(ownerAgent: Agent, workspaceId: string, email: string, role: 'owner' | 'member') {
+  const inviteRes = await ownerAgent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email, role });
+  const agent = request.agent(app);
+  const res = await agent.post('/api/auth/signup').send({ email, password: 'p4ssword!', name: email, invitationToken: inviteRes.body.token });
+  return { agent, userId: res.body.userId as string };
+}
+
+async function userIdOf(agent: Agent) {
+  return (await agent.get('/api/workspaces/me')).body.userId as string;
+}
+
+describe('DELETE /workspaces/:id/members/:userId', () => {
+  it('lets an owner remove a member, who then loses access at once', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
+
+    const res = await ownerAgent.delete(`/api/workspaces/${workspaceId}/members/${member.userId}`);
+    expect(res.status).toBe(204);
+
+    // The removed member's session is still valid, but every workspace route re-checks membership.
+    expect((await member.agent.get(`/api/workspaces/${workspaceId}/boards`)).status).toBe(403);
+    expect((await ownerAgent.get(`/api/workspaces/${workspaceId}/members`)).body.members).toHaveLength(1);
+  });
+
+  it('lets a member leave on their own', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
+    expect((await member.agent.delete(`/api/workspaces/${workspaceId}/members/${member.userId}`)).status).toBe(204);
+    expect((await member.agent.get(`/api/workspaces/${workspaceId}/members`)).status).toBe(403);
+  });
+
+  it('forbids a member from removing someone else', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
+    const res = await member.agent.delete(`/api/workspaces/${workspaceId}/members/${await userIdOf(ownerAgent)}`);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('FORBIDDEN');
+  });
+
+  it('refuses to let the last owner leave (409 LAST_OWNER)', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    const res = await agent.delete(`/api/workspaces/${workspaceId}/members/${await userIdOf(agent)}`);
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('LAST_OWNER');
+  });
+
+  it('lets an owner leave once another owner exists — handing a workspace over', async () => {
+    const { agent: operator, workspaceId } = await bootstrapOwner();
+    const customer = await joinAs(operator, workspaceId, 'customer-admin@x.com', 'owner');
+
+    expect((await operator.delete(`/api/workspaces/${workspaceId}/members/${await userIdOf(operator)}`)).status).toBe(204);
+    expect((await customer.agent.get(`/api/workspaces/${workspaceId}/members`)).body.members).toEqual([
+      { userId: customer.userId, email: 'customer-admin@x.com', name: 'customer-admin@x.com', role: 'owner' },
+    ]);
+  });
+
+  it('returns 404 for a user who is not a member', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    const res = await agent.delete(`/api/workspaces/${workspaceId}/members/nobody`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 403 to a signed-in user outside the workspace', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const other = await ownerAgent.post('/api/workspaces').send({ name: 'Other' });
+    const outsider = await joinAs(ownerAgent, other.body.id, 'outsider@x.com', 'owner');
+    const res = await outsider.agent.delete(`/api/workspaces/${workspaceId}/members/${await userIdOf(ownerAgent)}`);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('PATCH /workspaces/:id/members/:userId', () => {
+  it('lets an owner promote and demote', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
+
+    expect((await ownerAgent.patch(`/api/workspaces/${workspaceId}/members/${member.userId}`).send({ role: 'owner' })).status).toBe(204);
+    expect(
+      (await ownerAgent.patch(`/api/workspaces/${workspaceId}/members/${await userIdOf(ownerAgent)}`).send({ role: 'member' })).status
+    ).toBe(204);
+
+    const members = (await member.agent.get(`/api/workspaces/${workspaceId}/members`)).body.members as Array<{ email: string; role: string }>;
+    expect(Object.fromEntries(members.map(m => [m.email, m.role]))).toEqual({ 'owner@x.com': 'member', 'member@x.com': 'owner' });
+  });
+
+  it('refuses to demote the last owner', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    const res = await agent.patch(`/api/workspaces/${workspaceId}/members/${await userIdOf(agent)}`).send({ role: 'member' });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe('LAST_OWNER');
+  });
+
+  it('rejects an unknown role with 400', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    const res = await agent.patch(`/api/workspaces/${workspaceId}/members/${await userIdOf(agent)}`).send({ role: 'admin' });
+    expect(res.status).toBe(400);
+  });
+
+  it('forbids a member from changing roles', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
+    const res = await member.agent.patch(`/api/workspaces/${workspaceId}/members/${member.userId}`).send({ role: 'owner' });
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /workspaces/me after losing membership', () => {
+  it('falls back to a workspace the user still belongs to', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
+    const own = await member.agent.post('/api/workspaces').send({ name: 'Mine' });
+    await member.agent.post(`/api/workspaces/${workspaceId}/switch`);
+
+    await ownerAgent.delete(`/api/workspaces/${workspaceId}/members/${member.userId}`);
+
+    const me = await member.agent.get('/api/workspaces/me');
+    expect(me.body.activeWorkspaceId).toBe(own.body.id);
+    expect(me.body.workspaces.map((w: { id: string }) => w.id)).toEqual([own.body.id]);
+  });
+
+  it('reports no active workspace when none remain', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
+    await member.agent.delete(`/api/workspaces/${workspaceId}/members/${member.userId}`);
+
+    const me = await member.agent.get('/api/workspaces/me');
+    expect(me.status).toBe(200);
+    expect(me.body).toMatchObject({ activeWorkspaceId: '', workspaces: [] });
+  });
+});
+
+describe('workspace invitations: list and revoke', () => {
+  it('lists pending invitations for an owner, without tokens', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'new@x.com', role: 'owner' });
+
+    const res = await agent.get(`/api/workspaces/${workspaceId}/invitations`);
+    expect(res.status).toBe(200);
+    expect(res.body.invitations).toEqual([
+      { id: expect.any(String), workspaceId, email: 'new@x.com', role: 'owner', invitedByUserId: expect.any(String), expiresAt: expect.any(String) },
+    ]);
+  });
+
+  it('revokes an invitation so its link no longer admits anyone', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    const invite = await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'new@x.com', role: 'member' });
+    const [{ id }] = (await agent.get(`/api/workspaces/${workspaceId}/invitations`)).body.invitations;
+
+    expect((await agent.delete(`/api/workspaces/${workspaceId}/invitations/${id}`)).status).toBe(204);
+    expect((await agent.get(`/api/workspaces/${workspaceId}/invitations`)).body.invitations).toEqual([]);
+
+    const signup = await request(app).post('/api/auth/signup').send({
+      email: 'new@x.com', password: 'p4ssword!', name: 'New', invitationToken: invite.body.token,
+    });
+    expect(signup.status).toBe(410);
+    expect((await agent.delete(`/api/workspaces/${workspaceId}/invitations/${id}`)).status).toBe(404);
+  });
+
+  it('forbids members from listing or revoking invitations', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
+    expect((await member.agent.get(`/api/workspaces/${workspaceId}/invitations`)).status).toBe(403);
+    expect((await member.agent.delete(`/api/workspaces/${workspaceId}/invitations/x`)).status).toBe(403);
+  });
+});

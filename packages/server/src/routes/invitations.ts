@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { AppConfig } from '../app.js';
-import { findInvitationByToken, markInvitationAccepted, isInvitationUsable } from '../db/invitations.js';
+import { findInvitationByToken, markInvitationAcceptedIfUnused, isInvitationUsable } from '../db/invitations.js';
 import { findUserByEmail, findUserById } from '../db/users.js';
 import { normalizeEmail } from '../db/email.js';
 import { addWorkspaceUser, findWorkspaceUser } from '../db/workspaces.js';
@@ -50,8 +50,19 @@ export function createInvitationsRouter(config: AppConfig): Router {
       res.status(409).json({ code: 'ALREADY_MEMBER' });
       return;
     }
-    await addWorkspaceUser(db, { workspaceId: invitation.workspaceId, userId: req.userId!, role: invitation.role });
-    await markInvitationAccepted(db, invitation.id);
+    // Claim and join as one transaction: the conditional claim loses to a concurrent redemption
+    // and to an owner revoking the invitation in between (the row is gone), so neither can admit
+    // a member the invitation no longer allows.
+    const joined = await db.withTransaction(async tx => {
+      const claimed = await markInvitationAcceptedIfUnused(tx, invitation.id);
+      if (!claimed) return false;
+      await addWorkspaceUser(tx, { workspaceId: claimed.workspaceId, userId: req.userId!, role: claimed.role });
+      return true;
+    });
+    if (!joined) {
+      res.status(410).json({ code: 'INVITATION_EXPIRED' });
+      return;
+    }
     res.status(200).json({ workspaceId: invitation.workspaceId });
   });
 

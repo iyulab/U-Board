@@ -25,6 +25,10 @@ Open `http://<host>:4000/`. **The first account to sign up owns the installation
 owner of a workspace named "Default". Every later account joins through an invitation an owner sends
 from the console, so sign up yourself before you hand the address to anyone else.
 
+Owners change members' roles, remove members, and cancel invitations that have not been accepted;
+any member can leave a workspace. A workspace always keeps at least one owner — to hand one over,
+invite the new owner with the `owner` role and leave once they have joined.
+
 ## Settings
 
 | Variable | Required | What it does |

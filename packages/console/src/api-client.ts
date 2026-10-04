@@ -100,6 +100,32 @@ export function inviteMember(workspaceId: string, input: { email: string; role: 
   });
 }
 
+/** Removes a member — or, with the caller's own id, leaves the workspace. Fails with `LAST_OWNER`
+ * (409) when it would leave the workspace without an owner. */
+export function removeMember(workspaceId: string, userId: string) {
+  return request<void>(`/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' });
+}
+
+/** Fails with `LAST_OWNER` (409) when it would demote the workspace's only owner. */
+export function setMemberRole(workspaceId: string, userId: string, role: 'owner' | 'member') {
+  return request<void>(`/workspaces/${workspaceId}/members/${userId}`, { method: 'PATCH', body: JSON.stringify({ role }) });
+}
+
+export interface PendingInvitation {
+  id: string;
+  email: string;
+  role: 'owner' | 'member';
+  expiresAt: string;
+}
+
+export function listInvitations(workspaceId: string) {
+  return request<{ invitations: PendingInvitation[] }>(`/workspaces/${workspaceId}/invitations`);
+}
+
+export function revokeInvitation(workspaceId: string, invitationId: string) {
+  return request<void>(`/workspaces/${workspaceId}/invitations/${invitationId}`, { method: 'DELETE' });
+}
+
 export function switchWorkspace(workspaceId: string) {
   return request<{ activeWorkspaceId: string }>(`/workspaces/${workspaceId}/switch`, { method: 'POST' });
 }
