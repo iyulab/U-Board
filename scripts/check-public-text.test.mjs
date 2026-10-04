@@ -1,7 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scanText, isScannedPath } from './check-public-text.mjs';
+import { scanText as scanWith, isScannedPath, allowlist } from './check-public-text.mjs';
 
+// A fixed allowlist, so these tests mean the same in every repository that carries this script.
+const ALLOW = allowlist({
+  hosts: ['github.com', 'www.npmjs.com', 'www.gnu.org', 'www.w3.org', 'x.com', 'test.com'],
+  githubRepos: ['iyulab/U-Board', 'iyulab/u-widgets'],
+});
+const scanText = (path, text) => scanWith(path, text, ALLOW);
 const rules = (path, text) => scanText(path, text).map(v => v.rule);
 
 test('allows reserved example hosts, localhost, and the known public hosts', () => {
@@ -19,6 +25,8 @@ test('allows reserved example hosts, localhost, and the known public hosts', () 
 test('flags any other host, with or without a scheme', () => {
   assert.deepEqual(rules('src/a.ts', 'const api = "https://api.internal-corp.kr/v1";'), ['host']);
   assert.deepEqual(rules('docs/x.md', 'Deployed at board.somewhere.io behind the proxy.'), ['host']);
+  assert.deepEqual(rules('.gitignore', '# ASP.NET Scaffolding and AutoTest.Net output'), []);
+  assert.deepEqual(rules('docs/x.md', 'See HTTPS://Board.Somewhere.IO/x'), ['host']);
 });
 
 test('limits GitHub links to the allowed public repositories', () => {
@@ -55,8 +63,19 @@ test('reports the line number and the matched text', () => {
 
 test('skips generated and binary files', () => {
   assert.equal(isScannedPath('package-lock.json'), false);
+  assert.equal(isScannedPath('pnpm-lock.yaml'), false);
+  assert.equal(isScannedPath('site/package-lock.json'), false);
+  assert.equal(isScannedPath('src/__snapshots__/a.test.ts.snap'), false);
+  assert.equal(isScannedPath('public-text.json'), false);
   assert.equal(isScannedPath('packages/core/public/bg.png'), false);
   assert.equal(isScannedPath('packages/core/src/App.tsx'), true);
+});
+
+test('takes hosts and repositories from the allowlist it is given, ignoring case', () => {
+  const allow = allowlist({ hosts: ['Docs.Example.Kr', 'GitHub.com'], githubRepos: ['Org/Repo'] });
+  assert.deepEqual(scanWith('a.md', 'see docs.example.kr and https://github.com/org/repo', allow), []);
+  assert.deepEqual(scanWith('a.md', 'https://github.com/org/other', allow).map(v => v.rule), ['github-repo']);
+  assert.deepEqual(scanWith('a.md', 'see docs.example.kr', allowlist()).map(v => v.rule), ['host']);
 });
 
 test('reads the repository from a GitHub link that carries a fragment or query', () => {

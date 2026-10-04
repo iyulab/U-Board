@@ -1,0 +1,23 @@
+{
+  "hosts": [
+    "github.com",
+    "www.npmjs.com",
+    "registry.npmjs.org",
+    "www.gnu.org",
+    "fsf.org",
+    "www.w3.org",
+    "keepachangelog.com",
+    "semver.org",
+    "www.sitemaps.org",
+    "board.u-platform.kr",
+    "board-app.u-platform.kr",
+    "u-platform.kr",
+    "x.com",
+    "test.com"
+  ],
+  "githubRepos": [
+    "iyulab/U-Board",
+    "iyulab/u-widgets",
+    "iyulab/canvas-kit"
+  ]
+}
