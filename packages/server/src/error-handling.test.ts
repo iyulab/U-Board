@@ -30,7 +30,7 @@ afterEach(() => {
 describe('error-handling middleware', () => {
   it('answers 500 INTERNAL_ERROR when an async route handler rejects', async () => {
     const res = await request(app)
-      .post('/auth/signup')
+      .post('/api/auth/signup')
       .send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
 
     expect(res.status).toBe(500);
@@ -40,7 +40,7 @@ describe('error-handling middleware', () => {
 
   it('answers 500 INTERNAL_ERROR when the login handler rejects', async () => {
     await createDbUser(db);
-    const res = await request(app).post('/auth/login').send({ email: 'first@x.com', password: 'p4ssword!' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'first@x.com', password: 'p4ssword!' });
 
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ code: 'INTERNAL_ERROR' });

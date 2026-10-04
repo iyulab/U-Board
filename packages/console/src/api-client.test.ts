@@ -14,14 +14,14 @@ describe('API base URL', () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
     await getBootstrapStatus();
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/auth/bootstrap-status', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/auth/bootstrap-status', expect.anything());
   });
 
   it('strips a trailing slash from VITE_API_BASE_URL to avoid a double slash', async () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
     await getBootstrapStatus();
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/auth/bootstrap-status', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/auth/bootstrap-status', expect.anything());
   });
 });
 
@@ -65,7 +65,7 @@ describe('signup', () => {
     const result = await signup({ email: 'a@x.com', password: 'p', name: 'A' });
     expect(result).toEqual({ userId: 'u1', workspaceId: 'w1' });
     expect(fetch).toHaveBeenCalledWith(
-      '/auth/signup',
+      '/api/auth/signup',
       expect.objectContaining({ method: 'POST', credentials: 'include' })
     );
   });
@@ -91,7 +91,7 @@ describe('getBootstrapStatus', () => {
   it('returns hasAnyUser from /auth/bootstrap-status', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
     await expect(getBootstrapStatus()).resolves.toEqual({ hasAnyUser: false });
-    expect(fetch).toHaveBeenCalledWith('/auth/bootstrap-status', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/auth/bootstrap-status', expect.objectContaining({ credentials: 'include' }));
   });
 });
 
@@ -99,33 +99,33 @@ describe('board endpoints', () => {
   it('listBoards GETs /workspaces/:id/boards', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ boards: [{ id: 'b1', name: 'A', updatedAt: 't' }] }) });
     await expect(listBoards('w1')).resolves.toEqual({ boards: [{ id: 'b1', name: 'A', updatedAt: 't' }] });
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards', expect.objectContaining({ credentials: 'include' }));
   });
 
   it('createBoard POSTs {name}', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ id: 'b1', name: 'A', updatedAt: 't' }) });
     await expect(createBoard('w1', 'A')).resolves.toEqual({ id: 'b1', name: 'A', updatedAt: 't' });
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'A' }) }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'A' }) }));
   });
 
   it('getBoard GETs /workspaces/:id/boards/:boardId', async () => {
     const doc = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'b1', name: 'A', document: doc, updatedAt: 't' }) });
     await expect(getBoard('w1', 'b1')).resolves.toEqual({ id: 'b1', name: 'A', document: doc, updatedAt: 't' });
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ credentials: 'include' }));
   });
 
   it('updateBoard PUTs the given fields', async () => {
     const doc = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'b1', name: 'A', updatedAt: 't2' }) });
     await expect(updateBoard('w1', 'b1', { document: doc })).resolves.toEqual({ id: 'b1', name: 'A', updatedAt: 't2' });
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ document: doc }) }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ document: doc }) }));
   });
 
   it('deleteBoard DELETEs and resolves with no body', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
     await expect(deleteBoard('w1', 'b1')).resolves.toBeUndefined();
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1', expect.objectContaining({ method: 'DELETE' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ method: 'DELETE' }));
   });
 });
 
@@ -134,7 +134,7 @@ describe('connector endpoints', () => {
     const summary = { id: 'c1', name: 'A', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't' };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ connectors: [summary] }) });
     await expect(listConnectors('w1')).resolves.toEqual({ connectors: [summary] });
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors', expect.objectContaining({ credentials: 'include' }));
   });
 
   it('createConnector POSTs the input', async () => {
@@ -142,27 +142,27 @@ describe('connector endpoints', () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => summary });
     const input = { name: 'A', baseUrl: 'https://a.example.com', authType: 'none' as const };
     await expect(createConnector('w1', input)).resolves.toEqual(summary);
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors', expect.objectContaining({ method: 'POST', body: JSON.stringify(input) }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors', expect.objectContaining({ method: 'POST', body: JSON.stringify(input) }));
   });
 
   it('updateConnector PUTs the given fields', async () => {
     const summary = { id: 'c1', name: 'Renamed', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't2' };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => summary });
     await expect(updateConnector('w1', 'c1', { name: 'Renamed' })).resolves.toEqual(summary);
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors/c1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ name: 'Renamed' }) }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors/c1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ name: 'Renamed' }) }));
   });
 
   it('deleteConnector DELETEs and resolves with no body', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
     await expect(deleteConnector('w1', 'c1')).resolves.toBeUndefined();
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors/c1', expect.objectContaining({ method: 'DELETE' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors/c1', expect.objectContaining({ method: 'DELETE' }));
   });
 
   it('resolveConnector POSTs the ref and returns value+quality', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ value: 'running', quality: 'live' }) });
     const ref = { path: '/pumps/a', valuePath: 'status' };
     await expect(resolveConnector('w1', 'c1', ref)).resolves.toEqual({ value: 'running', quality: 'live' });
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/connectors/c1/resolve', expect.objectContaining({ method: 'POST', body: JSON.stringify({ ref }) }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors/c1/resolve', expect.objectContaining({ method: 'POST', body: JSON.stringify({ ref }) }));
   });
 });
 
@@ -171,19 +171,19 @@ describe('share token endpoints', () => {
     const summary = { id: 't1', tokenMask: 'ab12cd34', createdAt: 't' };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ tokens: [summary] }) });
     await expect(listShareTokens('w1', 'b1')).resolves.toEqual({ tokens: [summary] });
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ credentials: 'include' }));
   });
 
   it('createShareToken POSTs with no body', async () => {
     const created = { id: 't1', token: 'plaintext-token-value', tokenMask: 'ab12cd34', createdAt: 't' };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => created });
     await expect(createShareToken('w1', 'b1')).resolves.toEqual(created);
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ method: 'POST' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ method: 'POST' }));
   });
 
   it('deleteShareToken DELETEs and resolves with no body', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
     await expect(deleteShareToken('w1', 'b1', 't1')).resolves.toBeUndefined();
-    expect(fetch).toHaveBeenCalledWith('/workspaces/w1/boards/b1/share-tokens/t1', expect.objectContaining({ method: 'DELETE' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens/t1', expect.objectContaining({ method: 'DELETE' }));
   });
 });

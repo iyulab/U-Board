@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
 
 test('requests a reset for an existing account and sees the enumeration-safe confirmation', async ({ page, request }) => {
   // 부트스트랩: 이 invocation의 첫(그리고 유일한) 가입
-  await request.post('/auth/signup', {
+  await request.post('/api/auth/signup', {
     data: { email: 'e2e-reset-owner@test.com', password: 'p4ssword!', name: 'E2E Reset Owner' },
   });
 

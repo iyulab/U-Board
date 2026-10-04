@@ -41,7 +41,7 @@ describe('errorHandler / body size limit', () => {
     const cookie = `${SESSION_COOKIE_NAME}=${signSession({ userId: member.id, activeWorkspaceId: workspace.id, issuedAt: Date.now() }, SECRET)}`;
 
     const create = await request(app)
-      .post(`/workspaces/${workspace.id}/boards`)
+      .post(`/api/workspaces/${workspace.id}/boards`)
       .set('Cookie', cookie)
       .send({ name: 'Big Image Board' });
     expect(create.status).toBe(201);
@@ -57,7 +57,7 @@ describe('errorHandler / body size limit', () => {
     };
 
     const res = await request(app)
-      .put(`/workspaces/${workspace.id}/boards/${boardId}`)
+      .put(`/api/workspaces/${workspace.id}/boards/${boardId}`)
       .set('Cookie', cookie)
       .send({ document: hugeDoc });
 
@@ -66,12 +66,12 @@ describe('errorHandler / body size limit', () => {
   });
 
   it('returns 400 INVALID_JSON (not a generic 500) for a malformed JSON body, including on a public route', async () => {
-    const malformed = await request(app).post('/auth/login').set('Content-Type', 'application/json').send('{not json');
+    const malformed = await request(app).post('/api/auth/login').set('Content-Type', 'application/json').send('{not json');
     expect(malformed.status).toBe(400);
     expect(malformed.body.code).toBe('INVALID_JSON');
 
     const malformedPublicRoute = await request(app)
-      .post('/share/boards/nonexistent/resolve')
+      .post('/api/share/boards/nonexistent/resolve')
       .set('Content-Type', 'application/json')
       .send('{not json');
     expect(malformedPublicRoute.status).toBe(400);
@@ -82,7 +82,7 @@ describe('errorHandler / body size limit', () => {
 describe('CORS', () => {
   it('reflects an allowed origin and marks credentials allowed', async () => {
     const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
-    const res = await request(corsApp).get('/auth/bootstrap-status').set('Origin', 'https://app.example.com');
+    const res = await request(corsApp).get('/api/auth/bootstrap-status').set('Origin', 'https://app.example.com');
     expect(res.headers['access-control-allow-origin']).toBe('https://app.example.com');
     expect(res.headers['access-control-allow-credentials']).toBe('true');
   });
@@ -90,7 +90,7 @@ describe('CORS', () => {
   it('lets browsers cache a preflight so a viewer resolving many bindings does not preflight each one', async () => {
     const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
     const res = await request(corsApp)
-      .options('/share/boards/b1/resolve')
+      .options('/api/share/boards/b1/resolve')
       .set('Origin', 'https://app.example.com')
       .set('Access-Control-Request-Method', 'POST')
       .set('Access-Control-Request-Headers', 'content-type');
@@ -100,12 +100,12 @@ describe('CORS', () => {
 
   it('omits CORS headers for an origin not on the allowlist', async () => {
     const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
-    const res = await request(corsApp).get('/auth/bootstrap-status').set('Origin', 'https://evil.example.com');
+    const res = await request(corsApp).get('/api/auth/bootstrap-status').set('Origin', 'https://evil.example.com');
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
 
   it('adds no CORS middleware when corsOrigins is unset (dev/test default)', async () => {
-    const res = await request(app).get('/auth/bootstrap-status').set('Origin', 'https://anything.example.com');
+    const res = await request(app).get('/api/auth/bootstrap-status').set('Origin', 'https://anything.example.com');
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
 
@@ -115,7 +115,7 @@ describe('CORS', () => {
     // entity.too.large path exercised in the 'errorHandler / body size limit' suite above.
     const hugeBody = { email: 'x@x.com', password: 'A'.repeat(11 * 1024 * 1024) };
     const res = await request(corsApp)
-      .post('/auth/login')
+      .post('/api/auth/login')
       .set('Origin', 'https://app.example.com')
       .send(hugeBody);
     expect(res.status).toBe(413);
@@ -127,44 +127,44 @@ describe('CORS', () => {
 describe('auth rate limiting', () => {
   it('returns 429 after exceeding the login attempt limit', async () => {
     for (let i = 0; i < 10; i++) {
-      await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
+      await request(app).post('/api/auth/login').send({ email: 'x@x.com', password: 'wrong' });
     }
-    const res = await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'x@x.com', password: 'wrong' });
     expect(res.status).toBe(429);
   });
 
   it('returns 429 after exceeding the request-password-reset attempt limit', async () => {
     for (let i = 0; i < 10; i++) {
-      await request(app).post('/auth/request-password-reset').send({ email: 'x@x.com' });
+      await request(app).post('/api/auth/request-password-reset').send({ email: 'x@x.com' });
     }
-    const res = await request(app).post('/auth/request-password-reset').send({ email: 'x@x.com' });
+    const res = await request(app).post('/api/auth/request-password-reset').send({ email: 'x@x.com' });
     expect(res.status).toBe(429);
   });
 
   it('returns 429 after exceeding the reset-password attempt limit', async () => {
     for (let i = 0; i < 10; i++) {
-      await request(app).post('/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
+      await request(app).post('/api/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
     }
-    const res = await request(app).post('/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
+    const res = await request(app).post('/api/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
     expect(res.status).toBe(429);
   });
 
   it('shares one bucket across login/signup/request-password-reset/reset-password (same IP)', async () => {
     for (let i = 0; i < 5; i++) {
-      await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
+      await request(app).post('/api/auth/login').send({ email: 'x@x.com', password: 'wrong' });
     }
     for (let i = 0; i < 5; i++) {
-      await request(app).post('/auth/request-password-reset').send({ email: 'x@x.com' });
+      await request(app).post('/api/auth/request-password-reset').send({ email: 'x@x.com' });
     }
-    const res = await request(app).post('/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
+    const res = await request(app).post('/api/auth/reset-password').send({ token: 'garbage', newPassword: 'x' });
     expect(res.status).toBe(429);
   });
 
   it('does not rate-limit unrelated routes', async () => {
     for (let i = 0; i < 10; i++) {
-      await request(app).post('/auth/login').send({ email: 'x@x.com', password: 'wrong' });
+      await request(app).post('/api/auth/login').send({ email: 'x@x.com', password: 'wrong' });
     }
-    const res = await request(app).get('/auth/bootstrap-status');
+    const res = await request(app).get('/api/auth/bootstrap-status');
     expect(res.status).not.toBe(429);
   });
 
@@ -172,12 +172,12 @@ describe('auth rate limiting', () => {
     const cfApp = createApp({ db, sessionSecret: SECRET, trustCloudflareProxy: true });
     for (let i = 0; i < 10; i++) {
       await request(cfApp)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .set('CF-Connecting-IP', '203.0.113.1')
         .send({ email: 'x@x.com', password: 'wrong' });
     }
     const sameIp = await request(cfApp)
-      .post('/auth/login')
+      .post('/api/auth/login')
       .set('CF-Connecting-IP', '203.0.113.1')
       .send({ email: 'x@x.com', password: 'wrong' });
     expect(sameIp.status).toBe(429);
@@ -185,7 +185,7 @@ describe('auth rate limiting', () => {
     // A different CF-Connecting-IP is a separate bucket even though supertest sends every
     // request from the same underlying req.ip — proves the key came from the header, not req.ip.
     const otherIp = await request(cfApp)
-      .post('/auth/login')
+      .post('/api/auth/login')
       .set('CF-Connecting-IP', '203.0.113.2')
       .send({ email: 'x@x.com', password: 'wrong' });
     expect(otherIp.status).not.toBe(429);
@@ -196,18 +196,18 @@ describe('auth rate limiting', () => {
     // Ten different addresses inside one /56 — one subscriber rotating through its allocation.
     for (let i = 0; i < 10; i++) {
       await request(cfApp)
-        .post('/auth/login')
+        .post('/api/auth/login')
         .set('CF-Connecting-IP', `2001:db8:0:${i.toString(16)}::1`)
         .send({ email: 'x@x.com', password: 'wrong' });
     }
     const sameSubnet = await request(cfApp)
-      .post('/auth/login')
+      .post('/api/auth/login')
       .set('CF-Connecting-IP', '2001:db8:0:ff::2')
       .send({ email: 'x@x.com', password: 'wrong' });
     expect(sameSubnet.status).toBe(429);
 
     const otherSubnet = await request(cfApp)
-      .post('/auth/login')
+      .post('/api/auth/login')
       .set('CF-Connecting-IP', '2001:db8:0:100::1')
       .send({ email: 'x@x.com', password: 'wrong' });
     expect(otherSubnet.status).not.toBe(429);

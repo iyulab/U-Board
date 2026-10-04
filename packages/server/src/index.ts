@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createDb } from './db.js';
 import { createApp } from './app.js';
 import { createSendwayPasswordResetEmailSender, sendwayConfigFromEnv } from './email/sendway-email-sender.js';
@@ -33,12 +36,25 @@ if (staleMaxAge !== undefined && staleMaxAge !== '' && !(Number(staleMaxAge) > 0
 }
 const staleMaxAgeMs = staleMaxAge ? Number(staleMaxAge) * 1000 : undefined;
 
+// The console and share viewer builds sit next to this package in the workspace (and in the
+// container image, which keeps that layout). Serve them when they have been built; otherwise the
+// server is the API alone, and the two apps run from their own dev servers or hosts.
+const packagesDir = fileURLToPath(new URL('../../', import.meta.url));
+const consoleDir = path.join(packagesDir, 'console', 'dist');
+const shareDir = path.join(packagesDir, 'share', 'dist');
+const webApps =
+  existsSync(path.join(consoleDir, 'index.html')) && existsSync(path.join(shareDir, 'index.html'))
+    ? { consoleDir, shareDir, shareFrameAncestors: process.env.UBOARD_SHARE_FRAME_ANCESTORS || undefined }
+    : undefined;
+
 const db = await createDb(databaseUrl);
-const app = createApp({ db, sessionSecret, corsOrigins, trustCloudflareProxy, sendPasswordResetEmail, staleMaxAgeMs });
+const app = createApp({ db, sessionSecret, corsOrigins, trustCloudflareProxy, sendPasswordResetEmail, staleMaxAgeMs, webApps });
 
 const port = Number(process.env.PORT ?? 4000);
 // Express 5 hands a startup failure (e.g. the port is taken) to this callback instead of throwing.
 app.listen(port, (err?: Error) => {
   if (err) throw err;
-  console.log(`@iyulab/u-board-server listening on :${port} (db: ${redactDatabaseUrl(databaseUrl)})`);
+  console.log(
+    `@iyulab/u-board-server listening on :${port} (db: ${redactDatabaseUrl(databaseUrl)}; ${webApps ? 'serving the console and share viewer' : 'API only'})`
+  );
 });

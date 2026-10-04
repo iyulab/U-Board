@@ -72,7 +72,9 @@ server-side board storage, managed connectors, and read-only share links.
 | `packages/share` | private | Read-only embed viewer that opens a board from a share link, using only the library's `viewer` entry point. |
 
 The three applications are how U-Board runs as a hosted service; a host application that only
-needs the library does not need any of them. [`CONTRIBUTING.md`](CONTRIBUTING.md) covers building
+needs the library does not need any of them. They ship as one container image
+(`packages/server/Dockerfile`) serving one origin: the API under `/api`, the share viewer under
+`/share/`, and the console at every other path. [`CONTRIBUTING.md`](CONTRIBUTING.md) covers building
 and testing the whole workspace.
 
 ## Domain layer

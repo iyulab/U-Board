@@ -6,18 +6,18 @@ describe('getApiBase', () => {
     vi.unstubAllEnvs();
   });
 
-  it('returns an empty string when VITE_API_BASE_URL is unset', () => {
-    expect(getApiBase()).toBe('');
+  it('is /api on this origin when VITE_API_BASE_URL is unset', () => {
+    expect(getApiBase()).toBe('/api');
   });
 
-  it('returns VITE_API_BASE_URL as-is when it has no trailing slash', () => {
+  it('is /api on VITE_API_BASE_URL when set', () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
-    expect(getApiBase()).toBe('https://api.example.com');
+    expect(getApiBase()).toBe('https://api.example.com/api');
   });
 
-  it('strips a trailing slash so callers can concatenate a leading-slash path safely', () => {
+  it('strips a trailing slash from VITE_API_BASE_URL so the path has no double slash', () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
-    expect(getApiBase()).toBe('https://api.example.com');
+    expect(getApiBase()).toBe('https://api.example.com/api');
   });
 });
 

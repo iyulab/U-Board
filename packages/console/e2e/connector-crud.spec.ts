@@ -57,12 +57,12 @@ test('create a connector via the UI, then resolve a live value through the real 
 
     // UI를 통한 resolve 왕복은 binding-editor.spec.ts가 검증한다 — 여기서는 API 계층 자체를
     // 독립적으로(UI 무관하게) 확인한다.
-    const session = await page.request.get('/workspaces/me').then(r => r.json());
+    const session = await page.request.get('/api/workspaces/me').then(r => r.json());
     const workspaceId = session.activeWorkspaceId;
-    const connectors = await page.request.get(`/workspaces/${workspaceId}/connectors`).then(r => r.json());
+    const connectors = await page.request.get(`/api/workspaces/${workspaceId}/connectors`).then(r => r.json());
     const connectorId = connectors.connectors.find((c: { name: string }) => c.name === 'Mock Plant API').id;
 
-    const resolveRes = await page.request.post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`, {
+    const resolveRes = await page.request.post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`, {
       data: { ref: { path: '/status', valuePath: 'status' } },
     });
     expect(resolveRes.ok()).toBe(true);

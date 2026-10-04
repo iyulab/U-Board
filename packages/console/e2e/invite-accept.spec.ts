@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test('an invited email with no account signs up through the invite link and joins the workspace', async ({ page, request }) => {
-  const signupRes = await request.post('/auth/signup', {
+  const signupRes = await request.post('/api/auth/signup', {
     data: { email: 'e2e-owner2@test.com', password: 'p4ssword!', name: 'Owner' },
   });
   const { workspaceId } = await signupRes.json();
   const cookie = signupRes.headers()['set-cookie'];
 
-  const inviteRes = await request.post(`/workspaces/${workspaceId}/invitations`, {
+  const inviteRes = await request.post(`/api/workspaces/${workspaceId}/invitations`, {
     data: { email: 'e2e-invitee@test.com', role: 'member' },
     headers: { Cookie: cookie },
   });

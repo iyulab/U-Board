@@ -39,14 +39,14 @@ beforeEach(async () => {
 describe('board share token management routes', () => {
   it('rejects a non-owner member with 403 on create', async () => {
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+      .post(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', memberCookie);
     expect(res.status).toBe(403);
   });
 
   it('owner creates, lists, and deletes a share token', async () => {
     const create = await request(app)
-      .post(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+      .post(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
     expect(create.status).toBe(201);
     expect(create.body.token).toEqual(expect.any(String));
@@ -55,7 +55,7 @@ describe('board share token management routes', () => {
     const tokenId = create.body.id;
 
     const list = await request(app)
-      .get(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+      .get(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
     expect(list.status).toBe(200);
     expect(list.body.tokens).toEqual([expect.objectContaining({ id: tokenId, tokenMask: create.body.tokenMask })]);
@@ -63,31 +63,31 @@ describe('board share token management routes', () => {
     expect(list.body.tokens[0]).not.toHaveProperty('tokenHash');
 
     const del = await request(app)
-      .delete(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens/${tokenId}`)
+      .delete(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens/${tokenId}`)
       .set('Cookie', ownerCookie);
     expect(del.status).toBe(204);
 
     const listAfterDelete = await request(app)
-      .get(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+      .get(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
     expect(listAfterDelete.body.tokens).toEqual([]);
   });
 
   it('returns 404 when the board does not exist', async () => {
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/boards/nonexistent/share-tokens`)
+      .post(`/api/workspaces/${workspaceId}/boards/nonexistent/share-tokens`)
       .set('Cookie', ownerCookie);
     expect(res.status).toBe(404);
   });
 
   it('returns 404 deleting a token id that belongs to a different board', async () => {
     const create = await request(app)
-      .post(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+      .post(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
     const otherBoardId = (await createBoard(db, { workspaceId, name: 'Board B' })).id;
 
     const res = await request(app)
-      .delete(`/workspaces/${workspaceId}/boards/${otherBoardId}/share-tokens/${create.body.id}`)
+      .delete(`/api/workspaces/${workspaceId}/boards/${otherBoardId}/share-tokens/${create.body.id}`)
       .set('Cookie', ownerCookie);
     expect(res.status).toBe(404);
   });

@@ -120,7 +120,7 @@ function cookieFor(userId: string, activeWorkspaceId: string) {
 
 function resolve(ref: { path: string; valuePath?: string }) {
   return request(app)
-    .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+    .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
     .set('Cookie', memberCookie)
     .send({ ref })
     .then(res => res.body);
@@ -144,7 +144,7 @@ beforeEach(async () => {
   memberCookie = cookieFor(member.id, workspace.id);
 
   const created = await request(app)
-    .post(`/workspaces/${workspaceId}/connectors`)
+    .post(`/api/workspaces/${workspaceId}/connectors`)
     .set('Cookie', cookieFor(owner.id, workspace.id))
     .send({
       name: 'Asset register', baseUrl: `${source.origin}/data`, authType: 'oauth2-client-credentials',

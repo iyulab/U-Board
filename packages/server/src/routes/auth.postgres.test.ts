@@ -58,7 +58,7 @@ describe.skipIf(!dockerAvailable())('POST /auth/signup — real Postgres concurr
     // gate guarded by pg_advisory_xact_lock. The loser is rejected by that gate (403) before it
     // ever reaches the users.email UNIQUE constraint — a separate scenario below races on the
     // constraint itself.
-    const attempt = () => request(app).post('/auth/signup').send({ email: 'race@x.com', password: 'p4ssword!', name: 'Racer' });
+    const attempt = () => request(app).post('/api/auth/signup').send({ email: 'race@x.com', password: 'p4ssword!', name: 'Racer' });
     const [a, b] = await Promise.all([attempt(), attempt()]);
     const statuses = [a.status, b.status].sort((x, y) => x - y);
     expect(statuses).toEqual([201, 403]);
@@ -76,7 +76,7 @@ describe.skipIf(!dockerAvailable())('POST /auth/signup — real Postgres concurr
     const invitationA = await createInvitation(db, { workspaceId: workspace.id, email: 'race2@x.com', role: 'member', invitedByUserId: owner.id });
     const invitationB = await createInvitation(db, { workspaceId: workspace.id, email: 'race2@x.com', role: 'member', invitedByUserId: owner.id });
 
-    const attempt = (token: string) => request(app).post('/auth/signup').send({
+    const attempt = (token: string) => request(app).post('/api/auth/signup').send({
       email: 'race2@x.com', password: 'p4ssword!', name: 'Racer2', invitationToken: token,
     });
     const [a, b] = await Promise.all([attempt(invitationA.token), attempt(invitationB.token)]);
@@ -93,7 +93,7 @@ describe.skipIf(!dockerAvailable())('POST /auth/signup — real Postgres concurr
     await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
     const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'shared@x.com', role: 'member', invitedByUserId: owner.id });
 
-    const attempt = () => request(app).post('/auth/signup').send({
+    const attempt = () => request(app).post('/api/auth/signup').send({
       email: 'shared@x.com', password: 'p4ssword!', name: 'Shared', invitationToken: invitation.token,
     });
     const [a, b] = await Promise.all([attempt(), attempt()]);

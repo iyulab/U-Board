@@ -86,10 +86,9 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     try {
       const created = await createShareToken(workspaceId, boardId!);
       setShareError(null);
-      // The embed viewer (`packages/share`) is a separate app on its own origin, so the console's
-      // own origin is only a fallback for a hypothetical same-origin deployment — production
-      // topology is still undecided, hence the build-time override rather than a hardcoded host.
-      const shareBase = import.meta.env.VITE_SHARE_BASE_URL ?? window.location.origin;
+      // The server serves the share viewer under `/share/` on this same origin; a deployment that
+      // hosts the viewer elsewhere points `VITE_SHARE_BASE_URL` at it.
+      const shareBase = (import.meta.env.VITE_SHARE_BASE_URL ?? `${window.location.origin}/share`).replace(/\/+$/, '');
       setNewShareUrl(`${shareBase}/?board=${boardId}&token=${created.token}`);
       await reloadShareTokens();
     } catch {

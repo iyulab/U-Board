@@ -12,12 +12,14 @@ import { createConnectorsRouter } from './routes/connectors.js';
 import { createShareRouter } from './routes/share.js';
 import { ClientCredentialsTokens } from './oauth-client-credentials.js';
 import type { ResolveState } from './resolve-connector.js';
+import { serveWebApps, type WebApps } from './web-apps.js';
 
 export interface AppConfig {
   db: DbClient;
   sessionSecret: string;
-  /** Production-only CORS allowlist (console + share origins). Unset in dev/test, where the
-   *  same-origin dev proxy makes CORS a no-op anyway. */
+  /** CORS allowlist for a deployment that hosts the console and share viewer on other origins than
+   *  the API. Unset when they are served from the API's own origin (`webApps`) or in dev/test, where
+   *  the dev proxy makes requests same-origin. */
   corsOrigins?: string[];
   /** Key the auth rate limiter off Cloudflare's `CF-Connecting-IP` header instead of `req.ip`.
    *  Enable ONLY once the deployment's ingress is locked to Cloudflare-only traffic — otherwise
@@ -33,6 +35,10 @@ export interface AppConfig {
   /** How old a connector's last-known value may be and still be served as `stale` when a read fails
    *  (milliseconds) — past it the binding reads `disconnected`. Unset: no limit. */
   staleMaxAgeMs?: number;
+  /** The built console and share viewer to serve next to the API, from one origin: the share
+   *  viewer under `/share/`, the console at every other path. Omit to serve the API alone (tests,
+   *  or a deployment that hosts the two apps elsewhere). */
+  webApps?: WebApps;
 }
 
 /** `req.ip` collapses to the single ingress IP behind Cloudflare -> the hosting platform unless the
@@ -60,7 +66,7 @@ export function createApp(config: AppConfig): express.Express {
   if (config.corsOrigins && config.corsOrigins.length > 0) {
     // `maxAge`: every share-viewer resolve is a cross-origin JSON POST and so needs a preflight;
     // without it browsers cache that answer for seconds only, and each binding's poll pays an extra
-    // round trip that also counts against the edge rate limit on `/share/*`. Browsers cap it lower
+    // round trip that also counts against the edge rate limit on `/api/share/*`. Browsers cap it lower
     // on their own (Chromium at 2 hours), so 10 minutes applies as written everywhere.
     app.use(cors({ origin: config.corsOrigins, credentials: true, maxAge: 600 }));
   }
@@ -85,6 +91,9 @@ export function createApp(config: AppConfig): express.Express {
       ? { keyGenerator: cloudflareKeyGenerator, validate: { xForwardedForHeader: false } }
       : {}),
   });
+  // Every API route lives under `/api`, so the web apps can own every other path — the console's
+  // client-side routes and the share viewer's `/share/` — on the same origin.
+  const api = express.Router();
   // Unauthenticated liveness/readiness check — a DB round-trip, not just "the process is up", so
   // it catches a listening-but-stuck app (e.g. an exhausted connection pool) that a bare TCP probe
   // would miss. Registered before auth/rate-limiting so it stays cheap to poll.
@@ -94,20 +103,26 @@ export function createApp(config: AppConfig): express.Express {
       .then(() => res.status(200).json({ status: 'ok' }))
       .catch(() => res.status(503).json({ status: 'error' }));
   });
-  app.use('/auth/login', authRateLimiter);
-  app.use('/auth/signup', authRateLimiter);
+  api.use('/auth/login', authRateLimiter);
+  api.use('/auth/signup', authRateLimiter);
   // Same bucket as login/signup: an unlimited request-password-reset would let an attacker spam
   // token generation (and, once a real email provider is wired, email-bomb a victim's inbox);
   // reset-password shares it too for the same "auth attack surface" reasoning login/signup do.
-  app.use('/auth/request-password-reset', authRateLimiter);
-  app.use('/auth/reset-password', authRateLimiter);
-  app.use('/auth', createAuthRouter(config));
-  app.use('/invitations', createInvitationsRouter(config));
-  app.use('/workspaces', createWorkspacesRouter(config));
-  app.use('/workspaces/:workspaceId/boards', createBoardsRouter(config));
-  app.use('/workspaces/:workspaceId/boards/:boardId/share-tokens', createBoardShareTokensRouter(config));
-  app.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveState));
-  app.use('/share', createShareRouter(config, resolveState));
+  api.use('/auth/request-password-reset', authRateLimiter);
+  api.use('/auth/reset-password', authRateLimiter);
+  api.use('/auth', createAuthRouter(config));
+  api.use('/invitations', createInvitationsRouter(config));
+  api.use('/workspaces', createWorkspacesRouter(config));
+  api.use('/workspaces/:workspaceId/boards', createBoardsRouter(config));
+  api.use('/workspaces/:workspaceId/boards/:boardId/share-tokens', createBoardShareTokensRouter(config));
+  api.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveState));
+  api.use('/share', createShareRouter(config, resolveState));
+  // An unknown API path answers as the API does — never with the console's HTML.
+  api.use((_req, res) => {
+    res.status(404).json({ code: 'NOT_FOUND' });
+  });
+  app.use('/api', api);
+  if (config.webApps) serveWebApps(app, config.webApps);
   // Must stay last: Express only reaches an error handler registered AFTER the layer that
   // failed, so anything mounted below this line would bypass it.
   app.use(errorHandler);

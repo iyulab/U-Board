@@ -1,7 +1,7 @@
-/** The server origin fetches are issued against, with any trailing slash stripped so callers can
- * safely concatenate a leading-slash path without producing a double slash. */
+/** Where the server's API lives — `/api` on this viewer's own origin, or on `VITE_API_BASE_URL` when
+ * the server is hosted elsewhere. Callers append a leading-slash path (`/share/boards/…`). */
 export function getApiBase(): string {
-  return (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+  return `${(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')}/api`;
 }
 
 // A scale-to-zero production host's cold start has been observed to exceed 20s before

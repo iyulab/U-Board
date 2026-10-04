@@ -2,8 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
+  // Relative asset URLs: the same build works at a host's root and under the server's `/share/`.
+  base: './',
   plugins: [react()],
   server: {
-    proxy: { '/share': 'http://localhost:4000' },
+    proxy: { '/api': 'http://localhost:4000' },
   },
 });

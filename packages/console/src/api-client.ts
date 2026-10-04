@@ -29,9 +29,11 @@ async function fetchWithRetry(url: string, init: RequestInit): Promise<Response>
   }
 }
 
+// Every API route lives under `/api` on the server's origin — this app's own origin unless
+// `VITE_API_BASE_URL` points at a server hosted elsewhere.
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const base = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
-  const res = await fetchWithRetry(`${base}${path}`, {
+  const origin = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+  const res = await fetchWithRetry(`${origin}/api${path}`, {
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     ...init,

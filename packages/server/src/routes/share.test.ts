@@ -41,7 +41,7 @@ beforeEach(async () => {
 
 async function createShareToken(): Promise<string> {
   const res = await request(app)
-    .post(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+    .post(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
     .set('Cookie', ownerCookie);
   return res.body.token;
 }
@@ -57,7 +57,7 @@ describe('public share routes', () => {
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
-    const res = await request(app).get(`/share/boards/${boardId}?token=${token}`);
+    const res = await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Board A');
     expect(res.body.document).toEqual(doc);
@@ -73,7 +73,7 @@ describe('public share routes', () => {
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
 
-    const res = await request(app).get(`/share/boards/${boardId}?token=${token}`);
+    const res = await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
     expect(res.body.connectorIds).toEqual([]);
   });
 
@@ -85,24 +85,24 @@ describe('public share routes', () => {
     // extra field to one 404 body — e.g. {code:'NOT_FOUND', reason:'wrong-board'} — would fail
     // this test instead of silently passing, since that would defeat the "identical body shape
     // across all four failure modes" property this test exists to pin.
-    const noToken = await request(app).get(`/share/boards/${boardId}`);
+    const noToken = await request(app).get(`/api/share/boards/${boardId}`);
     expect(noToken.status).toBe(404);
     expect(noToken.body).toEqual({ code: 'NOT_FOUND' });
 
-    const garbageToken = await request(app).get(`/share/boards/${boardId}?token=garbage`);
+    const garbageToken = await request(app).get(`/api/share/boards/${boardId}?token=garbage`);
     expect(garbageToken.status).toBe(404);
     expect(garbageToken.body).toEqual({ code: 'NOT_FOUND' });
 
-    const wrongBoardToken = await request(app).get(`/share/boards/${otherBoardId}?token=${token}`);
+    const wrongBoardToken = await request(app).get(`/api/share/boards/${otherBoardId}?token=${token}`);
     expect(wrongBoardToken.status).toBe(404);
     expect(wrongBoardToken.body).toEqual({ code: 'NOT_FOUND' });
   });
 
   it('updates lastUsedAt on a successful access', async () => {
     const token = await createShareToken();
-    await request(app).get(`/share/boards/${boardId}?token=${token}`);
+    await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
     const list = await request(app)
-      .get(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
+      .get(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
     expect(list.body.tokens[0].lastUsedAt).toBeTruthy();
   });
@@ -126,7 +126,7 @@ describe('public share routes', () => {
       : jsonResponse({ on: true }));
 
     const res = await request(app)
-      .post(`/share/boards/${boardId}/resolve?token=${token}`)
+      .post(`/api/share/boards/${boardId}/resolve?token=${token}`)
       .send({ bindings: [
         { connectorId: b.id, ref: { path: '/pump', valuePath: 'on' } },
         { connectorId: a.id, ref: { path: '/assets', valuePath: 'value.1.Status' } },
@@ -155,7 +155,7 @@ describe('public share routes', () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
 
     const res = await request(app)
-      .post(`/share/boards/${boardId}/resolve?token=${token}`)
+      .post(`/api/share/boards/${boardId}/resolve?token=${token}`)
       .send({ bindings: [
         { connectorId: connector.id, ref: { path: '/status', valuePath: 'status' } },
         // The connector this board uses, with a ref it never declared: the gate compares the exact
@@ -180,12 +180,12 @@ describe('public share routes', () => {
 
   it('rejects a batch request without a valid token, a bindings array, or within the size cap', async () => {
     const token = await createShareToken();
-    expect((await request(app).post(`/share/boards/${boardId}/resolve`).send({ bindings: [] })).status).toBe(404);
-    expect((await request(app).post(`/share/boards/${boardId}/resolve?token=wrong`).send({ bindings: [] })).status).toBe(404);
-    expect((await request(app).post(`/share/boards/${boardId}/resolve?token=${token}`).send({})).status).toBe(400);
-    expect((await request(app).post(`/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: ['x'] })).status).toBe(400);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve`).send({ bindings: [] })).status).toBe(404);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve?token=wrong`).send({ bindings: [] })).status).toBe(404);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve?token=${token}`).send({})).status).toBe(400);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: ['x'] })).status).toBe(400);
     const tooMany = Array.from({ length: 501 }, () => ({ connectorId: 'c', ref: { path: '/a' } }));
-    expect((await request(app).post(`/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: tooMany })).status).toBe(400);
+    expect((await request(app).post(`/api/share/boards/${boardId}/resolve?token=${token}`).send({ bindings: tooMany })).status).toBe(400);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -204,13 +204,13 @@ describe('public share routes', () => {
     };
 
     const saveRes = await request(app)
-      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .put(`/api/workspaces/${workspaceId}/boards/${boardId}`)
       .set('Cookie', ownerCookie)
       .send({ document: doc });
     expect(saveRes.status).toBe(200);
 
     const token = await createShareToken();
-    const getRes = await request(app).get(`/share/boards/${boardId}?token=${token}`);
+    const getRes = await request(app).get(`/api/share/boards/${boardId}?token=${token}`);
     expect(getRes.status).toBe(200);
     expect(getRes.body.connectorIds).toEqual([connector.id]);
 
@@ -219,7 +219,7 @@ describe('public share routes', () => {
 
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
     const resolveRes = await request(app)
-      .post(`/share/boards/${boardId}/resolve?token=${token}`)
+      .post(`/api/share/boards/${boardId}/resolve?token=${token}`)
       .send({ bindings: [{ connectorId: binding.adapter, ref: binding.ref }] });
     expect(resolveRes.status).toBe(200);
     expect(resolveRes.body).toEqual({ results: [{ value: 'running', quality: 'live', observedAt: expect.any(String) }] });

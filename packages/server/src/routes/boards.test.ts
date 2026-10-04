@@ -35,47 +35,47 @@ beforeEach(async () => {
 
 describe('boards routes', () => {
   it('rejects a non-member with 403', async () => {
-    const res = await request(app).get(`/workspaces/${workspaceId}/boards`).set('Cookie', strangerCookie);
+    const res = await request(app).get(`/api/workspaces/${workspaceId}/boards`).set('Cookie', strangerCookie);
     expect(res.status).toBe(403);
   });
 
   it('creates, lists, fetches, updates and deletes a board end to end', async () => {
     const create = await request(app)
-      .post(`/workspaces/${workspaceId}/boards`)
+      .post(`/api/workspaces/${workspaceId}/boards`)
       .set('Cookie', memberCookie)
       .send({ name: 'My Board' });
     expect(create.status).toBe(201);
     const boardId = create.body.id;
 
-    const list = await request(app).get(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie);
+    const list = await request(app).get(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie);
     expect(list.status).toBe(200);
     expect(list.body.boards).toEqual([{ id: boardId, name: 'My Board', updatedAt: create.body.updatedAt }]);
 
-    const get = await request(app).get(`/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(get.status).toBe(200);
     expect(get.body.document).toEqual({ kind: 'canvas', background: {}, nodes: [], connectors: [] });
 
     const newDoc = { kind: 'canvas', background: {}, nodes: [{ id: 'n1', x: 1, y: 2, anchored: false, widget: { type: 'status' } }], connectors: [] };
     const update = await request(app)
-      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .put(`/api/workspaces/${workspaceId}/boards/${boardId}`)
       .set('Cookie', memberCookie)
       .send({ document: newDoc });
     expect(update.status).toBe(200);
 
-    const reget = await request(app).get(`/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    const reget = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(reget.body.document).toEqual(newDoc);
 
-    const del = await request(app).delete(`/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    const del = await request(app).delete(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(del.status).toBe(204);
 
-    const getAfterDelete = await request(app).get(`/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    const getAfterDelete = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(getAfterDelete.status).toBe(404);
   });
 
   it('returns 400 INVALID_DOCUMENT when the PUT body is not a ViewDocument', async () => {
-    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
     const res = await request(app)
-      .put(`/workspaces/${workspaceId}/boards/${create.body.id}`)
+      .put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`)
       .set('Cookie', memberCookie)
       .send({ document: { not: 'a document' } });
     expect(res.status).toBe(400);
@@ -83,13 +83,13 @@ describe('boards routes', () => {
   });
 
   it('refuses a document whose binding is not an object, and says where', async () => {
-    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
     const document = {
       kind: 'canvas', background: {}, connectors: [],
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', props: {}, bindings: { value: null } } }],
     };
     const res = await request(app)
-      .put(`/workspaces/${workspaceId}/boards/${create.body.id}`)
+      .put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`)
       .set('Cookie', memberCookie)
       .send({ document });
     expect(res.status).toBe(400);
@@ -98,7 +98,7 @@ describe('boards routes', () => {
   });
 
   it('returns 404 for a board id that belongs to a different workspace', async () => {
-    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
 
     const otherWorkspace = await createWorkspace(db, 'Other');
     const otherMember = await createUser(db, { email: 'other@x.com', passwordHash: 'h', name: 'Other' });
@@ -106,21 +106,21 @@ describe('boards routes', () => {
     const otherCookie = cookieFor(otherMember.id, otherWorkspace.id);
 
     const res = await request(app)
-      .get(`/workspaces/${otherWorkspace.id}/boards/${create.body.id}`)
+      .get(`/api/workspaces/${otherWorkspace.id}/boards/${create.body.id}`)
       .set('Cookie', otherCookie);
     expect(res.status).toBe(404);
   });
 
   it('returns 404 for an unknown board id within the caller\'s own workspace', async () => {
-    const res = await request(app).get(`/workspaces/${workspaceId}/boards/nonexistent-id`).set('Cookie', memberCookie);
+    const res = await request(app).get(`/api/workspaces/${workspaceId}/boards/nonexistent-id`).set('Cookie', memberCookie);
     expect(res.status).toBe(404);
   });
 
   it('returns 400 INVALID_INPUT when PUT has an empty name', async () => {
-    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
     const boardId = create.body.id;
     const res = await request(app)
-      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .put(`/api/workspaces/${workspaceId}/boards/${boardId}`)
       .set('Cookie', memberCookie)
       .send({ name: '' });
     expect(res.status).toBe(400);
@@ -128,10 +128,10 @@ describe('boards routes', () => {
   });
 
   it('returns 400 INVALID_INPUT when PUT has a non-string name', async () => {
-    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
     const boardId = create.body.id;
     const res = await request(app)
-      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .put(`/api/workspaces/${workspaceId}/boards/${boardId}`)
       .set('Cookie', memberCookie)
       .send({ name: 123 });
     expect(res.status).toBe(400);
@@ -139,18 +139,18 @@ describe('boards routes', () => {
   });
 
   it('allows a name-only PUT and keeps the document unchanged', async () => {
-    const create = await request(app).post(`/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'Original' });
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'Original' });
     const boardId = create.body.id;
     const originalDoc = create.body.document ?? { kind: 'canvas', background: {}, nodes: [], connectors: [] };
 
     const update = await request(app)
-      .put(`/workspaces/${workspaceId}/boards/${boardId}`)
+      .put(`/api/workspaces/${workspaceId}/boards/${boardId}`)
       .set('Cookie', memberCookie)
       .send({ name: 'Updated Name' });
     expect(update.status).toBe(200);
     expect(update.body.name).toBe('Updated Name');
 
-    const get = await request(app).get(`/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(get.status).toBe(200);
     expect(get.body.name).toBe('Updated Name');
     expect(get.body.document).toEqual(originalDoc);

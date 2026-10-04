@@ -41,7 +41,7 @@ beforeEach(async () => {
   const ownerCookie = cookieFor(owner.id, workspace.id);
 
   const create = await request(app)
-    .post(`/workspaces/${workspaceId}/connectors`)
+    .post(`/api/workspaces/${workspaceId}/connectors`)
     .set('Cookie', ownerCookie)
     .send({ name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer', authValue: 'secret-token' });
   connectorId = create.body.id;
@@ -51,7 +51,7 @@ describe('connector resolve proxy', () => {
   it('returns live quality and the extracted value on a successful JSON response', async () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ data: { status: 'running' } }));
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'data.status' } });
     expect(res.status).toBe(200);
@@ -68,7 +68,7 @@ describe('connector resolve proxy', () => {
   it('returns disconnected quality on first failure with no cache', async () => {
     (fetch as any).mockRejectedValueOnce(new Error('network error'));
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a' } });
     expect(res.status).toBe(200);
@@ -78,7 +78,7 @@ describe('connector resolve proxy', () => {
   it('returns stale quality with the last-known value on failure after a prior success', async () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
     const live = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(Number.isNaN(Date.parse(live.body.observedAt))).toBe(false);
@@ -86,7 +86,7 @@ describe('connector resolve proxy', () => {
 
     (fetch as any).mockRejectedValueOnce(new Error('network error'));
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(res.status).toBe(200);
@@ -98,7 +98,7 @@ describe('connector resolve proxy', () => {
   it('returns disconnected when valuePath does not exist in a successful response', async () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ value: [] }));
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/assets', valuePath: 'value.0.Status' } });
     expect(res.status).toBe(200);
@@ -109,13 +109,13 @@ describe('connector resolve proxy', () => {
   it('serves the last value as stale when a previously resolvable valuePath stops resolving', async () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
     await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
 
     (fetch as any).mockResolvedValueOnce(jsonResponse({ state: 'running' }));
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'address', observedAt: expect.any(String) });
@@ -124,7 +124,7 @@ describe('connector resolve proxy', () => {
   it('stops serving a last-known value as stale once it is older than the configured limit', async () => {
     const limited = createApp({ db, sessionSecret: SECRET, staleMaxAgeMs: 60_000 });
     const resolve = () => request(limited)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a' } })
       .then(res => res.body);
@@ -148,7 +148,7 @@ describe('connector resolve proxy', () => {
   it('keeps an explicit null at the end of valuePath as a live value', async () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ value: [{ Temp: null }] }));
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/assets', valuePath: 'value.0.Temp' } });
     expect(res.body).toEqual({ value: null, quality: 'live', observedAt: expect.any(String) });
@@ -157,7 +157,7 @@ describe('connector resolve proxy', () => {
   it('returns disconnected when valuePath is given but the response is not JSON', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => 'text/plain' }, text: async () => 'running' });
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'address' });
@@ -167,7 +167,7 @@ describe('connector resolve proxy', () => {
     let answer!: (response: unknown) => void;
     (fetch as any).mockReturnValueOnce(new Promise(resolve => { answer = resolve; }));
     const resolveAt = (valuePath: string) => request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/assets', valuePath } })
       .then(res => res.body);
@@ -189,7 +189,7 @@ describe('connector resolve proxy', () => {
       .mockResolvedValueOnce(jsonResponse({ status: 'running' }))
       .mockResolvedValueOnce(jsonResponse({ status: 'stopped' }));
     const resolveOnce = () => request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect((await resolveOnce()).body.value).toBe('running');
@@ -202,7 +202,7 @@ describe('connector resolve proxy', () => {
     for (const [status, reason] of cases) {
       (fetch as any).mockResolvedValueOnce({ ok: false, status, headers: { get: () => null } });
       const res = await request(app)
-        .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+        .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
         .set('Cookie', memberCookie)
         .send({ ref: { path: `/status-${status}` } });
       expect(res.body, `upstream ${status}`).toEqual({ quality: 'disconnected', reason });
@@ -212,7 +212,7 @@ describe('connector resolve proxy', () => {
   it('carries no reason on a live result', async () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(res.body).toEqual({ value: 'running', quality: 'live', observedAt: expect.any(String) });
@@ -224,7 +224,7 @@ describe('connector resolve proxy', () => {
     for (const [valuePath, expected] of cases) {
       (fetch as any).mockResolvedValueOnce(jsonResponse(body));
       const res = await request(app)
-        .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+        .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
         .set('Cookie', memberCookie)
         .send({ ref: { path: `/pointer-${expected}`, valuePath } });
       expect(res.body, valuePath).toEqual({ value: expected, quality: 'live', observedAt: expect.any(String) });
@@ -237,7 +237,7 @@ describe('connector resolve proxy', () => {
     for (const valuePath of ['/value/1/Status', '/value/00/Status', '/value/-', '/toString']) {
       (fetch as any).mockResolvedValueOnce(jsonResponse(body));
       const res = await request(app)
-        .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+        .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
         .set('Cookie', memberCookie)
         .send({ ref: { path: `/missing${valuePath}`, valuePath } });
       expect(res.body, valuePath).toEqual({ quality: 'disconnected', reason: 'address' });
@@ -246,7 +246,7 @@ describe('connector resolve proxy', () => {
 
   it('returns 404 for an unknown connectorId', async () => {
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/nonexistent/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/nonexistent/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a' } });
     expect(res.status).toBe(404);
@@ -254,7 +254,7 @@ describe('connector resolve proxy', () => {
 
   it('returns 400 INVALID_INPUT when ref.path is missing', async () => {
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: {} });
     expect(res.status).toBe(400);
@@ -274,7 +274,7 @@ describe('connector resolve proxy', () => {
     for (const [label, path] of cases) {
       it(`rejects ${label}`, async () => {
         const res = await request(app)
-          .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+          .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
           .set('Cookie', memberCookie)
           .send({ ref: { path } });
         expect(res.status).toBe(400);
@@ -288,14 +288,14 @@ describe('connector resolve proxy', () => {
     const owner = await createUser(db, { email: 'owner2@x.com', passwordHash: 'h', name: 'Owner2' });
     await addWorkspaceUser(db, { workspaceId, userId: owner.id, role: 'owner' });
     const create = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors`)
+      .post(`/api/workspaces/${workspaceId}/connectors`)
       .set('Cookie', cookieFor(owner.id, workspaceId))
       .send({ name: 'Prefixed', baseUrl: 'https://plant.example.com/api/v2/', authType: 'none' });
     expect(create.status).toBe(201);
 
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${create.body.id}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${create.body.id}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(res.status).toBe(200);
@@ -306,13 +306,13 @@ describe('connector resolve proxy', () => {
     const owner = await createUser(db, { email: 'owner3@x.com', passwordHash: 'h', name: 'Owner3' });
     await addWorkspaceUser(db, { workspaceId, userId: owner.id, role: 'owner' });
     const create = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors`)
+      .post(`/api/workspaces/${workspaceId}/connectors`)
       .set('Cookie', cookieFor(owner.id, workspaceId))
       .send({ name: 'Prefixed2', baseUrl: 'https://plant.example.com/api/v2', authType: 'none' });
     expect(create.status).toBe(201);
 
     const res = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${create.body.id}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${create.body.id}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/../../admin' } });
     expect(res.status).toBe(400);
@@ -330,7 +330,7 @@ describe('connector resolve proxy with an oauth2-client-credentials connector', 
   }
   function resolve() {
     return request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${oauthConnectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${oauthConnectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/assets/7', valuePath: 'status' } });
   }
@@ -338,7 +338,7 @@ describe('connector resolve proxy with an oauth2-client-credentials connector', 
   beforeEach(async () => {
     const owner = (await db.query<{ id: string }>(`SELECT id FROM users WHERE email = 'owner@x.com'`)).rows[0];
     const create = await request(app)
-      .post(`/workspaces/${workspaceId}/connectors`)
+      .post(`/api/workspaces/${workspaceId}/connectors`)
       .set('Cookie', cookieFor(owner.id, workspaceId))
       .send({
         name: 'Platform', baseUrl: 'https://platform.example.com', authType: 'oauth2-client-credentials',
@@ -390,7 +390,7 @@ describe('connector resolve proxy with an oauth2-client-credentials connector', 
 describe('resolve failure logging', () => {
   function resolve(path = '/pumps/a') {
     return request(app)
-      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path, valuePath: 'status' } });
   }

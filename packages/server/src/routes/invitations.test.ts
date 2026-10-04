@@ -25,13 +25,13 @@ describe('GET /invitations/:token', () => {
     await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
     const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'new@x.com', role: 'member', invitedByUserId: owner.id });
 
-    const res = await request(app).get(`/invitations/${invitation.token}`);
+    const res = await request(app).get(`/api/invitations/${invitation.token}`);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ email: 'new@x.com', workspaceId: workspace.id, hasAccount: false });
   });
 
   it('returns 404 for an unknown token', async () => {
-    const res = await request(app).get('/invitations/does-not-exist');
+    const res = await request(app).get('/api/invitations/does-not-exist');
     expect(res.status).toBe(404);
   });
 });
@@ -44,7 +44,7 @@ describe('POST /invitations/:token/accept', () => {
     const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'existing@x.com', role: 'member', invitedByUserId: owner.id });
 
     const signupRes = await request(app)
-      .post('/auth/signup')
+      .post('/api/auth/signup')
       .send({ email: 'existing@x.com', password: 'p4ssword!', name: 'Existing' }); // bootstrap already used by owner, so this needs its own invitation? no: this is the FIRST user overall in this test's db, so open signup is fine
     // (owner above was inserted directly via repository, not via /auth/signup, so countUsers()===0
     // is false already because of `owner` -> open signup for `existing` must fail; use login flow instead)
@@ -53,10 +53,10 @@ describe('POST /invitations/:token/accept', () => {
     const cookie = request.agent(app);
     const passwordHash = await hashPassword('p4ssword!');
     await createUser(db, { email: 'existing@x.com', passwordHash, name: 'Existing' });
-    const loginRes = await cookie.post('/auth/login').send({ email: 'existing@x.com', password: 'p4ssword!' });
+    const loginRes = await cookie.post('/api/auth/login').send({ email: 'existing@x.com', password: 'p4ssword!' });
     expect(loginRes.status).toBe(200);
 
-    const acceptRes = await cookie.post(`/invitations/${invitation.token}/accept`);
+    const acceptRes = await cookie.post(`/api/invitations/${invitation.token}/accept`);
     expect(acceptRes.status).toBe(200);
     expect(acceptRes.body.workspaceId).toBe(workspace.id);
   });
@@ -71,9 +71,9 @@ describe('POST /invitations/:token/accept', () => {
     const passwordHash = await hashPassword('p4ssword!');
     await createUser(db, { email: 'someone-else@x.com', passwordHash, name: 'Someone Else' });
     const agent = request.agent(app);
-    await agent.post('/auth/login').send({ email: 'someone-else@x.com', password: 'p4ssword!' });
+    await agent.post('/api/auth/login').send({ email: 'someone-else@x.com', password: 'p4ssword!' });
 
-    const res = await agent.post(`/invitations/${invitation.token}/accept`);
+    const res = await agent.post(`/api/invitations/${invitation.token}/accept`);
     expect(res.status).toBe(410);
     expect(res.body.code).toBe('INVITATION_INVALID');
   });
@@ -82,7 +82,7 @@ describe('POST /invitations/:token/accept', () => {
     const owner = await createUser(db, { email: 'owner@x.com', passwordHash: await hashPassword('x'), name: 'Owner' });
     const workspace = await createWorkspace(db, 'W1');
     const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'x@x.com', role: 'member', invitedByUserId: owner.id });
-    const res = await request(app).post(`/invitations/${invitation.token}/accept`);
+    const res = await request(app).post(`/api/invitations/${invitation.token}/accept`);
     expect(res.status).toBe(401);
   });
 
@@ -95,10 +95,10 @@ describe('POST /invitations/:token/accept', () => {
     const cookie = request.agent(app);
     const passwordHash = await hashPassword('p4ssword!');
     await createUser(db, { email: 'x@x.com', passwordHash, name: 'X' });
-    await cookie.post('/auth/login').send({ email: 'x@x.com', password: 'p4ssword!' });
-    await cookie.post(`/invitations/${invitation.token}/accept`);
+    await cookie.post('/api/auth/login').send({ email: 'x@x.com', password: 'p4ssword!' });
+    await cookie.post(`/api/invitations/${invitation.token}/accept`);
 
-    const secondAttempt = await cookie.post(`/invitations/${invitation.token}/accept`);
+    const secondAttempt = await cookie.post(`/api/invitations/${invitation.token}/accept`);
     expect(secondAttempt.status).toBe(410);
   });
 });

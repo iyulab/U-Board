@@ -23,15 +23,15 @@ afterEach(() => {
 
 describe('POST /auth/signup', () => {
   it('bootstraps: first-ever user becomes owner of a new Default workspace', async () => {
-    const res = await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
+    const res = await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
     expect(res.status).toBe(201);
     expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=/);
     expect(res.body.workspaceId).toBeTruthy();
   });
 
   it('rejects a second open signup (no invitation) with 403', async () => {
-    await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
-    const res = await request(app).post('/auth/signup').send({ email: 'second@x.com', password: 'p4ssword!', name: 'Second' });
+    await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
+    const res = await request(app).post('/api/auth/signup').send({ email: 'second@x.com', password: 'p4ssword!', name: 'Second' });
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('SIGNUP_REQUIRES_INVITATION');
   });
@@ -42,7 +42,7 @@ describe('POST /auth/signup', () => {
     await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
     const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'invitee@x.com', role: 'member', invitedByUserId: owner.id });
 
-    const res = await request(app).post('/auth/signup').send({
+    const res = await request(app).post('/api/auth/signup').send({
       email: 'invitee@x.com', password: 'p4ssword!', name: 'Invitee', invitationToken: invitation.token,
     });
     expect(res.status).toBe(201);
@@ -50,21 +50,21 @@ describe('POST /auth/signup', () => {
   });
 
   it('rejects a duplicate email with 409', async () => {
-    await request(app).post('/auth/signup').send({ email: 'dup@x.com', password: 'p4ssword!', name: 'A' });
-    const res = await request(app).post('/auth/signup').send({ email: 'dup@x.com', password: 'other!', name: 'B' });
+    await request(app).post('/api/auth/signup').send({ email: 'dup@x.com', password: 'p4ssword!', name: 'A' });
+    const res = await request(app).post('/api/auth/signup').send({ email: 'dup@x.com', password: 'other!', name: 'B' });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('EMAIL_TAKEN');
   });
 
   it('rejects malformed input (missing password) with 400', async () => {
-    const res = await request(app).post('/auth/signup').send({ email: 'bad@x.com', name: 'A' });
+    const res = await request(app).post('/api/auth/signup').send({ email: 'bad@x.com', name: 'A' });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_INPUT');
   });
 
   it('rejects an unknown/garbage invitation token with 410', async () => {
-    await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
-    const res = await request(app).post('/auth/signup').send({
+    await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
+    const res = await request(app).post('/api/auth/signup').send({
       email: 'nobody@x.com', password: 'p4ssword!', name: 'Nobody', invitationToken: 'garbage-token',
     });
     expect(res.status).toBe(410);
@@ -80,7 +80,7 @@ describe('POST /auth/signup', () => {
       new Date(Date.now() - 1000).toISOString(), invitation.id,
     ]);
 
-    const res = await request(app).post('/auth/signup').send({
+    const res = await request(app).post('/api/auth/signup').send({
       email: 'late@x.com', password: 'p4ssword!', name: 'Late', invitationToken: invitation.token,
     });
     expect(res.status).toBe(410);
@@ -93,7 +93,7 @@ describe('POST /auth/signup', () => {
     await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
     const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'invited@x.com', role: 'member', invitedByUserId: owner.id });
 
-    const res = await request(app).post('/auth/signup').send({
+    const res = await request(app).post('/api/auth/signup').send({
       email: 'someone-else@x.com', password: 'p4ssword!', name: 'Mismatch', invitationToken: invitation.token,
     });
     expect(res.status).toBe(410);
@@ -109,7 +109,7 @@ describe('POST /auth/signup', () => {
     app = createApp({ db, sessionSecret: SECRET });
     await db.query('DROP TABLE workspace_users');
 
-    const res = await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
+    const res = await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
 
     expect(res.status).toBe(500);
     expect(res.body.code).toBe('INTERNAL_ERROR');
@@ -122,7 +122,7 @@ describe('POST /auth/signup', () => {
     // gate guarded by pg_advisory_xact_lock. The loser is rejected by that gate (403) before it
     // ever reaches the users.email UNIQUE constraint — a separate scenario below races on the
     // constraint itself.
-    const attempt = () => request(app).post('/auth/signup').send({ email: 'race@x.com', password: 'p4ssword!', name: 'Racer' });
+    const attempt = () => request(app).post('/api/auth/signup').send({ email: 'race@x.com', password: 'p4ssword!', name: 'Racer' });
     const [a, b] = await Promise.all([attempt(), attempt()]);
     const statuses = [a.status, b.status].sort((x, y) => x - y);
     expect(statuses).toEqual([201, 403]);
@@ -140,7 +140,7 @@ describe('POST /auth/signup', () => {
     const invitationA = await createInvitation(db, { workspaceId: workspace.id, email: 'race2@x.com', role: 'member', invitedByUserId: owner.id });
     const invitationB = await createInvitation(db, { workspaceId: workspace.id, email: 'race2@x.com', role: 'member', invitedByUserId: owner.id });
 
-    const attempt = (token: string) => request(app).post('/auth/signup').send({
+    const attempt = (token: string) => request(app).post('/api/auth/signup').send({
       email: 'race2@x.com', password: 'p4ssword!', name: 'Racer2', invitationToken: token,
     });
     const [a, b] = await Promise.all([attempt(invitationA.token), attempt(invitationB.token)]);
@@ -157,7 +157,7 @@ describe('POST /auth/signup', () => {
     await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
     const invitation = await createInvitation(db, { workspaceId: workspace.id, email: 'shared@x.com', role: 'member', invitedByUserId: owner.id });
 
-    const attempt = () => request(app).post('/auth/signup').send({
+    const attempt = () => request(app).post('/api/auth/signup').send({
       email: 'shared@x.com', password: 'p4ssword!', name: 'Shared', invitationToken: invitation.token,
     });
     const [a, b] = await Promise.all([attempt(), attempt()]);
@@ -168,34 +168,34 @@ describe('POST /auth/signup', () => {
 
 describe('POST /auth/login', () => {
   it('logs in with correct credentials', async () => {
-    await request(app).post('/auth/signup').send({ email: 'login@x.com', password: 'p4ssword!', name: 'A' });
-    const res = await request(app).post('/auth/login').send({ email: 'login@x.com', password: 'p4ssword!' });
+    await request(app).post('/api/auth/signup').send({ email: 'login@x.com', password: 'p4ssword!', name: 'A' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'login@x.com', password: 'p4ssword!' });
     expect(res.status).toBe(200);
     expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=/);
   });
 
   it('logs in when the email casing differs from how the account was created', async () => {
-    await request(app).post('/auth/signup').send({ email: 'Mixed.Case@X.com', password: 'p4ssword!', name: 'A' });
-    const res = await request(app).post('/auth/login').send({ email: 'mixed.case@x.com', password: 'p4ssword!' });
+    await request(app).post('/api/auth/signup').send({ email: 'Mixed.Case@X.com', password: 'p4ssword!', name: 'A' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'mixed.case@x.com', password: 'p4ssword!' });
     expect(res.status).toBe(200);
     expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=/);
   });
 
   it('rejects an unknown email with 401 (no enumeration)', async () => {
-    const res = await request(app).post('/auth/login').send({ email: 'nobody@x.com', password: 'x' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'nobody@x.com', password: 'x' });
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('INVALID_CREDENTIALS');
   });
 
   it('rejects a wrong password with the same 401/code as unknown email', async () => {
-    await request(app).post('/auth/signup').send({ email: 'wrongpw@x.com', password: 'correct!', name: 'A' });
-    const res = await request(app).post('/auth/login').send({ email: 'wrongpw@x.com', password: 'incorrect!' });
+    await request(app).post('/api/auth/signup').send({ email: 'wrongpw@x.com', password: 'correct!', name: 'A' });
+    const res = await request(app).post('/api/auth/login').send({ email: 'wrongpw@x.com', password: 'incorrect!' });
     expect(res.status).toBe(401);
     expect(res.body.code).toBe('INVALID_CREDENTIALS');
   });
 
   it('rejects malformed input (missing email) with 400', async () => {
-    const res = await request(app).post('/auth/login').send({ password: 'p4ssword!' });
+    const res = await request(app).post('/api/auth/login').send({ password: 'p4ssword!' });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_INPUT');
   });
@@ -203,13 +203,13 @@ describe('POST /auth/login', () => {
 
 describe('POST /auth/logout', () => {
   it('clears the session cookie', async () => {
-    const res = await request(app).post('/auth/logout');
+    const res = await request(app).post('/api/auth/logout');
     expect(res.status).toBe(204);
     expect(res.headers['set-cookie']?.[0]).toMatch(/^ub_session=;/);
   });
 
   it('expires the cookie instead of re-issuing the 30-day one, and repeats SameSite', async () => {
-    const res = await request(app).post('/auth/logout');
+    const res = await request(app).post('/api/auth/logout');
     const header = res.headers['set-cookie']?.[0] ?? '';
     expect(header).not.toMatch(/Max-Age=2592000/);
     expect(header).toMatch(/Expires=Thu, 01 Jan 1970/);
@@ -219,14 +219,14 @@ describe('POST /auth/logout', () => {
 
 describe('GET /auth/bootstrap-status', () => {
   it('reports hasAnyUser=false before the first signup', async () => {
-    const res = await request(app).get('/auth/bootstrap-status');
+    const res = await request(app).get('/api/auth/bootstrap-status');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ hasAnyUser: false });
   });
 
   it('reports hasAnyUser=true after the first signup', async () => {
-    await request(app).post('/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
-    const res = await request(app).get('/auth/bootstrap-status');
+    await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: 'First' });
+    const res = await request(app).get('/api/auth/bootstrap-status');
     expect(res.body).toEqual({ hasAnyUser: true });
   });
 });
@@ -235,9 +235,9 @@ describe('POST /auth/request-password-reset', () => {
   it('accepts a request for an existing email and dispatches a reset token via the injected sender', async () => {
     const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
     const appWithSender = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
-    await request(appWithSender).post('/auth/signup').send({ email: 'reset-me@x.com', password: 'p4ssword!', name: 'R' });
+    await request(appWithSender).post('/api/auth/signup').send({ email: 'reset-me@x.com', password: 'p4ssword!', name: 'R' });
 
-    const res = await request(appWithSender).post('/auth/request-password-reset').send({ email: 'reset-me@x.com' });
+    const res = await request(appWithSender).post('/api/auth/request-password-reset').send({ email: 'reset-me@x.com' });
 
     expect(res.status).toBe(202);
     expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
@@ -250,9 +250,9 @@ describe('POST /auth/request-password-reset', () => {
   it('never returns the reset token in the response body', async () => {
     const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
     const appWithSender = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
-    await request(appWithSender).post('/auth/signup').send({ email: 'no-leak@x.com', password: 'p4ssword!', name: 'N' });
+    await request(appWithSender).post('/api/auth/signup').send({ email: 'no-leak@x.com', password: 'p4ssword!', name: 'N' });
 
-    const res = await request(appWithSender).post('/auth/request-password-reset').send({ email: 'no-leak@x.com' });
+    const res = await request(appWithSender).post('/api/auth/request-password-reset').send({ email: 'no-leak@x.com' });
 
     expect(JSON.stringify(res.body)).not.toContain(sendPasswordResetEmail.mock.calls[0][0].token);
   });
@@ -261,21 +261,21 @@ describe('POST /auth/request-password-reset', () => {
     const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
     const appWithSender = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
 
-    const res = await request(appWithSender).post('/auth/request-password-reset').send({ email: 'nobody@x.com' });
+    const res = await request(appWithSender).post('/api/auth/request-password-reset').send({ email: 'nobody@x.com' });
 
     expect(res.status).toBe(202);
     expect(sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 
   it('rejects malformed input (missing email) with 400', async () => {
-    const res = await request(app).post('/auth/request-password-reset').send({});
+    const res = await request(app).post('/api/auth/request-password-reset').send({});
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_INPUT');
   });
 
   it('still responds 202 with no sender configured (falls back to a safe default, does not throw)', async () => {
-    await request(app).post('/auth/signup').send({ email: 'no-sender@x.com', password: 'p4ssword!', name: 'X' });
-    const res = await request(app).post('/auth/request-password-reset').send({ email: 'no-sender@x.com' });
+    await request(app).post('/api/auth/signup').send({ email: 'no-sender@x.com', password: 'p4ssword!', name: 'X' });
+    const res = await request(app).post('/api/auth/request-password-reset').send({ email: 'no-sender@x.com' });
     expect(res.status).toBe(202);
   });
 });
@@ -286,54 +286,54 @@ describe('POST /auth/reset-password', () => {
     // Re-create the app with a capturing sender wired to the *same* db, so the token this helper
     // captures is usable against `targetApp` even though the two Express instances are distinct.
     const capturingApp = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
-    await request(capturingApp).post('/auth/request-password-reset').send({ email });
+    await request(capturingApp).post('/api/auth/request-password-reset').send({ email });
     return sendPasswordResetEmail.mock.calls[0][0].token as string;
   }
 
   it('resets the password with a valid token, and the new password works for login', async () => {
-    await request(app).post('/auth/signup').send({ email: 'reset2@x.com', password: 'old-pass!', name: 'R2' });
+    await request(app).post('/api/auth/signup').send({ email: 'reset2@x.com', password: 'old-pass!', name: 'R2' });
     const token = await requestReset(app, 'reset2@x.com');
 
-    const res = await request(app).post('/auth/reset-password').send({ token, newPassword: 'new-pass!' });
+    const res = await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'new-pass!' });
     expect(res.status).toBe(200);
 
-    const oldLogin = await request(app).post('/auth/login').send({ email: 'reset2@x.com', password: 'old-pass!' });
+    const oldLogin = await request(app).post('/api/auth/login').send({ email: 'reset2@x.com', password: 'old-pass!' });
     expect(oldLogin.status).toBe(401);
-    const newLogin = await request(app).post('/auth/login').send({ email: 'reset2@x.com', password: 'new-pass!' });
+    const newLogin = await request(app).post('/api/auth/login').send({ email: 'reset2@x.com', password: 'new-pass!' });
     expect(newLogin.status).toBe(200);
   });
 
   it('rejects a second use of the same token with 410', async () => {
-    await request(app).post('/auth/signup').send({ email: 'reset3@x.com', password: 'old-pass!', name: 'R3' });
+    await request(app).post('/api/auth/signup').send({ email: 'reset3@x.com', password: 'old-pass!', name: 'R3' });
     const token = await requestReset(app, 'reset3@x.com');
 
-    await request(app).post('/auth/reset-password').send({ token, newPassword: 'new-pass!' });
-    const second = await request(app).post('/auth/reset-password').send({ token, newPassword: 'another!' });
+    await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'new-pass!' });
+    const second = await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'another!' });
     expect(second.status).toBe(410);
     expect(second.body.code).toBe('RESET_TOKEN_INVALID');
   });
 
   it('rejects an unknown/garbage token with 410', async () => {
-    const res = await request(app).post('/auth/reset-password').send({ token: 'garbage-token', newPassword: 'new-pass!' });
+    const res = await request(app).post('/api/auth/reset-password').send({ token: 'garbage-token', newPassword: 'new-pass!' });
     expect(res.status).toBe(410);
     expect(res.body.code).toBe('RESET_TOKEN_INVALID');
   });
 
   it('rejects an expired token with 410', async () => {
-    await request(app).post('/auth/signup').send({ email: 'reset4@x.com', password: 'old-pass!', name: 'R4' });
+    await request(app).post('/api/auth/signup').send({ email: 'reset4@x.com', password: 'old-pass!', name: 'R4' });
     const token = await requestReset(app, 'reset4@x.com');
     await db.query('UPDATE password_reset_tokens SET expires_at = $1 WHERE user_id = (SELECT id FROM users WHERE email = $2)', [
       new Date(Date.now() - 1000).toISOString(),
       'reset4@x.com',
     ]);
 
-    const res = await request(app).post('/auth/reset-password').send({ token, newPassword: 'new-pass!' });
+    const res = await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'new-pass!' });
     expect(res.status).toBe(410);
     expect(res.body.code).toBe('RESET_TOKEN_INVALID');
   });
 
   it('rejects malformed input (missing newPassword) with 400', async () => {
-    const res = await request(app).post('/auth/reset-password').send({ token: 'x' });
+    const res = await request(app).post('/api/auth/reset-password').send({ token: 'x' });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_INPUT');
   });

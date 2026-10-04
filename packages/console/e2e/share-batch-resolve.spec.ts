@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
-// A board with many bindings must open in a fixed number of requests: the public `/share/*` surface
+// A board with many bindings must open in a fixed number of requests: the public `/api/share/*` surface
 // sits behind a per-IP edge rate limit, so a viewer that sent one request per binding could not load
 // a large board in full. Here: 12 bindings on one collection URL → per board load, one board fetch,
 // one batch resolve carrying all 12, and one upstream call.
@@ -18,16 +18,16 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
   const mockBaseUrl = `http://127.0.0.1:${(mockServer.address() as AddressInfo).port}`;
 
   try {
-    const signup = await page.request.post('/auth/signup', {
+    const signup = await page.request.post('/api/auth/signup', {
       data: { email: 'e2e-share-batch@test.com', password: 'p4ssword!', name: 'E2E Share Batch' },
     });
     expect(signup.status()).toBe(201);
     const { workspaceId } = await signup.json();
 
-    const connector = await (await page.request.post(`/workspaces/${workspaceId}/connectors`, {
+    const connector = await (await page.request.post(`/api/workspaces/${workspaceId}/connectors`, {
       data: { name: 'Mock Plant API', baseUrl: mockBaseUrl, authType: 'none' },
     })).json();
-    const board = await (await page.request.post(`/workspaces/${workspaceId}/boards`, { data: { name: 'Many Bindings' } })).json();
+    const board = await (await page.request.post(`/api/workspaces/${workspaceId}/boards`, { data: { name: 'Many Bindings' } })).json();
     const nodes = Array.from({ length: BINDINGS }, (_, i) => ({
       id: `n${i}`, x: 40 + (i % 4) * 180, y: 40 + Math.floor(i / 4) * 120, anchored: false,
       widget: { type: 'status', bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${i}.Status` } } } },
@@ -38,20 +38,20 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
       id: 'missing', x: 40, y: 420, anchored: false,
       widget: { type: 'status', bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${BINDINGS}.Status` } } } },
     });
-    const saved = await page.request.put(`/workspaces/${workspaceId}/boards/${board.id}`, {
+    const saved = await page.request.put(`/api/workspaces/${workspaceId}/boards/${board.id}`, {
       data: { document: { kind: 'canvas', background: {}, nodes, connectors: [] } },
     });
     expect(saved.ok()).toBe(true);
-    const { token } = await (await page.request.post(`/workspaces/${workspaceId}/boards/${board.id}/share-tokens`)).json();
+    const { token } = await (await page.request.post(`/api/workspaces/${workspaceId}/boards/${board.id}/share-tokens`)).json();
 
     const shareContext = await browser.newContext();
     const sharePage = await shareContext.newPage();
     const shareRequests: string[] = [];
     sharePage.on('request', req => {
       const url = new URL(req.url());
-      if (url.pathname.startsWith('/share/')) shareRequests.push(`${req.method()} ${url.pathname}`);
+      if (url.pathname.startsWith('/api/share/')) shareRequests.push(`${req.method()} ${url.pathname}`);
     });
-    const batchResponse = sharePage.waitForResponse(res => res.url().includes(`/share/boards/${board.id}/resolve`));
+    const batchResponse = sharePage.waitForResponse(res => res.url().includes(`/api/share/boards/${board.id}/resolve`));
     await sharePage.goto(`http://localhost:5176/?board=${board.id}&token=${token}`);
     const batch = await batchResponse;
     expect(batch.status()).toBe(200);
@@ -65,8 +65,8 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
 
     // One resolve request per board load, whatever the binding count. The dev server renders under
     // React StrictMode, which runs the load effect twice — so "per load" rather than a literal 1+1.
-    const loads = shareRequests.filter(r => r === `GET /share/boards/${board.id}`).length;
-    const resolves = shareRequests.filter(r => r === `POST /share/boards/${board.id}/resolve`).length;
+    const loads = shareRequests.filter(r => r === `GET /api/share/boards/${board.id}`).length;
+    const resolves = shareRequests.filter(r => r === `POST /api/share/boards/${board.id}/resolve`).length;
     expect(shareRequests).toHaveLength(loads + resolves);
     expect(loads).toBeGreaterThanOrEqual(1);
     expect(loads).toBeLessThanOrEqual(2);

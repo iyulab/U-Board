@@ -38,7 +38,7 @@ describe('ShareConnectorAdapter', () => {
     ]);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledWith(
-      '/share/boards/b1/resolve?token=tok',
+      '/api/share/boards/b1/resolve?token=tok',
       expect.objectContaining({
         method: 'POST',
         body: JSON.stringify({ bindings: [
@@ -113,7 +113,7 @@ describe('ShareConnectorAdapter', () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
     (fetch as any).mockResolvedValueOnce(batchResponse([{ value: 1, quality: 'live' }]));
     await new ShareConnectorAdapter(new ShareResolveBatcher('b1', 'tok'), 'c1').resolve({ path: '/status' });
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/share/boards/b1/resolve?token=tok', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/share/boards/b1/resolve?token=tok', expect.anything());
     vi.unstubAllEnvs();
   });
 });
