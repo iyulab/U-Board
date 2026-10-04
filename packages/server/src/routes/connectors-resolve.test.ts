@@ -121,6 +121,30 @@ describe('connector resolve proxy', () => {
     expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'address', observedAt: expect.any(String) });
   });
 
+  it('stops serving a last-known value as stale once it is older than the configured limit', async () => {
+    const limited = createApp({ db, sessionSecret: SECRET, staleMaxAgeMs: 60_000 });
+    const resolve = () => request(limited)
+      .post(`/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/pumps/a' } })
+      .then(res => res.body);
+
+    (fetch as any).mockResolvedValueOnce(jsonResponse('running'));
+    const live = await resolve();
+    const readAt = Date.parse(live.observedAt);
+
+    (fetch as any).mockRejectedValueOnce(new Error('network error'));
+    vi.spyOn(Date, 'now').mockReturnValue(readAt + 59_000);
+    expect(await resolve()).toEqual({ value: 'running', quality: 'stale', reason: 'transport', observedAt: live.observedAt });
+
+    (fetch as any).mockRejectedValueOnce(new Error('network error'));
+    vi.spyOn(Date, 'now').mockReturnValue(readAt + 61_000);
+    expect(await resolve()).toEqual({ value: undefined, quality: 'disconnected', reason: 'transport' });
+    expect(console.warn).toHaveBeenLastCalledWith(
+      `[resolve] connector ${connectorId} /pumps/a: request failed: network error — the last value is past the stale age limit`
+    );
+  });
+
   it('keeps an explicit null at the end of valuePath as a live value', async () => {
     (fetch as any).mockResolvedValueOnce(jsonResponse({ value: [{ Temp: null }] }));
     const res = await request(app)

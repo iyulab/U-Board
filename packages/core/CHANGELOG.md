@@ -17,8 +17,10 @@ All notable changes to this package are documented here. The format follows
   `stale` value was obtained from its source, so a host can tell a last-known value of seconds ago
   from one of days ago. The hosted HTTP connector reports it.
 - Connection-quality text for hosts that render their own UI: `QUALITY_LABEL`, `REASON_LABEL`,
-  `worstQuality` and `describeQuality`, exported from the package root and from
-  `@iyulab/u-board/domain`.
+  `worstQuality` and `describeQuality(widget, { text, now })`, exported from the package root and
+  from `@iyulab/u-board/domain`. For a `stale` value with an `observedAt`, the text says how long ago
+  it was obtained ("5 minutes ago") — in the canvas tooltip, the screen-reader announcement and the
+  binding preview. `ageText(locale)` builds those words for another language.
 - `ViewerPage` and `AuthoringView` fill their container when `width`/`height` are omitted, open with
   the whole document fitted into view (shrunk to fit, never magnified), and stay fitted as the
   container resizes until the user pans or zooms. "Fit to view" and zoom in/out controls sit next to
@@ -32,7 +34,7 @@ All notable changes to this package are documented here. The format follows
   side panel says how many instead of showing one item's properties.
 - `labels` on `AuthoringView` and `ViewerPage` replaces any of the text they show (`UBoardLabels`,
   English defaults in `DEFAULT_LABELS`), including the words for connection quality.
-  `describeQuality` takes the same words as an optional third argument (`QualityText`,
+  `describeQuality` takes the same words as its `text` option (`QualityText`,
   `DEFAULT_QUALITY_TEXT`).
 
 ### Changed

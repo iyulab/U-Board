@@ -135,7 +135,14 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
 
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
   const previewLabel = preview
-    ? describeQuality({ binding: preview.quality }, preview.reason ? { binding: preview.reason } : {}, labels.qualityText)
+    ? describeQuality(
+        {
+          quality: { binding: preview.quality },
+          ...(preview.reason && { reasons: { binding: preview.reason } }),
+          ...(preview.observedAt && { observedAt: { binding: preview.observedAt } }),
+        },
+        { text: labels.qualityText }
+      )
     : undefined;
 
   const handleExplore = async () => {

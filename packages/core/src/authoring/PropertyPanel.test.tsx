@@ -24,6 +24,9 @@ class FakeHttpAdapter implements Adapter {
     const r = ref as { path: string; valuePath?: string };
     if (r.path === '/pumps/a' && r.valuePath === 'status') return { value: 'running', quality: 'live' };
     if (r.path === '/pumps/a') return { value: undefined, quality: 'disconnected', reason: 'address' };
+    if (r.path === '/pumps/b') {
+      return { value: 'stopped', quality: 'stale', reason: 'transport', observedAt: new Date(Date.now() - 2 * 3_600_000 - 60_000).toISOString() };
+    }
     return { value: undefined, quality: 'disconnected' };
   }
 }
@@ -187,6 +190,18 @@ describe('PropertyPanel bindings', () => {
 
     await waitFor(() => expect(
       screen.getByText(`${QUALITY_LABEL.disconnected} (${REASON_LABEL.address})`)
+    ).toBeInTheDocument());
+  });
+
+  it('says how long ago a stale preview value was obtained', async () => {
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/b' } });
+    fireEvent.click(screen.getByText('Preview'));
+
+    await waitFor(() => expect(
+      screen.getByText(`${QUALITY_LABEL.stale} (${REASON_LABEL.transport}, 2 hours ago)`)
     ).toBeInTheDocument());
   });
 

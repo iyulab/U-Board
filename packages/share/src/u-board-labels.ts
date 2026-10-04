@@ -1,4 +1,4 @@
-import type { UBoardLabels } from '@iyulab/u-board/viewer';
+import { ageText, type UBoardLabels } from '@iyulab/u-board/viewer';
 
 /** 공유 뷰어(`ViewerPage`)가 보여 주는 U-Board 문구의 한국어 — 콘솔(`packages/console/src/u-board-labels.ts`)과 같은 말. */
 export const KO_LABELS: Partial<UBoardLabels> = {
@@ -18,5 +18,6 @@ export const KO_LABELS: Partial<UBoardLabels> = {
       address: '바인딩한 값이 원천에 없음',
       throttled: '요청 한도 초과',
     },
+    age: ageText('ko'),
   },
 };

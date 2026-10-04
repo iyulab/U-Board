@@ -37,6 +37,10 @@ export interface ResolveState {
    * `valuePath`s of the same response (one collection, many assets) share one request instead of
    * each fetching it — the upstream sees one call per distinct URL, however many nodes read it. */
   inflight: Map<string, Promise<unknown>>;
+  /** How old a last-known value may be and still be served as `stale` (milliseconds). Past it, a
+   * failed read is `disconnected` — the value is too old to stand in for the current one. Unset:
+   * no limit, the last value is served however old (its `observedAt` says how old). */
+  staleMaxAgeMs?: number;
 }
 
 type ResolveStage = 'token' | 'request' | 'response';
@@ -271,13 +275,20 @@ export async function resolveConnectorValue(
   } catch (err) {
     const { stage, message, reason } = err as StageError;
     const cached = state.values.get(cacheKey);
-    const stale = cached !== undefined;
-    const failure = `${stage} failed: ${message}`;
+    const tooOld =
+      cached !== undefined &&
+      state.staleMaxAgeMs !== undefined &&
+      Date.now() - Date.parse(cached.observedAt) > state.staleMaxAgeMs;
+    const servable = cached !== undefined && !tooOld;
+    // The served outcome is part of the logged failure, so crossing the age limit mid-outage logs once.
+    const failure = `${stage} failed: ${message} — ${
+      servable ? 'serving the last value as stale' : tooOld ? 'the last value is past the stale age limit' : 'no value to serve'
+    }`;
     if (state.failures.get(cacheKey) !== failure) {
       state.failures.set(cacheKey, failure);
-      console.warn(`${where}: ${failure} — ${stale ? 'serving the last value as stale' : 'no value to serve'}`);
+      console.warn(`${where}: ${failure}`);
     }
-    return cached
+    return servable
       ? { value: cached.value, quality: 'stale', reason, observedAt: cached.observedAt }
       : { value: undefined, quality: 'disconnected', reason };
   }

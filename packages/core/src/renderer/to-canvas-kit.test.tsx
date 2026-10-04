@@ -168,9 +168,24 @@ describe('toCanvasKit', () => {
         'data.lastKnown': 'stale',
       });
       expect(frame.props.title).toBe(
-        'disconnected — no value has been reached (data.threshold, data.zone) · ' +
+        'disconnected — no value has been reached (data.threshold; data.zone) · ' +
           'stale — showing last known value (data.lastKnown)'
       );
+    });
+
+    it('says in the title and the announcement how long ago a stale value was obtained', () => {
+      const observedAt = new Date(Date.now() - 5 * 60_000 - 10_000).toISOString();
+      const { overlays } = toCanvasKit(
+        doc({
+          nodes: [{
+            id: 'n1', x: 0, y: 0, anchored: false,
+            widget: { type: 'unknown-widget', props: {}, quality: { v: 'stale' }, reasons: { v: 'transport' }, observedAt: { v: observedAt } },
+          }],
+        })
+      );
+      const frame = overlays[0].content as ReactElement<{ title?: string; children?: ReactElement<{ children?: string }>[] }>;
+      expect(frame.props.title).toBe('stale — showing last known value (data source unreachable, 5 minutes ago)');
+      expect(frame.props.children?.[1].props.children).toBe(frame.props.title);
     });
 
     it('gives stale and disconnected distinct border *styles*, not just distinct colors', () => {

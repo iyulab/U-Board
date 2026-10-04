@@ -1,4 +1,4 @@
-import type { UBoardLabels } from '@iyulab/u-board';
+import { ageText, type UBoardLabels } from '@iyulab/u-board';
 
 /** U-Board 저작·뷰어 컴포넌트의 한국어 문구 — 콘솔 전체와 같은 말을 쓴다("연결 끊김" 등). */
 export const KO_LABELS: UBoardLabels = {
@@ -62,5 +62,6 @@ export const KO_LABELS: UBoardLabels = {
       address: '바인딩한 값이 원천에 없음',
       throttled: '요청 한도 초과',
     },
+    age: ageText('ko'),
   },
 };

@@ -158,29 +158,45 @@ const REASON_LABEL: Record<QualityReason, string>;
 interface QualityText {
   quality: Partial<Record<ConnectionQuality, string>>;
   reason: Record<QualityReason, string>;
+  age: (elapsedMs: number) => string;
 }
-const DEFAULT_QUALITY_TEXT: QualityText; // { quality: QUALITY_LABEL, reason: REASON_LABEL }
+const DEFAULT_QUALITY_TEXT: QualityText; // { quality: QUALITY_LABEL, reason: REASON_LABEL, age: ageText('en') }
+function ageText(locale: string): (elapsedMs: number) => string;
 function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined;
+type QualitySummary = Pick<ResolvedWidget, 'quality' | 'reasons' | 'observedAt'>;
 function describeQuality(
-  quality: Record<string, ConnectionQuality>,
-  reasons?: Record<string, QualityReason>,
-  text?: QualityText
+  widget: QualitySummary,
+  options?: { text?: QualityText; now?: number }
 ): string | undefined;
 ```
 
 The words the shipped renderer uses, for a host that renders its own UI from a `ResolvedWidget`.
 `worstQuality` is the least current of a widget's bindings (`disconnected`, then `stale`, then
-`live`). `describeQuality(widget.quality, widget.reasons)` is one line of text for a widget — the
-renderer's tooltip and screen-reader announcement — or `undefined` when every binding is `live`:
+`live`). `describeQuality(widget)` is one line of text for a `ResolvedWidget` — the renderer's
+tooltip and screen-reader announcement — or `undefined` when every binding is `live`. It names the
+cause when the adapter reported one and, for a `stale` value with an `observedAt`, how long ago it
+was obtained:
 
 ```ts
-describeQuality({ 'data.value': 'disconnected' }, { 'data.value': 'address' });
+describeQuality({ quality: { 'data.value': 'disconnected' }, reasons: { 'data.value': 'address' } });
 // → 'disconnected — no value has been reached (bound value not found at the source)'
+describeQuality({
+  quality: { 'data.value': 'stale' },
+  reasons: { 'data.value': 'transport' },
+  observedAt: { 'data.value': '2026-10-04T11:55:00Z' },
+}, { now: Date.parse('2026-10-04T12:00:00Z') });
+// → 'stale — showing last known value (data source unreachable, 5 minutes ago)'
 ```
+
+The age is measured when the text is built (`now`, default `Date.now()`), so text that stays on
+screen should be rebuilt as the widget re-resolves — the shipped components do on every refresh.
+When several bindings are at fault, the text breaks them out per prop path, separated by `;`.
 
 `live` has no label on purpose: normal operation is not announced, only departures from it.
 
-Pass `text` to describe quality in another language; it defaults to `DEFAULT_QUALITY_TEXT`. The
+Pass `text` to describe quality in another language; it defaults to `DEFAULT_QUALITY_TEXT`.
+`ageText(locale)` builds the `age` words from the platform's relative-time formatting
+(`Intl.RelativeTimeFormat`) — `ageText('ko')` reads "5분 전". The
 shipped components take the same words through their `labels` prop (`labels.qualityText`).
 
 ### `Binding`

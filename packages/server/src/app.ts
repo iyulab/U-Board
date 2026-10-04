@@ -30,6 +30,9 @@ export interface AppConfig {
    *  `routes/auth.ts`'s `defaultSendPasswordResetEmail`). Whatever this does or doesn't do, the
    *  token itself must never appear in an HTTP response — only ever passed to this function. */
   sendPasswordResetEmail?: (input: { email: string; token: string }) => Promise<void>;
+  /** How old a connector's last-known value may be and still be served as `stale` when a read fails
+   *  (milliseconds) — past it the binding reads `disconnected`. Unset: no limit. */
+  staleMaxAgeMs?: number;
 }
 
 /** `req.ip` collapses to the single ingress IP behind Cloudflare -> the hosting platform unless the
@@ -66,7 +69,13 @@ export function createApp(config: AppConfig): express.Express {
   app.use(cookieParser());
   // Per-process resolve state shared by the member and share-link resolve routes: last-known values
   // (so a failure can degrade to `stale`), OAuth access tokens, and which failures are already logged.
-  const resolveState: ResolveState = { values: new Map(), tokens: new ClientCredentialsTokens(), failures: new Map(), inflight: new Map() };
+  const resolveState: ResolveState = {
+    values: new Map(),
+    tokens: new ClientCredentialsTokens(),
+    failures: new Map(),
+    inflight: new Map(),
+    staleMaxAgeMs: config.staleMaxAgeMs,
+  };
   const authRateLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 10,

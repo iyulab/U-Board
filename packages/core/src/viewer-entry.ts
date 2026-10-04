@@ -9,5 +9,5 @@ export type {
 } from './viewer/useResolvedDocument.js';
 export { DEFAULT_LABELS } from './labels.js';
 export type { UBoardLabels } from './labels.js';
-export { DEFAULT_QUALITY_TEXT } from './quality-text.js';
+export { DEFAULT_QUALITY_TEXT, ageText } from './quality-text.js';
 export type { QualityText } from './quality-text.js';
