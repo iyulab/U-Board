@@ -63,3 +63,9 @@ is text only: it changes who needs to act, not how urgent the state is, so it ad
 ## Deployment
 
 The viewer runs in a standard web browser and can be embedded in another web application.
+
+The hosted applications — the server, the console and the share viewer — ship as one container
+image that serves them from one origin: the API under `/api`, the share viewer under `/share/`,
+and the console at every other path. A hosted installation and a self-hosted one run the same
+image; [`self-hosting.md`](self-hosting.md) covers running it. A host application that only needs
+the library uses `@iyulab/u-board` instead and runs none of them.

@@ -16,12 +16,12 @@ U-Board itself, without first raising it as a scope change.
 
 The Status section of the [README](README.md) is the single description of what is implemented;
 keep it current rather than restating it here. The repository layout (one published library, three
-private applications) is described there too.
+private applications, and the introduction site) is described there too.
 
 ## Releasing
 
 Only `packages/core` is published, as `@iyulab/u-board` on npm. The `server`, `console` and `share`
-workspaces are applications and stay `private`.
+workspaces are applications and `site` is the introduction site; all four stay `private`.
 
 To release, change `version` in `packages/core/package.json` (semver; while the version is 0.x, a
 minor bump may break the public API) and push the change to `main`. The `publish` job in

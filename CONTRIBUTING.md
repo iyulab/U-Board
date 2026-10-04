@@ -60,7 +60,7 @@ npm run typecheck    # tsc --noEmit across the workspace
 npm run lint         # oxlint — correctness rules plus the React hooks rules
 npm test             # vitest
 npm run build        # all packages
-npm run test:e2e     # Playwright (canvas rendering, console flows)
+npm run test:e2e     # Playwright (canvas rendering, console flows, and the built apps served by the server)
 ```
 
 The server and the other applications import `@iyulab/u-board` from `packages/core/dist/lib`,
@@ -75,8 +75,8 @@ release — a new major, or below 1.0 a new minor — is either adopted or recor
 [`dependency-deferrals.json`](dependency-deferrals.json) with a reason and a review date, after
 which the check fails again) and
 `npm run check:public-text` (no private tracking ids, local paths, or hosts outside the
-allowlist in [`scripts/check-public-text.mjs`](scripts/check-public-text.mjs) — a link to a new
-public site means adding it there), and `npm run check:doc-links` (every relative link in the
+allowlist in [`public-text.json`](public-text.json) — a link to a new public site means adding it
+there), and `npm run check:doc-links` (every relative link in the
 Markdown docs reaches a file and heading that exist). See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 Run `npm run typecheck` and `npm test` locally before opening a pull request.
 
