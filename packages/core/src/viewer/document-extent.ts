@@ -1,3 +1,4 @@
+import { getObjectBounds } from '@canvas-kit/core';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import type { ViewDocument } from '../view-document.js';
 
@@ -18,8 +19,8 @@ export interface DocumentRect {
 /**
  * The region a viewer has to show for the whole document to be visible: the background image's
  * rect, grown to take in every node (at its default footprint when it has no size of its own) and
- * decoration. A text decoration has no measured box here, so only its anchor point counts. `null`
- * when the document has nothing to show.
+ * decoration (a text decoration by its rendered text box, as the canvas draws it). `null` when the
+ * document has nothing to show.
  */
 export function documentExtent(doc: ViewDocument): DocumentRect | null {
   let minX = Infinity;
@@ -39,8 +40,8 @@ export function documentExtent(doc: ViewDocument): DocumentRect | null {
     include(node.x, node.y, node.width ?? DEFAULT_NODE_WIDTH, node.height ?? DEFAULT_NODE_HEIGHT);
   }
   for (const shape of doc.decorations ?? []) {
-    if (shape.type === 'rect') include(shape.x, shape.y, shape.width, shape.height);
-    else include(shape.x, shape.y);
+    const box = getObjectBounds(shape);
+    include(box.x, box.y, box.width, box.height);
   }
 
   if (minX === Infinity) return null;

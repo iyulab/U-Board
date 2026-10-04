@@ -37,13 +37,17 @@ describe('documentExtent', () => {
     expect(documentExtent(d)).toEqual({ x: -50, y: 0, width: 450, height: 250 + DEFAULT_NODE_HEIGHT });
   });
 
-  it('includes rect decorations and the anchor point of text decorations', () => {
+  it('includes rect decorations and the text box of text decorations', () => {
     const d = doc({
       decorations: [
         { id: 'r', type: 'rect', x: 0, y: 0, width: 200, height: 100 },
         { id: 't', type: 'text', x: 500, y: 300, text: 'Line A' },
       ],
     });
-    expect(documentExtent(d)).toEqual({ x: 0, y: 0, width: 500, height: 300 });
+    const extent = documentExtent(d)!;
+    expect(extent).toMatchObject({ x: 0, y: 0 });
+    // A text box hangs below its x/y (one 16px line at the default size) and to its right.
+    expect(extent.height).toBe(300 + 16);
+    expect(extent.width).toBeGreaterThan(500);
   });
 });
