@@ -26,6 +26,8 @@ const ALLOWED_HOSTS = new Set([
   'www.gnu.org',
   'fsf.org',
   'www.w3.org',
+  'keepachangelog.com',
+  'semver.org',
   // Domains of made-up email addresses in test fixtures (`owner@x.com`).
   'x.com',
   'test.com',

@@ -67,7 +67,9 @@ The server and the other applications import `@iyulab/u-board` from `packages/co
 which `npm install` builds once. After changing `packages/core`, run `npm run build:lib` before
 testing them, or they keep running against the previous build.
 
-CI runs the same checks plus a real-Postgres concurrency suite and three repository checks:
+CI runs the same checks plus a real-Postgres concurrency suite, `npm run check:package-types`
+(the published package's type declarations resolve for ESM consumers — `attw`), and three
+repository checks:
 `npm run check:pin-drift` (dependencies not left behind their published versions; a breaking
 release — a new major, or below 1.0 a new minor — is either adopted or recorded in
 [`dependency-deferrals.json`](dependency-deferrals.json) with a reason and a review date, after
@@ -83,6 +85,13 @@ command (`npm install -D <pkg>@<version> --workspace=packages/a --workspace=pack
 finish with `npm dedupe`. Upgrading one workspace at a time can leave a second copy nested under
 a package, and a second copy of a test runner silently splits type augmentation (such as
 jest-dom's matchers) from the instance the tests use.
+
+## Changelog
+
+`packages/core/CHANGELOG.md` records what consumers of `@iyulab/u-board` can notice, in the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. A change to the published package's
+behaviour or API adds an entry under `## [Unreleased]` in the same commit — breaking changes say how
+to migrate. A release renames that section to the version and date.
 
 ## Pull requests
 

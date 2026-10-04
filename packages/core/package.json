@@ -27,7 +27,8 @@
   "files": [
     "dist/lib",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {
