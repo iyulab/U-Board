@@ -15,6 +15,7 @@ export const KO_LABELS: UBoardLabels = {
   fitToView: '화면에 맞추기',
 
   editorHeading: '편집기',
+  editorRegion: '편집기',
   previewHeading: '실시간 미리보기',
   previewRegion: '실시간 미리보기',
   boardRegion: '보드',
@@ -23,6 +24,7 @@ export const KO_LABELS: UBoardLabels = {
   debugDocument: 'ViewDocument (디버그)',
 
   selectNode: '노드를 선택하세요.',
+  multipleSelected: '{count}개 선택됨 — 하나를 선택하면 편집할 수 있습니다.',
   propertiesHeading: '속성',
   widgetType: '위젯 타입',
   staticProps: '정적 props (JSON)',

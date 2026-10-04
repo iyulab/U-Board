@@ -24,6 +24,8 @@ export interface UBoardLabels {
 
   // Panes and states
   editorHeading: string;
+  /** The accessible name of the editor canvas. */
+  editorRegion: string;
   previewHeading: string;
   /** The accessible name of the authoring live preview. */
   previewRegion: string;
@@ -35,6 +37,9 @@ export interface UBoardLabels {
 
   // Node property panel
   selectNode: string;
+  /** Shown instead of a property panel while several items are selected; `{count}` is replaced by
+   * how many. */
+  multipleSelected: string;
   propertiesHeading: string;
   widgetType: string;
   staticProps: string;
@@ -82,6 +87,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   fitToView: 'Fit to view',
 
   editorHeading: 'Editor',
+  editorRegion: 'Editor',
   previewHeading: 'Live preview',
   previewRegion: 'Live preview',
   boardRegion: 'Board',
@@ -90,6 +96,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   debugDocument: 'ViewDocument (debug)',
 
   selectNode: 'Select a node.',
+  multipleSelected: '{count} items selected — select one to edit it.',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
   staticProps: 'Static props (JSON)',

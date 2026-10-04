@@ -61,9 +61,12 @@ and zoom in/out controls do what the wheel does from the keyboard. Pass `width`/
 fixed-size view instead.
 
 `AuthoringView` sizes the same way: without `width`/`height` the editor and its live preview split
-the parent's width and fill its height. Both share one pan/zoom (drag empty space to pan, wheel to
-zoom), the document opens fitted into view the same way, and a new node or decoration is placed
-where the author is looking.
+the parent's width and fill its height. Both share one pan/zoom and the document opens fitted into
+view the same way; a new node or decoration is placed where the author is looking. In the editor,
+drag across empty space to select several items and drag one of them to move them all; pan with
+Space + drag or the middle mouse button, or from the keyboard (arrow keys move the selection, or
+pan when nothing is selected; Tab steps through the items). In the live preview a drag pans. The
+wheel zooms either.
 
 ### Text in another language
 

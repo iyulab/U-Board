@@ -22,7 +22,11 @@ All notable changes to this package are documented here. The format follows
   the view, and the view pans and zooms from the keyboard. `ViewerPage` takes an `ariaLabel` for the
   board view (default "Board").
 - In `AuthoringView`, the editor and the live preview share one pan/zoom, and a new node or
-  decoration is placed where the author is looking.
+  decoration is placed where the author is looking. In the editor, a drag across empty space
+  selects several nodes and decorations to move together (one undo step); Space + drag or the
+  middle mouse button pans; the editor works from the keyboard (arrows move the selection or pan,
+  Tab steps through the items, Escape clears the selection). While several items are selected, the
+  side panel says how many instead of showing one item's properties.
 - `labels` on `AuthoringView` and `ViewerPage` replaces any of the text they show (`UBoardLabels`,
   English defaults in `DEFAULT_LABELS`), including the words for connection quality.
   `describeQuality` takes the same words as an optional third argument (`QualityText`,

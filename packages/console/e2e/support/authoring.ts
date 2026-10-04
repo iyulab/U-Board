@@ -1,6 +1,17 @@
 import { expect, type Page } from '@playwright/test';
 
 /**
+ * Clicks a point (CSS px from its top-left) inside the authoring editor. The editor draws on
+ * several stacked canvases, so the click goes to the editor region by position rather than to one
+ * of its canvases.
+ */
+export async function clickEditorAt(page: Page, position: { x: number; y: number }) {
+  const editor = page.getByRole('region', { name: '편집기' });
+  const box = (await editor.boundingBox())!;
+  await page.mouse.click(box.x + position.x, box.y + position.y);
+}
+
+/**
  * Clicks the first widget node in the authoring editor. The editor is a canvas with no DOM per node,
  * and where a node lands on screen depends on the view (a board with content opens fitted into
  * view), so a fixed pixel is not a stable target. The live preview beside it shares the editor's
@@ -13,11 +24,9 @@ export async function clickFirstNode(page: Page) {
   await expect(overlay).toBeVisible();
   const previewBox = (await preview.boundingBox())!;
   const nodeBox = (await overlay.boundingBox())!;
-  await page.locator('canvas').first().click({
-    position: {
-      x: nodeBox.x - previewBox.x + nodeBox.width / 2,
-      y: nodeBox.y - previewBox.y + nodeBox.height / 2,
-    },
+  await clickEditorAt(page, {
+    x: nodeBox.x - previewBox.x + nodeBox.width / 2,
+    y: nodeBox.y - previewBox.y + nodeBox.height / 2,
   });
 }
 
@@ -32,5 +41,5 @@ export async function clickScenePoint(page: Page, point: { x: number; y: number 
   const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\) scale\((-?[\d.]+)\)/.exec(css);
   expect(m, `view transform on the preview overlay layer: "${css}"`).not.toBeNull();
   const [x, y, scale] = m!.slice(1).map(Number);
-  await page.locator('canvas').first().click({ position: { x: point.x * scale + x, y: point.y * scale + y } });
+  await clickEditorAt(page, { x: point.x * scale + x, y: point.y * scale + y });
 }

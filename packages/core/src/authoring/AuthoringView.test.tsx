@@ -25,6 +25,16 @@ vi.mock('@canvas-kit/designer', async () => {
             select-decoration-1
           </button>
           <button onClick={() => onSelectionChange?.([])}>deselect</button>
+          <button
+            onClick={() =>
+              onSelectionChange?.([
+                { type: 'rect', id: 'node-1', x: 0, y: 0, width: 10, height: 10 },
+                { type: 'text', id: 'decoration-1', x: 0, y: 0, text: 'Zone A' },
+              ])
+            }
+          >
+            select-both
+          </button>
         </div>
       );
     },
@@ -442,5 +452,19 @@ describe('AuthoringView document source', () => {
   it('shows the document JSON with showDocumentSource', () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} showDocumentSource />);
     expect(screen.getByText('ViewDocument (debug)')).toBeInTheDocument();
+  });
+});
+
+describe('AuthoringView multiple selection', () => {
+  it('says how many items are selected instead of showing a single item panel, and names the editor', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
+    expect(designerProps.mock.lastCall![0].ariaLabel).toBe('Editor');
+
+    fireEvent.click(screen.getByText('select-both'));
+    expect(screen.getByText('2 items selected — select one to edit it.')).toBeInTheDocument();
+    expect(screen.queryByText('Select a node.')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('deselect'));
+    expect(screen.getByText('Select a node.')).toBeInTheDocument();
   });
 });

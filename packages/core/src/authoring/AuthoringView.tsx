@@ -67,6 +67,9 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const [importError, setImportError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
+  // How many items the editor has selected. With several (a box selection), they can be moved
+  // together but no single item's panel applies.
+  const [selectionCount, setSelectionCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const view = useFittedView();
   const { fitTo, transform } = view;
@@ -140,7 +143,8 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   // A decoration can be a scene `rect`, same as a node — told apart by which array of the
   // document actually contains the selected id, not by the DrawingObject's own `type`.
   const handleSelectionChange = (selection: DrawingObject[]) => {
-    const id = selection[0]?.id ?? null;
+    setSelectionCount(selection.length);
+    const id = selection.length === 1 ? (selection[0].id ?? null) : null;
     setSelectedNodeId(id && doc.nodes.some(n => n.id === id) ? id : null);
     setSelectedDecorationId(id && doc.decorations?.some(d => d.id === id) ? id : null);
   };
@@ -265,6 +269,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
               onViewportResize={view.onViewportResize}
               onSceneChange={handleSceneChange}
               onSelectionChange={handleSelectionChange}
+              ariaLabel={labels.editorRegion}
             />
           </div>
         </div>
@@ -287,7 +292,9 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           )}
         </div>
         <div>
-          {selectedDecoration ? (
+          {selectionCount > 1 ? (
+            <p>{labels.multipleSelected.replace('{count}', String(selectionCount))}</p>
+          ) : selectedDecoration ? (
             <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} labels={labels} />
           ) : (
             <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} labels={labels} />
