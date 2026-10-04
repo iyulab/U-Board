@@ -48,6 +48,7 @@ const canonical = new URL(pathFor(locale), SITE_URL).href;
     <meta name="twitter:card" content="summary" />
   </head>
   <body>
+    <!-- TODO(upstream): take the header and footer from the shared public design system once it exists. -->
     <header class="bar">
       <a class="mark" href={pathFor(locale)}>U-Board</a>
       <nav aria-label={locale === 'ko' ? '바로가기' : 'Shortcuts'}>
