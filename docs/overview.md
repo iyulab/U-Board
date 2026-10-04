@@ -14,7 +14,9 @@ any web application.
 
 U-Board is middleware, not a standalone product a user opens on its own. Another application
 embeds a U-Board-authored view and supplies the data that view binds to. U-Board owns the view's
-layout and presentation; it does not own or store the data displayed in it.
+layout and presentation; it does not own or store the data displayed in it. Values are read from
+the systems that own them when the view is shown — the hosted server keeps at most the last value
+it read for each binding, in memory, so a lapse shows as stale instead of blank.
 
 ## Editor and renderer are separate
 

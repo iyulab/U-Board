@@ -7,7 +7,9 @@ network diagram, a map, or a freeform layout — and embed the result anywhere o
 
 Teams building operational software (asset management, industrial monitoring, facility
 operations, and similar domains) who need to embed a live status view — equipment on a floor
-plan, a system topology, a site map — without building a spatial canvas renderer from scratch.
+plan, a system topology, a site map — in their own application, without building a spatial canvas
+renderer from scratch. A view reads its values from the systems that own them when it is shown;
+nothing has to be collected into a platform of U-Board's first.
 
 U-Board runs standalone against any external data source through its adapter surface — it does
 not assume or require a specific host platform.
@@ -20,10 +22,19 @@ floor plan), or embedding that view somewhere the source system's own UI has no 
 adapter surface is what buys that — a view isn't locked to whichever vendor's floor-plan feature
 happened to be good enough.
 
+Every bound value carries its own connection quality — live, stale, or disconnected — and, when it
+is not live, the reason: the source is unreachable, the credentials were refused, the value was not
+found at the source, or the request was rate limited. Each widget shows its own state (a distinct
+frame, with the reason as its tooltip and for screen readers), so one failing source does not turn
+the whole view into an error.
+
 ## What this is not
 
-- Not a general business-intelligence tool. U-Board sits closer to industrial HMI/SCADA
-  authoring than to chart-and-pivot-table dashboards.
+- Not a general business-intelligence tool — no chart-and-pivot-table dashboards over a data
+  warehouse.
+- Not an HMI/SCADA package. There is no symbol library, alarm handling, control output, or screen
+  navigation; U-Board draws status views, and the host application around them keeps those
+  responsibilities.
 - Not a full 3D digital-twin engine. Views are 2D/2.5D; a rotating 3D model of a single object
   is out of scope and left to a dedicated component if one is ever needed.
 - Not a business application. U-Board does not own or store domain data — it binds to values
