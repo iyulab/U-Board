@@ -3,7 +3,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDb } from './db.js';
 import { createApp } from './app.js';
-import { createSendwayPasswordResetEmailSender, sendwayConfigFromEnv } from './email/sendway-email-sender.js';
+import {
+  createSendwayInvitationEmailSender,
+  createSendwayPasswordResetEmailSender,
+  sendwayConfigFromEnv,
+} from './email/sendway-email-sender.js';
+import { publicUrlFromEnv } from './public-url.js';
 
 const databaseUrl = process.env.UBOARD_DATABASE_URL ?? './u-board-data';
 const sessionSecret = process.env.UBOARD_SESSION_SECRET;
@@ -14,6 +19,10 @@ if (!sessionSecret || sessionSecret.length < 16) {
 // Without Sendway settings, `createApp` falls back to its dev-mode log-the-token default.
 const sendwayConfig = sendwayConfigFromEnv(process.env);
 const sendPasswordResetEmail = sendwayConfig ? createSendwayPasswordResetEmailSender(sendwayConfig) : undefined;
+const sendInvitationEmail = sendwayConfig ? createSendwayInvitationEmailSender(sendwayConfig) : undefined;
+
+// Where people open the console — links in email point here. Unset: invitations are not emailed.
+const publicUrl = publicUrlFromEnv(process.env.UBOARD_PUBLIC_URL);
 
 function redactDatabaseUrl(url: string): string {
   if (url.startsWith('postgres://') || url.startsWith('postgresql://')) {
@@ -48,7 +57,17 @@ const webApps =
     : undefined;
 
 const db = await createDb(databaseUrl);
-const app = createApp({ db, sessionSecret, corsOrigins, trustCloudflareProxy, sendPasswordResetEmail, staleMaxAgeMs, webApps });
+const app = createApp({
+  db,
+  sessionSecret,
+  corsOrigins,
+  trustCloudflareProxy,
+  sendPasswordResetEmail,
+  publicUrl,
+  sendInvitationEmail,
+  staleMaxAgeMs,
+  webApps,
+});
 
 const port = Number(process.env.PORT ?? 4000);
 // Express 5 hands a startup failure (e.g. the port is taken) to this callback instead of throwing.

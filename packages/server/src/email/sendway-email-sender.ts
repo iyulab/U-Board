@@ -19,31 +19,43 @@ function buildResetEmailBody(token: string): string {
   );
 }
 
-/** Builds a `sendPasswordResetEmail` compatible with `AppConfig` (see `../app.js`) that delivers
- *  the reset token through a Sendway notification service instead of the dev-mode
- *  log fallback. `fetchFn` defaults to the global `fetch` and is only overridden by tests. */
-export function createSendwayPasswordResetEmailSender(
-  config: SendwayConfig,
-  fetchFn: typeof fetch = fetch
-): (input: { email: string; token: string }) => Promise<void> {
+/** What an invitation email says — everything but the recipient's own address comes from the
+ *  inviting workspace, so it is plain text only (no markup a workspace name could inject into). */
+export interface InvitationEmail {
+  email: string;
+  invitationId: string;
+  workspaceName: string;
+  inviterName: string;
+  role: 'owner' | 'member';
+  /** The link that opens the invitation in the console. */
+  link: string;
+  expiresAt: string;
+}
+
+function buildInvitationEmailBody(input: InvitationEmail): string {
+  return (
+    `${input.inviterName} invited you to the "${input.workspaceName}" workspace on U-Board as ${input.role}.\n\n` +
+    `Accept the invitation:\n${input.link}\n\n` +
+    `The invitation expires on ${input.expiresAt.slice(0, 10)} (UTC) and works once, for this email address. ` +
+    `If you weren't expecting it, you can ignore this email.`
+  );
+}
+
+/** One `POST /messages/email` to a Sendway deployment. `idempotencyKey` makes a retried call
+ *  replay the original send instead of emailing twice. */
+function createSendwayEmailPoster(config: SendwayConfig, fetchFn: typeof fetch) {
   const baseUrl = config.baseUrl.replace(/\/+$/, '');
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  return async function sendPasswordResetEmail(input: { email: string; token: string }): Promise<void> {
+  return async function postEmail(message: { to: string; subject: string; body: string; idempotencyKey: string }): Promise<void> {
     const response = await fetchFn(`${baseUrl}/messages/email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Api-Key': config.apiKey,
-        // The reset token is already unique per request, so reusing it as the idempotency key
-        // means a client retry replays the original send instead of emailing the user twice.
-        'Idempotency-Key': input.token,
+        'Idempotency-Key': message.idempotencyKey,
       },
-      body: JSON.stringify({
-        to: [input.email],
-        subject: 'Reset your U-Board password',
-        body: buildResetEmailBody(input.token),
-      }),
+      body: JSON.stringify({ to: [message.to], subject: message.subject, body: message.body }),
       signal: AbortSignal.timeout(timeoutMs),
     });
 
@@ -51,6 +63,41 @@ export function createSendwayPasswordResetEmailSender(
       const detail = await response.text().catch(() => '');
       throw new Error(`Sendway email send failed with status ${response.status}: ${detail}`);
     }
+  };
+}
+
+/** Builds a `sendPasswordResetEmail` compatible with `AppConfig` (see `../app.js`) that delivers
+ *  the reset token through a Sendway notification service instead of the dev-mode
+ *  log fallback. `fetchFn` defaults to the global `fetch` and is only overridden by tests. */
+export function createSendwayPasswordResetEmailSender(
+  config: SendwayConfig,
+  fetchFn: typeof fetch = fetch
+): (input: { email: string; token: string }) => Promise<void> {
+  const postEmail = createSendwayEmailPoster(config, fetchFn);
+  return async function sendPasswordResetEmail(input: { email: string; token: string }): Promise<void> {
+    await postEmail({
+      to: input.email,
+      subject: 'Reset your U-Board password',
+      body: buildResetEmailBody(input.token),
+      // The reset token is already unique per request, so it doubles as the idempotency key.
+      idempotencyKey: input.token,
+    });
+  };
+}
+
+/** Builds a `sendInvitationEmail` compatible with `AppConfig`. */
+export function createSendwayInvitationEmailSender(
+  config: SendwayConfig,
+  fetchFn: typeof fetch = fetch
+): (input: InvitationEmail) => Promise<void> {
+  const postEmail = createSendwayEmailPoster(config, fetchFn);
+  return async function sendInvitationEmail(input: InvitationEmail): Promise<void> {
+    await postEmail({
+      to: input.email,
+      subject: "You're invited to a U-Board workspace",
+      body: buildInvitationEmailBody(input),
+      idempotencyKey: `invitation-${input.invitationId}`,
+    });
   };
 }
 

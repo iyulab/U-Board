@@ -7,16 +7,17 @@ import {
   createWorkspace,
   addWorkspaceUser,
   changeWorkspaceMembership,
+  findWorkspaceById,
   type WorkspaceRole,
 } from '../db/workspaces.js';
 import { createInvitation, listPendingInvitations, revokeInvitation } from '../db/invitations.js';
-import { findUserByEmail } from '../db/users.js';
+import { findUserByEmail, findUserById } from '../db/users.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
 import { requireWorkspaceOwner, requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { signSession } from '../auth/session.js';
 
 export function createWorkspacesRouter(config: AppConfig): Router {
-  const { db, sessionSecret } = config;
+  const { db, sessionSecret, publicUrl, sendInvitationEmail } = config;
   const router = Router();
   router.use(requireAuth(db, sessionSecret));
 
@@ -59,7 +60,11 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       res.status(403).json({ code: 'FORBIDDEN' });
       return;
     }
-    sendMembershipResult(res, await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'remove' } }));
+    const result = await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'remove' } });
+    if (result === 'changed') {
+      console.log(`[workspaces] ${userId === req.userId ? `${userId} left` : `${req.userId} removed ${userId} from`} ${workspaceId}`);
+    }
+    sendMembershipResult(res, result);
   });
 
   router.patch('/:workspaceId/members/:userId', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string; userId: string }>, res) => {
@@ -69,7 +74,9 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       return;
     }
     const { workspaceId, userId } = req.params;
-    sendMembershipResult(res, await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'set-role', role } }));
+    const result = await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'set-role', role } });
+    if (result === 'changed') console.log(`[workspaces] ${req.userId} set ${userId} to ${role} in ${workspaceId}`);
+    sendMembershipResult(res, result);
   });
 
   router.get('/:workspaceId/invitations', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string }>, res) => {
@@ -98,7 +105,26 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       return;
     }
     const invitation = await createInvitation(db, { workspaceId: req.params.workspaceId, email, role, invitedByUserId: req.userId! });
-    res.status(201).json({ token: invitation.token, expiresAt: invitation.expiresAt });
+    let emailed = false;
+    if (publicUrl && sendInvitationEmail) {
+      try {
+        const [workspace, inviter] = await Promise.all([findWorkspaceById(db, invitation.workspaceId), findUserById(db, req.userId!)]);
+        await sendInvitationEmail({
+          email: invitation.email,
+          invitationId: invitation.id,
+          workspaceName: workspace?.name ?? '',
+          inviterName: inviter?.name ?? '',
+          role: invitation.role,
+          link: `${publicUrl}/invite/${invitation.token}`,
+          expiresAt: invitation.expiresAt,
+        });
+        emailed = true;
+      } catch (err) {
+        // The invitation stands either way — the owner still gets the link to pass on by hand.
+        console.error('[workspaces] sendInvitationEmail failed:', err);
+      }
+    }
+    res.status(201).json({ token: invitation.token, expiresAt: invitation.expiresAt, emailed });
   });
 
   router.post('/:workspaceId/switch', requireWorkspaceMember(db), (req: AuthedRequest<{ workspaceId: string }>, res) => {

@@ -32,7 +32,7 @@ describe('SettingsPage', () => {
 
   it('submits an invitation with the chosen role and shows the generated link', async () => {
     vi.mocked(api.listMembers).mockResolvedValue({ members: [OWNER] });
-    vi.mocked(api.inviteMember).mockResolvedValue({ token: 'abc123', expiresAt: '2026-08-27T00:00:00.000Z' });
+    vi.mocked(api.inviteMember).mockResolvedValue({ token: 'abc123', expiresAt: '2026-08-27T00:00:00.000Z', emailed: false });
 
     renderPage();
     await screen.findByRole('button', { name: '초대' });
@@ -44,6 +44,19 @@ describe('SettingsPage', () => {
     expect(api.inviteMember).toHaveBeenCalledWith('w1', { email: 'new@x.com', role: 'owner' });
     expect(await screen.findByDisplayValue(/\/invite\/abc123$/)).toBeInTheDocument();
     expect(api.listInvitations).toHaveBeenCalledTimes(2); // on load, and again after inviting
+    expect(screen.queryByText(/초대 메일을 보냈습니다/)).not.toBeInTheDocument();
+  });
+
+  it('says the invitation was emailed when the server mailed it, and still shows the link', async () => {
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [OWNER] });
+    vi.mocked(api.inviteMember).mockResolvedValue({ token: 'abc123', expiresAt: '2026-08-27T00:00:00.000Z', emailed: true });
+
+    renderPage();
+    await userEvent.type(await screen.findByLabelText('초대할 이메일'), 'new@x.com');
+    await userEvent.click(screen.getByRole('button', { name: '초대' }));
+
+    expect(await screen.findByText('new@x.com에게 초대 메일을 보냈습니다. 메일이 닿지 않으면 아래 링크를 전달하세요.')).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/\/invite\/abc123$/)).toBeInTheDocument();
   });
 
   it('hides owner controls from a member who is not the workspace owner', async () => {

@@ -29,6 +29,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<Role>('member');
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [invitedByEmail, setInvitedByEmail] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [memberError, setMemberError] = useState<string | null>(null);
 
@@ -53,8 +54,9 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
     e.preventDefault();
     setInviteError(null);
     try {
-      const { token } = await inviteMember(workspaceId, { email: inviteEmail, role: inviteRole });
+      const { token, emailed } = await inviteMember(workspaceId, { email: inviteEmail, role: inviteRole });
       setInviteLink(`${window.location.origin}/invite/${token}`);
+      setInvitedByEmail(emailed ? inviteEmail : null);
       setInviteEmail('');
       setInviteRole('member');
       await loadInvitations();
@@ -173,6 +175,9 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
         </>
       )}
       {inviteError && <Alert>{inviteError}</Alert>}
+      {inviteLink && invitedByEmail && (
+        <p role="status">{invitedByEmail}에게 초대 메일을 보냈습니다. 메일이 닿지 않으면 아래 링크를 전달하세요.</p>
+      )}
       {inviteLink && (
         <FormField label="초대 링크(복사해 전달)">
           <input type="text" readOnly value={inviteLink} onFocus={e => e.target.select()} />

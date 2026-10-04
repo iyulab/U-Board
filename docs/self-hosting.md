@@ -39,11 +39,14 @@ invite the new owner with the `owner` role and leave once they have joined.
 | `UBOARD_STALE_MAX_AGE_SECONDS` | no | How old a connector's last value may be and still be shown as stale when the data source stops answering. Past it, the binding shows as disconnected. Unset: no limit — the value is shown however old, with its age. |
 | `UBOARD_SHARE_FRAME_ANCESTORS` | no | Which pages may embed a share link in a frame, as a CSP `frame-ancestors` source list. Default `https:` (any page served over HTTPS). An intranet page served over plain HTTP needs to be named, e.g. `http://hmi.example.com https:`. |
 | `UBOARD_CORS_ORIGINS` | no | Only when the console or share viewer is hosted on another origin than this server: a comma-separated list of those origins. Not needed for the image as built. |
+| `UBOARD_PUBLIC_URL` | no | The address people open the console at, as an origin (`https://board.example.com`). Links in invitation emails point here; it is set rather than taken from the request so that whoever sends an invitation cannot choose where its link leads. Unset: invitations are not emailed. |
 | `UBOARD_TRUST_CF_PROXY` | no | `true` only when every request reaches the server through Cloudflare (the ingress refuses anything else): sign-in rate limiting then keys on the visitor address Cloudflare reports. |
 
 Password-reset codes are delivered by email when an email provider is configured (see
 `packages/server/.env.example`). Without one, the server writes the code to its log
-(`[auth] no email provider configured — …`), and an administrator passes it on.
+(`[auth] no email provider configured — …`), and an administrator passes it on. Invitations are
+emailed when both an email provider and `UBOARD_PUBLIC_URL` are set; the console always also shows
+the invitation link, so an owner can pass it on another way.
 
 ## HTTPS
 

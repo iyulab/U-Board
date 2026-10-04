@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import type { DbClient } from '../db.js';
 import type express from 'express';
@@ -308,5 +308,61 @@ describe('workspace invitations: list and revoke', () => {
     const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
     expect((await member.agent.get(`/api/workspaces/${workspaceId}/invitations`)).status).toBe(403);
     expect((await member.agent.delete(`/api/workspaces/${workspaceId}/invitations/x`)).status).toBe(403);
+  });
+});
+
+describe('POST /workspaces/:id/invitations — email delivery', () => {
+  async function ownerOn(appUnderTest: express.Express) {
+    const agent = request.agent(appUnderTest);
+    const res = await agent.post('/api/auth/signup').send({ email: 'owner@x.com', password: 'p4ssword!', name: 'Owner' });
+    return { agent, workspaceId: res.body.workspaceId as string };
+  }
+
+  it('emails the invitation link built on the configured public URL', async () => {
+    const sendInvitationEmail = vi.fn().mockResolvedValue(undefined);
+    const emailingApp = createApp({ db, sessionSecret: SECRET, publicUrl: 'https://board.example.com', sendInvitationEmail });
+    const { agent, workspaceId } = await ownerOn(emailingApp);
+
+    const res = await agent
+      .post(`/api/workspaces/${workspaceId}/invitations`)
+      .set('Host', 'attacker.example') // the link must not follow the request
+      .send({ email: 'New@x.com', role: 'owner' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.emailed).toBe(true);
+    expect(sendInvitationEmail).toHaveBeenCalledWith({
+      email: 'new@x.com',
+      invitationId: expect.any(String),
+      workspaceName: 'Default',
+      inviterName: 'Owner',
+      role: 'owner',
+      link: `https://board.example.com/invite/${res.body.token}`,
+      expiresAt: res.body.expiresAt,
+    });
+  });
+
+  it('does not email without a public URL, even with a sender', async () => {
+    const sendInvitationEmail = vi.fn();
+    const { agent, workspaceId } = await ownerOn(createApp({ db, sessionSecret: SECRET, sendInvitationEmail }));
+
+    const res = await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'new@x.com', role: 'member' });
+
+    expect(res.body.emailed).toBe(false);
+    expect(sendInvitationEmail).not.toHaveBeenCalled();
+  });
+
+  it('still creates the invitation when the email fails, reporting it as not emailed', async () => {
+    const sendInvitationEmail = vi.fn().mockRejectedValue(new Error('provider down'));
+    const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { agent, workspaceId } = await ownerOn(
+      createApp({ db, sessionSecret: SECRET, publicUrl: 'https://board.example.com', sendInvitationEmail })
+    );
+
+    const res = await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'new@x.com', role: 'member' });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ token: expect.any(String), emailed: false });
+    expect(errorLog).toHaveBeenCalledWith('[workspaces] sendInvitationEmail failed:', expect.any(Error));
+    errorLog.mockRestore();
   });
 });

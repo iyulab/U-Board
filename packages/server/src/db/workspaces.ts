@@ -25,6 +25,12 @@ export async function createWorkspace(db: DbClient, name: string): Promise<Works
   return workspace;
 }
 
+export async function findWorkspaceById(db: DbClient, id: string): Promise<Workspace | undefined> {
+  const { rows } = await db.query<{ id: string; name: string; created_at: string }>(`SELECT * FROM workspaces WHERE id = $1`, [id]);
+  const row = rows[0];
+  return row ? { id: row.id, name: row.name, createdAt: row.created_at } : undefined;
+}
+
 export async function addWorkspaceUser(
   db: DbClient,
   input: { workspaceId: string; userId: string; role: WorkspaceRole }

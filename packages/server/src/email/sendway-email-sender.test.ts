@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createSendwayPasswordResetEmailSender, sendwayConfigFromEnv } from './sendway-email-sender.js';
+import { createSendwayInvitationEmailSender, createSendwayPasswordResetEmailSender, sendwayConfigFromEnv } from './sendway-email-sender.js';
 
 function fakeFetch(response: { ok: boolean; status: number; text?: () => Promise<string> }) {
   return vi.fn().mockResolvedValue(response as unknown as Response);
@@ -89,5 +89,44 @@ describe('createSendwayPasswordResetEmailSender', () => {
     expect(init.signal.aborted).toBe(false);
     await new Promise(resolve => setTimeout(resolve, 25));
     expect(init.signal.aborted).toBe(true);
+  });
+});
+
+describe('createSendwayInvitationEmailSender', () => {
+  const invitation = {
+    email: 'new@example.com',
+    invitationId: 'inv-1',
+    workspaceName: 'Plant A',
+    inviterName: 'Operator',
+    role: 'owner' as const,
+    link: 'https://board.example.com/invite/tok',
+    expiresAt: '2026-10-12T03:04:05.000Z',
+  };
+
+  it('emails the link, workspace, inviter, role and expiry date to the invitee', async () => {
+    const fetchFn = fakeFetch({ ok: true, status: 200 });
+    await createSendwayInvitationEmailSender({ apiKey: 'k', baseUrl: BASE_URL }, fetchFn)(invitation);
+
+    const [url, init] = fetchFn.mock.calls[0];
+    expect(url).toBe('https://sendway.example.com/messages/email');
+    const body = JSON.parse(init.body as string);
+    expect(body.to).toEqual(['new@example.com']);
+    expect(body.subject).not.toContain('Plant A'); // workspace-controlled text stays out of headers
+    expect(body.body).toContain('https://board.example.com/invite/tok');
+    expect(body.body).toContain('"Plant A"');
+    expect(body.body).toContain('Operator');
+    expect(body.body).toContain('as owner');
+    expect(body.body).toContain('2026-10-12');
+  });
+
+  it('keys the send on the invitation id so a retry does not email twice', async () => {
+    const fetchFn = fakeFetch({ ok: true, status: 200 });
+    await createSendwayInvitationEmailSender({ apiKey: 'k', baseUrl: BASE_URL }, fetchFn)(invitation);
+    expect(fetchFn.mock.calls[0][1].headers['Idempotency-Key']).toBe('invitation-inv-1');
+  });
+
+  it('throws on a failed send', async () => {
+    const fetchFn = fakeFetch({ ok: false, status: 503, text: () => Promise.resolve('down') });
+    await expect(createSendwayInvitationEmailSender({ apiKey: 'k', baseUrl: BASE_URL }, fetchFn)(invitation)).rejects.toThrow(/503/);
   });
 });

@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { DbClient } from './db.js';
+import type { InvitationEmail } from './email/sendway-email-sender.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createInvitationsRouter } from './routes/invitations.js';
 import { createWorkspacesRouter } from './routes/workspaces.js';
@@ -32,6 +33,13 @@ export interface AppConfig {
    *  `routes/auth.ts`'s `defaultSendPasswordResetEmail`). Whatever this does or doesn't do, the
    *  token itself must never appear in an HTTP response — only ever passed to this function. */
   sendPasswordResetEmail?: (input: { email: string; token: string }) => Promise<void>;
+  /** Origin people open the console at (no trailing slash) — the base of links the server puts in
+   *  email. Configured rather than read from the request, so whoever triggers an email cannot
+   *  choose where its link points. */
+  publicUrl?: string;
+  /** Emails an invitation link. Used only with `publicUrl`; without both, an invitation is
+   *  delivered by the owner copying the link the console shows. */
+  sendInvitationEmail?: (input: InvitationEmail) => Promise<void>;
   /** How old a connector's last-known value may be and still be served as `stale` when a read fails
    *  (milliseconds) — past it the binding reads `disconnected`. Unset: no limit. */
   staleMaxAgeMs?: number;
