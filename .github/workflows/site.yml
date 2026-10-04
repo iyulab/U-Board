@@ -1,0 +1,50 @@
+# Deploys the introduction site (packages/site) to Cloudflare Pages. CI (ci.yml) already builds and
+# tests the site on every change; this only publishes it.
+#
+# It deploys only once the repository variable SITE_PAGES_PROJECT names the Pages project, with the
+# secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID set. Until then every run builds the site
+# and stops, so nothing is published before the site has somewhere to go.
+name: Site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/site/**'
+      - '.github/workflows/site.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+
+      # The site depends on nothing else in the workspace; skipping install scripts skips building
+      # the library, which the site does not use.
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Test
+        run: npm test --workspace=packages/site
+
+      - name: Build
+        run: npm run build --workspace=packages/site
+
+      - name: Deploy to Cloudflare Pages
+        if: ${{ vars.SITE_PAGES_PROJECT != '' && github.ref == 'refs/heads/main' }}
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy packages/site/dist --project-name=${{ vars.SITE_PAGES_PROJECT }} --branch=main
