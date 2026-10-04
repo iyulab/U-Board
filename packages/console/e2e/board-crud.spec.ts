@@ -27,11 +27,6 @@ test('create a board, add a node, save, and see it persisted after reopening', a
   await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
   await page.getByRole('link', { name: 'E2E Board' }).click();
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
-  // NOTE: 보드 편집기 페이지에는 owner에게 렌더링되는 공유 패널도 <details>이므로(공유
-  // 태스크 이후 실측), 텍스트로 ViewDocument 디버그 패널을 특정해 strict-mode violation을
-  // 피한다.
-  const debugPanel = page.locator('details').filter({ hasText: 'ViewDocument (디버그)' });
-  await expect(debugPanel.locator('summary')).toHaveText('ViewDocument (디버그)');
-  await debugPanel.locator('summary').click(); // <details> 펼치기
-  await expect(page.locator('pre')).toContainText('"widget"'); // 추가한 노드가 document에 남아있음
+  // 추가한 노드가 저장된 문서에 남아 있다 — 실시간 미리보기에 노드 오버레이가 하나 그려진다.
+  await expect(page.locator('[data-testid^="overlay-"]:not([data-testid="overlay-layer"])')).toHaveCount(1);
 });

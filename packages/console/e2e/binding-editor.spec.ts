@@ -52,8 +52,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await expect(page.getByText(/\(live\)/)).toBeVisible();
 
     await page.getByText('바인딩 저장', { exact: true }).click();
-    // 하단의 "ViewDocument (디버그)" <pre> 덤프에도 같은 문자열이 부분 문자열로 들어있으므로
-    // 바인딩 목록의 <code>data.value</code> 항목만 골라내려면 exact 매칭이 필요하다.
+    // 프롭 경로 입력의 placeholder 등과 섞이지 않게 바인딩 목록의 <code>data.value</code> 항목만 exact로 고른다.
     await expect(page.getByText('data.value', { exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: '저장', exact: true }).click();

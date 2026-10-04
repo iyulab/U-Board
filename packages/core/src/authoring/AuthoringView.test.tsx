@@ -432,3 +432,15 @@ describe('AuthoringView viewport', () => {
     expect(node).toMatchObject({ x: 1040, y: 540 });
   });
 });
+
+describe('AuthoringView document source', () => {
+  it('does not show the document JSON unless asked to', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
+    expect(screen.queryByText('ViewDocument (debug)')).not.toBeInTheDocument();
+  });
+
+  it('shows the document JSON with showDocumentSource', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} showDocumentSource />);
+    expect(screen.getByText('ViewDocument (debug)')).toBeInTheDocument();
+  });
+});

@@ -33,6 +33,8 @@ All notable changes to this package are documented here. The format follows
 - `isViewDocumentShape` is now the type guard for `validateViewDocument` — it checks the whole
   document, not only the top-level fields, so it rejects documents it used to accept.
 - Requires `@iyulab/u-widgets` 0.24.
+- `AuthoringView` no longer shows the edited document as JSON below the editor; pass
+  `showDocumentSource` to keep that development aid.
 - The node property panel and the decoration panel show English by default, like the rest of the
   components; they used to be in Korean. Pass `labels` to show another language.
 

@@ -44,6 +44,8 @@ export interface AuthoringViewProps {
   onDirtyChange?: (isDirty: boolean) => void;
   /** Text to show instead of the English defaults — any subset of `UBoardLabels`. */
   labels?: Partial<UBoardLabels>;
+  /** Show the document being edited as JSON below the editor — a development aid, off by default. */
+  showDocumentSource?: boolean;
 }
 
 /**
@@ -58,7 +60,7 @@ export interface AuthoringViewProps {
  * magnified) and stays fitted as the panes resize until the author pans or zooms; "Fit to view"
  * restores that, and a new node or decoration is placed in view.
  */
-export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp }: AuthoringViewProps) {
+export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false }: AuthoringViewProps) {
   const labels = useLabels(labelsProp);
   const [doc, setDoc] = useState(initialDocument);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
@@ -292,10 +294,12 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           )}
         </div>
       </div>
-      <details style={{ marginTop: 16 }}>
-        <summary>{labels.debugDocument}</summary>
-        <pre style={{ fontSize: 11, maxWidth: 900, overflowX: 'auto' }}>{JSON.stringify(doc, null, 2)}</pre>
-      </details>
+      {showDocumentSource && (
+        <details style={{ marginTop: 16 }}>
+          <summary>{labels.debugDocument}</summary>
+          <pre style={{ fontSize: 11, maxWidth: 900, overflowX: 'auto' }}>{JSON.stringify(doc, null, 2)}</pre>
+        </details>
+      )}
     </div>
   );
 }
