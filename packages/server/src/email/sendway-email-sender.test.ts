@@ -119,10 +119,16 @@ describe('createSendwayInvitationEmailSender', () => {
     expect(body.body).toContain('2026-10-12');
   });
 
-  it('keys the send on the invitation id so a retry does not email twice', async () => {
+  it('keys the send on the invitation and its expiry: a retry is not mailed twice, a resend is', async () => {
     const fetchFn = fakeFetch({ ok: true, status: 200 });
-    await createSendwayInvitationEmailSender({ apiKey: 'k', baseUrl: BASE_URL }, fetchFn)(invitation);
-    expect(fetchFn.mock.calls[0][1].headers['Idempotency-Key']).toBe('invitation-inv-1');
+    const send = createSendwayInvitationEmailSender({ apiKey: 'k', baseUrl: BASE_URL }, fetchFn);
+    await send(invitation);
+    await send(invitation);
+    await send({ ...invitation, expiresAt: '2026-10-19T00:00:00.000Z' }); // resent, with a renewed expiry
+    const keys = fetchFn.mock.calls.map(call => call[1].headers['Idempotency-Key']);
+    expect(keys[0]).toBe(`invitation-inv-1-${invitation.expiresAt}`);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
   });
 
   it('throws on a failed send', async () => {

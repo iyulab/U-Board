@@ -59,6 +59,20 @@ describe('SettingsPage', () => {
     expect(screen.queryByLabelText('초대 링크(복사해 전달)')).not.toBeInTheDocument();
   });
 
+  it('resends a pending invitation and says it was emailed again', async () => {
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [OWNER] });
+    vi.mocked(api.listInvitations).mockResolvedValue({
+      invitations: [{ id: 'i1', email: 'late@x.com', role: 'member', expiresAt: '2026-10-12T00:00:00.000Z' }],
+    });
+    vi.mocked(api.resendInvitation).mockResolvedValue({ expiresAt: '2026-10-19T00:00:00.000Z', emailed: true });
+
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'late@x.com 초대 다시 보내기' }));
+
+    expect(api.resendInvitation).toHaveBeenCalledWith('w1', 'i1');
+    expect(await screen.findByText(/^late@x.com에게 초대 메일을 보냈습니다\./)).toBeInTheDocument();
+  });
+
   it('hides owner controls from a member who is not the workspace owner', async () => {
     vi.mocked(api.listMembers).mockResolvedValue({ members: [OWNER, MEMBER] });
 

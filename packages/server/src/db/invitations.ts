@@ -112,3 +112,20 @@ export async function revokeInvitation(db: DbClient, workspaceId: string, invita
   );
   return (rowCount ?? 0) > 0;
 }
+
+/** Gives a pending invitation of this workspace a fresh expiry — same token, so a link already sent
+ *  keeps working. `undefined` when there is no such pending invitation (accepted, expired, revoked). */
+export async function renewPendingInvitation(
+  db: DbClient,
+  workspaceId: string,
+  invitationId: string
+): Promise<WorkspaceInvitation | undefined> {
+  const now = Date.now();
+  const { rows } = await db.query<InvitationRow>(
+    `UPDATE workspace_invitations SET expires_at = $1
+     WHERE id = $2 AND workspace_id = $3 AND accepted_at IS NULL AND expires_at > $4
+     RETURNING *`,
+    [new Date(now + INVITATION_TTL_MS).toISOString(), invitationId, workspaceId, new Date(now).toISOString()]
+  );
+  return rows[0] ? rowToInvitation(rows[0]) : undefined;
+}

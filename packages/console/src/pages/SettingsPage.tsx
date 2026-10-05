@@ -7,6 +7,7 @@ import {
   setMemberRole,
   listInvitations,
   revokeInvitation,
+  resendInvitation,
   type PendingInvitation,
 } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
@@ -97,6 +98,18 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
     }
   }
 
+  async function handleResend(invitation: PendingInvitation) {
+    setInviteError(null);
+    try {
+      const { token, emailed } = await resendInvitation(workspaceId, invitation.id);
+      setInviteLink(token ? `${window.location.origin}/invite/${token}` : null);
+      setInvitedByEmail(emailed ? invitation.email : null);
+      await loadInvitations();
+    } catch {
+      setInviteError('초대를 다시 보내지 못했습니다.');
+    }
+  }
+
   async function handleRevoke(invitation: PendingInvitation) {
     if (!window.confirm(`${invitation.email}에게 보낸 초대를 취소할까요?`)) return;
     setInviteError(null);
@@ -164,6 +177,9 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
                 {invitations.map(inv => (
                   <li key={inv.id}>
                     <span>{inv.email}</span> <Badge>{inv.role}</Badge> — 만료 {new Date(inv.expiresAt).toLocaleDateString()}{' '}
+                    <Button variant="ghost" aria-label={`${inv.email} 초대 다시 보내기`} onClick={() => handleResend(inv)}>
+                      다시 보내기
+                    </Button>{' '}
                     <Button variant="ghost" aria-label={`${inv.email} 초대 취소`} onClick={() => handleRevoke(inv)}>
                       취소
                     </Button>
@@ -177,7 +193,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
       {inviteError && <Alert>{inviteError}</Alert>}
       {invitedByEmail && (
         <p role="status">
-          {invitedByEmail}에게 초대 메일을 보냈습니다. 메일이 오지 않으면 스팸함을 확인하도록 안내하거나, 대기 중인 초대를 취소하고 다시 보내세요.
+          {invitedByEmail}에게 초대 메일을 보냈습니다. 메일이 오지 않으면 스팸함을 확인하도록 안내하거나, 대기 중인 초대에서 다시 보내세요.
         </p>
       )}
       {inviteLink && (

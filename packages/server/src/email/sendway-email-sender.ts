@@ -96,7 +96,9 @@ export function createSendwayInvitationEmailSender(
       to: input.email,
       subject: "You're invited to a U-Board workspace",
       body: buildInvitationEmailBody(input),
-      idempotencyKey: `invitation-${input.invitationId}`,
+      // One key per send of one invitation: a retry of the same send is not mailed twice, while
+      // resending (which renews the expiry) is a new send and is.
+      idempotencyKey: `invitation-${input.invitationId}-${input.expiresAt}`,
     });
   };
 }

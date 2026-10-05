@@ -34,7 +34,8 @@ installation always keeps at least one) and can join any workspace as an owner, 
 workspace whose owners have all gone is recovered; the operator then shows in its member list. The
 server logs these changes with account and workspace ids.
 
-Owners change members' roles, remove members, and cancel invitations that have not been accepted;
+Owners change members' roles, remove members, and resend or cancel invitations that have not been
+accepted (resending renews the link's week of validity);
 any member can leave a workspace. A workspace always keeps at least one owner — to hand one over,
 invite the new owner with the `owner` role and leave once they have joined.
 

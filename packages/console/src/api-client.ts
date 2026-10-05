@@ -148,6 +148,15 @@ export function listInvitations(workspaceId: string) {
   return request<{ invitations: PendingInvitation[] }>(`/workspaces/${workspaceId}/invitations`);
 }
 
+/** Sends a pending invitation again — the same link, valid for another full period. Answers like
+ *  `inviteMember`: the link comes back only when it was not emailed. */
+export function resendInvitation(workspaceId: string, invitationId: string) {
+  return request<{ token?: string; expiresAt: string; emailed: boolean }>(
+    `/workspaces/${workspaceId}/invitations/${invitationId}/resend`,
+    { method: 'POST' }
+  );
+}
+
 export function revokeInvitation(workspaceId: string, invitationId: string) {
   return request<void>(`/workspaces/${workspaceId}/invitations/${invitationId}`, { method: 'DELETE' });
 }

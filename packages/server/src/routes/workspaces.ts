@@ -10,7 +10,7 @@ import {
   findWorkspaceById,
   type WorkspaceRole,
 } from '../db/workspaces.js';
-import { createInvitation, listPendingInvitations, revokeInvitation } from '../db/invitations.js';
+import { createInvitation, listPendingInvitations, renewPendingInvitation, revokeInvitation, type WorkspaceInvitation } from '../db/invitations.js';
 import { findUserByEmail, findUserById, type User } from '../db/users.js';
 import { isPlausibleEmail } from '../db/email.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
@@ -118,15 +118,37 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       return;
     }
     const invitation = await createInvitation(db, { workspaceId: req.params.workspaceId, email, role, invitedByUserId: req.userId! });
+    res.status(201).json(await deliver(invitation, req.userId!));
+  });
+
+  // Sends a pending invitation again — the same link, with a fresh expiry.
+  router.post(
+    '/:workspaceId/invitations/:invitationId/resend',
+    requireWorkspaceOwner(db),
+    async (req: AuthedRequest<{ workspaceId: string; invitationId: string }>, res) => {
+      const invitation = await renewPendingInvitation(db, req.params.workspaceId, req.params.invitationId);
+      if (!invitation) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      res.status(200).json(await deliver(invitation, req.userId!));
+    }
+  );
+
+  /** Emails the invitation when the installation sends email. An emailed link goes to the invited
+   *  mailbox only — handing it to the inviter too would let them register the invited address with a
+   *  password of their own, without ever reading that mailbox — so the token comes back only when the
+   *  invitation was not emailed, for the owner to pass on by hand. */
+  async function deliver(invitation: WorkspaceInvitation, senderId: string) {
     let emailed = false;
     if (publicUrl && sendInvitationEmail) {
       try {
-        const [workspace, inviter] = await Promise.all([findWorkspaceById(db, invitation.workspaceId), findUserById(db, req.userId!)]);
+        const [workspace, sender] = await Promise.all([findWorkspaceById(db, invitation.workspaceId), findUserById(db, senderId)]);
         await sendInvitationEmail({
           email: invitation.email,
           invitationId: invitation.id,
           workspaceName: workspace?.name ?? '',
-          inviterName: inviter?.name ?? '',
+          inviterName: sender?.name ?? '',
           role: invitation.role,
           link: `${publicUrl}/invite/${invitation.token}`,
           expiresAt: invitation.expiresAt,
@@ -137,14 +159,10 @@ export function createWorkspacesRouter(config: AppConfig): Router {
         console.error('[workspaces] sendInvitationEmail failed:', err);
       }
     }
-    // An emailed link goes to the invited mailbox only. Handing it to the inviter too would let them
-    // register the invited address with a password of their own, without ever reading that mailbox.
-    res.status(201).json(
-      emailed
-        ? { expiresAt: invitation.expiresAt, emailed }
-        : { token: invitation.token, expiresAt: invitation.expiresAt, emailed }
-    );
-  });
+    return emailed
+      ? { expiresAt: invitation.expiresAt, emailed }
+      : { token: invitation.token, expiresAt: invitation.expiresAt, emailed };
+  }
 
   router.post('/:workspaceId/switch', requireWorkspaceMember(db), (req: AuthedRequest<{ workspaceId: string }>, res) => {
     const token = signSession({ userId: req.userId!, activeWorkspaceId: req.params.workspaceId, issuedAt: Date.now() }, sessionSecret);

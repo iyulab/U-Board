@@ -436,3 +436,52 @@ describe('POST /workspaces/:id/invitations — email delivery', () => {
     errorLog.mockRestore();
   });
 });
+
+describe('POST /workspaces/:id/invitations/:invitationId/resend', () => {
+  async function emailingOwner() {
+    const sendInvitationEmail = vi.fn().mockResolvedValue(undefined);
+    app = createApp({ db, sessionSecret: SECRET, publicUrl: 'https://board.example.com', sendInvitationEmail });
+    const { agent, workspaceId } = await bootstrapOwner();
+    await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'new@x.com', role: 'member' });
+    const [pending] = (await agent.get(`/api/workspaces/${workspaceId}/invitations`)).body.invitations;
+    return { agent, workspaceId, pending, sendInvitationEmail };
+  }
+
+  it('mails the same link again and renews its expiry, keeping the link out of the response', async () => {
+    const { agent, workspaceId, pending, sendInvitationEmail } = await emailingOwner();
+    const firstLink = sendInvitationEmail.mock.calls[0][0].link;
+
+    const res = await agent.post(`/api/workspaces/${workspaceId}/invitations/${pending.id}/resend`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ expiresAt: expect.any(String), emailed: true });
+    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThanOrEqual(new Date(pending.expiresAt).getTime());
+    expect(sendInvitationEmail).toHaveBeenCalledTimes(2);
+    expect(sendInvitationEmail.mock.calls[1][0].link).toBe(firstLink); // the first email keeps working too
+  });
+
+  it('hands the link back instead when the installation does not send email', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'new@x.com', role: 'member' });
+    const [pending] = (await agent.get(`/api/workspaces/${workspaceId}/invitations`)).body.invitations;
+
+    const res = await agent.post(`/api/workspaces/${workspaceId}/invitations/${pending.id}/resend`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ token: expect.any(String), emailed: false });
+  });
+
+  it('answers 404 for an invitation that is not pending in this workspace', async () => {
+    const { agent, workspaceId, pending } = await emailingOwner();
+    expect((await agent.post(`/api/workspaces/${workspaceId}/invitations/nope/resend`)).status).toBe(404);
+    await agent.delete(`/api/workspaces/${workspaceId}/invitations/${pending.id}`);
+    expect((await agent.post(`/api/workspaces/${workspaceId}/invitations/${pending.id}/resend`)).status).toBe(404);
+  });
+
+  it('is for owners only (403 to a member)', async () => {
+    const { agent, workspaceId } = await bootstrapOwner();
+    await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'other@x.com', role: 'member' });
+    const [other] = (await agent.get(`/api/workspaces/${workspaceId}/invitations`)).body.invitations;
+    const member = await joinAs(agent, workspaceId, 'member@x.com', 'member');
+    expect((await member.agent.post(`/api/workspaces/${workspaceId}/invitations/${other.id}/resend`)).status).toBe(403);
+  });
+});

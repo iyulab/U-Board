@@ -46,3 +46,4 @@ export const getAccount = vi.fn();
 export const renameAccount = vi.fn();
 export const changePassword = vi.fn();
 export const deleteAccount = vi.fn();
+export const resendInvitation = vi.fn();
