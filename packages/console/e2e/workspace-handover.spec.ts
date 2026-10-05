@@ -62,13 +62,13 @@ test('an owner invites a second owner through the console, then leaves the works
   // The workspace's own record shows the whole story, the operator's way back in included — and so
   // does the installation's record, on the operator page.
   await expect(page.getByRole('heading', { name: '활동 기록' })).toBeVisible();
-  await expect(page.getByText('운영자 Operator님이 Operator님을 owner로 들였습니다.')).toBeVisible();
+  await expect(page.getByText('운영자 Operator님이 owner로 들어왔습니다.')).toBeVisible();
   await expect(page.getByText('Operator님이 나갔습니다.')).toBeVisible();
   await expect(page.getByText('Customer Admin님이 owner 역할로 참여했습니다.')).toBeVisible();
   await expect(page.getByText('Operator님이 e2e-customer-admin@test.com을(를) owner 역할로 초대했습니다.')).toBeVisible();
   await page.getByRole('link', { name: '운영' }).click();
   await expect(page.getByRole('heading', { name: '운영 기록' })).toBeVisible();
-  await expect(page.getByText('운영자 Operator님이 Operator님을 owner로 들였습니다.')).toBeVisible();
+  await expect(page.getByText('운영자 Operator님이 owner로 들어왔습니다.')).toBeVisible();
 
   await customerContext.close();
 });

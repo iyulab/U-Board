@@ -35,15 +35,13 @@ describe('describeAuditEvent', () => {
       describeAuditEvent(
         event({ action: 'member.removed', actor: { userId: null, name: null }, subject: { userId: null, name: null, email: null } })
       )
-    ).toBe('삭제된 계정님이 삭제된 계정님을 내보냈습니다.');
+    ).toBe('삭제된 계정이 삭제된 계정을 내보냈습니다.');
   });
 
-  it("states an operator letting themselves in as the operator's act", () => {
-    expect(
-      describeAuditEvent(
-        event({ action: 'workspace.owner_restored', actor: { userId: 'op', name: 'Op' }, subject: { userId: 'op', name: 'Op', email: null } })
-      )
-    ).toBe('운영자 Op님이 Op님을 owner로 들였습니다.');
+  it("states an operator letting themselves in as the operator's act, and letting someone else in", () => {
+    const restored = event({ action: 'workspace.owner_restored', actor: { userId: 'op', name: 'Op' }, subject: { userId: 'op', name: 'Op', email: null } });
+    expect(describeAuditEvent(restored)).toBe('운영자 Op님이 owner로 들어왔습니다.');
+    expect(describeAuditEvent({ ...restored, subject: { userId: 'u2', name: 'Lee', email: null } })).toBe('운영자 Op님이 Lee님을 owner로 들였습니다.');
   });
 });
 
