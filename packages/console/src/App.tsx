@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
 import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
 import { InvitePage } from './pages/InvitePage.js';
+import { InstancePage } from './pages/InstancePage.js';
 import { RequireSession } from './RequireSession.js';
 import { Alert } from './design-system/Alert.js';
 import { BoardsListPage } from './pages/BoardsListPage.js';
@@ -68,7 +69,9 @@ function InviteRoute() {
 // `activeWorkspaceId` into shared state across routes — the same "session changed, refresh
 // everything" pattern login/signup/logout already use, and it keeps every wrapped page's own
 // `workspaceId`/`userId` props exactly as they were before this shell existed.
-function AuthedLayout({ children }: { children: (session: Session) => ReactNode }) {
+// `needsWorkspace`: pages that work inside a workspace show a way back in when the user belongs to
+// none; the installation page does not need one.
+function AuthedLayout({ children, needsWorkspace = true }: { children: (session: Session) => ReactNode; needsWorkspace?: boolean }) {
   const navigate = useNavigate();
 
   async function handleSwitch(workspaceId: string) {
@@ -91,6 +94,7 @@ function AuthedLayout({ children }: { children: (session: Session) => ReactNode 
       {session => (
         <AppShell
           onLogout={handleLogout}
+          showInstanceLink={session.instanceRole === 'operator'}
           workspaceSwitcher={
             <WorkspaceSwitcher
               workspaces={session.workspaces}
@@ -100,7 +104,7 @@ function AuthedLayout({ children }: { children: (session: Session) => ReactNode 
             />
           }
         >
-          {session.activeWorkspaceId ? (
+          {session.activeWorkspaceId || !needsWorkspace ? (
             children(session)
           ) : (
             // Removed from (or left) every workspace: no page has a workspace to show, so offer the
@@ -114,6 +118,24 @@ function AuthedLayout({ children }: { children: (session: Session) => ReactNode 
         </AppShell>
       )}
     </RequireSession>
+  );
+}
+
+// Entering a workspace as its owner, or stepping down as operator, changes what the session may
+// open — go to the workspace (or stay) and reload, as switching does.
+function InstanceRoute({ session }: { session: Session }) {
+  const navigate = useNavigate();
+  if (session.instanceRole !== 'operator') return <Navigate to="/boards" replace />;
+  return (
+    <InstancePage
+      userId={session.userId}
+      onEnterWorkspace={async workspaceId => {
+        await switchWorkspace(workspaceId);
+        navigate('/boards');
+        navigate(0);
+      }}
+      onSessionChanged={() => navigate(0)}
+    />
   );
 }
 
@@ -163,6 +185,10 @@ export function App({
           <Route
             path="/connectors"
             element={<AuthedLayout>{s => <ConnectorsPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</AuthedLayout>}
+          />
+          <Route
+            path="/instance"
+            element={<AuthedLayout needsWorkspace={false}>{s => <InstanceRoute session={s} />}</AuthedLayout>}
           />
           <Route
             path="/settings"

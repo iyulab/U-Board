@@ -118,3 +118,25 @@ describe('/settings', () => {
     expect(screen.getByRole('button', { name: /Default/ })).toBeInTheDocument();
   });
 });
+
+describe('/instance', () => {
+  it('shows the installation page to an operator, linked from the navigation, even with no workspace', async () => {
+    vi.mocked(api.getSession).mockResolvedValue(session({ activeWorkspaceId: '', workspaces: [] }));
+    vi.mocked(api.listInstanceWorkspaces).mockResolvedValue({ workspaces: [] });
+    vi.mocked(api.listInstanceUsers).mockResolvedValue({ users: [] });
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/instance']} />);
+
+    expect(await screen.findByRole('heading', { name: '계정' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '운영' })).toHaveClass('ub-shell__nav-link--active');
+  });
+
+  it('sends anyone else to /boards, with no link to it', async () => {
+    vi.mocked(api.getSession).mockResolvedValue(session({ instanceRole: 'user', canCreateWorkspaces: false }));
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/instance']} />);
+
+    expect(await screen.findByRole('heading', { name: '보드' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '운영' })).not.toBeInTheDocument();
+    expect(api.listInstanceWorkspaces).not.toHaveBeenCalled();
+  });
+});

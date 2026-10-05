@@ -22,6 +22,16 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: '설정' })).toHaveAttribute('href', '/settings');
   });
 
+  it('shows the installation page link only when asked to (operators)', () => {
+    renderShell();
+    expect(screen.queryByRole('link', { name: '운영' })).not.toBeInTheDocument();
+  });
+
+  it('links the installation page for an operator', () => {
+    renderShell({ showInstanceLink: true });
+    expect(screen.getByRole('link', { name: '운영' })).toHaveAttribute('href', '/instance');
+  });
+
   it('marks the link matching the current route as active', () => {
     renderShell();
     expect(screen.getByRole('link', { name: '보드' })).toHaveClass('ub-shell__nav-link--active');

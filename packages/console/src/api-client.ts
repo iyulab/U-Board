@@ -274,3 +274,40 @@ export function createShareToken(workspaceId: string, boardId: string, expiresAt
 export function deleteShareToken(workspaceId: string, boardId: string, tokenId: string) {
   return request<void>(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens/${tokenId}`, { method: 'DELETE' });
 }
+
+/** A workspace as an operator sees it: enough to run the installation, nothing of its contents. */
+export interface InstanceWorkspace {
+  id: string;
+  name: string;
+  createdAt: string;
+  memberCount: number;
+  owners: { userId: string; email: string; name: string }[];
+}
+
+export interface InstanceUser {
+  id: string;
+  email: string;
+  name: string;
+  instanceRole: 'operator' | 'user';
+  createdAt: string;
+  workspaceCount: number;
+}
+
+/** Operators only, like every `/instance` call. */
+export function listInstanceWorkspaces() {
+  return request<{ workspaces: InstanceWorkspace[] }>('/instance/workspaces');
+}
+
+export function listInstanceUsers() {
+  return request<{ users: InstanceUser[] }>('/instance/users');
+}
+
+/** Fails with `LAST_OPERATOR` when it would leave the installation without an operator. */
+export function setInstanceRole(userId: string, instanceRole: 'operator' | 'user') {
+  return request<void>(`/instance/users/${userId}`, { method: 'PATCH', body: JSON.stringify({ instanceRole }) });
+}
+
+/** Makes an account an owner of a workspace — the operator's way back into one whose owners are gone. */
+export function makeWorkspaceOwner(workspaceId: string, userId: string) {
+  return request<void>(`/instance/workspaces/${workspaceId}/owners`, { method: 'POST', body: JSON.stringify({ userId }) });
+}

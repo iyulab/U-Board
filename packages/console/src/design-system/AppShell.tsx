@@ -5,6 +5,8 @@ import './AppShell.css';
 
 interface AppShellProps {
   workspaceSwitcher?: ReactNode;
+  /** Adds the installation page to the navigation — for an operator only. */
+  showInstanceLink?: boolean;
   onLogout: () => void;
   children: ReactNode;
 }
@@ -14,14 +16,16 @@ const NAV_ITEMS = [
   { to: '/connectors', label: '커넥터' },
   { to: '/settings', label: '설정' },
 ];
+const INSTANCE_ITEM = { to: '/instance', label: '운영' };
 
-export function AppShell({ workspaceSwitcher, onLogout, children }: AppShellProps) {
+export function AppShell({ workspaceSwitcher, showInstanceLink = false, onLogout, children }: AppShellProps) {
+  const items = showInstanceLink ? [...NAV_ITEMS, INSTANCE_ITEM] : NAV_ITEMS;
   return (
     <div className="ub-shell">
       <aside className="ub-shell__sidebar">
         {workspaceSwitcher && <div className="ub-shell__workspace">{workspaceSwitcher}</div>}
         <nav className="ub-shell__nav" aria-label="주요 메뉴">
-          {NAV_ITEMS.map(item => (
+          {items.map(item => (
             <NavLink
               key={item.to}
               to={item.to}

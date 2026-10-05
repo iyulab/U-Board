@@ -28,6 +28,12 @@ else. Only an operator creates workspaces — on an installation that serves sev
 each gets its own workspace from the operator, who invites its administrator as an owner and can then
 leave it. Set `UBOARD_WORKSPACE_CREATION=anyone` to let every account create workspaces.
 
+An operator's console has an installation page that lists every workspace — its owners and member
+count, not its contents — and every account. There an operator makes other accounts operators (the
+installation always keeps at least one) and can join any workspace as an owner, which is how a
+workspace whose owners have all gone is recovered; the operator then shows in its member list. The
+server logs these changes with account and workspace ids.
+
 Owners change members' roles, remove members, and cancel invitations that have not been accepted;
 any member can leave a workspace. A workspace always keeps at least one owner — to hand one over,
 invite the new owner with the `owner` role and leave once they have joined.
