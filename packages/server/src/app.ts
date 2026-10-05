@@ -3,7 +3,7 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { DbClient } from './db.js';
-import type { InvitationEmail } from './email/sendway-email-sender.js';
+import type { InvitationEmail } from './email/messages.js';
 import { createAuthRouter } from './routes/auth.js';
 import { createInvitationsRouter } from './routes/invitations.js';
 import { createWorkspacesRouter } from './routes/workspaces.js';

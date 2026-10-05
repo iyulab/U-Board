@@ -115,8 +115,8 @@ describe('createSendwayInvitationEmailSender', () => {
     expect(body.body).toContain('https://board.example.com/invite/tok');
     expect(body.body).toContain('"Plant A"');
     expect(body.body).toContain('Operator');
-    expect(body.body).toContain('as owner');
-    expect(body.body).toContain('2026-10-12');
+    expect(body.body).toContain('owner 역할');
+    expect(body.body).toContain('2026-10-12 03:04 (UTC)');
   });
 
   it('keys the send on the invitation and its expiry: a retry is not mailed twice, a resend is', async () => {

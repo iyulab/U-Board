@@ -1,3 +1,5 @@
+import { invitationMessage, passwordResetMessage, type InvitationEmail } from './messages.js';
+
 const DEFAULT_TIMEOUT_MS = 10_000;
 
 export interface SendwayConfig {
@@ -9,36 +11,6 @@ export interface SendwayConfig {
    *  indefinitely, since that route always responds 202 regardless of account existence and has
    *  nothing else gating its response. */
   timeoutMs?: number;
-}
-
-function buildResetEmailBody(token: string): string {
-  return (
-    `Use this code to reset your U-Board password:\n\n${token}\n\n` +
-    `This code expires in 1 hour and can only be used once. If you didn't request a password ` +
-    `reset, you can ignore this email.`
-  );
-}
-
-/** What an invitation email says — everything but the recipient's own address comes from the
- *  inviting workspace, so it is plain text only (no markup a workspace name could inject into). */
-export interface InvitationEmail {
-  email: string;
-  invitationId: string;
-  workspaceName: string;
-  inviterName: string;
-  role: 'owner' | 'member';
-  /** The link that opens the invitation in the console. */
-  link: string;
-  expiresAt: string;
-}
-
-function buildInvitationEmailBody(input: InvitationEmail): string {
-  return (
-    `${input.inviterName} invited you to the "${input.workspaceName}" workspace on U-Board as ${input.role}.\n\n` +
-    `Accept the invitation:\n${input.link}\n\n` +
-    `The invitation expires on ${input.expiresAt.slice(0, 10)} (UTC) and works once, for this email address. ` +
-    `If you weren't expecting it, you can ignore this email.`
-  );
 }
 
 /** One `POST /messages/email` to a Sendway deployment. `idempotencyKey` makes a retried call
@@ -77,8 +49,7 @@ export function createSendwayPasswordResetEmailSender(
   return async function sendPasswordResetEmail(input: { email: string; token: string }): Promise<void> {
     await postEmail({
       to: input.email,
-      subject: 'Reset your U-Board password',
-      body: buildResetEmailBody(input.token),
+      ...passwordResetMessage(input.token),
       // The reset token is already unique per request, so it doubles as the idempotency key.
       idempotencyKey: input.token,
     });
@@ -94,8 +65,7 @@ export function createSendwayInvitationEmailSender(
   return async function sendInvitationEmail(input: InvitationEmail): Promise<void> {
     await postEmail({
       to: input.email,
-      subject: "You're invited to a U-Board workspace",
-      body: buildInvitationEmailBody(input),
+      ...invitationMessage(input),
       // One key per send of one invitation: a retry of the same send is not mailed twice, while
       // resending (which renews the expiry) is a new send and is.
       idempotencyKey: `invitation-${input.invitationId}-${input.expiresAt}`,
