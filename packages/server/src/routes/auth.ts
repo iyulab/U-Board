@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomBytes, createHash } from 'node:crypto';
 import type { AppConfig } from '../app.js';
-import { createUser, findUserByEmail, countUsers, updateUserPassword } from '../db/users.js';
+import { createUser, findUserByEmail, findUserById, countUsers, updateUserPassword, updateUserName } from '../db/users.js';
 import {
   createPasswordResetToken,
   findPasswordResetTokenByHash,
@@ -28,6 +28,8 @@ import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
   clearSessionCookieOptions,
+  requireAuth,
+  type AuthedRequest,
 } from '../middleware/require-auth.js';
 
 /** A signup gate that only the transaction can evaluate; carries the response it maps to. */
@@ -251,10 +253,51 @@ export function createAuthRouter(config: AppConfig): Router {
       }
 
       const passwordHash = await hashPassword(newPassword);
+      // Also signs out every session of the account: whoever held one may be why it was reset.
       await updateUserPassword(db, claimed.userId, passwordHash);
       res.status(200).json({ code: 'PASSWORD_RESET' });
     }
   );
+
+  // The signed-in account itself — what the console's account page shows and edits.
+  router.get('/me', requireAuth(db, sessionSecret), async (req: AuthedRequest, res) => {
+    const user = await findUserById(db, req.userId!);
+    res.status(200).json({ id: user!.id, email: user!.email, name: user!.name });
+  });
+
+  router.patch('/me', requireAuth(db, sessionSecret), async (req: AuthedRequest, res) => {
+    const { name: rawName } = req.body ?? {};
+    const name = typeof rawName === 'string' ? normalizeName(rawName) : undefined;
+    if (!name) {
+      res.status(400).json({ code: 'INVALID_NAME' });
+      return;
+    }
+    await updateUserName(db, req.userId!, name);
+    res.status(200).json({ name });
+  });
+
+  router.post('/change-password', requireAuth(db, sessionSecret), async (req: AuthedRequest, res) => {
+    const { currentPassword, newPassword } = req.body ?? {};
+    if (typeof currentPassword !== 'string' || typeof newPassword !== 'string') {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    const user = await findUserById(db, req.userId!);
+    if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) {
+      res.status(401).json({ code: 'INVALID_CREDENTIALS' });
+      return;
+    }
+    const passwordProblem = checkPassword(newPassword);
+    if (passwordProblem) {
+      res.status(400).json({ code: passwordProblem });
+      return;
+    }
+    // Every session opened with the old password is signed out; this one continues on a fresh cookie.
+    const changedAt = await updateUserPassword(db, user.id, await hashPassword(newPassword));
+    const token = signSession({ userId: user.id, activeWorkspaceId: req.activeWorkspaceId ?? '', issuedAt: changedAt }, sessionSecret);
+    res.cookie(SESSION_COOKIE_NAME, token, sessionCookieOptions(req));
+    res.status(204).end();
+  });
 
   return router;
 }

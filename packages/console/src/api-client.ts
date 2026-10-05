@@ -311,3 +311,19 @@ export function setInstanceRole(userId: string, instanceRole: 'operator' | 'user
 export function makeWorkspaceOwner(workspaceId: string, userId: string) {
   return request<void>(`/instance/workspaces/${workspaceId}/owners`, { method: 'POST', body: JSON.stringify({ userId }) });
 }
+
+/** The signed-in account. */
+export function getAccount() {
+  return request<{ id: string; email: string; name: string }>('/auth/me');
+}
+
+/** Fails with `INVALID_NAME` for a blank or overlong name. */
+export function renameAccount(name: string) {
+  return request<{ name: string }>('/auth/me', { method: 'PATCH', body: JSON.stringify({ name }) });
+}
+
+/** Signs out every other session of the account; this one continues. Fails with
+ *  `INVALID_CREDENTIALS` (wrong current password), `PASSWORD_TOO_SHORT` or `PASSWORD_TOO_LONG`. */
+export function changePassword(input: { currentPassword: string; newPassword: string }) {
+  return request<void>('/auth/change-password', { method: 'POST', body: JSON.stringify(input) });
+}

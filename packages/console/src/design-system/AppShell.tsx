@@ -35,6 +35,12 @@ export function AppShell({ workspaceSwitcher, showInstanceLink = false, onLogout
             </NavLink>
           ))}
         </nav>
+        <NavLink
+          to="/account"
+          className={({ isActive }) => `ub-shell__nav-link${isActive ? ' ub-shell__nav-link--active' : ''}`}
+        >
+          내 계정
+        </NavLink>
         <Button variant="ghost" onClick={onLogout}>
           로그아웃
         </Button>

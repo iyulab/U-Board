@@ -8,6 +8,7 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage.js';
 import { SettingsPage } from './pages/SettingsPage.js';
 import { InvitePage } from './pages/InvitePage.js';
 import { InstancePage } from './pages/InstancePage.js';
+import { AccountPage } from './pages/AccountPage.js';
 import { RequireSession } from './RequireSession.js';
 import { Alert } from './design-system/Alert.js';
 import { BoardsListPage } from './pages/BoardsListPage.js';
@@ -185,6 +186,10 @@ export function App({
           <Route
             path="/connectors"
             element={<AuthedLayout>{s => <ConnectorsPage workspaceId={s.activeWorkspaceId} userId={s.userId} />}</AuthedLayout>}
+          />
+          <Route
+            path="/account"
+            element={<AuthedLayout needsWorkspace={false}>{() => <AccountPage />}</AuthedLayout>}
           />
           <Route
             path="/instance"

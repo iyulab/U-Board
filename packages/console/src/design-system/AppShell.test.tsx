@@ -32,6 +32,11 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: '운영' })).toHaveAttribute('href', '/instance');
   });
 
+  it('links the account page for everyone', () => {
+    renderShell();
+    expect(screen.getByRole('link', { name: '내 계정' })).toHaveAttribute('href', '/account');
+  });
+
   it('marks the link matching the current route as active', () => {
     renderShell();
     expect(screen.getByRole('link', { name: '보드' })).toHaveClass('ub-shell__nav-link--active');

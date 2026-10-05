@@ -40,3 +40,6 @@ export const listInstanceWorkspaces = vi.fn();
 export const listInstanceUsers = vi.fn();
 export const setInstanceRole = vi.fn();
 export const makeWorkspaceOwner = vi.fn();
+export const getAccount = vi.fn();
+export const renameAccount = vi.fn();
+export const changePassword = vi.fn();

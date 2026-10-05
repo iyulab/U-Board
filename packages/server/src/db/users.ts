@@ -12,6 +12,8 @@ export interface User {
   passwordHash: string;
   name: string;
   instanceRole: InstanceRole;
+  /** Sessions issued before this moment (ISO 8601) are refused; undefined when none are. */
+  sessionsValidAfter?: string;
   createdAt: string;
 }
 
@@ -21,6 +23,7 @@ interface UserRow {
   password_hash: string;
   name: string;
   instance_role: InstanceRole;
+  sessions_valid_after: string | null;
   created_at: string;
 }
 
@@ -31,6 +34,7 @@ function rowToUser(row: UserRow): User {
     passwordHash: row.password_hash,
     name: row.name,
     instanceRole: row.instance_role,
+    ...(row.sessions_valid_after ? { sessionsValidAfter: row.sessions_valid_after } : {}),
     createdAt: row.created_at,
   };
 }
@@ -64,8 +68,20 @@ export async function findUserById(db: DbClient, id: string): Promise<User | und
   return rows[0] ? rowToUser(rows[0]) : undefined;
 }
 
-export async function updateUserPassword(db: DbClient, userId: string, passwordHash: string): Promise<void> {
-  await db.query(`UPDATE users SET password_hash = $1 WHERE id = $2`, [passwordHash, userId]);
+/** Replaces the password and signs out every session issued until now — they were opened with the
+ *  old one. Returns that moment, so the caller can issue the one session it means to keep after it. */
+export async function updateUserPassword(db: DbClient, userId: string, passwordHash: string): Promise<number> {
+  const now = Date.now();
+  await db.query(`UPDATE users SET password_hash = $1, sessions_valid_after = $2 WHERE id = $3`, [
+    passwordHash,
+    new Date(now).toISOString(),
+    userId,
+  ]);
+  return now;
+}
+
+export async function updateUserName(db: DbClient, userId: string, name: string): Promise<void> {
+  await db.query(`UPDATE users SET name = $1 WHERE id = $2`, [name, userId]);
 }
 
 export async function countUsers(db: DbClient): Promise<number> {

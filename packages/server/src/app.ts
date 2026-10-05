@@ -123,6 +123,8 @@ export function createApp(config: AppConfig): express.Express {
   // reset-password shares it too for the same "auth attack surface" reasoning login/signup do.
   api.use('/auth/request-password-reset', authRateLimiter);
   api.use('/auth/reset-password', authRateLimiter);
+  // A stolen session must not become unlimited guesses at the current password.
+  api.use('/auth/change-password', authRateLimiter);
   api.use('/auth', createAuthRouter(config));
   api.use('/invitations', createInvitationsRouter(config));
   api.use('/workspaces', createWorkspacesRouter(config));

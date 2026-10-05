@@ -124,6 +124,9 @@ CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_t
 -- Instance roles: an operator runs the installation (creates workspaces for others, by default the
 -- only one who may); every other account is a user. An installation from before this column gets
 -- one operator, its first account — the same account a fresh installation makes the operator.
+-- Sessions issued before this moment are no longer accepted — set when the password changes, so a
+-- reset or a change signs out every session that knew the old password. NULL: none revoked.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS sessions_valid_after TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS instance_role TEXT NOT NULL DEFAULT 'user' CHECK (instance_role IN ('operator', 'user'));
 UPDATE users SET instance_role = 'operator'
   WHERE id = (SELECT id FROM users ORDER BY created_at, id LIMIT 1)

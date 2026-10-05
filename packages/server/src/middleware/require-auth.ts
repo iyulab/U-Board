@@ -64,7 +64,8 @@ export function requireAuth(db: DbClient, sessionSecret: string): RequestHandler
       return;
     }
     const user = await findUserById(db, payload.userId);
-    if (!user) {
+    // A session opened before the password last changed knew the old password — refused.
+    if (!user || (user.sessionsValidAfter && payload.issuedAt < Date.parse(user.sessionsValidAfter))) {
       res.status(401).json({ code: 'UNAUTHENTICATED' });
       return;
     }

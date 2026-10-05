@@ -356,6 +356,20 @@ describe('POST /auth/reset-password', () => {
     expect(newLogin.status).toBe(200);
   });
 
+  it('signs out every existing session of the account — a stolen session does not survive a reset', async () => {
+    const victim = request.agent(app);
+    await victim.post('/api/auth/signup').send({ email: 'reset3@x.com', password: 'old-pass!', name: 'R3' });
+    expect((await victim.get('/api/workspaces/me')).status).toBe(200);
+    const token = await requestReset(app, 'reset3@x.com');
+
+    await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'new-pass!' });
+
+    expect((await victim.get('/api/workspaces/me')).status).toBe(401);
+    const fresh = request.agent(app);
+    await fresh.post('/api/auth/login').send({ email: 'reset3@x.com', password: 'new-pass!' });
+    expect((await fresh.get('/api/workspaces/me')).status).toBe(200);
+  });
+
   it('rejects a new password shorter than 8 characters without spending the token', async () => {
     await createUser(db, { email: 'u@x.com', passwordHash: await hashPassword('old-p4ssword'), name: 'U' });
     const token = await requestReset(app, 'u@x.com');
