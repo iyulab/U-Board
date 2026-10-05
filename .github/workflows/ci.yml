@@ -120,7 +120,7 @@ jobs:
         run: npm run build:lib
 
       - name: Library smoke
-        run: node scripts/smoke-library.mjs
+        run: npm run smoke:library
 
       - name: Server tests
         run: npm test --workspace=packages/server

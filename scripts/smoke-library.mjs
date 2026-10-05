@@ -7,7 +7,7 @@
 // toolchain, which has its own, newer requirements.
 //
 // Usage (after `npm run build:lib`):
-//   node scripts/smoke-library.mjs     # exit 1 on the first wrong result
+//   npm run smoke:library     # exit 1 on the first wrong result
 
 import assert from 'node:assert/strict';
 import { describeQuality, parseViewDocument, resolveDocument, validateViewDocument } from '@iyulab/u-board/domain';
@@ -47,7 +47,7 @@ const [pumpA] = (await resolveDocument(doc, [adapter])).nodes;
 assert.deepEqual(pumpA.widget.props, { data: { label: 'Pump A', value: 'running' } });
 assert.deepEqual(pumpA.widget.quality, { 'data.value': 'live', 'data.load': 'disconnected' });
 assert.equal(
-  describeQuality(pumpA.widget.quality, pumpA.widget.reasons),
+  describeQuality(pumpA.widget),
   'disconnected — no value has been reached (bound value not found at the source)'
 );
 

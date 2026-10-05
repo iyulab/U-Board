@@ -67,7 +67,9 @@ The server and the other applications import `@iyulab/u-board` from `packages/co
 which `npm install` builds once. After changing `packages/core`, run `npm run build:lib` before
 testing them, or they keep running against the previous build.
 
-CI runs the same checks plus a real-Postgres concurrency suite, `npm run check:package-types`
+CI runs the same checks plus a real-Postgres concurrency suite, `npm run smoke:library` on the oldest
+supported Node (the built library entry used the way a consumer would — after `npm run build:lib`),
+`npm run check:package-types`
 (the published package's type declarations resolve for ESM consumers — `attw`), and three
 repository checks:
 `npm run check:dependency-drift` (dependencies not left behind their published versions; a breaking
