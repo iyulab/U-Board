@@ -1,11 +1,17 @@
 import { useEffect, useState } from 'react';
-import { getInvitation, acceptInvitation, switchWorkspace } from '../api-client.js';
+import { getInvitation, acceptInvitation, switchWorkspace, ApiError, type InvitationDetails } from '../api-client.js';
 import { SignupPage } from './SignupPage.js';
 import { LoginPage } from './LoginPage.js';
 import { Loading } from '../design-system/Loading.js';
 
+// Why accepting failed, in terms of what the person can do about it.
+const ACCEPT_ERROR_MESSAGES: Record<string, string> = {
+  INVITATION_EXPIRED: '초대가 만료되었거나 취소되었습니다. 초대한 사람에게 다시 요청하세요.',
+  INVITATION_INVALID: '이 초대는 다른 이메일 주소로 보낸 것입니다. 초대받은 주소로 로그인하세요.',
+};
+
 export function InvitePage({ token, onJoined }: { token: string; onJoined: (workspaceId: string) => void }) {
-  const [invitation, setInvitation] = useState<{ email: string; workspaceId: string; hasAccount: boolean } | null>(null);
+  const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,14 +25,23 @@ export function InvitePage({ token, onJoined }: { token: string; onJoined: (work
     // is `() => void`), so a rejection escaping this function would be unhandled and the user
     // would see nothing happen at all.
     try {
-      const { workspaceId } = await acceptInvitation(token);
+      let workspaceId: string;
+      try {
+        ({ workspaceId } = await acceptInvitation(token));
+      } catch (err) {
+        // Already a member: the invitation has nothing left to do — take them to the workspace.
+        if (!(err instanceof ApiError && err.code === 'ALREADY_MEMBER') || !invitation) throw err;
+        workspaceId = invitation.workspaceId;
+      }
       // `login` minted the session cookie from the workspaces the user already belonged to,
       // before this membership existed — without switching, they would land on their old
       // default workspace with no sign the invitation was accepted.
       await switchWorkspace(workspaceId);
       onJoined(workspaceId);
-    } catch {
-      setError('초대 수락에 실패했습니다. 다시 시도해 주세요.');
+    } catch (err) {
+      setError(
+        (err instanceof ApiError && ACCEPT_ERROR_MESSAGES[err.code]) || '초대 수락에 실패했습니다. 다시 시도해 주세요.'
+      );
     }
   }
 
@@ -37,9 +52,17 @@ export function InvitePage({ token, onJoined }: { token: string; onJoined: (work
   if (error) return <p role="alert">{error}</p>;
   if (!invitation) return <Loading />;
 
-  return invitation.hasAccount ? (
-    <LoginPage prefillEmail={invitation.email} onSuccess={handleLoginSuccess} />
-  ) : (
-    <SignupPage invitationToken={token} prefillEmail={invitation.email} onSuccess={handleSignupSuccess} />
+  return (
+    <>
+      <p>
+        {invitation.inviterName}님이 {invitation.workspaceName} 워크스페이스에 {invitation.role}로 초대했습니다.{' '}
+        {new Date(invitation.expiresAt).toLocaleDateString()}까지 유효합니다.
+      </p>
+      {invitation.hasAccount ? (
+        <LoginPage prefillEmail={invitation.email} onSuccess={handleLoginSuccess} />
+      ) : (
+        <SignupPage invitationToken={token} prefillEmail={invitation.email} onSuccess={handleSignupSuccess} />
+      )}
+    </>
   );
 }

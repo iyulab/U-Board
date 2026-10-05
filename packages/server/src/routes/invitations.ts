@@ -3,7 +3,7 @@ import type { AppConfig } from '../app.js';
 import { findInvitationByToken, markInvitationAcceptedIfUnused, isInvitationUsable } from '../db/invitations.js';
 import { findUserByEmail, findUserById } from '../db/users.js';
 import { normalizeEmail } from '../db/email.js';
-import { addWorkspaceUser, findWorkspaceUser } from '../db/workspaces.js';
+import { addWorkspaceUser, findWorkspaceById, findWorkspaceUser } from '../db/workspaces.js';
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
 
 export function createInvitationsRouter(config: AppConfig): Router {
@@ -20,10 +20,20 @@ export function createInvitationsRouter(config: AppConfig): Router {
       res.status(410).json({ code: 'INVITATION_EXPIRED' });
       return;
     }
+    // The same facts the invitation email carries — the token holder already has them that way.
+    const [workspace, inviter, account] = await Promise.all([
+      findWorkspaceById(db, invitation.workspaceId),
+      findUserById(db, invitation.invitedByUserId),
+      findUserByEmail(db, invitation.email),
+    ]);
     res.status(200).json({
       email: invitation.email,
       workspaceId: invitation.workspaceId,
-      hasAccount: Boolean(await findUserByEmail(db, invitation.email)),
+      workspaceName: workspace?.name ?? '',
+      inviterName: inviter?.name ?? '',
+      role: invitation.role,
+      expiresAt: invitation.expiresAt,
+      hasAccount: Boolean(account),
     });
   });
 

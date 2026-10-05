@@ -18,9 +18,44 @@ function renderInvite(props: Parameters<typeof InvitePage>[0]) {
   );
 }
 
+function invitation(overrides: Partial<api.InvitationDetails> = {}): api.InvitationDetails {
+  return {
+    email: 'new@x.com',
+    workspaceId: 'w1',
+    workspaceName: 'Customer A',
+    inviterName: 'Operator',
+    role: 'owner',
+    expiresAt: '2026-10-12T00:00:00.000Z',
+    hasAccount: false,
+    ...overrides,
+  };
+}
+
 describe('InvitePage', () => {
+  it('says which workspace the invitation is to, from whom, as what, and until when', async () => {
+    vi.mocked(api.getInvitation).mockResolvedValue(invitation());
+    renderInvite({ token: 'tok123', onJoined: vi.fn() });
+
+    const context = await screen.findByText(/Operator님이 Customer A 워크스페이스에 owner로 초대했습니다/);
+    expect(context).toHaveTextContent(new Date('2026-10-12T00:00:00.000Z').toLocaleDateString());
+  });
+
+  it('takes someone who already belongs to the workspace there instead of failing', async () => {
+    vi.mocked(api.getInvitation).mockResolvedValue(invitation({ hasAccount: true }));
+    vi.mocked(api.login).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'w1' });
+    vi.mocked(api.acceptInvitation).mockRejectedValue(new api.ApiError('ALREADY_MEMBER', 409));
+    vi.mocked(api.switchWorkspace).mockResolvedValue({ activeWorkspaceId: 'w1' });
+    const onJoined = vi.fn();
+
+    renderInvite({ token: 'tok123', onJoined });
+    await userEvent.type(await screen.findByLabelText('비밀번호'), 'p4ssword!');
+    await userEvent.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() => expect(onJoined).toHaveBeenCalledWith('w1'));
+  });
+
   it('shows the login form (with accept-on-login) when the invited email already has an account', async () => {
-    vi.mocked(api.getInvitation).mockResolvedValue({ email: 'existing@x.com', workspaceId: 'w1', hasAccount: true });
+    vi.mocked(api.getInvitation).mockResolvedValue(invitation({ email: 'existing@x.com', hasAccount: true }));
     vi.mocked(api.login).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'other-workspace' });
     vi.mocked(api.acceptInvitation).mockResolvedValue({ workspaceId: 'w1' });
     vi.mocked(api.switchWorkspace).mockResolvedValue({ activeWorkspaceId: 'w1' });
@@ -41,7 +76,7 @@ describe('InvitePage', () => {
   });
 
   it('shows an error and does not navigate when accepting the invitation fails after login', async () => {
-    vi.mocked(api.getInvitation).mockResolvedValue({ email: 'existing@x.com', workspaceId: 'w1', hasAccount: true });
+    vi.mocked(api.getInvitation).mockResolvedValue(invitation({ email: 'existing@x.com', hasAccount: true }));
     vi.mocked(api.login).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'other-workspace' });
     vi.mocked(api.acceptInvitation).mockRejectedValue(new api.ApiError('INVITATION_EXPIRED', 410));
     const onJoined = vi.fn();
@@ -52,13 +87,13 @@ describe('InvitePage', () => {
     await userEvent.type(screen.getByLabelText('비밀번호'), 'p4ssword!');
     await userEvent.click(screen.getByRole('button', { name: '로그인' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('초대 수락에 실패했습니다. 다시 시도해 주세요.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('초대가 만료되었거나 취소되었습니다. 초대한 사람에게 다시 요청하세요.');
     expect(api.switchWorkspace).not.toHaveBeenCalled();
     expect(onJoined).not.toHaveBeenCalled();
   });
 
   it('shows the signup form when the invited email has no account, and joins without a separate accept call', async () => {
-    vi.mocked(api.getInvitation).mockResolvedValue({ email: 'new@x.com', workspaceId: 'w1', hasAccount: false });
+    vi.mocked(api.getInvitation).mockResolvedValue(invitation());
     vi.mocked(api.signup).mockResolvedValue({ userId: 'u2', workspaceId: 'w1' });
     const onJoined = vi.fn();
 

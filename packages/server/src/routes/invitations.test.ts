@@ -27,7 +27,16 @@ describe('GET /invitations/:token', () => {
 
     const res = await request(app).get(`/api/invitations/${invitation.token}`);
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ email: 'new@x.com', workspaceId: workspace.id, hasAccount: false });
+    // What the invited person needs to decide: where, from whom, as what, and until when.
+    expect(res.body).toEqual({
+      email: 'new@x.com',
+      workspaceId: workspace.id,
+      workspaceName: 'W1',
+      inviterName: 'Owner',
+      role: 'member',
+      expiresAt: invitation.expiresAt,
+      hasAccount: false,
+    });
   });
 
   it('returns 404 for an unknown token', async () => {

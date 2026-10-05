@@ -89,8 +89,19 @@ export function getSession() {
   );
 }
 
+export interface InvitationDetails {
+  email: string;
+  workspaceId: string;
+  workspaceName: string;
+  inviterName: string;
+  role: 'owner' | 'member';
+  expiresAt: string;
+  /** Whether the invited address already has an account — log in to accept, rather than sign up. */
+  hasAccount: boolean;
+}
+
 export function getInvitation(token: string) {
-  return request<{ email: string; workspaceId: string; hasAccount: boolean }>(`/invitations/${token}`);
+  return request<InvitationDetails>(`/invitations/${token}`);
 }
 
 export function acceptInvitation(token: string) {
