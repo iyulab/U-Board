@@ -27,13 +27,26 @@ export default defineConfig({
   // unexpectedly non-empty database.
   webServer: [
     {
+      command: 'node e2e/support/mock-sendway.mjs',
+      url: 'http://127.0.0.1:4011/',
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       // Env vars are passed via the `env` option (not inline `VAR=value` shell syntax in
       // `command`) so this works under both POSIX shells and Windows cmd.exe — Playwright sets
       // them directly on the spawned process's environment rather than relying on shell parsing.
       command: 'npm run build && npm start',
       cwd: '../server',
       // The data sources the specs connect to are local mock servers — on the server's own host.
-      env: { UBOARD_DATABASE_URL: ':memory:', UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long', UBOARD_CONNECTOR_ADDRESSES: 'any' },
+      // Email goes to the mock Sendway below, where a spec reads it the way a person reads their
+      // mailbox. UBOARD_PUBLIC_URL stays unset, so invitations are still handed over as links.
+      env: {
+        UBOARD_DATABASE_URL: ':memory:',
+        UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long',
+        UBOARD_CONNECTOR_ADDRESSES: 'any',
+        SENDWAY_API_KEY: 'e2e-sendway-key',
+        SENDWAY_BASE_URL: 'http://127.0.0.1:4011',
+      },
       port: 4000,
       reuseExistingServer: !process.env.CI,
     },
