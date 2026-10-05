@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ApiError, changePassword, getAccount, renameAccount } from '../api-client.js';
+import { ApiError, changePassword, deleteAccount, getAccount, renameAccount } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
@@ -10,14 +10,27 @@ const PASSWORD_ERRORS: Record<string, string> = {
   PASSWORD_TOO_LONG: '새 비밀번호가 너무 깁니다. 72바이트(영문 72자, 한글 24자) 이하로 정해 주세요.',
 };
 
-/** The signed-in account: its name, and its password. Independent of any workspace. */
-export function AccountPage() {
+function deletionMessage(err: unknown): string {
+  if (!(err instanceof ApiError)) return '탈퇴하지 못했습니다.';
+  if (err.code === 'INVALID_CREDENTIALS') return '비밀번호가 맞지 않습니다.';
+  if (err.code === 'LAST_OPERATOR') return '마지막 운영자는 탈퇴할 수 없습니다 — 먼저 다른 계정을 운영자로 지정하세요.';
+  if (err.code === 'LAST_OWNER') {
+    const names = Array.isArray(err.body.workspaces) ? err.body.workspaces.join(', ') : '';
+    return `다음 워크스페이스의 유일한 owner입니다: ${names}. 먼저 다른 멤버를 owner로 지정하세요.`;
+  }
+  return '탈퇴하지 못했습니다.';
+}
+
+/** The signed-in account: its name, its password, and deleting it. Independent of any workspace. */
+export function AccountPage({ onDeleted }: { onDeleted: () => void }) {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [nameStatus, setNameStatus] = useState<{ ok: boolean; text: string } | null>(null);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [passwordStatus, setPasswordStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     getAccount()
@@ -59,6 +72,18 @@ export function AccountPage() {
     }
   }
 
+  async function handleDelete(e: FormEvent) {
+    e.preventDefault();
+    if (!window.confirm('계정을 삭제하면 이름·이메일·비밀번호와 모든 워크스페이스 멤버십이 지워지고 되돌릴 수 없습니다. 탈퇴할까요?')) return;
+    setDeleteError(null);
+    try {
+      await deleteAccount(deletePassword);
+      onDeleted();
+    } catch (err) {
+      setDeleteError(deletionMessage(err));
+    }
+  }
+
   return (
     <div>
       <h2>내 계정</h2>
@@ -82,6 +107,18 @@ export function AccountPage() {
         <Button type="submit">비밀번호 변경</Button>
         {passwordStatus &&
           (passwordStatus.ok ? <p role="status">{passwordStatus.text}</p> : <Alert>{passwordStatus.text}</Alert>)}
+      </form>
+
+      <h2>탈퇴</h2>
+      <p>계정과 개인정보(이름·이메일·비밀번호)를 지웁니다. 만든 보드·공유 링크·보낸 초대는 워크스페이스에 남습니다.</p>
+      <form onSubmit={handleDelete}>
+        <FormField label="비밀번호 확인">
+          <input type="password" autoComplete="current-password" value={deletePassword} onChange={e => setDeletePassword(e.target.value)} required />
+        </FormField>
+        <Button type="submit" variant="danger">
+          탈퇴
+        </Button>
+        {deleteError && <Alert>{deleteError}</Alert>}
       </form>
     </div>
   );

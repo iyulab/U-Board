@@ -122,6 +122,19 @@ function AuthedLayout({ children, needsWorkspace = true }: { children: (session:
   );
 }
 
+// After deleting the account there is no session — back to the start, reloaded.
+function AccountRoute() {
+  const navigate = useNavigate();
+  return (
+    <AccountPage
+      onDeleted={() => {
+        navigate('/');
+        navigate(0);
+      }}
+    />
+  );
+}
+
 // Entering a workspace as its owner, or stepping down as operator, changes what the session may
 // open — go to the workspace (or stay) and reload, as switching does.
 function InstanceRoute({ session }: { session: Session }) {
@@ -189,7 +202,7 @@ export function App({
           />
           <Route
             path="/account"
-            element={<AuthedLayout needsWorkspace={false}>{() => <AccountPage />}</AuthedLayout>}
+            element={<AuthedLayout needsWorkspace={false}>{() => <AccountRoute />}</AuthedLayout>}
           />
           <Route
             path="/instance"

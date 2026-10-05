@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS workspace_invitations (
   email TEXT NOT NULL,
   role TEXT NOT NULL CHECK (role IN ('owner','member')),
   token TEXT NOT NULL UNIQUE,
-  invited_by_user_id TEXT NOT NULL REFERENCES users(id),
+  invited_by_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   expires_at TEXT NOT NULL,
   accepted_at TEXT
 );
@@ -100,7 +100,7 @@ CREATE TABLE IF NOT EXISTS board_share_tokens (
   workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   token_hash TEXT NOT NULL UNIQUE,
   token_mask TEXT NOT NULL,
-  created_by_user_id TEXT NOT NULL REFERENCES users(id),
+  created_by_user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
   created_at TEXT NOT NULL,
   last_used_at TEXT,
   expires_at TEXT
@@ -108,6 +108,31 @@ CREATE TABLE IF NOT EXISTS board_share_tokens (
 
 -- Brings a share-token table created before optional expiry up to the shape above (idempotent).
 ALTER TABLE board_share_tokens ADD COLUMN IF NOT EXISTS expires_at TEXT;
+
+-- Deleting an account keeps the invitations it sent and the share links it made — they belong to the
+-- workspace — with no author. Brings the two references from before that up to the shape above.
+ALTER TABLE workspace_invitations ALTER COLUMN invited_by_user_id DROP NOT NULL;
+ALTER TABLE board_share_tokens ALTER COLUMN created_by_user_id DROP NOT NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'workspace_invitations_invited_by_user_id_fkey' AND confdeltype = 'n'
+  ) THEN
+    ALTER TABLE workspace_invitations DROP CONSTRAINT IF EXISTS workspace_invitations_invited_by_user_id_fkey;
+    ALTER TABLE workspace_invitations ADD CONSTRAINT workspace_invitations_invited_by_user_id_fkey
+      FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'board_share_tokens_created_by_user_id_fkey' AND confdeltype = 'n'
+  ) THEN
+    ALTER TABLE board_share_tokens DROP CONSTRAINT IF EXISTS board_share_tokens_created_by_user_id_fkey;
+    ALTER TABLE board_share_tokens ADD CONSTRAINT board_share_tokens_created_by_user_id_fkey
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL;
+  END IF;
+END
+$$;
 
 CREATE INDEX IF NOT EXISTS idx_board_share_tokens_board_id ON board_share_tokens(board_id);
 

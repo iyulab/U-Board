@@ -9,7 +9,8 @@ export interface WorkspaceInvitation {
   email: string;
   role: WorkspaceRole;
   token: string;
-  invitedByUserId: string;
+  /** Null once the account that sent it has been deleted. */
+  invitedByUserId: string | null;
   expiresAt: string;
   acceptedAt: string | null;
 }
@@ -22,7 +23,7 @@ interface InvitationRow {
   email: string;
   role: WorkspaceRole;
   token: string;
-  invited_by_user_id: string;
+  invited_by_user_id: string | null;
   expires_at: string;
   accepted_at: string | null;
 }

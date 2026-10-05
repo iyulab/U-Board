@@ -125,6 +125,7 @@ export function createApp(config: AppConfig): express.Express {
   api.use('/auth/reset-password', authRateLimiter);
   // A stolen session must not become unlimited guesses at the current password.
   api.use('/auth/change-password', authRateLimiter);
+  api.delete('/auth/me', authRateLimiter); // deleting an account also takes the current password
   api.use('/auth', createAuthRouter(config));
   api.use('/invitations', createInvitationsRouter(config));
   api.use('/workspaces', createWorkspacesRouter(config));

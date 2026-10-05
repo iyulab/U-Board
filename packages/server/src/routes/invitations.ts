@@ -23,7 +23,7 @@ export function createInvitationsRouter(config: AppConfig): Router {
     // The same facts the invitation email carries — the token holder already has them that way.
     const [workspace, inviter, account] = await Promise.all([
       findWorkspaceById(db, invitation.workspaceId),
-      findUserById(db, invitation.invitedByUserId),
+      invitation.invitedByUserId ? findUserById(db, invitation.invitedByUserId) : undefined,
       findUserByEmail(db, invitation.email),
     ]);
     res.status(200).json({

@@ -91,3 +91,45 @@ export async function countUsers(db: DbClient): Promise<number> {
   const { rows } = await db.query<{ count: string }>(`SELECT COUNT(*) as count FROM users`);
   return Number(rows[0].count);
 }
+
+export type AccountDeletion =
+  | { kind: 'deleted' }
+  | { kind: 'not-found' }
+  | { kind: 'last-operator' }
+  /** Workspaces (by name) the account is the only owner of — hand them over first. */
+  | { kind: 'last-owner'; workspaces: string[] };
+
+/**
+ * Deletes an account and with it the personal data the installation holds about that person (email,
+ * name, password hash, memberships, reset tokens). Refused while the account is the last operator or
+ * the only owner of a workspace, so deleting it never strands the installation or a workspace.
+ * Locks the operator rows and then each workspace the account owns — the same rows
+ * `setInstanceRole` and `changeWorkspaceMembership` lock, in an order neither reverses — so a
+ * concurrent demotion, removal or second deletion cannot slip past the checks.
+ */
+export async function deleteAccount(db: DbClient, userId: string): Promise<AccountDeletion> {
+  return db.withTransaction(async tx => {
+    const { rows: operators } = await tx.query<{ id: string }>(`SELECT id FROM users WHERE instance_role = 'operator' FOR UPDATE`);
+    const { rows: target } = await tx.query<{ instance_role: InstanceRole }>(`SELECT instance_role FROM users WHERE id = $1`, [userId]);
+    if (!target[0]) return { kind: 'not-found' };
+    if (target[0].instance_role === 'operator' && operators.length <= 1) return { kind: 'last-operator' };
+
+    const { rows: owned } = await tx.query<{ id: string; name: string }>(
+      `SELECT w.id, w.name FROM workspaces w JOIN workspace_users wu ON wu.workspace_id = w.id
+       WHERE wu.user_id = $1 AND wu.role = 'owner' ORDER BY w.id FOR UPDATE OF w`,
+      [userId]
+    );
+    const soleOwned: string[] = [];
+    for (const workspace of owned) {
+      const { rows } = await tx.query<{ owners: number }>(
+        `SELECT COUNT(*)::int AS owners FROM workspace_users WHERE workspace_id = $1 AND role = 'owner'`,
+        [workspace.id]
+      );
+      if ((rows[0]?.owners ?? 0) <= 1) soleOwned.push(workspace.name);
+    }
+    if (soleOwned.length > 0) return { kind: 'last-owner', workspaces: soleOwned };
+
+    await tx.query(`DELETE FROM users WHERE id = $1`, [userId]);
+    return { kind: 'deleted' };
+  });
+}

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomBytes, createHash } from 'node:crypto';
 import type { AppConfig } from '../app.js';
-import { createUser, findUserByEmail, findUserById, countUsers, updateUserPassword, updateUserName } from '../db/users.js';
+import { createUser, deleteAccount, findUserByEmail, findUserById, countUsers, updateUserPassword, updateUserName } from '../db/users.js';
 import {
   createPasswordResetToken,
   findPasswordResetTokenByHash,
@@ -274,6 +274,28 @@ export function createAuthRouter(config: AppConfig): Router {
     }
     await updateUserName(db, req.userId!, name);
     res.status(200).json({ name });
+  });
+
+  // Deleting your own account: the person's data goes; what they made for a workspace stays.
+  router.delete('/me', requireAuth(db, sessionSecret), async (req: AuthedRequest, res) => {
+    const { password } = req.body ?? {};
+    const user = await findUserById(db, req.userId!);
+    if (typeof password !== 'string' || !user || !(await verifyPassword(password, user.passwordHash))) {
+      res.status(401).json({ code: 'INVALID_CREDENTIALS' });
+      return;
+    }
+    const result = await deleteAccount(db, user.id);
+    if (result.kind === 'last-operator') {
+      res.status(409).json({ code: 'LAST_OPERATOR' });
+      return;
+    }
+    if (result.kind === 'last-owner') {
+      res.status(409).json({ code: 'LAST_OWNER', workspaces: result.workspaces });
+      return;
+    }
+    if (result.kind === 'deleted') console.log(`[auth] ${user.id} deleted their account`);
+    res.clearCookie(SESSION_COOKIE_NAME, clearSessionCookieOptions(req));
+    res.status(204).end();
   });
 
   router.post('/change-password', requireAuth(db, sessionSecret), async (req: AuthedRequest, res) => {

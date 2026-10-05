@@ -146,4 +146,31 @@ describe('createDb', () => {
     const roles = await pglite.query<{ id: string; instance_role: string }>(`SELECT id, instance_role FROM users ORDER BY id`);
     expect(roles.rows.map(r => r.instance_role)).toEqual(['user', 'operator']);
   });
+  it('lets an account be deleted while its invitations and share links stay, idempotently upgrading the old keys', async () => {
+    const pglite = new PGlite();
+    await pglite.exec(SCHEMA_SQL);
+    // Put both references back in their earlier shape: NOT NULL, no ON DELETE action.
+    await pglite.exec(`
+      ALTER TABLE workspace_invitations DROP CONSTRAINT workspace_invitations_invited_by_user_id_fkey;
+      ALTER TABLE workspace_invitations ADD CONSTRAINT workspace_invitations_invited_by_user_id_fkey FOREIGN KEY (invited_by_user_id) REFERENCES users(id);
+      ALTER TABLE workspace_invitations ALTER COLUMN invited_by_user_id SET NOT NULL;
+      ALTER TABLE board_share_tokens DROP CONSTRAINT board_share_tokens_created_by_user_id_fkey;
+      ALTER TABLE board_share_tokens ADD CONSTRAINT board_share_tokens_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES users(id);
+      ALTER TABLE board_share_tokens ALTER COLUMN created_by_user_id SET NOT NULL;
+      INSERT INTO users (id, email, password_hash, name, created_at) VALUES ('u1', 'a@x.com', 'h', 'A', 't');
+      INSERT INTO workspaces (id, name, created_at) VALUES ('w1', 'W', 't');
+      INSERT INTO boards (id, workspace_id, name, document, created_at, updated_at) VALUES ('b1', 'w1', 'B', '{}', 't', 't');
+      INSERT INTO workspace_invitations (id, workspace_id, email, role, token, invited_by_user_id, expires_at)
+        VALUES ('i1', 'w1', 'n@x.com', 'member', 'tok', 'u1', 't');
+      INSERT INTO board_share_tokens (id, board_id, workspace_id, token_hash, token_mask, created_by_user_id, created_at)
+        VALUES ('s1', 'b1', 'w1', 'hash', 'mask', 'u1', 't');
+    `);
+
+    await pglite.exec(SCHEMA_SQL);
+    await pglite.exec(SCHEMA_SQL);
+    await pglite.exec(`DELETE FROM users WHERE id = 'u1'`);
+
+    expect((await pglite.query(`SELECT invited_by_user_id FROM workspace_invitations WHERE id = 'i1'`)).rows).toEqual([{ invited_by_user_id: null }]);
+    expect((await pglite.query(`SELECT created_by_user_id FROM board_share_tokens WHERE id = 's1'`)).rows).toEqual([{ created_by_user_id: null }]);
+  });
 });

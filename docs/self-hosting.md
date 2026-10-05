@@ -59,7 +59,10 @@ emailed when both an email provider and `UBOARD_PUBLIC_URL` are set, and then th
 invited mailbox only — whoever accepts it proves they read that mailbox. Without email, the console
 shows the owner the link to pass on another way. Passwords are at least 8 characters and at most
 72 bytes. Each account changes its own name and password on the console's account page; a password
-change or reset signs out every other session of that account.
+change or reset signs out every other session of that account. Deleting an account there erases
+its name, email, password and memberships; the boards, share links and invitations it made stay
+with their workspaces. It is refused while the account is the last operator or the only owner of a
+workspace — hand those over first.
 
 ## HTTPS
 

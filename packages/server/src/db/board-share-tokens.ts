@@ -7,7 +7,8 @@ export interface BoardShareToken {
   workspaceId: string;
   tokenHash: string;
   tokenMask: string;
-  createdByUserId: string;
+  /** Null once the account that made it has been deleted. */
+  createdByUserId: string | null;
   createdAt: string;
   lastUsedAt?: string;
   /** When the link stops working (ISO 8601). Absent: it works until it is revoked. */
@@ -28,7 +29,7 @@ interface BoardShareTokenRow {
   workspace_id: string;
   token_hash: string;
   token_mask: string;
-  created_by_user_id: string;
+  created_by_user_id: string | null;
   created_at: string;
   last_used_at: string | null;
   expires_at: string | null;

@@ -2,7 +2,9 @@ import type { ViewDocument } from '@iyulab/u-board';
 import type { ResolvedBinding } from '@iyulab/u-board';
 
 export class ApiError extends Error {
-  constructor(public code: string, public status: number) {
+  /** `body` is the whole error response, for codes that carry more than the code — e.g. `LAST_OWNER`
+   *  on account deletion names the workspaces. */
+  constructor(public code: string, public status: number, public body: Record<string, unknown> = {}) {
     super(code);
     this.name = 'ApiError';
   }
@@ -40,7 +42,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ code: 'UNKNOWN_ERROR' }));
-    throw new ApiError(body.code ?? 'UNKNOWN_ERROR', res.status);
+    throw new ApiError(body.code ?? 'UNKNOWN_ERROR', res.status, body);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -326,4 +328,10 @@ export function renameAccount(name: string) {
  *  `INVALID_CREDENTIALS` (wrong current password), `PASSWORD_TOO_SHORT` or `PASSWORD_TOO_LONG`. */
 export function changePassword(input: { currentPassword: string; newPassword: string }) {
   return request<void>('/auth/change-password', { method: 'POST', body: JSON.stringify(input) });
+}
+
+/** Deletes the signed-in account. Fails with `INVALID_CREDENTIALS`, `LAST_OPERATOR`, or `LAST_OWNER`
+ *  with `body.workspaces` naming the workspaces it is the only owner of. */
+export function deleteAccount(password: string) {
+  return request<void>('/auth/me', { method: 'DELETE', body: JSON.stringify({ password }) });
 }

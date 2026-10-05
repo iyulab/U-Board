@@ -1,7 +1,9 @@
 import { vi } from 'vitest';
 
 export class ApiError extends Error {
-  constructor(public code: string, public status: number) {
+  /** `body` is the whole error response, for codes that carry more than the code — e.g. `LAST_OWNER`
+   *  on account deletion names the workspaces. */
+  constructor(public code: string, public status: number, public body: Record<string, unknown> = {}) {
     super(code);
     this.name = 'ApiError';
   }
@@ -43,3 +45,4 @@ export const makeWorkspaceOwner = vi.fn();
 export const getAccount = vi.fn();
 export const renameAccount = vi.fn();
 export const changePassword = vi.fn();
+export const deleteAccount = vi.fn();
