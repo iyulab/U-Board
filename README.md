@@ -55,21 +55,23 @@ client credentials with cached, auto-renewed access tokens) is wired into both t
 and the read-only embed viewer. It picks a value out of a JSON response with an RFC 6901 JSON
 Pointer, reports why a binding is not live (source unreachable, credentials refused, value not
 found at the source, rate limited), and the embed viewer resolves all of a board's bindings in one
-request. A connector to a specific external system that needs its own
+request. A connector's settings can be tried before they are saved, and the addresses connectors may
+reach are an installation setting — never the server's own loopback, link-local or cloud host addresses. A connector to a specific external system that needs its own
 domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
 until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a
 board can be wired up and previewed before any real connector is configured. The hosted
 applications (see [Repository layout](#repository-layout)) add workspaces with members,
 server-side board storage, managed connectors, and read-only share links — on an installation run by
-an operator who creates each organization's workspace and can recover one whose owners are gone.
+an operator who creates each organization's workspace and can recover one whose owners are gone,
+and a record of who changed members, roles, invitations, boards, share links and connectors.
 
 ## Repository layout
 
 | Workspace | Package | What it is |
 |---|---|---|
 | `packages/core` | `@iyulab/u-board` (npm) | The library: view document schema, adapter contract, binding resolution, the canvas rendering pipeline, the authoring UI and the read-only viewer. Everything below this section documents it. |
-| `packages/server` | private | HTTP API for workspaces, members and invitations, accounts (sign-in, password, deletion), the installation's operators, boards, data connectors, and share links. Stores data in Postgres. |
-| `packages/console` | private | Web console for that API: sign-in and account, members, board editing (with the authoring UI above), connectors, issuing share links, and an installation page for operators. |
+| `packages/server` | private | HTTP API for workspaces, members and invitations, accounts (sign-in, password, deletion), the installation's operators, boards, data connectors, share links, and the activity record. Stores data in Postgres. |
+| `packages/console` | private | Web console for that API: sign-in and account, members and the activity record, board editing (with the authoring UI above), connectors with a connection test, issuing share links, and an installation page for operators. |
 | `packages/share` | private | Read-only embed viewer that opens a board from a share link, using only the library's `viewer` entry point. |
 | `packages/site` | private | The introduction site at board.u-platform.kr (Korean at `/`, English at `/en/`). Every statement it makes about the product has a row in its `claims.tsv` — status and the files that back it — checked against the pages by its tests. |
 
