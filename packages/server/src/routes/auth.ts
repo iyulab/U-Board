@@ -262,7 +262,11 @@ export function createAuthRouter(config: AppConfig): Router {
   // The signed-in account itself — what the console's account page shows and edits.
   router.get('/me', requireAuth(db, sessionSecret), async (req: AuthedRequest, res) => {
     const user = await findUserById(db, req.userId!);
-    res.status(200).json({ id: user!.id, email: user!.email, name: user!.name });
+    if (!user) {
+      res.status(401).json({ code: 'UNAUTHENTICATED' }); // deleted since the session was checked
+      return;
+    }
+    res.status(200).json({ id: user.id, email: user.email, name: user.name });
   });
 
   router.patch('/me', requireAuth(db, sessionSecret), async (req: AuthedRequest, res) => {

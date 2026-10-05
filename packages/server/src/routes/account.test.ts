@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import type express from 'express';
 import type { DbClient } from '../db.js';
@@ -65,6 +65,24 @@ describe('POST /auth/change-password', () => {
     expect((await request(app).post('/api/auth/login').send({ email: 'me@x.com', password: 'new-p4ssword' })).status).toBe(200);
   });
 
+  it('voids outstanding reset tokens', async () => {
+    const sendPasswordResetEmail = vi.fn().mockResolvedValue(undefined);
+    app = createApp({ db, sessionSecret: SECRET, sendPasswordResetEmail });
+    const agent = await signedIn();
+    await request(app).post('/api/auth/request-password-reset').send({ email: 'me@x.com' });
+    const token = sendPasswordResetEmail.mock.calls[0][0].token;
+
+    await agent.post('/api/auth/change-password').send({ currentPassword: 'old-p4ssword', newPassword: 'new-p4ssword' });
+    expect((await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'attacker-pass' })).status).toBe(410);
+  });
+
+  it('is limited separately from sign-in — other people signing in from the same address do not lock it', async () => {
+    const agent = await signedIn();
+    for (let i = 0; i < 9; i++) await request(app).post('/api/auth/login').send({ email: 'x@x.com', password: 'wrong-guess' });
+    const res = await agent.post('/api/auth/change-password').send({ currentPassword: 'old-p4ssword', newPassword: 'new-p4ssword' });
+    expect(res.status).toBe(204);
+  });
+
   it('refuses a wrong current password (401 INVALID_CREDENTIALS), changing nothing', async () => {
     const agent = await signedIn();
     const res = await agent.post('/api/auth/change-password').send({ currentPassword: 'wrong-guess', newPassword: 'new-p4ssword' });
@@ -129,6 +147,13 @@ describe('DELETE /auth/me', () => {
     expect(peek.body.inviterName).toBe('');
     const shared = await request(app).get(`/api/share/boards/${board.body.id}`).set('Authorization', `Bearer ${share.body.token}`);
     expect(shared.status).toBe(200);
+  });
+
+  it('also erases the invitations that were addressed to the person and accepted', async () => {
+    const { member } = await operatorWithMember();
+    await member.delete('/api/auth/me').send({ password: 'member-p4ss' });
+    const { rows } = await db.query(`SELECT 1 FROM workspace_invitations WHERE email = 'member@x.com'`);
+    expect(rows).toHaveLength(0);
   });
 
   it('refuses while the account is the only owner of a workspace (409 LAST_OWNER, naming it)', async () => {

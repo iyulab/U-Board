@@ -71,7 +71,7 @@ export async function setInstanceRole(
 ): Promise<'changed' | 'not-found' | 'last-operator'> {
   return db.withTransaction(async tx => {
     const { rows: operators } = await tx.query<{ id: string }>(
-      `SELECT id FROM users WHERE instance_role = 'operator' FOR UPDATE`
+      `SELECT id FROM users WHERE instance_role = 'operator' ORDER BY id FOR UPDATE`
     );
     const { rows: target } = await tx.query<{ instance_role: InstanceRole }>(`SELECT instance_role FROM users WHERE id = $1`, [userId]);
     if (!target[0]) return 'not-found';

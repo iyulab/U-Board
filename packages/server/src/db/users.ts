@@ -68,15 +68,16 @@ export async function findUserById(db: DbClient, id: string): Promise<User | und
   return rows[0] ? rowToUser(rows[0]) : undefined;
 }
 
-/** Replaces the password and signs out every session issued until now — they were opened with the
- *  old one. Returns that moment, so the caller can issue the one session it means to keep after it. */
+/** Replaces the password, signs out every session issued until now — they were opened with the old
+ *  one — and voids every outstanding reset token, so an older reset email cannot undo the change.
+ *  Returns that moment, so the caller can issue the one session it means to keep after it. */
 export async function updateUserPassword(db: DbClient, userId: string, passwordHash: string): Promise<number> {
   const now = Date.now();
-  await db.query(`UPDATE users SET password_hash = $1, sessions_valid_after = $2 WHERE id = $3`, [
-    passwordHash,
-    new Date(now).toISOString(),
-    userId,
-  ]);
+  const at = new Date(now).toISOString();
+  await db.withTransaction(async tx => {
+    await tx.query(`UPDATE users SET password_hash = $1, sessions_valid_after = $2 WHERE id = $3`, [passwordHash, at, userId]);
+    await tx.query(`UPDATE password_reset_tokens SET used_at = $1 WHERE user_id = $2 AND used_at IS NULL`, [at, userId]);
+  });
   return now;
 }
 
@@ -109,8 +110,15 @@ export type AccountDeletion =
  */
 export async function deleteAccount(db: DbClient, userId: string): Promise<AccountDeletion> {
   return db.withTransaction(async tx => {
-    const { rows: operators } = await tx.query<{ id: string }>(`SELECT id FROM users WHERE instance_role = 'operator' FOR UPDATE`);
-    const { rows: target } = await tx.query<{ instance_role: InstanceRole }>(`SELECT instance_role FROM users WHERE id = $1`, [userId]);
+    const { rows: operators } = await tx.query<{ id: string }>(
+      `SELECT id FROM users WHERE instance_role = 'operator' ORDER BY id FOR UPDATE`
+    );
+    // The account's own row too: a membership being added for it right now (it creating a workspace,
+    // an operator making it an owner) waits for this deletion instead of racing past the checks below.
+    const { rows: target } = await tx.query<{ instance_role: InstanceRole; email: string }>(
+      `SELECT instance_role, email FROM users WHERE id = $1 FOR UPDATE`,
+      [userId]
+    );
     if (!target[0]) return { kind: 'not-found' };
     if (target[0].instance_role === 'operator' && operators.length <= 1) return { kind: 'last-operator' };
 
@@ -129,6 +137,9 @@ export async function deleteAccount(db: DbClient, userId: string): Promise<Accou
     }
     if (soleOwned.length > 0) return { kind: 'last-owner', workspaces: soleOwned };
 
+    // Accepted invitations addressed to the person are a record about them; pending ones stay with the
+    // workspace that sent them.
+    await tx.query(`DELETE FROM workspace_invitations WHERE email = $1 AND accepted_at IS NOT NULL`, [target[0].email]);
     await tx.query(`DELETE FROM users WHERE id = $1`, [userId]);
     return { kind: 'deleted' };
   });

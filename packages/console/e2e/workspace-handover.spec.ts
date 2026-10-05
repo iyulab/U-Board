@@ -44,5 +44,20 @@ test('an owner invites a second owner through the console, then leaves the works
   await customer.getByRole('button', { name: '나가기' }).click();
   await expect(customer.getByRole('alert')).toContainText('owner가 한 명 이상');
 
+  // The customer's administrator cannot create workspaces of their own — only the operator can.
+  await customer.getByRole('button', { name: 'Default' }).first().click();
+  await expect(customer.getByRole('button', { name: '+ 새 워크스페이스' })).toHaveCount(0);
+  await expect(customer.getByRole('link', { name: '운영' })).toHaveCount(0);
+
+  // Later the administrator is gone; the operator, outside the workspace, sees it on the installation
+  // page and joins it as an owner to recover it.
+  await page.getByRole('link', { name: '운영' }).click();
+  await expect(page.getByText(/e2e-customer-admin@test.com/).first()).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await page.getByRole('button', { name: /에 owner로 들어가기$/ }).click();
+  await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
+  await page.getByRole('link', { name: '설정' }).click();
+  await expect(page.getByLabel('e2e-operator@test.com 역할')).toHaveValue('owner');
+
   await customerContext.close();
 });

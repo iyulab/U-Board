@@ -111,10 +111,21 @@ ALTER TABLE board_share_tokens ADD COLUMN IF NOT EXISTS expires_at TEXT;
 
 -- Deleting an account keeps the invitations it sent and the share links it made — they belong to the
 -- workspace — with no author. Brings the two references from before that up to the shape above.
-ALTER TABLE workspace_invitations ALTER COLUMN invited_by_user_id DROP NOT NULL;
-ALTER TABLE board_share_tokens ALTER COLUMN created_by_user_id DROP NOT NULL;
 DO $$
 BEGIN
+  -- Only when still NOT NULL, so a routine start takes no table lock.
+  IF EXISTS (
+    SELECT 1 FROM pg_attribute
+    WHERE attrelid = 'workspace_invitations'::regclass AND attname = 'invited_by_user_id' AND attnotnull
+  ) THEN
+    ALTER TABLE workspace_invitations ALTER COLUMN invited_by_user_id DROP NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_attribute
+    WHERE attrelid = 'board_share_tokens'::regclass AND attname = 'created_by_user_id' AND attnotnull
+  ) THEN
+    ALTER TABLE board_share_tokens ALTER COLUMN created_by_user_id DROP NOT NULL;
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conname = 'workspace_invitations_invited_by_user_id_fkey' AND confdeltype = 'n'

@@ -370,6 +370,16 @@ describe('POST /auth/reset-password', () => {
     expect((await fresh.get('/api/workspaces/me')).status).toBe(200);
   });
 
+  it('voids every other outstanding reset token once the password changes — an older email cannot undo it', async () => {
+    await request(app).post('/api/auth/signup').send({ email: 'reset4@x.com', password: 'old-pass!', name: 'R4' });
+    const older = await requestReset(app, 'reset4@x.com');
+    const newer = await requestReset(app, 'reset4@x.com');
+
+    expect((await request(app).post('/api/auth/reset-password').send({ token: newer, newPassword: 'new-pass!' })).status).toBe(200);
+    const replay = await request(app).post('/api/auth/reset-password').send({ token: older, newPassword: 'attacker-pass' });
+    expect(replay.status).toBe(410);
+  });
+
   it('rejects a new password shorter than 8 characters without spending the token', async () => {
     await createUser(db, { email: 'u@x.com', passwordHash: await hashPassword('old-p4ssword'), name: 'U' });
     const token = await requestReset(app, 'u@x.com');

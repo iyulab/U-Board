@@ -104,6 +104,18 @@ export function createApp(config: AppConfig): express.Express {
       ? { keyGenerator: cloudflareKeyGenerator, validate: { xForwardedForHeader: false } }
       : {}),
   });
+  // Changing the password and deleting the account also take the current password, so they are
+  // limited too — but in a bucket of their own: on a shared office address, other people's sign-ins
+  // must not lock someone out of changing their password.
+  const accountRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    ...(config.trustCloudflareProxy
+      ? { keyGenerator: cloudflareKeyGenerator, validate: { xForwardedForHeader: false } }
+      : {}),
+  });
   // Every API route lives under `/api`, so the web apps can own every other path — the console's
   // client-side routes and the share viewer's `/share/` — on the same origin.
   const api = express.Router();
@@ -124,8 +136,8 @@ export function createApp(config: AppConfig): express.Express {
   api.use('/auth/request-password-reset', authRateLimiter);
   api.use('/auth/reset-password', authRateLimiter);
   // A stolen session must not become unlimited guesses at the current password.
-  api.use('/auth/change-password', authRateLimiter);
-  api.delete('/auth/me', authRateLimiter); // deleting an account also takes the current password
+  api.use('/auth/change-password', accountRateLimiter);
+  api.delete('/auth/me', accountRateLimiter);
   api.use('/auth', createAuthRouter(config));
   api.use('/invitations', createInvitationsRouter(config));
   api.use('/workspaces', createWorkspacesRouter(config));

@@ -50,6 +50,8 @@ export function InstancePage({
       await onEnterWorkspace(workspace.id);
     } catch {
       setError('워크스페이스에 들어가지 못했습니다.');
+      // The owner row may have been added before the failure — show the list as it now stands.
+      await load().catch(() => {});
     }
   }
 
