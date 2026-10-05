@@ -47,7 +47,7 @@ describe.skipIf(!dockerAvailable())('setInstanceRole — real Postgres concurren
         ids.push(user.id);
       }
 
-      const results = await Promise.all(ids.map(id => setInstanceRole(db, id, 'user')));
+      const results = await Promise.all(ids.map(id => setInstanceRole(db, id, 'user', id)));
 
       expect(results.sort()).toEqual(['changed', 'last-operator']);
       expect((await listInstanceUsers(db)).filter(u => u.instanceRole === 'operator')).toHaveLength(1);

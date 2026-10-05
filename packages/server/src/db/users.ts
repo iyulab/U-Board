@@ -1,6 +1,7 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import { normalizeEmail } from './email.js';
+import { recordAuditEvent } from './audit.js';
 
 /** `operator` runs the installation; every other account is a `user`. Distinct from a workspace
  *  role — owning a workspace does not make anyone an operator. */
@@ -140,6 +141,17 @@ export async function deleteAccount(db: DbClient, userId: string): Promise<Accou
     // Accepted invitations addressed to the person are a record about them; pending ones stay with the
     // workspace that sent them.
     await tx.query(`DELETE FROM workspace_invitations WHERE email = $1 AND accepted_at IS NOT NULL`, [target[0].email]);
+    // Records keep what happened but no longer say who: the account's id and address are cleared
+    // from every record, the one about this deletion included.
+    await recordAuditEvent(tx, { action: 'account.deleted', actorUserId: userId });
+    await tx.query(
+      `UPDATE audit_events SET
+         actor_user_id = CASE WHEN actor_user_id = $1 THEN NULL ELSE actor_user_id END,
+         subject_user_id = CASE WHEN subject_user_id = $1 THEN NULL ELSE subject_user_id END,
+         subject_email = CASE WHEN subject_email = $2 THEN NULL ELSE subject_email END
+       WHERE actor_user_id = $1 OR subject_user_id = $1 OR subject_email = $2`,
+      [userId, target[0].email]
+    );
     await tx.query(`DELETE FROM users WHERE id = $1`, [userId]);
     return { kind: 'deleted' };
   });

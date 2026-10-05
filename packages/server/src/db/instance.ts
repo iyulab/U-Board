@@ -1,6 +1,7 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import type { InstanceRole } from './users.js';
+import { recordAuditEvent } from './audit.js';
 
 /** What an operator sees of a workspace: enough to run the installation, nothing of its contents. */
 export interface InstanceWorkspace {
@@ -67,7 +68,8 @@ export async function listInstanceUsers(db: DbClient): Promise<InstanceUser[]> {
 export async function setInstanceRole(
   db: DbClient,
   userId: string,
-  role: InstanceRole
+  role: InstanceRole,
+  actorUserId: string
 ): Promise<'changed' | 'not-found' | 'last-operator'> {
   return db.withTransaction(async tx => {
     const { rows: operators } = await tx.query<{ id: string }>(
@@ -76,28 +78,34 @@ export async function setInstanceRole(
     const { rows: target } = await tx.query<{ instance_role: InstanceRole }>(`SELECT instance_role FROM users WHERE id = $1`, [userId]);
     if (!target[0]) return 'not-found';
     if (target[0].instance_role === 'operator' && role !== 'operator' && operators.length <= 1) return 'last-operator';
-    await tx.query(`UPDATE users SET instance_role = $1 WHERE id = $2`, [role, userId]);
+    if (target[0].instance_role !== role) {
+      await tx.query(`UPDATE users SET instance_role = $1 WHERE id = $2`, [role, userId]);
+      await recordAuditEvent(tx, { action: 'instance.role_changed', actorUserId, subjectUserId: userId, role });
+    }
     return 'changed';
   });
 }
 
 /** Makes an account an owner of a workspace — adding it, or promoting it if it is already a member.
- *  The operator's way back into a workspace whose owners are gone. */
+ *  The operator's way back into a workspace whose owners are gone — recorded in that workspace's
+ *  history, so its owners see who was let in and by whom. */
 export async function makeWorkspaceOwner(
   db: DbClient,
   workspaceId: string,
-  userId: string
+  userId: string,
+  actorUserId: string
 ): Promise<'changed' | 'no-workspace' | 'no-user'> {
-  const [{ rows: workspace }, { rows: user }] = await Promise.all([
-    db.query(`SELECT 1 FROM workspaces WHERE id = $1`, [workspaceId]),
-    db.query(`SELECT 1 FROM users WHERE id = $1`, [userId]),
-  ]);
-  if (workspace.length === 0) return 'no-workspace';
-  if (user.length === 0) return 'no-user';
-  await db.query(
-    `INSERT INTO workspace_users (id, workspace_id, user_id, role, created_at) VALUES ($1, $2, $3, 'owner', $4)
-     ON CONFLICT (workspace_id, user_id) DO UPDATE SET role = 'owner'`,
-    [randomUUID(), workspaceId, userId, new Date().toISOString()]
-  );
-  return 'changed';
+  return db.withTransaction(async tx => {
+    const { rows: workspace } = await tx.query(`SELECT 1 FROM workspaces WHERE id = $1`, [workspaceId]);
+    if (workspace.length === 0) return 'no-workspace';
+    const { rows: user } = await tx.query(`SELECT 1 FROM users WHERE id = $1`, [userId]);
+    if (user.length === 0) return 'no-user';
+    await tx.query(
+      `INSERT INTO workspace_users (id, workspace_id, user_id, role, created_at) VALUES ($1, $2, $3, 'owner', $4)
+       ON CONFLICT (workspace_id, user_id) DO UPDATE SET role = 'owner'`,
+      [randomUUID(), workspaceId, userId, new Date().toISOString()]
+    );
+    await recordAuditEvent(tx, { action: 'workspace.owner_restored', workspaceId, actorUserId, subjectUserId: userId, role: 'owner' });
+    return 'changed';
+  });
 }

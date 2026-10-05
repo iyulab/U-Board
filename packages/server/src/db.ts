@@ -167,6 +167,28 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS instance_role TEXT NOT NULL DEFAULT '
 UPDATE users SET instance_role = 'operator'
   WHERE id = (SELECT id FROM users ORDER BY created_at, id LIMIT 1)
     AND NOT EXISTS (SELECT 1 FROM users WHERE instance_role = 'operator');
+
+-- Who changed membership, roles and invitations, and when. People are referenced by id and named
+-- when the record is read; deleting an account clears its id and address from every record, so its
+-- records stay with no name. The one address kept is an invitation's, whose recipient may have no
+-- account. The account ids are not foreign keys: a key would make every recorded change lock the
+-- accounts it names, against the order account deletion locks them in. Records older than the
+-- retention period are purged.
+CREATE TABLE IF NOT EXISTS audit_events (
+  id TEXT PRIMARY KEY,
+  -- Recording order: timestamps can tie within a millisecond, this cannot.
+  seq BIGINT GENERATED ALWAYS AS IDENTITY UNIQUE,
+  occurred_at TEXT NOT NULL,
+  action TEXT NOT NULL,
+  workspace_id TEXT REFERENCES workspaces(id) ON DELETE CASCADE,
+  actor_user_id TEXT,
+  subject_user_id TEXT,
+  subject_email TEXT,
+  role TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_events_workspace ON audit_events(workspace_id, seq);
+CREATE INDEX IF NOT EXISTS idx_audit_events_occurred_at ON audit_events(occurred_at);
 `;
 
 // Distinct from routes/auth.ts's SIGNUP_BOOTSTRAP_LOCK_KEY (727100) — Postgres advisory locks

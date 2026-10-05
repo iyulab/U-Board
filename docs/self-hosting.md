@@ -31,13 +31,20 @@ leave it. Set `UBOARD_WORKSPACE_CREATION=anyone` to let every account create wor
 An operator's console has an installation page that lists every workspace — its owners and member
 count, not its contents — and every account. There an operator makes other accounts operators (the
 installation always keeps at least one) and can join any workspace as an owner, which is how a
-workspace whose owners have all gone is recovered; the operator then shows in its member list. The
-server logs these changes with account and workspace ids.
+workspace whose owners have all gone is recovered; the operator then shows in its member list.
 
 Owners change members' roles, remove members, and resend or cancel invitations that have not been
 accepted (resending renews the link's week of validity);
 any member can leave a workspace. A workspace always keeps at least one owner — to hand one over,
 invite the new owner with the `owner` role and leave once they have joined.
+
+The server records who changed what, and when: a workspace's members joining, leaving or being
+removed, role changes, and invitations sent, resent or cancelled are read by that workspace's owners
+(`GET /api/workspaces/:id/audit`); workspaces created, operators designated, accounts deleted, and an
+operator joining a workspace as an owner are read by operators (`GET /api/instance/audit`) — the
+last one also shows in that workspace's own record, so its owners see who was let in. Records name
+people by their current account; deleting an account leaves its records in place with no name or
+address. Records older than `UBOARD_AUDIT_RETENTION_DAYS` are deleted.
 
 ## Settings
 
@@ -50,6 +57,7 @@ invite the new owner with the `owner` role and leave once they have joined.
 | `UBOARD_SHARE_FRAME_ANCESTORS` | no | Which pages may embed a share link in a frame, as a CSP `frame-ancestors` source list. Default `https:` (any page served over HTTPS). An intranet page served over plain HTTP needs to be named, e.g. `http://hmi.example.com https:`. |
 | `UBOARD_CORS_ORIGINS` | no | Only when the console or share viewer is hosted on another origin than this server: a comma-separated list of those origins. Not needed for the image as built. |
 | `UBOARD_WORKSPACE_CREATION` | no | Who may create workspaces: `operator` (default — the installation's operator only) or `anyone` (every signed-in account). Any other value stops the server from starting. |
+| `UBOARD_AUDIT_RETENTION_DAYS` | no | Days the record of membership, role and invitation changes is kept (default `180`); older records are deleted daily and when the server starts. Any value other than a whole number from 1 stops the server from starting. |
 | `UBOARD_PUBLIC_URL` | no | The address people open the console at, as an origin (`https://board.example.com`). Links in invitation emails point here; it is set rather than taken from the request so that whoever sends an invitation cannot choose where its link leads. Unset: invitations are not emailed. |
 | `UBOARD_TRUST_CF_PROXY` | no | `true` only when every request reaches the server through Cloudflare (the ingress refuses anything else): sign-in rate limiting then keys on the visitor address Cloudflare reports. |
 

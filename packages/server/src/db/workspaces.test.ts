@@ -72,23 +72,23 @@ describe('changeWorkspaceMembership', () => {
 
   it('removes a member', async () => {
     const { workspaceId, userIds } = await workspaceWith(['owner', 'member']);
-    expect(await changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'remove' } })).toBe('changed');
+    expect(await changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'remove' }, actorUserId: userIds[1] })).toBe('changed');
     expect(await findWorkspaceUser(db, workspaceId, userIds[1])).toBeUndefined();
   });
 
   it('changes a role in both directions', async () => {
     const { workspaceId, userIds } = await workspaceWith(['owner', 'member']);
-    await changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'set-role', role: 'owner' } });
+    await changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'set-role', role: 'owner' }, actorUserId: userIds[1] });
     expect((await findWorkspaceUser(db, workspaceId, userIds[1]))?.role).toBe('owner');
-    await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'member' } });
+    await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'member' }, actorUserId: userIds[0] });
     expect((await findWorkspaceUser(db, workspaceId, userIds[0]))?.role).toBe('member');
   });
 
   it('refuses to remove or demote the last owner', async () => {
     const { workspaceId, userIds } = await workspaceWith(['owner', 'member']);
-    expect(await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'remove' } })).toBe('last-owner');
+    expect(await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'remove' }, actorUserId: userIds[0] })).toBe('last-owner');
     expect(
-      await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'member' } })
+      await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'member' }, actorUserId: userIds[0] })
     ).toBe('last-owner');
     expect((await findWorkspaceUser(db, workspaceId, userIds[0]))?.role).toBe('owner');
   });
@@ -96,20 +96,20 @@ describe('changeWorkspaceMembership', () => {
   it('lets the last owner keep the owner role (a no-op is not a demotion)', async () => {
     const { workspaceId, userIds } = await workspaceWith(['owner']);
     expect(
-      await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'owner' } })
+      await changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'set-role', role: 'owner' }, actorUserId: userIds[0] })
     ).toBe('changed');
   });
 
   it('reports a user who is not a member', async () => {
     const { workspaceId } = await workspaceWith(['owner']);
-    expect(await changeWorkspaceMembership(db, { workspaceId, userId: 'nobody', change: { kind: 'remove' } })).toBe('not-member');
+    expect(await changeWorkspaceMembership(db, { workspaceId, userId: 'nobody', change: { kind: 'remove' }, actorUserId: 'nobody' })).toBe('not-member');
   });
 
   it('leaves one owner when two owners remove each other at once', async () => {
     const { workspaceId, userIds } = await workspaceWith(['owner', 'owner']);
     const results = await Promise.all([
-      changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'remove' } }),
-      changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'remove' } }),
+      changeWorkspaceMembership(db, { workspaceId, userId: userIds[0], change: { kind: 'remove' }, actorUserId: userIds[0] }),
+      changeWorkspaceMembership(db, { workspaceId, userId: userIds[1], change: { kind: 'remove' }, actorUserId: userIds[1] }),
     ]);
     expect(results.sort()).toEqual(['changed', 'last-owner']);
     expect((await listWorkspaceMembers(db, workspaceId)).filter(m => m.role === 'owner')).toHaveLength(1);

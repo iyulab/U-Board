@@ -4,6 +4,7 @@ import { findInvitationByToken, markInvitationAcceptedIfUnused, isInvitationUsab
 import { findUserByEmail, findUserById } from '../db/users.js';
 import { normalizeEmail } from '../db/email.js';
 import { addWorkspaceUser, findWorkspaceById, findWorkspaceUser } from '../db/workspaces.js';
+import { recordAuditEvent } from '../db/audit.js';
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
 
 export function createInvitationsRouter(config: AppConfig): Router {
@@ -67,6 +68,7 @@ export function createInvitationsRouter(config: AppConfig): Router {
       const claimed = await markInvitationAcceptedIfUnused(tx, invitation.id);
       if (!claimed) return false;
       await addWorkspaceUser(tx, { workspaceId: claimed.workspaceId, userId: req.userId!, role: claimed.role });
+      await recordAuditEvent(tx, { action: 'member.joined', workspaceId: claimed.workspaceId, actorUserId: req.userId!, role: claimed.role });
       return true;
     });
     if (!joined) {

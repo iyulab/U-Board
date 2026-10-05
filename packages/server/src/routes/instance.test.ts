@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import type express from 'express';
 import type { DbClient } from '../db.js';
@@ -89,13 +89,19 @@ describe('PATCH /instance/users/:userId', () => {
   it('makes another account an operator, who can then create workspaces', async () => {
     const { agent: operator, userId: operatorId } = await bootstrapOperator();
     const { admin } = await customerWorkspace(operator, operatorId);
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     const res = await operator.patch(`/api/instance/users/${admin.userId}`).send({ instanceRole: 'operator' });
     expect(res.status).toBe(204);
     expect((await admin.agent.post('/api/workspaces').send({ name: 'Own' })).status).toBe(201);
-    expect(log).toHaveBeenCalledWith(`[instance] ${operatorId} set ${admin.userId} to operator`);
-    log.mockRestore();
+    const audit = await operator.get('/api/instance/audit');
+    expect(audit.body.events).toContainEqual(
+      expect.objectContaining({
+        action: 'instance.role_changed',
+        actor: { userId: operatorId, name: 'Operator' },
+        subject: expect.objectContaining({ userId: admin.userId }),
+        role: 'operator',
+      })
+    );
   });
 
   it('lets an operator step down once another operator exists', async () => {
@@ -124,16 +130,21 @@ describe('PATCH /instance/users/:userId', () => {
 describe('POST /instance/workspaces/:workspaceId/owners', () => {
   it('recovers a workspace whose owner is gone by making the operator its owner', async () => {
     const { agent: operator, userId: operatorId } = await bootstrapOperator();
-    const { workspaceId } = await customerWorkspace(operator, operatorId);
+    const { workspaceId, admin } = await customerWorkspace(operator, operatorId);
     expect((await operator.get(`/api/workspaces/${workspaceId}/members`)).status).toBe(403);
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     const res = await operator.post(`/api/instance/workspaces/${workspaceId}/owners`).send({ userId: operatorId });
     expect(res.status).toBe(204);
     const members = await operator.get(`/api/workspaces/${workspaceId}/members`);
     expect(members.body.members).toContainEqual(expect.objectContaining({ userId: operatorId, role: 'owner' }));
-    expect(log).toHaveBeenCalledWith(`[instance] ${operatorId} made ${operatorId} an owner of ${workspaceId}`);
-    log.mockRestore();
+    // The workspace's own owners see who let whom in — not only the operators.
+    const restored = expect.objectContaining({
+      action: 'workspace.owner_restored',
+      actor: { userId: operatorId, name: 'Operator' },
+      subject: expect.objectContaining({ userId: operatorId }),
+    });
+    expect((await admin.agent.get(`/api/workspaces/${workspaceId}/audit`)).body.events).toContainEqual(restored);
+    expect((await operator.get('/api/instance/audit')).body.events).toContainEqual(restored);
   });
 
   it('promotes an existing member to owner rather than adding them twice', async () => {

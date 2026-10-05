@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { randomBytes, createHash } from 'node:crypto';
 import type { AppConfig } from '../app.js';
 import { createUser, deleteAccount, findUserByEmail, findUserById, countUsers, updateUserPassword, updateUserName } from '../db/users.js';
+import { recordAuditEvent } from '../db/audit.js';
 import {
   createPasswordResetToken,
   findPasswordResetTokenByHash,
@@ -142,6 +143,12 @@ export function createAuthRouter(config: AppConfig): Router {
             throw err;
           }
           await addWorkspaceUser(tx, { workspaceId, userId: user.id, role });
+          await recordAuditEvent(
+            tx,
+            invitation
+              ? { action: 'member.joined', workspaceId, actorUserId: user.id, role }
+              : { action: 'workspace.created', workspaceId, actorUserId: user.id }
+          );
           return { userId: user.id, workspaceId };
         });
       } catch (err) {
@@ -297,7 +304,6 @@ export function createAuthRouter(config: AppConfig): Router {
       res.status(409).json({ code: 'LAST_OWNER', workspaces: result.workspaces });
       return;
     }
-    if (result.kind === 'deleted') console.log(`[auth] ${user.id} deleted their account`);
     res.clearCookie(SESSION_COOKIE_NAME, clearSessionCookieOptions(req));
     res.status(204).end();
   });

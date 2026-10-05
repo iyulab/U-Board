@@ -1,5 +1,6 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
+import { recordAuditEvent } from './audit.js';
 
 export type WorkspaceRole = 'owner' | 'member';
 
@@ -96,7 +97,8 @@ export type MembershipChange = { kind: 'remove' } | { kind: 'set-role'; role: Wo
  */
 export async function changeWorkspaceMembership(
   db: DbClient,
-  input: { workspaceId: string; userId: string; change: MembershipChange }
+  /** `actorUserId`: who makes the change — the member themselves when leaving. */
+  input: { workspaceId: string; userId: string; change: MembershipChange; actorUserId: string }
 ): Promise<'changed' | 'not-member' | 'last-owner'> {
   return db.withTransaction(async tx => {
     await tx.query(`SELECT id FROM workspaces WHERE id = $1 FOR UPDATE`, [input.workspaceId]);
@@ -112,10 +114,13 @@ export async function changeWorkspaceMembership(
       if ((rows[0]?.owners ?? 0) <= 1) return 'last-owner';
     }
 
+    const recorded = { workspaceId: input.workspaceId, actorUserId: input.actorUserId, subjectUserId: input.userId };
     if (input.change.kind === 'remove') {
       await tx.query(`DELETE FROM workspace_users WHERE id = $1`, [target.id]);
-    } else {
+      await recordAuditEvent(tx, { ...recorded, action: input.userId === input.actorUserId ? 'member.left' : 'member.removed' });
+    } else if (input.change.role !== target.role) {
       await tx.query(`UPDATE workspace_users SET role = $1 WHERE id = $2`, [input.change.role, target.id]);
+      await recordAuditEvent(tx, { ...recorded, action: 'member.role_changed', role: input.change.role });
     }
     return 'changed';
   });

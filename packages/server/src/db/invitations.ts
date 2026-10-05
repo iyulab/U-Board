@@ -2,6 +2,7 @@ import type { DbClient } from '../db.js';
 import { randomUUID, randomBytes } from 'node:crypto';
 import type { WorkspaceRole } from './workspaces.js';
 import { normalizeEmail } from './email.js';
+import { recordAuditEvent } from './audit.js';
 
 export interface WorkspaceInvitation {
   id: string;
@@ -55,11 +56,20 @@ export async function createInvitation(
     expiresAt: new Date(Date.now() + INVITATION_TTL_MS).toISOString(),
     acceptedAt: null,
   };
-  await db.query(
-    `INSERT INTO workspace_invitations (id, workspace_id, email, role, token, invited_by_user_id, expires_at, accepted_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [invitation.id, invitation.workspaceId, invitation.email, invitation.role, invitation.token, invitation.invitedByUserId, invitation.expiresAt, invitation.acceptedAt]
-  );
+  await db.withTransaction(async tx => {
+    await tx.query(
+      `INSERT INTO workspace_invitations (id, workspace_id, email, role, token, invited_by_user_id, expires_at, accepted_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [invitation.id, invitation.workspaceId, invitation.email, invitation.role, invitation.token, invitation.invitedByUserId, invitation.expiresAt, invitation.acceptedAt]
+    );
+    await recordAuditEvent(tx, {
+      action: 'invitation.created',
+      workspaceId: invitation.workspaceId,
+      actorUserId: input.invitedByUserId,
+      subjectEmail: invitation.email,
+      role: invitation.role,
+    });
+  });
   return invitation;
 }
 
@@ -105,12 +115,16 @@ export async function listPendingInvitations(
 }
 
 /** Deletes an unaccepted invitation of this workspace; `false` when there is none to revoke. */
-export async function revokeInvitation(db: DbClient, workspaceId: string, invitationId: string): Promise<boolean> {
-  const { rowCount } = await db.query(
-    `DELETE FROM workspace_invitations WHERE id = $1 AND workspace_id = $2 AND accepted_at IS NULL`,
-    [invitationId, workspaceId]
-  );
-  return (rowCount ?? 0) > 0;
+export async function revokeInvitation(db: DbClient, workspaceId: string, invitationId: string, actorUserId: string): Promise<boolean> {
+  return db.withTransaction(async tx => {
+    const { rows } = await tx.query<{ email: string; role: WorkspaceRole }>(
+      `DELETE FROM workspace_invitations WHERE id = $1 AND workspace_id = $2 AND accepted_at IS NULL RETURNING email, role`,
+      [invitationId, workspaceId]
+    );
+    if (!rows[0]) return false;
+    await recordAuditEvent(tx, { action: 'invitation.revoked', workspaceId, actorUserId, subjectEmail: rows[0].email, role: rows[0].role });
+    return true;
+  });
 }
 
 /** Gives a pending invitation of this workspace a fresh expiry — same token, so a link already sent
@@ -118,14 +132,20 @@ export async function revokeInvitation(db: DbClient, workspaceId: string, invita
 export async function renewPendingInvitation(
   db: DbClient,
   workspaceId: string,
-  invitationId: string
+  invitationId: string,
+  actorUserId: string
 ): Promise<WorkspaceInvitation | undefined> {
   const now = Date.now();
-  const { rows } = await db.query<InvitationRow>(
-    `UPDATE workspace_invitations SET expires_at = $1
-     WHERE id = $2 AND workspace_id = $3 AND accepted_at IS NULL AND expires_at > $4
-     RETURNING *`,
-    [new Date(now + INVITATION_TTL_MS).toISOString(), invitationId, workspaceId, new Date(now).toISOString()]
-  );
-  return rows[0] ? rowToInvitation(rows[0]) : undefined;
+  return db.withTransaction(async tx => {
+    const { rows } = await tx.query<InvitationRow>(
+      `UPDATE workspace_invitations SET expires_at = $1
+       WHERE id = $2 AND workspace_id = $3 AND accepted_at IS NULL AND expires_at > $4
+       RETURNING *`,
+      [new Date(now + INVITATION_TTL_MS).toISOString(), invitationId, workspaceId, new Date(now).toISOString()]
+    );
+    if (!rows[0]) return undefined;
+    const invitation = rowToInvitation(rows[0]);
+    await recordAuditEvent(tx, { action: 'invitation.resent', workspaceId, actorUserId, subjectEmail: invitation.email, role: invitation.role });
+    return invitation;
+  });
 }

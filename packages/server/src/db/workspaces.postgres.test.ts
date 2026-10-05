@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 import type { DbClient } from '../db.js';
 import { createDb } from '../db.js';
-import { createUser } from './users.js';
+import { createUser, deleteAccount } from './users.js';
 import { createWorkspace, addWorkspaceUser, changeWorkspaceMembership, listWorkspaceMembers } from './workspaces.js';
 import { truncateAllTables } from '../test-support/test-db.js';
 
@@ -50,7 +50,7 @@ describe.skipIf(!dockerAvailable())('changeWorkspaceMembership — real Postgres
       }
 
       const results = await Promise.all(
-        ownerIds.map(userId => changeWorkspaceMembership(db, { workspaceId: ws.id, userId, change: { kind: 'remove' } }))
+        ownerIds.map(userId => changeWorkspaceMembership(db, { workspaceId: ws.id, userId, change: { kind: 'remove' }, actorUserId: userId }))
       );
 
       expect(results.sort()).toEqual(['changed', 'last-owner']);
@@ -69,11 +69,36 @@ describe.skipIf(!dockerAvailable())('changeWorkspaceMembership — real Postgres
       }
 
       await Promise.all([
-        changeWorkspaceMembership(db, { workspaceId: ws.id, userId: ownerIds[0], change: { kind: 'set-role', role: 'member' } }),
-        changeWorkspaceMembership(db, { workspaceId: ws.id, userId: ownerIds[1], change: { kind: 'remove' } }),
+        changeWorkspaceMembership(db, { workspaceId: ws.id, userId: ownerIds[0], change: { kind: 'set-role', role: 'member' }, actorUserId: ownerIds[0] }),
+        changeWorkspaceMembership(db, { workspaceId: ws.id, userId: ownerIds[1], change: { kind: 'remove' }, actorUserId: ownerIds[1] }),
       ]);
 
       expect((await listWorkspaceMembers(db, ws.id)).filter(m => m.role === 'owner')).toHaveLength(1);
+    }
+  });
+
+  // The change is recorded with the ids of who made it and whom it was about. Were those foreign keys
+  // to the accounts, the recording would lock the account rows after the workspace row — the reverse
+  // of account deletion's order — and these two would deadlock.
+  it('removes an owner while that owner deletes their account, without deadlocking', async () => {
+    for (let round = 0; round < 10; round++) {
+      const ws = await createWorkspace(db, `R${round}`);
+      const ownerIds: string[] = [];
+      for (const n of [0, 1]) {
+        const user = await createUser(db, { email: `r${n}-${round}@x.com`, passwordHash: 'h', name: `R${n}` });
+        await addWorkspaceUser(db, { workspaceId: ws.id, userId: user.id, role: 'owner' });
+        ownerIds.push(user.id);
+      }
+      // Another operator exists, so the deletion is not refused as the last one.
+      await createUser(db, { email: `op-${round}@x.com`, passwordHash: 'h', name: 'Op', instanceRole: 'operator' });
+
+      await Promise.all([
+        changeWorkspaceMembership(db, { workspaceId: ws.id, userId: ownerIds[1], change: { kind: 'remove' }, actorUserId: ownerIds[0] }),
+        deleteAccount(db, ownerIds[1]),
+      ]);
+
+      const members = await listWorkspaceMembers(db, ws.id);
+      expect(members.map(m => m.userId)).toEqual([ownerIds[0]]);
     }
   });
 });

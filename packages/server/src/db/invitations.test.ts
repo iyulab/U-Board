@@ -91,15 +91,15 @@ describe('invitation repository', () => {
     const inv = await createInvitation(db, { workspaceId, email: 'a@x.com', role: 'member', invitedByUserId: userId });
     const elsewhere = await createWorkspace(db, 'Other');
 
-    expect(await revokeInvitation(db, elsewhere.id, inv.id)).toBe(false);
-    expect(await revokeInvitation(db, workspaceId, inv.id)).toBe(true);
+    expect(await revokeInvitation(db, elsewhere.id, inv.id, userId)).toBe(false);
+    expect(await revokeInvitation(db, workspaceId, inv.id, userId)).toBe(true);
     expect(await findInvitationByToken(db, inv.token)).toBeUndefined();
-    expect(await revokeInvitation(db, workspaceId, inv.id)).toBe(false);
+    expect(await revokeInvitation(db, workspaceId, inv.id, userId)).toBe(false);
   });
 
   it('does not revoke an invitation that was already accepted', async () => {
     const inv = await createInvitation(db, { workspaceId, email: 'a@x.com', role: 'member', invitedByUserId: userId });
     await markInvitationAcceptedIfUnused(db, inv.id);
-    expect(await revokeInvitation(db, workspaceId, inv.id)).toBe(false);
+    expect(await revokeInvitation(db, workspaceId, inv.id, userId)).toBe(false);
   });
 });

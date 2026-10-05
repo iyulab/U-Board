@@ -13,6 +13,8 @@ import {
 import { createInvitation, listPendingInvitations, renewPendingInvitation, revokeInvitation, type WorkspaceInvitation } from '../db/invitations.js';
 import { findUserByEmail, findUserById, type User } from '../db/users.js';
 import { isPlausibleEmail } from '../db/email.js';
+import { listWorkspaceAuditEvents, recordAuditEvent } from '../db/audit.js';
+import { readAuditPage } from './audit-page.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
 import { requireWorkspaceOwner, requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { signSession } from '../auth/session.js';
@@ -54,6 +56,7 @@ export function createWorkspacesRouter(config: AppConfig): Router {
     const workspace = await db.withTransaction(async tx => {
       const workspace = await createWorkspace(tx, name.trim());
       await addWorkspaceUser(tx, { workspaceId: workspace.id, userId: req.userId!, role: 'owner' });
+      await recordAuditEvent(tx, { action: 'workspace.created', workspaceId: workspace.id, actorUserId: req.userId! });
       return workspace;
     });
     const token = signSession({ userId: req.userId!, activeWorkspaceId: workspace.id, issuedAt: Date.now() }, sessionSecret);
@@ -73,11 +76,7 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       res.status(403).json({ code: 'FORBIDDEN' });
       return;
     }
-    const result = await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'remove' } });
-    if (result === 'changed') {
-      console.log(`[workspaces] ${userId === req.userId ? `${userId} left` : `${req.userId} removed ${userId} from`} ${workspaceId}`);
-    }
-    sendMembershipResult(res, result);
+    sendMembershipResult(res, await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'remove' }, actorUserId: req.userId! }));
   });
 
   router.patch('/:workspaceId/members/:userId', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string; userId: string }>, res) => {
@@ -87,9 +86,17 @@ export function createWorkspacesRouter(config: AppConfig): Router {
       return;
     }
     const { workspaceId, userId } = req.params;
-    const result = await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'set-role', role } });
-    if (result === 'changed') console.log(`[workspaces] ${req.userId} set ${userId} to ${role} in ${workspaceId}`);
-    sendMembershipResult(res, result);
+    sendMembershipResult(res, await changeWorkspaceMembership(db, { workspaceId, userId, change: { kind: 'set-role', role }, actorUserId: req.userId! }));
+  });
+
+  // Who joined, left, was removed or invited, and role changes — owners only, newest first.
+  router.get('/:workspaceId/audit', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string }>, res) => {
+    const page = readAuditPage(req.query);
+    if (!page) {
+      res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    res.status(200).json(await listWorkspaceAuditEvents(db, req.params.workspaceId, page));
   });
 
   router.get('/:workspaceId/invitations', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string }>, res) => {
@@ -97,7 +104,7 @@ export function createWorkspacesRouter(config: AppConfig): Router {
   });
 
   router.delete('/:workspaceId/invitations/:invitationId', requireWorkspaceOwner(db), async (req: AuthedRequest<{ workspaceId: string; invitationId: string }>, res) => {
-    if (!(await revokeInvitation(db, req.params.workspaceId, req.params.invitationId))) {
+    if (!(await revokeInvitation(db, req.params.workspaceId, req.params.invitationId, req.userId!))) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
@@ -126,7 +133,7 @@ export function createWorkspacesRouter(config: AppConfig): Router {
     '/:workspaceId/invitations/:invitationId/resend',
     requireWorkspaceOwner(db),
     async (req: AuthedRequest<{ workspaceId: string; invitationId: string }>, res) => {
-      const invitation = await renewPendingInvitation(db, req.params.workspaceId, req.params.invitationId);
+      const invitation = await renewPendingInvitation(db, req.params.workspaceId, req.params.invitationId, req.userId!);
       if (!invitation) {
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
