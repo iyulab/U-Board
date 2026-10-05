@@ -9,11 +9,13 @@ import {
   findConnector,
   updateConnector,
   deleteConnector,
+  applyConnectorChanges,
   type Connector,
+  type ConnectorChanges,
   type ConnectorOAuthSettings,
   type ConnectorSummary,
 } from '../db/connectors.js';
-import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from '../resolve-connector.js';
+import { isValidRef, buildResolveTarget, resolveConnectorValue, testConnector, type ResolveState } from '../resolve-connector.js';
 
 const OAUTH = 'oauth2-client-credentials';
 const AUTH_TYPES = new Set(['none', 'bearer', 'header', OAUTH]);
@@ -91,6 +93,46 @@ function oauthSettings(body: any, existing?: Connector): ConnectorOAuthSettings 
   };
 }
 
+/** A new connector's settings from a create request (everything but its name), or the error code
+ *  the request is refused with. */
+function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' | 'name' | 'type' | 'createdAt' | 'updatedAt'> | string {
+  if (!parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
+  const authError = validateAuthFields(body);
+  if (authError) return authError;
+  return {
+    baseUrl: body.baseUrl,
+    authType: body.authType,
+    authHeaderName: body.authType === 'header' ? body.authHeaderName : undefined,
+    authValue: body.authType === 'none' ? undefined : body.authValue,
+    ...(body.authType === OAUTH ? oauthSettings(body) : {}),
+  };
+}
+
+/** The change an update request makes to `existing`, or the error code it is refused with. Auth
+ *  validation runs against the merged state: `{authType: 'bearer'}` with no `authValue` is valid
+ *  when a secret is already stored (a rename that leaves the secret alone) and invalid when there
+ *  is none to fall back on. By `authType`:
+ *  - absent: neither the header name nor the secret is touched
+ *  - `none`: both are cleared
+ *  - `header`: the header name is set; the secret is kept unless a new one is given
+ *  - `bearer` / OAuth: the header name is cleared; the secret is kept unless a new one is given
+ *  Leaving OAuth for any other type clears the OAuth settings along with it. */
+function connectorChanges(body: any, existing: Connector): ConnectorChanges | string {
+  if (body.name !== undefined && (typeof body.name !== 'string' || body.name.trim() === '')) return 'INVALID_INPUT';
+  if (body.baseUrl !== undefined && !parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
+  const changes: ConnectorChanges = { name: body.name, baseUrl: body.baseUrl };
+  if (body.authType === undefined) return changes;
+  const authError = validateAuthFields(body, existing);
+  if (authError) return authError;
+  return {
+    ...changes,
+    authType: body.authType,
+    authHeaderName: body.authType === 'header' ? body.authHeaderName : null,
+    authValue: body.authType === 'none' ? null : (body.authValue ?? undefined),
+    oauth: body.authType === OAUTH ? oauthSettings(body, existing) : null,
+  };
+}
+
 function toSummary(connector: Connector): ConnectorSummary {
   const { workspaceId: _workspaceId, authValue: _authValue, createdAt: _createdAt, ...summary } = connector;
   return summary;
@@ -111,26 +153,63 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    if (!parseBaseUrl(body.baseUrl)) {
-      res.status(400).json({ code: 'INVALID_INPUT' });
-      return;
-    }
-    const authError = validateAuthFields(body);
-    if (authError) {
-      res.status(400).json({ code: authError });
+    const settings = newConnectorSettings(body);
+    if (typeof settings === 'string') {
+      res.status(400).json({ code: settings });
       return;
     }
     const connector = await createConnector(db, {
       workspaceId: pathParam(req, 'workspaceId'),
       actorUserId: req.userId!,
       name: body.name,
-      baseUrl: body.baseUrl,
-      authType: body.authType,
-      authHeaderName: body.authType === 'header' ? body.authHeaderName : undefined,
-      authValue: body.authType === 'none' ? undefined : body.authValue,
-      ...(body.authType === OAUTH ? oauthSettings(body) : {}),
+      ...settings,
     });
     res.status(201).json(toSummary(connector));
+  });
+
+  // Tries settings before they are saved: an OAuth connector's token request and, given a `path`,
+  // one request to the data source — the request a binding would make, under the same origin
+  // pinning, without touching the values bindings are served from. With `connectorId` the body is
+  // an edit of that connector (omitted secrets are the stored ones); without, a new connector.
+  router.post('/test', requireWorkspaceOwner(db), async (req: AuthedRequest, res) => {
+    const body = req.body ?? {};
+    const workspaceId = pathParam(req, 'workspaceId');
+    let candidate: Connector;
+    if (body.connectorId !== undefined) {
+      const existing = typeof body.connectorId === 'string' ? await findConnector(db, workspaceId, body.connectorId) : undefined;
+      if (!existing) {
+        res.status(404).json({ code: 'NOT_FOUND' });
+        return;
+      }
+      const changes = connectorChanges(body, existing);
+      if (typeof changes === 'string') {
+        res.status(400).json({ code: changes });
+        return;
+      }
+      candidate = applyConnectorChanges(existing, changes);
+    } else {
+      const settings = newConnectorSettings(body);
+      if (typeof settings === 'string') {
+        res.status(400).json({ code: settings });
+        return;
+      }
+      const now = new Date().toISOString();
+      candidate = { id: 'connection-test', workspaceId, name: '', type: 'http', createdAt: now, updatedAt: now, ...settings };
+    }
+    // Without a path there is nothing to call but an OAuth token endpoint.
+    if (body.path === undefined && candidate.authType !== OAUTH) {
+      res.status(400).json({ code: 'PATH_REQUIRED' });
+      return;
+    }
+    let target: URL | null = null;
+    if (body.path !== undefined) {
+      target = isValidRef({ path: body.path }) ? buildResolveTarget(candidate, { path: body.path }) : null;
+      if (!target) {
+        res.status(400).json({ code: 'INVALID_INPUT' });
+        return;
+      }
+    }
+    res.status(200).json(await testConnector(candidate, target));
   });
 
   router.put('/:connectorId', requireWorkspaceOwner(db), async (req: AuthedRequest<{ connectorId: string }>, res) => {
@@ -151,45 +230,12 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    if (body.authType !== undefined) {
-      const authError = validateAuthFields(body, existing);
-      if (authError) {
-        res.status(400).json({ code: authError });
-        return;
-      }
+    const changes = connectorChanges(body, existing);
+    if (typeof changes === 'string') {
+      res.status(400).json({ code: changes });
+      return;
     }
-    // Compute authHeaderName and authValue based on authType change:
-    // - undefined authType: don't touch either field
-    // - authType === 'none': explicitly clear both authHeaderName and authValue
-    // - authType === 'header': set authHeaderName to new value, clear authValue if not provided
-    // - authType === 'bearer': clear authHeaderName, keep or set authValue if provided
-    // - authType === OAUTH: clear authHeaderName, keep or set authValue (the client secret)
-    // Leaving OAuth for any other type clears the OAuth settings along with it.
-    let authHeaderName: string | null | undefined;
-    let authValue: string | null | undefined;
-    let oauth: ConnectorOAuthSettings | null | undefined;
-    if (body.authType !== undefined) oauth = body.authType === OAUTH ? oauthSettings(body, existing) : null;
-    if (body.authType === undefined) {
-      authHeaderName = undefined;
-      authValue = undefined;
-    } else if (body.authType === 'none') {
-      authHeaderName = null;
-      authValue = null;
-    } else if (body.authType === 'header') {
-      authHeaderName = body.authHeaderName;
-      authValue = body.authValue ?? undefined;
-    } else if (body.authType === 'bearer' || body.authType === OAUTH) {
-      authHeaderName = null;
-      authValue = body.authValue ?? undefined;
-    }
-    const updated = await updateConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId, {
-      name: body.name,
-      baseUrl: body.baseUrl,
-      authType: body.authType,
-      authHeaderName,
-      authValue,
-      oauth,
-    }, req.userId!);
+    const updated = await updateConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId, changes, req.userId!);
     if (!updated) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;

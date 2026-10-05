@@ -49,3 +49,4 @@ export const deleteAccount = vi.fn();
 export const resendInvitation = vi.fn();
 export const listWorkspaceAudit = vi.fn();
 export const listInstanceAudit = vi.fn();
+export const testConnector = vi.fn();

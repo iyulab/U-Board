@@ -296,4 +296,57 @@ describe('ConnectorsPage', () => {
     fireEvent.change(screen.getByLabelText('인증 방식'), { target: { value: 'oauth2-client-credentials' } });
     expect(screen.getByLabelText('클라이언트 시크릿')).toBeRequired();
   });
+
+  describe('connection test', () => {
+    const OWNER = { members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' as const }] };
+    const BEARER = { id: 'c3', name: 'Bearer API', type: 'http' as const, baseUrl: 'https://plant.example.com', authType: 'bearer' as const, updatedAt: 't' };
+
+    function renderPage() {
+      render(
+        <MemoryRouter>
+          <ConnectorsPage workspaceId="w1" userId="u1" />
+        </MemoryRouter>
+      );
+    }
+
+    it('tries an edit with the stored secret and the given path, and says it connected', async () => {
+      vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [BEARER] });
+      vi.mocked(api.listMembers).mockResolvedValue(OWNER);
+      vi.mocked(api.testConnector).mockResolvedValue({ ok: true });
+      renderPage();
+      await userEvent.click(await screen.findByRole('button', { name: 'Bearer API 수정' }));
+      await userEvent.type(screen.getByLabelText('시험할 경로'), '/assets');
+      await userEvent.click(screen.getByRole('button', { name: '연결 테스트' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('연결됨 — /assets가 응답했습니다.');
+      expect(api.testConnector).toHaveBeenCalledWith('w1', {
+        connectorId: 'c3', path: '/assets', baseUrl: 'https://plant.example.com', authType: 'bearer', authHeaderName: undefined, authValue: undefined,
+      });
+      expect(api.updateConnector).not.toHaveBeenCalled();
+    });
+
+    it('names the failing stage, the upstream status and what to check', async () => {
+      vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+      vi.mocked(api.listMembers).mockResolvedValue(OWNER);
+      vi.mocked(api.testConnector).mockResolvedValue({ ok: false, stage: 'token', reason: 'auth', status: 401, message: 'token endpoint responded 401' });
+      renderPage();
+      await userEvent.type(await screen.findByLabelText('Base URL'), 'https://platform.example.com');
+      await userEvent.selectOptions(screen.getByLabelText('인증 방식'), 'oauth2-client-credentials');
+      await userEvent.click(screen.getByRole('button', { name: '연결 테스트' }));
+
+      expect(await screen.findByText(/토큰 발급 단계 실패 \(HTTP 401\): 자격 증명이 거부됐습니다/)).toBeInTheDocument();
+      expect(vi.mocked(api.testConnector).mock.calls[0][1]).not.toHaveProperty('path');
+    });
+
+    it('asks for a path before trying a connector that has no token to obtain', async () => {
+      vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [BEARER] });
+      vi.mocked(api.listMembers).mockResolvedValue(OWNER);
+      renderPage();
+      await userEvent.click(await screen.findByRole('button', { name: 'Bearer API 수정' }));
+      await userEvent.click(screen.getByRole('button', { name: '연결 테스트' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('시험할 경로를 입력하세요');
+      expect(api.testConnector).not.toHaveBeenCalled();
+    });
+  });
 });

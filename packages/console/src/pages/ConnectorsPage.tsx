@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { listConnectors, createConnector, updateConnector, deleteConnector, listMembers, type ConnectorSummary, type ConnectorAuthType, type ConnectorOAuthClientAuth } from '../api-client.js';
+import {
+  ApiError,
+  listConnectors,
+  createConnector,
+  updateConnector,
+  deleteConnector,
+  listMembers,
+  testConnector,
+  type ConnectorSummary,
+  type ConnectorAuthType,
+  type ConnectorOAuthClientAuth,
+  type ConnectorTestResult,
+} from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
@@ -16,6 +28,26 @@ const AUTH_TYPE_LABELS: Record<ConnectorAuthType, string> = {
   header: '커스텀 헤더',
   'oauth2-client-credentials': 'OAuth 2.0 클라이언트 자격 증명',
 };
+
+const TEST_STAGES: Record<Extract<ConnectorTestResult, { ok: false }>['stage'], string> = {
+  token: '토큰 발급',
+  request: '요청',
+  response: '응답 읽기',
+};
+
+const TEST_REASONS: Record<Extract<ConnectorTestResult, { ok: false }>['reason'], string> = {
+  auth: '자격 증명이 거부됐습니다 — 시크릿·클라이언트 ID를 확인하세요',
+  address: '주소를 찾을 수 없습니다 — Base URL·경로를 확인하세요',
+  throttled: '요청이 너무 많다고 거절됐습니다 — 잠시 뒤 다시 시도하세요',
+  transport: '연결하지 못했습니다 — 주소에 닿을 수 있는지 확인하세요',
+};
+
+/** What a connection test found, as one line. */
+export function describeTestResult(result: ConnectorTestResult, path: string): string {
+  if (result.ok) return path ? `연결됨 — ${path}가 응답했습니다.` : '연결됨 — 토큰을 발급받았습니다.';
+  const status = result.status !== undefined ? ` (HTTP ${result.status})` : '';
+  return `${TEST_STAGES[result.stage]} 단계 실패${status}: ${TEST_REASONS[result.reason]}.`;
+}
 
 export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
@@ -35,6 +67,9 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [oauthClientId, setOauthClientId] = useState('');
   const [oauthScope, setOauthScope] = useState('');
   const [oauthClientAuth, setOauthClientAuth] = useState<ConnectorOAuthClientAuth>('basic');
+  const [testPath, setTestPath] = useState('');
+  const [testOutcome, setTestOutcome] = useState<{ ok: boolean; text: string } | null>(null);
+  const [isTesting, setIsTesting] = useState(false);
   const isOAuth = authType === 'oauth2-client-credentials';
   // On edit the stored secret is kept when the field is left blank — but only while it is still
   // the same kind of secret: an OAuth client secret and a bearer/header value are not
@@ -75,6 +110,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setOauthClientId('');
     setOauthScope('');
     setOauthClientAuth('basic');
+    setTestPath('');
+    setTestOutcome(null);
   }
 
   function startEdit(c: ConnectorSummary) {
@@ -89,18 +126,48 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setOauthClientId(c.oauthClientId ?? '');
     setOauthScope(c.oauthScope ?? '');
     setOauthClientAuth(c.oauthClientAuth ?? 'basic');
+    setTestOutcome(null);
   }
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const input = {
-      name,
+  /** The connection settings as the form holds them — what is saved, and what a test tries. */
+  function formSettings() {
+    return {
       baseUrl,
       authType,
       authHeaderName: authType === 'header' ? authHeaderName : undefined,
       authValue: authType === 'none' ? undefined : authValue || undefined,
       ...(isOAuth ? { oauthTokenUrl, oauthClientId, oauthScope, oauthClientAuth } : {}),
     };
+  }
+
+  async function handleTest() {
+    const path = testPath.trim();
+    if (!path && !isOAuth) {
+      setTestOutcome({ ok: false, text: '시험할 경로를 입력하세요(예: /assets).' });
+      return;
+    }
+    setIsTesting(true);
+    setTestOutcome(null);
+    try {
+      const result = await testConnector(workspaceId, {
+        ...formSettings(),
+        ...(editingId ? { connectorId: editingId } : {}),
+        ...(path ? { path } : {}),
+      });
+      setTestOutcome({ ok: result.ok, text: describeTestResult(result, path) });
+    } catch (err) {
+      setTestOutcome({
+        ok: false,
+        text: err instanceof ApiError && err.status === 400 ? '설정 또는 경로를 확인하세요 — 형식이 맞지 않습니다.' : '연결 테스트를 실행하지 못했습니다.',
+      });
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    const input = { name, ...formSettings() };
     try {
       if (editingId) {
         await updateConnector(workspaceId, editingId, input);
@@ -198,6 +265,17 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
             <FormField label={`${isOAuth ? '클라이언트 시크릿' : '값'}${canKeepStoredSecret ? '(변경 시에만 입력)' : ''}`}>
               <input type="password" value={authValue} onChange={e => setAuthValue(e.target.value)} required={!canKeepStoredSecret} />
             </FormField>
+          )}
+          <FormField label={isOAuth ? '시험할 경로(선택 — 비우면 토큰만)' : '시험할 경로'}>
+            <input value={testPath} onChange={e => setTestPath(e.target.value)} placeholder="/assets" />
+          </FormField>
+          <Button type="button" variant="ghost" onClick={handleTest} disabled={isTesting || !baseUrl}>
+            {isTesting ? '시험 중…' : '연결 테스트'}
+          </Button>
+          {testOutcome && (
+            <p role="status" className={testOutcome.ok ? 'ub-connector-test--ok' : 'ub-connector-test--failed'}>
+              {testOutcome.text}
+            </p>
           )}
           <Button type="submit">{editingId ? '데이터소스 수정' : '데이터소스 추가'}</Button>
           {editingId && (

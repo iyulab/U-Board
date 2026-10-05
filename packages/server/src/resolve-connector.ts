@@ -1,5 +1,5 @@
 import type { Connector } from './db/connectors.js';
-import type { ClientCredentials, ClientCredentialsTokens } from './oauth-client-credentials.js';
+import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
 import { HttpStatusError } from './http-status-error.js';
 
 export type ResolveQuality = 'live' | 'stale' | 'disconnected';
@@ -158,9 +158,12 @@ async function authHeaders(connector: Connector, tokens: ClientCredentialsTokens
  * the same way to every binding waiting on it. */
 class StageError extends Error {
   readonly reason: ResolveReason;
+  /** The status the upstream answered with, when it answered at all. */
+  readonly status?: number;
   constructor(readonly stage: ResolveStage, cause: unknown, reason?: ResolveReason) {
     super(describeFailure(cause));
     this.reason = reason ?? reasonFor(stage, cause);
+    if (cause instanceof HttpStatusError) this.status = cause.status;
   }
 }
 
@@ -291,5 +294,40 @@ export async function resolveConnectorValue(
     return servable
       ? { value: cached.value, quality: 'stale', reason, observedAt: cached.observedAt }
       : { value: undefined, quality: 'disconnected', reason };
+  }
+}
+
+/** The outcome of trying a connector's settings: `ok`, or where it failed (`stage`), what that
+ *  means for whoever fixes it (`reason`), the status the upstream answered with, and a message
+ *  that names the failure — never the request, whose headers carry the credentials. */
+export type ConnectorTestResult =
+  | { ok: true }
+  | { ok: false; stage: ResolveStage; reason: ResolveReason; status?: number; message: string };
+
+/** Tries `connector` as a binding would use it: obtains an OAuth access token, then, given a
+ *  target, requests it once. A token cache of its own, so a token already obtained with the stored
+ *  settings cannot vouch for the ones being tried; nothing is cached or logged for bindings. */
+export async function testConnector(connector: Connector, target: URL | null): Promise<ConnectorTestResult> {
+  const tokens = new ClientCredentialsTokens();
+  try {
+    if (target) {
+      await fetchBody(connector, target, tokens);
+    } else if (connector.authType === 'oauth2-client-credentials') {
+      try {
+        await tokens.get(clientCredentialsOf(connector));
+      } catch (err) {
+        throw new StageError('token', err);
+      }
+    }
+    return { ok: true };
+  } catch (err) {
+    const failure = err instanceof StageError ? err : new StageError('request', err);
+    return {
+      ok: false,
+      stage: failure.stage,
+      reason: failure.reason,
+      ...(failure.status !== undefined && { status: failure.status }),
+      message: failure.message,
+    };
   }
 }

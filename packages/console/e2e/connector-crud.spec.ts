@@ -6,6 +6,12 @@ test('create a connector via the UI, then resolve a live value through the real 
   // 로컬 mock HTTP 서버 — 실제 외부 API 대신 baseUrl로 지정한다.
   const mockServer = createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
+    // /secured answers only the header connector's secret — what the connection test checks below.
+    if (req.url === '/secured' && req.headers['x-api-key'] !== 'e2e-secret') {
+      res.statusCode = 401;
+      res.end(JSON.stringify({ error: 'unauthorized' }));
+      return;
+    }
     res.end(JSON.stringify({ status: 'running' }));
   });
   await new Promise<void>(resolve => mockServer.listen(0, resolve));
@@ -47,6 +53,17 @@ test('create a connector via the UI, then resolve a live value through the real 
     await page.getByRole('button', { name: '데이터소스 수정' }).click();
     await expect(page.getByText('Secured API Renamed')).toBeVisible();
     await expect(page.getByRole('alert')).toHaveCount(0);
+
+    // 연결 테스트: 저장하지 않고 폼의 설정으로 시험한다 — 비밀값 칸을 비우면 저장된 비밀값이 쓰이고,
+    // 틀린 값을 넣으면 데이터소스가 거절한 단계와 상태가 그대로 보인다.
+    await page.getByRole('button', { name: 'Secured API Renamed 수정' }).click();
+    await page.getByLabel('시험할 경로').fill('/secured');
+    await page.getByRole('button', { name: '연결 테스트' }).click();
+    await expect(page.getByText('연결됨 — /secured가 응답했습니다.')).toBeVisible();
+    await page.getByLabel('값(변경 시에만 입력)').fill('wrong-secret');
+    await page.getByRole('button', { name: '연결 테스트' }).click();
+    await expect(page.getByText(/요청 단계 실패 \(HTTP 401\): 자격 증명이 거부됐습니다/)).toBeVisible();
+    await page.getByRole('button', { name: '취소' }).click();
 
     // 보드 편집기가 이 커넥터를 어댑터 목록 로딩에서 실패 없이 받아들이는지 확인
     await page.getByRole('link', { name: '보드' }).click();

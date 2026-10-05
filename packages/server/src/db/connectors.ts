@@ -168,23 +168,46 @@ export async function findConnector(db: DbClient, workspaceId: string, connector
   return rows[0] ? rowToConnector(rows[0]) : undefined;
 }
 
+/** A change to a connector's settings. For each field `undefined` leaves the stored value alone and
+ *  `null` clears it. */
+export interface ConnectorChanges {
+  name?: string;
+  baseUrl?: string;
+  authType?: ConnectorAuthType;
+  authHeaderName?: string | null;
+  authValue?: string | null;
+  /** `undefined` leaves the stored OAuth settings alone; `null` clears them (the connector is
+   * leaving OAuth); an object replaces them as a set. */
+  oauth?: ConnectorOAuthSettings | null;
+}
+
+/** The connector `existing` becomes with `changes` applied — what an update stores, and what a
+ *  connection test tries before anything is stored. */
+export function applyConnectorChanges(existing: Connector, changes: ConnectorChanges): Connector {
+  const oauthSource = changes.oauth === undefined ? existing : (changes.oauth ?? {});
+  return {
+    ...existing,
+    name: changes.name ?? existing.name,
+    baseUrl: changes.baseUrl ?? existing.baseUrl,
+    authType: changes.authType ?? existing.authType,
+    authHeaderName: changes.authHeaderName === undefined ? existing.authHeaderName : (changes.authHeaderName ?? undefined),
+    authValue: changes.authValue === undefined ? existing.authValue : (changes.authValue ?? undefined),
+    oauthTokenUrl: oauthSource.oauthTokenUrl,
+    oauthClientId: oauthSource.oauthClientId,
+    oauthScope: oauthSource.oauthScope,
+    oauthClientAuth: oauthSource.oauthClientAuth,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export async function updateConnector(
   db: DbClient,
   workspaceId: string,
   connectorId: string,
-  input: {
-    name?: string;
-    baseUrl?: string;
-    authType?: ConnectorAuthType;
-    authHeaderName?: string | null;
-    authValue?: string | null;
-    /** `undefined` leaves the stored OAuth settings alone; `null` clears them (the connector is
-     * leaving OAuth); an object replaces them as a set. */
-    oauth?: ConnectorOAuthSettings | null;
-  },
+  changes: ConnectorChanges,
   actorUserId: string
 ): Promise<Connector | undefined> {
-  return db.withTransaction(tx => updateConnectorIn(tx, workspaceId, connectorId, input, actorUserId));
+  return db.withTransaction(tx => updateConnectorIn(tx, workspaceId, connectorId, changes, actorUserId));
 }
 
 /** Which settings an update changed, for the record — by group, never by value. */
@@ -202,7 +225,7 @@ async function updateConnectorIn(
   db: DbClient,
   workspaceId: string,
   connectorId: string,
-  input: Parameters<typeof updateConnector>[3],
+  changes: ConnectorChanges,
   actorUserId: string
 ): Promise<Connector | undefined> {
   const { rows: locked } = await db.query<ConnectorRow>(
@@ -211,35 +234,14 @@ async function updateConnectorIn(
   );
   if (!locked[0]) return undefined;
   const existing = rowToConnector(locked[0]);
-
-  // Distinguish undefined (don't touch) from null (explicitly clear)
-  const authHeaderName = input.authHeaderName === undefined ? existing.authHeaderName : (input.authHeaderName ?? undefined);
-  const authValue = input.authValue === undefined ? existing.authValue : (input.authValue ?? undefined);
-  const oauthSource = input.oauth === undefined ? existing : (input.oauth ?? {});
-  const oauth: ConnectorOAuthSettings = {
-    oauthTokenUrl: oauthSource.oauthTokenUrl,
-    oauthClientId: oauthSource.oauthClientId,
-    oauthScope: oauthSource.oauthScope,
-    oauthClientAuth: oauthSource.oauthClientAuth,
-  };
-
-  const updated: Connector = {
-    ...existing,
-    name: input.name ?? existing.name,
-    baseUrl: input.baseUrl ?? existing.baseUrl,
-    authType: input.authType ?? existing.authType,
-    authHeaderName,
-    authValue,
-    ...oauth,
-    updatedAt: new Date().toISOString(),
-  };
+  const updated = applyConnectorChanges(existing, changes);
   await db.query(
     `UPDATE connectors SET name = $1, base_url = $2, auth_type = $3, auth_header_name = $4, auth_value = $5,
        oauth_token_url = $6, oauth_client_id = $7, oauth_scope = $8, oauth_client_auth = $9, updated_at = $10
      WHERE id = $11 AND workspace_id = $12`,
     [
-      updated.name, updated.baseUrl, updated.authType, authHeaderName ?? null, authValue ?? null,
-      oauth.oauthTokenUrl ?? null, oauth.oauthClientId ?? null, oauth.oauthScope ?? null, oauth.oauthClientAuth ?? null,
+      updated.name, updated.baseUrl, updated.authType, updated.authHeaderName ?? null, updated.authValue ?? null,
+      updated.oauthTokenUrl ?? null, updated.oauthClientId ?? null, updated.oauthScope ?? null, updated.oauthClientAuth ?? null,
       updated.updatedAt, connectorId, workspaceId,
     ]
   );

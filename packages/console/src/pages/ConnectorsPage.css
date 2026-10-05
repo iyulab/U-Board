@@ -17,3 +17,11 @@
   margin-top: auto;
   padding-top: var(--ub-space-2);
 }
+
+.ub-connector-test--ok {
+  color: var(--ub-success);
+}
+
+.ub-connector-test--failed {
+  color: var(--ub-error);
+}

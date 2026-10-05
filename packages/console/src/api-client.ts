@@ -238,6 +238,32 @@ export function createConnector(
   });
 }
 
+/** How trying a connector's settings went: `ok`, or the stage that failed (`token` — the OAuth token
+ *  request; `request` — the data source; `response` — reading its answer), why, and what the
+ *  upstream answered with. */
+export type ConnectorTestResult =
+  | { ok: true }
+  | {
+      ok: false;
+      stage: 'token' | 'request' | 'response';
+      reason: 'transport' | 'auth' | 'address' | 'throttled';
+      status?: number;
+      message: string;
+    };
+
+/** Tries settings without saving them: the OAuth token request and, given `path`, one request to the
+ *  data source. With `connectorId` the settings are an edit of that connector — a secret left out is
+ *  the stored one. Fails with `PATH_REQUIRED` when there is nothing to call without a path. */
+export function testConnector(
+  workspaceId: string,
+  input: { connectorId?: string; path?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authValue?: string } & ConnectorOAuthSettings
+) {
+  return request<ConnectorTestResult>(`/workspaces/${workspaceId}/connectors/test`, {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
 export function updateConnector(
   workspaceId: string,
   connectorId: string,
