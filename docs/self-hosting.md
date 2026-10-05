@@ -39,7 +39,9 @@ any member can leave a workspace. A workspace always keeps at least one owner �
 invite the new owner with the `owner` role and leave once they have joined.
 
 The server records who changed what, and when: a workspace's members joining, leaving or being
-removed, role changes, and invitations sent, resent or cancelled are read by that workspace's owners
+removed, role changes, invitations sent, resent or cancelled, boards created or deleted, share
+links made or deleted (by their visible ending, never the link itself), and connectors created,
+changed (which settings — name, address, credentials — never their values) or deleted are read by that workspace's owners
 on the console's settings page (`GET /api/workspaces/:id/audit`); workspaces created, operators
 designated, accounts deleted, and an operator joining a workspace as an owner are read by operators
 on the installation page (`GET /api/instance/audit`) — the

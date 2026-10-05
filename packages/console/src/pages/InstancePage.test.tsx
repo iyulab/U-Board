@@ -31,7 +31,7 @@ beforeEach(() => {
 describe('InstancePage', () => {
   it("shows the installation's record with each workspace named", async () => {
     vi.mocked(api.listInstanceAudit).mockResolvedValue({
-      events: [{ id: 'e1', occurredAt: '2026-10-05T00:00:00.000Z', action: 'workspace.created', workspace: { id: 'w1', name: 'Customer A' }, actor: { userId: 'op', name: 'Op' }, subject: null, role: null }],
+      events: [{ id: 'e1', occurredAt: '2026-10-05T00:00:00.000Z', action: 'workspace.created', workspace: { id: 'w1', name: 'Customer A' }, actor: { userId: 'op', name: 'Op' }, subject: null, role: null, target: null, detail: null }],
       nextBefore: null,
     });
     renderPage();

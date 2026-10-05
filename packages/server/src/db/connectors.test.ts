@@ -14,6 +14,7 @@ beforeEach(async () => {
 describe('connector repository', () => {
   it('creates a connector with the given fields', async () => {
     const connector = await createConnector(db, {
+      actorUserId: 'test-actor',
       workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com',
       authType: 'bearer', authValue: 'secret-token',
     });
@@ -26,6 +27,7 @@ describe('connector repository', () => {
 
   it('lists connectors for a workspace without the auth value, but with the header name', async () => {
     await createConnector(db, {
+      actorUserId: 'test-actor',
       workspaceId, name: 'A', baseUrl: 'https://a.example.com',
       authType: 'header', authHeaderName: 'X-API-Key', authValue: 'secret',
     });
@@ -38,12 +40,14 @@ describe('connector repository', () => {
 
   it('does not list connectors belonging to another workspace', async () => {
     const otherWorkspaceId = (await createWorkspace(db, 'Other')).id;
-    await createConnector(db, { workspaceId: otherWorkspaceId, name: 'Not mine', baseUrl: 'https://x.example.com', authType: 'none' });
+    await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId: otherWorkspaceId, name: 'Not mine', baseUrl: 'https://x.example.com', authType: 'none' });
     expect(await listConnectorsForWorkspace(db, workspaceId)).toEqual([]);
   });
 
   it('finds a connector only when workspaceId matches', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
+    const connector = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
     expect(await findConnector(db, workspaceId, connector.id)).toEqual(connector);
 
     const otherWorkspaceId = (await createWorkspace(db, 'Other')).id;
@@ -51,29 +55,33 @@ describe('connector repository', () => {
   });
 
   it('updates fields and bumps updatedAt, keeping authValue when not provided', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'bearer', authValue: 'secret-1' });
+    const connector = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'bearer', authValue: 'secret-1' });
     await new Promise(r => setTimeout(r, 2)); // ensure a distinguishable ISO timestamp
-    const updated = await updateConnector(db, workspaceId, connector.id, { name: 'Renamed' });
+    const updated = await updateConnector(db, workspaceId, connector.id, { name: 'Renamed' }, 'test-actor');
     expect(updated).toMatchObject({ name: 'Renamed', baseUrl: 'https://a.example.com', authValue: 'secret-1' });
     expect(updated!.updatedAt).not.toBe(connector.updatedAt);
   });
 
   it('overwrites authValue when a new one is provided', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'bearer', authValue: 'secret-1' });
-    const updated = await updateConnector(db, workspaceId, connector.id, { authValue: 'secret-2' });
+    const connector = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'bearer', authValue: 'secret-1' });
+    const updated = await updateConnector(db, workspaceId, connector.id, { authValue: 'secret-2' }, 'test-actor');
     expect(updated!.authValue).toBe('secret-2');
   });
 
   it('updateConnector returns undefined for a connector in another workspace', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
+    const connector = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
     const otherWorkspaceId = (await createWorkspace(db, 'Other')).id;
-    expect(await updateConnector(db, otherWorkspaceId, connector.id, { name: 'X' })).toBeUndefined();
+    expect(await updateConnector(db, otherWorkspaceId, connector.id, { name: 'X' }, 'test-actor')).toBeUndefined();
   });
 
   it('deletes a connector and returns true, false if it did not exist', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
-    expect(await deleteConnector(db, workspaceId, connector.id)).toBe(true);
+    const connector = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
+    expect(await deleteConnector(db, workspaceId, connector.id, 'test-actor')).toBe(true);
     expect(await findConnector(db, workspaceId, connector.id)).toBeUndefined();
-    expect(await deleteConnector(db, workspaceId, connector.id)).toBe(false);
+    expect(await deleteConnector(db, workspaceId, connector.id, 'test-actor')).toBe(false);
   });
 });

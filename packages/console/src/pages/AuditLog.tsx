@@ -17,6 +17,13 @@ function subjectOf(event: AuditEvent): string {
   return subject?.email ?? DELETED;
 }
 
+const CONNECTOR_SETTINGS: Record<string, string> = { name: '이름', base_url: '주소', auth: '인증 정보' };
+
+/** A board or connector as the sentence names it. */
+function targetOf(event: AuditEvent): string {
+  return `"${event.target?.name ?? ''}"`;
+}
+
 /** One record as a sentence. */
 export function describeAuditEvent(event: AuditEvent): string {
   const actor = person(event.actor);
@@ -47,6 +54,22 @@ export function describeAuditEvent(event: AuditEvent): string {
         : `${actor}이 ${subjectOf(event)}을 운영자에서 해제했습니다.`;
     case 'account.deleted':
       return '계정 하나가 삭제되었습니다.';
+    case 'board.created':
+      return `${actor}이 보드 ${targetOf(event)}을(를) 만들었습니다.`;
+    case 'board.deleted':
+      return `${actor}이 보드 ${targetOf(event)}을(를) 삭제했습니다.`;
+    case 'share_link.created':
+      return `${actor}이 보드 ${targetOf(event)}의 공유 링크(•••• ${event.detail ?? ''})를 만들었습니다.`;
+    case 'share_link.deleted':
+      return `${actor}이 보드 ${targetOf(event)}의 공유 링크(•••• ${event.detail ?? ''})를 삭제했습니다.`;
+    case 'connector.created':
+      return `${actor}이 커넥터 ${targetOf(event)}을(를) 만들었습니다.`;
+    case 'connector.updated': {
+      const changed = (event.detail ?? '').split(',').filter(Boolean).map(key => CONNECTOR_SETTINGS[key] ?? key);
+      return `${actor}이 커넥터 ${targetOf(event)}의 ${changed.join('·') || '설정'}을(를) 바꿨습니다.`;
+    }
+    case 'connector.deleted':
+      return `${actor}이 커넥터 ${targetOf(event)}을(를) 삭제했습니다.`;
   }
 }
 

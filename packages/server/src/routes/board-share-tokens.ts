@@ -66,11 +66,11 @@ export function createBoardShareTokensRouter(config: AppConfig): Router {
     });
   });
 
-  router.delete('/:tokenId', async (req, res) => {
+  router.delete('/:tokenId', async (req: AuthedRequest<{ tokenId: string }>, res) => {
     const workspaceId = pathParam(req, 'workspaceId');
     const boardId = pathParam(req, 'boardId');
     const { tokenId } = req.params;
-    const deleted = await deleteBoardShareToken(db, workspaceId, boardId, tokenId);
+    const deleted = await deleteBoardShareToken(db, workspaceId, boardId, tokenId, req.userId!);
     if (!deleted) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;

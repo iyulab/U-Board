@@ -17,7 +17,7 @@ let userId: string;
 beforeEach(async () => {
   db = await createTestDb();
   workspaceId = (await createWorkspace(db, 'W1')).id;
-  boardId = (await createBoard(db, { workspaceId, name: 'Board A' })).id;
+  boardId = (await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Board A' })).id;
   userId = (await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' })).id;
 });
 
@@ -38,7 +38,7 @@ describe('board share token repository', () => {
   });
 
   it('does not list tokens belonging to another board', async () => {
-    const otherBoardId = (await createBoard(db, { workspaceId, name: 'Board B' })).id;
+    const otherBoardId = (await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Board B' })).id;
     await createBoardShareToken(db, { boardId: otherBoardId, workspaceId, tokenHash: 'hash-1', tokenMask: 'ab12cd34', createdByUserId: userId });
     expect(await listBoardShareTokensForBoard(db, workspaceId, boardId)).toEqual([]);
   });
@@ -53,10 +53,10 @@ describe('board share token repository', () => {
   it('deletes a token only when board and workspace match, returns false otherwise', async () => {
     const token = await createBoardShareToken(db, { boardId, workspaceId, tokenHash: 'hash-1', tokenMask: 'ab12cd34', createdByUserId: userId });
     const otherWorkspaceId = (await createWorkspace(db, 'Other')).id;
-    expect(await deleteBoardShareToken(db, otherWorkspaceId, boardId, token.id)).toBe(false);
-    expect(await deleteBoardShareToken(db, workspaceId, boardId, token.id)).toBe(true);
+    expect(await deleteBoardShareToken(db, otherWorkspaceId, boardId, token.id, 'test-actor')).toBe(false);
+    expect(await deleteBoardShareToken(db, workspaceId, boardId, token.id, 'test-actor')).toBe(true);
     expect(await findBoardShareTokenByHash(db, 'hash-1')).toBeUndefined();
-    expect(await deleteBoardShareToken(db, workspaceId, boardId, token.id)).toBe(false);
+    expect(await deleteBoardShareToken(db, workspaceId, boardId, token.id, 'test-actor')).toBe(false);
   });
 
   it('updates lastUsedAt when touched', async () => {

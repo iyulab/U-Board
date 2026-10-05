@@ -13,6 +13,8 @@ function event(overrides: Partial<AuditEvent>): AuditEvent {
     actor: { userId: 'u1', name: 'Kim' },
     subject: null,
     role: null,
+    target: null,
+    detail: null,
     ...overrides,
   };
 }
@@ -42,6 +44,19 @@ describe('describeAuditEvent', () => {
     const restored = event({ action: 'workspace.owner_restored', actor: { userId: 'op', name: 'Op' }, subject: { userId: 'op', name: 'Op', email: null } });
     expect(describeAuditEvent(restored)).toBe('운영자 Op님이 owner로 들어왔습니다.');
     expect(describeAuditEvent({ ...restored, subject: { userId: 'u2', name: 'Lee', email: null } })).toBe('운영자 Op님이 Lee님을 owner로 들였습니다.');
+  });
+});
+
+describe('describeAuditEvent — boards, share links, connectors', () => {
+  it('names the board or connector as it was, and what changed — never a secret', () => {
+    const target = { id: 't1', name: 'Line 1' };
+    expect(describeAuditEvent(event({ action: 'board.deleted', target }))).toBe('Kim님이 보드 "Line 1"을(를) 삭제했습니다.');
+    expect(describeAuditEvent(event({ action: 'share_link.created', target, detail: 'abcd1234' }))).toBe(
+      'Kim님이 보드 "Line 1"의 공유 링크(•••• abcd1234)를 만들었습니다.'
+    );
+    expect(describeAuditEvent(event({ action: 'connector.updated', target: { id: 'c1', name: 'Plant API' }, detail: 'base_url,auth' }))).toBe(
+      'Kim님이 커넥터 "Plant API"의 주소·인증 정보을(를) 바꿨습니다.'
+    );
   });
 });
 

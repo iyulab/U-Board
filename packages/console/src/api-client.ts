@@ -334,7 +334,14 @@ export type AuditAction =
   | 'invitation.resent'
   | 'invitation.revoked'
   | 'instance.role_changed'
-  | 'account.deleted';
+  | 'account.deleted'
+  | 'board.created'
+  | 'board.deleted'
+  | 'share_link.created'
+  | 'share_link.deleted'
+  | 'connector.created'
+  | 'connector.updated'
+  | 'connector.deleted';
 
 /** Someone a record names — `userId` and `name` are null once their account has been deleted. */
 export interface AuditPerson {
@@ -350,6 +357,10 @@ export interface AuditEvent {
   actor: AuditPerson;
   subject: (AuditPerson & { email: string | null }) | null;
   role: string | null;
+  /** The board or connector a record is about, named as it was then. */
+  target: { id: string; name: string } | null;
+  /** A share link's visible ending, or which connector settings changed (`name`, `base_url`, `auth`). */
+  detail: string | null;
 }
 
 export interface AuditEventList {

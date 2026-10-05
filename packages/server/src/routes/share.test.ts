@@ -36,7 +36,7 @@ beforeEach(async () => {
   await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
   workspaceId = workspace.id;
   ownerCookie = cookieFor(owner.id, workspace.id);
-  boardId = (await createBoard(db, { workspaceId, name: 'Board A' })).id;
+  boardId = (await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Board A' })).id;
 });
 
 async function createShareToken(): Promise<string> {
@@ -48,7 +48,8 @@ async function createShareToken(): Promise<string> {
 
 describe('public share routes', () => {
   it('returns the board document and connectorIds for a valid token', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const connector = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: '/status' } } } }],
@@ -79,7 +80,7 @@ describe('public share routes', () => {
 
   it('returns 404 for a missing, invalid, or wrong-board token', async () => {
     const token = await createShareToken();
-    const otherBoardId = (await createBoard(db, { workspaceId, name: 'Board B' })).id;
+    const otherBoardId = (await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Board B' })).id;
 
     // Exact body equality (not toMatchObject's partial match) so a future branch that adds an
     // extra field to one 404 body — e.g. {code:'NOT_FOUND', reason:'wrong-board'} — would fail
@@ -150,8 +151,10 @@ describe('public share routes', () => {
   });
 
   it('resolves every declared binding of a board in one batch request, in request order', async () => {
-    const a = await createConnector(db, { workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
-    const b = await createConnector(db, { workspaceId, name: 'B', baseUrl: 'https://b.example.com', authType: 'none' });
+    const a = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
+    const b = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'B', baseUrl: 'https://b.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [
@@ -185,8 +188,10 @@ describe('public share routes', () => {
   });
 
   it('answers disconnected for a batch entry the document does not declare, without calling its upstream', async () => {
-    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
-    const unreferenced = await createConnector(db, { workspaceId, name: 'Other', baseUrl: 'https://other.example.com', authType: 'none' });
+    const connector = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const unreferenced = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Other', baseUrl: 'https://other.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
@@ -238,7 +243,8 @@ describe('public share routes', () => {
     // the literal object above — so both sides of isDeclaredBinding's comparison actually pass
     // through JSON.stringify -> database storage -> JSON.parse -> HTTP response -> HTTP request,
     // the same path the embed viewer takes, instead of sharing one in-memory object by reference.
-    const connector = await createConnector(db, { workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const connector = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {
       kind: 'canvas' as const, background: {},
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],

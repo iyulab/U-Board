@@ -184,7 +184,13 @@ CREATE TABLE IF NOT EXISTS audit_events (
   actor_user_id TEXT,
   subject_user_id TEXT,
   subject_email TEXT,
-  role TEXT
+  role TEXT,
+  -- What a board, share link or connector record is about, named as it was then: the board or
+  -- connector may be gone by the time anyone reads it.
+  target_id TEXT,
+  target_name TEXT,
+  -- A short, non-secret particular: a share link's visible ending, which connector settings changed.
+  detail TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_events_workspace ON audit_events(workspace_id, seq);

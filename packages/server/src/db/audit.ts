@@ -15,7 +15,14 @@ export type AuditAction =
   | 'invitation.resent'
   | 'invitation.revoked'
   | 'instance.role_changed'
-  | 'account.deleted';
+  | 'account.deleted'
+  | 'board.created'
+  | 'board.deleted'
+  | 'share_link.created'
+  | 'share_link.deleted'
+  | 'connector.created'
+  | 'connector.updated'
+  | 'connector.deleted';
 
 const INSTANCE_ACTIONS: readonly AuditAction[] = [
   'workspace.created',
@@ -45,6 +52,10 @@ export interface AuditEventInput {
   subjectEmail?: string;
   /** The role granted or set — a workspace role, or an instance role. */
   role?: string;
+  /** The board or connector a record is about, named as it is at the time. */
+  target?: { id: string; name: string };
+  /** A short, non-secret particular — never a credential or a whole token. */
+  detail?: string;
 }
 
 export interface AuditPerson {
@@ -61,14 +72,16 @@ export interface AuditEvent {
   actor: AuditPerson;
   subject: (AuditPerson & { email: string | null }) | null;
   role: string | null;
+  target: { id: string; name: string } | null;
+  detail: string | null;
 }
 
 /** Records an event. Call it with the transaction that makes the change, so the record exists
  *  exactly when the change does. */
 export async function recordAuditEvent(db: DbClient, event: AuditEventInput): Promise<void> {
   await db.query(
-    `INSERT INTO audit_events (id, occurred_at, action, workspace_id, actor_user_id, subject_user_id, subject_email, role)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    `INSERT INTO audit_events (id, occurred_at, action, workspace_id, actor_user_id, subject_user_id, subject_email, role, target_id, target_name, detail)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
     [
       randomUUID(),
       new Date().toISOString(),
@@ -78,6 +91,9 @@ export async function recordAuditEvent(db: DbClient, event: AuditEventInput): Pr
       event.subjectUserId ?? null,
       event.subjectEmail ?? null,
       event.role ?? null,
+      event.target?.id ?? null,
+      event.target?.name ?? null,
+      event.detail ?? null,
     ]
   );
 }
@@ -107,12 +123,16 @@ interface AuditRow {
   subject_name: string | null;
   subject_email: string | null;
   role: string | null;
+  target_id: string | null;
+  target_name: string | null;
+  detail: string | null;
 }
 
 const SELECT_EVENTS = `
   SELECT e.id, e.seq::text AS seq, e.occurred_at, e.action, e.workspace_id, w.name AS workspace_name,
          e.actor_user_id, actor.name AS actor_name,
-         e.subject_user_id, subject.name AS subject_name, e.subject_email, e.role
+         e.subject_user_id, subject.name AS subject_name, e.subject_email, e.role,
+         e.target_id, e.target_name, e.detail
   FROM audit_events e
   LEFT JOIN workspaces w ON w.id = e.workspace_id
   LEFT JOIN users actor ON actor.id = e.actor_user_id
@@ -151,6 +171,8 @@ function rowToEvent(row: AuditRow): AuditEvent {
         ? { userId: row.subject_user_id, name: row.subject_name, email: row.subject_email }
         : null,
     role: row.role,
+    target: row.target_id ? { id: row.target_id, name: row.target_name ?? '' } : null,
+    detail: row.detail,
   };
 }
 

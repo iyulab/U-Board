@@ -1,6 +1,7 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import type { ClientAuthMethod } from '../oauth-client-credentials.js';
+import { recordAuditEvent } from './audit.js';
 
 export type ConnectorAuthType = 'none' | 'bearer' | 'header' | 'oauth2-client-credentials';
 
@@ -101,6 +102,7 @@ export async function createConnector(
     authType: ConnectorAuthType;
     authHeaderName?: string;
     authValue?: string;
+    actorUserId: string;
   } & ConnectorOAuthSettings
 ): Promise<Connector> {
   const now = new Date().toISOString();
@@ -120,17 +122,25 @@ export async function createConnector(
     createdAt: now,
     updatedAt: now,
   };
-  await db.query(
-    `INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_header_name, auth_value,
-       oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, created_at, updated_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-    [
-      connector.id, connector.workspaceId, connector.name, connector.type, connector.baseUrl,
-      connector.authType, connector.authHeaderName ?? null, connector.authValue ?? null,
-      connector.oauthTokenUrl ?? null, connector.oauthClientId ?? null, connector.oauthScope ?? null,
-      connector.oauthClientAuth ?? null, connector.createdAt, connector.updatedAt,
-    ]
-  );
+  await db.withTransaction(async tx => {
+    await tx.query(
+      `INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_header_name, auth_value,
+         oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        connector.id, connector.workspaceId, connector.name, connector.type, connector.baseUrl,
+        connector.authType, connector.authHeaderName ?? null, connector.authValue ?? null,
+        connector.oauthTokenUrl ?? null, connector.oauthClientId ?? null, connector.oauthScope ?? null,
+        connector.oauthClientAuth ?? null, connector.createdAt, connector.updatedAt,
+      ]
+    );
+    await recordAuditEvent(tx, {
+      action: 'connector.created',
+      workspaceId: connector.workspaceId,
+      actorUserId: input.actorUserId,
+      target: { id: connector.id, name: connector.name },
+    });
+  });
   return connector;
 }
 
@@ -171,10 +181,36 @@ export async function updateConnector(
     /** `undefined` leaves the stored OAuth settings alone; `null` clears them (the connector is
      * leaving OAuth); an object replaces them as a set. */
     oauth?: ConnectorOAuthSettings | null;
-  }
+  },
+  actorUserId: string
 ): Promise<Connector | undefined> {
-  const existing = await findConnector(db, workspaceId, connectorId);
-  if (!existing) return undefined;
+  return db.withTransaction(tx => updateConnectorIn(tx, workspaceId, connectorId, input, actorUserId));
+}
+
+/** Which settings an update changed, for the record — by group, never by value. */
+function changedSettings(before: Connector, after: Connector): string {
+  const changed: string[] = [];
+  if (after.name !== before.name) changed.push('name');
+  if (after.baseUrl !== before.baseUrl) changed.push('base_url');
+  const auth = (c: Connector) =>
+    [c.authType, c.authHeaderName, c.authValue, c.oauthTokenUrl, c.oauthClientId, c.oauthScope, c.oauthClientAuth].join('\u0000');
+  if (auth(after) !== auth(before)) changed.push('auth');
+  return changed.join(',');
+}
+
+async function updateConnectorIn(
+  db: DbClient,
+  workspaceId: string,
+  connectorId: string,
+  input: Parameters<typeof updateConnector>[3],
+  actorUserId: string
+): Promise<Connector | undefined> {
+  const { rows: locked } = await db.query<ConnectorRow>(
+    `SELECT * FROM connectors WHERE id = $1 AND workspace_id = $2 FOR UPDATE`,
+    [connectorId, workspaceId]
+  );
+  if (!locked[0]) return undefined;
+  const existing = rowToConnector(locked[0]);
 
   // Distinguish undefined (don't touch) from null (explicitly clear)
   const authHeaderName = input.authHeaderName === undefined ? existing.authHeaderName : (input.authHeaderName ?? undefined);
@@ -207,10 +243,21 @@ export async function updateConnector(
       updated.updatedAt, connectorId, workspaceId,
     ]
   );
+  const detail = changedSettings(existing, updated);
+  if (detail) {
+    await recordAuditEvent(db, { action: 'connector.updated', workspaceId, actorUserId, target: { id: connectorId, name: updated.name }, detail });
+  }
   return updated;
 }
 
-export async function deleteConnector(db: DbClient, workspaceId: string, connectorId: string): Promise<boolean> {
-  const { rowCount } = await db.query(`DELETE FROM connectors WHERE id = $1 AND workspace_id = $2`, [connectorId, workspaceId]);
-  return (rowCount ?? 0) > 0;
+export async function deleteConnector(db: DbClient, workspaceId: string, connectorId: string, actorUserId: string): Promise<boolean> {
+  return db.withTransaction(async tx => {
+    const { rows } = await tx.query<{ name: string }>(
+      `DELETE FROM connectors WHERE id = $1 AND workspace_id = $2 RETURNING name`,
+      [connectorId, workspaceId]
+    );
+    if (!rows[0]) return false;
+    await recordAuditEvent(tx, { action: 'connector.deleted', workspaceId, actorUserId, target: { id: connectorId, name: rows[0].name } });
+    return true;
+  });
 }

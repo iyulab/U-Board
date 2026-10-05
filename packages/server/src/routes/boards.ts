@@ -27,7 +27,7 @@ export function createBoardsRouter(config: AppConfig): Router {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    const board = await createBoard(db, { workspaceId, name });
+    const board = await createBoard(db, { workspaceId, name, actorUserId: req.userId! });
     res.status(201).json({ id: board.id, name: board.name, updatedAt: board.updatedAt });
   });
 
@@ -71,7 +71,7 @@ export function createBoardsRouter(config: AppConfig): Router {
   router.delete('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {
     const workspaceId = pathParam(req, 'workspaceId');
     const { boardId } = req.params;
-    const deleted = await deleteBoard(db, workspaceId, boardId);
+    const deleted = await deleteBoard(db, workspaceId, boardId, req.userId!);
     if (!deleted) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;

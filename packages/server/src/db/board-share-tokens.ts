@@ -1,5 +1,6 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
+import { recordAuditEvent } from './audit.js';
 
 export interface BoardShareToken {
   id: string;
@@ -63,11 +64,14 @@ export async function createBoardShareToken(
     createdAt: new Date().toISOString(),
     ...(input.expiresAt && { expiresAt: input.expiresAt }),
   };
-  await db.query(
-    `INSERT INTO board_share_tokens (id, board_id, workspace_id, token_hash, token_mask, created_by_user_id, created_at, expires_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [token.id, token.boardId, token.workspaceId, token.tokenHash, token.tokenMask, token.createdByUserId, token.createdAt, token.expiresAt ?? null]
-  );
+  await db.withTransaction(async tx => {
+    await tx.query(
+      `INSERT INTO board_share_tokens (id, board_id, workspace_id, token_hash, token_mask, created_by_user_id, created_at, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [token.id, token.boardId, token.workspaceId, token.tokenHash, token.tokenMask, token.createdByUserId, token.createdAt, token.expiresAt ?? null]
+    );
+    await recordShareLinkEvent(tx, 'share_link.created', token.workspaceId, token.boardId, input.createdByUserId, token.tokenMask);
+  });
   return token;
 }
 
@@ -94,12 +98,36 @@ export async function findBoardShareTokenByHash(db: DbClient, tokenHash: string)
   return rows[0] ? rowToToken(rows[0]) : undefined;
 }
 
-export async function deleteBoardShareToken(db: DbClient, workspaceId: string, boardId: string, tokenId: string): Promise<boolean> {
-  const { rowCount } = await db.query(
-    `DELETE FROM board_share_tokens WHERE id = $1 AND board_id = $2 AND workspace_id = $3`,
-    [tokenId, boardId, workspaceId]
-  );
-  return (rowCount ?? 0) > 0;
+export async function deleteBoardShareToken(
+  db: DbClient,
+  workspaceId: string,
+  boardId: string,
+  tokenId: string,
+  actorUserId: string
+): Promise<boolean> {
+  return db.withTransaction(async tx => {
+    const { rows } = await tx.query<{ token_mask: string }>(
+      `DELETE FROM board_share_tokens WHERE id = $1 AND board_id = $2 AND workspace_id = $3 RETURNING token_mask`,
+      [tokenId, boardId, workspaceId]
+    );
+    if (!rows[0]) return false;
+    await recordShareLinkEvent(tx, 'share_link.deleted', workspaceId, boardId, actorUserId, rows[0].token_mask);
+    return true;
+  });
+}
+
+/** A share link is recorded against its board, with the link's visible ending (the same one the
+ *  console lists links by) to tell several links apart — never the token. */
+async function recordShareLinkEvent(
+  tx: DbClient,
+  action: 'share_link.created' | 'share_link.deleted',
+  workspaceId: string,
+  boardId: string,
+  actorUserId: string,
+  tokenMask: string
+): Promise<void> {
+  const { rows } = await tx.query<{ name: string }>(`SELECT name FROM boards WHERE id = $1`, [boardId]);
+  await recordAuditEvent(tx, { action, workspaceId, actorUserId, target: { id: boardId, name: rows[0]?.name ?? '' }, detail: tokenMask });
 }
 
 export async function touchBoardShareTokenLastUsed(db: DbClient, tokenId: string): Promise<void> {

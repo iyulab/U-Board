@@ -31,7 +31,7 @@ beforeEach(async () => {
   await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
   await addWorkspaceUser(db, { workspaceId: workspace.id, userId: member.id, role: 'member' });
   workspaceId = workspace.id;
-  boardId = (await createBoard(db, { workspaceId, name: 'Board A' })).id;
+  boardId = (await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Board A' })).id;
   ownerCookie = cookieFor(owner.id, workspace.id);
   memberCookie = cookieFor(member.id, workspace.id);
 });
@@ -84,7 +84,7 @@ describe('board share token management routes', () => {
     const create = await request(app)
       .post(`/api/workspaces/${workspaceId}/boards/${boardId}/share-tokens`)
       .set('Cookie', ownerCookie);
-    const otherBoardId = (await createBoard(db, { workspaceId, name: 'Board B' })).id;
+    const otherBoardId = (await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Board B' })).id;
 
     const res = await request(app)
       .delete(`/api/workspaces/${workspaceId}/boards/${otherBoardId}/share-tokens/${create.body.id}`)

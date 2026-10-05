@@ -99,6 +99,40 @@ describe('GET /workspaces/:workspaceId/audit', () => {
   });
 });
 
+describe('boards, share links and connectors', () => {
+  it('records who created and deleted them, by name, with no secret in the record', async () => {
+    const { agent: owner, userId: ownerId, workspaceId } = await bootstrapOperator();
+    const board = await owner.post(`/api/workspaces/${workspaceId}/boards`).send({ name: 'Line 1' });
+    const link = await owner.post(`/api/workspaces/${workspaceId}/boards/${board.body.id}/share-tokens`).send({});
+    await owner.delete(`/api/workspaces/${workspaceId}/boards/${board.body.id}/share-tokens/${link.body.id}`);
+    const connector = await owner
+      .post(`/api/workspaces/${workspaceId}/connectors`)
+      .send({ name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer', authValue: 'first-secret' });
+    await owner.put(`/api/workspaces/${workspaceId}/connectors/${connector.body.id}`).send({ authType: 'bearer', authValue: 'second-secret' });
+    await owner.put(`/api/workspaces/${workspaceId}/connectors/${connector.body.id}`).send({ name: 'Plant API' }); // no change
+    await owner.delete(`/api/workspaces/${workspaceId}/connectors/${connector.body.id}`);
+    await owner.delete(`/api/workspaces/${workspaceId}/boards/${board.body.id}`);
+
+    const events = (await owner.get(`/api/workspaces/${workspaceId}/audit`)).body.events;
+    expect(actions({ events }).slice(0, 7)).toEqual([
+      'board.deleted',
+      'connector.deleted',
+      'connector.updated',
+      'connector.created',
+      'share_link.deleted',
+      'share_link.created',
+      'board.created',
+    ]);
+    expect(events[0]).toMatchObject({ actor: { userId: ownerId }, target: { id: board.body.id, name: 'Line 1' } });
+    expect(events[2]).toMatchObject({ target: { name: 'Plant API' }, detail: 'auth' });
+    expect(events[4]).toMatchObject({ target: { name: 'Line 1' }, detail: link.body.tokenMask });
+    const recorded = JSON.stringify(events);
+    expect(recorded).not.toContain('first-secret');
+    expect(recorded).not.toContain('second-secret');
+    expect(recorded).not.toContain(link.body.token);
+  });
+});
+
 describe('GET /instance/audit', () => {
   it("shows the installation's own events, not a workspace's membership changes", async () => {
     const { agent: operator, userId: operatorId, workspaceId } = await bootstrapOperator();

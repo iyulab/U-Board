@@ -13,21 +13,21 @@ beforeEach(async () => {
 
 describe('board repository', () => {
   it('creates a board with an empty document', async () => {
-    const board = await createBoard(db, { workspaceId, name: 'My Board' });
+    const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'My Board' });
     expect(board.name).toBe('My Board');
     expect(board.document).toEqual({ kind: 'canvas', background: {}, nodes: [], connectors: [] });
     expect(board.createdAt).toBe(board.updatedAt);
   });
 
   it('creates each board with a unique document object (not a shared singleton)', async () => {
-    const board1 = await createBoard(db, { workspaceId, name: 'A' });
-    const board2 = await createBoard(db, { workspaceId, name: 'B' });
+    const board1 = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
+    const board2 = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'B' });
     expect(board1.document.nodes).not.toBe(board2.document.nodes);
   });
 
   it('lists boards for a workspace without the document body', async () => {
-    await createBoard(db, { workspaceId, name: 'A' });
-    await createBoard(db, { workspaceId, name: 'B' });
+    await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
+    await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'B' });
     const list = await listBoardsForWorkspace(db, workspaceId);
     expect(list.map(b => b.name).sort()).toEqual(['A', 'B']);
     expect(list[0]).not.toHaveProperty('document');
@@ -35,12 +35,12 @@ describe('board repository', () => {
 
   it('does not list boards belonging to another workspace', async () => {
     const otherWorkspaceId = (await createWorkspace(db, 'Other')).id;
-    await createBoard(db, { workspaceId: otherWorkspaceId, name: 'Not mine' });
+    await createBoard(db, { actorUserId: 'test-actor', workspaceId: otherWorkspaceId, name: 'Not mine' });
     expect(await listBoardsForWorkspace(db, workspaceId)).toEqual([]);
   });
 
   it('finds a board only when workspaceId matches', async () => {
-    const board = await createBoard(db, { workspaceId, name: 'A' });
+    const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     expect(await findBoard(db, workspaceId, board.id)).toEqual(board);
 
     const otherWorkspaceId = (await createWorkspace(db, 'Other')).id;
@@ -48,7 +48,7 @@ describe('board repository', () => {
   });
 
   it('updates name and document, bumping updatedAt', async () => {
-    const board = await createBoard(db, { workspaceId, name: 'A' });
+    const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     await new Promise(r => setTimeout(r, 2)); // ensure a distinguishable ISO timestamp
     const newDoc = { kind: 'canvas' as const, background: {}, nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status' } }], connectors: [] };
     const updated = await updateBoard(db, workspaceId, board.id, { name: 'Renamed', document: newDoc });
@@ -58,15 +58,15 @@ describe('board repository', () => {
   });
 
   it('updateBoard returns undefined for a board in another workspace', async () => {
-    const board = await createBoard(db, { workspaceId, name: 'A' });
+    const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     const otherWorkspaceId = (await createWorkspace(db, 'Other')).id;
     expect(await updateBoard(db, otherWorkspaceId, board.id, { name: 'X' })).toBeUndefined();
   });
 
   it('deletes a board and returns true, false if it did not exist', async () => {
-    const board = await createBoard(db, { workspaceId, name: 'A' });
-    expect(await deleteBoard(db, workspaceId, board.id)).toBe(true);
+    const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
+    expect(await deleteBoard(db, workspaceId, board.id, 'test-actor')).toBe(true);
     expect(await findBoard(db, workspaceId, board.id)).toBeUndefined();
-    expect(await deleteBoard(db, workspaceId, board.id)).toBe(false);
+    expect(await deleteBoard(db, workspaceId, board.id, 'test-actor')).toBe(false);
   });
 });

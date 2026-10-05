@@ -148,11 +148,11 @@ describe('SettingsPage', () => {
     vi.mocked(api.setMemberRole).mockResolvedValue(undefined);
     vi.mocked(api.listWorkspaceAudit)
       .mockResolvedValueOnce({
-        events: [{ id: 'e1', occurredAt: '2026-10-05T00:00:00.000Z', action: 'workspace.created', workspace: { id: 'w1', name: 'W' }, actor: { userId: 'u1', name: 'Owner' }, subject: null, role: null }],
+        events: [{ id: 'e1', occurredAt: '2026-10-05T00:00:00.000Z', action: 'workspace.created', workspace: { id: 'w1', name: 'W' }, actor: { userId: 'u1', name: 'Owner' }, subject: null, role: null, target: null, detail: null }],
         nextBefore: null,
       })
       .mockResolvedValue({
-        events: [{ id: 'e2', occurredAt: '2026-10-05T01:00:00.000Z', action: 'member.role_changed', workspace: { id: 'w1', name: 'W' }, actor: { userId: 'u1', name: 'Owner' }, subject: { userId: 'u2', name: 'Member', email: null }, role: 'owner' }],
+        events: [{ id: 'e2', occurredAt: '2026-10-05T01:00:00.000Z', action: 'member.role_changed', workspace: { id: 'w1', name: 'W' }, actor: { userId: 'u1', name: 'Owner' }, subject: { userId: 'u2', name: 'Member', email: null }, role: 'owner', target: null, detail: null }],
         nextBefore: null,
       });
 

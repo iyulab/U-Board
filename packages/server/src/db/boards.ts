@@ -1,5 +1,6 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
+import { recordAuditEvent } from './audit.js';
 import type { ViewDocument } from '@iyulab/u-board/domain';
 
 export interface Board {
@@ -31,7 +32,7 @@ function rowToBoard(row: BoardRow): Board {
   };
 }
 
-export async function createBoard(db: DbClient, input: { workspaceId: string; name: string }): Promise<Board> {
+export async function createBoard(db: DbClient, input: { workspaceId: string; name: string; actorUserId: string }): Promise<Board> {
   const now = new Date().toISOString();
   const board: Board = {
     id: randomUUID(),
@@ -41,10 +42,18 @@ export async function createBoard(db: DbClient, input: { workspaceId: string; na
     createdAt: now,
     updatedAt: now,
   };
-  await db.query(
-    `INSERT INTO boards (id, workspace_id, name, document, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`,
-    [board.id, board.workspaceId, board.name, JSON.stringify(board.document), board.createdAt, board.updatedAt]
-  );
+  await db.withTransaction(async tx => {
+    await tx.query(
+      `INSERT INTO boards (id, workspace_id, name, document, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [board.id, board.workspaceId, board.name, JSON.stringify(board.document), board.createdAt, board.updatedAt]
+    );
+    await recordAuditEvent(tx, {
+      action: 'board.created',
+      workspaceId: board.workspaceId,
+      actorUserId: input.actorUserId,
+      target: { id: board.id, name: board.name },
+    });
+  });
   return board;
 }
 
@@ -86,7 +95,14 @@ export async function updateBoard(
   return updated;
 }
 
-export async function deleteBoard(db: DbClient, workspaceId: string, boardId: string): Promise<boolean> {
-  const { rowCount } = await db.query(`DELETE FROM boards WHERE id = $1 AND workspace_id = $2`, [boardId, workspaceId]);
-  return (rowCount ?? 0) > 0;
+export async function deleteBoard(db: DbClient, workspaceId: string, boardId: string, actorUserId: string): Promise<boolean> {
+  return db.withTransaction(async tx => {
+    const { rows } = await tx.query<{ name: string }>(
+      `DELETE FROM boards WHERE id = $1 AND workspace_id = $2 RETURNING name`,
+      [boardId, workspaceId]
+    );
+    if (!rows[0]) return false;
+    await recordAuditEvent(tx, { action: 'board.deleted', workspaceId, actorUserId, target: { id: boardId, name: rows[0].name } });
+    return true;
+  });
 }
