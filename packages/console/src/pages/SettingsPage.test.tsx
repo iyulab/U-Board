@@ -47,16 +47,16 @@ describe('SettingsPage', () => {
     expect(screen.queryByText(/초대 메일을 보냈습니다/)).not.toBeInTheDocument();
   });
 
-  it('says the invitation was emailed when the server mailed it, and still shows the link', async () => {
+  it('says the invitation was emailed when the server mailed it, with no link to pass on', async () => {
     vi.mocked(api.listMembers).mockResolvedValue({ members: [OWNER] });
-    vi.mocked(api.inviteMember).mockResolvedValue({ token: 'abc123', expiresAt: '2026-08-27T00:00:00.000Z', emailed: true });
+    vi.mocked(api.inviteMember).mockResolvedValue({ expiresAt: '2026-08-27T00:00:00.000Z', emailed: true });
 
     renderPage();
     await userEvent.type(await screen.findByLabelText('초대할 이메일'), 'new@x.com');
     await userEvent.click(screen.getByRole('button', { name: '초대' }));
 
-    expect(await screen.findByText('new@x.com에게 초대 메일을 보냈습니다. 메일이 닿지 않으면 아래 링크를 전달하세요.')).toBeInTheDocument();
-    expect(screen.getByDisplayValue(/\/invite\/abc123$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^new@x.com에게 초대 메일을 보냈습니다\./)).toBeInTheDocument();
+    expect(screen.queryByLabelText('초대 링크(복사해 전달)')).not.toBeInTheDocument();
   });
 
   it('hides owner controls from a member who is not the workspace owner', async () => {

@@ -22,6 +22,7 @@ import {
 } from '../db/invitations.js';
 import { isPlausibleEmail, normalizeEmail } from '../db/email.js';
 import { hashPassword, verifyPassword } from '../auth/password.js';
+import { checkPassword, normalizeName } from '../auth/account-fields.js';
 import { signSession } from '../auth/session.js';
 import {
   SESSION_COOKIE_NAME,
@@ -72,9 +73,19 @@ export function createAuthRouter(config: AppConfig): Router {
   router.post(
     '/signup',
     async (req, res) => {
-      const { email, password, name, invitationToken } = req.body ?? {};
-      if (typeof email !== 'string' || !isPlausibleEmail(email) || typeof password !== 'string' || typeof name !== 'string') {
+      const { email, password, name: rawName, invitationToken } = req.body ?? {};
+      if (typeof email !== 'string' || !isPlausibleEmail(email) || typeof password !== 'string' || typeof rawName !== 'string') {
         res.status(400).json({ code: 'INVALID_INPUT' });
+        return;
+      }
+      const passwordProblem = checkPassword(password);
+      if (passwordProblem) {
+        res.status(400).json({ code: passwordProblem });
+        return;
+      }
+      const name = normalizeName(rawName);
+      if (!name) {
+        res.status(400).json({ code: 'INVALID_NAME' });
         return;
       }
 
@@ -216,6 +227,12 @@ export function createAuthRouter(config: AppConfig): Router {
       const { token, newPassword } = req.body ?? {};
       if (typeof token !== 'string' || typeof newPassword !== 'string') {
         res.status(400).json({ code: 'INVALID_INPUT' });
+        return;
+      }
+      // Checked before the token is looked up, so a refused password never spends the token.
+      const passwordProblem = checkPassword(newPassword);
+      if (passwordProblem) {
+        res.status(400).json({ code: passwordProblem });
         return;
       }
 

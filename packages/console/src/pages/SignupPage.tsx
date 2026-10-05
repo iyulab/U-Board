@@ -5,6 +5,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   EMAIL_TAKEN: '이미 가입된 이메일입니다.',
   SIGNUP_REQUIRES_INVITATION: '가입은 초대를 통해서만 가능합니다.',
   INVITATION_INVALID: '초대가 만료되었거나 이미 사용되었습니다.',
+  PASSWORD_TOO_SHORT: '비밀번호는 8자 이상이어야 합니다.',
+  PASSWORD_TOO_LONG: '비밀번호가 너무 깁니다. 72바이트(영문 72자, 한글 24자) 이하로 정해 주세요.',
+  INVALID_NAME: '이름을 입력해 주세요(100자 이하).',
 };
 
 export function SignupPage({

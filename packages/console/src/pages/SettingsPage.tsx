@@ -55,7 +55,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
     setInviteError(null);
     try {
       const { token, emailed } = await inviteMember(workspaceId, { email: inviteEmail, role: inviteRole });
-      setInviteLink(`${window.location.origin}/invite/${token}`);
+      setInviteLink(token ? `${window.location.origin}/invite/${token}` : null);
       setInvitedByEmail(emailed ? inviteEmail : null);
       setInviteEmail('');
       setInviteRole('member');
@@ -175,8 +175,10 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
         </>
       )}
       {inviteError && <Alert>{inviteError}</Alert>}
-      {inviteLink && invitedByEmail && (
-        <p role="status">{invitedByEmail}에게 초대 메일을 보냈습니다. 메일이 닿지 않으면 아래 링크를 전달하세요.</p>
+      {invitedByEmail && (
+        <p role="status">
+          {invitedByEmail}에게 초대 메일을 보냈습니다. 메일이 오지 않으면 스팸함을 확인하도록 안내하거나, 대기 중인 초대를 취소하고 다시 보내세요.
+        </p>
       )}
       {inviteLink && (
         <FormField label="초대 링크(복사해 전달)">

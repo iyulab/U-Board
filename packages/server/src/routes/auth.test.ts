@@ -51,7 +51,7 @@ describe('POST /auth/signup', () => {
 
   it('rejects a duplicate email with 409', async () => {
     await request(app).post('/api/auth/signup').send({ email: 'dup@x.com', password: 'p4ssword!', name: 'A' });
-    const res = await request(app).post('/api/auth/signup').send({ email: 'dup@x.com', password: 'other!', name: 'B' });
+    const res = await request(app).post('/api/auth/signup').send({ email: 'dup@x.com', password: 'other-p4ss', name: 'B' });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe('EMAIL_TAKEN');
   });
@@ -60,6 +60,36 @@ describe('POST /auth/signup', () => {
     const res = await request(app).post('/api/auth/signup').send({ email: 'bad@x.com', name: 'A' });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_INPUT');
+  });
+
+  it('rejects a password shorter than 8 characters (400 PASSWORD_TOO_SHORT), creating no account', async () => {
+    const res = await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: '1234567', name: 'First' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('PASSWORD_TOO_SHORT');
+    expect((await request(app).get('/api/auth/bootstrap-status')).body.hasAnyUser).toBe(false);
+  });
+
+  it('accepts a password of exactly 8 characters', async () => {
+    const res = await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: '12345678', name: 'First' });
+    expect(res.status).toBe(201);
+  });
+
+  it('rejects a password over 72 bytes (400 PASSWORD_TOO_LONG) — bcrypt would ignore the rest', async () => {
+    // 25 Hangul syllables: 25 characters, 75 bytes in UTF-8.
+    const res = await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: '가'.repeat(25), name: 'First' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('PASSWORD_TOO_LONG');
+  });
+
+  it('rejects a blank name (400 INVALID_NAME) and stores a name trimmed', async () => {
+    const blank = await request(app).post('/api/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: '   ' });
+    expect(blank.status).toBe(400);
+    expect(blank.body.code).toBe('INVALID_NAME');
+
+    const agent = request.agent(app);
+    const ok = await agent.post('/api/auth/signup').send({ email: 'first@x.com', password: 'p4ssword!', name: '  First  ' });
+    const members = await agent.get(`/api/workspaces/${ok.body.workspaceId}/members`);
+    expect(members.body.members[0].name).toBe('First');
   });
 
   it('rejects an address that is not an email with 400, creating no account', async () => {
@@ -324,6 +354,17 @@ describe('POST /auth/reset-password', () => {
     expect(oldLogin.status).toBe(401);
     const newLogin = await request(app).post('/api/auth/login').send({ email: 'reset2@x.com', password: 'new-pass!' });
     expect(newLogin.status).toBe(200);
+  });
+
+  it('rejects a new password shorter than 8 characters without spending the token', async () => {
+    await createUser(db, { email: 'u@x.com', passwordHash: await hashPassword('old-p4ssword'), name: 'U' });
+    const token = await requestReset(app, 'u@x.com');
+
+    const short = await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'short' });
+    expect(short.status).toBe(400);
+    expect(short.body.code).toBe('PASSWORD_TOO_SHORT');
+    const ok = await request(app).post('/api/auth/reset-password').send({ token, newPassword: 'new-p4ssword' });
+    expect(ok.status).toBe(200);
   });
 
   it('rejects a second use of the same token with 410', async () => {

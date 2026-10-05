@@ -49,8 +49,10 @@ invite the new owner with the `owner` role and leave once they have joined.
 Password-reset codes are delivered by email when an email provider is configured (see
 `packages/server/.env.example`). Without one, the server writes the code to its log
 (`[auth] no email provider configured — …`), and an administrator passes it on. Invitations are
-emailed when both an email provider and `UBOARD_PUBLIC_URL` are set; the console always also shows
-the invitation link, so an owner can pass it on another way.
+emailed when both an email provider and `UBOARD_PUBLIC_URL` are set, and then the link goes to the
+invited mailbox only — whoever accepts it proves they read that mailbox. Without email, the console
+shows the owner the link to pass on another way. Passwords are at least 8 characters and at most
+72 bytes.
 
 ## HTTPS
 

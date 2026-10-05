@@ -37,6 +37,18 @@ describe('SignupPage', () => {
     expect(await screen.findByText('이미 가입된 이메일입니다.')).toBeInTheDocument();
   });
 
+  it('explains a password the server refuses as too long', async () => {
+    vi.mocked(api.signup).mockRejectedValue(new api.ApiError('PASSWORD_TOO_LONG', 400));
+    render(<SignupPage onSuccess={vi.fn()} />);
+
+    await userEvent.type(screen.getByLabelText('이메일'), 'a@x.com');
+    await userEvent.type(screen.getByLabelText('비밀번호'), '가'.repeat(25));
+    await userEvent.type(screen.getByLabelText('이름'), 'A');
+    await userEvent.click(screen.getByRole('button', { name: '가입' }));
+
+    expect(await screen.findByText(/비밀번호가 너무 깁니다/)).toBeInTheDocument();
+  });
+
   it('prefills and locks the email field when prefillEmail is given', () => {
     render(<SignupPage prefillEmail="invited@x.com" onSuccess={vi.fn()} />);
     const emailInput = screen.getByLabelText('이메일') as HTMLInputElement;

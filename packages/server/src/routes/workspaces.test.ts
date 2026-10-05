@@ -392,9 +392,23 @@ describe('POST /workspaces/:id/invitations — email delivery', () => {
       workspaceName: 'Default',
       inviterName: 'Owner',
       role: 'owner',
-      link: `https://board.example.com/invite/${res.body.token}`,
+      link: expect.stringMatching(/^https:\/\/board\.example\.com\/invite\/[0-9a-f]+$/),
       expiresAt: res.body.expiresAt,
     });
+  });
+
+  it('keeps the link of an emailed invitation out of the response — only the mailbox gets it', async () => {
+    const sendInvitationEmail = vi.fn().mockResolvedValue(undefined);
+    const { agent, workspaceId } = await ownerOn(
+      createApp({ db, sessionSecret: SECRET, publicUrl: 'https://board.example.com', sendInvitationEmail })
+    );
+
+    const res = await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'new@x.com', role: 'member' });
+
+    expect(res.body).toEqual({ expiresAt: expect.any(String), emailed: true });
+    // Whoever holds the response cannot register the invited address in its owner's place.
+    const link: string = sendInvitationEmail.mock.calls[0][0].link;
+    expect(JSON.stringify(res.body)).not.toContain(link.split('/invite/')[1]);
   });
 
   it('does not email without a public URL, even with a sender', async () => {
@@ -403,7 +417,7 @@ describe('POST /workspaces/:id/invitations — email delivery', () => {
 
     const res = await agent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'new@x.com', role: 'member' });
 
-    expect(res.body.emailed).toBe(false);
+    expect(res.body).toMatchObject({ token: expect.any(String), emailed: false });
     expect(sendInvitationEmail).not.toHaveBeenCalled();
   });
 

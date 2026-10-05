@@ -103,10 +103,11 @@ export function listMembers(workspaceId: string) {
   );
 }
 
-/** `emailed` says whether the server also mailed the link (it does when it has an email provider and
- *  a configured public URL); either way the link is returned for the owner to pass on. */
+/** `emailed` says whether the server mailed the link (it does when it has an email provider and a
+ *  configured public URL). A mailed link goes to the invited mailbox only, so `token` comes back only
+ *  when the invitation was not emailed — for the owner to pass on by hand. */
 export function inviteMember(workspaceId: string, input: { email: string; role: 'owner' | 'member' }) {
-  return request<{ token: string; expiresAt: string; emailed: boolean }>(`/workspaces/${workspaceId}/invitations`, {
+  return request<{ token?: string; expiresAt: string; emailed: boolean }>(`/workspaces/${workspaceId}/invitations`, {
     method: 'POST',
     body: JSON.stringify(input),
   });

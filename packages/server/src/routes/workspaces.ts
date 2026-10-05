@@ -133,11 +133,17 @@ export function createWorkspacesRouter(config: AppConfig): Router {
         });
         emailed = true;
       } catch (err) {
-        // The invitation stands either way — the owner still gets the link to pass on by hand.
+        // The invitation stands either way — the owner gets the link to pass on by hand instead.
         console.error('[workspaces] sendInvitationEmail failed:', err);
       }
     }
-    res.status(201).json({ token: invitation.token, expiresAt: invitation.expiresAt, emailed });
+    // An emailed link goes to the invited mailbox only. Handing it to the inviter too would let them
+    // register the invited address with a password of their own, without ever reading that mailbox.
+    res.status(201).json(
+      emailed
+        ? { expiresAt: invitation.expiresAt, emailed }
+        : { token: invitation.token, expiresAt: invitation.expiresAt, emailed }
+    );
   });
 
   router.post('/:workspaceId/switch', requireWorkspaceMember(db), (req: AuthedRequest<{ workspaceId: string }>, res) => {
