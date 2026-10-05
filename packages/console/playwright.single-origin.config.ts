@@ -18,7 +18,7 @@ export default defineConfig({
       'npm run build --workspace=packages/console && npm run build --workspace=packages/share && ' +
       'npm run build --workspace=packages/server && npm start --workspace=packages/server',
     cwd: '../..',
-    env: { UBOARD_DATABASE_URL: ':memory:', UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long', PORT: String(PORT) },
+    env: { UBOARD_DATABASE_URL: ':memory:', UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long', UBOARD_CONNECTOR_ADDRESSES: 'any', PORT: String(PORT) },
     port: PORT,
     reuseExistingServer: false,
     timeout: 300_000,

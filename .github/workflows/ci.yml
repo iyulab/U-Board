@@ -95,14 +95,15 @@ jobs:
       - name: E2E
         run: npm run test:e2e
 
-  # The packages declare `engines.node >=22.12.0` — the oldest supported Node line. `verify` runs on
-  # the current line only, so without this job the declared floor would be a claim nothing checks.
-  # It runs the product on that Node, not the test toolchain: the published library's entry point
-  # (scripts/smoke-library.mjs) and the server's suite, which runs on Node in production. Browser
-  # code is unit-tested under jsdom in `verify` — its Node version is the tooling's, not the product's,
-  # and the test toolchain (jsdom among it) needs a newer Node than the floor.
+  # Each package declares the oldest Node it supports in `engines.node`. `verify` runs on the current
+  # line only, so without this job the declared floors would be claims nothing checks. It runs the
+  # product on its floor, not the test toolchain: the published library's entry point
+  # (scripts/smoke-library.mjs) on the library's floor (22.12), and the server's suite on the
+  # application's (22.22 — the console's router requires it to build, and the server's HTTP client
+  # to run). Browser code is unit-tested under jsdom in `verify` — its Node version is the tooling's,
+  # not the product's, and the test toolchain (jsdom among it) needs a newer Node than the floor.
   node-floor:
-    name: node-floor (22.12)
+    name: node-floor (library 22.12, server 22.22)
     runs-on: ubuntu-latest
 
     steps:
@@ -121,6 +122,11 @@ jobs:
 
       - name: Library smoke
         run: npm run smoke:library
+
+      # No native modules in the install, so the same node_modules serves the server's floor.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22.22"
 
       - name: Server tests
         run: npm test --workspace=packages/server

@@ -1,6 +1,7 @@
 import type { Connector } from './db/connectors.js';
 import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
 import { HttpStatusError } from './http-status-error.js';
+import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
 
 export type ResolveQuality = 'live' | 'stale' | 'disconnected';
 
@@ -29,6 +30,9 @@ export interface ResolveState {
   values: Map<string, CachedValue>;
   /** Access tokens for `oauth2-client-credentials` connectors. */
   tokens: ClientCredentialsTokens;
+  /** Makes the requests to data sources — kept to the addresses the installation allows connectors
+   *  (`createConnectorFetch`). */
+  fetch: typeof fetch;
   /** The failure currently logged per connector and ref (same key as `values`). A binding polled
    * against a data source that is down fails on every poll; logging only when the failure starts,
    * changes, or clears keeps the log a record of what happened rather than a repeat of it. */
@@ -171,6 +175,9 @@ class StageError extends Error {
  * endpoint answered with says it; anything else (network, timeout, 5xx, a redirect not followed,
  * an unparseable body) means the source could not be used at all. */
 function reasonFor(stage: ResolveStage, cause: unknown): ResolveReason {
+  // An address the installation does not let connectors reach: the connector points somewhere it
+  // may not go, which its owner fixes like an address that does not exist.
+  if ((cause as { cause?: { code?: unknown } } | null)?.cause?.code === CONNECTOR_ADDRESS_REFUSED) return 'address';
   if (!(cause instanceof HttpStatusError)) return 'transport';
   const { status } = cause;
   if (status === 429) return 'throttled';
@@ -205,7 +212,7 @@ async function errorBody(response: Response): Promise<unknown> {
 /** Fetches and parses `target` with `connector`'s auth headers. An OAuth connector whose token is
  * rejected (401) gets one fresh token and one retry — the authorization server may revoke a token
  * before the expiry it advertised. */
-async function fetchBody(connector: Connector, target: URL, tokens: ClientCredentialsTokens): Promise<unknown> {
+async function fetchBody(connector: Connector, target: URL, tokens: ClientCredentialsTokens, fetchFn: typeof fetch): Promise<unknown> {
   // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
   // compromised upstream must not be able to bounce the credentialed request to a host of its
   // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
@@ -214,7 +221,7 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
     stage = 'token';
     const headers = await authHeaders(connector, tokens);
     stage = 'request';
-    return fetch(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
+    return fetchFn(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
   };
   try {
     let response = await send();
@@ -252,7 +259,7 @@ export async function resolveConnectorValue(
 
   let request = state.inflight.get(requestKey);
   if (!request) {
-    request = fetchBody(connector, target, state.tokens).finally(() => state.inflight.delete(requestKey));
+    request = fetchBody(connector, target, state.tokens, state.fetch).finally(() => state.inflight.delete(requestKey));
     state.inflight.set(requestKey, request);
   }
 
@@ -307,11 +314,11 @@ export type ConnectorTestResult =
 /** Tries `connector` as a binding would use it: obtains an OAuth access token, then, given a
  *  target, requests it once. A token cache of its own, so a token already obtained with the stored
  *  settings cannot vouch for the ones being tried; nothing is cached or logged for bindings. */
-export async function testConnector(connector: Connector, target: URL | null): Promise<ConnectorTestResult> {
-  const tokens = new ClientCredentialsTokens();
+export async function testConnector(connector: Connector, target: URL | null, fetchFn: typeof fetch): Promise<ConnectorTestResult> {
+  const tokens = new ClientCredentialsTokens(Date.now, fetchFn);
   try {
     if (target) {
-      await fetchBody(connector, target, tokens);
+      await fetchBody(connector, target, tokens, fetchFn);
     } else if (connector.authType === 'oauth2-client-credentials') {
       try {
         await tokens.get(clientCredentialsOf(connector));

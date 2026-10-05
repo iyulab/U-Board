@@ -32,7 +32,8 @@ export default defineConfig({
       // them directly on the spawned process's environment rather than relying on shell parsing.
       command: 'npm run build && npm start',
       cwd: '../server',
-      env: { UBOARD_DATABASE_URL: ':memory:', UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long' },
+      // The data sources the specs connect to are local mock servers — on the server's own host.
+      env: { UBOARD_DATABASE_URL: ':memory:', UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long', UBOARD_CONNECTOR_ADDRESSES: 'any' },
       port: 4000,
       reuseExistingServer: !process.env.CI,
     },

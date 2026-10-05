@@ -51,7 +51,12 @@ export class ClientCredentialsTokens {
   private readonly cached = new Map<string, CachedToken>();
   private readonly pending = new Map<string, { fingerprint: string; promise: Promise<string> }>();
 
-  constructor(private readonly now: () => number = Date.now) {}
+  /** `fetchFn` makes the token requests — the connector `fetch`, so they keep to the same addresses
+   *  as the data source requests. */
+  constructor(
+    private readonly now: () => number = Date.now,
+    private readonly fetchFn: typeof fetch = (input, init) => fetch(input, init)
+  ) {}
 
   async get(credentials: ClientCredentials): Promise<string> {
     const fingerprint = fingerprintOf(credentials);
@@ -92,7 +97,7 @@ export class ClientCredentialsTokens {
 
     // Same discipline as the resource request: no redirects (a 3xx must not carry the client
     // secret elsewhere), and a bounded wait.
-    const response = await fetch(credentials.tokenUrl, {
+    const response = await this.fetchFn(credentials.tokenUrl, {
       method: 'POST',
       headers,
       body: params.toString(),

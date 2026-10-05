@@ -13,7 +13,8 @@
     "board-app.u-platform.kr",
     "u-platform.kr",
     "x.com",
-    "test.com"
+    "test.com",
+    "169.254.169.254"
   ],
   "githubRepos": [
     "iyulab/U-Board",

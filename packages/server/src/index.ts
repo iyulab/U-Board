@@ -11,6 +11,7 @@ import {
 import { publicUrlFromEnv } from './public-url.js';
 import { workspaceCreationFromEnv } from './workspace-creation.js';
 import { auditRetentionDaysFromEnv, scheduleAuditPurge } from './audit-retention.js';
+import { connectorAddressesFromEnv, createConnectorFetch } from './connector-network.js';
 
 const databaseUrl = process.env.UBOARD_DATABASE_URL ?? './u-board-data';
 const sessionSecret = process.env.UBOARD_SESSION_SECRET;
@@ -50,6 +51,10 @@ const staleMaxAgeMs = staleMaxAge ? Number(staleMaxAge) * 1000 : undefined;
 // Who may create workspaces: instance operators only unless set to `anyone`.
 const workspaceCreation = workspaceCreationFromEnv(process.env.UBOARD_WORKSPACE_CREATION);
 
+// Which addresses connectors may reach: by default the installation's private networks, never the
+// server's own loopback or link-local addresses.
+const connectorFetch = createConnectorFetch(connectorAddressesFromEnv(process.env.UBOARD_CONNECTOR_ADDRESSES));
+
 // Days membership, role and invitation records are kept.
 const auditRetentionDays = auditRetentionDaysFromEnv(process.env.UBOARD_AUDIT_RETENTION_DAYS);
 
@@ -76,6 +81,7 @@ const app = createApp({
   sendInvitationEmail,
   staleMaxAgeMs,
   workspaceCreation,
+  connectorFetch,
   webApps,
 });
 

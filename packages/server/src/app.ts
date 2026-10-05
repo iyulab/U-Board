@@ -45,6 +45,10 @@ export interface AppConfig {
   /** How old a connector's last-known value may be and still be served as `stale` when a read fails
    *  (milliseconds) — past it the binding reads `disconnected`. Unset: no limit. */
   staleMaxAgeMs?: number;
+  /** The `fetch` requests to connectors' data sources and token endpoints go through — one that keeps
+   *  them to the addresses the installation allows (`createConnectorFetch`). Unset: the global
+   *  `fetch`, unrestricted (tests). */
+  connectorFetch?: typeof fetch;
   /** Who may create workspaces — instance operators only (default) or every account. */
   workspaceCreation?: WorkspaceCreation;
   /** The built console and share viewer to serve next to the API, from one origin: the share
@@ -88,9 +92,12 @@ export function createApp(config: AppConfig): express.Express {
   app.use(cookieParser());
   // Per-process resolve state shared by the member and share-link resolve routes: last-known values
   // (so a failure can degrade to `stale`), OAuth access tokens, and which failures are already logged.
+  // Late-bound to the global `fetch` when none is configured, so a test that replaces it is seen.
+  const connectorFetch = config.connectorFetch ?? ((input, init) => fetch(input, init));
   const resolveState: ResolveState = {
     values: new Map(),
-    tokens: new ClientCredentialsTokens(),
+    tokens: new ClientCredentialsTokens(Date.now, connectorFetch),
+    fetch: connectorFetch,
     failures: new Map(),
     inflight: new Map(),
     staleMaxAgeMs: config.staleMaxAgeMs,
