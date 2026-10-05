@@ -60,15 +60,16 @@ domain knowledge (e.g. a real CMMS) still requires access to that system and doe
 until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a
 board can be wired up and previewed before any real connector is configured. The hosted
 applications (see [Repository layout](#repository-layout)) add workspaces with members,
-server-side board storage, managed connectors, and read-only share links.
+server-side board storage, managed connectors, and read-only share links — on an installation run by
+an operator who creates each organization's workspace and can recover one whose owners are gone.
 
 ## Repository layout
 
 | Workspace | Package | What it is |
 |---|---|---|
 | `packages/core` | `@iyulab/u-board` (npm) | The library: view document schema, adapter contract, binding resolution, the canvas rendering pipeline, the authoring UI and the read-only viewer. Everything below this section documents it. |
-| `packages/server` | private | HTTP API for workspaces, members and invitations, sign-in, boards, data connectors, and share links. Stores data in Postgres. |
-| `packages/console` | private | Web console for that API: sign-in, members, board editing (with the authoring UI above), connectors, and issuing share links. |
+| `packages/server` | private | HTTP API for workspaces, members and invitations, accounts (sign-in, password, deletion), the installation's operators, boards, data connectors, and share links. Stores data in Postgres. |
+| `packages/console` | private | Web console for that API: sign-in and account, members, board editing (with the authoring UI above), connectors, issuing share links, and an installation page for operators. |
 | `packages/share` | private | Read-only embed viewer that opens a board from a share link, using only the library's `viewer` entry point. |
 | `packages/site` | private | The introduction site at board.u-platform.kr (Korean at `/`, English at `/en/`). Every statement it makes about the product has a row in its `claims.tsv` — status and the files that back it — checked against the pages by its tests. |
 
