@@ -48,8 +48,8 @@ test('binds a node to a live value via the property panel and its path explorer'
     await expect(page.getByLabel('값 경로')).toHaveValue('/status');
 
     await page.getByText('미리보기', { exact: true }).click();
-    await expect(page.getByText(/"running"/)).toBeVisible();
-    await expect(page.getByText(/\(live\)/)).toBeVisible();
+    // The preview line itself — the explorer's `status: "running"` entry can still be on screen.
+    await expect(page.getByText('값: "running" (live)')).toBeVisible();
 
     await page.getByText('바인딩 저장', { exact: true }).click();
     // 프롭 경로 입력의 placeholder 등과 섞이지 않게 바인딩 목록의 <code>data.value</code> 항목만 exact로 고른다.

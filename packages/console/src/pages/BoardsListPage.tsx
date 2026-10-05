@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router';
 import { listBoards, createBoard, deleteBoard } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
 import { Button } from '../design-system/Button.js';

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
-import { BrowserRouter, MemoryRouter, Navigate, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, MemoryRouter, Navigate, Routes, Route, useNavigate, useParams } from 'react-router';
 import { getSession, getBootstrapStatus, switchWorkspace, createWorkspace, logout, type Session } from './api-client.js';
 import { SignupPage } from './pages/SignupPage.js';
 import { LoginPage } from './pages/LoginPage.js';

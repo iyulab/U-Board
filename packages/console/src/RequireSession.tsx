@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router';
 import { getSession, type Session } from './api-client.js';
 import { Alert } from './design-system/Alert.js';
 import { Loading } from './design-system/Loading.js';

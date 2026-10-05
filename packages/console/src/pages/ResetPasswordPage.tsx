@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { resetPassword, ApiError } from '../api-client.js';
 
 const ERROR_MESSAGES: Record<string, string> = {

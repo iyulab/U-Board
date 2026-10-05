@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Routes, Route, Link } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, Link } from 'react-router';
 import { BoardEditorPage } from './BoardEditorPage.js';
 import * as api from '../api-client.js';
 

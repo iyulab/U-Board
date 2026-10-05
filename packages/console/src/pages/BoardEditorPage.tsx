@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router';
 import { AuthoringView, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import { DemoAdapter } from '@iyulab/u-board/demo';
 import {
