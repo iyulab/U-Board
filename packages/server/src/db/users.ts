@@ -123,6 +123,13 @@ export async function deleteAccount(db: DbClient, userId: string): Promise<Accou
     if (!target[0]) return { kind: 'not-found' };
     if (target[0].instance_role === 'operator' && operators.length <= 1) return { kind: 'last-operator' };
 
+    // Every workspace the account belongs to, not only those it owns: a membership change there (an
+    // owner removing it right now) commits its record before this deletion clears the account from
+    // the records, instead of after. Read again below, under these locks.
+    await tx.query(
+      `SELECT id FROM workspaces WHERE id IN (SELECT workspace_id FROM workspace_users WHERE user_id = $1) ORDER BY id FOR UPDATE`,
+      [userId]
+    );
     const { rows: owned } = await tx.query<{ id: string; name: string }>(
       `SELECT w.id, w.name FROM workspaces w JOIN workspace_users wu ON wu.workspace_id = w.id
        WHERE wu.user_id = $1 AND wu.role = 'owner' ORDER BY w.id FOR UPDATE OF w`,

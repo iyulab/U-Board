@@ -99,6 +99,12 @@ describe.skipIf(!dockerAvailable())('changeWorkspaceMembership — real Postgres
 
       const members = await listWorkspaceMembers(db, ws.id);
       expect(members.map(m => m.userId)).toEqual([ownerIds[0]]);
+      // Whichever finished first, no record still names the deleted account.
+      const { rows } = await db.query<{ n: number }>(
+        `SELECT COUNT(*)::int AS n FROM audit_events WHERE actor_user_id = $1 OR subject_user_id = $1`,
+        [ownerIds[1]]
+      );
+      expect(rows[0].n).toBe(0);
     }
   });
 });

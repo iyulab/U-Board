@@ -29,6 +29,13 @@ describe('connectorAddressAllowed', () => {
     ['::ffff:127.0.0.1', 6, { public: false, private: false }],
     ['::ffff:a9fe:a9fe', 6, { public: false, private: false }], // 169.254.169.254
     ['::ffff:10.0.0.1', 6, { public: false, private: true }],
+    // Cloud host services outside the link-local range.
+    ['100.100.100.200', 4, { public: false, private: false }],
+    ['100.100.100.201', 4, { public: false, private: true }],
+    ['192.0.0.192', 4, { public: false, private: false }],
+    ['168.63.129.16', 4, { public: false, private: false }],
+    ['fd00:ec2::254', 6, { public: false, private: false }],
+    ['fd00:ec2::253', 6, { public: false, private: true }],
   ];
   for (const [address, family, allowed] of cases) {
     it(`${address}: public ${allowed.public}, private ${allowed.private}, any true`, () => {

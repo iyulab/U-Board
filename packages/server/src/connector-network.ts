@@ -9,7 +9,8 @@ import { Agent, fetch as undiciFetch } from 'undici';
  * - `public`: public addresses only.
  * - `private` (default): also the private ranges (RFC 1918, carrier-grade NAT, IPv6 unique local),
  *   where an installation's own data sources usually live. Never the server's own loopback, link-local
- *   addresses (a cloud instance's metadata service among them), or unspecified/multicast addresses.
+ *   addresses, the cloud host services a server can reach (instance metadata, Azure's host endpoint),
+ *   or unspecified/multicast addresses.
  * - `any`: no restriction — for development, or a data source running on the server's own host.
  */
 export type ConnectorAddresses = 'public' | 'private' | 'any';
@@ -28,6 +29,13 @@ LOCAL.addSubnet('127.0.0.0', 8, 'ipv4'); // loopback
 LOCAL.addSubnet('169.254.0.0', 16, 'ipv4'); // link-local — cloud metadata services
 LOCAL.addSubnet('224.0.0.0', 4, 'ipv4'); // multicast
 LOCAL.addSubnet('240.0.0.0', 4, 'ipv4'); // reserved, and the broadcast address
+LOCAL.addSubnet('192.0.0.0', 24, 'ipv4'); // IETF protocol assignments — Oracle Cloud's legacy metadata (192.0.0.192)
+// Cloud host services outside the link-local range, each inside a range otherwise allowed under
+// `private` or `public`: Alibaba Cloud's metadata (in carrier-grade NAT space), Azure's host endpoint
+// (WireServer, a public address), AWS's IPv6 metadata (in unique-local space).
+LOCAL.addAddress('100.100.100.200', 'ipv4');
+LOCAL.addAddress('168.63.129.16', 'ipv4');
+LOCAL.addAddress('fd00:ec2::254', 'ipv6');
 LOCAL.addAddress('::', 'ipv6'); // unspecified
 LOCAL.addAddress('::1', 'ipv6'); // loopback
 LOCAL.addSubnet('fe80::', 10, 'ipv6'); // link-local
@@ -39,7 +47,6 @@ PRIVATE.addSubnet('10.0.0.0', 8, 'ipv4');
 PRIVATE.addSubnet('172.16.0.0', 12, 'ipv4');
 PRIVATE.addSubnet('192.168.0.0', 16, 'ipv4');
 PRIVATE.addSubnet('100.64.0.0', 10, 'ipv4'); // carrier-grade NAT
-PRIVATE.addSubnet('192.0.0.0', 24, 'ipv4'); // IETF protocol assignments
 PRIVATE.addSubnet('198.18.0.0', 15, 'ipv4'); // benchmarking
 PRIVATE.addSubnet('fc00::', 7, 'ipv6'); // unique local
 
