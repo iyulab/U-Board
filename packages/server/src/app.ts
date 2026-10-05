@@ -11,6 +11,7 @@ import { createBoardsRouter } from './routes/boards.js';
 import { createBoardShareTokensRouter } from './routes/board-share-tokens.js';
 import { createConnectorsRouter } from './routes/connectors.js';
 import { createShareRouter } from './routes/share.js';
+import { createInstanceRouter } from './routes/instance.js';
 import { ClientCredentialsTokens } from './oauth-client-credentials.js';
 import type { ResolveState } from './resolve-connector.js';
 import { serveWebApps, type WebApps } from './web-apps.js';
@@ -129,6 +130,7 @@ export function createApp(config: AppConfig): express.Express {
   api.use('/workspaces/:workspaceId/boards/:boardId/share-tokens', createBoardShareTokensRouter(config));
   api.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveState));
   api.use('/share', createShareRouter(config, resolveState));
+  api.use('/instance', createInstanceRouter(config));
   // An unknown API path answers as the API does — never with the console's HTML.
   api.use((_req, res) => {
     res.status(404).json({ code: 'NOT_FOUND' });
