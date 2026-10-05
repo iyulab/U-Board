@@ -5,12 +5,14 @@ import {
   listInstanceWorkspaces,
   makeWorkspaceOwner,
   setInstanceRole,
+  listInstanceAudit,
   type InstanceUser,
   type InstanceWorkspace,
 } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
+import { AuditLog } from './AuditLog.js';
 
 const LAST_OPERATOR_MESSAGE = '운영자가 한 명 이상 있어야 합니다 — 먼저 다른 계정을 운영자로 지정하세요.';
 
@@ -31,6 +33,8 @@ export function InstancePage({
   const [workspaces, setWorkspaces] = useState<InstanceWorkspace[]>([]);
   const [users, setUsers] = useState<InstanceUser[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Bumped after each change made here, so the installation's record is read again and shows it.
+  const [auditVersion, setAuditVersion] = useState(0);
 
   const load = useCallback(async () => {
     const [w, u] = await Promise.all([listInstanceWorkspaces(), listInstanceUsers()]);
@@ -62,7 +66,10 @@ export function InstancePage({
     try {
       await setInstanceRole(user.id, instanceRole);
       if (self) onSessionChanged();
-      else await load();
+      else {
+        setAuditVersion(v => v + 1);
+        await load();
+      }
     } catch (err) {
       setError(err instanceof ApiError && err.code === 'LAST_OPERATOR' ? LAST_OPERATOR_MESSAGE : '역할을 바꾸지 못했습니다.');
     }
@@ -108,6 +115,9 @@ export function InstancePage({
           </li>
         ))}
       </ul>
+
+      <h2>운영 기록</h2>
+      <AuditLog key={auditVersion} load={listInstanceAudit} showWorkspace />
     </div>
   );
 }

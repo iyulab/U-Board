@@ -323,6 +323,55 @@ export function makeWorkspaceOwner(workspaceId: string, userId: string) {
   return request<void>(`/instance/workspaces/${workspaceId}/owners`, { method: 'POST', body: JSON.stringify({ userId }) });
 }
 
+export type AuditAction =
+  | 'workspace.created'
+  | 'workspace.owner_restored'
+  | 'member.joined'
+  | 'member.left'
+  | 'member.removed'
+  | 'member.role_changed'
+  | 'invitation.created'
+  | 'invitation.resent'
+  | 'invitation.revoked'
+  | 'instance.role_changed'
+  | 'account.deleted';
+
+/** Someone a record names — `userId` and `name` are null once their account has been deleted. */
+export interface AuditPerson {
+  userId: string | null;
+  name: string | null;
+}
+
+export interface AuditEvent {
+  id: string;
+  occurredAt: string;
+  action: AuditAction;
+  workspace: { id: string; name: string } | null;
+  actor: AuditPerson;
+  subject: (AuditPerson & { email: string | null }) | null;
+  role: string | null;
+}
+
+export interface AuditEventList {
+  events: AuditEvent[];
+  /** Pass back as `before` for the next (older) page; null when there is none. */
+  nextBefore: string | null;
+}
+
+function auditQuery(before?: string): string {
+  return before ? `?before=${encodeURIComponent(before)}` : '';
+}
+
+/** A workspace's record of membership, role and invitation changes, newest first. Owners only. */
+export function listWorkspaceAudit(workspaceId: string, before?: string) {
+  return request<AuditEventList>(`/workspaces/${workspaceId}/audit${auditQuery(before)}`);
+}
+
+/** The installation's record — workspaces created, owners restored, operators designated, accounts deleted. */
+export function listInstanceAudit(before?: string) {
+  return request<AuditEventList>(`/instance/audit${auditQuery(before)}`);
+}
+
 /** The signed-in account. */
 export function getAccount() {
   return request<{ id: string; email: string; name: string }>('/auth/me');

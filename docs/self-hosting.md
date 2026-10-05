@@ -40,8 +40,9 @@ invite the new owner with the `owner` role and leave once they have joined.
 
 The server records who changed what, and when: a workspace's members joining, leaving or being
 removed, role changes, and invitations sent, resent or cancelled are read by that workspace's owners
-(`GET /api/workspaces/:id/audit`); workspaces created, operators designated, accounts deleted, and an
-operator joining a workspace as an owner are read by operators (`GET /api/instance/audit`) — the
+on the console's settings page (`GET /api/workspaces/:id/audit`); workspaces created, operators
+designated, accounts deleted, and an operator joining a workspace as an owner are read by operators
+on the installation page (`GET /api/instance/audit`) — the
 last one also shows in that workspace's own record, so its owners see who was let in. Records name
 people by their current account; deleting an account leaves its records in place with no name or
 address. Records older than `UBOARD_AUDIT_RETENTION_DAYS` are deleted.

@@ -25,9 +25,21 @@ function renderPage(overrides: Partial<Parameters<typeof InstancePage>[0]> = {})
 beforeEach(() => {
   vi.mocked(api.listInstanceWorkspaces).mockResolvedValue({ workspaces: [DEFAULT_WS, CUSTOMER_WS] });
   vi.mocked(api.listInstanceUsers).mockResolvedValue({ users: [OPERATOR, ADMIN] });
+  vi.mocked(api.listInstanceAudit).mockResolvedValue({ events: [], nextBefore: null });
 });
 
 describe('InstancePage', () => {
+  it("shows the installation's record with each workspace named", async () => {
+    vi.mocked(api.listInstanceAudit).mockResolvedValue({
+      events: [{ id: 'e1', occurredAt: '2026-10-05T00:00:00.000Z', action: 'workspace.created', workspace: { id: 'w1', name: 'Customer A' }, actor: { userId: 'op', name: 'Op' }, subject: null, role: null }],
+      nextBefore: null,
+    });
+    renderPage();
+    expect(await screen.findByRole('heading', { name: '운영 기록' })).toBeInTheDocument();
+    expect(await screen.findByText('[Customer A]')).toBeInTheDocument();
+    expect(screen.getByText(/Op님이 워크스페이스를 만들었습니다/)).toBeInTheDocument();
+  });
+
   it('lists every workspace with its owners, and every account with its role', async () => {
     renderPage();
     expect(await screen.findByText('Customer A')).toBeInTheDocument();

@@ -6,7 +6,11 @@ import { App } from './App.js';
 import * as api from './api-client.js';
 
 vi.mock('./api-client.js');
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(api.listWorkspaceAudit).mockResolvedValue({ events: [], nextBefore: null });
+  vi.mocked(api.listInstanceAudit).mockResolvedValue({ events: [], nextBefore: null });
+});
 
 function session(overrides: Partial<api.Session> = {}): api.Session {
   return {

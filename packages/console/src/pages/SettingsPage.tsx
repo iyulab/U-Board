@@ -8,8 +8,10 @@ import {
   listInvitations,
   revokeInvitation,
   resendInvitation,
+  listWorkspaceAudit,
   type PendingInvitation,
 } from '../api-client.js';
+import { AuditLog } from './AuditLog.js';
 import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
@@ -33,6 +35,9 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
   const [invitedByEmail, setInvitedByEmail] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [memberError, setMemberError] = useState<string | null>(null);
+  // Bumped after each change made here, so the activity record is read again and shows it.
+  const [auditVersion, setAuditVersion] = useState(0);
+  const refreshAudit = () => setAuditVersion(v => v + 1);
 
   const isOwner = members.find(m => m.userId === userId)?.role === 'owner';
 
@@ -41,6 +46,8 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
     () => listInvitations(workspaceId).then(res => setInvitations(res.invitations)),
     [workspaceId]
   );
+
+  const loadAudit = useCallback((before?: string) => listWorkspaceAudit(workspaceId, before), [workspaceId]);
 
   useEffect(() => {
     loadMembers();
@@ -60,6 +67,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
       setInvitedByEmail(emailed ? inviteEmail : null);
       setInviteEmail('');
       setInviteRole('member');
+      refreshAudit();
       await loadInvitations();
     } catch {
       setInviteError('초대에 실패했습니다.');
@@ -70,6 +78,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
     setMemberError(null);
     try {
       await setMemberRole(workspaceId, member.userId, role);
+      refreshAudit();
       await loadMembers();
     } catch (err) {
       setMemberError(failureMessage(err, '역할을 바꾸지 못했습니다.'));
@@ -81,6 +90,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
     setMemberError(null);
     try {
       await removeMember(workspaceId, member.userId);
+      refreshAudit();
       await loadMembers();
     } catch (err) {
       setMemberError(failureMessage(err, '멤버를 제거하지 못했습니다.'));
@@ -104,6 +114,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
       const { token, emailed } = await resendInvitation(workspaceId, invitation.id);
       setInviteLink(token ? `${window.location.origin}/invite/${token}` : null);
       setInvitedByEmail(emailed ? invitation.email : null);
+      refreshAudit();
       await loadInvitations();
     } catch {
       setInviteError('초대를 다시 보내지 못했습니다.');
@@ -115,6 +126,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
     setInviteError(null);
     try {
       await revokeInvitation(workspaceId, invitation.id);
+      refreshAudit();
       await loadInvitations();
     } catch {
       setInviteError('초대를 취소하지 못했습니다.');
@@ -200,6 +212,13 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
         <FormField label="초대 링크(복사해 전달)">
           <input type="text" readOnly value={inviteLink} onFocus={e => e.target.select()} />
         </FormField>
+      )}
+
+      {isOwner && (
+        <>
+          <h2>활동 기록</h2>
+          <AuditLog key={auditVersion} load={loadAudit} />
+        </>
       )}
     </div>
   );

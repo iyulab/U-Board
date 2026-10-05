@@ -47,3 +47,5 @@ export const renameAccount = vi.fn();
 export const changePassword = vi.fn();
 export const deleteAccount = vi.fn();
 export const resendInvitation = vi.fn();
+export const listWorkspaceAudit = vi.fn();
+export const listInstanceAudit = vi.fn();

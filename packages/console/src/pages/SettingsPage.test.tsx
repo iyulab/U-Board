@@ -8,6 +8,7 @@ vi.mock('../api-client.js');
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.listInvitations).mockResolvedValue({ invitations: [] });
+  vi.mocked(api.listWorkspaceAudit).mockResolvedValue({ events: [], nextBefore: null });
   vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 afterEach(() => vi.restoreAllMocks());
@@ -84,6 +85,8 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('button', { name: 'owner@x.com 제거' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('owner@x.com 역할')).not.toBeInTheDocument();
     expect(api.listInvitations).not.toHaveBeenCalled();
+    expect(screen.queryByRole('heading', { name: '활동 기록' })).not.toBeInTheDocument();
+    expect(api.listWorkspaceAudit).not.toHaveBeenCalled();
   });
 
   it('surfaces an error when creating an invitation fails', async () => {
@@ -138,6 +141,28 @@ describe('SettingsPage', () => {
     await userEvent.selectOptions(await screen.findByLabelText('member@x.com 역할'), 'owner');
 
     expect(api.setMemberRole).toHaveBeenCalledWith('w1', 'u2', 'owner');
+  });
+
+  it("shows an owner the workspace's activity record and reads it again after a change", async () => {
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [OWNER, MEMBER] });
+    vi.mocked(api.setMemberRole).mockResolvedValue(undefined);
+    vi.mocked(api.listWorkspaceAudit)
+      .mockResolvedValueOnce({
+        events: [{ id: 'e1', occurredAt: '2026-10-05T00:00:00.000Z', action: 'workspace.created', workspace: { id: 'w1', name: 'W' }, actor: { userId: 'u1', name: 'Owner' }, subject: null, role: null }],
+        nextBefore: null,
+      })
+      .mockResolvedValue({
+        events: [{ id: 'e2', occurredAt: '2026-10-05T01:00:00.000Z', action: 'member.role_changed', workspace: { id: 'w1', name: 'W' }, actor: { userId: 'u1', name: 'Owner' }, subject: { userId: 'u2', name: 'Member', email: null }, role: 'owner' }],
+        nextBefore: null,
+      });
+
+    renderPage();
+    expect(await screen.findByRole('heading', { name: '활동 기록' })).toBeInTheDocument();
+    expect(await screen.findByText(/Owner님이 워크스페이스를 만들었습니다/)).toBeInTheDocument();
+    expect(api.listWorkspaceAudit).toHaveBeenCalledWith('w1', undefined);
+
+    await userEvent.selectOptions(screen.getByLabelText('member@x.com 역할'), 'owner');
+    expect(await screen.findByText(/Owner님이 Member님의 역할을 owner\(으\)로 바꿨습니다/)).toBeInTheDocument();
   });
 
   it('explains the last-owner rule when demoting the only owner is refused', async () => {
