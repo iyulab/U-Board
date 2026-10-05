@@ -122,7 +122,8 @@ export function createAuthRouter(config: AppConfig): Router {
 
           let user;
           try {
-            user = await createUser(tx, { email, passwordHash, name });
+            // The account that bootstraps the installation runs it.
+            user = await createUser(tx, { email, passwordHash, name, instanceRole: invitation ? 'user' : 'operator' });
           } catch (err) {
             if ((err as { code?: string }).code === UNIQUE_VIOLATION) throw new SignupRejected(409, 'EMAIL_TAKEN');
             throw err;

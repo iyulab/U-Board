@@ -120,6 +120,14 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+
+-- Instance roles: an operator runs the installation (creates workspaces for others, by default the
+-- only one who may); every other account is a user. An installation from before this column gets
+-- one operator, its first account — the same account a fresh installation makes the operator.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS instance_role TEXT NOT NULL DEFAULT 'user' CHECK (instance_role IN ('operator', 'user'));
+UPDATE users SET instance_role = 'operator'
+  WHERE id = (SELECT id FROM users ORDER BY created_at, id LIMIT 1)
+    AND NOT EXISTS (SELECT 1 FROM users WHERE instance_role = 'operator');
 `;
 
 // Distinct from routes/auth.ts's SIGNUP_BOOTSTRAP_LOCK_KEY (727100) — Postgres advisory locks

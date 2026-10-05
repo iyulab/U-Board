@@ -2,11 +2,16 @@ import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import { normalizeEmail } from './email.js';
 
+/** `operator` runs the installation; every other account is a `user`. Distinct from a workspace
+ *  role — owning a workspace does not make anyone an operator. */
+export type InstanceRole = 'operator' | 'user';
+
 export interface User {
   id: string;
   email: string;
   passwordHash: string;
   name: string;
+  instanceRole: InstanceRole;
   createdAt: string;
 }
 
@@ -15,27 +20,37 @@ interface UserRow {
   email: string;
   password_hash: string;
   name: string;
+  instance_role: InstanceRole;
   created_at: string;
 }
 
 function rowToUser(row: UserRow): User {
-  return { id: row.id, email: row.email, passwordHash: row.password_hash, name: row.name, createdAt: row.created_at };
+  return {
+    id: row.id,
+    email: row.email,
+    passwordHash: row.password_hash,
+    name: row.name,
+    instanceRole: row.instance_role,
+    createdAt: row.created_at,
+  };
 }
 
 export async function createUser(
   db: DbClient,
-  input: { email: string; passwordHash: string; name: string }
+  input: { email: string; passwordHash: string; name: string; instanceRole?: InstanceRole }
 ): Promise<User> {
   const user: User = {
     id: randomUUID(),
     email: normalizeEmail(input.email),
     passwordHash: input.passwordHash,
     name: input.name,
+    instanceRole: input.instanceRole ?? 'user',
     createdAt: new Date().toISOString(),
   };
-  await db.query(`INSERT INTO users (id, email, password_hash, name, created_at) VALUES ($1, $2, $3, $4, $5)`, [
-    user.id, user.email, user.passwordHash, user.name, user.createdAt,
-  ]);
+  await db.query(
+    `INSERT INTO users (id, email, password_hash, name, instance_role, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+    [user.id, user.email, user.passwordHash, user.name, user.instanceRole, user.createdAt]
+  );
   return user;
 }
 

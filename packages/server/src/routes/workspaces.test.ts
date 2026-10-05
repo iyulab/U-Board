@@ -77,6 +77,51 @@ describe('POST /workspaces', () => {
   });
 });
 
+async function inviteAndSignUp(ownerAgent: ReturnType<typeof request.agent>, workspaceId: string, email: string) {
+  const inviteRes = await ownerAgent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email, role: 'member' });
+  const agent = request.agent(app);
+  await agent.post('/api/auth/signup').send({ email, password: 'p4ssword!', name: 'Invited', invitationToken: inviteRes.body.token });
+  return agent;
+}
+
+describe('workspace creation policy', () => {
+  it('makes the first account the instance operator, who may create workspaces', async () => {
+    const { agent } = await bootstrapOwner();
+    const me = await agent.get('/api/workspaces/me');
+    expect(me.body).toMatchObject({ instanceRole: 'operator', canCreateWorkspaces: true });
+  });
+
+  it('by default refuses workspace creation to anyone but an operator (403 WORKSPACE_CREATION_RESTRICTED)', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const memberAgent = await inviteAndSignUp(ownerAgent, workspaceId, 'member@x.com');
+
+    const me = await memberAgent.get('/api/workspaces/me');
+    expect(me.body).toMatchObject({ instanceRole: 'user', canCreateWorkspaces: false });
+    const res = await memberAgent.post('/api/workspaces').send({ name: 'Own' });
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe('WORKSPACE_CREATION_RESTRICTED');
+    const after = await memberAgent.get('/api/workspaces/me');
+    expect(after.body.workspaces).toHaveLength(1);
+  });
+
+  it('refuses it to an owner the operator invited, too — owning a workspace is not running the instance', async () => {
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const inviteRes = await ownerAgent.post(`/api/workspaces/${workspaceId}/invitations`).send({ email: 'admin@x.com', role: 'owner' });
+    const customer = request.agent(app);
+    await customer.post('/api/auth/signup').send({ email: 'admin@x.com', password: 'p4ssword!', name: 'Admin', invitationToken: inviteRes.body.token });
+    expect((await customer.post('/api/workspaces').send({ name: 'Own' })).status).toBe(403);
+  });
+
+  it('lets every account create workspaces when the instance allows anyone', async () => {
+    app = createApp({ db, sessionSecret: SECRET, workspaceCreation: 'anyone' });
+    const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
+    const memberAgent = await inviteAndSignUp(ownerAgent, workspaceId, 'member@x.com');
+
+    expect((await memberAgent.get('/api/workspaces/me')).body.canCreateWorkspaces).toBe(true);
+    expect((await memberAgent.post('/api/workspaces').send({ name: 'Own' })).status).toBe(201);
+  });
+});
+
 describe('GET /workspaces/:id/members', () => {
   it('lists members for a workspace the user belongs to', async () => {
     const { agent, workspaceId } = await bootstrapOwner();
@@ -263,7 +308,10 @@ describe('GET /workspaces/me after losing membership', () => {
   it('falls back to a workspace the user still belongs to', async () => {
     const { agent: ownerAgent, workspaceId } = await bootstrapOwner();
     const member = await joinAs(ownerAgent, workspaceId, 'member@x.com', 'member');
-    const own = await member.agent.post('/api/workspaces').send({ name: 'Mine' });
+    // The operator gives the member a second workspace (members cannot create one themselves).
+    const own = await ownerAgent.post('/api/workspaces').send({ name: 'Mine' });
+    const invite = await ownerAgent.post(`/api/workspaces/${own.body.id}/invitations`).send({ email: 'member@x.com', role: 'member' });
+    await member.agent.post(`/api/invitations/${invite.body.token}/accept`);
     await member.agent.post(`/api/workspaces/${workspaceId}/switch`);
 
     await ownerAgent.delete(`/api/workspaces/${workspaceId}/members/${member.userId}`);

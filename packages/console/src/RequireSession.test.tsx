@@ -24,7 +24,7 @@ function renderAt(path: string) {
 
 describe('RequireSession', () => {
   it('renders children with the session when authenticated', async () => {
-    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [] });
+    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [], instanceRole: 'user', canCreateWorkspaces: false });
     renderAt('/protected');
     expect(await screen.findByText('welcome u1')).toBeInTheDocument();
   });
@@ -40,7 +40,7 @@ describe('RequireSession', () => {
     renderAt('/protected');
     expect(await screen.findByRole('alert')).toHaveTextContent('세션을 확인하지 못했습니다');
 
-    vi.mocked(api.getSession).mockResolvedValueOnce({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [] });
+    vi.mocked(api.getSession).mockResolvedValueOnce({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [], instanceRole: 'user', canCreateWorkspaces: false });
     await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
 
     expect(await screen.findByText('welcome u1')).toBeInTheDocument();

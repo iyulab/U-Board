@@ -1,10 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
-import { getSession } from './api-client.js';
+import { getSession, type Session } from './api-client.js';
 import { Alert } from './design-system/Alert.js';
 import { Loading } from './design-system/Loading.js';
-
-type Session = { userId: string; activeWorkspaceId: string; workspaces: { id: string; name: string }[] };
 
 export function RequireSession({ children }: { children: (session: Session) => ReactNode }) {
   const [session, setSession] = useState<'loading' | 'error' | Session | null>('loading');

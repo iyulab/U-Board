@@ -8,6 +8,17 @@ import * as api from './api-client.js';
 vi.mock('./api-client.js');
 beforeEach(() => vi.resetAllMocks());
 
+function session(overrides: Partial<api.Session> = {}): api.Session {
+  return {
+    userId: 'u1',
+    activeWorkspaceId: 'w1',
+    workspaces: [{ id: 'w1', name: 'Default' }],
+    instanceRole: 'operator',
+    canCreateWorkspaces: true,
+    ...overrides,
+  };
+}
+
 describe('App', () => {
   it('shows LoginPage at "/" when a User already exists but the visitor has no session', async () => {
     vi.mocked(api.getSession).mockResolvedValue(null);
@@ -24,7 +35,7 @@ describe('App', () => {
   });
 
   it('redirects "/" to /boards (inside the authenticated shell) when a session exists', async () => {
-    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }] });
+    vi.mocked(api.getSession).mockResolvedValue(session());
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
     render(<App RouterComponent={MemoryRouter} initialEntries={['/']} />);
     expect(await screen.findByRole('heading', { name: '보드' })).toBeInTheDocument();
@@ -32,14 +43,25 @@ describe('App', () => {
   });
 
   it('shows a way back in, not workspace pages, when the user belongs to no workspace', async () => {
-    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: '', workspaces: [] });
+    vi.mocked(api.getSession).mockResolvedValue(session({ activeWorkspaceId: '', workspaces: [] }));
     render(<App RouterComponent={MemoryRouter} initialEntries={['/boards']} />);
     expect(await screen.findByText(/소속된 워크스페이스가 없습니다/)).toBeInTheDocument();
     expect(api.listBoards).not.toHaveBeenCalled();
   });
 
+  it('points an account that may not create workspaces to an invitation, and offers no create action', async () => {
+    vi.mocked(api.getSession).mockResolvedValue(
+      session({ activeWorkspaceId: '', workspaces: [], instanceRole: 'user', canCreateWorkspaces: false })
+    );
+    const user = userEvent.setup();
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/boards']} />);
+    expect(await screen.findByText(/운영자나 워크스페이스 owner에게 받은 초대 링크로 참여하세요/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /워크스페이스/ }));
+    expect(screen.queryByRole('button', { name: '+ 새 워크스페이스' })).not.toBeInTheDocument();
+  });
+
   it('sends the board editor back to /boards when the user belongs to no workspace', async () => {
-    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: '', workspaces: [] });
+    vi.mocked(api.getSession).mockResolvedValue(session({ activeWorkspaceId: '', workspaces: [] }));
     render(<App RouterComponent={MemoryRouter} initialEntries={['/boards/b1/edit']} />);
     expect(await screen.findByText(/소속된 워크스페이스가 없습니다/)).toBeInTheDocument();
     expect(api.getBoard).not.toHaveBeenCalled();
@@ -86,7 +108,7 @@ describe('/boards without a session', () => {
 
 describe('/settings', () => {
   it('renders SettingsPage inside the authenticated shell', async () => {
-    vi.mocked(api.getSession).mockResolvedValue({ userId: 'u1', activeWorkspaceId: 'w1', workspaces: [{ id: 'w1', name: 'Default' }] });
+    vi.mocked(api.getSession).mockResolvedValue(session());
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'owner@x.com', name: 'Owner', role: 'owner' }] });
     vi.mocked(api.listInvitations).mockResolvedValue({ invitations: [] });
     render(<App RouterComponent={MemoryRouter} initialEntries={['/settings']} />);

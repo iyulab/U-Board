@@ -11,32 +11,44 @@ import {
   type WorkspaceRole,
 } from '../db/workspaces.js';
 import { createInvitation, listPendingInvitations, revokeInvitation } from '../db/invitations.js';
-import { findUserByEmail, findUserById } from '../db/users.js';
+import { findUserByEmail, findUserById, type User } from '../db/users.js';
 import { isPlausibleEmail } from '../db/email.js';
 import { requireAuth, type AuthedRequest, SESSION_COOKIE_NAME, sessionCookieOptions } from '../middleware/require-auth.js';
 import { requireWorkspaceOwner, requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { signSession } from '../auth/session.js';
 
 export function createWorkspacesRouter(config: AppConfig): Router {
-  const { db, sessionSecret, publicUrl, sendInvitationEmail } = config;
+  const { db, sessionSecret, publicUrl, sendInvitationEmail, workspaceCreation = 'operator' } = config;
+  const canCreateWorkspaces = (user: User | undefined) => workspaceCreation === 'anyone' || user?.instanceRole === 'operator';
   const router = Router();
   router.use(requireAuth(db, sessionSecret));
 
   router.get('/me', async (req: AuthedRequest, res) => {
-    const workspaces = await listWorkspacesForUser(db, req.userId!);
+    const [workspaces, user] = await Promise.all([listWorkspacesForUser(db, req.userId!), findUserById(db, req.userId!)]);
     // The session names the workspace it last switched to, but membership can end while the session
     // lives on (an owner removed this user, or they left). Answer with one they still belong to —
     // or none — instead of a workspace every request would then refuse.
     const activeWorkspaceId = workspaces.some(w => w.id === req.activeWorkspaceId)
       ? req.activeWorkspaceId
       : (workspaces[0]?.id ?? '');
-    res.status(200).json({ userId: req.userId, activeWorkspaceId, workspaces });
+    res.status(200).json({
+      userId: req.userId,
+      activeWorkspaceId,
+      workspaces,
+      instanceRole: user?.instanceRole ?? 'user',
+      canCreateWorkspaces: canCreateWorkspaces(user),
+    });
   });
 
   router.post('/', async (req: AuthedRequest, res) => {
     const { name } = req.body ?? {};
     if (typeof name !== 'string' || name.trim() === '') {
       res.status(400).json({ code: 'INVALID_INPUT' });
+      return;
+    }
+    // Workspaces are tenants: on an installation run for others, the operator decides who gets one.
+    if (!canCreateWorkspaces(await findUserById(db, req.userId!))) {
+      res.status(403).json({ code: 'WORKSPACE_CREATION_RESTRICTED' });
       return;
     }
     const workspace = await db.withTransaction(async tx => {

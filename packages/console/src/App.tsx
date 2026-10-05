@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { BrowserRouter, MemoryRouter, Navigate, Routes, Route, useNavigate, useParams } from 'react-router-dom';
-import { getSession, getBootstrapStatus, switchWorkspace, createWorkspace, logout } from './api-client.js';
+import { getSession, getBootstrapStatus, switchWorkspace, createWorkspace, logout, type Session } from './api-client.js';
 import { SignupPage } from './pages/SignupPage.js';
 import { LoginPage } from './pages/LoginPage.js';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.js';
@@ -68,7 +68,7 @@ function InviteRoute() {
 // `activeWorkspaceId` into shared state across routes — the same "session changed, refresh
 // everything" pattern login/signup/logout already use, and it keeps every wrapped page's own
 // `workspaceId`/`userId` props exactly as they were before this shell existed.
-function AuthedLayout({ children }: { children: (session: NonNullable<Awaited<ReturnType<typeof getSession>>>) => ReactNode }) {
+function AuthedLayout({ children }: { children: (session: Session) => ReactNode }) {
   const navigate = useNavigate();
 
   async function handleSwitch(workspaceId: string) {
@@ -96,7 +96,7 @@ function AuthedLayout({ children }: { children: (session: NonNullable<Awaited<Re
               workspaces={session.workspaces}
               activeWorkspaceId={session.activeWorkspaceId}
               onSwitch={handleSwitch}
-              onCreate={handleCreate}
+              onCreate={session.canCreateWorkspaces ? handleCreate : undefined}
             />
           }
         >
@@ -106,7 +106,9 @@ function AuthedLayout({ children }: { children: (session: NonNullable<Awaited<Re
             // Removed from (or left) every workspace: no page has a workspace to show, so offer the
             // two ways back in instead of rendering pages against an empty id.
             <EmptyState>
-              소속된 워크스페이스가 없습니다. 위의 워크스페이스 메뉴에서 새로 만들거나, 받은 초대 링크로 참여하세요.
+              {session.canCreateWorkspaces
+                ? '소속된 워크스페이스가 없습니다. 위의 워크스페이스 메뉴에서 새로 만들거나, 받은 초대 링크로 참여하세요.'
+                : '소속된 워크스페이스가 없습니다. 운영자나 워크스페이스 owner에게 받은 초대 링크로 참여하세요.'}
             </EmptyState>
           )}
         </AppShell>

@@ -140,6 +140,13 @@ describe('WorkspaceSwitcher', () => {
       expect(screen.queryByLabelText('워크스페이스 검색')).not.toBeInTheDocument();
     });
 
+    it('offers no create action when onCreate is omitted', async () => {
+      renderSwitcher({ onCreate: undefined });
+      await userEvent.click(screen.getByRole('button', { name: /Acme Robotics/ }));
+      expect(screen.getByRole('button', { name: 'Acme Facilities' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: '+ 새 워크스페이스' })).not.toBeInTheDocument();
+    });
+
     it('focuses the name field when entering create mode', async () => {
       renderSwitcher();
       await userEvent.click(screen.getByRole('button', { name: /Acme Robotics/ }));

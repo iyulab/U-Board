@@ -9,6 +9,7 @@ import {
   sendwayConfigFromEnv,
 } from './email/sendway-email-sender.js';
 import { publicUrlFromEnv } from './public-url.js';
+import { workspaceCreationFromEnv } from './workspace-creation.js';
 
 const databaseUrl = process.env.UBOARD_DATABASE_URL ?? './u-board-data';
 const sessionSecret = process.env.UBOARD_SESSION_SECRET;
@@ -45,6 +46,9 @@ if (staleMaxAge !== undefined && staleMaxAge !== '' && !(Number(staleMaxAge) > 0
 }
 const staleMaxAgeMs = staleMaxAge ? Number(staleMaxAge) * 1000 : undefined;
 
+// Who may create workspaces: instance operators only unless set to `anyone`.
+const workspaceCreation = workspaceCreationFromEnv(process.env.UBOARD_WORKSPACE_CREATION);
+
 // The console and share viewer builds sit next to this package in the workspace (and in the
 // container image, which keeps that layout). Serve them when they have been built; otherwise the
 // server is the API alone, and the two apps run from their own dev servers or hosts.
@@ -66,6 +70,7 @@ const app = createApp({
   publicUrl,
   sendInvitationEmail,
   staleMaxAgeMs,
+  workspaceCreation,
   webApps,
 });
 

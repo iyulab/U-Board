@@ -14,6 +14,7 @@ import { createShareRouter } from './routes/share.js';
 import { ClientCredentialsTokens } from './oauth-client-credentials.js';
 import type { ResolveState } from './resolve-connector.js';
 import { serveWebApps, type WebApps } from './web-apps.js';
+import type { WorkspaceCreation } from './workspace-creation.js';
 
 export interface AppConfig {
   db: DbClient;
@@ -43,6 +44,8 @@ export interface AppConfig {
   /** How old a connector's last-known value may be and still be served as `stale` when a read fails
    *  (milliseconds) — past it the binding reads `disconnected`. Unset: no limit. */
   staleMaxAgeMs?: number;
+  /** Who may create workspaces — instance operators only (default) or every account. */
+  workspaceCreation?: WorkspaceCreation;
   /** The built console and share viewer to serve next to the API, from one origin: the share
    *  viewer under `/share/`, the console at every other path. Omit to serve the API alone (tests,
    *  or a deployment that hosts the two apps elsewhere). */

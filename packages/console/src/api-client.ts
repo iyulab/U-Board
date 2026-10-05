@@ -70,8 +70,18 @@ export function resetPassword(input: { token: string; newPassword: string }) {
   return request<{ code: string }>('/auth/reset-password', { method: 'POST', body: JSON.stringify(input) });
 }
 
+export interface Session {
+  userId: string;
+  activeWorkspaceId: string;
+  workspaces: { id: string; name: string }[];
+  /** `operator` runs the installation; every other account is a `user`. */
+  instanceRole: 'operator' | 'user';
+  /** Whether this account may create workspaces — the server's policy, applied to it. */
+  canCreateWorkspaces: boolean;
+}
+
 export function getSession() {
-  return request<{ userId: string; activeWorkspaceId: string; workspaces: { id: string; name: string }[] }>('/workspaces/me').catch(
+  return request<Session>('/workspaces/me').catch(
     err => {
       if (err instanceof ApiError && err.status === 401) return null;
       throw err;

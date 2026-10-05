@@ -113,4 +113,37 @@ describe('createDb', () => {
     const constraints = await pglite.query(`SELECT 1 FROM pg_constraint WHERE conrelid = 'connectors'::regclass AND conname = 'connectors_auth_type_check'`);
     expect(constraints.rows).toHaveLength(1);
   });
+  it('gives an installation from before instance roles one operator — its first account — idempotently', async () => {
+    const pglite = new PGlite();
+    await pglite.exec(SCHEMA_SQL);
+    await pglite.exec(`
+      ALTER TABLE users DROP COLUMN instance_role;
+      INSERT INTO users (id, email, password_hash, name, created_at) VALUES
+        ('u2', 'second@x.com', 'h', 'Second', '2026-01-02T00:00:00.000Z'),
+        ('u1', 'first@x.com', 'h', 'First', '2026-01-01T00:00:00.000Z');
+    `);
+
+    await pglite.exec(SCHEMA_SQL);
+    await pglite.exec(SCHEMA_SQL);
+
+    const roles = await pglite.query<{ id: string; instance_role: string }>(`SELECT id, instance_role FROM users ORDER BY id`);
+    expect(roles.rows).toEqual([
+      { id: 'u1', instance_role: 'operator' },
+      { id: 'u2', instance_role: 'user' },
+    ]);
+    await expect(pglite.exec(`UPDATE users SET instance_role = 'admin' WHERE id = 'u2'`)).rejects.toThrow(/check constraint/);
+  });
+
+  it('leaves the operators alone once one exists', async () => {
+    const pglite = new PGlite();
+    await pglite.exec(SCHEMA_SQL);
+    await pglite.exec(`
+      INSERT INTO users (id, email, password_hash, name, created_at, instance_role) VALUES
+        ('u1', 'first@x.com', 'h', 'First', '2026-01-01T00:00:00.000Z', 'user'),
+        ('u2', 'second@x.com', 'h', 'Second', '2026-01-02T00:00:00.000Z', 'operator');
+    `);
+    await pglite.exec(SCHEMA_SQL);
+    const roles = await pglite.query<{ id: string; instance_role: string }>(`SELECT id, instance_role FROM users ORDER BY id`);
+    expect(roles.rows.map(r => r.instance_role)).toEqual(['user', 'operator']);
+  });
 });

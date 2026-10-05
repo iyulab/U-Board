@@ -13,7 +13,8 @@ interface WorkspaceSwitcherProps {
   workspaces: Workspace[];
   activeWorkspaceId: string | null;
   onSwitch: (workspaceId: string) => void;
-  onCreate: (name: string) => Promise<void>;
+  /** Omit when this account may not create workspaces — the switcher then offers switching only. */
+  onCreate?: (name: string) => Promise<void>;
 }
 
 export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch, onCreate }: WorkspaceSwitcherProps) {
@@ -96,6 +97,7 @@ export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch, onC
 
   async function handleCreateSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!onCreate) return; // create mode is only reachable through the trigger, which needs onCreate
     setCreating(true);
     setCreateError(null);
     try {
@@ -152,9 +154,11 @@ export function WorkspaceSwitcher({ workspaces, activeWorkspaceId, onSwitch, onC
               </li>
             ))}
           </ul>
-          <button type="button" className="ub-workspace-switcher__create-trigger" onClick={startCreate}>
-            + 새 워크스페이스
-          </button>
+          {onCreate && (
+            <button type="button" className="ub-workspace-switcher__create-trigger" onClick={startCreate}>
+              + 새 워크스페이스
+            </button>
+          )}
         </div>
       )}
       {open && mode === 'create' && (

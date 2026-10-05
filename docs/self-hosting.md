@@ -21,9 +21,12 @@ docker run -d --name u-board -p 4000:4000 \
   u-board
 ```
 
-Open `http://<host>:4000/`. **The first account to sign up owns the installation**: it becomes the
-owner of a workspace named "Default". Every later account joins through an invitation an owner sends
-from the console, so sign up yourself before you hand the address to anyone else.
+Open `http://<host>:4000/`. **The first account to sign up runs the installation**: it becomes its
+operator and the owner of a workspace named "Default". Every later account joins through an
+invitation an owner sends from the console, so sign up yourself before you hand the address to anyone
+else. Only an operator creates workspaces — on an installation that serves several organizations,
+each gets its own workspace from the operator, who invites its administrator as an owner and can then
+leave it. Set `UBOARD_WORKSPACE_CREATION=anyone` to let every account create workspaces.
 
 Owners change members' roles, remove members, and cancel invitations that have not been accepted;
 any member can leave a workspace. A workspace always keeps at least one owner — to hand one over,
@@ -39,6 +42,7 @@ invite the new owner with the `owner` role and leave once they have joined.
 | `UBOARD_STALE_MAX_AGE_SECONDS` | no | How old a connector's last value may be and still be shown as stale when the data source stops answering. Past it, the binding shows as disconnected. Unset: no limit — the value is shown however old, with its age. |
 | `UBOARD_SHARE_FRAME_ANCESTORS` | no | Which pages may embed a share link in a frame, as a CSP `frame-ancestors` source list. Default `https:` (any page served over HTTPS). An intranet page served over plain HTTP needs to be named, e.g. `http://hmi.example.com https:`. |
 | `UBOARD_CORS_ORIGINS` | no | Only when the console or share viewer is hosted on another origin than this server: a comma-separated list of those origins. Not needed for the image as built. |
+| `UBOARD_WORKSPACE_CREATION` | no | Who may create workspaces: `operator` (default — the installation's operator only) or `anyone` (every signed-in account). Any other value stops the server from starting. |
 | `UBOARD_PUBLIC_URL` | no | The address people open the console at, as an origin (`https://board.example.com`). Links in invitation emails point here; it is set rather than taken from the request so that whoever sends an invitation cannot choose where its link leads. Unset: invitations are not emailed. |
 | `UBOARD_TRUST_CF_PROXY` | no | `true` only when every request reaches the server through Cloudflare (the ingress refuses anything else): sign-in rate limiting then keys on the visitor address Cloudflare reports. |
 
