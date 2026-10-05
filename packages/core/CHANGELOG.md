@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-05
+
 ### Added
 
 - `validateViewDocument(value)` checks every field the `ViewDocument` type promises — nodes,
@@ -42,6 +44,7 @@ All notable changes to this package are documented here. The format follows
 - `isViewDocumentShape` is now the type guard for `validateViewDocument` — it checks the whole
   document, not only the top-level fields, so it rejects documents it used to accept.
 - Requires `@iyulab/u-widgets` 0.24.
+- Requires `@canvas-kit/core` 0.4, `@canvas-kit/viewer` 0.4 and `@canvas-kit/designer` 0.5.
 - `AuthoringView` no longer shows the edited document as JSON below the editor; pass
   `showDocumentSource` to keep that development aid.
 - The node property panel and the decoration panel show English by default, like the rest of the
