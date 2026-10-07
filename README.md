@@ -79,8 +79,9 @@ and a record of who changed members, roles, invitations, boards, share links and
 | `packages/site` | private | The introduction site at board.u-platform.kr (Korean at `/`, English at `/en/`). Every statement it makes about the product has a row in its `claims.tsv` — status and the files that back it — checked against the pages by its tests. |
 
 The three applications are how U-Board runs as a service installed on your own network; a host application that only
-needs the library does not need any of them. They ship as one container image
-(`packages/server/Dockerfile`) serving one origin: the API under `/api`, the share viewer under
+needs the library does not need any of them. They ship as one container image,
+`ghcr.io/iyulab/u-board` — published with each GitHub release under the product's own version,
+apart from the library's — serving one origin: the API under `/api`, the share viewer under
 `/share/`, and the console at every other path — see [`docs/self-hosting.md`](docs/self-hosting.md). [`CONTRIBUTING.md`](CONTRIBUTING.md) covers building
 and testing the whole workspace.
 

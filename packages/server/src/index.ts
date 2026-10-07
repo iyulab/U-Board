@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createDb } from './db.js';
@@ -77,6 +77,8 @@ const webApps =
   existsSync(path.join(consoleDir, 'index.html')) && existsSync(path.join(shareDir, 'index.html'))
     ? { consoleDir, shareDir, shareFrameAncestors: process.env.UBOARD_SHARE_FRAME_ANCESTORS || undefined }
     : undefined;
+// The installed version — the one a release and its image are tagged with — so a log says which one is running.
+const version: string = JSON.parse(readFileSync(path.join(packagesDir, 'server', 'package.json'), 'utf8')).version;
 
 const db = await createDb(databaseUrl);
 try {
@@ -109,7 +111,7 @@ const port = Number(process.env.PORT ?? 4000);
 const server = app.listen(port, (err?: Error) => {
   if (err) throw err;
   console.log(
-    `@iyulab/u-board-server listening on :${port} (db: ${redactDatabaseUrl(databaseUrl)}; ${webApps ? 'serving the console and share viewer' : 'API only'})`
+    `U-Board ${version} listening on :${port} (db: ${redactDatabaseUrl(databaseUrl)}; ${webApps ? 'serving the console and share viewer' : 'API only'})`
   );
 });
 // In a container the server is process 1, which Node gives no default handling of `SIGTERM` — without

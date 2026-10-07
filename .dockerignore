@@ -5,6 +5,7 @@
 .worktrees
 test-results
 playwright-report
+release
 .playwright-mcp
 claudedocs
 packages/*/*.db

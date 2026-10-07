@@ -20,10 +20,19 @@ private applications, and the introduction site) is described there too.
 
 ## Releasing
 
-Only `packages/core` is published, as `@iyulab/u-board` on npm. The `server`, `console` and `share`
-workspaces are applications and `site` is the introduction site; all four stay `private`.
+Two things are released, each under its own version. The library, `packages/core`, is published as
+`@iyulab/u-board` on npm. The product — the `server`, `console` and `share` applications in one
+container image — is released at the version in `packages/server/package.json`. The four other
+workspaces (`site` is the introduction site) stay `private` on npm.
 
-To release, change `version` in `packages/core/package.json` (semver; while the version is 0.x, a
+To release the product, change `version` in `packages/server/package.json` and push the change to
+`main`. The `image` job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` and, if that
+version has no GitHub release yet, pushes the image to `ghcr.io/iyulab/u-board` (the version,
+`<major>.<minor>` and, unless it is a pre-release, `latest`) and creates the release `v<version>` with
+the image as a `docker save` archive and its checksum. `npm run release:image` builds the same image
+and release files locally without pushing anything.
+
+To release the library, change `version` in `packages/core/package.json` (semver; while the version is 0.x, a
 minor bump may break the public API) and push the change to `main`. The `publish` job in
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` (`npm run check`) passes and publishes
 with provenance if that version is not on the registry yet; on any other push it publishes

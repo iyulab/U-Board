@@ -4,13 +4,24 @@ The server's container image is the whole product: one process on one origin ser
 `/api`, the read-only share viewer under `/share/`, and the console at every other path. A hosted
 installation and a self-hosted one run the same image.
 
-## Build the image
+## Get the image
 
-From the repository root (the build context is the npm workspace):
+Each release — listed on the repository's GitHub Releases page, tagged `v<version>` — publishes the
+image for `linux/amd64` as `ghcr.io/iyulab/u-board:<version>`, and moves `<major>.<minor>` and
+`latest` onto it:
 
 ```sh
-docker build -f packages/server/Dockerfile -t u-board .
+docker pull ghcr.io/iyulab/u-board:<version>
 ```
+
+Name an exact version rather than `latest`, so the installation changes only when you upgrade it.
+That version is the product's own, apart from the `@iyulab/u-board` library's: the server logs it
+when it starts (`U-Board 0.1.0 listening on :4000 …`), and the image carries it as a label
+(`docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' <image>`).
+
+To build the image from a checkout instead — the build context is the repository root, an npm
+workspace — run `docker build -f packages/server/Dockerfile -t u-board .` and use `u-board` where
+the commands below name the published image.
 
 ## Run it
 
@@ -18,7 +29,7 @@ docker build -f packages/server/Dockerfile -t u-board .
 docker run -d --name u-board -p 4000:4000 \
   -e UBOARD_DATABASE_URL='postgres://u_board:<password>@db.example.com:5432/u_board?sslmode=verify-full' \
   -e UBOARD_SESSION_SECRET='<a long random string>'   -e UBOARD_SECRETS_KEY='<another long random string>' \
-  u-board
+  ghcr.io/iyulab/u-board:<version>
 ```
 
 Open `http://<host>:4000/`. **The first account to sign up runs the installation**: it becomes its
@@ -132,13 +143,17 @@ installation runs on a closed network. The one exception is a board's background
 page shows from the address its author gave; on a closed network, give it one that is reachable
 there.
 
-Building the image does need internet access, for its base image and packages. Build it on a
-connected machine and carry the image over:
+Getting the image is the one step that needs a connection, and a release covers it: each one
+carries the image as an archive, `u-board-<version>-linux-amd64.tar.gz`, with its SHA-256 beside it.
+Download both on a connected machine, carry them over, and on the installation's host:
 
 ```sh
-docker save u-board -o u-board.tar   # on the connected machine
-docker load -i u-board.tar           # on the installation's host
+sha256sum -c u-board-<version>-linux-amd64.tar.gz.sha256
+docker load -i u-board-<version>-linux-amd64.tar.gz   # ghcr.io/iyulab/u-board:<version>
 ```
+
+An image you built yourself carries over the same way: `docker save u-board -o u-board.tar` on the
+connected machine, `docker load -i u-board.tar` on the host.
 
 ## Stopping
 
@@ -162,20 +177,22 @@ catch a write half-done. The image itself has `tar`, so no other image is needed
 
 ```sh
 docker stop u-board
-docker run --rm -v u-board-data:/data -v "$PWD":/backup --entrypoint tar u-board czf /backup/u-board-data.tgz -C /data .
+docker run --rm -v u-board-data:/data -v "$PWD":/backup --entrypoint tar ghcr.io/iyulab/u-board:<version> czf /backup/u-board-data.tgz -C /data .
 docker start u-board
 ```
 
 To restore, unpack the archive into an empty volume and start the server on it:
 
 ```sh
-docker run --rm -v u-board-restored:/data -v "$PWD":/backup --entrypoint tar u-board xzf /backup/u-board-data.tgz -C /data
+docker run --rm -v u-board-restored:/data -v "$PWD":/backup --entrypoint tar ghcr.io/iyulab/u-board:<version> xzf /backup/u-board-data.tgz -C /data
 ```
 
 ## Upgrading
 
-Back up first. Then stop the old container and start one from the new image with the same
-settings: the server brings its database tables up to date when it starts. Those steps are
+Back up first. Then get the new version's image (`docker pull`, or its release archive on a closed
+network), stop the old container and start one from the new image with the same settings: the
+server brings its database tables up to date when it starts. A release's notes link to this page as
+it stood at that version. Those steps are
 cumulative, so a newer image can start on a database from any older one — versions can be skipped.
 
 An upgrade is not undone by starting the older image again: the tables it changed stay changed, and

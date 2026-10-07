@@ -15,6 +15,15 @@ RUN npm run build --workspace=packages/console \
  && npm run build --workspace=packages/server
 
 FROM node:24-alpine
+# Set by a release (scripts/release-image.mjs); a local build leaves them empty.
+ARG VERSION=""
+ARG REVISION=""
+LABEL org.opencontainers.image.title="U-Board" \
+      org.opencontainers.image.description="Spatial dashboards: a console, a read-only share viewer and their API in one image" \
+      org.opencontainers.image.source="https://github.com/iyulab/U-Board" \
+      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}"
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules

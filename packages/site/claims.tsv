@@ -10,7 +10,7 @@ quality	works	README.md · packages/core/src/quality-text.ts	Per-value quality, 
 connect	works	README.md · packages/server/src/resolve-connector.ts · packages/server/src/secret-box.ts	Generic HTTP connector: static token/header or OAuth 2.0 client credentials, JSON Pointer, credentials server-side and sealed at rest
 embed	works	docs/self-hosting.md · packages/server/src/routes/share.ts	Share link: read-only without sign-in, iframe embedding, optional expiry, revocation
 delivery-demo	promise	README.md	The demo instance iyulab operates for trying U-Board before installing it — an operating commitment, not something the code proves
-delivery-container	works	docs/self-hosting.md · packages/server/Dockerfile · scripts/check-image.mjs	One image with server, console and share viewer; runs without internet access (no outside calls but those configured); PostgreSQL or the embedded database
+delivery-container	works	docs/self-hosting.md · packages/server/Dockerfile · scripts/check-image.mjs · scripts/release-image.mjs	One image with server, console and share viewer; runs without internet access (no outside calls but those configured); PostgreSQL or the embedded database
 delivery-library	works	README.md · packages/core/package.json	The npm package @iyulab/u-board with the authoring view and the viewer
 not-hmi	design	README.md	No symbol library, alarms, control output or screen navigation
 not-data	design	README.md · docs/scope.md · docs/overview.md	Boards store binding references, not values

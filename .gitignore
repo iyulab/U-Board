@@ -3,6 +3,8 @@ dist/
 .playwright-mcp/
 test-results/
 playwright-report/
+# Written by scripts/release-image.mjs.
+release/
 .worktrees/
 .superpowers/
 
