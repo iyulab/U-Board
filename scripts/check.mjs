@@ -38,6 +38,9 @@ export const STEPS = [
   { name: 'library-smoke', command: 'npm run smoke:library' },
   // The published package is ESM-only; its declarations must resolve under node16 and bundler resolution.
   { name: 'package-types', command: 'npm run check:package-types' },
+  // The container image — the product as installed: builds, starts on its required settings alone,
+  // passes the smoke checks, and stops cleanly on SIGTERM. Needs Docker.
+  { name: 'image', command: 'npm run check:image' },
   // Slowest last — jsdom cannot render <canvas> or shadow DOM, so only a real browser tells a chart
   // from a silent fallback. Needs Chromium (`npx playwright install chromium` in packages/core and packages/console).
   { name: 'e2e', command: 'npm run test:e2e' },

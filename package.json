@@ -27,7 +27,8 @@
     "check:dependency-drift": "node scripts/check-dependency-drift.mjs --strict",
     "check:public-text": "node scripts/check-public-text.mjs",
     "check:doc-links": "node scripts/check-doc-links.mjs",
-    "check:package-types": "attw --pack packages/core --profile esm-only"
+    "check:package-types": "attw --pack packages/core --profile esm-only",
+    "check:image": "node scripts/check-image.mjs"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

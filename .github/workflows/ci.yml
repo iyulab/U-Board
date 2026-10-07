@@ -30,7 +30,7 @@ jobs:
 
       # The checks themselves live in scripts/check.mjs, so a local `npm run check` runs exactly this
       # list. Only machine setup stays here: the browsers its last step (E2E) drives. ubuntu-latest
-      # ships Docker preinstalled, which its Postgres step needs.
+      # ships Docker preinstalled, which its Postgres and image steps need.
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
         working-directory: packages/core

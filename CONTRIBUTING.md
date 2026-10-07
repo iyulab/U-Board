@@ -64,7 +64,7 @@ npm run lint         # oxlint — correctness rules plus the React hooks rules
 npm test             # vitest
 npm run build        # all packages
 npm run test:e2e     # Playwright (canvas rendering, console flows, and the built apps served by the server)
-npm run check        # everything CI checks, in CI's order — `-- --skip=postgres,e2e` without Docker or browsers
+npm run check        # everything CI checks, in CI's order — `-- --skip=postgres,image,e2e` without Docker or browsers
 ```
 
 The server and the other applications import `@iyulab/u-board` from `packages/core/dist/lib`,
@@ -75,7 +75,9 @@ CI runs `npm run check` ([`scripts/check.mjs`](scripts/check.mjs) holds the list
 commands above a real-Postgres concurrency suite (needs Docker), `npm run smoke:library` (the built
 library entry used the way a consumer would; CI also runs it on the oldest supported Node),
 `npm run check:package-types`
-(the published package's type declarations resolve for ESM consumers — `attw`), and three
+(the published package's type declarations resolve for ESM consumers — `attw`),
+`npm run check:image` (needs Docker: the container image builds, starts on its required settings
+alone, passes `npm run smoke`, and stops cleanly on `SIGTERM`), and three
 repository checks:
 `npm run check:dependency-drift` (dependencies not left behind their published versions; a breaking
 release — a new major, or below 1.0 a new minor — is either adopted or recorded in
