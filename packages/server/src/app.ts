@@ -1,6 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
 import cookieParser from 'cookie-parser';
-import cors from 'cors';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { DbClient } from './db.js';
 import type { InvitationEmail } from './email/messages.js';
@@ -20,10 +19,6 @@ import type { WorkspaceCreation } from './workspace-creation.js';
 export interface AppConfig {
   db: DbClient;
   sessionSecret: string;
-  /** CORS allowlist for a deployment that hosts the console and share viewer on other origins than
-   *  the API. Unset when they are served from the API's own origin (`webApps`) or in dev/test, where
-   *  the dev proxy makes requests same-origin. */
-  corsOrigins?: string[];
   /** Key the auth rate limiter off Cloudflare's `CF-Connecting-IP` header instead of `req.ip`.
    *  Enable ONLY once the deployment's ingress is locked to Cloudflare-only traffic — otherwise
    *  the header is client-spoofable and the limiter is worse than doing nothing. Unset in
@@ -78,18 +73,6 @@ export function cloudflareKeyGenerator(req: Request): string {
 export function createApp(config: AppConfig): express.Express {
   const app = express();
   app.disable('x-powered-by');
-  // CORS must be registered before express.json(): when express.json() throws (413 for an
-  // oversized body, 400 for malformed JSON), Express skips every remaining non-error middleware
-  // and jumps straight to errorHandler — a cors() mounted after it would never run, so those
-  // error responses would ship without CORS headers and the browser would block the client from
-  // ever reading them.
-  if (config.corsOrigins && config.corsOrigins.length > 0) {
-    // `maxAge`: every share-viewer resolve is a cross-origin JSON POST and so needs a preflight;
-    // without it browsers cache that answer for seconds only, and each binding's poll pays an extra
-    // round trip that also counts against the edge rate limit on `/api/share/*`. Browsers cap it lower
-    // on their own (Chromium at 2 hours), so 10 minutes applies as written everywhere.
-    app.use(cors({ origin: config.corsOrigins, credentials: true, maxAge: 600 }));
-  }
   // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
   app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());

@@ -1,5 +1,5 @@
 import type { Adapter, ResolvedBinding } from '@iyulab/u-board/viewer';
-import { getApiBase, fetchWithRetry } from './api-base.js';
+import { API_BASE, fetchWithRetry } from './api-base.js';
 
 /** Mirrors the server's cap on one batch request. */
 const MAX_BATCH_BINDINGS = 500;
@@ -61,7 +61,7 @@ export class ShareResolveBatcher {
    * reports as `disconnected` for every binding in the request. */
   private async send(bindings: { connectorId: string; ref: unknown }[]): Promise<ResolvedBinding[]> {
     const res = await fetchWithRetry(
-      `${getApiBase()}/share/boards/${this.boardId}/resolve`,
+      `${API_BASE}/share/boards/${this.boardId}/resolve`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.token}` },

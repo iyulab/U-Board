@@ -38,7 +38,6 @@ function redactDatabaseUrl(url: string): string {
   return url; // ':memory:' or a local PGlite path — nothing sensitive to redact
 }
 
-const corsOrigins = process.env.UBOARD_CORS_ORIGINS?.split(',').map(s => s.trim()).filter(Boolean);
 const trustCloudflareProxy = process.env.UBOARD_TRUST_CF_PROXY === 'true';
 
 // Seconds a last-known value may still be served as stale when a connector read fails. Unset: no limit.
@@ -74,7 +73,6 @@ scheduleAuditPurge(db, auditRetentionDays);
 const app = createApp({
   db,
   sessionSecret,
-  corsOrigins,
   trustCloudflareProxy,
   sendPasswordResetEmail,
   publicUrl,

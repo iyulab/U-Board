@@ -110,14 +110,6 @@ describe('ShareConnectorAdapter', () => {
     expect(results[500]).toEqual({ value: 0, quality: 'live' });
   });
 
-  it('prefixes the batch URL with VITE_API_BASE_URL, without a double slash', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
-    (fetch as any).mockResolvedValueOnce(batchResponse([{ value: 1, quality: 'live' }]));
-    await new ShareConnectorAdapter(new ShareResolveBatcher('b1', 'tok'), 'c1').resolve({ path: '/status' });
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/share/boards/b1/resolve', expect.anything());
-    vi.unstubAllEnvs();
-  });
-
   it('tells its owner when the share link has expired, and reports the binding refused', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 410, json: async () => ({ code: 'SHARE_LINK_EXPIRED' }) });
     let expired = 0;

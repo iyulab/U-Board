@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ViewerPage, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
-import { getApiBase, fetchWithRetry, apiClock } from './api-base.js';
+import { API_BASE, fetchWithRetry, apiClock } from './api-base.js';
 import { KO_LABELS } from './u-board-labels.js';
 
 type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[] };
@@ -24,9 +24,8 @@ export function App() {
       setState('error');
       return;
     }
-    const base = getApiBase();
     // The token travels in a header from here on: the page URL is the only place it appears.
-    fetchWithRetry(`${base}/share/boards/${boardId}`, { headers: { Authorization: `Bearer ${token}` } })
+    fetchWithRetry(`${API_BASE}/share/boards/${boardId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => {
         if (res.status === 410) {
           setState('expired');

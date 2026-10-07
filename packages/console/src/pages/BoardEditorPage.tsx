@@ -92,8 +92,8 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       const expiresAt = shareLifetimeDays > 0 ? new Date(Date.now() + shareLifetimeDays * 86_400_000).toISOString() : undefined;
       const created = await createShareToken(workspaceId, boardId!, expiresAt);
       setShareError(null);
-      // The server serves the share viewer under `/share/` on this same origin; a deployment that
-      // hosts the viewer elsewhere points `VITE_SHARE_BASE_URL` at it.
+      // The server serves the share viewer under `/share/` on this same origin; local development,
+      // where the viewer runs on its own dev server, points `VITE_SHARE_BASE_URL` at it.
       const shareBase = (import.meta.env.VITE_SHARE_BASE_URL ?? `${window.location.origin}/share`).replace(/\/+$/, '');
       setNewShareUrl(`${shareBase}/?board=${boardId}&token=${created.token}`);
       await reloadShareTokens();

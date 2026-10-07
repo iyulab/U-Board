@@ -1,25 +1,5 @@
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { getApiBase, fetchWithRetry, apiClock } from './api-base.js';
-
-describe('getApiBase', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it('is /api on this origin when VITE_API_BASE_URL is unset', () => {
-    expect(getApiBase()).toBe('/api');
-  });
-
-  it('is /api on VITE_API_BASE_URL when set', () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
-    expect(getApiBase()).toBe('https://api.example.com/api');
-  });
-
-  it('strips a trailing slash from VITE_API_BASE_URL so the path has no double slash', () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
-    expect(getApiBase()).toBe('https://api.example.com/api');
-  });
-});
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fetchWithRetry, apiClock } from './api-base.js';
 
 describe('fetchWithRetry (edge cold-start hardening)', () => {
   beforeEach(() => {

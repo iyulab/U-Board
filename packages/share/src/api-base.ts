@@ -1,10 +1,7 @@
 import { serverClock } from '@iyulab/u-board/viewer';
 
-/** Where the server's API lives — `/api` on this viewer's own origin, or on `VITE_API_BASE_URL` when
- * the server is hosted elsewhere. Callers append a leading-slash path (`/share/boards/…`). */
-export function getApiBase(): string {
-  return `${(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')}/api`;
-}
+/** Where the server's API lives: `/api` on this viewer's own origin — the server serves the viewer. */
+export const API_BASE = '/api';
 
 // A scale-to-zero production host's cold start has been observed to exceed 20s before
 // the first byte arrives — longer than a typical client-side timeout — so a plain `fetch` here

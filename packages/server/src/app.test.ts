@@ -92,47 +92,9 @@ describe('API caching', () => {
 });
 
 describe('CORS', () => {
-  it('reflects an allowed origin and marks credentials allowed', async () => {
-    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
-    const res = await request(corsApp).get('/api/auth/bootstrap-status').set('Origin', 'https://app.example.com');
-    expect(res.headers['access-control-allow-origin']).toBe('https://app.example.com');
-    expect(res.headers['access-control-allow-credentials']).toBe('true');
-  });
-
-  it('lets browsers cache a preflight so a viewer resolving many bindings does not preflight each one', async () => {
-    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
-    const res = await request(corsApp)
-      .options('/api/share/boards/b1/resolve')
-      .set('Origin', 'https://app.example.com')
-      .set('Access-Control-Request-Method', 'POST')
-      .set('Access-Control-Request-Headers', 'content-type');
-    expect(res.status).toBe(204);
-    expect(res.headers['access-control-max-age']).toBe('600');
-  });
-
-  it('omits CORS headers for an origin not on the allowlist', async () => {
-    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
-    const res = await request(corsApp).get('/api/auth/bootstrap-status').set('Origin', 'https://evil.example.com');
-    expect(res.headers['access-control-allow-origin']).toBeUndefined();
-  });
-
-  it('adds no CORS middleware when corsOrigins is unset (dev/test default)', async () => {
+  it('sends no CORS headers: the console and share viewer call the API on its own origin', async () => {
     const res = await request(app).get('/api/auth/bootstrap-status').set('Origin', 'https://anything.example.com');
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
-  });
-
-  it('still carries CORS headers on a 413 PAYLOAD_TOO_LARGE response (CORS must run before express.json())', async () => {
-    const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });
-    // Well over the 10mb express.json() limit configured in createApp — triggers the same
-    // entity.too.large path exercised in the 'errorHandler / body size limit' suite above.
-    const hugeBody = { email: 'x@x.com', password: 'A'.repeat(11 * 1024 * 1024) };
-    const res = await request(corsApp)
-      .post('/api/auth/login')
-      .set('Origin', 'https://app.example.com')
-      .send(hugeBody);
-    expect(res.status).toBe(413);
-    expect(res.body.code).toBe('PAYLOAD_TOO_LARGE');
-    expect(res.headers['access-control-allow-origin']).toBe('https://app.example.com');
   });
 });
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector, listShareTokens, createShareToken, deleteShareToken, removeMember, setMemberRole, listInvitations, revokeInvitation } from './api-client.js';
 
 beforeEach(() => {
@@ -6,22 +6,10 @@ beforeEach(() => {
 });
 
 describe('API base URL', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  it('prefixes requests with VITE_API_BASE_URL when set', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com');
+  it('calls the API under /api on its own origin, sending the session cookie', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
     await getBootstrapStatus();
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/auth/bootstrap-status', expect.anything());
-  });
-
-  it('strips a trailing slash from VITE_API_BASE_URL to avoid a double slash', async () => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com/');
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
-    await getBootstrapStatus();
-    expect(fetch).toHaveBeenCalledWith('https://api.example.com/api/auth/bootstrap-status', expect.anything());
+    expect(fetch).toHaveBeenCalledWith('/api/auth/bootstrap-status', expect.objectContaining({ credentials: 'same-origin' }));
   });
 });
 
@@ -66,7 +54,7 @@ describe('signup', () => {
     expect(result).toEqual({ userId: 'u1', workspaceId: 'w1' });
     expect(fetch).toHaveBeenCalledWith(
       '/api/auth/signup',
-      expect.objectContaining({ method: 'POST', credentials: 'include' })
+      expect.objectContaining({ method: 'POST', credentials: 'same-origin' })
     );
   });
 
@@ -91,7 +79,7 @@ describe('getBootstrapStatus', () => {
   it('returns hasAnyUser from /auth/bootstrap-status', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
     await expect(getBootstrapStatus()).resolves.toEqual({ hasAnyUser: false });
-    expect(fetch).toHaveBeenCalledWith('/api/auth/bootstrap-status', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/auth/bootstrap-status', expect.objectContaining({ credentials: 'same-origin' }));
   });
 });
 
@@ -99,7 +87,7 @@ describe('board endpoints', () => {
   it('listBoards GETs /workspaces/:id/boards', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ boards: [{ id: 'b1', name: 'A', updatedAt: 't' }] }) });
     await expect(listBoards('w1')).resolves.toEqual({ boards: [{ id: 'b1', name: 'A', updatedAt: 't' }] });
-    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('createBoard POSTs {name}', async () => {
@@ -112,7 +100,7 @@ describe('board endpoints', () => {
     const doc = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'b1', name: 'A', document: doc, updatedAt: 't' }) });
     await expect(getBoard('w1', 'b1')).resolves.toEqual({ id: 'b1', name: 'A', document: doc, updatedAt: 't' });
-    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('updateBoard PUTs the given fields', async () => {
@@ -153,7 +141,7 @@ describe('membership endpoints', () => {
   it('listInvitations GETs and revokeInvitation DELETEs', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ invitations: [] }) });
     await expect(listInvitations('w1')).resolves.toEqual({ invitations: [] });
-    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/invitations', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/invitations', expect.objectContaining({ credentials: 'same-origin' }));
 
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
     await revokeInvitation('w1', 'i1');
@@ -166,7 +154,7 @@ describe('connector endpoints', () => {
     const summary = { id: 'c1', name: 'A', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't' };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ connectors: [summary] }) });
     await expect(listConnectors('w1')).resolves.toEqual({ connectors: [summary] });
-    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('createConnector POSTs the input', async () => {
@@ -203,7 +191,7 @@ describe('share token endpoints', () => {
     const summary = { id: 't1', tokenMask: 'ab12cd34', createdAt: 't' };
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ tokens: [summary] }) });
     await expect(listShareTokens('w1', 'b1')).resolves.toEqual({ tokens: [summary] });
-    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ credentials: 'include' }));
+    expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('createShareToken POSTs, with an expiry only when one is given', async () => {
