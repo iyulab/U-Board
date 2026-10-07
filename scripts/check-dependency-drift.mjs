@@ -104,6 +104,8 @@ export function findDeferral(deferrals, name, latest) {
   return deferrals.find(d => d.package === name && deferralLine(d) === line);
 }
 
+const VERDICT_SEVERITY = ['clean', 'info', 'deferred', 'drift'];
+
 // Classifies one outdated entry. Pure — the ledger and `today` (YYYY-MM-DD) are passed in, so the
 // rules are testable without the registry or the clock.
 // Verdicts: 'clean' | 'info' (reported only) | 'deferred' | 'drift' (fails under --strict).
@@ -112,13 +114,20 @@ export function classify(
   { sibling = false, deferrals = [], today = '', update = 'npm update' } = {}
 ) {
   if (current !== wanted) {
-    if (sibling) {
-      return { verdict: 'drift', reason: `\`${update}\` would pick up a newer in-range version` };
-    }
-    if (minorGap(current, wanted) >= THIRD_PARTY_IN_RANGE_MINOR_GAP) {
-      return { verdict: 'drift', reason: `in-range gap of ${THIRD_PARTY_IN_RANGE_MINOR_GAP}+ minors — run \`${update}\`` };
-    }
-    return { verdict: 'info', reason: 'small in-range gap' };
+    const inRange = sibling
+      ? { verdict: 'drift', reason: `\`${update}\` would pick up a newer in-range version` }
+      : minorGap(current, wanted) >= THIRD_PARTY_IN_RANGE_MINOR_GAP
+        ? { verdict: 'drift', reason: `in-range gap of ${THIRD_PARTY_IN_RANGE_MINOR_GAP}+ minors — run \`${update}\`` }
+        : { verdict: 'info', reason: 'small in-range gap' };
+    // The update only reaches `wanted`; the newest release may sit past the range as well. Judge that
+    // too, as if the update were done, so a dependency a breaking line behind is not reported as a
+    // routine update that would leave it there.
+    const pastRange = classify({ name, current: wanted, wanted, latest }, { sibling, deferrals, today, update });
+    if (pastRange.verdict === 'clean') return inRange;
+    const verdict = VERDICT_SEVERITY.indexOf(pastRange.verdict) > VERDICT_SEVERITY.indexOf(inRange.verdict)
+      ? pastRange.verdict
+      : inRange.verdict;
+    return { verdict, reason: `${inRange.reason}; newest ${latest}: ${pastRange.reason}` };
   }
   if (current === latest) return { verdict: 'clean', reason: null };
   // `latest` can sit behind what is installed: the package manager reports the newest version
@@ -151,7 +160,7 @@ export function classify(
 // Ledger entries that excuse nothing currently outdated.
 export function staleDeferrals(deferrals, entries) {
   return deferrals.filter(d => !entries.some(e =>
-    e.name === d.package && e.current === e.wanted
+    e.name === d.package
     && breakingLine(e.latest) === deferralLine(d) && breakingLine(e.current) !== deferralLine(d)));
 }
 
@@ -216,7 +225,8 @@ function main() {
   }
   const stale = staleDeferrals(deferrals, entries);
 
-  const line = e => `  ${e.name} (${e.dependents}): ${e.current} → ${e.current !== e.wanted ? e.wanted : e.latest} — ${e.reason}`;
+  const target = e => (e.current === e.wanted ? e.latest : e.wanted === e.latest ? e.wanted : `${e.wanted} (newest ${e.latest})`);
+  const line = e => `  ${e.name} (${e.dependents}): ${e.current} → ${target(e)} — ${e.reason}`;
   if (found.info.length > 0) {
     console.log('Behind, within tolerance (not a failure):');
     found.info.forEach(e => console.log(line(e)));

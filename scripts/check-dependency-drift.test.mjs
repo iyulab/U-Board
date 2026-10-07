@@ -109,6 +109,25 @@ test('a 0.x minor past the caret range is a breaking release: drift without a de
   assert.match(thirdParty.reason, /dependency-deferrals\.json/);
 });
 
+test('behind in range and a breaking line behind past it: the breaking line is reported, not only the update', () => {
+  // ^0.24.0 installed at 0.24.0 while 0.24.1 and 0.26.1 are out — `npm update` alone would leave it two lines behind
+  const sibling = classify({ name: '@iyulab/u-widgets', current: '0.24.0', wanted: '0.24.1', latest: '0.26.1' }, { sibling: true, today });
+  assert.equal(sibling.verdict, 'drift');
+  assert.match(sibling.reason, /npm update/);
+  assert.match(sibling.reason, /0\.26\.1/);
+  assert.match(sibling.reason, /dependency-deferrals\.json/);
+  // a third-party patch gap is only reported on its own, but not when a new major is waiting past it
+  const thirdParty = classify({ name: 'express', current: '4.22.2', wanted: '4.22.3', latest: '5.2.1' }, { today });
+  assert.equal(thirdParty.verdict, 'drift');
+  const deferrals = [{ package: 'express', major: 5, minor: 0, reason: 'x', reviewBy: '2026-10-15' }];
+  assert.equal(classify({ name: 'express', current: '4.22.2', wanted: '4.22.3', latest: '5.2.1' }, { deferrals, today }).verdict, 'deferred');
+});
+
+test('staleDeferrals: a deferral still excuses its line while the dependency is also behind in range', () => {
+  const deferrals = [{ package: 'some-lib', major: 0, minor: 5, reason: 'x', reviewBy: '2027-01-01' }];
+  assert.equal(staleDeferrals(deferrals, [{ name: 'some-lib', current: '0.4.2', wanted: '0.4.3', latest: '0.5.1' }]).length, 0);
+});
+
 test('a 0.x breaking release is deferred by an entry for that exact minor line only', () => {
   const deferrals = [{ package: 'some-lib', major: 0, minor: 5, reason: 'api rename pending', reviewBy: '2026-10-15' }];
   assert.equal(classify({ name: 'some-lib', current: '0.4.2', wanted: '0.4.2', latest: '0.5.1' }, { deferrals, today }).verdict, 'deferred');

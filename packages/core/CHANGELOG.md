@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Requires `@iyulab/u-widgets` `^0.26.1` (was `^0.24.0`). Widgets' own built-in text — region names,
+  fallback cards — now goes through the u-widgets locale table, so a host can translate it with
+  that library's `registerLocale`/`setDefaultLocale`.
+
 ## [0.4.0] - 2026-10-05
 
 ### Added
