@@ -31,8 +31,9 @@ section in the root `CHANGELOG.md` (the release notes are made from it), and pus
 version has no GitHub release yet, pushes the image to `ghcr.io/iyulab/u-board` under the version,
 attests it, moves `<major>.<minor>` and `latest` onto it where it is the newest, and creates the
 release `v<version>` with the image as a `docker save` archive and its checksum. A version's tag is
-pushed once: if the job fails after that, re-run that workflow run — it releases the image already in
-the registry. A later commit carrying the same unreleased version is refused rather than released as
+pushed once: if the job fails after that, re-run that workflow run — or, when GitHub will not retry
+it, run the CI workflow on `main` by hand (`workflow_dispatch`) — and it releases the image already
+in the registry. A later commit carrying the same unreleased version is refused rather than released as
 an image it did not build; give it a new version. `npm run release:image` builds the same image and release files locally without
 pushing anything.
 

@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # By hand on main: finishes a release whose run cannot be re-run (GitHub refuses to retry a run that
+  # failed while scheduling its jobs). Publishing stays as safe as on a push — see the `image` job.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -86,7 +89,7 @@ jobs:
   publish:
     name: publish
     needs: [verify, node-floor]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -141,7 +144,7 @@ jobs:
   image:
     name: image
     needs: [verify, node-floor]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
