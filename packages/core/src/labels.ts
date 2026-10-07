@@ -66,6 +66,17 @@ export interface UBoardLabels {
   previewBinding: string;
   previewFailed: string;
   saveBinding: string;
+  /** The value-map part of the binding form (`Binding.map`). `{n}` is replaced by the row number. */
+  valueMapHeading: string;
+  mapFrom: string;
+  mapTo: string;
+  addMapping: string;
+  removeMapping: string;
+  /** The value shown for a source value with no mapping; left empty, such a value shows as it comes. */
+  mapOtherwise: string;
+  mapOtherwisePlaceholder: string;
+  /** Marks a listed binding that has a value map. */
+  mapped: string;
   previewValue: string;
 
   // Decoration panel
@@ -133,6 +144,14 @@ export const DEFAULT_LABELS: UBoardLabels = {
   previewBinding: 'Preview',
   previewFailed: 'The preview request failed',
   saveBinding: 'Save binding',
+  valueMapHeading: 'Value map',
+  mapFrom: 'Source value {n}',
+  mapTo: 'Shown as {n}',
+  addMapping: 'Add mapping',
+  removeMapping: 'Remove mapping {n}',
+  mapOtherwise: 'Anything else',
+  mapOtherwisePlaceholder: 'as it comes',
+  mapped: 'mapped',
   previewValue: 'Value',
 
   decorationHeading: 'Decoration',

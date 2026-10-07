@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { Adapter, ResolvedBinding } from '../adapter.js';
-import type { Node, Widget, Binding } from '../view-document.js';
+import { applyValueMap, type Adapter, type ResolvedBinding } from '../adapter.js';
+import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
@@ -35,10 +35,41 @@ interface BindingDraft {
   path: string;
   valuePath: string;
   demoRef: string;
+  /** The value map as the form edits it — rows of source value → shown value, and the value for
+   * anything else (empty: shown as it comes). Written as text: the map's usual job is a status
+   * word or level. */
+  mappings: { from: string; to: string }[];
+  otherwise: string;
 }
 
 function emptyDraft(connectorId: string): BindingDraft {
-  return { propPath: '', connectorId, path: '', valuePath: '', demoRef: '' };
+  return { propPath: '', connectorId, path: '', valuePath: '', demoRef: '', mappings: [], otherwise: '' };
+}
+
+/** One field per line, its label above-left of it — inline, a label wrapped onto the line before
+ * its own field once the panel is narrower than the row. */
+const FIELD_STYLE: React.CSSProperties = { display: 'block', margin: '2px 0' };
+
+/** The form's text for a mapped value — itself when it is text, its JSON otherwise. */
+const asText = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value));
+
+function draftMap(map: ValueMap | undefined): Pick<BindingDraft, 'mappings' | 'otherwise'> {
+  if (!map) return { mappings: [], otherwise: '' };
+  return {
+    mappings: Object.entries(map.values).map(([from, to]) => ({ from, to: asText(to) })),
+    otherwise: 'otherwise' in map ? asText(map.otherwise) : '',
+  };
+}
+
+/** The `Binding.map` the form describes, or `undefined` when it describes none. A row without a
+ * source value is left out. */
+function mapFromDraft(draft: BindingDraft): ValueMap | undefined {
+  const rows = draft.mappings.filter(row => row.from !== '');
+  if (rows.length === 0 && draft.otherwise === '') return undefined;
+  return {
+    values: Object.fromEntries(rows.map(row => [row.from, row.to])),
+    ...(draft.otherwise !== '' && { otherwise: draft.otherwise }),
+  };
 }
 
 /** Picks which adapter the binding form should default to: the first non-demo adapter when one
@@ -52,10 +83,11 @@ function initialConnectorId(adapters: readonly Adapter[]): string {
 
 function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
   const ref = binding.ref as { path?: string; valuePath?: string } | string;
+  const map = draftMap(binding.map);
   if (typeof ref === 'string') {
-    return { propPath, connectorId: binding.adapter, path: '', valuePath: '', demoRef: ref };
+    return { propPath, connectorId: binding.adapter, path: '', valuePath: '', demoRef: ref, ...map };
   }
-  return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', demoRef: '' };
+  return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', demoRef: '', ...map };
 }
 
 export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS }: PropertyPanelProps) {
@@ -133,6 +165,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
     }
   };
 
+  const previewMap = mapFromDraft(draft);
+
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
   const previewLabel = preview
     ? describeQuality(
@@ -165,7 +199,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   const handleSaveBinding = () => {
     if (!draft.propPath || !selectedAdapter) return;
     const bindings = { ...node.widget.bindings };
-    bindings[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef() };
+    const map = mapFromDraft(draft);
+    bindings[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef(), ...(map && { map }) };
     if (editingPropPath !== null && editingPropPath !== draft.propPath) {
       delete bindings[editingPropPath];
     }
@@ -197,7 +232,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   return (
     <div>
       <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.propertiesHeading}</h2>
-      <label>
+      <label style={FIELD_STYLE}>
         {labels.widgetType}
         <select value={node.widget.type} onChange={handleTypeChange}>
           {WIDGET_TYPES.map(t => (
@@ -226,7 +261,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
         {bindingEntries.map(([propPath, binding]) => (
           <li key={propPath}>
             <code>{propPath}</code> {'→ '}
-            <span>{labelFor(binding.adapter, connectorLabels)}</span>{' '}
+            <span>{labelFor(binding.adapter, connectorLabels)}</span>
+            {binding.map && <span style={{ fontSize: 11, color: '#64748b' }}> · {labels.mapped}</span>}{' '}
             <button type="button" onClick={() => handleEditBinding(propPath, binding)}>
               {labels.editBinding}
             </button>{' '}
@@ -241,11 +277,11 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
         <p style={{ fontSize: 12 }}>{labels.noDataSources}</p>
       ) : (
         <div>
-          <label>
+          <label style={FIELD_STYLE}>
             {labels.propPath}
             <input value={draft.propPath} onChange={e => setDraft({ ...draft, propPath: e.target.value })} placeholder="data.value" />
           </label>
-          <label>
+          <label style={FIELD_STYLE}>
             {labels.dataSource}
             <select value={draft.connectorId} onChange={e => setDraft({ ...draft, connectorId: e.target.value })}>
               {adapters.map(a => (
@@ -256,17 +292,17 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
             </select>
           </label>
           {isDemo ? (
-            <label>
+            <label style={FIELD_STYLE}>
               {labels.demoReference}
               <input value={draft.demoRef} onChange={e => setDraft({ ...draft, demoRef: e.target.value })} placeholder="pump-a.state" />
             </label>
           ) : (
             <>
-              <label>
+              <label style={FIELD_STYLE}>
                 {labels.path}
                 <input value={draft.path} onChange={e => setDraft({ ...draft, path: e.target.value })} placeholder="/pumps/a" />
               </label>
-              <label>
+              <label style={FIELD_STYLE}>
                 {labels.valuePath}
                 <input value={draft.valuePath} onChange={e => setDraft({ ...draft, valuePath: e.target.value })} placeholder="/status" />
               </label>
@@ -279,6 +315,35 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
               )}
             </>
           )}
+          <fieldset style={{ border: '1px solid #e2e8f0', borderRadius: 4, margin: '8px 0', padding: '4px 8px', minWidth: 0 }}>
+            <legend style={{ fontSize: 12 }}>{labels.valueMapHeading}</legend>
+            {draft.mappings.map((row, i) => {
+              const n = String(i + 1);
+              const setRow = (change: Partial<{ from: string; to: string }>) =>
+                setDraft(d => ({ ...d, mappings: d.mappings.map((r, j) => (j === i ? { ...r, ...change } : r)) }));
+              return (
+                <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <input style={{ flex: 1, minWidth: 0 }} aria-label={labels.mapFrom.replace('{n}', n)} value={row.from} onChange={e => setRow({ from: e.target.value })} placeholder="Fault" />
+                  <span aria-hidden="true">→</span>
+                  <input style={{ flex: 1, minWidth: 0 }} aria-label={labels.mapTo.replace('{n}', n)} value={row.to} onChange={e => setRow({ to: e.target.value })} placeholder="error" />
+                  <button
+                    type="button"
+                    aria-label={labels.removeMapping.replace('{n}', n)}
+                    onClick={() => setDraft(d => ({ ...d, mappings: d.mappings.filter((_, j) => j !== i) }))}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => setDraft(d => ({ ...d, mappings: [...d.mappings, { from: '', to: '' }] }))}>
+              {labels.addMapping}
+            </button>
+            <label style={FIELD_STYLE}>
+              {labels.mapOtherwise}
+              <input value={draft.otherwise} onChange={e => setDraft({ ...draft, otherwise: e.target.value })} placeholder={labels.mapOtherwisePlaceholder} />
+            </label>
+          </fieldset>
           <button type="button" onClick={handlePreview}>
             {labels.previewBinding}
           </button>
@@ -289,7 +354,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           {preview && (
             <p style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }} data-quality={preview.quality}>
               <span>
-                {labels.previewValue}: {JSON.stringify(preview.value)} ({preview.quality})
+                {labels.previewValue}: {JSON.stringify(preview.value)}
+                {previewMap && preview.quality !== 'disconnected' && ` → ${JSON.stringify(applyValueMap(previewMap, preview.value))}`} ({preview.quality})
               </span>
               {previewLabel && (
                 <span style={{ ...QUALITY_FRAME_STYLE[preview.quality], borderRadius: 4, padding: '0 4px', fontSize: 11 }}>

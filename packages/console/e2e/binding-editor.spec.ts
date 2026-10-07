@@ -55,6 +55,23 @@ test('binds a node to a live value via the property panel and its path explorer'
     // 프롭 경로 입력의 placeholder 등과 섞이지 않게 바인딩 목록의 <code>data.value</code> 항목만 exact로 고른다.
     await expect(page.getByText('data.value', { exact: true })).toBeVisible();
 
+    // 같은 필드를 한 번 더 — 이번엔 값 매핑으로 위젯의 수준(level)에. 원천의 "running"이 "success"로 보여야 한다.
+    await page.getByLabel('프롭 경로').fill('data.level');
+    await page.getByLabel('데이터소스').selectOption({ label: 'Mock Plant API' });
+    await page.getByLabel('요청 경로', { exact: true }).fill('/status');
+    await page.getByLabel('값 경로').fill('/status');
+    await page.getByText('매핑 추가', { exact: true }).click();
+    await page.getByLabel('원천 값 1').fill('running');
+    await page.getByLabel('표시 값 1').fill('success');
+    await page.getByLabel('그 밖의 값').fill('neutral');
+    await page.getByText('미리보기', { exact: true }).click();
+    await expect(page.getByText('값: "running" → "success" (live)')).toBeVisible();
+    await page.getByText('바인딩 저장', { exact: true }).click();
+    await expect(page.getByText('data.level', { exact: true })).toBeVisible();
+    await expect(page.getByText('· 매핑됨')).toBeVisible();
+    // 미리보기 캔버스의 위젯이 매핑된 수준으로 그려진다.
+    await expect(page.locator('[data-level="success"]').first()).toBeVisible();
+
     await page.getByRole('button', { name: '저장', exact: true }).click();
     // board-crud.spec.ts와 동일한 패턴: 저장 PUT이 실제로 반영됐다는 신호(저장됨)를 기다린 뒤에만
     // reload한다 — 그렇지 않으면 저장 요청이 아직 진행 중일 때 reload가 그것을 취소할 수 있다.
@@ -65,6 +82,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await clickFirstNode(page);
     await expect(page.getByLabel('위젯 타입')).toHaveValue('status');
     await expect(page.getByText('data.value', { exact: true })).toBeVisible();
+    await expect(page.getByText('· 매핑됨')).toBeVisible(); // 저장된 문서에 매핑이 남았다
   } finally {
     mockServer.close();
   }

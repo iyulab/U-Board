@@ -48,6 +48,9 @@ export interface AuthoringViewProps {
   showDocumentSource?: boolean;
 }
 
+/** Width of the property/decoration panel beside the editor and preview (CSS px). */
+const PANEL_WIDTH = 320;
+
 /**
  * The authoring surface: a canvas-kit `KonvaDesigner` for adding/dragging/selecting nodes, a live
  * preview rendered through the same path a real viewer would use (`resolveDocument` +
@@ -291,7 +294,9 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
             <p>{labels.resolving}</p>
           )}
         </div>
-        <div>
+        {/* A fixed width: sized by its content, the form's inline fields would widen the panel until the
+            editor and preview — which give way (`minWidth: 0`) — were squeezed to a sliver. */}
+        <div style={{ flex: `0 0 ${PANEL_WIDTH}px`, minWidth: 0, overflowY: 'auto' }}>
           {selectionCount > 1 ? (
             <p>{labels.multipleSelected.replace('{count}', String(selectionCount))}</p>
           ) : selectedDecoration ? (

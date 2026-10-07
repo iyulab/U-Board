@@ -16,9 +16,19 @@ All notable changes to this package are documented here. The format follows
 - `Binding.map` (`ValueMap`): translates a source's value into the one a prop takes — `"Fault"` into
   a status level `"error"` — looked up by the value's text, with `otherwise` for a value with no
   entry (else it passes through). Applied to a shown (`live`/`stale`) value before it reaches the
-  prop; `validateViewDocument` checks its shape. `applyValueMap(map, value)` exported.
+  prop; `validateViewDocument` checks its shape. `applyValueMap(map, value)` exported. The binding
+  form of `AuthoringView` edits it — rows of source value → shown value and a value for anything
+  else — previews the mapped value, and marks a mapped binding in the list (labels
+  `valueMapHeading`, `mapFrom`, `mapTo`, `addMapping`, `removeMapping`, `mapOtherwise`,
+  `mapOtherwisePlaceholder`, `mapped`).
 - Labels `lastUpdated`, `notUpdating` and `time` (a time-of-day formatter), and `timeText(locale)` to
   build one.
+
+### Fixed
+
+- `AuthoringView`'s property panel has a fixed width (320 px). Sized by its content, the binding
+  form's fields widened it until the editor and the live preview were squeezed to a sliver. Its
+  fields are one per line, each with its label.
 
 ### Changed
 

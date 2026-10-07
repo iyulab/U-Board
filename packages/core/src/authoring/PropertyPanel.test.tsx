@@ -334,4 +334,58 @@ describe('PropertyPanel bindings', () => {
     // Verify the stale tree is no longer rendered
     expect(screen.queryByText('load: 73')).not.toBeInTheDocument();
   });
+
+  describe('value map', () => {
+    const fillBinding = () => {
+      fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.level' } });
+      fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/a' } });
+      fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
+    };
+
+    it('saves the mappings and the value for anything else with the binding', () => {
+      const onChange = vi.fn();
+      render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+      fillBinding();
+      fireEvent.click(screen.getByText('Add mapping'));
+      fireEvent.change(screen.getByLabelText('Source value 1'), { target: { value: 'running' } });
+      fireEvent.change(screen.getByLabelText('Shown as 1'), { target: { value: 'success' } });
+      fireEvent.click(screen.getByText('Add mapping'));
+      fireEvent.change(screen.getByLabelText('Source value 2'), { target: { value: 'fault' } });
+      fireEvent.change(screen.getByLabelText('Shown as 2'), { target: { value: 'error' } });
+      fireEvent.change(screen.getByLabelText('Anything else'), { target: { value: 'neutral' } });
+      fireEvent.click(screen.getByText('Save binding'));
+
+      expect(onChange.mock.calls[0][0].bindings['data.level']).toEqual({
+        adapter: 'connector-1',
+        ref: { path: '/pumps/a', valuePath: 'status' },
+        map: { values: { running: 'success', fault: 'error' }, otherwise: 'neutral' },
+      });
+    });
+
+    it('saves no map when no mapping is left and anything else is empty', () => {
+      const onChange = vi.fn();
+      const node = statusNode({
+        'data.level': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' }, map: { values: { running: 'success' } } },
+      });
+      render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+      expect(screen.getByText(/mapped/)).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Edit'));
+      expect(screen.getByLabelText('Source value 1')).toHaveValue('running');
+      expect(screen.getByLabelText('Shown as 1')).toHaveValue('success');
+      fireEvent.click(screen.getByRole('button', { name: 'Remove mapping 1' }));
+      fireEvent.click(screen.getByText('Save binding'));
+      expect(onChange.mock.calls[0][0].bindings['data.level']).toEqual({ adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } });
+    });
+
+    it('previews the value as the map will show it', async () => {
+      render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+      fillBinding();
+      fireEvent.click(screen.getByText('Add mapping'));
+      fireEvent.change(screen.getByLabelText('Source value 1'), { target: { value: 'running' } });
+      fireEvent.change(screen.getByLabelText('Shown as 1'), { target: { value: 'success' } });
+      fireEvent.click(screen.getByText('Preview'));
+      expect(await screen.findByText(/"running" → "success"/)).toBeInTheDocument();
+    });
+  });
 });
+
