@@ -131,6 +131,14 @@ export function createApp(config: AppConfig): express.Express {
   // Every API route lives under `/api`, so the web apps can own every other path — the console's
   // client-side routes and the share viewer's `/share/` — on the same origin.
   const api = express.Router();
+  // No API answer is stored by a browser or a proxy. What an answer says depends on the session or
+  // the share-link token, and a share token travels in a header — so every link to one board fetches
+  // the same URL, and a stored answer for one (an expired link's 410, which browsers keep as fresh
+  // without being told) would answer the next. First, so refusals (429, 404) carry it too.
+  api.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    next();
+  });
   // Unauthenticated liveness/readiness check — a DB round-trip, not just "the process is up", so
   // it catches a listening-but-stuck app (e.g. an exhausted connection pool) that a bare TCP probe
   // would miss. Registered before auth/rate-limiting so it stays cheap to poll.

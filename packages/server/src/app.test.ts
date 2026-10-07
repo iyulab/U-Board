@@ -79,6 +79,18 @@ describe('errorHandler / body size limit', () => {
   });
 });
 
+describe('API caching', () => {
+  // A share link's token travels in a header, so every link to one board fetches the same URL — a
+  // stored answer for one token (an expired link's 410) would answer the next. No API answer is stored.
+  it('marks every API answer, success or refusal, as not to be stored', async () => {
+    const app = createApp({ db, sessionSecret: SECRET });
+    for (const path of ['/api/share/boards/b1', '/api/auth/me', '/api/no-such-route']) {
+      const res = await request(app).get(path).set('Authorization', 'Bearer some-token');
+      expect(res.headers['cache-control']).toBe('no-store');
+    }
+  });
+});
+
 describe('CORS', () => {
   it('reflects an allowed origin and marks credentials allowed', async () => {
     const corsApp = createApp({ db, sessionSecret: SECRET, corsOrigins: ['https://app.example.com'] });

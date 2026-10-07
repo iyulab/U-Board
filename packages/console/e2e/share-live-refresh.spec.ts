@@ -7,7 +7,7 @@ import type { AddressInfo } from 'node:net';
 // must say so rather than keep showing the last values. The page's clock is driven forward to reach
 // the next poll; the server's is real, so the test also waits out the server's reuse of a recent
 // upstream read (10 s) before asking for the new value.
-test('an open shared board follows its source and says when its link expires', async ({ page, browser }) => {
+test('an open shared board follows its source, says when its link expires, and opens again with a new link', async ({ page, browser }) => {
   test.setTimeout(60_000);
   let status = 'Running';
   const mockServer = createServer((_req, res) => {
@@ -68,6 +68,14 @@ test('an open shared board follows its source and says when its link expires', a
     await sharePage.clock.fastForward(30_000);
     expect((await expiredPoll).status()).toBe(410);
     await expect(sharePage.getByText('이 공유 링크는 만료되었습니다', { exact: false })).toBeVisible();
+
+    // The owner issues a new link for the same board. The token travels in a header, so both links
+    // fetch the same URL — the expired one's 410 must not be what this browser answers the new one with.
+    await sharePage.reload();
+    await expect(sharePage.getByText('이 공유 링크는 만료되었습니다', { exact: false })).toBeVisible();
+    const renewed = await (await page.request.post(`/api/workspaces/${workspaceId}/boards/${board.id}/share-tokens`, { data: {} })).json();
+    await sharePage.goto(`http://localhost:5176/?board=${board.id}&token=${renewed.token}`);
+    await expect(sharePage.getByText('Fault')).toBeVisible();
     await shareContext.close();
   } finally {
     mockServer.close();
