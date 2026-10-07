@@ -9,6 +9,7 @@ import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
 import { findConnector } from '../db/connectors.js';
+import { secretBox } from '../secret-box.js';
 
 const SECRET = 'test-secret-at-least-16-chars';
 let db: DbClient;
@@ -406,5 +407,30 @@ describe('oauth2-client-credentials connectors', () => {
     expect(res.body).not.toHaveProperty('oauthTokenUrl');
     const stored = await findConnector(db, workspaceId, created.id);
     expect(stored).toMatchObject({ authType: 'bearer', authValue: 'new-token', oauthTokenUrl: undefined, oauthClientId: undefined });
+  });
+});
+
+describe('connector credentials sealed with the installation key', () => {
+  it('reaches the data source with the credential, while the database holds it sealed', async () => {
+    const seen: string[] = [];
+    const sealedApp = createApp({
+      db, sessionSecret: SECRET, secrets: secretBox('a-secrets-key-of-at-least-32-characters'),
+      connectorFetch: async (_input, init) => {
+        seen.push(new Headers(init?.headers).get('Authorization') ?? '');
+        return new Response(JSON.stringify({ status: 'Running' }), { headers: { 'Content-Type': 'application/json' } });
+      },
+    });
+    const { body: created } = await request(sealedApp)
+      .post(`/api/workspaces/${workspaceId}/connectors`).set('Cookie', ownerCookie)
+      .send({ name: 'API', baseUrl: 'https://api.example.com', authType: 'bearer', authValue: 'secret123' });
+
+    const { rows } = await db.query<{ auth_value: string }>('SELECT auth_value FROM connectors WHERE id = $1', [created.id]);
+    expect(rows[0].auth_value).not.toContain('secret123');
+
+    const res = await request(sealedApp)
+      .post(`/api/workspaces/${workspaceId}/connectors/${created.id}/resolve`).set('Cookie', memberCookie)
+      .send({ ref: { path: '/pumps/a', valuePath: '/status' } });
+    expect(res.body).toMatchObject({ value: 'Running', quality: 'live' });
+    expect(seen).toEqual(['Bearer secret123']);
   });
 });

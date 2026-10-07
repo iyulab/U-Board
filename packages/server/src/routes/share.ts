@@ -60,7 +60,7 @@ function isDeclaredBinding(doc: ViewDocument, connectorId: string, ref: unknown)
 }
 
 export function createShareRouter(config: AppConfig, resolveState: ResolveState): Router {
-  const { db } = config;
+  const { db, secrets } = config;
   const router = Router();
 
   /** The share link's token for this board, from `Authorization: Bearer <token>` — a header, so it
@@ -126,7 +126,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
 
     const connectors = new Map<string, Promise<Connector | undefined>>();
     const connectorOf = (id: string) => {
-      if (!connectors.has(id)) connectors.set(id, findConnector(db, token.workspaceId, id));
+      if (!connectors.has(id)) connectors.set(id, findConnector(db, token.workspaceId, id, secrets));
       return connectors.get(id)!;
     };
     const results = await Promise.all(

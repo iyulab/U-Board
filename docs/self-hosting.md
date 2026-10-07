@@ -17,7 +17,7 @@ docker build -f packages/server/Dockerfile -t u-board .
 ```sh
 docker run -d --name u-board -p 4000:4000 \
   -e UBOARD_DATABASE_URL='postgres://u_board:<password>@db.example.com:5432/u_board?sslmode=verify-full' \
-  -e UBOARD_SESSION_SECRET='<a long random string>' \
+  -e UBOARD_SESSION_SECRET='<a long random string>'   -e UBOARD_SECRETS_KEY='<another long random string>' \
   u-board
 ```
 
@@ -55,6 +55,7 @@ address. Records older than `UBOARD_AUDIT_RETENTION_DAYS` are deleted.
 |---|---|---|
 | `UBOARD_DATABASE_URL` | yes | A `postgres://` or `postgresql://` URL for a PostgreSQL database the server owns — it creates and upgrades its tables on start. Say `sslmode=verify-full` explicitly for a TLS connection that checks the certificate. Anything else is a directory path for an embedded PostgreSQL (PGlite) — enough for a trial or a small single-machine installation; put it on a volume (`-v u-board-data:/data -e UBOARD_DATABASE_URL=/data/u-board`). |
 | `UBOARD_SESSION_SECRET` | yes | Signs session cookies; at least 16 characters. Changing it signs everyone out. |
+| `UBOARD_SECRETS_KEY` | yes | Seals connector credentials in the database (AES-256-GCM), so a copy of the database does not hand them out; at least 32 characters (`openssl rand -base64 32`). Keep it apart from the session secret and from backups. The server seals credentials stored before it was set when it starts, and refuses to start with a key other than the one they were sealed with. A lost key leaves the credentials unreadable: clear them (`UPDATE connectors SET auth_value = NULL`) and have owners enter them again. |
 | `PORT` | no | Port to listen on (default `4000`). |
 | `UBOARD_STALE_MAX_AGE_SECONDS` | no | How old a connector's last value may be and still be shown as stale when the data source stops answering. Past it, the binding shows as disconnected. Unset: no limit — the value is shown however old, with its age. |
 | `UBOARD_SHARE_FRAME_ANCESTORS` | no | Which pages may embed a share link in a frame, as a CSP `frame-ancestors` source list. Default `https:` (any page served over HTTPS). An intranet page served over plain HTTP needs to be named, e.g. `http://hmi.example.com https:`. |
@@ -148,10 +149,10 @@ exits.
 ## Backup and restore
 
 Everything an installation keeps is in its database: accounts, workspaces and their members, boards,
-connectors with their credentials, share links, and the activity record. A backup therefore holds
-connector credentials as stored — keep it as you keep those credentials. Keep
-`UBOARD_SESSION_SECRET` alongside it: an installation restored with a different one works, but
-signs everyone out.
+connectors with their credentials, share links, and the activity record. Connector credentials are
+sealed with `UBOARD_SECRETS_KEY`, so a backup does not hand them out — and is restored with that
+same key, which belongs in a different place from the backup. Restored with a different
+`UBOARD_SESSION_SECRET`, an installation works but signs everyone out.
 
 With PostgreSQL, use its own tools — `pg_dump` while the server runs, and restore into an empty
 database before the server first starts on it.

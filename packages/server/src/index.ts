@@ -13,12 +13,21 @@ import { workspaceCreationFromEnv } from './workspace-creation.js';
 import { auditRetentionDaysFromEnv, scheduleAuditPurge } from './audit-retention.js';
 import { connectorAddressesFromEnv, createConnectorFetch } from './connector-network.js';
 import { exitOnStopSignal } from './shutdown.js';
+import { secretBox, SecretUnreadableError } from './secret-box.js';
+import { sealStoredConnectorSecrets } from './db/connectors.js';
 
 const databaseUrl = process.env.UBOARD_DATABASE_URL ?? './u-board-data';
 const sessionSecret = process.env.UBOARD_SESSION_SECRET;
 if (!sessionSecret || sessionSecret.length < 16) {
   throw new Error('UBOARD_SESSION_SECRET must be set to a string of at least 16 characters');
 }
+// Seals connector credentials in the database — a key of its own, so changing the session secret
+// (which signs everyone out) never makes stored credentials unreadable.
+const secretsKey = process.env.UBOARD_SECRETS_KEY;
+if (!secretsKey) {
+  throw new Error('UBOARD_SECRETS_KEY must be set (at least 32 characters, e.g. `openssl rand -base64 32`)');
+}
+const secrets = secretBox(secretsKey);
 
 // Without Sendway settings, `createApp` falls back to its dev-mode log-the-token default.
 const sendwayConfig = sendwayConfigFromEnv(process.env);
@@ -70,6 +79,16 @@ const webApps =
     : undefined;
 
 const db = await createDb(databaseUrl);
+try {
+  const sealed = await sealStoredConnectorSecrets(db, secrets);
+  if (sealed > 0) console.log(`[server] sealed ${sealed} connector credential(s) stored before sealing existed`);
+} catch (err) {
+  if (!(err instanceof SecretUnreadableError)) throw err;
+  throw new Error(
+    'UBOARD_SECRETS_KEY is not the key the stored connector credentials were sealed with — start with that key, ' +
+      'or (if it is lost) clear the credentials so owners can enter them again: UPDATE connectors SET auth_value = NULL'
+  );
+}
 scheduleAuditPurge(db, auditRetentionDays);
 const app = createApp({
   db,
@@ -81,6 +100,7 @@ const app = createApp({
   staleMaxAgeMs,
   workspaceCreation,
   connectorFetch,
+  secrets,
   webApps,
 });
 

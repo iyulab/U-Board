@@ -139,7 +139,7 @@ function toSummary(connector: Connector): ConnectorSummary {
 }
 
 export function createConnectorsRouter(config: AppConfig, resolveState: ResolveState): Router {
-  const { db, sessionSecret } = config;
+  const { db, sessionSecret, secrets } = config;
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent mount path
   router.use(requireAuth(db, sessionSecret));
 
@@ -163,7 +163,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       actorUserId: req.userId!,
       name: body.name,
       ...settings,
-    });
+    }, secrets);
     res.status(201).json(toSummary(connector));
   });
 
@@ -176,7 +176,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
     const workspaceId = pathParam(req, 'workspaceId');
     let candidate: Connector;
     if (body.connectorId !== undefined) {
-      const existing = typeof body.connectorId === 'string' ? await findConnector(db, workspaceId, body.connectorId) : undefined;
+      const existing = typeof body.connectorId === 'string' ? await findConnector(db, workspaceId, body.connectorId, secrets) : undefined;
       if (!existing) {
         res.status(404).json({ code: 'NOT_FOUND' });
         return;
@@ -225,7 +225,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
     // Auth validation runs against the *merged* state, so the existing connector has to be read
     // first: `{authType: 'bearer'}` with no `authValue` is valid when a secret is already stored
     // (a rename that leaves the secret alone) and invalid when there is none to fall back on.
-    const existing = await findConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId);
+    const existing = await findConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId, secrets);
     if (!existing) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
@@ -235,7 +235,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       res.status(400).json({ code: changes });
       return;
     }
-    const updated = await updateConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId, changes, req.userId!);
+    const updated = await updateConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId, changes, req.userId!, secrets);
     if (!updated) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
@@ -255,7 +255,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
   });
 
   router.post('/:connectorId/resolve', requireWorkspaceMember(db), async (req, res) => {
-    const connector = await findConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId);
+    const connector = await findConnector(db, pathParam(req, 'workspaceId'), req.params.connectorId, secrets);
     if (!connector) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;

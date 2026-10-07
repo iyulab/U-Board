@@ -43,6 +43,7 @@ export default defineConfig({
       env: {
         UBOARD_DATABASE_URL: ':memory:',
         UBOARD_SESSION_SECRET: 'e2e-test-secret-32-chars-long',
+        UBOARD_SECRETS_KEY: 'e2e-test-secrets-key-at-least-32-chars',
         UBOARD_CONNECTOR_ADDRESSES: 'any',
         SENDWAY_API_KEY: 'e2e-sendway-key',
         SENDWAY_BASE_URL: 'http://127.0.0.1:4011',

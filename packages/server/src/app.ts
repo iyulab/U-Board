@@ -1,4 +1,5 @@
 import express, { type Request, type Response, type NextFunction } from 'express';
+import type { SecretBox } from './secret-box.js';
 import cookieParser from 'cookie-parser';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { DbClient } from './db.js';
@@ -47,6 +48,9 @@ export interface AppConfig {
    *  them to the addresses the installation allows (`createConnectorFetch`). Unset: the global
    *  `fetch`, unrestricted (tests). */
   connectorFetch?: typeof fetch;
+  /** Seals connector credentials in the database (`secretBox(UBOARD_SECRETS_KEY)`). Unset: stored as
+   *  given (tests). */
+  secrets?: SecretBox;
   /** Who may create workspaces — instance operators only (default) or every account. */
   workspaceCreation?: WorkspaceCreation;
   /** The built console and share viewer to serve next to the API, from one origin: the share

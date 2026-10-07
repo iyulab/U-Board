@@ -2,6 +2,7 @@ import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import type { ClientAuthMethod } from '../oauth-client-credentials.js';
 import { recordAuditEvent } from './audit.js';
+import { UNSEALED, isSealed, type SecretBox } from '../secret-box.js';
 
 export type ConnectorAuthType = 'none' | 'bearer' | 'header' | 'oauth2-client-credentials';
 
@@ -77,7 +78,7 @@ function oauthSettingsFromRow(row: OAuthColumns): ConnectorOAuthSettings {
   };
 }
 
-function rowToConnector(row: ConnectorRow): Connector {
+function rowToConnector(row: ConnectorRow, secrets: SecretBox): Connector {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
@@ -86,7 +87,7 @@ function rowToConnector(row: ConnectorRow): Connector {
     baseUrl: row.base_url,
     authType: row.auth_type as ConnectorAuthType,
     authHeaderName: row.auth_header_name ?? undefined,
-    authValue: row.auth_value ?? undefined,
+    authValue: row.auth_value === null ? undefined : secrets.open(row.auth_value),
     ...oauthSettingsFromRow(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -103,7 +104,8 @@ export async function createConnector(
     authHeaderName?: string;
     authValue?: string;
     actorUserId: string;
-  } & ConnectorOAuthSettings
+  } & ConnectorOAuthSettings,
+  secrets: SecretBox = UNSEALED
 ): Promise<Connector> {
   const now = new Date().toISOString();
   const connector: Connector = {
@@ -129,7 +131,7 @@ export async function createConnector(
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
         connector.id, connector.workspaceId, connector.name, connector.type, connector.baseUrl,
-        connector.authType, connector.authHeaderName ?? null, connector.authValue ?? null,
+        connector.authType, connector.authHeaderName ?? null, connector.authValue === undefined ? null : secrets.seal(connector.authValue),
         connector.oauthTokenUrl ?? null, connector.oauthClientId ?? null, connector.oauthScope ?? null,
         connector.oauthClientAuth ?? null, connector.createdAt, connector.updatedAt,
       ]
@@ -163,9 +165,31 @@ export async function listConnectorsForWorkspace(db: DbClient, workspaceId: stri
   }));
 }
 
-export async function findConnector(db: DbClient, workspaceId: string, connectorId: string): Promise<Connector | undefined> {
+export async function findConnector(db: DbClient, workspaceId: string, connectorId: string, secrets: SecretBox = UNSEALED): Promise<Connector | undefined> {
   const { rows } = await db.query<ConnectorRow>(`SELECT * FROM connectors WHERE id = $1 AND workspace_id = $2`, [connectorId, workspaceId]);
-  return rows[0] ? rowToConnector(rows[0]) : undefined;
+  return rows[0] ? rowToConnector(rows[0], secrets) : undefined;
+}
+
+/** Seals every connector secret still stored as given — run when the server starts, so values from
+ *  before sealing existed are sealed too — and checks that each sealed one opens with this key.
+ *  Throws `SecretUnreadableError` when one does not: the installation was started with another key
+ *  than its credentials were sealed under, which would otherwise surface later as failing reads. */
+export async function sealStoredConnectorSecrets(db: DbClient, secrets: SecretBox): Promise<number> {
+  return db.withTransaction(async tx => {
+    const { rows } = await tx.query<{ id: string; auth_value: string }>(
+      `SELECT id, auth_value FROM connectors WHERE auth_value IS NOT NULL FOR UPDATE`
+    );
+    let sealed = 0;
+    for (const row of rows) {
+      if (isSealed(row.auth_value)) {
+        secrets.open(row.auth_value);
+        continue;
+      }
+      await tx.query(`UPDATE connectors SET auth_value = $1 WHERE id = $2`, [secrets.seal(row.auth_value), row.id]);
+      sealed++;
+    }
+    return sealed;
+  });
 }
 
 /** A change to a connector's settings. For each field `undefined` leaves the stored value alone and
@@ -205,9 +229,10 @@ export async function updateConnector(
   workspaceId: string,
   connectorId: string,
   changes: ConnectorChanges,
-  actorUserId: string
+  actorUserId: string,
+  secrets: SecretBox = UNSEALED
 ): Promise<Connector | undefined> {
-  return db.withTransaction(tx => updateConnectorIn(tx, workspaceId, connectorId, changes, actorUserId));
+  return db.withTransaction(tx => updateConnectorIn(tx, workspaceId, connectorId, changes, actorUserId, secrets));
 }
 
 /** Which settings an update changed, for the record — by group, never by value. */
@@ -226,21 +251,22 @@ async function updateConnectorIn(
   workspaceId: string,
   connectorId: string,
   changes: ConnectorChanges,
-  actorUserId: string
+  actorUserId: string,
+  secrets: SecretBox
 ): Promise<Connector | undefined> {
   const { rows: locked } = await db.query<ConnectorRow>(
     `SELECT * FROM connectors WHERE id = $1 AND workspace_id = $2 FOR UPDATE`,
     [connectorId, workspaceId]
   );
   if (!locked[0]) return undefined;
-  const existing = rowToConnector(locked[0]);
+  const existing = rowToConnector(locked[0], secrets);
   const updated = applyConnectorChanges(existing, changes);
   await db.query(
     `UPDATE connectors SET name = $1, base_url = $2, auth_type = $3, auth_header_name = $4, auth_value = $5,
        oauth_token_url = $6, oauth_client_id = $7, oauth_scope = $8, oauth_client_auth = $9, updated_at = $10
      WHERE id = $11 AND workspace_id = $12`,
     [
-      updated.name, updated.baseUrl, updated.authType, updated.authHeaderName ?? null, updated.authValue ?? null,
+      updated.name, updated.baseUrl, updated.authType, updated.authHeaderName ?? null, updated.authValue === undefined ? null : secrets.seal(updated.authValue),
       updated.oauthTokenUrl ?? null, updated.oauthClientId ?? null, updated.oauthScope ?? null, updated.oauthClientAuth ?? null,
       updated.updatedAt, connectorId, workspaceId,
     ]
