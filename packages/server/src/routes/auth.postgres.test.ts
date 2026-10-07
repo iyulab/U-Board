@@ -57,9 +57,11 @@ describe.skipIf(!dockerAvailable())('POST /auth/signup — real Postgres concurr
     // Both requests have no invitation token, so both race the "am I the first user" bootstrap
     // gate guarded by pg_advisory_xact_lock. The loser is rejected by that gate (403) before it
     // ever reaches the users.email UNIQUE constraint — a separate scenario below races on the
-    // constraint itself.
-    const attempt = () => request(app).post('/api/auth/signup').send({ email: 'race@x.com', password: 'p4ssword!', name: 'Racer' });
-    const [a, b] = await Promise.all([attempt(), attempt()]);
+    // constraint itself. Two different emails, so this races the gate alone: with one email, a
+    // loser arriving after the winner committed is turned away earlier as EMAIL_TAKEN (409), which
+    // is right but is not what this test is about.
+    const attempt = (email: string) => request(app).post('/api/auth/signup').send({ email, password: 'p4ssword!', name: 'Racer' });
+    const [a, b] = await Promise.all([attempt('race-a@x.com'), attempt('race-b@x.com')]);
     const statuses = [a.status, b.status].sort((x, y) => x - y);
     expect(statuses).toEqual([201, 403]);
     expect(Number((await db.query<{ c: string }>('SELECT COUNT(*) AS c FROM users')).rows[0].c)).toBe(1);
