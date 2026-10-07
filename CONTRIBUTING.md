@@ -61,14 +61,16 @@ npm run lint         # oxlint — correctness rules plus the React hooks rules
 npm test             # vitest
 npm run build        # all packages
 npm run test:e2e     # Playwright (canvas rendering, console flows, and the built apps served by the server)
+npm run check        # everything CI checks, in CI's order — `-- --skip=postgres,e2e` without Docker or browsers
 ```
 
 The server and the other applications import `@iyulab/u-board` from `packages/core/dist/lib`,
 which `npm install` builds once. After changing `packages/core`, run `npm run build:lib` before
 testing them, or they keep running against the previous build.
 
-CI runs the same checks plus a real-Postgres concurrency suite, `npm run smoke:library` on the oldest
-supported Node (the built library entry used the way a consumer would — after `npm run build:lib`),
+CI runs `npm run check` ([`scripts/check.mjs`](scripts/check.mjs) holds the list), which adds to the
+commands above a real-Postgres concurrency suite (needs Docker), `npm run smoke:library` (the built
+library entry used the way a consumer would; CI also runs it on the oldest supported Node),
 `npm run check:package-types`
 (the published package's type declarations resolve for ESM consumers — `attw`), and three
 repository checks:
@@ -80,7 +82,7 @@ which the check fails again) and
 allowlist in [`public-text.json`](public-text.json) — a link to a new public site means adding it
 there), and `npm run check:doc-links` (every relative link in the
 Markdown docs reaches a file and heading that exist). See [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
-Run `npm run typecheck` and `npm test` locally before opening a pull request.
+Run `npm run check` (or at least `npm run typecheck` and `npm test`) locally before opening a pull request.
 
 When upgrading a dependency that several workspaces share, install it for all of them in one
 command (`npm install -D <pkg>@<version> --workspace=packages/a --workspace=packages/b …`) and

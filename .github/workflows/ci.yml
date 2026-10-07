@@ -28,62 +28,9 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Cheapest checks first — fail fast before the slower test/build steps.
-      - name: Tooling script tests
-        run: npm run test:tooling
-
-      # Catches dependencies sitting behind already-published versions — `npm install`/`npm ci`
-      # doesn't re-resolve an already-satisfying lockfile entry, so this drift is otherwise
-      # silent. New majors must be adopted or deferred with a review date in
-      # dependency-deferrals.json (see scripts/check-dependency-drift.mjs). Also runs weekly
-      # (dependency-drift.yml).
-      - name: Dependency drift
-        run: npm run check:dependency-drift
-
-      # This repository is public: tracked text must not carry work-tracking ids, paths into
-      # private notes or a local machine, or hosts of real deployments. Hosts are checked against
-      # an allowlist rather than a denylist, which would itself publish them (see
-      # scripts/check-public-text.mjs).
-      - name: Public text (no private context)
-        run: npm run check:public-text
-
-      # Relative links in the Markdown docs must reach a file (and heading) that exists — nothing
-      # else follows them, so a moved file leaves them broken silently (scripts/check-doc-links.mjs).
-      - name: Doc links
-        run: npm run check:doc-links
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      # oxlint, not ESLint: typescript-eslint cannot load the native TypeScript 7 compiler this
-      # workspace uses (.oxlintrc.json).
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm test
-
-      # Separate from the Test step above (not just merged into `npm test`) so it never competes
-      # for resources with everything else's parallel PGlite-per-test-file startup — see
-      # packages/server/vitest.config.ts. ubuntu-latest ships Docker preinstalled, so this needs
-      # no extra setup here.
-      - name: Test (Postgres concurrency, real container)
-        run: npm run test:postgres --workspace=packages/server
-
-      - name: Build
-        run: npm run build
-
-      - name: Build library entry
-        run: npm run build:lib
-
-      # The published package is ESM-only; its declarations must resolve for ESM consumers
-      # under both node16 and bundler module resolution.
-      - name: Package types (attw)
-        run: npm run check:package-types
-
-      # Slowest/most expensive check last. jsdom (the `Test` step above) can't render <canvas> or
-      # custom-element shadow DOM at all, so it can't tell a real chart from a silent fallback —
-      # only a real browser can catch that regression class (see e2e/chart-rendering.spec.ts).
+      # The checks themselves live in scripts/check.mjs, so a local `npm run check` runs exactly this
+      # list. Only machine setup stays here: the browsers its last step (E2E) drives. ubuntu-latest
+      # ships Docker preinstalled, which its Postgres step needs.
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
         working-directory: packages/core
@@ -92,8 +39,8 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: packages/console
 
-      - name: E2E
-        run: npm run test:e2e
+      - name: Check
+        run: npm run check
 
   # Each package declares the oldest Node it supports in `engines.node`. `verify` runs on the current
   # line only, so without this job the declared floors would be claims nothing checks. It runs the

@@ -100,6 +100,11 @@ credentials and session cookies cross that network unencrypted.
 `GET /health` answers `200 {"status":"ok"}` once the server can reach its database, and `503`
 otherwise — use it for liveness and readiness probes.
 
+After deploying, `npm run smoke -- https://board.example.com` (from a checkout of this repository)
+checks the installation from the outside: health, the API refusing a request without a session,
+the console and share viewer served with their security headers, and a missing build file
+answering 404. It only reads public paths.
+
 ## Share links
 
 A share link (`https://<host>/share/?board=…&token=…`) opens one board read-only, without signing
