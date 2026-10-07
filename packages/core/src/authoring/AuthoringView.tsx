@@ -16,6 +16,7 @@ import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import { PropertyPanel } from './PropertyPanel.js';
+import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
@@ -72,13 +73,14 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const readClock = useEffectEvent(() => clock());
   const [doc, setDoc] = useState(initialDocument);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
   // How many items the editor has selected. With several (a box selection), they can be moved
   // together but no single item's panel applies.
   const [selectionCount, setSelectionCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backgroundInputRef = useRef<HTMLInputElement>(null);
   const view = useFittedView();
   const { fitTo, transform } = view;
   // The document most recently opened (the initial one, or an import) — fitting into view happens
@@ -159,16 +161,16 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
 
   const handleAddNode = () => {
     setDoc(prev => addNode(prev, nextNodePosition(prev, visibleOrigin())));
-    setImportError(null);
+    setFileError(null);
   };
 
   const handleAddDecoration = (type: Shape['type']) => {
     setDoc(prev => addDecoration(prev, type, nextDecorationPosition(prev, visibleOrigin()), labels.newTextDecoration));
-    setImportError(null);
+    setFileError(null);
   };
 
   const handleSave = async () => {
-    setImportError(null);
+    setFileError(null);
     if (onSave) {
       try {
         await onSave(doc);
@@ -200,10 +202,42 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
       const imported = parseViewDocument(await file.text());
       setDoc(imported);
       setOpenedDoc(imported);
-      setImportError(null);
+      setFileError(null);
     } catch (err) {
-      setImportError(err instanceof InvalidViewDocumentError ? err.message : labels.importFailed);
+      setFileError(err instanceof InvalidViewDocumentError ? err.message : labels.importFailed);
     }
+  };
+
+  const handleBackgroundFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-choosing the same file later
+    if (!file) return;
+    try {
+      const image = await readBackgroundImage(file);
+      const next = { ...doc, background: { ...doc.background, image } };
+      setDoc(next);
+      // The background usually sets the board's extent — show all of it, as when a board opens.
+      const nextExtent = documentExtent(next);
+      if (nextExtent) fitTo(nextExtent);
+      setFileError(null);
+    } catch (err) {
+      const problem = err instanceof BackgroundImageError ? err.problem : 'unreadable';
+      setFileError(
+        problem === 'type'
+          ? labels.backgroundType
+          : problem === 'size'
+            ? labels.backgroundTooLarge.replace('{max}', `${MAX_BACKGROUND_BYTES / (1024 * 1024)} MB`)
+            : labels.backgroundUnreadable
+      );
+    }
+  };
+
+  const handleRemoveBackground = () => {
+    setDoc(prev => {
+      const { image: _image, ...background } = prev.background;
+      return { ...prev, background };
+    });
+    setFileError(null);
   };
 
   const handleWidgetChange = (widget: Widget) => {
@@ -246,7 +280,18 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
         </button>{' '}
         <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
           {labels.import}
+        </button>{' '}
+        <button onClick={() => backgroundInputRef.current?.click()} style={{ marginBottom: 8 }}>
+          {labels.setBackground}
         </button>
+        {doc.background.image && (
+          <>
+            {' '}
+            <button onClick={handleRemoveBackground} style={{ marginBottom: 8 }}>
+              {labels.removeBackground}
+            </button>
+          </>
+        )}
         {' '}
         <ViewControls
           view={view}
@@ -262,7 +307,15 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           style={{ display: 'none' }}
           data-testid="import-file-input"
         />
-        {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
+        <input
+          ref={backgroundInputRef}
+          type="file"
+          accept={BACKGROUND_IMAGE_TYPES.join(',')}
+          onChange={handleBackgroundFile}
+          style={{ display: 'none' }}
+          data-testid="background-file-input"
+        />
+        {fileError && <p style={{ color: '#dc2626', fontSize: 13 }}>{fileError}</p>}
       </div>
       <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0 }}>
         <div style={paneStyle}>

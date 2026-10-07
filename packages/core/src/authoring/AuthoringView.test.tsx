@@ -52,6 +52,14 @@ afterEach(() => {
   viewerProps.mockClear();
 });
 
+// Reading a real image needs a browser that decodes it; the reading itself is tested in
+// background-image.test.ts — here only what the view does with its result.
+const readBackgroundImage = vi.fn();
+vi.mock('./background-image', async importOriginal => ({
+  ...(await importOriginal<typeof import('./background-image')>()),
+  readBackgroundImage: (file: File) => readBackgroundImage(file),
+}));
+
 const lastDesignerProps = () => designerProps.mock.lastCall![0] as Record<string, any>;
 
 function doc(): ViewDocument {
@@ -501,5 +509,42 @@ describe('AuthoringView clock', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('AuthoringView background image', () => {
+  const plan = { src: 'data:image/png;base64,AAAA', width: 1200, height: 800 };
+  const choose = (file = new File(['x'], 'plan.png', { type: 'image/png' })) =>
+    fireEvent.change(screen.getByTestId('background-file-input'), { target: { files: [file] } });
+
+  it('sets a chosen image as the background at its own size, and saves it with the board', async () => {
+    readBackgroundImage.mockResolvedValueOnce(plan);
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={doc()} adapters={[]} onSave={onSave} />);
+    expect(screen.queryByText('Remove background')).not.toBeInTheDocument();
+    choose();
+    await screen.findByText('Remove background');
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0].background).toEqual({ image: plan });
+  });
+
+  it('says why a chosen file was refused, and leaves the background as it was', async () => {
+    const { BackgroundImageError } = await import('./background-image');
+    readBackgroundImage.mockRejectedValueOnce(new BackgroundImageError('size'));
+    render(<AuthoringView initialDocument={doc()} adapters={[]} />);
+    choose();
+    expect(await screen.findByText('The image is larger than 4 MB.')).toBeInTheDocument();
+    expect(screen.queryByText('Remove background')).not.toBeInTheDocument();
+  });
+
+  it('removes the background', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={{ ...doc(), background: { image: plan } }} adapters={[]} onSave={onSave} />);
+    fireEvent.click(screen.getByText('Remove background'));
+    expect(screen.queryByText('Remove background')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0].background).toEqual({});
   });
 });

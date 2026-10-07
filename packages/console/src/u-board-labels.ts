@@ -9,6 +9,11 @@ export const KO_LABELS: UBoardLabels = {
   export: '내보내기',
   import: '가져오기',
   importFailed: '문서를 가져오지 못했습니다.',
+  setBackground: '배경 이미지',
+  removeBackground: '배경 제거',
+  backgroundType: 'PNG, JPEG, WebP, GIF, SVG 이미지를 고르세요.',
+  backgroundTooLarge: '이미지가 {max}보다 큽니다.',
+  backgroundUnreadable: '이미지를 읽지 못했습니다.',
 
   zoomIn: '확대',
   zoomOut: '축소',

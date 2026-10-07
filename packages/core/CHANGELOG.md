@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `AuthoringView` sets the background image: "Background image" takes a PNG, JPEG, WebP, GIF or SVG
+  file of up to 4 MB and keeps it inside the document as a `data:` URL at the image's own size in
+  pixels — so a board needs no other store, opens the same on a network without internet access,
+  and travels whole in a backup or an exported file — then fits the view to it; "Remove background"
+  takes it away. A refused file says why (labels `setBackground`, `removeBackground`,
+  `backgroundType`, `backgroundTooLarge`, `backgroundUnreadable`).
 - A polling `ViewerPage` (`pollIntervalMs`) suits a board left open on a screen: it shows when its
   values were last updated, and once no update has arrived for two intervals it says it is not
   updating — an announced status — and shows every value as last known (`stale`) rather than

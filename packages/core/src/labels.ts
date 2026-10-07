@@ -16,6 +16,14 @@ export interface UBoardLabels {
   export: string;
   import: string;
   importFailed: string;
+  /** Chooses an image file as the board's background; `removeBackground` takes it away. */
+  setBackground: string;
+  removeBackground: string;
+  /** Said when a chosen background is refused: not an image type browsers draw, over the size
+   *  limit (`{max}` is replaced by it), or unreadable. */
+  backgroundType: string;
+  backgroundTooLarge: string;
+  backgroundUnreadable: string;
 
   // View controls
   zoomIn: string;
@@ -115,6 +123,11 @@ export const DEFAULT_LABELS: UBoardLabels = {
   export: 'Export',
   import: 'Import',
   importFailed: 'Import failed.',
+  setBackground: 'Background image',
+  removeBackground: 'Remove background',
+  backgroundType: 'Choose a PNG, JPEG, WebP, GIF or SVG image.',
+  backgroundTooLarge: 'The image is larger than {max}.',
+  backgroundUnreadable: 'The image could not be read.',
 
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',
