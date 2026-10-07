@@ -12,6 +12,7 @@ import { publicUrlFromEnv } from './public-url.js';
 import { workspaceCreationFromEnv } from './workspace-creation.js';
 import { auditRetentionDaysFromEnv, scheduleAuditPurge } from './audit-retention.js';
 import { connectorAddressesFromEnv, createConnectorFetch } from './connector-network.js';
+import { exitOnStopSignal } from './shutdown.js';
 
 const databaseUrl = process.env.UBOARD_DATABASE_URL ?? './u-board-data';
 const sessionSecret = process.env.UBOARD_SESSION_SECRET;
@@ -85,9 +86,12 @@ const app = createApp({
 
 const port = Number(process.env.PORT ?? 4000);
 // Express 5 hands a startup failure (e.g. the port is taken) to this callback instead of throwing.
-app.listen(port, (err?: Error) => {
+const server = app.listen(port, (err?: Error) => {
   if (err) throw err;
   console.log(
     `@iyulab/u-board-server listening on :${port} (db: ${redactDatabaseUrl(databaseUrl)}; ${webApps ? 'serving the console and share viewer' : 'API only'})`
   );
 });
+// In a container the server is process 1, which Node gives no default handling of `SIGTERM` — without
+// this, `docker stop` waits out its timeout and kills the process, database open and requests cut.
+exitOnStopSignal(server, db);

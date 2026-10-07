@@ -119,7 +119,64 @@ share path sits behind a per-address rate limit, allow for one request per open 
 seconds, plus one when it opens or is shown again — screens behind one network address all count
 against that address.
 
+An open board's ages ("updated 2 minutes ago") are measured against the server's clock, read from
+its responses, so a display's own clock does not need to be set exactly.
+
+## Networks without internet access
+
+The server reaches out only to what an installation sets up: the data sources its connectors read
+and their OAuth token endpoints, and Sendway when `SENDWAY_*` is set. The console and the share
+viewer load nothing from other origins — no fonts, scripts or stylesheets from a CDN — so an
+installation runs on a closed network. The one exception is a board's background image, which a
+page shows from the address its author gave; on a closed network, give it one that is reachable
+there.
+
+Building the image does need internet access, for its base image and packages. Build it on a
+connected machine and carry the image over:
+
+```sh
+docker save u-board -o u-board.tar   # on the connected machine
+docker load -i u-board.tar           # on the installation's host
+```
+
+## Stopping
+
+`docker stop`, or a platform stopping the container, sends `SIGTERM` (`SIGINT` too): the server stops
+taking connections, gives requests under way up to 8 seconds to finish, closes its database and
+exits.
+
+## Backup and restore
+
+Everything an installation keeps is in its database: accounts, workspaces and their members, boards,
+connectors with their credentials, share links, and the activity record. A backup therefore holds
+connector credentials as stored — keep it as you keep those credentials. Keep
+`UBOARD_SESSION_SECRET` alongside it: an installation restored with a different one works, but
+signs everyone out.
+
+With PostgreSQL, use its own tools — `pg_dump` while the server runs, and restore into an empty
+database before the server first starts on it.
+
+With the embedded database, stop the server and copy its directory; a copy taken while it runs may
+catch a write half-done. The image itself has `tar`, so no other image is needed:
+
+```sh
+docker stop u-board
+docker run --rm -v u-board-data:/data -v "$PWD":/backup --entrypoint tar u-board czf /backup/u-board-data.tgz -C /data .
+docker start u-board
+```
+
+To restore, unpack the archive into an empty volume and start the server on it:
+
+```sh
+docker run --rm -v u-board-restored:/data -v "$PWD":/backup --entrypoint tar u-board xzf /backup/u-board-data.tgz -C /data
+```
+
 ## Upgrading
 
-Stop the old container and start one from the new image with the same settings. The server brings
-its database tables up to date when it starts.
+Back up first. Then stop the old container and start one from the new image with the same
+settings: the server brings its database tables up to date when it starts. Those steps are
+cumulative, so a newer image can start on a database from any older one — versions can be skipped.
+
+An upgrade is not undone by starting the older image again: the tables it changed stay changed, and
+the older server is not built to read them. To go back, restore the backup taken before the
+upgrade.

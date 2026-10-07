@@ -6,6 +6,12 @@ export interface DbClient {
   withTransaction<T>(fn: (tx: DbClient) => Promise<T>): Promise<T>;
 }
 
+/** The database a server opens: a client, plus the means to let go of it when the server stops —
+ *  the pool's connections, or the embedded engine's files. */
+export interface Database extends DbClient {
+  close(): Promise<void>;
+}
+
 // Exported for the upgrade-path test only, which replays it over a database in an older shape.
 export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS users (
@@ -255,7 +261,7 @@ class PgliteDbClient implements DbClient {
   }
 }
 
-export async function createDb(url: string): Promise<DbClient> {
+export async function createDb(url: string): Promise<Database> {
   if (url.startsWith('postgres://') || url.startsWith('postgresql://')) {
     const pool = new Pool({ connectionString: url });
     pool.on('error', err => {
@@ -281,11 +287,11 @@ export async function createDb(url: string): Promise<DbClient> {
       }
       throw err;
     }
-    return new PgDbClient(pool);
+    return Object.assign(new PgDbClient(pool), { close: () => pool.end() });
   }
   // `:memory:` (tests) or any local path (local `npm run dev` default) both use PGlite — a real
   // Postgres engine compiled to WASM, not a mock, so the SQL executed is identical to production.
   const pglite = url === ':memory:' ? new PGlite() : new PGlite(url);
   await pglite.exec(SCHEMA_SQL); // .exec (not .query) runs the semicolon-separated statement list
-  return new PgliteDbClient(pglite, pglite);
+  return Object.assign(new PgliteDbClient(pglite, pglite), { close: () => pglite.close() });
 }
