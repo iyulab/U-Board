@@ -11,5 +11,6 @@ describe('viewer entry ("./viewer")', () => {
 
   it('still re-exports the viewer surface', () => {
     expect(typeof mod.ViewerPage).toBe('function');
+    expect(typeof mod.serverClock).toBe('function');
   });
 });

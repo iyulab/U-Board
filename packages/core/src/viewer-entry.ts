@@ -11,3 +11,5 @@ export { DEFAULT_LABELS, timeText } from './labels.js';
 export type { UBoardLabels } from './labels.js';
 export { DEFAULT_QUALITY_TEXT, ageText } from './quality-text.js';
 export type { QualityText } from './quality-text.js';
+export { serverClock } from './server-clock.js';
+export type { ServerClock, ResponseWithHeaders } from './server-clock.js';

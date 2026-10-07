@@ -67,6 +67,18 @@ value arrived) has come for two intervals it says so prominently (an announced s
 every value as last known (`stale`) rather than current. `useResolvedDocument` reports the same
 through `resolvedAt` and `stalled` for a host that renders its own view.
 
+How long ago a value was obtained is measured against `clock` (default `Date.now`). Its
+`observedAt` comes from the source's side, so on a screen whose own clock may drift, pass a clock
+set by the server's: `serverClock()` follows the `Date` of the responses you hand it.
+
+```tsx
+import { ViewerPage, serverClock } from '@iyulab/u-board/viewer';
+
+const clock = serverClock();
+// in your adapter: const sentAt = Date.now(); const res = await fetch(…); clock.observe(res, sentAt);
+<ViewerPage initialDocument={doc} adapters={adapters} pollIntervalMs={30_000} clock={clock.now} />;
+```
+
 `AuthoringView` sizes the same way: without `width`/`height` the editor and its live preview split
 the parent's width and fill its height. Both share one pan/zoom and the document opens fitted into
 view the same way; a new node or decoration is placed where the author is looking. In the editor,

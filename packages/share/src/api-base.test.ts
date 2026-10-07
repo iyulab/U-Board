@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { getApiBase, fetchWithRetry } from './api-base.js';
+import { getApiBase, fetchWithRetry, apiClock } from './api-base.js';
 
 describe('getApiBase', () => {
   afterEach(() => {
@@ -27,7 +27,7 @@ describe('fetchWithRetry (edge cold-start hardening)', () => {
   });
 
   it('sets an AbortSignal timeout on the request', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers() });
     await fetchWithRetry('/x');
     const [, init] = (fetch as any).mock.calls[0];
     expect(init.signal).toBeInstanceOf(AbortSignal);
@@ -36,10 +36,18 @@ describe('fetchWithRetry (edge cold-start hardening)', () => {
   it('retries once when the first attempt times out, and resolves with the retry result', async () => {
     (fetch as any)
       .mockRejectedValueOnce(new DOMException('The operation timed out.', 'TimeoutError'))
-      .mockResolvedValueOnce({ ok: true });
+      .mockResolvedValueOnce({ ok: true, headers: new Headers() });
 
-    await expect(fetchWithRetry('/x')).resolves.toEqual({ ok: true });
+    await expect(fetchWithRetry('/x')).resolves.toEqual({ ok: true, headers: new Headers() });
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('sets the server clock from the Date each response carries', async () => {
+    // A server an hour behind this machine.
+    const serverDate = new Date(Date.now() - 3_600_000);
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers({ Date: serverDate.toUTCString() }) });
+    await fetchWithRetry('/x');
+    expect(Math.abs(apiClock.now() - serverDate.getTime())).toBeLessThan(2000);
   });
 
   it('does not retry a non-timeout failure', async () => {

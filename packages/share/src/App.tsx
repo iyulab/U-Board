@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ViewerPage, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
-import { getApiBase, fetchWithRetry } from './api-base.js';
+import { getApiBase, fetchWithRetry, apiClock } from './api-base.js';
 import { KO_LABELS } from './u-board-labels.js';
 
 type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[] };
@@ -57,6 +57,7 @@ export function App() {
       pollIntervalMs={SHARE_POLL_INTERVAL_MS}
       ariaLabel={state.name}
       labels={KO_LABELS}
+      clock={apiClock.now}
     />
   );
 }

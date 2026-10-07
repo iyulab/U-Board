@@ -6,7 +6,7 @@ beforeEach(() => {
 });
 
 function batchResponse(results: unknown[]) {
-  return { ok: true, json: async () => ({ results }) };
+  return { ok: true, headers: new Headers(), json: async () => ({ results }) };
 }
 
 describe('ShareConnectorAdapter', () => {
@@ -77,7 +77,7 @@ describe('ShareConnectorAdapter', () => {
   });
 
   it('answers disconnected for every binding when the batch request is refused, saying why', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({}) });
+    (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 429, json: async () => ({}) });
     const batcher = new ShareResolveBatcher('b1', 'tok');
     const adapter = new ShareConnectorAdapter(batcher, 'c1');
     await expect(Promise.all([adapter.resolve({ path: '/a' }), adapter.resolve({ path: '/b' })])).resolves.toEqual([
@@ -87,7 +87,7 @@ describe('ShareConnectorAdapter', () => {
   });
 
   it('reports any other refusal of the batch request as the source being unreachable', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({}) });
+    (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 502, json: async () => ({}) });
     const adapter = new ShareConnectorAdapter(new ShareResolveBatcher('b1', 'tok'), 'c1');
     await expect(adapter.resolve({ path: '/a' })).resolves.toEqual({ value: undefined, quality: 'disconnected', reason: 'transport' });
   });
@@ -119,7 +119,7 @@ describe('ShareConnectorAdapter', () => {
   });
 
   it('tells its owner when the share link has expired, and reports the binding refused', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: false, status: 410, json: async () => ({ code: 'SHARE_LINK_EXPIRED' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 410, json: async () => ({ code: 'SHARE_LINK_EXPIRED' }) });
     let expired = 0;
     const adapter = new ShareConnectorAdapter(new ShareResolveBatcher('b1', 'tok', () => expired++), 'c1');
     expect(await adapter.resolve({ path: '/status' })).toEqual({ value: undefined, quality: 'disconnected', reason: 'auth' });

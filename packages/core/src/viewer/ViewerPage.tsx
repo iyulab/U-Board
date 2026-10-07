@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { Viewer } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
 import { documentExtent } from './document-extent.js';
@@ -30,6 +30,11 @@ export interface ViewerPageProps {
   ariaLabel?: string;
   /** Text to show instead of the English defaults — any subset of `UBoardLabels`. */
   labels?: Partial<UBoardLabels>;
+  /** The current time in epoch milliseconds — what "N minutes ago" and the time of the last update
+   * are measured by. `Date.now` by default. The `observedAt` times adapters report come from the
+   * source's side; when this machine's clock may be off from that one (an unattended screen whose
+   * clock has drifted), pass a clock corrected to the source's — see `serverClock`. */
+  clock?: () => number;
 }
 
 /**
@@ -49,6 +54,7 @@ export function ViewerPage({
   pollIntervalMs,
   ariaLabel,
   labels: labelsProp,
+  clock = Date.now,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
   const [doc, setDoc] = useState<ViewDocument | null>(initialDocument ?? null);
@@ -56,7 +62,9 @@ export function ViewerPage({
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { resolved: received, resolvedAt, stalled } = useResolvedDocument(doc, adapters, { pollIntervalMs });
+  // Read when a result is drawn, not watched: a new function on every render must not redraw the view.
+  const readClock = useEffectEvent(() => clock());
+  const { resolved: received, resolvedAt, stalled } = useResolvedDocument(doc, adapters, { pollIntervalMs, clock });
   // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
 
@@ -76,12 +84,12 @@ export function ViewerPage({
       return;
     }
     let cancelled = false;
-    setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText }));
+    setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock() }));
     // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
     // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
     // pick it up.
     chartsReady.then(() => {
-      if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText }));
+      if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock() }));
     });
     return () => {
       cancelled = true;

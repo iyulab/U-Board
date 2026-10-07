@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { resolveDocument } from '../resolve-document.js';
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import type { Adapter } from '../adapter.js';
@@ -8,6 +8,9 @@ export interface UseResolvedDocumentOptions {
   /** Re-resolve every N ms while a document is loaded. Omitted — the document is resolved once
    * (unchanged from the original one-shot behavior). */
   pollIntervalMs?: number;
+  /** The current time in epoch milliseconds, read for `resolvedAt` — `Date.now` by default. Read when
+   * a resolve completes, so a new function on every render is fine. */
+  clock?: () => number;
 }
 
 export interface UseResolvedDocumentResult {
@@ -16,7 +19,7 @@ export interface UseResolvedDocumentResult {
    * (e.g. a "Refresh" button) — this hook only provides the capability. */
   refresh: () => void;
   isRefreshing: boolean;
-  /** When the latest resolve completed (epoch ms, this machine's clock), or `null` before the first.
+  /** When the latest resolve completed (epoch ms, by `options.clock`), or `null` before the first.
    * What a view left open shows as "last updated". */
   resolvedAt: number | null;
   /** `true` while a polling view has gone two intervals without a completed resolve — a poll that
@@ -58,6 +61,8 @@ export function useResolvedDocument(
   const [stalled, setStalled] = useState(false);
   const runRef = useRef<() => void>(() => {});
   const pollIntervalMs = options?.pollIntervalMs;
+  const clock = options?.clock;
+  const readClock = useEffectEvent(() => (clock ?? Date.now)());
 
   useEffect(() => {
     if (!doc) {
@@ -93,7 +98,7 @@ export function useResolvedDocument(
         // must not read as "updated just now".
         if (!receivedAnyValue(result)) return;
         completedAt = performance.now();
-        setResolvedAt(Date.now());
+        setResolvedAt(readClock());
         setStalled(false);
       });
     };

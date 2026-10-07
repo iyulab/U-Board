@@ -53,6 +53,8 @@ export interface CanvasKitRenderOutput {
 export interface ToCanvasKitOptions {
   /** Words for each node's connection-quality tooltip and announcement (English by default). */
   qualityText?: QualityText;
+  /** The time a stale value's age is measured to, in epoch milliseconds — `Date.now()` by default. */
+  now?: number;
 }
 
 /**
@@ -62,7 +64,7 @@ export interface ToCanvasKitOptions {
  * (docs/principles.md) — it depends on canvas-kit and u-widgets so the document format itself
  * doesn't have to.
  */
-export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_QUALITY_TEXT }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
+export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_QUALITY_TEXT, now }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
   const scene = new Scene();
 
   if (doc.background.image) {
@@ -106,7 +108,7 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
   const overlays: ViewerOverlayItem[] = doc.nodes.map(node => {
     const quality = frameQuality(node.widget.quality, node.widget.type);
     const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
-    const label = describeQuality(node.widget, { text: qualityText });
+    const label = describeQuality(node.widget, { text: qualityText, now });
 
     return {
       id: node.id,

@@ -313,3 +313,36 @@ describe('ViewerPage liveness', () => {
     expect(screen.getByText('갱신 오후 2:00:00')).toBeInTheDocument();
   });
 });
+
+describe('ViewerPage clock', () => {
+  // The machine running the view says 05:10, but the source's timestamps — and the real time — say 05:02.
+  class StaleAdapter implements Adapter {
+    readonly id = 'cmms';
+    resolve = vi.fn(async (): Promise<ResolvedBinding> => ({
+      value: 'running',
+      quality: 'stale',
+      observedAt: '2026-10-07T05:00:00Z',
+    }));
+  }
+  const clock = () => Date.parse('2026-10-07T05:02:00Z');
+
+  it('measures how long ago a value was obtained against the clock it is given', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-07T05:10:00Z') });
+    render(<ViewerPage adapters={[new StaleAdapter()]} initialDocument={docWithBinding()} clock={clock} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const content = lastViewerProps().overlays[0].content as React.ReactElement<{ title?: string }>;
+    expect(content.props.title).toMatch(/2 minutes ago\)$/);
+  });
+
+  it('tells the time of the last update by the clock it is given', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-07T05:10:00Z') });
+    render(<ViewerPage adapters={[new StaleAdapter()]} initialDocument={docWithBinding()} pollIntervalMs={1000} clock={clock} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const time = new Intl.DateTimeFormat('en', { timeStyle: 'medium' }).format(clock());
+    expect(screen.getByText(`Updated ${time}`)).toBeInTheDocument();
+  });
+});
