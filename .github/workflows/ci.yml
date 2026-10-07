@@ -146,7 +146,10 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write # the release and its tag
-      packages: write # the registry
+      packages: write # the registry, and the image's attestation pushed beside it
+      id-token: write # signing the attestations
+      attestations: write
+      artifact-metadata: write
     env:
       GH_TOKEN: ${{ github.token }}
 
@@ -179,8 +182,24 @@ jobs:
           password: ${{ github.token }}
 
       - name: Build and push the image
+        id: push
         if: steps.check.outputs.exists == 'false'
         run: node scripts/release-image.mjs --push
+
+      # Build provenance — this workflow, this commit — for the pushed image and for the archive the
+      # release carries, so either can be checked with `gh attestation verify` (the library's npm
+      # provenance, for the product).
+      - uses: actions/attest@v4
+        if: steps.check.outputs.exists == 'false'
+        with:
+          subject-name: ghcr.io/iyulab/u-board
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - uses: actions/attest@v4
+        if: steps.check.outputs.exists == 'false'
+        with:
+          subject-path: release/*.tar.gz
 
       # Last, so a failed build or push leaves no release behind and the next push to main tries again.
       - name: Create the release

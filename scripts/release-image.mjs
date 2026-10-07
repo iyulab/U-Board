@@ -13,7 +13,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { createReadStream, createWriteStream, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, createReadStream, createWriteStream, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import { pathToFileURL } from 'node:url';
@@ -95,6 +95,8 @@ export function releaseNotes(plan, archiveSha256, changes) {
     '',
     `SHA-256 \`${archiveSha256}\`.`,
     '',
+    `Both the image and the archive carry a build provenance attestation: on a connected machine, \`gh attestation verify oci://${plan.image}:${plan.version} --repo iyulab/U-Board\` (or \`gh attestation verify ${plan.archive} --repo iyulab/U-Board\`) confirms it was built by this repository's release workflow${plan.revision ? ' from the commit below' : ''}.`,
+    '',
     `Settings, backups and upgrading: [docs/self-hosting.md](${docs}). Back up before upgrading — the server upgrades its database on start.`,
     '',
     plan.revision ? `Built from ${plan.revision}.` : '',
@@ -126,6 +128,15 @@ async function sha256(file) {
   const hash = createHash('sha256');
   await pipeline(createReadStream(file), hash);
   return hash.digest('hex');
+}
+
+/** The digest the registry gave `image`, from an image's `RepoDigests` (`<image>@sha256:<hex>`, one
+ *  per repository it was pushed to). */
+export function registryDigest(repoDigests, image) {
+  const entry = repoDigests.find(d => d.startsWith(`${image}@`));
+  const digest = entry?.slice(image.length + 1);
+  if (!digest || !/^sha256:[0-9a-f]{64}$/.test(digest)) throw new Error(`no registry digest for ${image} in ${JSON.stringify(repoDigests)}`);
+  return digest;
 }
 
 /** Whether anyone can pull `ref` without signing in — a new package on the registry starts out as
@@ -174,13 +185,17 @@ async function main() {
   run('docker', ['save', '-o', tar, plan.refs[0]]);
   await pipeline(createReadStream(tar), createGzip(), createWriteStream(archive));
   rmSync(tar);
-  const digest = await sha256(archive);
-  writeFileSync(`${archive}.sha256`, `${digest}  ${plan.archive}\n`);
-  writeFileSync(path.join(OUT_DIR, 'notes.md'), releaseNotes(plan, digest, changes));
-  console.log(`Wrote ${archive} (sha256 ${digest}), its checksum and notes.md.`);
+  const archiveSha256 = await sha256(archive);
+  writeFileSync(`${archive}.sha256`, `${archiveSha256}  ${plan.archive}\n`);
+  writeFileSync(path.join(OUT_DIR, 'notes.md'), releaseNotes(plan, archiveSha256, changes));
+  console.log(`Wrote ${archive} (sha256 ${archiveSha256}), its checksum and notes.md.`);
 
   if (!args.includes('--push')) return;
   for (const ref of plan.refs) run('docker', ['push', ref]);
+  // The registry's name for what was pushed, which an attestation is made for (.github/workflows/ci.yml).
+  const digest = registryDigest(JSON.parse(output('docker', ['inspect', '--format', '{{json .RepoDigests}}', plan.refs[0]])), plan.image);
+  console.log(`Pushed ${plan.image}@${digest}`);
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `digest=${digest}\n`);
   if (!(await anonymouslyPullable(plan.refs[0]))) {
     // Not a failure: the image is published, but installations cannot pull it until the package is public.
     console.log(`::warning::${plan.refs[0]} was pushed but cannot be pulled without signing in — make the package public in its settings.`);

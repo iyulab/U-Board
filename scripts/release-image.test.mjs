@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { absoluteLinks, changelogSection, releaseNotes, releasePlan } from './release-image.mjs';
+import { absoluteLinks, changelogSection, registryDigest, releaseNotes, releasePlan } from './release-image.mjs';
 
 test('a release moves its minor line and latest onto itself', () => {
   const plan = releasePlan('0.1.0', 'abc123');
@@ -67,6 +67,15 @@ test('the notes say what changed, then how to install from the registry and from
   assert.match(notes, /docker load -i u-board-0\.1\.0-linux-amd64\.tar\.gz/);
   assert.match(notes, /blob\/v0\.1\.0\/docs\/self-hosting\.md/);
   assert.match(notes, /Built from abc123\./);
+  assert.match(notes, /gh attestation verify oci:\/\/ghcr\.io\/iyulab\/u-board:0\.1\.0 --repo iyulab\/U-Board/);
+  assert.match(notes, /gh attestation verify u-board-0\.1\.0-linux-amd64\.tar\.gz --repo iyulab\/U-Board/);
+});
+
+test("reads the registry's digest for the image, not another repository's", () => {
+  const hex = 'a'.repeat(64);
+  assert.equal(registryDigest([`other.example.com/u-board@sha256:${'b'.repeat(64)}`, `ghcr.io/iyulab/u-board@sha256:${hex}`], 'ghcr.io/iyulab/u-board'), `sha256:${hex}`);
+  assert.throws(() => registryDigest([], 'ghcr.io/iyulab/u-board'), /no registry digest/);
+  assert.throws(() => registryDigest(['ghcr.io/iyulab/u-board-x@sha256:' + hex], 'ghcr.io/iyulab/u-board'), /no registry digest/);
 });
 
 // The image job refuses a version without a section — after `verify` has passed. Caught here instead,

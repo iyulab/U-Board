@@ -14,6 +14,11 @@ image for `linux/amd64` as `ghcr.io/iyulab/u-board:<version>`, and moves `<major
 docker pull ghcr.io/iyulab/u-board:<version>
 ```
 
+The image, and the archive a release carries (see [Networks without internet access](#networks-without-internet-access)),
+come with a build provenance attestation: `gh attestation verify oci://ghcr.io/iyulab/u-board:<version> --repo iyulab/U-Board`
+— or the archive's file name in place of `oci://…` — confirms it was built by this repository's
+release workflow, and from which commit.
+
 Name an exact version rather than `latest`, so the installation changes only when you upgrade it.
 That version is the product's own, apart from the `@iyulab/u-board` library's: an operator sees it on
 the console's installation page (`GET /api/instance`), the server logs it when it starts
