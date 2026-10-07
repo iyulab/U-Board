@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ApiError,
+  getInstance,
   listInstanceUsers,
   listInstanceWorkspaces,
   makeWorkspaceOwner,
@@ -32,12 +33,14 @@ export function InstancePage({
 }) {
   const [workspaces, setWorkspaces] = useState<InstanceWorkspace[]>([]);
   const [users, setUsers] = useState<InstanceUser[]>([]);
+  const [version, setVersion] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Bumped after each change made here, so the installation's record is read again and shows it.
   const [auditVersion, setAuditVersion] = useState(0);
 
   const load = useCallback(async () => {
-    const [w, u] = await Promise.all([listInstanceWorkspaces(), listInstanceUsers()]);
+    const [i, w, u] = await Promise.all([getInstance(), listInstanceWorkspaces(), listInstanceUsers()]);
+    setVersion(i.version);
     setWorkspaces(w.workspaces);
     setUsers(u.users);
   }, []);
@@ -77,6 +80,8 @@ export function InstancePage({
 
   return (
     <div>
+      {/* What an operator quotes when asking for help, and checks after an upgrade. */}
+      {version && <p>설치 버전: U-Board {version}</p>}
       <h2>워크스페이스</h2>
       {error && <Alert>{error}</Alert>}
       <ul>

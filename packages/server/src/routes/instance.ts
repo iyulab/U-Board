@@ -5,6 +5,7 @@ import { listInstanceUsers, listInstanceWorkspaces, makeWorkspaceOwner, setInsta
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
 import { listInstanceAuditEvents } from '../db/audit.js';
 import { readAuditPage } from './audit-page.js';
+import { productVersion } from '../version.js';
 
 /** Running the installation: every workspace and account, operator designation, and getting back
  *  into a workspace whose owners are gone. Operators only. */
@@ -18,6 +19,12 @@ export function createInstanceRouter(config: AppConfig): Router {
       return;
     }
     next();
+  });
+
+  // The installation itself. Operators only, like the rest: the version tells which known flaws apply,
+  // so it is not handed to anyone who asks.
+  router.get('/', (_req, res) => {
+    res.status(200).json({ version: productVersion });
   });
 
   router.get('/workspaces', async (_req, res) => {

@@ -341,7 +341,11 @@ export interface InstanceUser {
   workspaceCount: number;
 }
 
-/** Operators only, like every `/instance` call. */
+/** Operators only, like every `/instance` call. The installation itself: the product version it runs. */
+export function getInstance() {
+  return request<{ version: string }>('/instance');
+}
+
 export function listInstanceWorkspaces() {
   return request<{ workspaces: InstanceWorkspace[] }>('/instance/workspaces');
 }

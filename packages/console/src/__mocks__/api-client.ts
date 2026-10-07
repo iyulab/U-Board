@@ -41,6 +41,7 @@ export const resolveConnector = vi.fn();
 export const listShareTokens = vi.fn();
 export const createShareToken = vi.fn();
 export const deleteShareToken = vi.fn();
+export const getInstance = vi.fn();
 export const listInstanceWorkspaces = vi.fn();
 export const listInstanceUsers = vi.fn();
 export const setInstanceRole = vi.fn();

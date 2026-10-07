@@ -15,8 +15,9 @@ docker pull ghcr.io/iyulab/u-board:<version>
 ```
 
 Name an exact version rather than `latest`, so the installation changes only when you upgrade it.
-That version is the product's own, apart from the `@iyulab/u-board` library's: the server logs it
-when it starts (`U-Board 0.1.0 listening on :4000 …`), and the image carries it as a label
+That version is the product's own, apart from the `@iyulab/u-board` library's: an operator sees it on
+the console's installation page (`GET /api/instance`), the server logs it when it starts
+(`U-Board 0.1.0 listening on :4000 …`), and the image carries it as a label
 (`docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' <image>`).
 
 To build the image from a checkout instead — the build context is the repository root, an npm

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import request from 'supertest';
 import type express from 'express';
 import type { DbClient } from '../db.js';
@@ -42,6 +43,7 @@ describe('operator-only access', () => {
     const member = await joinAs(operator, defaultWorkspaceId, 'member@x.com', 'member');
 
     for (const [method, path] of [
+      ['get', '/api/instance'],
       ['get', '/api/instance/workspaces'],
       ['get', '/api/instance/users'],
       ['patch', `/api/instance/users/${member.userId}`],
@@ -51,6 +53,19 @@ describe('operator-only access', () => {
       expect(res.status, `${method} ${path}`).toBe(403);
       expect((await request(app)[method](path).send({})).status, `${method} ${path} anonymous`).toBe(401);
     }
+  });
+});
+
+describe('GET /instance', () => {
+  it("tells an operator the installation's version — the server package's, which its release is tagged with", async () => {
+    const { agent: operator } = await bootstrapOperator();
+    const { version } = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
+
+    const res = await operator.get('/api/instance');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ version });
+    expect(version).toMatch(/^\d+\.\d+\.\d+/);
   });
 });
 

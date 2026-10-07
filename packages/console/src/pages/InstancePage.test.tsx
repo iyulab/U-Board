@@ -23,12 +23,18 @@ function renderPage(overrides: Partial<Parameters<typeof InstancePage>[0]> = {})
 }
 
 beforeEach(() => {
+  vi.mocked(api.getInstance).mockResolvedValue({ version: '0.1.0' });
   vi.mocked(api.listInstanceWorkspaces).mockResolvedValue({ workspaces: [DEFAULT_WS, CUSTOMER_WS] });
   vi.mocked(api.listInstanceUsers).mockResolvedValue({ users: [OPERATOR, ADMIN] });
   vi.mocked(api.listInstanceAudit).mockResolvedValue({ events: [], nextBefore: null });
 });
 
 describe('InstancePage', () => {
+  it('shows the version the installation runs', async () => {
+    renderPage();
+    expect(await screen.findByText('설치 버전: U-Board 0.1.0')).toBeInTheDocument();
+  });
+
   it("shows the installation's record with each workspace named", async () => {
     vi.mocked(api.listInstanceAudit).mockResolvedValue({
       events: [{ id: 'e1', occurredAt: '2026-10-05T00:00:00.000Z', action: 'workspace.created', workspace: { id: 'w1', name: 'Customer A' }, actor: { userId: 'op', name: 'Op' }, subject: null, role: null, target: null, detail: null }],
