@@ -26,12 +26,12 @@ afterEach(() => {
 describe('reuse of recent upstream reads', () => {
   it('lets go of a read once its reuse window has passed, so the reads kept stay those of the last window', async () => {
     const state = stateWith(vi.fn(async () => json({ v: 1 })));
-    const start = Date.now();
     await resolveConnectorValue(connector, new URL('https://plant.example.com/a'), { path: '/a' }, state);
     await resolveConnectorValue(connector, new URL('https://plant.example.com/b'), { path: '/b' }, state);
     expect([...state.reads.keys()]).toHaveLength(2);
 
-    vi.spyOn(Date, 'now').mockReturnValue(start + 10_001);
+    // Past the window of both reads, measured from after they finished.
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 10_001);
     await resolveConnectorValue(connector, new URL('https://plant.example.com/c'), { path: '/c' }, state);
     expect([...state.reads.keys()]).toEqual(['c1 https://plant.example.com/c']);
   });

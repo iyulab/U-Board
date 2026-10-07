@@ -227,7 +227,7 @@ describe('connector resolve proxy', () => {
         .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Running' }] }))
         .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Fault' }] }));
       const readAt = Date.parse((await resolveIn(reusing, 'value.0.Status')).observedAt);
-      vi.spyOn(Date, 'now').mockReturnValue(readAt + DEFAULT_UPSTREAM_REUSE_MS + 1);
+      vi.spyOn(Date, 'now').mockReturnValue(readAt + DEFAULT_UPSTREAM_REUSE_MS + 1_000);
       expect((await resolveIn(reusing, 'value.0.Status')).value).toBe('Fault');
       expect(fetch).toHaveBeenCalledTimes(2);
     });
