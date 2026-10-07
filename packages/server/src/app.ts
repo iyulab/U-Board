@@ -50,8 +50,7 @@ export interface AppConfig {
   /** Who may create workspaces — instance operators only (default) or every account. */
   workspaceCreation?: WorkspaceCreation;
   /** The built console and share viewer to serve next to the API, from one origin: the share
-   *  viewer under `/share/`, the console at every other path. Omit to serve the API alone (tests,
-   *  or a deployment that hosts the two apps elsewhere). */
+   *  viewer under `/share/`, the console at every other path. Omit to serve the API alone (tests). */
   webApps?: WebApps;
 }
 

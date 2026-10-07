@@ -41,6 +41,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed — breaking
 
+- The `react` and `react-dom` peer range is `^19.2.0` (was `^19.0.0`): the views read the clock
+  through `useEffectEvent`, which React 19.2 introduced.
 - `UBoardLabels` has new required members — `lastUpdated`, `notUpdating`, `time` and the value-map
   form's `valueMapHeading`, `mapFrom`, `mapTo`, `addMapping`, `removeMapping`, `mapOtherwise`,
   `mapOtherwisePlaceholder`, `mapped`. Code that builds a whole `UBoardLabels` (rather than the
