@@ -280,6 +280,11 @@ describe('value maps', () => {
     expect(applyValueMap({ values: { Fault: 'error' } }, { nested: 1 })).toEqual({ nested: 1 });
   });
 
+  it('passes the value through a map that is not one — a document that was never validated', () => {
+    expect(applyValueMap({} as never, 'Fault')).toBe('Fault');
+    expect(applyValueMap({ values: null } as never, 'Fault')).toBe('Fault');
+  });
+
   it('only looks up an entry the map itself has — never one inherited from Object', () => {
     expect(applyValueMap({ values: { Fault: 'error' } }, 'toString')).toBe('toString');
   });

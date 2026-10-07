@@ -38,8 +38,24 @@ interface BindingDraft {
   /** The value map as the form edits it — rows of source value → shown value, and the value for
    * anything else (empty: shown as it comes). Written as text: the map's usual job is a status
    * word or level. */
-  mappings: { from: string; to: string }[];
+  mappings: MappingRow[];
   otherwise: string;
+  /** The map's `otherwise` as loaded, kept as it was unless its text is edited (see `MappingRow.loaded`). */
+  otherwiseLoaded?: { value: unknown };
+}
+
+/** A row of the value map as the form edits it. `loaded` is the shown value the row was loaded with:
+ * while its text is left as shown, that value is saved back as it was — a number stays a number —
+ * rather than as the text the form displays it with. */
+interface MappingRow {
+  from: string;
+  to: string;
+  loaded?: { value: unknown };
+}
+
+/** The value a form field stands for: what it was loaded with if its text was not edited, else its text. */
+function fieldValue(text: string, loaded?: { value: unknown }): unknown {
+  return loaded && text === asText(loaded.value) ? loaded.value : text;
 }
 
 function emptyDraft(connectorId: string): BindingDraft {
@@ -53,11 +69,12 @@ const FIELD_STYLE: React.CSSProperties = { display: 'block', margin: '2px 0' };
 /** The form's text for a mapped value — itself when it is text, its JSON otherwise. */
 const asText = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value));
 
-function draftMap(map: ValueMap | undefined): Pick<BindingDraft, 'mappings' | 'otherwise'> {
+function draftMap(map: ValueMap | undefined): Pick<BindingDraft, 'mappings' | 'otherwise' | 'otherwiseLoaded'> {
   if (!map) return { mappings: [], otherwise: '' };
   return {
-    mappings: Object.entries(map.values).map(([from, to]) => ({ from, to: asText(to) })),
+    mappings: Object.entries(map.values).map(([from, to]) => ({ from, to: asText(to), loaded: { value: to } })),
     otherwise: 'otherwise' in map ? asText(map.otherwise) : '',
+    ...('otherwise' in map && { otherwiseLoaded: { value: map.otherwise } }),
   };
 }
 
@@ -67,8 +84,8 @@ function mapFromDraft(draft: BindingDraft): ValueMap | undefined {
   const rows = draft.mappings.filter(row => row.from !== '');
   if (rows.length === 0 && draft.otherwise === '') return undefined;
   return {
-    values: Object.fromEntries(rows.map(row => [row.from, row.to])),
-    ...(draft.otherwise !== '' && { otherwise: draft.otherwise }),
+    values: Object.fromEntries(rows.map(row => [row.from, fieldValue(row.to, row.loaded)])),
+    ...(draft.otherwise !== '' && { otherwise: fieldValue(draft.otherwise, draft.otherwiseLoaded) }),
   };
 }
 
@@ -319,7 +336,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
             <legend style={{ fontSize: 12 }}>{labels.valueMapHeading}</legend>
             {draft.mappings.map((row, i) => {
               const n = String(i + 1);
-              const setRow = (change: Partial<{ from: string; to: string }>) =>
+              const setRow = (change: Partial<MappingRow>) =>
                 setDraft(d => ({ ...d, mappings: d.mappings.map((r, j) => (j === i ? { ...r, ...change } : r)) }));
               return (
                 <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>

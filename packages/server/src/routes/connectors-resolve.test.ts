@@ -16,6 +16,7 @@ let app: express.Express;
 let workspaceId: string;
 let memberCookie: string;
 let connectorId: string;
+let ownerCookie: string;
 
 function cookieFor(userId: string, activeWorkspaceId: string) {
   return `${SESSION_COOKIE_NAME}=${signSession({ userId, activeWorkspaceId, issuedAt: Date.now() }, SECRET)}`;
@@ -40,7 +41,7 @@ beforeEach(async () => {
   await addWorkspaceUser(db, { workspaceId: workspace.id, userId: owner.id, role: 'owner' });
   workspaceId = workspace.id;
   memberCookie = cookieFor(member.id, workspace.id);
-  const ownerCookie = cookieFor(owner.id, workspace.id);
+  ownerCookie = cookieFor(owner.id, workspace.id);
 
   const create = await request(app)
     .post(`/api/workspaces/${workspaceId}/connectors`)
@@ -227,6 +228,20 @@ describe('connector resolve proxy', () => {
         .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Fault' }] }));
       const readAt = Date.parse((await resolveIn(reusing, 'value.0.Status')).observedAt);
       vi.spyOn(Date, 'now').mockReturnValue(readAt + DEFAULT_UPSTREAM_REUSE_MS + 1);
+      expect((await resolveIn(reusing, 'value.0.Status')).value).toBe('Fault');
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('reads afresh once the connector is changed, never answering with what the old settings read', async () => {
+      (fetch as any)
+        .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Running' }] }))
+        .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Fault' }] }));
+      expect((await resolveIn(reusing, 'value.0.Status')).value).toBe('Running');
+      const changed = await request(reusing)
+        .put(`/api/workspaces/${workspaceId}/connectors/${connectorId}`)
+        .set('Cookie', ownerCookie)
+        .send({ authValue: 'rotated-token' });
+      expect(changed.status).toBe(200);
       expect((await resolveIn(reusing, 'value.0.Status')).value).toBe('Fault');
       expect(fetch).toHaveBeenCalledTimes(2);
     });

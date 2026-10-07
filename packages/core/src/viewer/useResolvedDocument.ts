@@ -26,6 +26,16 @@ export interface UseResolvedDocumentResult {
   stalled: boolean;
 }
 
+/** The longest wait (ms) before re-resolving a page that is shown again. */
+const SHOWN_SPREAD_MS = 3000;
+
+/** Whether any binding in `doc` came back with a value — `live` or `stale` — or there are no bindings
+ * at all, in which case there is nothing that could have failed to arrive. */
+function receivedAnyValue(doc: ResolvedViewDocument): boolean {
+  const qualities = doc.nodes.flatMap(node => Object.values(node.widget.quality));
+  return qualities.length === 0 || qualities.some(quality => quality !== 'disconnected');
+}
+
 /**
  * Resolves a ViewDocument's bindings and keeps the result current — once, or on a poll interval
  * plus on-demand via `refresh()`. `resolveDocument` itself stays a pure one-shot function; this
@@ -52,6 +62,8 @@ export function useResolvedDocument(
   useEffect(() => {
     if (!doc) {
       setResolved(null);
+      setResolvedAt(null);
+      setStalled(false);
       runRef.current = () => {};
       return;
     }
@@ -74,11 +86,15 @@ export function useResolvedDocument(
       resolveDocument(doc, adapters).then(result => {
         inFlight = false;
         if (cancelled) return;
-        completedAt = performance.now();
         setResolved(result);
+        setIsRefreshing(false);
+        // A result is shown whatever it holds, but only one in which some value arrived is an update:
+        // a viewer that reaches nothing gets every binding back `disconnected` on schedule, and that
+        // must not read as "updated just now".
+        if (!receivedAnyValue(result)) return;
+        completedAt = performance.now();
         setResolvedAt(Date.now());
         setStalled(false);
-        setIsRefreshing(false);
       });
     };
     runRef.current = run;
@@ -87,20 +103,28 @@ export function useResolvedDocument(
     const intervalId = pollIntervalMs ? setInterval(run, pollIntervalMs) : undefined;
     // A page shown again — a tab brought back, a machine woken, a page restored from the back/forward
     // cache — asks at once rather than at the next poll, which a suspended page may have long missed.
+    // Spread over a few seconds: the screens of one site woken together (start of a shift) would
+    // otherwise all ask in the same instant, against a rate limit that counts them together.
+    let shownTimer: ReturnType<typeof setTimeout> | undefined;
+    const onShown = () => {
+      clearTimeout(shownTimer);
+      shownTimer = setTimeout(run, Math.random() * Math.min(SHOWN_SPREAD_MS, pollIntervalMs ?? 0));
+    };
     const onVisible = () => {
-      if (document.visibilityState === 'visible') run();
+      if (document.visibilityState === 'visible') onShown();
     };
     if (pollIntervalMs) {
       document.addEventListener('visibilitychange', onVisible);
-      window.addEventListener('pageshow', run);
+      window.addEventListener('pageshow', onShown);
     }
 
     return () => {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
+      clearTimeout(shownTimer);
       if (pollIntervalMs) {
         document.removeEventListener('visibilitychange', onVisible);
-        window.removeEventListener('pageshow', run);
+        window.removeEventListener('pageshow', onShown);
       }
     };
   }, [doc, adapters, pollIntervalMs]);

@@ -8,8 +8,9 @@ type LoadedState = { name: string; document: ViewDocument; adapters: readonly Ad
 
 /** How often an open board asks for its values again. A shared board is left open on a screen, so
  * it must keep up with its sources — and say so when a link expires under it. Each poll is one
- * batch request, and `/api/share/*` sits behind a per-IP edge rate limit (10 requests per 10 s):
- * at this interval about 30 screens behind one address stay well inside it. */
+ * batch request, and `/api/share/*` sits behind a per-address edge rate limit (10 requests per
+ * 10 s, i.e. one a second): at this interval 30 screens behind one address reach it exactly, so
+ * about 20 have room to spare for opening and for screens woken together. */
 export const SHARE_POLL_INTERVAL_MS = 30_000;
 
 export function App() {

@@ -342,6 +342,45 @@ describe('useResolvedDocument', () => {
       expect(result.current.stalled).toBe(false);
     });
 
+    it('does not count a result in which no value arrived as an update', async () => {
+      vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
+      let reachable = true;
+      const adapter: Adapter = {
+        id: 'cmms',
+        resolve: async () => (reachable ? { value: 'running', quality: 'live' } : { value: undefined, quality: 'disconnected', reason: 'transport' }),
+      };
+      const doc = docWithBinding();
+      const adapters = [adapter];
+      const { result } = renderHook(() => useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const updatedAt = result.current.resolvedAt;
+
+      reachable = false; // the viewer reaches nothing: every binding comes back disconnected
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      expect(result.current.resolvedAt).toBe(updatedAt);
+      expect(result.current.stalled).toBe(true);
+      expect(result.current.resolved?.nodes[0].widget.quality.value).toBe('disconnected'); // still shown as it is
+    });
+
+    it('forgets when it last updated once the document is gone', async () => {
+      vi.useFakeTimers();
+      const adapters = [new SpyAdapter()];
+      const { result, rerender } = renderHook(({ doc }) => useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }), {
+        initialProps: { doc: docWithBinding() as ViewDocument | null },
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.resolvedAt).not.toBeNull();
+      rerender({ doc: null });
+      expect(result.current.resolvedAt).toBeNull();
+      expect(result.current.stalled).toBe(false);
+    });
+
     it('never calls a one-shot view stalled', async () => {
       vi.useFakeTimers();
       const doc = docWithBinding();
@@ -364,16 +403,17 @@ describe('useResolvedDocument', () => {
       });
       expect(adapter.resolve).toHaveBeenCalledTimes(1);
 
+      // Within a few seconds, spread so that screens woken together do not all ask in the same instant.
       await act(async () => {
         Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
         document.dispatchEvent(new Event('visibilitychange'));
-        await vi.advanceTimersByTimeAsync(0);
+        await vi.advanceTimersByTimeAsync(3000);
       });
       expect(adapter.resolve).toHaveBeenCalledTimes(2);
 
       await act(async () => {
         window.dispatchEvent(new Event('pageshow'));
-        await vi.advanceTimersByTimeAsync(0);
+        await vi.advanceTimersByTimeAsync(3000);
       });
       expect(adapter.resolve).toHaveBeenCalledTimes(3);
     });

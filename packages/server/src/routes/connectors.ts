@@ -15,7 +15,7 @@ import {
   type ConnectorOAuthSettings,
   type ConnectorSummary,
 } from '../db/connectors.js';
-import { isValidRef, buildResolveTarget, resolveConnectorValue, testConnector, type ResolveState } from '../resolve-connector.js';
+import { isValidRef, buildResolveTarget, resolveConnectorValue, testConnector, forgetConnector, type ResolveState } from '../resolve-connector.js';
 
 const OAUTH = 'oauth2-client-credentials';
 const AUTH_TYPES = new Set(['none', 'bearer', 'header', OAUTH]);
@@ -240,6 +240,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
+    forgetConnector(resolveState, updated.id);
     res.status(200).json(toSummary(updated));
   });
 
@@ -249,6 +250,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
+    forgetConnector(resolveState, req.params.connectorId);
     res.status(204).send();
   });
 

@@ -119,6 +119,8 @@ export async function resolveWidget(
 /** The value `map` gives `value` (`Binding.map`): the entry for the value's text when it is a
  * string, number, boolean or `null`, else `otherwise`, else the value unchanged. */
 export function applyValueMap(map: ValueMap, value: unknown): unknown {
+  // A document is not always validated before it is resolved; a map that is not one changes nothing.
+  if (typeof map?.values !== 'object' || map.values === null) return value;
   const key = value === null || ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : undefined;
   if (key !== undefined && Object.hasOwn(map.values, key)) return map.values[key];
   return 'otherwise' in map ? map.otherwise : value;

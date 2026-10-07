@@ -110,8 +110,10 @@ page with an `<iframe>`; `UBOARD_SHARE_FRAME_ANCESTORS` decides which pages may.
 An open board keeps itself current: every 30 seconds it asks for all of its values in one request,
 and a link that expires while it is open turns into an expiry notice. Many screens showing the same
 board do not multiply the load on a data source — the server answers requests for the same source
-URL from one read for 10 seconds. If the share path sits behind a per-address rate limit, allow for
-one request per open screen every 30 seconds (plus one when it opens).
+URL from one read for 10 seconds, and forgets it as soon as the connector's settings change. If the
+share path sits behind a per-address rate limit, allow for one request per open screen every 30
+seconds, plus one when it opens or is shown again — screens behind one network address all count
+against that address.
 
 ## Upgrading
 

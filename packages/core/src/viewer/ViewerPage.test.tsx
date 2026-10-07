@@ -284,6 +284,9 @@ describe('ViewerPage liveness', () => {
     });
     const contentTitle = () => (lastViewerProps().overlays[0].content as React.ReactElement<{ title?: string }>).props.title;
     expect(contentTitle()).toBeUndefined(); // live: not announced
+    // The live region is there before it has anything to say — one inserted with its text already
+    // in it is not announced by many screen readers.
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
 
     adapter.hold = true;
     await act(async () => {

@@ -60,6 +60,24 @@ export interface UpstreamRead {
   settledAt?: number;
 }
 
+function sweepExpiredReads(state: ResolveState): void {
+  const now = Date.now();
+  for (const [key, read] of state.reads) {
+    if (read.settledAt !== undefined && now - read.settledAt >= state.reuseMs) state.reads.delete(key);
+  }
+}
+
+/** Drops everything the resolve proxy holds for `connectorId` — reads being reused, last-known values
+ * served as `stale`, logged failures, its access token. Call it when the connector's settings change
+ * or it is deleted: what was read with the old address or credentials must not answer for the new. */
+export function forgetConnector(state: ResolveState, connectorId: string): void {
+  for (const key of state.reads.keys()) if (key.startsWith(`${connectorId} `)) state.reads.delete(key);
+  for (const map of [state.values, state.failures]) {
+    for (const key of map.keys()) if (key.startsWith(`${connectorId}:`)) map.delete(key);
+  }
+  state.tokens.invalidate(connectorId);
+}
+
 /** How long a successful upstream read is reused by default — shorter than a viewer's poll
  * interval, so one screen still sees a fresh read on every poll, while many screens polling the
  * same board cost the data source a few reads per interval rather than one each. */
@@ -279,6 +297,9 @@ export async function resolveConnectorValue(
   let read = state.reads.get(requestKey);
   if (read?.settledAt !== undefined && Date.now() - read.settledAt >= state.reuseMs) read = undefined;
   if (!read) {
+    // Each entry holds a whole response body, so finished reads past their window go whenever a new
+    // read starts: what stays is at most the reads of the last window (and the ones still open).
+    sweepExpiredReads(state);
     const started: UpstreamRead = {
       result: fetchBody(connector, target, state.tokens, state.fetch).then(body => ({ body, readAt: Date.now() })),
     };

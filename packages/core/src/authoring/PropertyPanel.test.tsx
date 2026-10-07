@@ -377,6 +377,19 @@ describe('PropertyPanel bindings', () => {
       expect(onChange.mock.calls[0][0].bindings['data.level']).toEqual({ adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } });
     });
 
+    it('keeps a mapped value that is not text as it was, unless its row is edited', () => {
+      const onChange = vi.fn();
+      const node = statusNode({
+        'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' }, map: { values: { running: 3, stopped: 0 }, otherwise: -1 } },
+      });
+      render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+      fireEvent.click(screen.getByText('Edit'));
+      expect(screen.getByLabelText('Shown as 1')).toHaveValue('3');
+      fireEvent.change(screen.getByLabelText('Shown as 2'), { target: { value: 'off' } });
+      fireEvent.click(screen.getByText('Save binding'));
+      expect(onChange.mock.calls[0][0].bindings['data.value'].map).toEqual({ values: { running: 3, stopped: 'off' }, otherwise: -1 });
+    });
+
     it('previews the value as the map will show it', async () => {
       render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
       fillBinding();

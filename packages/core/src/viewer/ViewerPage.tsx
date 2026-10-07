@@ -120,9 +120,7 @@ export function ViewerPage({
             </>
           )}
           {viewerShown && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
-          {viewerShown && pollIntervalMs !== undefined && resolvedAt !== null && (
-            <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />
-          )}
+          {viewerShown && pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
         </div>
       )}
       {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
@@ -167,17 +165,21 @@ function asLastKnown(doc: ResolvedViewDocument): ResolvedViewDocument {
 
 /** When the values on screen were last updated, and — distinctly, announced — when they have stopped
  * being updated (NUREG-0700 §14.1-4: show that the display is working; §2.5.4-6: label a frozen one).
- * A time of day rather than an age, so the line itself never goes out of date. */
-function Freshness({ resolvedAt, stalled, labels }: { resolvedAt: number; stalled: boolean; labels: UBoardLabels }) {
-  const time = labels.time(resolvedAt);
-  return stalled ? (
-    <span role="status" style={{ marginLeft: 'auto', alignSelf: 'center', padding: '2px 8px', borderRadius: 4, background: '#fef3c7', color: '#92400e', fontWeight: 600, fontSize: 13 }}>
-      {labels.notUpdating.replace('{time}', time)}
-    </span>
-  ) : (
-    <span style={{ marginLeft: 'auto', alignSelf: 'center', color: '#64748b', fontSize: 13 }}>
-      {labels.lastUpdated.replace('{time}', time)}
+ * A time of day rather than an age, so the line itself never goes out of date. The announcing region
+ * is always there and only its text changes: one inserted with its text already in it is not read
+ * out by many screen readers. */
+function Freshness({ resolvedAt, stalled, labels }: { resolvedAt: number | null; stalled: boolean; labels: UBoardLabels }) {
+  const time = resolvedAt === null ? null : labels.time(resolvedAt);
+  const notUpdating = stalled && time !== null;
+  return (
+    <span style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 13 }}>
+      <span
+        role="status"
+        style={notUpdating ? { padding: '2px 8px', borderRadius: 4, background: '#fef3c7', color: '#92400e', fontWeight: 600 } : undefined}
+      >
+        {notUpdating ? labels.notUpdating.replace('{time}', time) : ''}
+      </span>
+      {!notUpdating && time !== null && <span style={{ color: '#64748b' }}>{labels.lastUpdated.replace('{time}', time)}</span>}
     </span>
   );
 }
-

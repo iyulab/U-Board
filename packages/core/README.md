@@ -60,12 +60,12 @@ fitted as the view resizes until the viewer pans or zooms; a "Fit to view" contr
 and zoom in/out controls do what the wheel does from the keyboard. Pass `width`/`height` (CSS px) for a
 fixed-size view instead.
 
-With `pollIntervalMs` the board re-reads its bindings on that interval — at once, too, when the page
-is shown again after a hidden tab or a sleeping machine — and is made to be left open on a screen: it
-shows the time its values were last updated, and when no update has arrived for two intervals it
-says so prominently (an announced status) and shows every value as last known (`stale`) rather than
-current. `useResolvedDocument` reports the same through `resolvedAt` and `stalled` for a host that
-renders its own view.
+With `pollIntervalMs` the board re-reads its bindings on that interval — and within a few seconds when
+the page is shown again after a hidden tab or a sleeping machine — and is made to be left open on a
+screen: it shows the time its values were last updated, and when no update (a result in which some
+value arrived) has come for two intervals it says so prominently (an announced status) and shows
+every value as last known (`stale`) rather than current. `useResolvedDocument` reports the same
+through `resolvedAt` and `stalled` for a host that renders its own view.
 
 `AuthoringView` sizes the same way: without `width`/`height` the editor and its live preview split
 the parent's width and fill its height. Both share one pan/zoom and the document opens fitted into

@@ -11,8 +11,10 @@ All notable changes to this package are documented here. The format follows
 - A polling `ViewerPage` (`pollIntervalMs`) suits a board left open on a screen: it shows when its
   values were last updated, and once no update has arrived for two intervals it says it is not
   updating — an announced status — and shows every value as last known (`stale`) rather than
-  current. It also re-reads at once when the page is shown again (`visibilitychange`, `pageshow`)
-  instead of waiting for the next interval. `useResolvedDocument` returns `resolvedAt` and `stalled`.
+  current. Only a result in which some value arrived counts as an update — a viewer that reaches
+  nothing does not read as "updated just now". It also re-reads within a few seconds when the page is
+  shown again (`visibilitychange`, `pageshow`) instead of waiting for the next interval.
+  `useResolvedDocument` returns `resolvedAt` and `stalled`.
 - `Binding.map` (`ValueMap`): translates a source's value into the one a prop takes — `"Fault"` into
   a status level `"error"` — looked up by the value's text, with `otherwise` for a value with no
   entry (else it passes through). Applied to a shown (`live`/`stale`) value before it reaches the
@@ -29,6 +31,13 @@ All notable changes to this package are documented here. The format follows
 - `AuthoringView`'s property panel has a fixed width (320 px). Sized by its content, the binding
   form's fields widened it until the editor and the live preview were squeezed to a sliver. Its
   fields are one per line, each with its label.
+
+### Changed — breaking
+
+- `UBoardLabels` has new required members — `lastUpdated`, `notUpdating`, `time` and the value-map
+  form's `valueMapHeading`, `mapFrom`, `mapTo`, `addMapping`, `removeMapping`, `mapOtherwise`,
+  `mapOtherwisePlaceholder`, `mapped`. Code that builds a whole `UBoardLabels` (rather than the
+  `Partial` the components' `labels` prop takes) must add them; spreading `DEFAULT_LABELS` covers it.
 
 ### Changed
 
