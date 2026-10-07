@@ -86,6 +86,10 @@ function checkNode(doc: Checker, node: unknown, at: string[]): void {
     }
     doc.string(binding, [...bindingAt, 'adapter']);
     if (!('ref' in binding)) doc.fail([...bindingAt, 'ref'], 'expected a ref (its shape is up to the adapter)');
+    // A value map's entries are the values the prop takes — the widget library's business, like props.
+    if (binding.map !== undefined && doc.record(binding, [...bindingAt, 'map'])) {
+      doc.record(binding.map as Record<string, unknown>, [...bindingAt, 'map', 'values']);
+    }
   }
 }
 

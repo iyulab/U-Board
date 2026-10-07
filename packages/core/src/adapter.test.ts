@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveWidget } from './adapter';
+import { resolveWidget, applyValueMap } from './adapter';
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { Widget } from './view-document';
 
@@ -261,3 +261,48 @@ describe('resolveWidget observedAt', () => {
     expect('observedAt' in unknown).toBe(false);
   });
 });
+
+describe('value maps', () => {
+  // A source speaks its own vocabulary ("Fault", 3, true); a widget prop wants its own (a status
+  // level). A binding's map translates one into the other, before the value reaches the props.
+  const levels = { values: { Fault: 'error', Running: 'success', '3': 'warning', true: 'info', null: 'neutral' }, otherwise: 'neutral' };
+
+  it('looks a value up by its text, for strings, numbers, booleans and null', () => {
+    expect(applyValueMap(levels, 'Fault')).toBe('error');
+    expect(applyValueMap(levels, 3)).toBe('warning');
+    expect(applyValueMap(levels, true)).toBe('info');
+    expect(applyValueMap(levels, null)).toBe('neutral');
+  });
+
+  it('answers a value with no entry with `otherwise`, and passes it through when there is none', () => {
+    expect(applyValueMap(levels, 'Idle')).toBe('neutral');
+    expect(applyValueMap({ values: { Fault: 'error' } }, 'Idle')).toBe('Idle');
+    expect(applyValueMap({ values: { Fault: 'error' } }, { nested: 1 })).toEqual({ nested: 1 });
+  });
+
+  it('only looks up an entry the map itself has — never one inherited from Object', () => {
+    expect(applyValueMap({ values: { Fault: 'error' } }, 'toString')).toBe('toString');
+  });
+
+  it('maps a bound value before it reaches the props, live or stale, and leaves a disconnected one alone', async () => {
+    const plant = new InMemoryAdapter('plant', {
+      a: { value: 'Fault', quality: 'live' },
+      b: { value: 'Running', quality: 'stale' },
+      c: { value: 'Fault', quality: 'disconnected' },
+    });
+    const widget = (ref: string): Widget => ({
+      type: 'status',
+      props: { data: { label: 'Pump', level: 'neutral', value: '?' } },
+      bindings: {
+        'data.value': { adapter: 'plant', ref },
+        'data.level': { adapter: 'plant', ref, map: levels },
+      },
+    });
+    expect((await resolveWidget(widget('a'), [plant])).props.data).toEqual({ label: 'Pump', level: 'error', value: 'Fault' });
+    expect((await resolveWidget(widget('b'), [plant])).props.data).toEqual({ label: 'Pump', level: 'success', value: 'Running' });
+    const disconnected = await resolveWidget(widget('c'), [plant]);
+    expect(disconnected.props.data).toEqual({ label: 'Pump', level: 'neutral', value: '?' });
+    expect(disconnected.quality['data.level']).toBe('disconnected');
+  });
+});
+

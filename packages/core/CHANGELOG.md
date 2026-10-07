@@ -13,6 +13,10 @@ All notable changes to this package are documented here. The format follows
   updating — an announced status — and shows every value as last known (`stale`) rather than
   current. It also re-reads at once when the page is shown again (`visibilitychange`, `pageshow`)
   instead of waiting for the next interval. `useResolvedDocument` returns `resolvedAt` and `stalled`.
+- `Binding.map` (`ValueMap`): translates a source's value into the one a prop takes — `"Fault"` into
+  a status level `"error"` — looked up by the value's text, with `otherwise` for a value with no
+  entry (else it passes through). Applied to a shown (`live`/`stale`) value before it reaches the
+  prop; `validateViewDocument` checks its shape. `applyValueMap(map, value)` exported.
 - Labels `lastUpdated`, `notUpdating` and `time` (a time-of-day formatter), and `timeText(locale)` to
   build one.
 

@@ -111,4 +111,17 @@ export interface Binding {
   /** The adapter-specific reference to a value (e.g. an asset id and field name). Opaque to the
    * core binding surface — each adapter defines and interprets its own reference shape. */
   ref: unknown;
+  /** Translates the source's value into the one the prop takes — a data source speaks its own
+   * vocabulary (`"Fault"`, `3`), a widget prop its own (a status level). Applied to a value that is
+   * shown (`live` or `stale`) before it reaches the prop. Omitted: the value is used as it comes. */
+  map?: ValueMap;
+}
+
+/** A lookup from source values to the values a prop takes. A source value is looked up by its
+ * text — `"Fault"`, `"3"`, `"true"`, `"null"` — so a JSON object key can name any of them. A value
+ * with no entry takes `otherwise`, or passes through unchanged when there is none, the way the raw
+ * reading would have. */
+export interface ValueMap {
+  values: Record<string, unknown>;
+  otherwise?: unknown;
 }

@@ -79,6 +79,15 @@ describe('validateViewDocument', () => {
     expect(paths(broken(d => { d.nodes[0].widget.bindings['data.value'] = { adapter: 'cmms' }; }))).toEqual(['/nodes/0/widget/bindings/data.value/ref']);
   });
 
+  it("checks a binding's value map, leaving the mapped values themselves to the widget", () => {
+    const withMap = (map: unknown) => broken(d => { d.nodes[0].widget.bindings['data.value'].map = map; });
+    expect(validateViewDocument(withMap({ values: { Fault: 'error', '3': { any: ['thing'] } }, otherwise: 'neutral' }))).toEqual([]);
+    expect(validateViewDocument(withMap({ values: {} }))).toEqual([]);
+    expect(paths(withMap('error'))).toEqual(['/nodes/0/widget/bindings/data.value/map']);
+    expect(paths(withMap({ otherwise: 'x' }))).toEqual(['/nodes/0/widget/bindings/data.value/map/values']);
+    expect(paths(withMap({ values: ['error'] }))).toEqual(['/nodes/0/widget/bindings/data.value/map/values']);
+  });
+
   it('leaves a binding ref and widget props opaque — each adapter and widget library defines its own', () => {
     expect(validateViewDocument(broken(d => {
       d.nodes[0].widget.bindings['data.value'].ref = 'pump-a.state';

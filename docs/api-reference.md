@@ -205,12 +205,38 @@ shipped components take the same words through their `labels` prop (`labels.qual
 interface Binding {
   adapter: string;
   ref: unknown;
+  map?: ValueMap;
+}
+
+interface ValueMap {
+  values: Record<string, unknown>;
+  otherwise?: unknown;
 }
 ```
 
 - `adapter` — the `id` of the `Adapter` that should resolve this binding.
 - `ref` — the adapter-specific reference to a value (for example, an asset id and field name).
   Opaque to the core binding surface; each adapter defines and interprets its own `ref` shape.
+- `map` — translates the source's value into the one the prop takes. A data source speaks its own
+  vocabulary (`"Fault"`, `3`); a widget prop takes its own (a status widget's level). A source value
+  is looked up in `values` by its text (`"Fault"`, `"3"`, `"true"`, `"null"`); a value with no entry
+  takes `otherwise`, or passes through unchanged when there is none. It applies to a value that is
+  shown (`live` or `stale`), before it reaches the prop. `applyValueMap(map, value)` is the same
+  lookup for a host's own code.
+
+Bind the same source field twice to show it and color by it — the raw value as the text, the mapped
+one as the level:
+
+```ts
+bindings: {
+  'data.value': { adapter: 'plant', ref: { path: '/pumps/a', valuePath: '/status' } },
+  'data.level': {
+    adapter: 'plant',
+    ref: { path: '/pumps/a', valuePath: '/status' },
+    map: { values: { Running: 'success', Fault: 'error' }, otherwise: 'neutral' },
+  },
+}
+```
 
 ### `Widget`
 
@@ -325,7 +351,7 @@ located by an RFC 6901 JSON Pointer into the value
 `isViewDocumentShape` is that test as a type guard.
 
 It checks structure only: a binding's `ref` belongs to its adapter and a widget's `type`/`props`
-to its widget library, so their contents are not inspected; references between parts of a
+(and the values a binding's `map` gives) to its widget library, so their contents are not inspected; references between parts of a
 document (a connector naming a node that is not there) are not judged; fields it does not know
 are ignored.
 

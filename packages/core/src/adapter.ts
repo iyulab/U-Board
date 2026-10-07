@@ -1,4 +1,4 @@
-import type { Widget } from './view-document.js';
+import type { Widget, ValueMap } from './view-document.js';
 
 /**
  * A pluggable resolver for one specific external system's values (docs/concepts.md — "Adapter").
@@ -98,7 +98,9 @@ export async function resolveWidget(
         // Only a reading that has a value to show replaces the static one: `live` is current,
         // `stale` is the last-known value by definition. A `disconnected` reading has none — any
         // `value` it carries is meaningless — so the author's placeholder stays.
-        if (resolved.quality !== 'disconnected') setPath(props, propPath, resolved.value);
+        if (resolved.quality !== 'disconnected') {
+          setPath(props, propPath, binding.map ? applyValueMap(binding.map, resolved.value) : resolved.value);
+        }
         quality[propPath] = resolved.quality;
         if (resolved.reason && resolved.quality !== 'live') reasons[propPath] = resolved.reason;
         if (resolved.observedAt && resolved.quality !== 'disconnected') observedAt[propPath] = resolved.observedAt;
@@ -112,6 +114,14 @@ export async function resolveWidget(
   if (Object.keys(reasons).length > 0) result.reasons = reasons;
   if (Object.keys(observedAt).length > 0) result.observedAt = observedAt;
   return result;
+}
+
+/** The value `map` gives `value` (`Binding.map`): the entry for the value's text when it is a
+ * string, number, boolean or `null`, else `otherwise`, else the value unchanged. */
+export function applyValueMap(map: ValueMap, value: unknown): unknown {
+  const key = value === null || ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : undefined;
+  if (key !== undefined && Object.hasOwn(map.values, key)) return map.values[key];
+  return 'otherwise' in map ? map.otherwise : value;
 }
 
 /** Sets `path` (dot-separated) on `target`, copying each object or array along the way so the
