@@ -468,3 +468,38 @@ describe('AuthoringView multiple selection', () => {
     expect(screen.getByText('Select a node.')).toBeInTheDocument();
   });
 });
+
+describe('AuthoringView clock', () => {
+  it('measures how long ago a preview value was obtained against the clock it is given', async () => {
+    // The machine says 05:10; the source's timestamps — and the real time — say 05:02.
+    vi.useFakeTimers({ now: new Date('2026-10-07T05:10:00Z'), toFake: ['Date'] });
+    const adapter = {
+      id: 'cmms',
+      resolve: async () => ({ value: 'running', quality: 'stale' as const, observedAt: '2026-10-07T05:00:00Z' }),
+    };
+    const staleDoc: ViewDocument = {
+      kind: 'canvas',
+      background: {},
+      nodes: [
+        {
+          id: 'n1',
+          x: 0,
+          y: 0,
+          anchored: false,
+          widget: { type: 'status', props: { data: { label: 'Pump A' } }, bindings: { 'data.value': { adapter: 'cmms', ref: 'k' } } },
+        },
+      ],
+      connectors: [],
+    };
+    try {
+      render(<AuthoringView initialDocument={staleDoc} adapters={[adapter]} clock={() => Date.parse('2026-10-07T05:02:00Z')} />);
+      await waitFor(() => {
+        const props = viewerProps.mock.lastCall?.[0] as Record<string, any> | undefined;
+        const content = props?.overlays?.[0]?.content as React.ReactElement<{ title?: string }> | undefined;
+        expect(content?.props.title).toMatch(/2 minutes ago\)$/);
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

@@ -4,7 +4,7 @@ import { AuthoringView, type ViewDocument, type Adapter } from '@iyulab/u-board'
 import { DemoAdapter } from '@iyulab/u-board/demo';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
-  listMembers, listShareTokens, createShareToken, deleteShareToken, type ShareTokenSummary,
+  listMembers, listShareTokens, createShareToken, deleteShareToken, type ShareTokenSummary, apiClock,
 } from '../api-client.js';
 import { HttpConnectorAdapter } from '../http-connector-adapter.js';
 import { KO_LABELS } from '../u-board-labels.js';
@@ -197,6 +197,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           onDirtyChange={handleDirtyChange}
           onSave={handleSave}
           labels={KO_LABELS}
+          clock={apiClock.now}
         />
       </div>
 

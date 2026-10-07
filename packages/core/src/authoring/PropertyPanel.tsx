@@ -19,6 +19,9 @@ export interface PropertyPanelProps {
   connectorLabels?: Record<string, string>;
   onChange: (widget: Widget) => void;
   labels?: UBoardLabels;
+  /** The current time in epoch milliseconds, which a stale preview value's age is measured to —
+   * `Date.now` by default. */
+  clock?: () => number;
 }
 
 function isWidgetType(value: string): value is WidgetType {
@@ -107,7 +110,7 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
   return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', demoRef: '', ...map };
 }
 
-export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS }: PropertyPanelProps) {
+export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS, clock = Date.now }: PropertyPanelProps) {
   const [propsText, setPropsText] = useState('{}');
   const [propsError, setPropsError] = useState<string | null>(null);
   const [draft, setDraft] = useState<BindingDraft>(emptyDraft(initialConnectorId(adapters)));
@@ -192,7 +195,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           ...(preview.reason && { reasons: { binding: preview.reason } }),
           ...(preview.observedAt && { observedAt: { binding: preview.observedAt } }),
         },
-        { text: labels.qualityText }
+        { text: labels.qualityText, now: clock() }
       )
     : undefined;
 

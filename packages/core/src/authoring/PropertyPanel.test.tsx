@@ -205,6 +205,19 @@ describe('PropertyPanel bindings', () => {
     ).toBeInTheDocument());
   });
 
+  it('measures that age against the clock it is given', async () => {
+    // The source's clock — and the real time — is two hours behind this machine's.
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} clock={() => Date.now() - 2 * 3_600_000} />);
+
+    fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/b' } });
+    fireEvent.click(screen.getByText('Preview'));
+
+    await waitFor(() => expect(
+      screen.getByText(`${QUALITY_LABEL.stale} (${REASON_LABEL.transport}, 1 minute ago)`)
+    ).toBeInTheDocument());
+  });
+
   it('saves a new binding with the adapter id and HTTP ref shape', () => {
     const onChange = vi.fn();
     render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);

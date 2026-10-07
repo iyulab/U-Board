@@ -1,5 +1,6 @@
 import type { ViewDocument } from '@iyulab/u-board';
 import type { ResolvedBinding } from '@iyulab/u-board';
+import { serverClock } from '@iyulab/u-board';
 
 export class ApiError extends Error {
   /** `body` is the whole error response, for codes that carry more than the code — e.g. `LAST_OWNER`
@@ -16,16 +17,28 @@ export class ApiError extends Error {
 // case (the instance is warm by the second attempt) without masking a genuinely dead backend.
 const REQUEST_TIMEOUT_MS = 30_000;
 
+/** The server's clock, as its responses tell it — what the editor's "N minutes ago" is measured by,
+ * since the values it previews are stamped by the server. */
+export const apiClock = serverClock();
+
+/** One request, its response's `Date` taken into `apiClock`. */
+async function timedFetch(url: string, init: RequestInit): Promise<Response> {
+  const sentAt = Date.now();
+  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  apiClock.observe(res, sentAt);
+  return res;
+}
+
 async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
   try {
-    return await fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+    return await timedFetch(url, init);
   } catch (err) {
     // Checked via `.name` rather than `instanceof DOMException`/`instanceof Error` — the abort
     // reason `AbortSignal.timeout` throws is a `DOMException`, but whether that inherits from
     // `Error` varies across environments (true in real browsers and Node, not in jsdom's test
     // implementation); `.name` is the one property both agree on.
     if ((err as { name?: string } | null)?.name === 'TimeoutError') {
-      return fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+      return timedFetch(url, init);
     }
     throw err;
   }

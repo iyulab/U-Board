@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { KonvaDesigner } from '@canvas-kit/designer';
 import { Viewer } from '@canvas-kit/viewer';
 import { viewToScene } from '@canvas-kit/core';
@@ -46,6 +46,9 @@ export interface AuthoringViewProps {
   labels?: Partial<UBoardLabels>;
   /** Show the document being edited as JSON below the editor — a development aid, off by default. */
   showDocumentSource?: boolean;
+  /** The current time in epoch milliseconds — what "N minutes ago" in the preview and the binding
+   * form is measured by. `Date.now` by default; see `ViewerPage`'s `clock`. */
+  clock?: () => number;
 }
 
 /** Width of the property/decoration panel beside the editor and preview (CSS px). */
@@ -63,8 +66,10 @@ const PANEL_WIDTH = 320;
  * magnified) and stays fitted as the panes resize until the author pans or zooms; "Fit to view"
  * restores that, and a new node or decoration is placed in view.
  */
-export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false }: AuthoringViewProps) {
+export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now }: AuthoringViewProps) {
   const labels = useLabels(labelsProp);
+  // Read when a result is drawn, not watched: a new function on every render must not re-resolve.
+  const readClock = useEffectEvent(() => clock());
   const [doc, setDoc] = useState(initialDocument);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -117,12 +122,12 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     let cancelled = false;
     resolveDocument(doc, adapters).then(resolved => {
       if (cancelled) return;
-      setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText }));
+      setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock() }));
       // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
       // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
       // pick it up.
       chartsReady.then(() => {
-        if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText }));
+        if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock() }));
       });
     });
     return () => {
@@ -302,7 +307,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           ) : selectedDecoration ? (
             <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} labels={labels} />
           ) : (
-            <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} labels={labels} />
+            <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} labels={labels} clock={clock} />
           )}
         </div>
       </div>

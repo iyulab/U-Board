@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector, listShareTokens, createShareToken, deleteShareToken, removeMember, setMemberRole, listInvitations, revokeInvitation } from './api-client.js';
+import { apiClock, signup, login, getBootstrapStatus, ApiError, listBoards, createBoard, getBoard, updateBoard, deleteBoard, listConnectors, createConnector, updateConnector, deleteConnector, resolveConnector, listShareTokens, createShareToken, deleteShareToken, removeMember, setMemberRole, listInvitations, revokeInvitation } from './api-client.js';
 
 beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn());
@@ -7,15 +7,25 @@ beforeEach(() => {
 
 describe('API base URL', () => {
   it('calls the API under /api on its own origin, sending the session cookie', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ hasAnyUser: false }) });
     await getBootstrapStatus();
     expect(fetch).toHaveBeenCalledWith('/api/auth/bootstrap-status', expect.objectContaining({ credentials: 'same-origin' }));
   });
 });
 
+describe('server clock', () => {
+  it('follows the Date of the API responses', async () => {
+    // A server an hour behind this machine.
+    const serverDate = new Date(Date.now() - 3_600_000);
+    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, headers: new Headers({ Date: serverDate.toUTCString() }), json: async () => ({ hasAnyUser: false }) });
+    await getBootstrapStatus();
+    expect(Math.abs(apiClock.now() - serverDate.getTime())).toBeLessThan(2000);
+  });
+});
+
 describe('request timeout + retry (edge cold-start hardening)', () => {
   it('sets an AbortSignal timeout on every request', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ hasAnyUser: false }) });
     await getBootstrapStatus();
     const [, init] = (fetch as any).mock.calls[0];
     expect(init.signal).toBeInstanceOf(AbortSignal);
@@ -24,7 +34,7 @@ describe('request timeout + retry (edge cold-start hardening)', () => {
   it('retries once when the first attempt times out, and resolves with the retry result', async () => {
     (fetch as any)
       .mockRejectedValueOnce(new DOMException('The operation timed out.', 'TimeoutError'))
-      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: true }) });
+      .mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ hasAnyUser: true }) });
 
     await expect(getBootstrapStatus()).resolves.toEqual({ hasAnyUser: true });
     expect(fetch).toHaveBeenCalledTimes(2);
@@ -49,7 +59,7 @@ describe('request timeout + retry (edge cold-start hardening)', () => {
 
 describe('signup', () => {
   it('posts to /auth/signup and returns the parsed body', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ userId: 'u1', workspaceId: 'w1' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 201, json: async () => ({ userId: 'u1', workspaceId: 'w1' }) });
     const result = await signup({ email: 'a@x.com', password: 'p', name: 'A' });
     expect(result).toEqual({ userId: 'u1', workspaceId: 'w1' });
     expect(fetch).toHaveBeenCalledWith(
@@ -59,7 +69,7 @@ describe('signup', () => {
   });
 
   it('throws ApiError with the server code on failure', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ code: 'EMAIL_TAKEN' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 409, json: async () => ({ code: 'EMAIL_TAKEN' }) });
     await expect(signup({ email: 'a@x.com', password: 'p', name: 'A' })).rejects.toMatchObject(
       new ApiError('EMAIL_TAKEN', 409)
     );
@@ -68,7 +78,7 @@ describe('signup', () => {
 
 describe('login', () => {
   it('throws ApiError(INVALID_CREDENTIALS, 401) on wrong password', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ code: 'INVALID_CREDENTIALS' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 401, json: async () => ({ code: 'INVALID_CREDENTIALS' }) });
     await expect(login({ email: 'a@x.com', password: 'wrong' })).rejects.toMatchObject(
       new ApiError('INVALID_CREDENTIALS', 401)
     );
@@ -77,7 +87,7 @@ describe('login', () => {
 
 describe('getBootstrapStatus', () => {
   it('returns hasAnyUser from /auth/bootstrap-status', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ hasAnyUser: false }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ hasAnyUser: false }) });
     await expect(getBootstrapStatus()).resolves.toEqual({ hasAnyUser: false });
     expect(fetch).toHaveBeenCalledWith('/api/auth/bootstrap-status', expect.objectContaining({ credentials: 'same-origin' }));
   });
@@ -85,33 +95,33 @@ describe('getBootstrapStatus', () => {
 
 describe('board endpoints', () => {
   it('listBoards GETs /workspaces/:id/boards', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ boards: [{ id: 'b1', name: 'A', updatedAt: 't' }] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ boards: [{ id: 'b1', name: 'A', updatedAt: 't' }] }) });
     await expect(listBoards('w1')).resolves.toEqual({ boards: [{ id: 'b1', name: 'A', updatedAt: 't' }] });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('createBoard POSTs {name}', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => ({ id: 'b1', name: 'A', updatedAt: 't' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 201, json: async () => ({ id: 'b1', name: 'A', updatedAt: 't' }) });
     await expect(createBoard('w1', 'A')).resolves.toEqual({ id: 'b1', name: 'A', updatedAt: 't' });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards', expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'A' }) }));
   });
 
   it('getBoard GETs /workspaces/:id/boards/:boardId', async () => {
     const doc = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'b1', name: 'A', document: doc, updatedAt: 't' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ id: 'b1', name: 'A', document: doc, updatedAt: 't' }) });
     await expect(getBoard('w1', 'b1')).resolves.toEqual({ id: 'b1', name: 'A', document: doc, updatedAt: 't' });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('updateBoard PUTs the given fields', async () => {
     const doc = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ id: 'b1', name: 'A', updatedAt: 't2' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ id: 'b1', name: 'A', updatedAt: 't2' }) });
     await expect(updateBoard('w1', 'b1', { document: doc })).resolves.toEqual({ id: 'b1', name: 'A', updatedAt: 't2' });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ document: doc }) }));
   });
 
   it('deleteBoard DELETEs and resolves with no body', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 204, json: async () => ({}) });
     await expect(deleteBoard('w1', 'b1')).resolves.toBeUndefined();
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ method: 'DELETE' }));
   });
@@ -119,18 +129,18 @@ describe('board endpoints', () => {
 
 describe('membership endpoints', () => {
   it('removeMember DELETEs the membership', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 204, json: async () => ({}) });
     await expect(removeMember('w1', 'u2')).resolves.toBeUndefined();
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/members/u2', expect.objectContaining({ method: 'DELETE' }));
   });
 
   it('removeMember surfaces LAST_OWNER', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({ code: 'LAST_OWNER' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 409, json: async () => ({ code: 'LAST_OWNER' }) });
     await expect(removeMember('w1', 'u1')).rejects.toMatchObject({ code: 'LAST_OWNER', status: 409 });
   });
 
   it('setMemberRole PATCHes {role}', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 204, json: async () => ({}) });
     await setMemberRole('w1', 'u2', 'owner');
     expect(fetch).toHaveBeenCalledWith(
       '/api/workspaces/w1/members/u2',
@@ -139,11 +149,11 @@ describe('membership endpoints', () => {
   });
 
   it('listInvitations GETs and revokeInvitation DELETEs', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ invitations: [] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ invitations: [] }) });
     await expect(listInvitations('w1')).resolves.toEqual({ invitations: [] });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/invitations', expect.objectContaining({ credentials: 'same-origin' }));
 
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 204, json: async () => ({}) });
     await revokeInvitation('w1', 'i1');
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/invitations/i1', expect.objectContaining({ method: 'DELETE' }));
   });
@@ -152,14 +162,14 @@ describe('membership endpoints', () => {
 describe('connector endpoints', () => {
   it('listConnectors GETs /workspaces/:id/connectors', async () => {
     const summary = { id: 'c1', name: 'A', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't' };
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ connectors: [summary] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ connectors: [summary] }) });
     await expect(listConnectors('w1')).resolves.toEqual({ connectors: [summary] });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('createConnector POSTs the input', async () => {
     const summary = { id: 'c1', name: 'A', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't' };
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => summary });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 201, json: async () => summary });
     const input = { name: 'A', baseUrl: 'https://a.example.com', authType: 'none' as const };
     await expect(createConnector('w1', input)).resolves.toEqual(summary);
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors', expect.objectContaining({ method: 'POST', body: JSON.stringify(input) }));
@@ -167,19 +177,19 @@ describe('connector endpoints', () => {
 
   it('updateConnector PUTs the given fields', async () => {
     const summary = { id: 'c1', name: 'Renamed', type: 'http' as const, baseUrl: 'https://a.example.com', authType: 'none' as const, updatedAt: 't2' };
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => summary });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => summary });
     await expect(updateConnector('w1', 'c1', { name: 'Renamed' })).resolves.toEqual(summary);
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors/c1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ name: 'Renamed' }) }));
   });
 
   it('deleteConnector DELETEs and resolves with no body', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 204, json: async () => ({}) });
     await expect(deleteConnector('w1', 'c1')).resolves.toBeUndefined();
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors/c1', expect.objectContaining({ method: 'DELETE' }));
   });
 
   it('resolveConnector POSTs the ref and returns value+quality', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ value: 'running', quality: 'live' }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ value: 'running', quality: 'live' }) });
     const ref = { path: '/pumps/a', valuePath: 'status' };
     await expect(resolveConnector('w1', 'c1', ref)).resolves.toEqual({ value: 'running', quality: 'live' });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/connectors/c1/resolve', expect.objectContaining({ method: 'POST', body: JSON.stringify({ ref }) }));
@@ -189,18 +199,18 @@ describe('connector endpoints', () => {
 describe('share token endpoints', () => {
   it('listShareTokens GETs /workspaces/:id/boards/:id/share-tokens', async () => {
     const summary = { id: 't1', tokenMask: 'ab12cd34', createdAt: 't' };
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ tokens: [summary] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ tokens: [summary] }) });
     await expect(listShareTokens('w1', 'b1')).resolves.toEqual({ tokens: [summary] });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('createShareToken POSTs, with an expiry only when one is given', async () => {
     const created = { id: 't1', token: 'plaintext-token-value', tokenMask: 'ab12cd34', createdAt: 't' };
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => created });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 201, json: async () => created });
     await expect(createShareToken('w1', 'b1')).resolves.toEqual(created);
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens', expect.objectContaining({ method: 'POST', body: '{}' }));
 
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 201, json: async () => created });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 201, json: async () => created });
     await createShareToken('w1', 'b1', '2999-01-01T00:00:00.000Z');
     expect(fetch).toHaveBeenLastCalledWith(
       '/api/workspaces/w1/boards/b1/share-tokens',
@@ -209,7 +219,7 @@ describe('share token endpoints', () => {
   });
 
   it('deleteShareToken DELETEs and resolves with no body', async () => {
-    (fetch as any).mockResolvedValueOnce({ ok: true, status: 204, json: async () => ({}) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 204, json: async () => ({}) });
     await expect(deleteShareToken('w1', 'b1', 't1')).resolves.toBeUndefined();
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1/share-tokens/t1', expect.objectContaining({ method: 'DELETE' }));
   });

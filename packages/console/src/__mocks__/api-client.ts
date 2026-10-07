@@ -9,6 +9,9 @@ export class ApiError extends Error {
   }
 }
 
+/** The machine's clock: tests that need another pass their own. */
+export const apiClock = { now: () => Date.now(), observe: vi.fn() };
+
 export const signup = vi.fn();
 export const login = vi.fn();
 export const logout = vi.fn();

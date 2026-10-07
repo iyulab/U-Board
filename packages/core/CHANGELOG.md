@@ -25,8 +25,8 @@ All notable changes to this package are documented here. The format follows
   `mapOtherwisePlaceholder`, `mapped`).
 - Labels `lastUpdated`, `notUpdating` and `time` (a time-of-day formatter), and `timeText(locale)` to
   build one.
-- `ViewerPage` `clock` (default `Date.now`): what a stale value's age and the time of the last update
-  are measured by. `serverClock()` estimates a server's clock from the `Date` of its responses
+- `ViewerPage` and `AuthoringView` `clock` (default `Date.now`): what a stale value's age and the
+  time of the last update are measured by (`AuthoringView` passes it to its preview and binding form). `serverClock()` estimates a server's clock from the `Date` of its responses
   (`observe(response, sentAt)`), so a screen whose own clock has drifted still says "2 minutes ago"
   when it is. `toCanvasKit` takes `now`, `useResolvedDocument` takes `clock`.
 
