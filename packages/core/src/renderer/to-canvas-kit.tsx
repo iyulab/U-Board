@@ -45,6 +45,8 @@ const VISUALLY_HIDDEN_STYLE: CSSProperties = {
   border: 0,
 };
 
+const WIDGET_FILL_STYLE: CSSProperties = { width: '100%', minHeight: '100%' };
+
 export interface CanvasKitRenderOutput {
   scene: Scene;
   overlays: ViewerOverlayItem[];
@@ -118,7 +120,11 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
       height: node.height ?? DEFAULT_NODE_HEIGHT,
       content: (
         <div style={{ width: '100%', height: '100%', ...frameStyle }} title={label}>
-          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} />
+          {/* A widget fills its node: u-widgets grows into the height its host is given, and without
+              one a chart keeps its own default and leaves the box half empty. A minimum, not a fixed
+              height: in a box smaller than what a widget can draw in, the widget stays whole and
+              extends past the box, rather than a chart's plot being pressed flat or a gauge cut off. */}
+          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} />
           <span role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
             {label ?? ''}
           </span>

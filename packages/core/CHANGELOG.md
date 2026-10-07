@@ -32,6 +32,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- A widget fills its node's height: a chart in a node taller than its own default height was drawn
+  at that default, leaving the rest of the box empty. In a node smaller than what a widget can draw
+  in, the widget keeps its size as before.
 - `AuthoringView`'s property panel has a fixed width (320 px). Sized by its content, the binding
   form's fields widened it until the editor and the live preview were squeezed to a sliver. Its
   fields are one per line, each with its label.

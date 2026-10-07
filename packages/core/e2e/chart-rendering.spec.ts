@@ -88,3 +88,28 @@ test('the authoring seed shape for chart.line renders a canvas, not the "Unknown
   const text = await overlayShadowText(page, overlayTestId);
   expect(text).not.toContain('Unknown widget');
 });
+
+/** On-screen heights of a node's box and of the widget drawn in it. */
+async function heights(page: Page, nodeId: string) {
+  return page.evaluate(id => {
+    const overlay = document.querySelector(`[data-testid="overlay-${id}"]`) as HTMLElement;
+    const widget = overlay.querySelector('u-widget') as HTMLElement;
+    return { overlay: overlay.getBoundingClientRect().height, widget: widget.getBoundingClientRect().height };
+  }, nodeId);
+}
+
+// A node's box is the author's: its widget fills it, rather than keeping its own default height and
+// leaving the box half empty.
+test('a widget fills a node taller than its own default — the chart is as tall as the node', async ({ page }) => {
+  const sizes = await heights(page, 'pump-a-load-trend');
+  expect(sizes.overlay).toBeGreaterThan(0);
+  expect(Math.abs(sizes.widget - sizes.overlay)).toBeLessThan(2);
+});
+
+// …but is not squeezed below what it can draw in: a chart's plot is not pressed flat, a gauge not cut off.
+test('a widget keeps its own size in a node smaller than that', async ({ page }) => {
+  for (const id of ['seed-chart-line-check', 'seed-gauge-check']) {
+    const sizes = await heights(page, id);
+    expect(sizes.widget, id).toBeGreaterThan(sizes.overlay);
+  }
+});
