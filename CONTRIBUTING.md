@@ -97,10 +97,20 @@ jest-dom's matchers) from the instance the tests use.
 
 ## Changelog
 
-`packages/core/CHANGELOG.md` records what consumers of `@iyulab/u-board` can notice, in the
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format. A change to the published package's
-behaviour or API adds an entry under `## [Unreleased]` in the same commit — breaking changes say how
-to migrate. A release renames that section to the version and date.
+Two changelogs, one per thing released, both in the
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format:
+
+- `packages/core/CHANGELOG.md` records what consumers of the `@iyulab/u-board` library can notice.
+  A change to its behaviour or API adds an entry under `## [Unreleased]` in the same commit —
+  breaking changes say how to migrate.
+- `CHANGELOG.md` at the root records what an installation of the product — the container image with
+  the server, console and share viewer — can notice: behaviour, settings, paths, the database. An
+  entry that asks something of an installation when it upgrades (a setting to add, a path that moved)
+  says what to do.
+
+A release renames `## [Unreleased]` to the version and date, in the commit that sets that version.
+The product's release notes are its section; a product version without one fails `npm run
+test:tooling`.
 
 ## Pull requests
 

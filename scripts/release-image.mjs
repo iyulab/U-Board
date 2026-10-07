@@ -46,11 +46,39 @@ export function releasePlan(version, revision = '') {
   };
 }
 
-/** The release's notes — how to install this version, from the registry or from the archive. */
-export function releaseNotes(plan, archiveSha256) {
+/** The body of `version`'s section in the product changelog (CHANGELOG.md) — its `###` headings
+ *  sit under the notes' `## Changes` as they sat under the version. Throws when there is none: a
+ *  release says what changed. */
+export function changelogSection(changelog, version) {
+  const lines = changelog.split(/\r?\n/);
+  const heading = new RegExp(`^## \\[${version.replace(/[.+-]/g, '\\$&')}\\](\\s|$)`);
+  const start = lines.findIndex(l => heading.test(l));
+  if (start === -1) throw new Error(`CHANGELOG.md has no section for ${version} — add "## [${version}] - <date>" before releasing it`);
+  const end = lines.findIndex((l, i) => i > start && l.startsWith('## '));
+  const body = lines
+    .slice(start + 1, end === -1 ? undefined : end)
+    .join('\n')
+    .trim();
+  if (!body) throw new Error(`CHANGELOG.md's section for ${version} is empty`);
+  return body;
+}
+
+/** Markdown links relative to the repository root, made absolute against `base` — release notes
+ *  are read on the release's page, not next to the files. */
+export function absoluteLinks(markdown, base) {
+  return markdown.replace(/\]\((?![a-z][a-z0-9+.-]*:|#|\/)([^)\s]+)\)/gi, (_, target) => `](${base}${target})`);
+}
+
+/** The release's notes — what changed (the changelog's section), then how to install this version,
+ *  from the registry or from the archive. */
+export function releaseNotes(plan, archiveSha256, changes) {
   const docs = `${REPOSITORY}/blob/${plan.tag}/docs/self-hosting.md`;
   return [
     `The U-Board container image, version ${plan.version} (${plan.platform}). It serves the console, the read-only share viewer and their API from one origin.`,
+    '',
+    '## Changes',
+    '',
+    absoluteLinks(changes, `${REPOSITORY}/blob/${plan.tag}/`),
     '',
     '## Install',
     '',
@@ -127,6 +155,9 @@ async function main() {
     return;
   }
 
+  // Before the build: a release without a changelog section is refused, not built.
+  const changes = changelogSection(readFileSync('CHANGELOG.md', 'utf8'), plan.version);
+
   console.log(`Building ${plan.refs.join(', ')} (${plan.platform}) …`);
   run('docker', [
     'build', '-f', 'packages/server/Dockerfile', '--platform', plan.platform,
@@ -145,7 +176,7 @@ async function main() {
   rmSync(tar);
   const digest = await sha256(archive);
   writeFileSync(`${archive}.sha256`, `${digest}  ${plan.archive}\n`);
-  writeFileSync(path.join(OUT_DIR, 'notes.md'), releaseNotes(plan, digest));
+  writeFileSync(path.join(OUT_DIR, 'notes.md'), releaseNotes(plan, digest, changes));
   console.log(`Wrote ${archive} (sha256 ${digest}), its checksum and notes.md.`);
 
   if (!args.includes('--push')) return;

@@ -1,0 +1,29 @@
+# Changelog — U-Board
+
+The product: the server, the console and the share viewer, released together as one container image,
+`ghcr.io/iyulab/u-board`, at the version in `packages/server/package.json`. The library,
+`@iyulab/u-board`, has a version and a changelog of its own: [packages/core/CHANGELOG.md](packages/core/CHANGELOG.md).
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the product follows
+[Semantic Versioning](https://semver.org/) — below 1.0, a minor release may contain breaking changes.
+An entry that asks something of an installation — a setting to add, a path that moved — says what to
+do when upgrading. Each release's notes carry its section.
+
+## [Unreleased]
+
+## [0.1.0] - 2026-10-08
+
+The first release as a published image. What it does is described in the [README](README.md#status);
+running, backing up and upgrading it in [docs/self-hosting.md](docs/self-hosting.md).
+
+### Upgrading from an image built from source
+
+An installation built from an earlier checkout upgrades as any other does — back up, then start this
+image on the same database ([Upgrading](docs/self-hosting.md#upgrading)). If its build predates them,
+it also needs:
+
+- `UBOARD_SECRETS_KEY`, at least 32 characters. The server refuses to start without it, and on its
+  first start seals the connector credentials stored in the clear before it.
+- One origin for everything: the API under `/api`, the share viewer under `/share/` and the console
+  at every other path. Share links made with the viewer on a host of its own keep working only if
+  that host redirects to `/share/` with the query kept. `UBOARD_CORS_ORIGINS` is gone.

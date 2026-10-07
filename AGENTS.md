@@ -25,7 +25,8 @@ Two things are released, each under its own version. The library, `packages/core
 container image — is released at the version in `packages/server/package.json`. The four other
 workspaces (`site` is the introduction site) stay `private` on npm.
 
-To release the product, change `version` in `packages/server/package.json` and push the change to
+To release the product, change `version` in `packages/server/package.json`, give that version its
+section in the root `CHANGELOG.md` (the release notes are made from it), and push the change to
 `main`. The `image` job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` and, if that
 version has no GitHub release yet, pushes the image to `ghcr.io/iyulab/u-board` (the version,
 `<major>.<minor>` and, unless it is a pre-release, `latest`) and creates the release `v<version>` with
