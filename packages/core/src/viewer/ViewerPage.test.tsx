@@ -247,3 +247,66 @@ describe('ViewerPage labels', () => {
     expect(viewerProps.mock.calls.length).toBe(calls);
   });
 });
+
+describe('ViewerPage liveness', () => {
+  class GatedAdapter implements Adapter {
+    readonly id = 'cmms';
+    hold = false;
+    resolve = vi.fn((): Promise<ResolvedBinding> =>
+      this.hold ? new Promise(() => {}) : Promise.resolve({ value: 'running', quality: 'live', observedAt: new Date().toISOString() })
+    );
+  }
+
+  it('shows when the values were last updated while it polls, and nothing of the kind when it does not', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
+    const adapters = [new GatedAdapter()];
+    const { unmount } = render(<ViewerPage adapters={adapters} initialDocument={docWithBinding()} pollIntervalMs={1000} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const time = new Intl.DateTimeFormat('en', { timeStyle: 'medium' }).format(Date.parse('2026-10-07T05:00:00Z'));
+    expect(screen.getByText(`Updated ${time}`)).toBeInTheDocument();
+    unmount();
+
+    render(<ViewerPage adapters={adapters} initialDocument={docWithBinding()} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.queryByText(/Updated/)).not.toBeInTheDocument();
+  });
+
+  it('says it is not updating and shows every value as last known, once a poll goes unanswered', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
+    const adapter = new GatedAdapter();
+    render(<ViewerPage adapters={[adapter]} initialDocument={docWithBinding()} pollIntervalMs={1000} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    const contentTitle = () => (lastViewerProps().overlays[0].content as React.ReactElement<{ title?: string }>).props.title;
+    expect(contentTitle()).toBeUndefined(); // live: not announced
+
+    adapter.hold = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    const time = new Intl.DateTimeFormat('en', { timeStyle: 'medium' }).format(Date.parse('2026-10-07T05:00:00Z'));
+    expect(screen.getByRole('status')).toHaveTextContent(`Not updating — last updated ${time}`);
+    expect(contentTitle()).toMatch(/^stale — showing last known value/);
+  });
+
+  it('writes the time in the language of the labels it is given', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
+    render(
+      <ViewerPage
+        adapters={[new GatedAdapter()]}
+        initialDocument={docWithBinding()}
+        pollIntervalMs={1000}
+        labels={{ lastUpdated: '갱신 {time}', time: () => '오후 2:00:00' }}
+      />
+    );
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getByText('갱신 오후 2:00:00')).toBeInTheDocument();
+  });
+});

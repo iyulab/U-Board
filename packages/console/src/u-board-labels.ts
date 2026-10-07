@@ -1,4 +1,4 @@
-import { ageText, type UBoardLabels } from '@iyulab/u-board';
+import { ageText, timeText, type UBoardLabels } from '@iyulab/u-board';
 
 /** U-Board 저작·뷰어 컴포넌트의 한국어 문구 — 콘솔 전체와 같은 말을 쓴다("연결 끊김" 등). */
 export const KO_LABELS: UBoardLabels = {
@@ -20,6 +20,9 @@ export const KO_LABELS: UBoardLabels = {
   previewRegion: '실시간 미리보기',
   boardRegion: '보드',
   resolving: '불러오는 중…',
+  lastUpdated: '갱신 {time}',
+  notUpdating: '갱신이 멈춤 — 마지막 갱신 {time}',
+  time: timeText('ko'),
   noDocument: '불러온 문서가 없습니다 — 가져오기로 여세요.',
   debugDocument: 'ViewDocument (디버그)',
 

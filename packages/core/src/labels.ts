@@ -33,6 +33,13 @@ export interface UBoardLabels {
   boardRegion: string;
   resolving: string;
   noDocument: string;
+  /** A polling `ViewerPage`'s "last updated" line; `{time}` is replaced by the time of day. */
+  lastUpdated: string;
+  /** Shown instead, prominently, while a polling `ViewerPage` is not updating; `{time}` as above. */
+  notUpdating: string;
+  /** Writes a time of day (epoch ms) for `{time}` — in the labels' own language, like
+   * `qualityText.age`. `timeText(locale)` builds one. */
+  time: (epochMs: number) => string;
   debugDocument: string;
 
   // Node property panel
@@ -73,6 +80,13 @@ export interface UBoardLabels {
   qualityText: QualityText;
 }
 
+/** A time of day in `locale`'s words — "4:19:24 PM", "오후 4:19:24" (`Intl.DateTimeFormat`, hours
+ * to seconds, the local time zone). */
+export function timeText(locale: string): (epochMs: number) => string {
+  const format = new Intl.DateTimeFormat(locale, { timeStyle: 'medium' });
+  return epochMs => format.format(epochMs);
+}
+
 export const DEFAULT_LABELS: UBoardLabels = {
   addNode: 'Add node',
   addRectDecoration: 'Add rect decoration',
@@ -93,6 +107,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   boardRegion: 'Board',
   resolving: 'Resolving…',
   noDocument: 'No document loaded — Import one to view it.',
+  lastUpdated: 'Updated {time}',
+  notUpdating: 'Not updating — last updated {time}',
+  time: timeText('en'),
   debugDocument: 'ViewDocument (debug)',
 
   selectNode: 'Select a node.',

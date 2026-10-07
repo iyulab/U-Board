@@ -10,6 +10,7 @@ import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
+import type { ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
 
 export interface ViewerPageProps {
@@ -55,7 +56,9 @@ export function ViewerPage({
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { resolved } = useResolvedDocument(doc, adapters, { pollIntervalMs });
+  const { resolved: received, resolvedAt, stalled } = useResolvedDocument(doc, adapters, { pollIntervalMs });
+  // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
+  const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
 
   const extent = useMemo(() => (doc ? documentExtent(doc) : null), [doc]);
   const view = useFittedView();
@@ -117,6 +120,9 @@ export function ViewerPage({
             </>
           )}
           {viewerShown && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
+          {viewerShown && pollIntervalMs !== undefined && resolvedAt !== null && (
+            <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />
+          )}
         </div>
       )}
       {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
@@ -141,3 +147,37 @@ export function ViewerPage({
     </div>
   );
 }
+
+/** A resolved document with every `live` binding read as `stale` — the values stay, their observation
+ * times stay, only the claim that they are current goes. */
+function asLastKnown(doc: ResolvedViewDocument): ResolvedViewDocument {
+  return {
+    ...doc,
+    nodes: doc.nodes.map(node => ({
+      ...node,
+      widget: {
+        ...node.widget,
+        quality: Object.fromEntries(
+          Object.entries(node.widget.quality).map(([path, quality]) => [path, quality === 'live' ? 'stale' : quality])
+        ),
+      },
+    })),
+  };
+}
+
+/** When the values on screen were last updated, and — distinctly, announced — when they have stopped
+ * being updated (NUREG-0700 §14.1-4: show that the display is working; §2.5.4-6: label a frozen one).
+ * A time of day rather than an age, so the line itself never goes out of date. */
+function Freshness({ resolvedAt, stalled, labels }: { resolvedAt: number; stalled: boolean; labels: UBoardLabels }) {
+  const time = labels.time(resolvedAt);
+  return stalled ? (
+    <span role="status" style={{ marginLeft: 'auto', alignSelf: 'center', padding: '2px 8px', borderRadius: 4, background: '#fef3c7', color: '#92400e', fontWeight: 600, fontSize: 13 }}>
+      {labels.notUpdating.replace('{time}', time)}
+    </span>
+  ) : (
+    <span style={{ marginLeft: 'auto', alignSelf: 'center', color: '#64748b', fontSize: 13 }}>
+      {labels.lastUpdated.replace('{time}', time)}
+    </span>
+  );
+}
+

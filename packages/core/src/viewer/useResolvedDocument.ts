@@ -16,6 +16,14 @@ export interface UseResolvedDocumentResult {
    * (e.g. a "Refresh" button) — this hook only provides the capability. */
   refresh: () => void;
   isRefreshing: boolean;
+  /** When the latest resolve completed (epoch ms, this machine's clock), or `null` before the first.
+   * What a view left open shows as "last updated". */
+  resolvedAt: number | null;
+  /** `true` while a polling view has gone two intervals without a completed resolve — a poll that
+   * never answered, or a page whose timers were suspended (a sleeping machine, a frozen tab). The
+   * values on screen are then the last ones received, however their bindings read: show it. Always
+   * `false` without `pollIntervalMs`. */
+  stalled: boolean;
 }
 
 /**
@@ -36,6 +44,8 @@ export function useResolvedDocument(
 ): UseResolvedDocumentResult {
   const [resolved, setResolved] = useState<ResolvedViewDocument | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [resolvedAt, setResolvedAt] = useState<number | null>(null);
+  const [stalled, setStalled] = useState(false);
   const runRef = useRef<() => void>(() => {});
   const pollIntervalMs = options?.pollIntervalMs;
 
@@ -50,15 +60,24 @@ export function useResolvedDocument(
     // a hook-level ref — a still-pending resolve from a document that's since been swapped out
     // must never block the new document's own first resolve.
     let inFlight = false;
+    // Measured on the monotonic clock, so a change to the machine's wall clock cannot fake or hide a stall.
+    let completedAt = performance.now();
+    setStalled(false);
 
     const run = () => {
+      // Checked whenever a poll is due — including the first one a page runs after its timers were
+      // suspended, which may start a resolve but has nothing current to show until it completes.
+      if (pollIntervalMs && performance.now() - completedAt >= 2 * pollIntervalMs) setStalled(true);
       if (inFlight) return;
       inFlight = true;
       setIsRefreshing(true);
       resolveDocument(doc, adapters).then(result => {
         inFlight = false;
         if (cancelled) return;
+        completedAt = performance.now();
         setResolved(result);
+        setResolvedAt(Date.now());
+        setStalled(false);
         setIsRefreshing(false);
       });
     };
@@ -66,10 +85,23 @@ export function useResolvedDocument(
 
     run();
     const intervalId = pollIntervalMs ? setInterval(run, pollIntervalMs) : undefined;
+    // A page shown again — a tab brought back, a machine woken, a page restored from the back/forward
+    // cache — asks at once rather than at the next poll, which a suspended page may have long missed.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') run();
+    };
+    if (pollIntervalMs) {
+      document.addEventListener('visibilitychange', onVisible);
+      window.addEventListener('pageshow', run);
+    }
 
     return () => {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
+      if (pollIntervalMs) {
+        document.removeEventListener('visibilitychange', onVisible);
+        window.removeEventListener('pageshow', run);
+      }
     };
   }, [doc, adapters, pollIntervalMs]);
 
@@ -77,5 +109,7 @@ export function useResolvedDocument(
     resolved,
     refresh: () => runRef.current(),
     isRefreshing,
+    resolvedAt,
+    stalled,
   };
 }

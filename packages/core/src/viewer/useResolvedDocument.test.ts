@@ -284,4 +284,98 @@ describe('useResolvedDocument', () => {
     });
     expect(adapter.resolve).toHaveBeenCalledTimes(3);
   });
+
+  describe('liveness, for a view left open', () => {
+    class GatedAdapter implements Adapter {
+      readonly id = 'cmms';
+      private gates: Array<() => void> = [];
+      hold = false;
+      resolve = vi.fn((): Promise<ResolvedBinding> => {
+        if (!this.hold) return Promise.resolve({ value: 'running', quality: 'live' });
+        return new Promise(r => this.gates.push(() => r({ value: 'running', quality: 'live' })));
+      });
+      release() {
+        this.gates.splice(0).forEach(open => open());
+      }
+    }
+
+    it('reports when the latest resolve completed', async () => {
+      vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
+      const doc = docWithBinding();
+      const adapters = [new SpyAdapter()];
+      const { result } = renderHook(() => useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.resolvedAt).toBe(Date.parse('2026-10-07T05:00:00Z'));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(result.current.resolvedAt).toBe(Date.parse('2026-10-07T05:00:01Z'));
+    });
+
+    it('says the view is not updating once a poll has gone unanswered for two intervals, until the next result', async () => {
+      vi.useFakeTimers();
+      const adapter = new GatedAdapter();
+      const doc = docWithBinding();
+      const adapters = [adapter];
+      const { result } = renderHook(() => useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.stalled).toBe(false);
+
+      adapter.hold = true; // the next poll never answers
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(result.current.stalled).toBe(false);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(result.current.stalled).toBe(true);
+
+      await act(async () => {
+        adapter.release();
+        await flushMicrotasks();
+      });
+      expect(result.current.stalled).toBe(false);
+    });
+
+    it('never calls a one-shot view stalled', async () => {
+      vi.useFakeTimers();
+      const doc = docWithBinding();
+      const adapters = [new SpyAdapter()];
+      const { result } = renderHook(() => useResolvedDocument(doc, adapters));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+      expect(result.current.stalled).toBe(false);
+    });
+
+    it('asks again at once when the page is shown again, instead of waiting for the next poll', async () => {
+      vi.useFakeTimers();
+      const adapter = new SpyAdapter();
+      const doc = docWithBinding();
+      const adapters = [adapter];
+      renderHook(() => useResolvedDocument(doc, adapters, { pollIntervalMs: 30_000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(adapter.resolve).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(adapter.resolve).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        window.dispatchEvent(new Event('pageshow'));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(adapter.resolve).toHaveBeenCalledTimes(3);
+    });
+  });
 });

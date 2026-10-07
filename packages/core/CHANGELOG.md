@@ -6,6 +6,16 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A polling `ViewerPage` (`pollIntervalMs`) suits a board left open on a screen: it shows when its
+  values were last updated, and once no update has arrived for two intervals it says it is not
+  updating — an announced status — and shows every value as last known (`stale`) rather than
+  current. It also re-reads at once when the page is shown again (`visibilitychange`, `pageshow`)
+  instead of waiting for the next interval. `useResolvedDocument` returns `resolvedAt` and `stalled`.
+- Labels `lastUpdated`, `notUpdating` and `time` (a time-of-day formatter), and `timeText(locale)` to
+  build one.
+
 ### Changed
 
 - Requires `@iyulab/u-widgets` `^0.26.1` (was `^0.24.0`). Widgets' own built-in text — region names,

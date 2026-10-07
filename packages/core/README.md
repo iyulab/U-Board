@@ -60,6 +60,13 @@ fitted as the view resizes until the viewer pans or zooms; a "Fit to view" contr
 and zoom in/out controls do what the wheel does from the keyboard. Pass `width`/`height` (CSS px) for a
 fixed-size view instead.
 
+With `pollIntervalMs` the board re-reads its bindings on that interval — at once, too, when the page
+is shown again after a hidden tab or a sleeping machine — and is made to be left open on a screen: it
+shows the time its values were last updated, and when no update has arrived for two intervals it
+says so prominently (an announced status) and shows every value as last known (`stale`) rather than
+current. `useResolvedDocument` reports the same through `resolvedAt` and `stalled` for a host that
+renders its own view.
+
 `AuthoringView` sizes the same way: without `width`/`height` the editor and its live preview split
 the parent's width and fill its height. Both share one pan/zoom and the document opens fitted into
 view the same way; a new node or decoration is placed where the author is looking. In the editor,
@@ -73,7 +80,7 @@ wheel zooms either.
 The components show English text by default. Pass `labels` — any subset of `UBoardLabels`, the
 rest stays English — to show your own; `DEFAULT_LABELS` lists every key with its English text.
 `labels.qualityText` holds the words for connection quality (the node tooltip and screen-reader
-announcement):
+announcement), and `labels.time` writes the time of day — `timeText(locale)` builds one:
 
 ```tsx
 import { ViewerPage, type UBoardLabels } from '@iyulab/u-board/viewer';
