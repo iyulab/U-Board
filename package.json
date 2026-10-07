@@ -4,6 +4,13 @@
   "workspaces": [
     "packages/*"
   ],
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^22.22.2 || >=24.15.0",
+      "onFail": "warn"
+    }
+  },
   "scripts": {
     "postinstall": "npm run build:lib --workspace=packages/core",
     "typecheck": "npm run typecheck --workspaces --if-present",

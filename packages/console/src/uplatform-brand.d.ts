@@ -1,14 +1,12 @@
 import type { DetailedHTMLProps, HTMLAttributes } from 'react';
+import type { UplatformAffiliationAttributes } from '@uplatform/brand';
 
-// `@uplatform/brand` registers `<uplatform-affiliation>`; React needs to be told the tag exists.
+// `@uplatform/brand` registers `<uplatform-affiliation>` and types it for the DOM; React's JSX needs
+// to be told the tag exists, with the attribute values the package itself declares.
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
-      'uplatform-affiliation': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & {
-        product?: string;
-        lang?: 'ko' | 'en';
-        theme?: 'auto' | 'light' | 'dark';
-      };
+      'uplatform-affiliation': DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & UplatformAffiliationAttributes;
     }
   }
 }

@@ -54,6 +54,9 @@ an issue first if you think an exception is warranted.
 
 ## Development
 
+Develop on Node `^22.22.2` or `24.15` and later — what the test tooling needs, a little above the
+versions the packages themselves run on (`devEngines` in `package.json`; npm warns below it).
+
 ```bash
 npm install
 npm run typecheck    # tsc --noEmit across the workspace

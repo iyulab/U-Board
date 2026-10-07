@@ -46,7 +46,7 @@ export function AppShell({ workspaceSwitcher, showInstanceLink = false, onLogout
           로그아웃
         </Button>
         <div className="ub-shell__affiliation">
-          <uplatform-affiliation product="u-board" lang="ko" theme="auto" />
+          <uplatform-affiliation product="u-board" lang="ko" />
         </div>
       </aside>
       <main className="ub-shell__main">{children}</main>
