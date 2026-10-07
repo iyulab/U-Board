@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { NavLink } from 'react-router';
+import '@uplatform/brand';
 import { Button } from './Button.js';
 import './AppShell.css';
 
@@ -44,6 +45,9 @@ export function AppShell({ workspaceSwitcher, showInstanceLink = false, onLogout
         <Button variant="ghost" onClick={onLogout}>
           로그아웃
         </Button>
+        <div className="ub-shell__affiliation">
+          <uplatform-affiliation product="u-board" lang="ko" theme="auto" />
+        </div>
       </aside>
       <main className="ub-shell__main">{children}</main>
     </div>

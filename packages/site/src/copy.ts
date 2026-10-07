@@ -10,7 +10,6 @@ export const SOURCE_URL = 'https://github.com/iyulab/U-Board';
 export const DOCS_URL = 'https://github.com/iyulab/U-Board/tree/main/docs';
 export const SELF_HOSTING_URL = 'https://github.com/iyulab/U-Board/blob/main/docs/self-hosting.md';
 export const NPM_URL = 'https://www.npmjs.com/package/@iyulab/u-board';
-export const PLATFORM_URL = 'https://u-platform.kr/';
 export const CONTACT_URL = 'https://u-platform.kr/contact';
 
 export interface Section {
@@ -40,7 +39,7 @@ export interface Copy {
   notHeading: string;
   not: Section[];
   license: Section;
-  footer: { source: string; docs: string; selfHosting: string; npm: string; contact: string; platform: string };
+  footer: { source: string; docs: string; selfHosting: string; npm: string; contact: string };
   otherLanguage: string;
 }
 
@@ -131,7 +130,6 @@ export const COPY: Record<Locale, Copy> = {
       selfHosting: '직접 설치',
       npm: 'npm 패키지',
       contact: '문의',
-      platform: 'U-Platform',
     },
     otherLanguage: 'English',
   },
@@ -221,7 +219,6 @@ export const COPY: Record<Locale, Copy> = {
       selfHosting: 'Self-hosting',
       npm: 'npm package',
       contact: 'Contact',
-      platform: 'U-Platform',
     },
     otherLanguage: '한국어',
   },

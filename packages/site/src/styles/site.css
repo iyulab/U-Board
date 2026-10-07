@@ -241,6 +241,23 @@ main,
   gap: 0.5rem 1.5rem;
 }
 
+.foot-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+}
+
+.foot-meta p {
+  margin: 0;
+}
+
+/* The U-Platform affiliation keeps its own type and colors; only the contrast is set here. */
+.foot-meta uplatform-affiliation {
+  --uplatform-fg: var(--muted);
+  --uplatform-bg: var(--sheet);
+}
+
 @media (max-width: 56rem) {
   .hero {
     grid-template-columns: minmax(0, 1fr);

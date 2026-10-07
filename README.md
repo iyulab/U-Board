@@ -71,7 +71,7 @@ and a record of who changed members, roles, invitations, boards, share links and
 |---|---|---|
 | `packages/core` | `@iyulab/u-board` (npm) | The library: view document schema, adapter contract, binding resolution, the canvas rendering pipeline, the authoring UI and the read-only viewer. Everything below this section documents it. |
 | `packages/server` | private | HTTP API for workspaces, members and invitations, accounts (sign-in, password, deletion), the installation's operators, boards, data connectors, share links, and the activity record. Stores data in Postgres. |
-| `packages/console` | private | Web console for that API: sign-in and account, members and the activity record, board editing (with the authoring UI above), connectors with a connection test, issuing share links, and an installation page for operators. |
+| `packages/console` | private | Web console for that API: sign-in and account, members and the activity record, board editing (with the authoring UI above), connectors with a connection test, issuing share links, and an installation page for operators. Its sidebar carries the U-Platform affiliation. |
 | `packages/share` | private | Read-only embed viewer that opens a board from a share link, using only the library's `viewer` entry point. |
 | `packages/site` | private | The introduction site at board.u-platform.kr (Korean at `/`, English at `/en/`). Every statement it makes about the product has a row in its `claims.tsv` — status and the files that back it — checked against the pages by its tests. |
 
@@ -158,3 +158,8 @@ Copyright (c) 2026 iyulab.
 AGPL-3.0-or-later. A commercial license is available for organizations that cannot adopt AGPL-3.0
 terms.
 See [`LICENSE`](LICENSE).
+
+The console and the introduction site show U-Platform affiliation through the
+[`@uplatform/brand`](https://www.npmjs.com/package/@uplatform/brand) package. Its code is MIT; the
+marks and product names it carries are trademarks of iyulab with limited permitted use (see that
+package's `LICENSE`), and are not covered by this repository's license.

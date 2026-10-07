@@ -21,11 +21,12 @@
     "node": ">=22.12.0"
   },
   "devDependencies": {
-    "vitest": "^5.0.3",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-kr": "^5.3.0",
+    "@uplatform/brand": "^0.1.1",
     "astro": "^7.3.5",
     "cookie": "^2.0.1"
   }

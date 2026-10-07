@@ -26,6 +26,14 @@ test('the console, its share links and the share viewer work from one origin', a
   await page.getByRole('button', { name: '가입' }).click();
   await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
 
+  // The U-Platform affiliation renders under the console's policy and opens its sibling list.
+  await expect(page.getByRole('link', { name: 'U-Platform', exact: true })).toHaveAttribute('href', 'https://u-platform.kr');
+  await page.getByRole('button', { name: 'U-Platform 제품' }).click();
+  await expect(page.getByRole('group', { name: '독립 제품' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'U-Board' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('group', { name: '독립 제품' })).toBeHidden();
+
   await page.getByRole('button', { name: '새 보드' }).click();
   await page.getByLabel('보드 이름').fill('One Origin');
   await page.getByRole('button', { name: '생성' }).click();
@@ -51,6 +59,8 @@ test('the console, its share links and the share viewer work from one origin', a
   await sharePage.goto(shareUrl.replace('/share/?', '/share?'));
   expect(new URL(sharePage.url()).pathname).toBe('/share/');
   await expect(sharePage.getByTestId('canvas')).toBeVisible();
+  // The viewer sits inside other people's pages: it carries no affiliation of its own.
+  await expect(sharePage.locator('uplatform-affiliation')).toHaveCount(0);
   await shareContext.close();
 
   // A file the build does not have (a tab holding the previous build's names) is a 404, not HTML.

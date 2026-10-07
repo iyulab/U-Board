@@ -41,6 +41,19 @@
   font-weight: 600;
 }
 
+/* The U-Platform affiliation: the element keeps its own type and colors; only the contrast against
+   this sidebar is set here. */
+.ub-shell__affiliation {
+  padding: var(--ub-space-2) var(--ub-space-3) 0;
+  border-top: 1px solid var(--ub-border);
+  font-size: var(--ub-font-size-sm);
+}
+
+.ub-shell__affiliation uplatform-affiliation {
+  --uplatform-fg: var(--ub-text-muted);
+  --uplatform-bg: var(--ub-bg-surface);
+}
+
 .ub-shell__main {
   flex: 1;
   padding: var(--ub-space-6);

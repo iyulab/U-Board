@@ -64,4 +64,15 @@ describe('AppShell', () => {
     await userEvent.click(screen.getByRole('button', { name: '로그아웃' }));
     expect(onLogout).toHaveBeenCalledTimes(1);
   });
+
+  it('shows the U-Platform affiliation in the sidebar, leaving U-Board out of the sibling list', () => {
+    const { container } = renderShell();
+    const affiliation = container.querySelector('.ub-shell__sidebar uplatform-affiliation');
+    expect(affiliation).toHaveAttribute('product', 'u-board');
+    const shadow = affiliation!.shadowRoot!;
+    expect(shadow.querySelector('[part="link"]')).toHaveAttribute('href', 'https://u-platform.kr');
+    const siblings = [...shadow.querySelectorAll('[part="list"] a')].map(a => a.textContent);
+    expect(siblings.length).toBeGreaterThan(0);
+    expect(siblings).not.toContain('U-Board');
+  });
 });

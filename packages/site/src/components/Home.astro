@@ -11,7 +11,6 @@ import {
   DOCS_URL,
   SELF_HOSTING_URL,
   NPM_URL,
-  PLATFORM_URL,
   CONTACT_URL,
   type Locale,
 } from '../copy';
@@ -121,10 +120,15 @@ const canonical = new URL(pathFor(locale), SITE_URL).href;
           <a href={SELF_HOSTING_URL}>{c.footer.selfHosting}</a>
           <a href={NPM_URL}>{c.footer.npm}</a>
           <a href={CONTACT_URL}>{c.footer.contact}</a>
-          <a href={PLATFORM_URL}>{c.footer.platform}</a>
         </nav>
-        <p>© 2026 iyulab</p>
+        <div class="foot-meta">
+          <uplatform-affiliation product="u-board" lang={locale} theme="light"></uplatform-affiliation>
+          <p>© 2026 iyulab</p>
+        </div>
       </div>
     </footer>
+    <script>
+      import '@uplatform/brand';
+    </script>
   </body>
 </html>
