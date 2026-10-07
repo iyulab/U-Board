@@ -30,13 +30,13 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
     const board = await (await page.request.post(`/api/workspaces/${workspaceId}/boards`, { data: { name: 'Many Bindings' } })).json();
     const nodes = Array.from({ length: BINDINGS }, (_, i) => ({
       id: `n${i}`, x: 40 + (i % 4) * 180, y: 40 + Math.floor(i / 4) * 120, anchored: false,
-      widget: { type: 'status', bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${i}.Status` } } } },
+      widget: { type: 'status', props: { data: { label: `Asset ${i}` } }, bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${i}.Status` } } } },
     }));
     // One more node bound past the end of the collection: the source answers, but not with what
     // this binding points at — the viewer must say so rather than show an empty widget as fine.
     nodes.push({
       id: 'missing', x: 40, y: 420, anchored: false,
-      widget: { type: 'status', bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${BINDINGS}.Status` } } } },
+      widget: { type: 'status', props: { data: { label: 'Missing' } }, bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${BINDINGS}.Status` } } } },
     });
     const saved = await page.request.put(`/api/workspaces/${workspaceId}/boards/${board.id}`, {
       data: { document: { kind: 'canvas', background: {}, nodes, connectors: [] } },
@@ -61,6 +61,8 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
     expect(results[1]).toEqual({ value: 'Fault', quality: 'live', observedAt: expect.any(String) });
     expect(results[BINDINGS]).toEqual({ quality: 'disconnected', reason: 'address' });
     await expect(sharePage.getByTestId('canvas')).toBeVisible();
+    // The values are drawn, not only fetched.
+    await expect(sharePage.getByRole('listitem').filter({ has: sharePage.getByText('Asset 1', { exact: true }) })).toContainText('Fault');
     await expect(sharePage.locator('[title="연결 끊김 — 값을 받지 못함 (바인딩한 값이 원천에 없음)"]')).toHaveCount(1);
 
     // One resolve request per board load, whatever the binding count. The dev server renders under

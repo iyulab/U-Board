@@ -225,9 +225,11 @@ interface ValueMap {
   lookup for a host's own code.
 
 Bind the same source field twice to show it and color by it — the raw value as the text, the mapped
-one as the level:
+one as the level (a `status` widget draws an item only when it has a `label`, so the label is set as a
+static prop):
 
 ```ts
+props: { data: { label: 'Pump A' } },
 bindings: {
   'data.value': { adapter: 'plant', ref: { path: '/pumps/a', valuePath: '/status' } },
   'data.level': {
