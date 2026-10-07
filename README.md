@@ -43,9 +43,11 @@ the whole view into an error.
 ## Status
 
 This project is in early development. The rendering pipeline (canvas-kit + u-widgets), the
-authoring UI (add/drag/resize nodes and rect/text decorations; a property panel for editing the
-selected node's widget type, static props, and data bindings, including a path explorer for
-HTTP-shaped adapter responses; a label editor for the selected text decoration), local save
+authoring UI (set the background image; add/drag/resize nodes and rect/text decorations; a
+property panel for editing the selected node's widget type, static props, and data bindings,
+including a path explorer for HTTP-shaped adapter responses and a value map that turns a source's
+words or numbers — by exact value or numeric range — into what the widget takes; a label editor for
+the selected text decoration), local save
 (export/import), and a read-only viewer mode are implemented and browser-verified. The editor and
 the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
 or keyboard.
@@ -55,7 +57,8 @@ client credentials with cached, auto-renewed access tokens) is wired into both t
 and the read-only embed viewer. It picks a value out of a JSON response with an RFC 6901 JSON
 Pointer, reports why a binding is not live (source unreachable, credentials refused, value not
 found at the source, rate limited), and the embed viewer resolves all of a board's bindings in one
-request, again every 30 seconds while it is open. A connector's settings can be tried before they are saved, and the addresses connectors may
+request, again every 30 seconds while it is open. A connector's settings can be tried before they are saved, its credentials are kept on the server
+sealed under an installation key, and the addresses connectors may
 reach are an installation setting — never the server's own loopback, link-local or cloud host addresses. A connector to a specific external system that needs its own
 domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
 until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a

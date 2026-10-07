@@ -34,7 +34,10 @@ quality alongside its value — `live` (the adapter reached the source just now)
 adapter couldn't reach it, but is showing a previously-live value as last-known), or
 `disconnected` (no value has been reached) — and, when the adapter can tell, the reason it is
 not live (the source unreachable, credentials refused, the bound value not found at the source, or
-rate limiting). This is deliberately narrower than a full alarm
+rate limiting). A binding can also translate the value it reads into the one its widget takes —
+the source's own words (`Fault`) or numbers (a temperature) into a status level — by exact values
+and numeric ranges the author sets; U-Board attaches no meaning to either side of that table.
+This is deliberately narrower than a full alarm
 model (priority, acknowledgement, shelving) — that belongs to the system a binding points at, not
 to the binding surface itself.
 

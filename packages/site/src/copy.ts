@@ -51,7 +51,7 @@ export const COPY: Record<Locale, Copy> = {
     headline: '도면 위에 실시간 데이터를 잇는 공간형 대시보드',
     lede: {
       claim: 'lede',
-      text: '도면·네트워크도·지도 같은 배경 위에 값을 놓은 화면을 만들고, 그 화면을 운영 중인 다른 웹 페이지에 넣어 보여 줍니다. 값은 화면을 열 때 그 값을 가진 시스템에서 읽어 옵니다.',
+      text: '도면·네트워크도·지도 같은 배경 위에 값을 놓은 화면을 만들고, 그 화면을 운영 중인 다른 웹 페이지에 넣어 보여 줍니다. 값은 화면을 열어 둔 동안 그 값을 가진 시스템에서 계속 읽어 옵니다.',
     },
     tryIt: '데모 열기',
     readSource: '소스 보기',
@@ -73,7 +73,7 @@ export const COPY: Record<Locale, Copy> = {
       {
         claim: 'connect',
         heading: 'HTTP로 말하는 시스템이면 연결합니다',
-        body: '범용 HTTP 연결은 고정 토큰이나 헤더, OAuth 2.0 클라이언트 자격 증명으로 원천에 접속하고, JSON 응답에서 JSON Pointer로 값을 고릅니다. 자격 증명은 서버에만 있고 브라우저로 가지 않습니다.',
+        body: '범용 HTTP 연결은 고정 토큰이나 헤더, OAuth 2.0 클라이언트 자격 증명으로 원천에 접속하고, JSON 응답에서 JSON Pointer로 값을 고릅니다. 자격 증명은 서버에만, 그 데이터베이스에 봉인된 채로 있고 브라우저로 가지 않습니다.',
       },
       {
         claim: 'embed',
@@ -87,7 +87,7 @@ export const COPY: Record<Locale, Copy> = {
         {
           claim: 'delivery-container',
           heading: '컨테이너 하나로 사내에 설치',
-          body: '서버·콘솔·공유 뷰어가 한 컨테이너 이미지에 들어 있습니다. 사내망에 두고 PostgreSQL 하나만 붙이면 됩니다.',
+          body: '서버·콘솔·공유 뷰어가 한 컨테이너 이미지에 들어 있습니다. 인터넷이 닿지 않는 사내망에서도 돌아가고, PostgreSQL 하나(작은 설치는 내장 DB)만 있으면 됩니다.',
         },
         {
           claim: 'delivery-library',
@@ -140,7 +140,7 @@ export const COPY: Record<Locale, Copy> = {
     headline: 'Spatial dashboards that bind live data onto floor plans',
     lede: {
       claim: 'lede',
-      text: 'Place values on a floor plan, a network diagram or a map, and embed the view in the web pages your operators already use. Each value is read from the system that owns it when the view is shown.',
+      text: 'Place values on a floor plan, a network diagram or a map, and embed the view in the web pages your operators already use. Each value is read from the system that owns it for as long as the view is open.',
     },
     tryIt: 'Try the demo',
     readSource: 'Read the source',
@@ -162,7 +162,7 @@ export const COPY: Record<Locale, Copy> = {
       {
         claim: 'connect',
         heading: 'Anything that speaks HTTP',
-        body: 'The generic HTTP connector reaches a source with a static token or header, or OAuth 2.0 client credentials, and picks the value out of a JSON response with a JSON Pointer. Credentials stay on the server and never reach the browser.',
+        body: 'The generic HTTP connector reaches a source with a static token or header, or OAuth 2.0 client credentials, and picks the value out of a JSON response with a JSON Pointer. Credentials stay on the server, sealed in its database, and never reach the browser.',
       },
       {
         claim: 'embed',
@@ -176,7 +176,7 @@ export const COPY: Record<Locale, Copy> = {
         {
           claim: 'delivery-container',
           heading: 'One container, on your network',
-          body: 'The server, console and share viewer ship in one container image. Run it on your own network and give it a PostgreSQL database.',
+          body: 'The server, console and share viewer ship in one container image. Run it on your own network — no internet access needed — with a PostgreSQL database, or the embedded one for a small installation.',
         },
         {
           claim: 'delivery-library',
