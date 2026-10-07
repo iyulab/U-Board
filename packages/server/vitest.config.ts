@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os';
 import { configDefaults, defineConfig } from 'vitest/config';
 
 export default defineConfig({
@@ -17,5 +18,11 @@ export default defineConfig({
     // test that starts the engine in its own body pays the same cost and gets the same budget,
     // instead of the 5s default that it overran whenever the machine was busy.
     testTimeout: 10_000,
+    // Each worker starts its own PGlite engine at once. Left to vitest's default (one worker per
+    // core but one), a many-core machine starts dozens of WASM Postgres engines in the same few
+    // seconds, and on a busy machine some take longer than the 10s above — the suite failed until
+    // run with a hand-picked lower count. Measured on 32 cores: 8 workers finish the suite fastest
+    // (20s, against 23s at the default and 27s at 4), so more workers only add contention.
+    maxWorkers: Math.min(8, availableParallelism()),
   },
 });
