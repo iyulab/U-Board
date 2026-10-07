@@ -38,8 +38,9 @@ test('an owner invites a second owner through the console, then leaves the works
 
   // The administrator now holds the workspace alone — and, as its last owner, cannot leave it.
   await customer.getByRole('link', { name: '설정' }).click();
-  await expect(customer.getByText('e2e-customer-admin@test.com')).toBeVisible();
-  await expect(customer.getByText('e2e-operator@test.com')).toHaveCount(0);
+  // The member list's own controls — the activity record below it names the same accounts.
+  await expect(customer.getByLabel('e2e-customer-admin@test.com 역할')).toBeVisible();
+  await expect(customer.getByLabel('e2e-operator@test.com 역할')).toHaveCount(0);
   customer.once('dialog', dialog => dialog.accept());
   await customer.getByRole('button', { name: '나가기' }).click();
   await expect(customer.getByRole('alert')).toContainText('owner가 한 명 이상');
