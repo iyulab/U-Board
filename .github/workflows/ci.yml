@@ -185,8 +185,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      # The exact version tag only. A run that failed further on is re-run on the image already pushed
-      # under it, never a new build — the script asks the registry first.
+      # The exact version tag only. A re-run of a run that failed further on releases the image already
+      # pushed under it, never a new build — the script asks the registry first.
       - name: Publish the image
         id: push
         if: steps.check.outputs.exists == 'false'
@@ -212,9 +212,11 @@ jobs:
       - name: Move <major>.<minor> and latest
         if: steps.check.outputs.exists == 'false'
         run: node scripts/release-image.mjs --promote
+        env:
+          RELEASE_DIGEST: ${{ steps.push.outputs.digest }}
 
-      # Last: until it exists the version counts as unreleased, and the next push to main finishes the
-      # job on the image already pushed.
+      # Last: until it exists the version counts as unreleased. A failed run is finished by re-running
+      # it (same commit), on the image already pushed; a later commit with the same version is refused.
       - name: Create the release
         if: steps.check.outputs.exists == 'false'
         run: |

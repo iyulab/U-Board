@@ -225,13 +225,22 @@ function build(plan) {
   ]);
 }
 
-/** Pushes the exact tag, or — when an earlier run already did — pulls that image back instead of
- *  building another under the same tag. Returns its registry digest. */
+/** Pushes the exact tag, or — when an earlier run of this same commit already did — pulls that image
+ *  back instead of building another under the same tag. Returns its registry digest. */
 function publish(plan) {
   const existing = pushedDigest(plan);
   if (existing) {
-    console.log(`${plan.ref} was pushed before (${existing}) — releasing that image, not a new build.`);
     run('docker', ['pull', `${plan.image}@${existing}`]);
+    const builtFrom = output('docker', ['inspect', '--format', '{{index .Config.Labels "org.opencontainers.image.revision"}}', `${plan.image}@${existing}`]);
+    // Released from another commit, the release, its tag and its attestation would all name a commit
+    // that did not build the image.
+    if (builtFrom !== plan.revision) {
+      throw new Error(
+        `${plan.ref} was pushed from ${builtFrom || 'an unknown commit'}, not this one (${plan.revision}). ` +
+          `Re-run the release from that commit's workflow run, or give this commit a new version.`
+      );
+    }
+    console.log(`${plan.ref} was pushed before from this commit (${existing}) — releasing that image, not a new build.`);
     run('docker', ['tag', `${plan.image}@${existing}`, plan.ref]);
     return existing;
   }
@@ -248,7 +257,10 @@ function promote(plan) {
     console.log(`${plan.version} moves no other tag (a pre-release, or a newer version is out).`);
     return;
   }
-  const existing = pushedDigest(plan);
+  // The publish step hands its digest over (RELEASE_DIGEST); asking the registry again is the fallback.
+  const handed = process.env.RELEASE_DIGEST;
+  if (handed && !/^sha256:[0-9a-f]{64}$/.test(handed)) throw new Error(`RELEASE_DIGEST is not a digest: ${handed}`);
+  const existing = handed || pushedDigest(plan);
   if (!existing) throw new Error(`${plan.ref} has not been pushed — publish it first`);
   run('docker', ['pull', `${plan.image}@${existing}`]);
   for (const tag of tags) {
