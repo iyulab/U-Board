@@ -84,8 +84,20 @@ describe('validateViewDocument', () => {
     expect(validateViewDocument(withMap({ values: { Fault: 'error', '3': { any: ['thing'] } }, otherwise: 'neutral' }))).toEqual([]);
     expect(validateViewDocument(withMap({ values: {} }))).toEqual([]);
     expect(paths(withMap('error'))).toEqual(['/nodes/0/widget/bindings/data.value/map']);
-    expect(paths(withMap({ otherwise: 'x' }))).toEqual(['/nodes/0/widget/bindings/data.value/map/values']);
+    expect(paths(withMap({ otherwise: 'x' }))).toEqual(['/nodes/0/widget/bindings/data.value/map']);
     expect(paths(withMap({ values: ['error'] }))).toEqual(['/nodes/0/widget/bindings/data.value/map/values']);
+  });
+
+  it("checks a value map's ranges — numeric bounds, at least one, in order, and a value", () => {
+    const at = '/nodes/0/widget/bindings/data.value/map';
+    const withRanges = (ranges: unknown) => broken(d => { d.nodes[0].widget.bindings['data.value'].map = { ranges }; });
+    expect(validateViewDocument(withRanges([{ min: 80, value: 'error' }, { min: 70, max: 80, value: { any: 1 } }, { max: 70, value: null }]))).toEqual([]);
+    expect(paths(withRanges({ min: 1 }))).toEqual([`${at}/ranges`]);
+    expect(paths(withRanges(['x']))).toEqual([`${at}/ranges/0`]);
+    expect(paths(withRanges([{ value: 'x' }]))).toEqual([`${at}/ranges/0`]);
+    expect(paths(withRanges([{ min: '80', value: 'x' }]))).toEqual([`${at}/ranges/0/min`]);
+    expect(paths(withRanges([{ min: 80, max: 80, value: 'x' }]))).toEqual([`${at}/ranges/0/max`]);
+    expect(paths(withRanges([{ min: 80 }]))).toEqual([`${at}/ranges/0/value`]);
   });
 
   it('leaves a binding ref and widget props opaque — each adapter and widget library defines its own', () => {

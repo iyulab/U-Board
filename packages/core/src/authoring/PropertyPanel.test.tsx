@@ -403,6 +403,55 @@ describe('PropertyPanel bindings', () => {
       expect(onChange.mock.calls[0][0].bindings['data.value'].map).toEqual({ values: { running: 3, stopped: 'off' }, otherwise: -1 });
     });
 
+    it('saves numeric ranges, an empty end left open, without an empty lookup beside them', () => {
+      const onChange = vi.fn();
+      render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+      fillBinding();
+      fireEvent.click(screen.getByText('Add range'));
+      fireEvent.change(screen.getByLabelText('Range 1 from'), { target: { value: '80' } });
+      fireEvent.change(screen.getByLabelText('Range 1 shown as'), { target: { value: 'error' } });
+      fireEvent.click(screen.getByText('Add range'));
+      fireEvent.change(screen.getByLabelText('Range 2 from'), { target: { value: '70' } });
+      fireEvent.change(screen.getByLabelText('Range 2 below'), { target: { value: '80' } });
+      fireEvent.change(screen.getByLabelText('Range 2 shown as'), { target: { value: 'warning' } });
+      fireEvent.click(screen.getByText('Add range')); // left empty — not saved
+      fireEvent.change(screen.getByLabelText('Anything else'), { target: { value: 'success' } });
+      fireEvent.click(screen.getByText('Save binding'));
+
+      expect(onChange.mock.calls[0][0].bindings['data.level'].map).toEqual({
+        ranges: [{ min: 80, value: 'error' }, { min: 70, max: 80, value: 'warning' }],
+        otherwise: 'success',
+      });
+    });
+
+    it('refuses to save a range whose upper end is not above its lower one, and says which', () => {
+      const onChange = vi.fn();
+      render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+      fillBinding();
+      fireEvent.click(screen.getByText('Add range'));
+      fireEvent.change(screen.getByLabelText('Range 1 from'), { target: { value: '80' } });
+      fireEvent.change(screen.getByLabelText('Range 1 below'), { target: { value: '70' } });
+      expect(screen.getByRole('alert')).toHaveTextContent('Range 1: the upper end must be above the lower one.');
+      expect(screen.getByText('Save binding')).toBeDisabled();
+      fireEvent.change(screen.getByLabelText('Range 1 below'), { target: { value: '90' } });
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByText('Save binding')).toBeEnabled();
+    });
+
+    it('loads a saved range back into its row, keeping a shown value that is not text', () => {
+      const onChange = vi.fn();
+      const node = statusNode({
+        'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'temp' }, map: { values: { off: 0 }, ranges: [{ max: 70, value: 1 }] } },
+      });
+      render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+      fireEvent.click(screen.getByText('Edit'));
+      expect(screen.getByLabelText('Range 1 from')).toHaveValue(null);
+      expect(screen.getByLabelText('Range 1 below')).toHaveValue(70);
+      expect(screen.getByLabelText('Range 1 shown as')).toHaveValue('1');
+      fireEvent.click(screen.getByText('Save binding'));
+      expect(onChange.mock.calls[0][0].bindings['data.value'].map).toEqual({ values: { off: 0 }, ranges: [{ max: 70, value: 1 }] });
+    });
+
     it('previews the value as the map will show it', async () => {
       render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
       fillBinding();

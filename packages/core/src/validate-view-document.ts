@@ -86,11 +86,32 @@ function checkNode(doc: Checker, node: unknown, at: string[]): void {
     }
     doc.string(binding, [...bindingAt, 'adapter']);
     if (!('ref' in binding)) doc.fail([...bindingAt, 'ref'], 'expected a ref (its shape is up to the adapter)');
-    // A value map's entries are the values the prop takes — the widget library's business, like props.
     if (binding.map !== undefined && doc.record(binding, [...bindingAt, 'map'])) {
-      doc.record(binding.map as Record<string, unknown>, [...bindingAt, 'map', 'values']);
+      checkValueMap(doc, binding.map as Record<string, unknown>, [...bindingAt, 'map']);
     }
   }
+}
+
+/** A value map's own shape. Its mapped values are the values the prop takes — the widget library's
+ * business, like props — so they are not inspected. */
+function checkValueMap(doc: Checker, map: Record<string, unknown>, at: string[]): void {
+  if (map.values === undefined && map.ranges === undefined) {
+    doc.fail(at, 'expected values, ranges or both');
+    return;
+  }
+  if (map.values !== undefined) doc.record(map, [...at, 'values']);
+  if (map.ranges === undefined || !doc.array(map, [...at, 'ranges'])) return;
+  (map.ranges as unknown[]).forEach((range, i) => {
+    const rangeAt = [...at, 'ranges', String(i)];
+    if (!doc.isRecordAt(range, rangeAt)) return;
+    doc.optionalNumber(range, [...rangeAt, 'min']);
+    doc.optionalNumber(range, [...rangeAt, 'max']);
+    if (range.min === undefined && range.max === undefined) doc.fail(rangeAt, 'expected min, max or both');
+    else if (typeof range.min === 'number' && typeof range.max === 'number' && !(range.min < range.max)) {
+      doc.fail([...rangeAt, 'max'], 'expected a number greater than min');
+    }
+    if (!('value' in range)) doc.fail([...rangeAt, 'value'], 'expected the value this range is shown as');
+  });
 }
 
 function checkShape(doc: Checker, shape: unknown, at: string[]): void {

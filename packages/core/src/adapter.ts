@@ -117,13 +117,39 @@ export async function resolveWidget(
 }
 
 /** The value `map` gives `value` (`Binding.map`): the entry for the value's text when it is a
- * string, number, boolean or `null`, else `otherwise`, else the value unchanged. */
+ * string, number, boolean or `null`; else the first range a numeric value falls in; else
+ * `otherwise`; else the value unchanged. */
 export function applyValueMap(map: ValueMap, value: unknown): unknown {
   // A document is not always validated before it is resolved; a map that is not one changes nothing.
-  if (typeof map?.values !== 'object' || map.values === null) return value;
+  if (!isObject(map)) return value;
   const key = value === null || ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : undefined;
-  if (key !== undefined && Object.hasOwn(map.values, key)) return map.values[key];
+  if (key !== undefined && isObject(map.values) && Object.hasOwn(map.values, key)) return map.values[key];
+  const n = numericValue(value);
+  if (n !== undefined && Array.isArray(map.ranges)) {
+    const range = map.ranges.find(r => inRange(r, n));
+    if (range) return range.value;
+  }
   return 'otherwise' in map ? map.otherwise : value;
+}
+
+/** Whether `n` falls in `range` — `min` included, `max` not. A range with no numeric bound holds nothing. */
+function inRange(range: unknown, n: number): boolean {
+  if (!isObject(range)) return false;
+  const min = typeof range.min === 'number' ? range.min : undefined;
+  const max = typeof range.max === 'number' ? range.max : undefined;
+  if (min === undefined && max === undefined) return false;
+  return (min === undefined || n >= min) && (max === undefined || n < max);
+}
+
+const isObject = (v: unknown): v is Record<string, any> => typeof v === 'object' && v !== null;
+
+/** The number a source value stands for: a finite number, or text that is one (`" 92.5 "`) — sources
+ * often send decimals as text. Booleans, `null` and empty text are not numbers here. */
+function numericValue(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 /** Sets `path` (dot-separated) on `target`, copying each object or array along the way so the

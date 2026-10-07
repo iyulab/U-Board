@@ -77,6 +77,12 @@ describe('App', () => {
     expect(await screen.findByRole('heading', { name: '가입' })).toBeInTheDocument();
   });
 
+  it('says a page does not exist, with a way back, at an address the console has no page for', async () => {
+    render(<App RouterComponent={MemoryRouter} initialEntries={['/boards/b1']} />);
+    expect(await screen.findByRole('heading', { name: '페이지를 찾을 수 없습니다' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '처음으로' })).toHaveAttribute('href', '/');
+  });
+
   it('renders ForgotPasswordPage at "/forgot-password"', async () => {
     render(<App RouterComponent={MemoryRouter} initialEntries={['/forgot-password']} />);
     expect(await screen.findByRole('heading', { name: '비밀번호 재설정 요청' })).toBeInTheDocument();

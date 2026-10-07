@@ -72,6 +72,15 @@ export interface UBoardLabels {
   mapTo: string;
   addMapping: string;
   removeMapping: string;
+  /** A numeric range row of the value map (`ValueMap.ranges`): from `rangeMin` up to but not
+   * including `rangeMax`, shown as `rangeTo`. `{n}` is replaced by the row number. */
+  rangeMin: string;
+  rangeMax: string;
+  rangeTo: string;
+  addRange: string;
+  removeRange: string;
+  /** Said under a range whose upper end is not above its lower one; the binding cannot be saved. */
+  rangeOrder: string;
   /** The value shown for a source value with no mapping; left empty, such a value shows as it comes. */
   mapOtherwise: string;
   mapOtherwisePlaceholder: string;
@@ -149,6 +158,12 @@ export const DEFAULT_LABELS: UBoardLabels = {
   mapTo: 'Shown as {n}',
   addMapping: 'Add mapping',
   removeMapping: 'Remove mapping {n}',
+  rangeMin: 'Range {n} from',
+  rangeMax: 'Range {n} below',
+  rangeTo: 'Range {n} shown as',
+  addRange: 'Add range',
+  removeRange: 'Remove range {n}',
+  rangeOrder: 'Range {n}: the upper end must be above the lower one.',
   mapOtherwise: 'Anything else',
   mapOtherwisePlaceholder: 'as it comes',
   mapped: 'mapped',

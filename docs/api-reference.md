@@ -227,8 +227,15 @@ interface Binding {
 }
 
 interface ValueMap {
-  values: Record<string, unknown>;
+  values?: Record<string, unknown>;
+  ranges?: ValueRange[];
   otherwise?: unknown;
+}
+
+interface ValueRange {
+  min?: number;
+  max?: number;
+  value: unknown;
 }
 ```
 
@@ -236,11 +243,16 @@ interface ValueMap {
 - `ref` — the adapter-specific reference to a value (for example, an asset id and field name).
   Opaque to the core binding surface; each adapter defines and interprets its own `ref` shape.
 - `map` — translates the source's value into the one the prop takes. A data source speaks its own
-  vocabulary (`"Fault"`, `3`); a widget prop takes its own (a status widget's level). A source value
-  is looked up in `values` by its text (`"Fault"`, `"3"`, `"true"`, `"null"`); a value with no entry
-  takes `otherwise`, or passes through unchanged when there is none. It applies to a value that is
-  shown (`live` or `stale`), before it reaches the prop. `applyValueMap(map, value)` is the same
-  lookup for a host's own code.
+  vocabulary (`"Fault"`, `3`, a temperature); a widget prop takes its own (a status widget's level).
+  It is tried in order:
+  1. `values` — a source value is looked up by its text (`"Fault"`, `"3"`, `"true"`, `"null"`).
+  2. `ranges` — a number, or text that reads as one (`"92.5"`), takes the first range it falls in:
+     from `min` up to but not including `max`, so adjacent ranges meet without overlapping. A missing
+     bound leaves that end open; a range gives at least one.
+  3. `otherwise` — or, when there is none, the value passes through unchanged.
+
+  A map has `values`, `ranges` or both. It applies to a value that is shown (`live` or `stale`),
+  before it reaches the prop. `applyValueMap(map, value)` is the same lookup for a host's own code.
 
 Bind the same source field twice to show it and color by it — the raw value as the text, the mapped
 one as the level (a `status` widget draws an item only when it has a `label`, so the label is set as a
@@ -255,6 +267,17 @@ bindings: {
     ref: { path: '/pumps/a', valuePath: '/status' },
     map: { values: { Running: 'success', Fault: 'error' }, otherwise: 'neutral' },
   },
+}
+```
+
+A measurement becomes a level the same way, by bands — a bearing temperature that warns from 70 and
+alarms from 80:
+
+```ts
+'data.level': {
+  adapter: 'plant',
+  ref: { path: '/pumps/a', valuePath: '/bearingTemp' },
+  map: { ranges: [{ min: 80, value: 'error' }, { min: 70, max: 80, value: 'warning' }], otherwise: 'neutral' },
 }
 ```
 

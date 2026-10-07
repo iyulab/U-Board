@@ -285,6 +285,45 @@ describe('value maps', () => {
     expect(applyValueMap({ values: null } as never, 'Fault')).toBe('Fault');
   });
 
+  describe('ranges', () => {
+    // A bearing temperature: alarm at 80 and above, warning from 70, normal below.
+    const temp = {
+      ranges: [{ min: 80, value: 'error' }, { min: 70, max: 80, value: 'warning' }, { max: 70, value: 'success' }],
+      otherwise: 'neutral',
+    };
+
+    it('gives a number the first range it falls in — min included, max not', () => {
+      expect(applyValueMap(temp, 92.5)).toBe('error');
+      expect(applyValueMap(temp, 80)).toBe('error');
+      expect(applyValueMap(temp, 79.99)).toBe('warning');
+      expect(applyValueMap(temp, 70)).toBe('warning');
+      expect(applyValueMap(temp, -5)).toBe('success');
+    });
+
+    it('reads text that is a number as one, and nothing else', () => {
+      expect(applyValueMap(temp, ' 92.5 ')).toBe('error');
+      expect(applyValueMap(temp, '1e2')).toBe('error');
+      for (const notANumber of ['', '  ', 'hot', true, null, NaN, Infinity, [85], { v: 85 }]) {
+        expect(applyValueMap(temp, notANumber)).toBe('neutral');
+      }
+    });
+
+    it('takes the first match when ranges overlap', () => {
+      expect(applyValueMap({ ranges: [{ min: 0, value: 'a' }, { min: 50, value: 'b' }] }, 60)).toBe('a');
+    });
+
+    it('lets an exact value win over a range, and passes through a number no range holds', () => {
+      const map = { values: { '0': 'off' }, ranges: [{ min: 0, max: 10, value: 'low' }] };
+      expect(applyValueMap(map, 0)).toBe('off');
+      expect(applyValueMap(map, 5)).toBe('low');
+      expect(applyValueMap(map, 50)).toBe(50);
+    });
+
+    it('ignores a range with no numeric bound — a document that was never validated', () => {
+      expect(applyValueMap({ ranges: [{ value: 'x' }, { min: '5', value: 'y' }, null] } as never, 7)).toBe(7);
+    });
+  });
+
   it('only looks up an entry the map itself has — never one inherited from Object', () => {
     expect(applyValueMap({ values: { Fault: 'error' } }, 'toString')).toBe('toString');
   });

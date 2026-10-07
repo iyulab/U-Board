@@ -16,13 +16,17 @@ All notable changes to this package are documented here. The format follows
   shown again (`visibilitychange`, `pageshow`) instead of waiting for the next interval.
   `useResolvedDocument` returns `resolvedAt` and `stalled`.
 - `Binding.map` (`ValueMap`): translates a source's value into the one a prop takes — `"Fault"` into
-  a status level `"error"` — looked up by the value's text, with `otherwise` for a value with no
-  entry (else it passes through). Applied to a shown (`live`/`stale`) value before it reaches the
-  prop; `validateViewDocument` checks its shape. `applyValueMap(map, value)` exported. The binding
-  form of `AuthoringView` edits it — rows of source value → shown value and a value for anything
-  else — previews the mapped value, and marks a mapped binding in the list (labels
-  `valueMapHeading`, `mapFrom`, `mapTo`, `addMapping`, `removeMapping`, `mapOtherwise`,
-  `mapOtherwisePlaceholder`, `mapped`).
+  a status level `"error"`, a temperature of 85 into `"error"` too. Tried in order: `values`, looked
+  up by the value's text; `ranges` (`ValueRange` — `{ min?, max?, value }`, from `min` up to but not
+  including `max`), the first one a number — or text that reads as one — falls in; `otherwise`;
+  else the value passes through. Applied to a shown (`live`/`stale`) value before it reaches the
+  prop; `validateViewDocument` checks its shape (`values`, `ranges` or both; each range a bound and
+  `min` below `max`). `applyValueMap(map, value)` exported. The binding form of `AuthoringView`
+  edits it — rows of source value → shown value, numeric range rows (an inverted range is named and
+  keeps the binding from being saved), and a value for anything else — previews the mapped value,
+  and marks a mapped binding in the list (labels `valueMapHeading`, `mapFrom`, `mapTo`,
+  `addMapping`, `removeMapping`, `rangeMin`, `rangeMax`, `rangeTo`, `addRange`, `removeRange`,
+  `rangeOrder`, `mapOtherwise`, `mapOtherwisePlaceholder`, `mapped`).
 - Labels `lastUpdated`, `notUpdating` and `time` (a time-of-day formatter), and `timeText(locale)` to
   build one.
 - `ViewerPage` and `AuthoringView` `clock` (default `Date.now`): what a stale value's age and the

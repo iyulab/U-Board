@@ -42,6 +42,8 @@ interface BindingDraft {
    * anything else (empty: shown as it comes). Written as text: the map's usual job is a status
    * word or level. */
   mappings: MappingRow[];
+  /** Numeric bands → shown value (`ValueMap.ranges`), tried after `mappings`. */
+  ranges: RangeRow[];
   otherwise: string;
   /** The map's `otherwise` as loaded, kept as it was unless its text is edited (see `MappingRow.loaded`). */
   otherwiseLoaded?: { value: unknown };
@@ -56,13 +58,22 @@ interface MappingRow {
   loaded?: { value: unknown };
 }
 
+/** A numeric range row as the form edits it: its bounds as typed (empty: that end is open) and
+ * its shown value, kept as loaded like `MappingRow.to`. */
+interface RangeRow {
+  min: string;
+  max: string;
+  to: string;
+  loaded?: { value: unknown };
+}
+
 /** The value a form field stands for: what it was loaded with if its text was not edited, else its text. */
 function fieldValue(text: string, loaded?: { value: unknown }): unknown {
   return loaded && text === asText(loaded.value) ? loaded.value : text;
 }
 
 function emptyDraft(connectorId: string): BindingDraft {
-  return { propPath: '', connectorId, path: '', valuePath: '', demoRef: '', mappings: [], otherwise: '' };
+  return { propPath: '', connectorId, path: '', valuePath: '', demoRef: '', mappings: [], ranges: [], otherwise: '' };
 }
 
 /** One field per line, its label above-left of it — inline, a label wrapped onto the line before
@@ -72,22 +83,45 @@ const FIELD_STYLE: React.CSSProperties = { display: 'block', margin: '2px 0' };
 /** The form's text for a mapped value — itself when it is text, its JSON otherwise. */
 const asText = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value));
 
-function draftMap(map: ValueMap | undefined): Pick<BindingDraft, 'mappings' | 'otherwise' | 'otherwiseLoaded'> {
-  if (!map) return { mappings: [], otherwise: '' };
+const boundText = (bound: number | undefined) => (bound === undefined ? '' : String(bound));
+
+function draftMap(map: ValueMap | undefined): Pick<BindingDraft, 'mappings' | 'ranges' | 'otherwise' | 'otherwiseLoaded'> {
+  if (!map) return { mappings: [], ranges: [], otherwise: '' };
   return {
-    mappings: Object.entries(map.values).map(([from, to]) => ({ from, to: asText(to), loaded: { value: to } })),
+    mappings: Object.entries(map.values ?? {}).map(([from, to]) => ({ from, to: asText(to), loaded: { value: to } })),
+    ranges: (map.ranges ?? []).map(r => ({ min: boundText(r.min), max: boundText(r.max), to: asText(r.value), loaded: { value: r.value } })),
     otherwise: 'otherwise' in map ? asText(map.otherwise) : '',
     ...('otherwise' in map && { otherwiseLoaded: { value: map.otherwise } }),
   };
 }
 
+/** A range bound as typed: `undefined` when left empty (an open end), else the number it reads as. */
+const bound = (text: string) => (text.trim() === '' ? undefined : Number(text));
+
+/** The rows (1-based) whose range is not a range — an upper end not above the lower one, or a bound
+ * that is not a number. Such a binding is not saved: the document would be refused. */
+function invalidRanges(draft: BindingDraft): number[] {
+  return draft.ranges.flatMap((row, i) => {
+    const [min, max] = [bound(row.min), bound(row.max)];
+    const broken = [min, max].some(b => b !== undefined && !Number.isFinite(b)) || (min !== undefined && max !== undefined && !(min < max));
+    return broken ? [i + 1] : [];
+  });
+}
+
 /** The `Binding.map` the form describes, or `undefined` when it describes none. A row without a
- * source value is left out. */
+ * source value, and a range row with neither end, is left out. */
 function mapFromDraft(draft: BindingDraft): ValueMap | undefined {
   const rows = draft.mappings.filter(row => row.from !== '');
-  if (rows.length === 0 && draft.otherwise === '') return undefined;
+  const ranges = draft.ranges.filter(row => bound(row.min) !== undefined || bound(row.max) !== undefined);
+  if (rows.length === 0 && ranges.length === 0 && draft.otherwise === '') return undefined;
   return {
-    values: Object.fromEntries(rows.map(row => [row.from, fieldValue(row.to, row.loaded)])),
+    ...(rows.length > 0 || ranges.length === 0 ? { values: Object.fromEntries(rows.map(row => [row.from, fieldValue(row.to, row.loaded)])) } : {}),
+    ...(ranges.length > 0 && {
+      ranges: ranges.map(row => {
+        const [min, max] = [bound(row.min), bound(row.max)];
+        return { ...(min !== undefined && { min }), ...(max !== undefined && { max }), value: fieldValue(row.to, row.loaded) };
+      }),
+    }),
     ...(draft.otherwise !== '' && { otherwise: fieldValue(draft.otherwise, draft.otherwiseLoaded) }),
   };
 }
@@ -186,6 +220,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   };
 
   const previewMap = mapFromDraft(draft);
+  const rangeIssues = invalidRanges(draft);
 
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
   const previewLabel = preview
@@ -217,7 +252,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   };
 
   const handleSaveBinding = () => {
-    if (!draft.propPath || !selectedAdapter) return;
+    if (!draft.propPath || !selectedAdapter || rangeIssues.length > 0) return;
     const bindings = { ...node.widget.bindings };
     const map = mapFromDraft(draft);
     bindings[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef(), ...(map && { map }) };
@@ -359,6 +394,35 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
             <button type="button" onClick={() => setDraft(d => ({ ...d, mappings: [...d.mappings, { from: '', to: '' }] }))}>
               {labels.addMapping}
             </button>
+            {draft.ranges.map((row, i) => {
+              const n = String(i + 1);
+              const setRow = (change: Partial<RangeRow>) =>
+                setDraft(d => ({ ...d, ranges: d.ranges.map((r, j) => (j === i ? { ...r, ...change } : r)) }));
+              return (
+                <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  <input type="number" style={{ flex: 1, minWidth: 0 }} aria-label={labels.rangeMin.replace('{n}', n)} value={row.min} onChange={e => setRow({ min: e.target.value })} placeholder="70" />
+                  <span aria-hidden="true">≤ x &lt;</span>
+                  <input type="number" style={{ flex: 1, minWidth: 0 }} aria-label={labels.rangeMax.replace('{n}', n)} value={row.max} onChange={e => setRow({ max: e.target.value })} placeholder="80" />
+                  <span aria-hidden="true">→</span>
+                  <input style={{ flex: 1, minWidth: 0 }} aria-label={labels.rangeTo.replace('{n}', n)} value={row.to} onChange={e => setRow({ to: e.target.value })} placeholder="warning" />
+                  <button
+                    type="button"
+                    aria-label={labels.removeRange.replace('{n}', n)}
+                    onClick={() => setDraft(d => ({ ...d, ranges: d.ranges.filter((_, j) => j !== i) }))}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => setDraft(d => ({ ...d, ranges: [...d.ranges, { min: '', max: '', to: '' }] }))}>
+              {labels.addRange}
+            </button>
+            {rangeIssues.map(n => (
+              <p key={n} role="alert" style={{ color: '#dc2626', fontSize: 12, margin: '2px 0' }}>
+                {labels.rangeOrder.replace('{n}', String(n))}
+              </p>
+            ))}
             <label style={FIELD_STYLE}>
               {labels.mapOtherwise}
               <input value={draft.otherwise} onChange={e => setDraft({ ...draft, otherwise: e.target.value })} placeholder={labels.mapOtherwisePlaceholder} />
@@ -367,7 +431,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           <button type="button" onClick={handlePreview}>
             {labels.previewBinding}
           </button>
-          <button type="button" onClick={handleSaveBinding} disabled={!draft.propPath}>
+          <button type="button" onClick={handleSaveBinding} disabled={!draft.propPath || rangeIssues.length > 0}>
             {labels.saveBinding}
           </button>
           {previewError && <p style={{ color: '#dc2626', fontSize: 12 }}>{previewError}</p>}

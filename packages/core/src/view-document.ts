@@ -117,11 +117,23 @@ export interface Binding {
   map?: ValueMap;
 }
 
-/** A lookup from source values to the values a prop takes. A source value is looked up by its
- * text — `"Fault"`, `"3"`, `"true"`, `"null"` — so a JSON object key can name any of them. A value
- * with no entry takes `otherwise`, or passes through unchanged when there is none, the way the raw
- * reading would have. */
+/** A lookup from source values to the values a prop takes, tried in order:
+ * 1. `values` — a source value is looked up by its text — `"Fault"`, `"3"`, `"true"`, `"null"` — so
+ *    a JSON object key can name any of them.
+ * 2. `ranges` — a number (or text that reads as one, `"92.5"`) takes the first range it falls in.
+ * 3. `otherwise` — or, when there is none, the value passes through unchanged, the way the raw
+ *    reading would have. */
 export interface ValueMap {
-  values: Record<string, unknown>;
+  values?: Record<string, unknown>;
+  ranges?: ValueRange[];
   otherwise?: unknown;
+}
+
+/** A band of numbers and the value a prop takes for it: from `min` up to but not including `max`,
+ * so adjacent ranges meet without overlapping — `{ min: 70, max: 80 }` then `{ min: 80 }` reads
+ * "70 or more" and "80 or more". A missing bound leaves that end open; at least one is given. */
+export interface ValueRange {
+  min?: number;
+  max?: number;
+  value: unknown;
 }
