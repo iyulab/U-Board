@@ -25,7 +25,7 @@ workspaces are applications and `site` is the introduction site; all four stay `
 
 To release, change `version` in `packages/core/package.json` (semver; while the version is 0.x, a
 minor bump may break the public API) and push the change to `main`. The `publish` job in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` passes and publishes
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` (`npm run check`) passes and publishes
 with provenance if that version is not on the registry yet; on any other push it publishes
 nothing. Do not run
 `npm publish` by hand — a hand-published tarball has no provenance and skips the checks.

@@ -192,6 +192,24 @@ The age is measured when the text is built (`now`, default `Date.now()`), so tex
 screen should be rebuilt as the widget re-resolves — the shipped components do on every refresh.
 When several bindings are at fault, the text breaks them out per prop path, separated by `;`.
 
+`observedAt` is stamped on the source's side, so the age is only as right as the two clocks agree.
+On a machine whose clock may drift (a screen left running unattended), measure against the source's
+clock instead: the shipped components take it as `clock` (`ViewerPage`, `AuthoringView`), and
+`toCanvasKit` as `now`.
+
+```ts
+interface ServerClock {
+  now: () => number; // the server's current time; this machine's until a response has carried a Date
+  observe: (response: { headers: { get(name: string): string | null } }, sentAt: number) => void;
+}
+function serverClock(): ServerClock;
+```
+
+`serverClock()` estimates a server's clock from the `Date` header of its responses (RFC 9110): hand
+it each response with the `Date.now()` the request was sent at, and pass `now` on as the clock. A
+response without a readable `Date` changes nothing — a cross-origin response does not expose it
+unless the server lists it in `Access-Control-Expose-Headers`.
+
 `live` has no label on purpose: normal operation is not announced, only departures from it.
 
 Pass `text` to describe quality in another language; it defaults to `DEFAULT_QUALITY_TEXT`.
