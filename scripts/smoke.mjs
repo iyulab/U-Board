@@ -105,7 +105,8 @@ async function main() {
   for (const r of results) console.log(`${r.problem ? 'FAIL' : 'ok  '}  ${r.name} (${r.path})${r.problem ? ` — ${r.problem}` : ''}`);
   const failed = results.filter(r => r.problem).length;
   console.log(failed > 0 ? `\n${failed} of ${results.length} checks failed.` : `\nAll ${results.length} checks passed.`);
-  process.exit(failed > 0 ? 1 : 0);
+  // Not `process.exit()`: it can cut off sockets that are still closing (Node on Windows aborts on it).
+  process.exitCode = failed > 0 ? 1 : 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) main();
