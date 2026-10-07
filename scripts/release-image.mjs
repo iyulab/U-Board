@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 // release-image.mjs
 // Releases the product — its container image — at the version in packages/server/package.json: builds
-// the image with that version on it, tags it, and writes what a GitHub Release carries for an
-// installation that cannot reach a registry (the image as a `docker save` archive, its checksum, and
-// the release notes). The CI `image` job runs it on main once the version has no release yet
-// (.github/workflows/ci.yml); the library package (@iyulab/u-board) is versioned and published apart.
+// the image with that version on it, pushes it under that exact tag, and writes what a GitHub Release
+// carries for an installation that cannot reach a registry (the image as a `docker save` archive, its
+// checksum, and the release notes). The CI `image` job runs it on main once the version has no release
+// yet (.github/workflows/ci.yml); the library package (@iyulab/u-board) is versioned and published apart.
+//
+// A version's tag, once pushed, is never pushed again: a run that failed after the push (attesting,
+// promoting, creating the release) is re-run on the image already in the registry, so what the
+// release describes is what was first pulled under that tag.
 //
 // Usage:
-//   node scripts/release-image.mjs --plan    # print what a release of this version would publish (JSON)
-//   node scripts/release-image.mjs           # build, and write the release files to release/ — nothing pushed
-//   node scripts/release-image.mjs --push    # also push the image's tags to the registry
+//   node scripts/release-image.mjs --plan      # print what a release of this version would publish (JSON)
+//   node scripts/release-image.mjs             # build, and write the release files to release/ — nothing pushed
+//   node scripts/release-image.mjs --publish   # push the exact tag (or reuse it if already pushed), then write the files
+//   node scripts/release-image.mjs --promote   # move <major>.<minor> and latest onto it, if it is the newest there
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -27,23 +32,39 @@ const OUT_DIR = 'release';
 
 const SEMVER = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?$/;
 
-/** What a release of `version` publishes. A pre-release (`0.2.0-rc.1`) gets its exact tag only;
- *  a release also moves `<major>.<minor>` and `latest` onto itself. */
-export function releasePlan(version, revision = '') {
+function parseVersion(version) {
   const match = SEMVER.exec(version);
   if (!match) throw new Error(`"${version}" is not a version (MAJOR.MINOR.PATCH, optionally -PRERELEASE)`);
-  const prerelease = match[4] !== undefined;
-  const tags = prerelease ? [version] : [version, `${match[1]}.${match[2]}`, 'latest'];
+  return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]), prerelease: match[4] !== undefined };
+}
+
+/** What a release of `version` publishes: the image under its exact tag (`ref`), and the archive. */
+export function releasePlan(version, revision = '') {
+  const { prerelease } = parseVersion(version);
   return {
     version,
     revision,
     tag: `v${version}`,
     prerelease,
     image: IMAGE,
-    refs: tags.map(t => `${IMAGE}:${t}`),
+    ref: `${IMAGE}:${version}`,
     platform: PLATFORM,
     archive: `u-board-${version}-${PLATFORM.replace('/', '-')}.tar.gz`,
   };
+}
+
+/** The moving tags `version` takes, given the versions released before it: `<major>.<minor>` when
+ *  none of that line is newer, `latest` when none at all is. A pre-release takes neither, and a
+ *  hotfix to an older line does not pull `latest` back to it. */
+export function promotedTags(version, released) {
+  const v = parseVersion(version);
+  if (v.prerelease) return [];
+  const others = released.filter(r => SEMVER.test(r) && !parseVersion(r).prerelease).map(parseVersion);
+  const newer = o => o.major !== v.major ? o.major > v.major : o.minor !== v.minor ? o.minor > v.minor : o.patch > v.patch;
+  const tags = [];
+  if (!others.some(o => o.major === v.major && o.minor === v.minor && newer(o))) tags.push(`${v.major}.${v.minor}`);
+  if (!others.some(newer)) tags.push('latest');
+  return tags;
 }
 
 /** The body of `version`'s section in the product changelog (CHANGELOG.md) — its `###` headings
@@ -63,10 +84,20 @@ export function changelogSection(changelog, version) {
   return body;
 }
 
-/** Markdown links relative to the repository root, made absolute against `base` — release notes
- *  are read on the release's page, not next to the files. */
-export function absoluteLinks(markdown, base) {
-  return markdown.replace(/\]\((?![a-z][a-z0-9+.-]*:|#|\/)([^)\s]+)\)/gi, (_, target) => `](${base}${target})`);
+// A link target that is relative to the repository root: no scheme, not an anchor, not root-relative.
+const RELATIVE = String.raw`(?![a-z][a-z0-9+.-]*:|#|/)`;
+
+/** Markdown links relative to the repository root, made absolute at `ref` (a tag) — release notes are
+ *  read on the release's page, not next to the files. Images point at the raw file, so they show. */
+export function absoluteLinks(markdown, ref) {
+  const blob = `${REPOSITORY}/blob/${ref}/`;
+  const raw = `${REPOSITORY}/raw/${ref}/`;
+  return markdown
+    .replace(
+      new RegExp(String.raw`(!?\[[^\]]*\])\(${RELATIVE}([^)\s]+)((?:\s+"[^"]*")?)\)`, 'gi'),
+      (_, label, target, title) => `${label}(${label.startsWith('!') ? raw : blob}${target}${title})`
+    )
+    .replace(new RegExp(String.raw`^( {0,3}\[[^\]]+\]:\s*)${RELATIVE}(\S+)`, 'gim'), (_, def, target) => `${def}${blob}${target}`);
 }
 
 /** The release's notes — what changed (the changelog's section), then how to install this version,
@@ -78,7 +109,7 @@ export function releaseNotes(plan, archiveSha256, changes) {
     '',
     '## Changes',
     '',
-    absoluteLinks(changes, `${REPOSITORY}/blob/${plan.tag}/`),
+    absoluteLinks(changes, plan.tag),
     '',
     '## Install',
     '',
@@ -119,6 +150,34 @@ function output(command, args) {
   return r.stdout.trim();
 }
 
+/** The registry digest `ref` was pushed with, or null when the registry has no such tag (or no such
+ *  package yet). Asked of the GitHub Packages API, not by pulling: an anonymous or denied pull cannot
+ *  tell "absent" from "private". Any other failure throws — guessing "absent" would push the tag again. */
+function pushedDigest(plan) {
+  const [, owner, name] = plan.image.split('/');
+  const tag = plan.version;
+  const r = spawnSync(
+    'gh',
+    ['api', '--paginate', `orgs/${owner}/packages/container/${name}/versions`, '--jq', `.[] | select(.metadata.container.tags | index("${tag}")) | .name`],
+    { encoding: 'utf8' }
+  );
+  if (r.error) throw r.error;
+  if (r.status !== 0) {
+    if (/HTTP 404/.test(r.stderr)) return null;
+    throw new Error(`could not tell whether ${plan.ref} was pushed: ${r.stderr.trim()}`);
+  }
+  return r.stdout.trim().split('\n')[0] || null;
+}
+
+function releasedVersions() {
+  const releases = JSON.parse(output('gh', ['release', 'list', '--limit', '1000', '--json', 'tagName,isDraft']));
+  return releases.filter(r => !r.isDraft && r.tagName.startsWith('v')).map(r => r.tagName.slice(1));
+}
+
+function setOutput(name, value) {
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`);
+}
+
 function currentPlan() {
   const { version } = JSON.parse(readFileSync('packages/server/package.json', 'utf8'));
   return releasePlan(version, output('git', ['rev-parse', 'HEAD']));
@@ -156,33 +215,82 @@ export async function anonymouslyPullable(ref) {
   return manifest.ok;
 }
 
+function build(plan) {
+  console.log(`Building ${plan.ref} (${plan.platform}) …`);
+  run('docker', [
+    'build', '-f', 'packages/server/Dockerfile', '--platform', plan.platform,
+    '--build-arg', `VERSION=${plan.version}`, '--build-arg', `REVISION=${plan.revision}`,
+    '-t', plan.ref,
+    '.',
+  ]);
+}
+
+/** Pushes the exact tag, or — when an earlier run already did — pulls that image back instead of
+ *  building another under the same tag. Returns its registry digest. */
+function publish(plan) {
+  const existing = pushedDigest(plan);
+  if (existing) {
+    console.log(`${plan.ref} was pushed before (${existing}) — releasing that image, not a new build.`);
+    run('docker', ['pull', `${plan.image}@${existing}`]);
+    run('docker', ['tag', `${plan.image}@${existing}`, plan.ref]);
+    return existing;
+  }
+  build(plan);
+  run('docker', ['push', plan.ref]);
+  return registryDigest(JSON.parse(output('docker', ['inspect', '--format', '{{json .RepoDigests}}', plan.ref])), plan.image);
+}
+
+/** Moves `<major>.<minor>` and `latest` onto the released image, where it is the newest. The tags are
+ *  pushed from the same image, so they carry its digest — and its attestation. */
+function promote(plan) {
+  const tags = promotedTags(plan.version, releasedVersions().filter(v => v !== plan.version));
+  if (tags.length === 0) {
+    console.log(`${plan.version} moves no other tag (a pre-release, or a newer version is out).`);
+    return;
+  }
+  const existing = pushedDigest(plan);
+  if (!existing) throw new Error(`${plan.ref} has not been pushed — publish it first`);
+  run('docker', ['pull', `${plan.image}@${existing}`]);
+  for (const tag of tags) {
+    run('docker', ['tag', `${plan.image}@${existing}`, `${plan.image}:${tag}`]);
+    run('docker', ['push', `${plan.image}:${tag}`]);
+  }
+  console.log(`Moved ${tags.join(', ')} onto ${plan.version}.`);
+}
+
 async function main() {
   const args = process.argv.slice(2);
-  const unknown = args.filter(a => a !== '--plan' && a !== '--push');
-  if (unknown.length > 0) throw new Error(`unknown argument: ${unknown.join(' ')}`);
+  const modes = ['--plan', '--publish', '--promote'];
+  const unknown = args.filter(a => !modes.includes(a));
+  if (unknown.length > 0 || args.length > 1) throw new Error(`usage: release-image.mjs [${modes.join(' | ')}]`);
   const plan = currentPlan();
-  if (args.includes('--plan')) {
+  if (args[0] === '--plan') {
     console.log(JSON.stringify(plan, null, 2));
+    return;
+  }
+  if (args[0] === '--promote') {
+    promote(plan);
     return;
   }
 
   // Before the build: a release without a changelog section is refused, not built.
   const changes = changelogSection(readFileSync('CHANGELOG.md', 'utf8'), plan.version);
-
-  console.log(`Building ${plan.refs.join(', ')} (${plan.platform}) …`);
-  run('docker', [
-    'build', '-f', 'packages/server/Dockerfile', '--platform', plan.platform,
-    '--build-arg', `VERSION=${plan.version}`, '--build-arg', `REVISION=${plan.revision}`,
-    ...plan.refs.flatMap(ref => ['-t', ref]),
-    '.',
-  ]);
+  let digest;
+  if (args[0] === '--publish') {
+    digest = publish(plan);
+    console.log(`${plan.ref} is ${plan.image}@${digest}`);
+    // What the attestation is made for (.github/workflows/ci.yml).
+    setOutput('digest', digest);
+  } else {
+    build(plan);
+  }
 
   rmSync(OUT_DIR, { recursive: true, force: true });
   mkdirSync(OUT_DIR);
   const tar = path.join(OUT_DIR, `u-board-${plan.version}.tar`);
   const archive = path.join(OUT_DIR, plan.archive);
   // Saved under its exact tag only: loading it must not move an installation's `latest`.
-  run('docker', ['save', '-o', tar, plan.refs[0]]);
+  run('docker', ['save', '-o', tar, plan.ref]);
   await pipeline(createReadStream(tar), createGzip(), createWriteStream(archive));
   rmSync(tar);
   const archiveSha256 = await sha256(archive);
@@ -190,16 +298,17 @@ async function main() {
   writeFileSync(path.join(OUT_DIR, 'notes.md'), releaseNotes(plan, archiveSha256, changes));
   console.log(`Wrote ${archive} (sha256 ${archiveSha256}), its checksum and notes.md.`);
 
-  if (!args.includes('--push')) return;
-  for (const ref of plan.refs) run('docker', ['push', ref]);
-  // The registry's name for what was pushed, which an attestation is made for (.github/workflows/ci.yml).
-  const digest = registryDigest(JSON.parse(output('docker', ['inspect', '--format', '{{json .RepoDigests}}', plan.refs[0]])), plan.image);
-  console.log(`Pushed ${plan.image}@${digest}`);
-  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `digest=${digest}\n`);
-  if (!(await anonymouslyPullable(plan.refs[0]))) {
-    // Not a failure: the image is published, but installations cannot pull it until the package is public.
-    console.log(`::warning::${plan.refs[0]} was pushed but cannot be pulled without signing in — make the package public in its settings.`);
+  if (!digest) return;
+  // Advisory only: the image is published either way, but installations cannot pull it until the
+  // package is public — and a failed check must not fail the release after the push.
+  let pullable;
+  try {
+    pullable = await anonymouslyPullable(plan.ref);
+  } catch (err) {
+    console.log(`::warning::could not check whether ${plan.ref} can be pulled without signing in: ${err.message}`);
+    return;
   }
+  if (!pullable) console.log(`::warning::${plan.ref} cannot be pulled without signing in — make the package public in its settings.`);
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

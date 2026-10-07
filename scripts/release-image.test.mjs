@@ -1,20 +1,32 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { absoluteLinks, changelogSection, registryDigest, releaseNotes, releasePlan } from './release-image.mjs';
+import { absoluteLinks, changelogSection, promotedTags, registryDigest, releaseNotes, releasePlan } from './release-image.mjs';
 
-test('a release moves its minor line and latest onto itself', () => {
+test('a release is the image under its exact tag, and the archive', () => {
   const plan = releasePlan('0.1.0', 'abc123');
   assert.equal(plan.tag, 'v0.1.0');
   assert.equal(plan.prerelease, false);
-  assert.deepEqual(plan.refs, ['ghcr.io/iyulab/u-board:0.1.0', 'ghcr.io/iyulab/u-board:0.1', 'ghcr.io/iyulab/u-board:latest']);
+  assert.equal(plan.ref, 'ghcr.io/iyulab/u-board:0.1.0');
   assert.equal(plan.archive, 'u-board-0.1.0-linux-amd64.tar.gz');
+  assert.equal(releasePlan('0.2.0-rc.1').prerelease, true);
 });
 
-test('a pre-release gets its exact tag only', () => {
-  const plan = releasePlan('0.2.0-rc.1');
-  assert.equal(plan.prerelease, true);
-  assert.deepEqual(plan.refs, ['ghcr.io/iyulab/u-board:0.2.0-rc.1']);
+test('the newest release takes its minor line and latest', () => {
+  assert.deepEqual(promotedTags('0.1.0', []), ['0.1', 'latest']);
+  assert.deepEqual(promotedTags('0.2.0', ['0.1.0', '0.1.1']), ['0.2', 'latest']);
+  assert.deepEqual(promotedTags('1.0.0', ['0.9.9']), ['1.0', 'latest']);
+});
+
+test('a hotfix to an older line takes that line only, and never pulls latest back', () => {
+  assert.deepEqual(promotedTags('0.1.2', ['0.1.0', '0.1.1', '0.2.0']), ['0.1']);
+  assert.deepEqual(promotedTags('0.1.1', ['0.1.3', '0.2.0']), []);
+  assert.deepEqual(promotedTags('0.10.0', ['0.9.0']), ['0.10', 'latest']); // numbers, not text
+});
+
+test('a pre-release takes no moving tag, and pre-releases do not hold one back', () => {
+  assert.deepEqual(promotedTags('0.2.0-rc.1', []), []);
+  assert.deepEqual(promotedTags('0.1.0', ['0.2.0-rc.1', 'not-a-version']), ['0.1', 'latest']);
 });
 
 test('refuses what is not a version', () => {
@@ -51,12 +63,15 @@ test('refuses a version the changelog has no section for, or an empty one', () =
   assert.throws(() => changelogSection('## [0.1.0] - 2026-10-08\n\n## [0.0.9]\n', '0.1.0'), /empty/);
 });
 
-test('makes repository-relative links absolute, leaves the rest', () => {
-  const base = 'https://github.com/iyulab/U-Board/blob/v0.1.0/';
+test('makes repository-relative links absolute at the tag, leaves the rest', () => {
+  const blob = 'https://github.com/iyulab/U-Board/blob/v0.1.0/';
+  const raw = 'https://github.com/iyulab/U-Board/raw/v0.1.0/';
   assert.equal(
-    absoluteLinks('[a](docs/x.md#y) [b](https://example.com/z) [c](#here) [d](/root) [e](README.md)', base),
-    `[a](${base}docs/x.md#y) [b](https://example.com/z) [c](#here) [d](/root) [e](${base}README.md)`
+    absoluteLinks('[a](docs/x.md#y) [b](https://example.com/z) [c](#here) [d](/root) [e](README.md "Read me")', 'v0.1.0'),
+    `[a](${blob}docs/x.md#y) [b](https://example.com/z) [c](#here) [d](/root) [e](${blob}README.md "Read me")`
   );
+  assert.equal(absoluteLinks('![shot](docs/shot.png)', 'v0.1.0'), `![shot](${raw}docs/shot.png)`);
+  assert.equal(absoluteLinks('See [the guide][g].\n\n[g]: docs/self-hosting.md\n[h]: https://example.com', 'v0.1.0'), `See [the guide][g].\n\n[g]: ${blob}docs/self-hosting.md\n[h]: https://example.com`);
 });
 
 test('the notes say what changed, then how to install from the registry and from the archive, at this version', () => {

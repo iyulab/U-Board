@@ -7,8 +7,9 @@ installation and a self-hosted one run the same image.
 ## Get the image
 
 Each release — listed on the repository's GitHub Releases page, tagged `v<version>` — publishes the
-image for `linux/amd64` as `ghcr.io/iyulab/u-board:<version>`, and moves `<major>.<minor>` and
-`latest` onto it:
+image for `linux/amd64` as `ghcr.io/iyulab/u-board:<version>`. `<major>.<minor>` follows the newest
+release of that line and `latest` the newest of all, so a fix to an older line does not move
+`latest` back; pre-releases move neither:
 
 ```sh
 docker pull ghcr.io/iyulab/u-board:<version>

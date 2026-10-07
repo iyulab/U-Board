@@ -165,7 +165,11 @@ jobs:
         run: |
           node scripts/release-image.mjs --plan > plan.json
           TAG=$(node -p 'require("./plan.json").tag')
-          if gh release view "${TAG}" >/dev/null 2>&1; then EXISTS=true; else EXISTS=false; fi
+          # Only "no such release" counts as not released. Any other failure stops here: taking it for
+          # "not released" would publish the version again.
+          if OUT=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" 2>&1); then EXISTS=true
+          elif grep -q "HTTP 404" <<< "${OUT}"; then EXISTS=false
+          else echo "${OUT}"; exit 1; fi
           {
             echo "tag=${TAG}"
             echo "version=$(node -p 'require("./plan.json").version')"
@@ -181,10 +185,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Build and push the image
+      # The exact version tag only. A run that failed further on is re-run on the image already pushed
+      # under it, never a new build — the script asks the registry first.
+      - name: Publish the image
         id: push
         if: steps.check.outputs.exists == 'false'
-        run: node scripts/release-image.mjs --push
+        run: node scripts/release-image.mjs --publish
 
       # Build provenance — this workflow, this commit — for the pushed image and for the archive the
       # release carries, so either can be checked with `gh attestation verify` (the library's npm
@@ -201,7 +207,14 @@ jobs:
         with:
           subject-path: release/*.tar.gz
 
-      # Last, so a failed build or push leaves no release behind and the next push to main tries again.
+      # After the attestation, so a moving tag never points at an image without one. Only where this
+      # version is the newest: a hotfix to an older line does not pull `latest` back.
+      - name: Move <major>.<minor> and latest
+        if: steps.check.outputs.exists == 'false'
+        run: node scripts/release-image.mjs --promote
+
+      # Last: until it exists the version counts as unreleased, and the next push to main finishes the
+      # job on the image already pushed.
       - name: Create the release
         if: steps.check.outputs.exists == 'false'
         run: |

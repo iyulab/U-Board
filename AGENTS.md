@@ -28,10 +28,12 @@ workspaces (`site` is the introduction site) stay `private` on npm.
 To release the product, change `version` in `packages/server/package.json`, give that version its
 section in the root `CHANGELOG.md` (the release notes are made from it), and push the change to
 `main`. The `image` job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` and, if that
-version has no GitHub release yet, pushes the image to `ghcr.io/iyulab/u-board` (the version,
-`<major>.<minor>` and, unless it is a pre-release, `latest`) and creates the release `v<version>` with
-the image as a `docker save` archive and its checksum. `npm run release:image` builds the same image
-and release files locally without pushing anything.
+version has no GitHub release yet, pushes the image to `ghcr.io/iyulab/u-board` under the version,
+attests it, moves `<major>.<minor>` and `latest` onto it where it is the newest, and creates the
+release `v<version>` with the image as a `docker save` archive and its checksum. A version's tag is
+pushed once: if the job fails after that, the next push to `main` finishes it on the image already in
+the registry. `npm run release:image` builds the same image and release files locally without
+pushing anything.
 
 To release the library, change `version` in `packages/core/package.json` (semver; while the version is 0.x, a
 minor bump may break the public API) and push the change to `main`. The `publish` job in
