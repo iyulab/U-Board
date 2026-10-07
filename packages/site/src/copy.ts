@@ -54,7 +54,7 @@ export const COPY: Record<Locale, Copy> = {
       claim: 'lede',
       text: '도면·네트워크도·지도 같은 배경 위에 값을 놓은 화면을 만들고, 그 화면을 운영 중인 다른 웹 페이지에 넣어 보여 줍니다. 값은 화면을 열 때 그 값을 가진 시스템에서 읽어 옵니다.',
     },
-    tryIt: '서비스 열기',
+    tryIt: '데모 열기',
     readSource: '소스 보기',
     figure: {
       caption: '값마다 자기 상태를 표시합니다. 정상인 값에는 테두리가 없습니다.',
@@ -86,19 +86,19 @@ export const COPY: Record<Locale, Copy> = {
       heading: '쓰는 방식',
       items: [
         {
-          claim: 'delivery-hosted',
-          heading: '이유랩이 운영하는 서비스',
-          body: '설치할 것 없이, 이유랩이 운영하는 인스턴스에서 씁니다.',
-        },
-        {
           claim: 'delivery-container',
-          heading: '컨테이너 하나로 직접 설치',
+          heading: '컨테이너 하나로 사내에 설치',
           body: '서버·콘솔·공유 뷰어가 한 컨테이너 이미지에 들어 있습니다. 사내망에 두고 PostgreSQL 하나만 붙이면 됩니다.',
         },
         {
           claim: 'delivery-library',
           heading: '라이브러리로 자기 앱 안에',
           body: '저작 화면과 뷰어를 npm 패키지 @iyulab/u-board로 가져다 자기 웹 앱 안에 넣을 수 있습니다.',
+        },
+        {
+          claim: 'delivery-demo',
+          heading: '설치 전에 데모로',
+          body: '이유랩이 운영하는 데모 인스턴스에서 설치 없이 먼저 써 볼 수 있습니다.',
         },
       ],
     },
@@ -144,7 +144,7 @@ export const COPY: Record<Locale, Copy> = {
       claim: 'lede',
       text: 'Place values on a floor plan, a network diagram or a map, and embed the view in the web pages your operators already use. Each value is read from the system that owns it when the view is shown.',
     },
-    tryIt: 'Open the service',
+    tryIt: 'Try the demo',
     readSource: 'Read the source',
     figure: {
       caption: 'Every value shows its own state. A value that is live has no frame.',
@@ -176,11 +176,6 @@ export const COPY: Record<Locale, Copy> = {
       heading: 'Ways to run it',
       items: [
         {
-          claim: 'delivery-hosted',
-          heading: 'The service iyulab runs',
-          body: 'Use it straight away on the instance iyulab operates — nothing to install.',
-        },
-        {
           claim: 'delivery-container',
           heading: 'One container, on your network',
           body: 'The server, console and share viewer ship in one container image. Run it on your own network and give it a PostgreSQL database.',
@@ -189,6 +184,11 @@ export const COPY: Record<Locale, Copy> = {
           claim: 'delivery-library',
           heading: 'A library inside your app',
           body: 'Bring the authoring view and the viewer into your own web application with the npm package @iyulab/u-board.',
+        },
+        {
+          claim: 'delivery-demo',
+          heading: 'A demo before you install',
+          body: 'Try it first on the demo instance iyulab operates — nothing to install.',
         },
       ],
     },

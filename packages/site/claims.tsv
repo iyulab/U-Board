@@ -9,7 +9,7 @@ figure	works	packages/core/src/quality-presentation.ts · packages/core/src/qual
 quality	works	README.md · packages/core/src/quality-text.ts	Per-value quality, the four reasons, the age of a stale value, no whole-view error
 connect	works	README.md · packages/server/src/resolve-connector.ts	Generic HTTP connector: static token/header or OAuth 2.0 client credentials, JSON Pointer, credentials server-side
 embed	works	docs/self-hosting.md · packages/server/src/routes/share.ts	Share link: read-only without sign-in, iframe embedding, optional expiry, revocation
-delivery-hosted	promise	README.md	The instance iyulab operates — an operating commitment, not something the code proves
+delivery-demo	promise	README.md	The demo instance iyulab operates for trying U-Board before installing it — an operating commitment, not something the code proves
 delivery-container	works	docs/self-hosting.md · packages/server/Dockerfile	One image with server, console and share viewer; PostgreSQL
 delivery-library	works	README.md · packages/core/package.json	The npm package @iyulab/u-board with the authoring view and the viewer
 not-hmi	design	README.md	No symbol library, alarms, control output or screen navigation
