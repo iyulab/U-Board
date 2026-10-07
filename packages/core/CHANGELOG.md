@@ -28,11 +28,11 @@ All notable changes to this package are documented here. The format follows
   else the value passes through. Applied to a shown (`live`/`stale`) value before it reaches the
   prop; `validateViewDocument` checks its shape (`values`, `ranges` or both; each range a bound and
   `min` below `max`). `applyValueMap(map, value)` exported. The binding form of `AuthoringView`
-  edits it — rows of source value → shown value, numeric range rows (an inverted range is named and
+  edits it — rows of source value → shown value, numeric range rows (a row with no end, or an inverted one, is named and
   keeps the binding from being saved), and a value for anything else — previews the mapped value,
   and marks a mapped binding in the list (labels `valueMapHeading`, `mapFrom`, `mapTo`,
   `addMapping`, `removeMapping`, `rangeMin`, `rangeMax`, `rangeTo`, `addRange`, `removeRange`,
-  `rangeOrder`, `mapOtherwise`, `mapOtherwisePlaceholder`, `mapped`).
+  `rangeInvalid`, `mapOtherwise`, `mapOtherwisePlaceholder`, `mapped`).
 - Labels `lastUpdated`, `notUpdating` and `time` (a time-of-day formatter), and `timeText(locale)` to
   build one.
 - `ViewerPage` and `AuthoringView` `clock` (default `Date.now`): what a stale value's age and the

@@ -87,8 +87,9 @@ export interface UBoardLabels {
   rangeTo: string;
   addRange: string;
   removeRange: string;
-  /** Said under a range whose upper end is not above its lower one; the binding cannot be saved. */
-  rangeOrder: string;
+  /** Said under a range row that is not a range — no end given, or an upper end not above the
+   *  lower one; the binding cannot be saved. */
+  rangeInvalid: string;
   /** The value shown for a source value with no mapping; left empty, such a value shows as it comes. */
   mapOtherwise: string;
   mapOtherwisePlaceholder: string;
@@ -176,7 +177,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   rangeTo: 'Range {n} shown as',
   addRange: 'Add range',
   removeRange: 'Remove range {n}',
-  rangeOrder: 'Range {n}: the upper end must be above the lower one.',
+  rangeInvalid: 'Range {n}: give a lower end, an upper end, or both — the upper above the lower.',
   mapOtherwise: 'Anything else',
   mapOtherwisePlaceholder: 'as it comes',
   mapped: 'mapped',

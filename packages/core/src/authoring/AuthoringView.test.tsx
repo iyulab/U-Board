@@ -529,6 +529,21 @@ describe('AuthoringView background image', () => {
     expect(onSave.mock.calls[0][0].background).toEqual({ image: plan });
   });
 
+  it('keeps edits made while the image was being read', async () => {
+    let finish!: (image: typeof plan) => void;
+    readBackgroundImage.mockReturnValueOnce(new Promise(r => { finish = r; }));
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={doc()} adapters={[]} onSave={onSave} />);
+    choose();
+    fireEvent.click(screen.getByText('Add node')); // while the file is still being read
+    await act(async () => finish(plan));
+    await screen.findByText('Remove background');
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0][0].nodes).toHaveLength(1);
+    expect(onSave.mock.calls[0][0].background).toEqual({ image: plan });
+  });
+
   it('says why a chosen file was refused, and leaves the background as it was', async () => {
     const { BackgroundImageError } = await import('./background-image');
     readBackgroundImage.mockRejectedValueOnce(new BackgroundImageError('size'));

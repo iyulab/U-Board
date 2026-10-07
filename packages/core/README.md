@@ -12,7 +12,7 @@ README for what U-Board is for and what it deliberately is not.
 npm install @iyulab/u-board react react-dom
 ```
 
-`react` and `react-dom` (19.x) are peer dependencies. The domain entry point below does not use
+`react` and `react-dom` (19.2 or later) are peer dependencies. The domain entry point below does not use
 them at runtime, but npm installs peer dependencies by default. The package is ESM-only (`import`,
 not `require`) and needs Node 22.12 or later.
 

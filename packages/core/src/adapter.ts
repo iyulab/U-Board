@@ -143,11 +143,15 @@ function inRange(range: unknown, n: number): boolean {
 
 const isObject = (v: unknown): v is Record<string, any> => typeof v === 'object' && v !== null;
 
-/** The number a source value stands for: a finite number, or text that is one (`" 92.5 "`) — sources
- * often send decimals as text. Booleans, `null` and empty text are not numbers here. */
+/** Text that is a number written in decimal — `92.5`, `-3`, `.5`, `1e3` — with spaces around it
+ *  allowed. Not `0x10` or `0b11`, which `Number` would also read. */
+const DECIMAL = /^\s*[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?\s*$/i;
+
+/** The number a source value stands for: a finite number, or decimal text (`" 92.5 "`) — sources
+ * often send decimals as text. Booleans, `null`, empty text and other notations are not numbers here. */
 function numericValue(value: unknown): number | undefined {
   if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
-  if (typeof value !== 'string' || value.trim() === '') return undefined;
+  if (typeof value !== 'string' || !DECIMAL.test(value)) return undefined;
   const n = Number(value);
   return Number.isFinite(n) ? n : undefined;
 }

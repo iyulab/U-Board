@@ -431,11 +431,20 @@ describe('PropertyPanel bindings', () => {
       fireEvent.click(screen.getByText('Add range'));
       fireEvent.change(screen.getByLabelText('Range 1 from'), { target: { value: '80' } });
       fireEvent.change(screen.getByLabelText('Range 1 below'), { target: { value: '70' } });
-      expect(screen.getByRole('alert')).toHaveTextContent('Range 1: the upper end must be above the lower one.');
+      expect(screen.getByRole('alert')).toHaveTextContent('Range 1: give a lower end, an upper end, or both — the upper above the lower.');
       expect(screen.getByText('Save binding')).toBeDisabled();
       fireEvent.change(screen.getByLabelText('Range 1 below'), { target: { value: '90' } });
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       expect(screen.getByText('Save binding')).toBeEnabled();
+    });
+
+    it('refuses to save a range row that has a shown value but no end, rather than drop it', () => {
+      render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+      fillBinding();
+      fireEvent.click(screen.getByText('Add range'));
+      fireEvent.change(screen.getByLabelText('Range 1 shown as'), { target: { value: 'error' } });
+      expect(screen.getByRole('alert')).toHaveTextContent('Range 1:');
+      expect(screen.getByText('Save binding')).toBeDisabled();
     });
 
     it('loads a saved range back into its row, keeping a shown value that is not text', () => {

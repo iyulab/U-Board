@@ -26,3 +26,23 @@ describe('readBackgroundImage', () => {
     await expect(readBackgroundImage(png(), sized(0, 0))).rejects.toMatchObject({ problem: 'unreadable' });
   });
 });
+
+describe('SVG backgrounds', () => {
+  const svg = (text: string, type = 'image/svg+xml') => new File([text], 'plan.svg', { type });
+  const noSize = async () => ({ width: 0, height: 0 });
+
+  it('takes an SVG file with no type by its name', async () => {
+    const image = await readBackgroundImage(svg('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"/>', ''), sized(300, 200));
+    expect(image.src).toMatch(/^data:image\/svg\+xml;base64,/);
+  });
+
+  it('reads the size of an SVG the browser reports none for — from width/height, else the viewBox', async () => {
+    expect(await readBackgroundImage(svg('<svg width="640px" height="480" viewBox="0 0 10 10"/>'), noSize)).toMatchObject({ width: 640, height: 480 });
+    expect(await readBackgroundImage(svg('<svg viewBox="0 0 1200, 800"/>'), noSize)).toMatchObject({ width: 1200, height: 800 });
+    expect(await readBackgroundImage(svg('<svg width="100%" height="100%" viewBox="-50 -50 900 600"/>'), noSize)).toMatchObject({ width: 900, height: 600 });
+  });
+
+  it('still refuses an SVG that states no size at all', async () => {
+    await expect(readBackgroundImage(svg('<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>'), noSize)).rejects.toMatchObject({ problem: 'unreadable' });
+  });
+});

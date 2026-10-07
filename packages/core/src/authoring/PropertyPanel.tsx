@@ -98,12 +98,16 @@ function draftMap(map: ValueMap | undefined): Pick<BindingDraft, 'mappings' | 'r
 /** A range bound as typed: `undefined` when left empty (an open end), else the number it reads as. */
 const bound = (text: string) => (text.trim() === '' ? undefined : Number(text));
 
-/** The rows (1-based) whose range is not a range — an upper end not above the lower one, or a bound
- * that is not a number. Such a binding is not saved: the document would be refused. */
+/** The rows (1-based) whose range is not a range — a shown value with neither end, an upper end not
+ * above the lower one, or a bound that is not a number. Such a binding is not saved: a row with no
+ * end would be dropped silently, the others refused with the document. */
 function invalidRanges(draft: BindingDraft): number[] {
   return draft.ranges.flatMap((row, i) => {
     const [min, max] = [bound(row.min), bound(row.max)];
-    const broken = [min, max].some(b => b !== undefined && !Number.isFinite(b)) || (min !== undefined && max !== undefined && !(min < max));
+    const broken =
+      (min === undefined && max === undefined && row.to.trim() !== '') ||
+      [min, max].some(b => b !== undefined && !Number.isFinite(b)) ||
+      (min !== undefined && max !== undefined && !(min < max));
     return broken ? [i + 1] : [];
   });
 }
@@ -420,7 +424,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
             </button>
             {rangeIssues.map(n => (
               <p key={n} role="alert" style={{ color: '#dc2626', fontSize: 12, margin: '2px 0' }}>
-                {labels.rangeOrder.replace('{n}', String(n))}
+                {labels.rangeInvalid.replace('{n}', String(n))}
               </p>
             ))}
             <label style={FIELD_STYLE}>

@@ -62,7 +62,7 @@ export const KO_LABELS: UBoardLabels = {
   rangeTo: '구간 {n} 표시 값',
   addRange: '구간 추가',
   removeRange: '구간 {n} 삭제',
-  rangeOrder: '구간 {n}: 미만 값이 이상 값보다 커야 합니다.',
+  rangeInvalid: '구간 {n}: 이상·미만 중 하나 이상을 적고, 둘 다 적으면 미만이 더 커야 합니다.',
   mapOtherwise: '그 밖의 값',
   mapOtherwisePlaceholder: '받은 그대로',
   mapped: '매핑됨',

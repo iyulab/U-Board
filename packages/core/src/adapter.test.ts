@@ -303,7 +303,9 @@ describe('value maps', () => {
     it('reads text that is a number as one, and nothing else', () => {
       expect(applyValueMap(temp, ' 92.5 ')).toBe('error');
       expect(applyValueMap(temp, '1e2')).toBe('error');
-      for (const notANumber of ['', '  ', 'hot', true, null, NaN, Infinity, [85], { v: 85 }]) {
+      expect(applyValueMap(temp, '-.5')).toBe('success');
+      expect(applyValueMap(temp, '+75')).toBe('warning');
+      for (const notANumber of ['', '  ', 'hot', '0x10', '0b11', '85 C', '1e999', true, null, NaN, Infinity, [85], { v: 85 }]) {
         expect(applyValueMap(temp, notANumber)).toBe('neutral');
       }
     });

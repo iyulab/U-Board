@@ -20,15 +20,33 @@ export class BackgroundImageError extends Error {
  *  the scene units the board is laid out in. Refuses another type, a file over the limit, and an
  *  image the browser cannot draw or that has no size of its own. */
 export async function readBackgroundImage(file: File, measure: (src: string) => Promise<{ width: number; height: number }> = naturalSize): Promise<BackgroundImage> {
-  if (!BACKGROUND_IMAGE_TYPES.includes(file.type)) throw new BackgroundImageError('type');
+  // Some systems give an SVG file no type; its name still says what it is.
+  const type = file.type || (/\.svg$/i.test(file.name) ? 'image/svg+xml' : '');
+  if (!BACKGROUND_IMAGE_TYPES.includes(type)) throw new BackgroundImageError('type');
   if (file.size > MAX_BACKGROUND_BYTES) throw new BackgroundImageError('size');
-  const src = await readAsDataUrl(file);
-  const { width, height } = await measure(src).catch(() => ({ width: 0, height: 0 }));
+  const src = await readAsDataUrl(type === file.type ? file : new Blob([file], { type }));
+  let { width, height } = await measure(src).catch(() => ({ width: 0, height: 0 }));
+  // An SVG sized only by its viewBox has no size the browser reports; read it from the drawing.
+  if (!(width > 0 && height > 0) && type === 'image/svg+xml') ({ width, height } = svgSize(await file.text()));
   if (!(width > 0 && height > 0)) throw new BackgroundImageError('unreadable');
   return { src, width, height };
 }
 
-function readAsDataUrl(file: File): Promise<string> {
+/** An SVG drawing's size from its root element: `width`/`height` in plain numbers or pixels, else
+ *  its `viewBox`. Zero when it states neither. */
+export function svgSize(text: string): { width: number; height: number } {
+  const root = /<svg\b[^>]*>/i.exec(text)?.[0] ?? '';
+  const attr = (name: string) => new RegExp(`\\s${name}\\s*=\\s*["']([^"']*)["']`, 'i').exec(root)?.[1];
+  const pixels = (value?: string) => (value && /^\s*[\d.]+\s*(px)?\s*$/i.test(value) ? parseFloat(value) : NaN);
+  const width = pixels(attr('width'));
+  const height = pixels(attr('height'));
+  if (width > 0 && height > 0) return { width, height };
+  const box = attr('viewBox')?.trim().split(/[\s,]+/).map(Number);
+  if (box?.length === 4 && box[2] > 0 && box[3] > 0) return { width: box[2], height: box[3] };
+  return { width: 0, height: 0 };
+}
+
+function readAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);

@@ -113,6 +113,16 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     fitTo(documentExtent(openedDoc));
   }, [fitTo, openedDoc]);
 
+  // A new background usually sets the board's extent — once it is in, show all of it, as when a
+  // board opens.
+  const [fitPending, setFitPending] = useState(false);
+  useEffect(() => {
+    if (!fitPending) return;
+    setFitPending(false);
+    const extentNow = documentExtent(doc);
+    if (extentNow) fitTo(extentNow);
+  }, [fitPending, doc, fitTo]);
+
 
   // The scene point at the top-left of the editor's view — where a newly added item is offset from.
   const visibleOrigin = () => {
@@ -214,11 +224,9 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     if (!file) return;
     try {
       const image = await readBackgroundImage(file);
-      const next = { ...doc, background: { ...doc.background, image } };
-      setDoc(next);
-      // The background usually sets the board's extent — show all of it, as when a board opens.
-      const nextExtent = documentExtent(next);
-      if (nextExtent) fitTo(nextExtent);
+      // Onto the document as it is now — the author may have kept editing while the file was read.
+      setDoc(prev => ({ ...prev, background: { ...prev.background, image } }));
+      setFitPending(true);
       setFileError(null);
     } catch (err) {
       const problem = err instanceof BackgroundImageError ? err.problem : 'unreadable';
