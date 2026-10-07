@@ -67,6 +67,9 @@ applications (see [Repository layout](#repository-layout)) add workspaces with m
 server-side board storage, managed connectors, and read-only share links — on an installation run by
 an operator who creates each organization's workspace and can recover one whose owners are gone,
 and a record of who changed members, roles, invitations, boards, share links and connectors.
+They are released together as a versioned container image — on GitHub Releases with an archive for
+networks without internet access, both carrying a build provenance attestation, and changes recorded
+in [`CHANGELOG.md`](CHANGELOG.md); an operator sees the installed version in the console.
 
 ## Repository layout
 

@@ -87,7 +87,7 @@ export const COPY: Record<Locale, Copy> = {
         {
           claim: 'delivery-container',
           heading: '컨테이너 하나로 사내에 설치',
-          body: '서버·콘솔·공유 뷰어가 한 컨테이너 이미지에 들어 있습니다. 인터넷이 닿지 않는 사내망에서도 돌아가고, PostgreSQL 하나(작은 설치는 내장 DB)만 있으면 됩니다.',
+          body: '서버·콘솔·공유 뷰어가 한 컨테이너 이미지에 들어 있고, 버전마다 이미지와 사내망 반입용 파일을 출처 증명과 함께 공개합니다. 인터넷이 닿지 않는 사내망에서도 돌아가고, PostgreSQL 하나(작은 설치는 내장 DB)만 있으면 됩니다.',
         },
         {
           claim: 'delivery-library',
@@ -176,7 +176,7 @@ export const COPY: Record<Locale, Copy> = {
         {
           claim: 'delivery-container',
           heading: 'One container, on your network',
-          body: 'The server, console and share viewer ship in one container image. Run it on your own network — no internet access needed — with a PostgreSQL database, or the embedded one for a small installation.',
+          body: 'The server, console and share viewer ship in one container image, released by version with an archive to carry onto a closed network, both attested to their build. Run it on your own network — no internet access needed — with a PostgreSQL database, or the embedded one for a small installation.',
         },
         {
           claim: 'delivery-library',
