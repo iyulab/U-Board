@@ -37,15 +37,33 @@ export interface ResolveState {
    * against a data source that is down fails on every poll; logging only when the failure starts,
    * changes, or clears keeps the log a record of what happened rather than a repeat of it. */
   failures: Map<string, string>;
-  /** Upstream requests currently open, per connector and URL. Bindings that read different
-   * `valuePath`s of the same response (one collection, many assets) share one request instead of
-   * each fetching it — the upstream sees one call per distinct URL, however many nodes read it. */
-  inflight: Map<string, Promise<unknown>>;
+  /** Upstream reads per connector and URL — the ones still open, and successful ones for `reuseMs`
+   * after they finished. Bindings that read different `valuePath`s of the same response (one
+   * collection, many assets) share one request instead of each fetching it, and so do the polls of
+   * every viewer that has the board open: the upstream sees about one call per URL per `reuseMs`,
+   * however many nodes read it and however many screens show it. */
+  reads: Map<string, UpstreamRead>;
+  /** How long a successful upstream read answers later resolves of the same URL (milliseconds).
+   * 0: only resolves that start while the read is still open share it. */
+  reuseMs: number;
   /** How old a last-known value may be and still be served as `stale` (milliseconds). Past it, a
    * failed read is `disconnected` — the value is too old to stand in for the current one. Unset:
    * no limit, the last value is served however old (its `observedAt` says how old). */
   staleMaxAgeMs?: number;
 }
+
+/** One read of a data source URL: its parsed body and when it was read (epoch ms) — the time a
+ * value taken from it was observed, however much later a resolve reuses it. `settledAt` is set
+ * once a successful read finishes, which starts its reuse window. */
+export interface UpstreamRead {
+  result: Promise<{ body: unknown; readAt: number }>;
+  settledAt?: number;
+}
+
+/** How long a successful upstream read is reused by default — shorter than a viewer's poll
+ * interval, so one screen still sees a fresh read on every poll, while many screens polling the
+ * same board cost the data source a few reads per interval rather than one each. */
+export const DEFAULT_UPSTREAM_REUSE_MS = 10_000;
 
 type ResolveStage = 'token' | 'request' | 'response';
 
@@ -245,8 +263,9 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
  * to `stale` instead of `disconnected` when something was resolved before. Never throws — a
  * fetch/parse failure becomes a `disconnected`/`stale` result, not an exception, because resolve
  * is a status-carrying endpoint. That includes failing to obtain an OAuth access token: the
- * binding is as unavailable as if the data source itself had not answered. Concurrent resolves of
- * the same URL share one upstream request (`ResolveState.inflight`). */
+ * binding is as unavailable as if the data source itself had not answered. Resolves of the same URL
+ * share one upstream read while it is open and for `ResolveState.reuseMs` after it succeeded
+ * (`ResolveState.reads`). */
 export async function resolveConnectorValue(
   connector: Connector,
   target: URL,
@@ -257,16 +276,31 @@ export async function resolveConnectorValue(
   const requestKey = `${connector.id} ${target.href}`;
   const where = `[resolve] connector ${connector.id} ${ref.path}`;
 
-  let request = state.inflight.get(requestKey);
-  if (!request) {
-    request = fetchBody(connector, target, state.tokens, state.fetch).finally(() => state.inflight.delete(requestKey));
-    state.inflight.set(requestKey, request);
+  let read = state.reads.get(requestKey);
+  if (read?.settledAt !== undefined && Date.now() - read.settledAt >= state.reuseMs) read = undefined;
+  if (!read) {
+    const started: UpstreamRead = {
+      result: fetchBody(connector, target, state.tokens, state.fetch).then(body => ({ body, readAt: Date.now() })),
+    };
+    state.reads.set(requestKey, started);
+    // A failed read is never reused — the next resolve asks the data source again.
+    started.result.then(
+      () => {
+        if (state.reuseMs > 0) started.settledAt = Date.now();
+        else if (state.reads.get(requestKey) === started) state.reads.delete(requestKey);
+      },
+      () => {
+        if (state.reads.get(requestKey) === started) state.reads.delete(requestKey);
+      }
+    );
+    read = started;
   }
 
   try {
     let body: unknown;
+    let readAt: number;
     try {
-      body = await request;
+      ({ body, readAt } = await read.result);
     } catch (err) {
       throw err instanceof StageError ? err : new StageError('request', err);
     }
@@ -278,7 +312,7 @@ export async function resolveConnectorValue(
       }
       value = extracted.value;
     }
-    const observedAt = new Date().toISOString();
+    const observedAt = new Date(readAt).toISOString();
     state.values.set(cacheKey, { value, observedAt });
     if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
     return { value, quality: 'live', observedAt };

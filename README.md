@@ -55,7 +55,7 @@ client credentials with cached, auto-renewed access tokens) is wired into both t
 and the read-only embed viewer. It picks a value out of a JSON response with an RFC 6901 JSON
 Pointer, reports why a binding is not live (source unreachable, credentials refused, value not
 found at the source, rate limited), and the embed viewer resolves all of a board's bindings in one
-request. A connector's settings can be tried before they are saved, and the addresses connectors may
+request, again every 30 seconds while it is open. A connector's settings can be tried before they are saved, and the addresses connectors may
 reach are an installation setting — never the server's own loopback, link-local or cloud host addresses. A connector to a specific external system that needs its own
 domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
 until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a

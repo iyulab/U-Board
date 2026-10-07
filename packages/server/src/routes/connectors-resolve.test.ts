@@ -4,6 +4,7 @@ import type { DbClient } from '../db.js';
 import type express from 'express';
 import { createTestDb } from '../test-support/test-db.js';
 import { createApp } from '../app.js';
+import { DEFAULT_UPSTREAM_REUSE_MS } from '../resolve-connector.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { signSession } from '../auth/session.js';
@@ -29,7 +30,8 @@ beforeEach(async () => {
   vi.restoreAllMocks();
   vi.spyOn(console, 'warn').mockImplementation(() => {});
   db = await createTestDb();
-  app = createApp({ db, sessionSecret: SECRET });
+  // Each resolve below reads the data source afresh — the reuse of a recent read is tested on its own.
+  app = createApp({ db, sessionSecret: SECRET, upstreamReuseMs: 0 });
 
   const member = await createUser(db, { email: 'member@x.com', passwordHash: 'h', name: 'Member' });
   const owner = await createUser(db, { email: 'owner@x.com', passwordHash: 'h', name: 'Owner' });
@@ -122,7 +124,7 @@ describe('connector resolve proxy', () => {
   });
 
   it('stops serving a last-known value as stale once it is older than the configured limit', async () => {
-    const limited = createApp({ db, sessionSecret: SECRET, staleMaxAgeMs: 60_000 });
+    const limited = createApp({ db, sessionSecret: SECRET, staleMaxAgeMs: 60_000, upstreamReuseMs: 0 });
     const resolve = () => request(limited)
       .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
@@ -195,6 +197,48 @@ describe('connector resolve proxy', () => {
     expect((await resolveOnce()).body.value).toBe('running');
     expect((await resolveOnce()).body.value).toBe('stopped');
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  describe('with the default reuse of a recent upstream read', () => {
+    let reusing: express.Express;
+    const resolveIn = (target: express.Express, valuePath: string) => request(target)
+      .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
+      .set('Cookie', memberCookie)
+      .send({ ref: { path: '/assets', valuePath } })
+      .then(res => res.body);
+    beforeEach(() => {
+      reusing = createApp({ db, sessionSecret: SECRET });
+    });
+
+    it('answers a resolve that starts soon after a read finished from that read, observed when it was read', async () => {
+      (fetch as any)
+        .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Running' }, { Status: 'Fault' }] }))
+        .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Stopped' }, { Status: 'Stopped' }] }));
+      const first = await resolveIn(reusing, 'value.0.Status');
+      const second = await resolveIn(reusing, 'value.1.Status');
+      expect(first).toEqual({ value: 'Running', quality: 'live', observedAt: expect.any(String) });
+      expect(second).toEqual({ value: 'Fault', quality: 'live', observedAt: first.observedAt });
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('reads the data source again once the reuse window has passed', async () => {
+      (fetch as any)
+        .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Running' }] }))
+        .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Fault' }] }));
+      const readAt = Date.parse((await resolveIn(reusing, 'value.0.Status')).observedAt);
+      vi.spyOn(Date, 'now').mockReturnValue(readAt + DEFAULT_UPSTREAM_REUSE_MS + 1);
+      expect((await resolveIn(reusing, 'value.0.Status')).value).toBe('Fault');
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('never reuses a failed read', async () => {
+      (fetch as any)
+        .mockRejectedValueOnce(new Error('network error'))
+        .mockResolvedValueOnce(jsonResponse({ value: [{ Status: 'Running' }] }));
+      expect((await resolveIn(reusing, 'value.0.Status')).quality).toBe('disconnected');
+      expect(await resolveIn(reusing, 'value.0.Status')).toEqual({ value: 'Running', quality: 'live', observedAt: expect.any(String) });
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('says why a resolve failed, by what the data source answered', async () => {

@@ -134,7 +134,8 @@ beforeEach(async () => {
   source.dataRequests.length = 0;
 
   db = await createTestDb();
-  app = createApp({ db, sessionSecret: SECRET });
+  // Every resolve here reads the source afresh, as a poll past the reuse window would.
+  app = createApp({ db, sessionSecret: SECRET, upstreamReuseMs: 0 });
   const owner = await createUser(db, { email: 'owner@example.com', passwordHash: 'h', name: 'Owner' });
   const member = await createUser(db, { email: 'member@example.com', passwordHash: 'h', name: 'Member' });
   const workspace = await createWorkspace(db, 'W1');

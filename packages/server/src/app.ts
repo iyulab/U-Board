@@ -13,7 +13,7 @@ import { createConnectorsRouter } from './routes/connectors.js';
 import { createShareRouter } from './routes/share.js';
 import { createInstanceRouter } from './routes/instance.js';
 import { ClientCredentialsTokens } from './oauth-client-credentials.js';
-import type { ResolveState } from './resolve-connector.js';
+import { DEFAULT_UPSTREAM_REUSE_MS, type ResolveState } from './resolve-connector.js';
 import { serveWebApps, type WebApps } from './web-apps.js';
 import type { WorkspaceCreation } from './workspace-creation.js';
 
@@ -45,6 +45,9 @@ export interface AppConfig {
   /** How old a connector's last-known value may be and still be served as `stale` when a read fails
    *  (milliseconds) — past it the binding reads `disconnected`. Unset: no limit. */
   staleMaxAgeMs?: number;
+  /** How long a successful read of a data source answers later resolves of the same URL
+   *  (milliseconds). Default `DEFAULT_UPSTREAM_REUSE_MS`; 0 shares only reads still open. */
+  upstreamReuseMs?: number;
   /** The `fetch` requests to connectors' data sources and token endpoints go through — one that keeps
    *  them to the addresses the installation allows (`createConnectorFetch`). Unset: the global
    *  `fetch`, unrestricted (tests). */
@@ -91,7 +94,8 @@ export function createApp(config: AppConfig): express.Express {
   app.use(express.json({ limit: '10mb' }));
   app.use(cookieParser());
   // Per-process resolve state shared by the member and share-link resolve routes: last-known values
-  // (so a failure can degrade to `stale`), OAuth access tokens, and which failures are already logged.
+  // (so a failure can degrade to `stale`), OAuth access tokens, recent upstream reads (shared by every
+  // viewer's polls), and which failures are already logged.
   // Late-bound to the global `fetch` when none is configured, so a test that replaces it is seen.
   const connectorFetch = config.connectorFetch ?? ((input, init) => fetch(input, init));
   const resolveState: ResolveState = {
@@ -99,7 +103,8 @@ export function createApp(config: AppConfig): express.Express {
     tokens: new ClientCredentialsTokens(Date.now, connectorFetch),
     fetch: connectorFetch,
     failures: new Map(),
-    inflight: new Map(),
+    reads: new Map(),
+    reuseMs: config.upstreamReuseMs ?? DEFAULT_UPSTREAM_REUSE_MS,
     staleMaxAgeMs: config.staleMaxAgeMs,
   };
   const authRateLimiter = rateLimit({

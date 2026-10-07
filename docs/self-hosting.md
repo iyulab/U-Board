@@ -106,6 +106,12 @@ A share link (`https://<host>/share/?board=…&token=…`) opens one board read-
 in, until it is revoked or reaches the expiry its owner chose. Embed it in another application's
 page with an `<iframe>`; `UBOARD_SHARE_FRAME_ANCESTORS` decides which pages may.
 
+An open board keeps itself current: every 30 seconds it asks for all of its values in one request,
+and a link that expires while it is open turns into an expiry notice. Many screens showing the same
+board do not multiply the load on a data source — the server answers requests for the same source
+URL from one read for 10 seconds. If the share path sits behind a per-address rate limit, allow for
+one request per open screen every 30 seconds (plus one when it opens).
+
 ## Upgrading
 
 Stop the old container and start one from the new image with the same settings. The server brings

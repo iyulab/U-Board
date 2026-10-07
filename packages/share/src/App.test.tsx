@@ -2,14 +2,14 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { App } from './App.js';
+import { App, SHARE_POLL_INTERVAL_MS } from './App.js';
 
 vi.mock('@iyulab/u-board/viewer', async () => {
   const actual = await vi.importActual('@iyulab/u-board/viewer');
   return {
     ...actual,
     ViewerPage: (props: any) => (
-      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')} data-label={props.ariaLabel}>
+      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')} data-label={props.ariaLabel} data-poll={props.pollIntervalMs}>
         {props.initialDocument.background ? 'rendered' : ''}
       </div>
     ),
@@ -46,6 +46,13 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({ ok: false, status: 410 });
     render(<App />);
     expect(await screen.findByText(/만료되었습니다/)).toBeInTheDocument();
+  });
+
+  it('keeps the open board current by polling its values', async () => {
+    setLocation('?board=b1&token=tok');
+    (fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+    render(<App />);
+    expect((await screen.findByTestId('viewer-page')).dataset.poll).toBe(String(SHARE_POLL_INTERVAL_MS));
   });
 
   it('names the board view after the board', async () => {

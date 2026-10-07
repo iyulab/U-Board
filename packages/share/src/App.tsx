@@ -6,6 +6,12 @@ import { KO_LABELS } from './u-board-labels.js';
 
 type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[] };
 
+/** How often an open board asks for its values again. A shared board is left open on a screen, so
+ * it must keep up with its sources — and say so when a link expires under it. Each poll is one
+ * batch request, and `/api/share/*` sits behind a per-IP edge rate limit (10 requests per 10 s):
+ * at this interval about 30 screens behind one address stay well inside it. */
+export const SHARE_POLL_INTERVAL_MS = 30_000;
+
 export function App() {
   const params = new URLSearchParams(window.location.search);
   const boardId = params.get('board');
@@ -43,5 +49,13 @@ export function App() {
   if (state === 'error') return <p>이 링크는 더 이상 유효하지 않습니다.</p>;
   if (state === 'expired') return <p>이 공유 링크는 만료되었습니다. 보드를 공유한 사람에게 새 링크를 요청하세요.</p>;
 
-  return <ViewerPage initialDocument={state.document} adapters={state.adapters} ariaLabel={state.name} labels={KO_LABELS} />;
+  return (
+    <ViewerPage
+      initialDocument={state.document}
+      adapters={state.adapters}
+      pollIntervalMs={SHARE_POLL_INTERVAL_MS}
+      ariaLabel={state.name}
+      labels={KO_LABELS}
+    />
+  );
 }
