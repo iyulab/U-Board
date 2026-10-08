@@ -1,8 +1,9 @@
 // Lint configuration (oxlint). oxlint parses TypeScript itself, so it works with the native
-// TypeScript 7 compiler this workspace uses, which typescript-eslint cannot load.
+// TypeScript 7 compiler this workspace uses, which typescript-eslint cannot load. Accessibility
+// rules (jsx-a11y) run with the correctness ones.
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "react", "unicorn", "oxc"],
+  "plugins": ["typescript", "react", "unicorn", "oxc", "jsx-a11y"],
   "categories": { "correctness": "error" },
   "rules": {
     "react/rules-of-hooks": "error",
@@ -10,7 +11,10 @@
     // A React Compiler-era render-performance heuristic, not a correctness rule: it flags the
     // reset-on-input and load-on-mount effects this codebase uses on purpose. The hooks gate is
     // the classic pair above.
-    "react/set-state-in-effect": "off"
+    "react/set-state-in-effect": "off",
+    // Live regions stay `role="status"`: the ARIA pattern screen readers announce reliably, where
+    // support for announcing an `<output>` element varies.
+    "jsx-a11y/prefer-tag-over-role": "off"
   },
   "ignorePatterns": ["**/dist/**", "**/node_modules/**", "**/test-results/**", "**/playwright-report/**"]
 }

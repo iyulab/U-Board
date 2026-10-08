@@ -114,7 +114,7 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
         <h3 id="create-board-heading">새 보드</h3>
         <form onSubmit={handleCreateSubmit}>
           <FormField label="보드 이름">
-            <input value={newBoardName} onChange={e => setNewBoardName(e.target.value)} required autoFocus />
+            <input value={newBoardName} onChange={e => setNewBoardName(e.target.value)} required />
           </FormField>
           {createError && <Alert>{createError}</Alert>}
           <Button type="submit">생성</Button>{' '}
