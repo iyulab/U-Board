@@ -61,9 +61,10 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - Requires `@canvas-kit/viewer` `^0.5.0` (was `^0.4.0`; nothing here changes with it).
-- Requires `@iyulab/u-widgets` `^0.26.1` (was `^0.24.0`). Widgets' own built-in text — region names,
+- Requires `@iyulab/u-widgets` `^0.26.3` (was `^0.24.0`). Widgets' own built-in text — region names,
   fallback cards — now goes through the u-widgets locale table, so a host can translate it with
-  that library's `registerLocale`/`setDefaultLocale`.
+  that library's `registerLocale`/`setDefaultLocale`. From 0.26.3 a widget element
+  carrying the `hidden` attribute stops drawing (it used to stay visible).
 
 ## [0.4.0] - 2026-10-05
 
