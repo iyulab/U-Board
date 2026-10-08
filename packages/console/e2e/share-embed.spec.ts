@@ -20,11 +20,11 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
 
   // 데모 데이터로 바인딩한 노드 하나 추가 — 아래 공유 패널 경고(ISSUE-U-Board-20260829-*)가
   // 실 브라우저에서도 뜨는지 확인하기 위함. binding-editor.spec.ts와 동일 패턴, 데이터소스만
-  // 실 커넥터 대신 데모(HTTP Path/Value path 대신 참조 키 하나).
+  // 실 커넥터 대신 데모(HTTP Path/Value path 대신 데모가 나열하는 참조 중 하나).
   await page.getByText('노드 추가').click();
   await clickFirstNode(page);
   await page.getByLabel('프롭 경로').fill('data.value');
-  await page.getByLabel('참조 키').fill('pump-a.state');
+  await page.getByRole('combobox', { name: '참조', exact: true }).selectOption('pump-a.state');
   await page.getByText('바인딩 저장', { exact: true }).click();
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
