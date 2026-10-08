@@ -114,11 +114,19 @@ jobs:
           NAME=$(node -p 'require("./package.json").name')
           VERSION=$(node -p 'require("./package.json").version')
           echo "spec=${NAME}@${VERSION}" >> "$GITHUB_OUTPUT"
-          if npm view "${NAME}@${VERSION}" version >/dev/null 2>&1; then
+          # A prerelease goes out under `next`, never as `latest` (npm refuses one without a tag).
+          case "${VERSION}" in *-*) echo "tag=next" >> "$GITHUB_OUTPUT" ;; *) echo "tag=latest" >> "$GITHUB_OUTPUT" ;; esac
+          # Only npm's 404 means "not published yet"; any other failure (registry down, rate limit)
+          # stops here instead of trying to publish a version that may already exist.
+          if out=$(npm view "${NAME}@${VERSION}" version 2>&1); then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "### Skipped — ${NAME}@${VERSION} is already published" >> "$GITHUB_STEP_SUMMARY"
-          else
+          elif grep -q E404 <<< "${out}"; then
             echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "${out}" >&2
+            echo "::error::Could not ask npm whether ${NAME}@${VERSION} is published"
+            exit 1
           fi
 
       - name: Install
@@ -131,8 +139,8 @@ jobs:
       - name: Publish
         if: steps.check.outputs.exists == 'false'
         run: |
-          npm publish
-          echo "### Published ${{ steps.check.outputs.spec }}" >> "$GITHUB_STEP_SUMMARY"
+          npm publish --tag "${{ steps.check.outputs.tag }}"
+          echo "### Published ${{ steps.check.outputs.spec }} (${{ steps.check.outputs.tag }})" >> "$GITHUB_STEP_SUMMARY"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
