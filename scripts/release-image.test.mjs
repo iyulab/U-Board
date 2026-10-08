@@ -100,3 +100,11 @@ test("the product's version has a section in CHANGELOG.md", () => {
   const changelog = readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
   assert.ok(changelogSection(changelog, version));
 });
+
+// The library publishes from CI the same way (the `publish` job, on a version npm does not have yet),
+// so its version needs its own section in packages/core/CHANGELOG.md just as much.
+test("the library's version has a section in its CHANGELOG.md", () => {
+  const { version } = JSON.parse(readFileSync(new URL('../packages/core/package.json', import.meta.url), 'utf8'));
+  const changelog = readFileSync(new URL('../packages/core/CHANGELOG.md', import.meta.url), 'utf8');
+  assert.ok(changelogSection(changelog, version));
+});
