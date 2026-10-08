@@ -25,6 +25,8 @@ do when upgrading. Each release's notes carry its section.
   yet, lists what each binding points at, and shows previewed values and widget types in words
   (`running` and 정상 rather than `"running" (live)`; 상태, 게이지, 선 차트). A new node starts as
   새 노드 · 연결 전 instead of English.
+- A widget's label, value, status level, gauge range and unit are edited in fields instead of JSON;
+  the JSON stays under "고급" for the rest.
 - Times read as dates and times in Korean, in the viewer's time zone — the board list, share links,
   invitations, the installation page and the activity log. The board list and share links used to
   show raw ISO timestamps, and the other pages followed the browser's language.

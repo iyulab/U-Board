@@ -154,7 +154,9 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-authoring__error`, `ub-authoring__status`, `ub-authoring__source` | A file that could not be used; "resolving"; the document source (`showDocumentSource`) |
 | `ub-panel` (`--properties`, `--decoration`) | A property or decoration panel |
 | `ub-panel__heading`, `ub-panel__subheading`, `ub-panel__field`, `ub-panel__hint`, `ub-panel__error` | Its heading, section heading, a labelled field, hint text and an error |
-| `ub-panel__json` | The static props editor |
+| `ub-panel__widget-form`, `ub-panel__group` | The widget's own fields, and each group of them (data, display options) |
+| `ub-panel__field-name`, `ub-panel__field--check` | A field's name (with its key); a checkbox field |
+| `ub-panel__advanced`, `ub-panel__json` | The folded "edit as JSON" section, and its editor |
 | `ub-panel__bindings`, `ub-panel__binding`, `ub-panel__binding-path`, `ub-panel__binding-ref`, `ub-panel__binding-tag` | The list of bindings, one entry, its prop path, what it points at, and its "mapped" tag |
 | `ub-panel__binding-form`, `ub-panel__value-map`, `ub-panel__map-row`, `ub-panel__actions` | The binding form, its value map, a row of the map, and its buttons |
 | `ub-panel__preview`, `ub-panel__quality` | A binding's previewed value, and its connection quality |

@@ -199,6 +199,41 @@
   font-weight: 400;
 }
 
+.ub-panel__group {
+  margin: 0 0 var(--_ub-space-3);
+  padding: var(--_ub-space-2);
+  border: 1px solid var(--_ub-border);
+  border-radius: var(--_ub-radius-sm);
+}
+
+.ub-panel__group legend {
+  padding: 0 var(--_ub-space-1);
+  font-size: var(--_ub-font-sm);
+  font-weight: 600;
+}
+
+/* The widget library's name for a value, with its key for anyone matching it to the JSON. */
+.ub-panel__field-name code {
+  font-size: var(--_ub-font-xs);
+  font-weight: 400;
+  color: var(--_ub-text-muted);
+}
+
+.ub-panel__field--check {
+  font-weight: 400;
+}
+
+.ub-panel__advanced {
+  margin: 0 0 var(--_ub-space-2);
+  font-size: var(--_ub-font-sm);
+}
+
+.ub-panel__advanced > summary {
+  margin-bottom: var(--_ub-space-2);
+  cursor: pointer;
+  color: var(--_ub-text-muted);
+}
+
 .ub-panel__json {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: var(--_ub-font-sm);

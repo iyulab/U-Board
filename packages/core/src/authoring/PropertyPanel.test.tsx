@@ -89,6 +89,24 @@ describe('PropertyPanel', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("edits the widget's own fields with controls, and folds the JSON editor away until it holds an error", () => {
+    const onChange = vi.fn();
+    const { container } = render(<PropertyPanel node={statusNode()} adapters={[]} onChange={onChange} />);
+    const advanced = container.querySelector('details.ub-panel__advanced')!;
+    expect(advanced).not.toHaveAttribute('open');
+
+    const label = screen.getByLabelText(/Status label/);
+    expect(label).toHaveValue('Pump A');
+    fireEvent.change(label, { target: { value: 'Pump B' } });
+    fireEvent.blur(label);
+    expect(onChange.mock.calls[0][0].props.data.label).toBe('Pump B');
+
+    const textarea = screen.getByLabelText('Static props (JSON)');
+    fireEvent.change(textarea, { target: { value: '{not valid' } });
+    fireEvent.blur(textarea);
+    expect(advanced).toHaveAttribute('open');
+  });
+
   it('does not discard an invalid-JSON props edit (and its error) when a binding is saved afterwards', () => {
     const onChange = vi.fn();
     let node = statusNode();

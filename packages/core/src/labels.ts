@@ -63,6 +63,14 @@ export interface UBoardLabels {
   newNodeLabel: string;
   newNodeValue: string;
   staticProps: string;
+  /** The widget form: its data and its options, a field's "bound" mark, a choice left to the widget's
+   * own default, the JSON editor it folds the rest into, and how many options only that editor holds. */
+  widgetData: string;
+  widgetOptions: string;
+  boundField: string;
+  choiceDefault: string;
+  advancedProps: string;
+  moreInAdvanced: string;
   invalidJson: string;
   bindingsHeading: string;
   noBindings: string;
@@ -169,6 +177,12 @@ export const DEFAULT_LABELS: UBoardLabels = {
   newNodeLabel: 'New node',
   newNodeValue: 'Not bound',
   staticProps: 'Static props (JSON)',
+  widgetData: 'Data',
+  widgetOptions: 'Display',
+  boundField: 'bound',
+  choiceDefault: 'Default',
+  advancedProps: 'Advanced: edit as JSON',
+  moreInAdvanced: '{count} more options can be set in Advanced.',
   invalidJson: 'Not valid JSON',
   bindingsHeading: 'Bindings',
   noBindings: 'No bindings',

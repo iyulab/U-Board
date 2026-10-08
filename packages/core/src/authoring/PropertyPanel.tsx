@@ -3,6 +3,7 @@ import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBindin
 import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, defaultPropPath, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
+import { WidgetPropsForm } from './WidgetPropsForm.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
 import { describeQuality } from '../quality-text.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
@@ -370,22 +371,27 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           ))}
         </select>
       </label>
-      <label className="ub-panel__field" style={FIELD_STYLE}>
-        {labels.staticProps}
-        <textarea
-          className="ub-panel__json"
-          value={propsText}
-          onChange={e => setPropsText(e.target.value)}
-          onBlur={handlePropsBlur}
-          rows={8}
-          style={{ width: '100%', fontFamily: 'monospace' }}
-        />
-      </label>
-      {propsError && (
-        <p role="alert" className="ub-panel__error" style={ERROR_STYLE}>
-          {propsError}
-        </p>
-      )}
+      <WidgetPropsForm widget={node.widget} onChange={onChange} labels={labels} />
+      {/* Open while it holds an edit that is not valid JSON, so the error is never folded away. */}
+      <details className="ub-panel__advanced" open={propsError !== null || undefined}>
+        <summary>{labels.advancedProps}</summary>
+        <label className="ub-panel__field" style={FIELD_STYLE}>
+          {labels.staticProps}
+          <textarea
+            className="ub-panel__json"
+            value={propsText}
+            onChange={e => setPropsText(e.target.value)}
+            onBlur={handlePropsBlur}
+            rows={8}
+            style={{ width: '100%', fontFamily: 'monospace' }}
+          />
+        </label>
+        {propsError && (
+          <p role="alert" className="ub-panel__error" style={ERROR_STYLE}>
+            {propsError}
+          </p>
+        )}
+      </details>
 
       <h3 className="ub-panel__subheading">{labels.bindingsHeading}</h3>
       {bindingEntries.length === 0 && <p className="ub-panel__hint">{labels.noBindings}</p>}
