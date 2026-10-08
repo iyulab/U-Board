@@ -38,10 +38,11 @@ an image it did not build; give it a new version. `npm run release:image` builds
 pushing anything.
 
 To release the library, change `version` in `packages/core/package.json` (semver; while the version is 0.x, a
-minor bump may break the public API) and push the change to `main`. The `publish` job in
+minor bump may break the public API), rename `## [Unreleased]` in `packages/core/CHANGELOG.md` to that
+version and date (a tooling test fails on a version without its section), and push the change to `main`. The `publish` job in
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` (`npm run check`) passes and publishes
-with provenance if that version is not on the registry yet; on any other push it publishes
-nothing. Do not run
+with provenance if that version is not on the registry yet — a prerelease version under the `next`
+dist-tag; on any other push it publishes nothing. Do not run
 `npm publish` by hand — a hand-published tarball has no provenance and skips the checks.
 
 `packages/core/scripts/prepack.mjs` rebuilds `dist/lib` from clean and copies the repository
