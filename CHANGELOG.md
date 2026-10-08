@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-08
+
 ### Changed
 
 - The console's pages before sign-in — sign-in, the first account, an invitation, password reset and

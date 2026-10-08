@@ -65,6 +65,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed — breaking
 
+- Requires `@canvas-kit/core` ^0.5.0, `@canvas-kit/designer` ^0.6.0 and `@canvas-kit/viewer` ^0.5.1
+  (`Shape.locked`, which keeps the background and connector lines in place in the editor).
 - The binding form no longer recognises the demo adapter by its id: a string reference is picked
   from `Adapter.references()`, and the form starts on the first adapter given (it used to skip the
   demo adapter) — list the adapter to start on first. Label `demoReference` is now `reference`, with

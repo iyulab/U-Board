@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/u-board-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Workspace/user/auth API server for U-Board",
   "type": "module",
