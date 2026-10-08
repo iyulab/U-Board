@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-08
+
 ### Changed
 
 - The board editor's toolbar, its property panel and the share viewer's zoom buttons take the

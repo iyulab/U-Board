@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-08
+
 ### Added
 
 - The default stylesheet has dark fallbacks: the authoring view and the viewer follow the page's declared theme
