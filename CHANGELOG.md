@@ -18,6 +18,10 @@ do when upgrading. Each release's notes carry its section.
   rendering as unstyled forms. Sign-in says that accounts come by invitation; the first account says
   it will run the installation. Inputs carry autocomplete hints for password managers.
 - While the console checks the session, the product mark turns in the middle of the screen.
+- The share viewer tells a malformed address, a link the server does not know (unknown or revoked), an
+  expired link and a server that did not answer apart, instead of calling every failure an invalid
+  link. It retries a server that did not answer on its own — after 2 seconds, doubling up to a minute,
+  and at once when the network comes back — so a screen left open recovers from a deploy or an outage.
 
 ## [0.1.0] - 2026-10-08
 
