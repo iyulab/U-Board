@@ -4,6 +4,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { AuthoringView } from './AuthoringView';
 import type { ViewDocument } from '../view-document';
+import { KO_LABELS } from '../labels-ko';
 
 // AuthoringView delegates all Konva/canvas rendering to these two packages — they're already
 // tested in their own repo (canvas-kit). Stubbing them here keeps this test focused on
@@ -100,6 +101,18 @@ describe('AuthoringView import error', () => {
     fireEvent.click(screen.getByText('Export'));
 
     expect(screen.queryByText(/not valid json/i)).not.toBeInTheDocument();
+  });
+});
+
+describe('AuthoringView new nodes', () => {
+  it('starts a new node in the words of its labels', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} labels={KO_LABELS} />);
+    fireEvent.click(screen.getByText('노드 추가'));
+    fireEvent.click(screen.getByText('저장'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const saved: ViewDocument = onSave.mock.calls[0][0];
+    expect(saved.nodes.at(-1)!.widget.props).toEqual({ data: { label: '새 노드', level: 'neutral', value: '연결 전' } });
   });
 });
 

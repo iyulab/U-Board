@@ -1,11 +1,17 @@
 import { describe, it, expect } from 'vitest';
-import { seedWidget, WIDGET_TYPES } from './widget-catalog.js';
+import { seedWidget, defaultPropPath, WIDGET_TYPES } from './widget-catalog.js';
 
 describe('seedWidget', () => {
   it('seeds a status widget with a visible placeholder value and no bindings', () => {
     expect(seedWidget('status')).toEqual({
       type: 'status',
-      props: { data: { label: 'New node', level: 'neutral', value: 'unbound' } },
+      props: { data: { label: 'New node', level: 'neutral', value: 'Not bound' } },
+    });
+  });
+
+  it('seeds a status widget in the words it is given', () => {
+    expect(seedWidget('status', { label: '새 노드', value: '연결 전' }).props).toEqual({
+      data: { label: '새 노드', level: 'neutral', value: '연결 전' },
     });
   });
 
@@ -22,5 +28,17 @@ describe('seedWidget', () => {
 
   it('lists exactly the three known widget types', () => {
     expect(WIDGET_TYPES).toEqual(['status', 'gauge', 'chart.line']);
+  });
+});
+
+describe('defaultPropPath', () => {
+  it("starts on the widget's headline value while it is unbound", () => {
+    expect(defaultPropPath(seedWidget('status'))).toBe('data.value');
+    expect(defaultPropPath(seedWidget('gauge'))).toBe('data.value');
+  });
+
+  it('starts empty once the headline value is bound, or for a widget without one', () => {
+    expect(defaultPropPath({ ...seedWidget('status'), bindings: { 'data.value': { adapter: 'a', ref: 'r' } } })).toBe('');
+    expect(defaultPropPath(seedWidget('chart.line'))).toBe('');
   });
 });

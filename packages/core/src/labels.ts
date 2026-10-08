@@ -57,6 +57,11 @@ export interface UBoardLabels {
   multipleSelected: string;
   propertiesHeading: string;
   widgetType: string;
+  /** What each widget type is called in the type picker; a type without an entry shows its id. */
+  widgetTypeNames: Record<string, string>;
+  /** The text a new node starts with: its label, and the value it shows until it is bound. */
+  newNodeLabel: string;
+  newNodeValue: string;
   staticProps: string;
   invalidJson: string;
   bindingsHeading: string;
@@ -79,6 +84,9 @@ export interface UBoardLabels {
   previewBinding: string;
   previewFailed: string;
   saveBinding: string;
+  /** Why "Save binding" cannot be pressed yet, shown next to it. */
+  bindingNeedsPropPath: string;
+  bindingNeedsReference: string;
   /** The value-map part of the binding form (`Binding.map`). `{n}` is replaced by the row number. */
   valueMapHeading: string;
   mapFrom: string;
@@ -101,6 +109,8 @@ export interface UBoardLabels {
   /** Marks a listed binding that has a value map. */
   mapped: string;
   previewValue: string;
+  /** The binding preview's word for a value that is current (`live`). */
+  previewLive: string;
 
   // Decoration panel
   decorationHeading: string;
@@ -155,6 +165,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   multipleSelected: '{count} items selected — select one to edit it.',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
+  widgetTypeNames: { status: 'Status', gauge: 'Gauge', 'chart.line': 'Line chart' },
+  newNodeLabel: 'New node',
+  newNodeValue: 'Not bound',
   staticProps: 'Static props (JSON)',
   invalidJson: 'Not valid JSON',
   bindingsHeading: 'Bindings',
@@ -174,6 +187,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   previewBinding: 'Preview',
   previewFailed: 'The preview request failed',
   saveBinding: 'Save binding',
+  bindingNeedsPropPath: 'Enter the prop path to bind.',
+  bindingNeedsReference: 'Choose a reference.',
   valueMapHeading: 'Value map',
   mapFrom: 'Source value {n}',
   mapTo: 'Shown as {n}',
@@ -189,6 +204,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   mapOtherwisePlaceholder: 'as it comes',
   mapped: 'mapped',
   previewValue: 'Value',
+  previewLive: 'live',
 
   decorationHeading: 'Decoration',
   decorationText: 'Text',

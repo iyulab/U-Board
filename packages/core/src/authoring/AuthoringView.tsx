@@ -16,6 +16,7 @@ import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import { PropertyPanel } from './PropertyPanel.js';
+import { seedWidget } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
 import { documentExtent } from '../viewer/document-extent.js';
@@ -168,7 +169,8 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   };
 
   const handleAddNode = () => {
-    setDoc(prev => addNode(prev, nextNodePosition(prev, visibleOrigin())));
+    const widget = seedWidget('status', { label: labels.newNodeLabel, value: labels.newNodeValue });
+    setDoc(prev => addNode(prev, nextNodePosition(prev, visibleOrigin()), widget));
     setFileError(null);
   };
 

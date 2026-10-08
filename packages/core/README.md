@@ -155,7 +155,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-panel` (`--properties`, `--decoration`) | A property or decoration panel |
 | `ub-panel__heading`, `ub-panel__subheading`, `ub-panel__field`, `ub-panel__hint`, `ub-panel__error` | Its heading, section heading, a labelled field, hint text and an error |
 | `ub-panel__json` | The static props editor |
-| `ub-panel__bindings`, `ub-panel__binding`, `ub-panel__binding-path`, `ub-panel__binding-tag` | The list of bindings, one entry, its prop path and its "mapped" tag |
+| `ub-panel__bindings`, `ub-panel__binding`, `ub-panel__binding-path`, `ub-panel__binding-ref`, `ub-panel__binding-tag` | The list of bindings, one entry, its prop path, what it points at, and its "mapped" tag |
 | `ub-panel__binding-form`, `ub-panel__value-map`, `ub-panel__map-row`, `ub-panel__actions` | The binding form, its value map, a row of the map, and its buttons |
 | `ub-panel__preview`, `ub-panel__quality` | A binding's previewed value, and its connection quality |
 | `ub-json-tree`, `ub-json-tree__leaf` | The response explorer, and a value in it to pick |

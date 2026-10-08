@@ -7,6 +7,7 @@ import { DemoAdapter } from '../demo-adapter.js';
 import type { Adapter, ResolvedBinding } from '../adapter.js';
 import type { Node } from '../view-document.js';
 import { QUALITY_LABEL, REASON_LABEL } from '../quality-text.js';
+import { KO_LABELS } from '../labels-ko.js';
 
 function statusNode(bindings?: Node['widget']['bindings']): Node {
   return {
@@ -165,8 +166,57 @@ describe('PropertyPanel bindings', () => {
     fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
     fireEvent.click(screen.getByText('Preview'));
 
-    await waitFor(() => expect(screen.getByText(/running/)).toBeInTheDocument());
-    expect(screen.getByText(/live/)).toBeInTheDocument();
+    // The value as the author reads it — no JSON quotes — and the word for a current value.
+    expect(await screen.findByText('Value: running')).toBeInTheDocument();
+    expect(screen.getByText('live')).toHaveClass('ub-panel__quality');
+  });
+
+  it('starts a new binding on the headline value, so it can be saved without typing a path', () => {
+    const onChange = vi.fn();
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+    expect(screen.getByLabelText('Prop path')).toHaveValue('data.value');
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/a' } });
+    fireEvent.click(screen.getByText('Save binding'));
+    expect(onChange.mock.calls[0][0].bindings).toHaveProperty('data.value');
+    // That value is bound now: the next binding names its own prop.
+    expect(screen.getByLabelText('Prop path')).toHaveValue('');
+  });
+
+  it('says why a binding cannot be saved yet, next to the button', () => {
+    render(<PropertyPanel node={statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/a' } } })} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+    const save = screen.getByRole('button', { name: 'Save binding' });
+    expect(save).toBeDisabled();
+    expect(save).toHaveAccessibleDescription('Enter the prop path to bind.');
+    fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.label' } });
+    expect(save).toBeEnabled();
+    expect(screen.queryByText('Enter the prop path to bind.')).not.toBeInTheDocument();
+  });
+
+  it('asks for a reference before a listing adapter can be saved', async () => {
+    render(<PropertyPanel node={statusNode()} adapters={[listing('tags', ['a'])]} onChange={vi.fn()} />);
+    await screen.findByRole('option', { name: 'a' });
+    expect(screen.getByRole('button', { name: 'Save binding' })).toHaveAccessibleDescription('Choose a reference.');
+  });
+
+  it('shows what each binding points at', () => {
+    render(
+      <PropertyPanel
+        node={statusNode({
+          'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: '/status' } },
+          'data.label': { adapter: 'tags', ref: 'pump-a.name' },
+        })}
+        adapters={[new FakeHttpAdapter()]}
+        onChange={vi.fn()}
+      />
+    );
+    expect(screen.getByText('· /pumps/a /status')).toHaveClass('ub-panel__binding-ref');
+    expect(screen.getByText('· pump-a.name')).toBeInTheDocument();
+  });
+
+  it('names widget types in the words it is given', () => {
+    render(<PropertyPanel node={statusNode()} adapters={[]} onChange={vi.fn()} labels={KO_LABELS} />);
+    expect(screen.getByRole('option', { name: '게이지' })).toHaveValue('gauge');
+    expect(screen.getByRole('option', { name: '선 차트' })).toHaveValue('chart.line');
   });
 
   it('renders the preview badge with the same label the canvas frame uses for a degraded binding', async () => {
@@ -307,10 +357,10 @@ describe('PropertyPanel bindings', () => {
 
     const other = render(<PropertyPanel node={statusNode()} adapters={[demo]} onChange={vi.fn()} />);
     const scoped = within(other.container);
-    fireEvent.change(scoped.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+    fireEvent.change(scoped.getByLabelText('Prop path'), { target: { value: 'data.label' } });
     other.rerender(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter(), demo]} onChange={vi.fn()} />);
     expect(scoped.getByLabelText('Data source')).toHaveValue('demo-cmms');
-    expect(scoped.getByLabelText('Prop path')).toHaveValue('data.value');
+    expect(scoped.getByLabelText('Prop path')).toHaveValue('data.label');
   });
 
   it('asks a listing adapter for its references once, though the host passes fresh adapters every render', async () => {
@@ -542,7 +592,7 @@ describe('PropertyPanel bindings', () => {
       fireEvent.change(screen.getByLabelText('Source value 1'), { target: { value: 'running' } });
       fireEvent.change(screen.getByLabelText('Shown as 1'), { target: { value: 'success' } });
       fireEvent.click(screen.getByText('Preview'));
-      expect(await screen.findByText(/"running" → "success"/)).toBeInTheDocument();
+      expect(await screen.findByText('Value: running → success')).toBeInTheDocument();
     });
   });
 });

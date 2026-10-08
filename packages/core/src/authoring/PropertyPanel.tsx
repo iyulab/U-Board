@@ -1,7 +1,7 @@
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useId, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
-import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
+import { WIDGET_TYPES, seedWidget, defaultPropPath, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
 import { describeQuality } from '../quality-text.js';
@@ -69,8 +69,8 @@ function fieldValue(text: string, loaded?: { value: unknown }): unknown {
   return loaded && text === asText(loaded.value) ? loaded.value : text;
 }
 
-function emptyDraft(connectorId: string): BindingDraft {
-  return { propPath: '', connectorId, path: '', valuePath: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
+function emptyDraft(connectorId: string, propPath = ''): BindingDraft {
+  return { propPath, connectorId, path: '', valuePath: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
 }
 
 /** One field per line, its label above it — without the stylesheet as well. */
@@ -82,6 +82,17 @@ const ROW_INPUT_STYLE: React.CSSProperties = { flex: 1, minWidth: 0 };
 
 /** The form's text for a mapped value — itself when it is text, its JSON otherwise. */
 const asText = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value));
+
+/** A previewed value as the author reads it: text without quotes, a dash for no value. */
+const valueText = (value: unknown) => (value === undefined ? '—' : asText(value));
+
+/** Where a binding points, as its adapter wrote it: a listed reference, or a request path and the
+ * value path into its response. */
+function refText(ref: unknown): string {
+  if (typeof ref === 'string') return ref;
+  const { path, valuePath } = (ref ?? {}) as { path?: string; valuePath?: string };
+  return [path, valuePath].filter(Boolean).join(' ');
+}
 
 const boundText = (bound: number | undefined) => (bound === undefined ? '' : String(bound));
 
@@ -135,10 +146,10 @@ function initialConnectorId(adapters: readonly Adapter[]): string {
   return adapters[0]?.id ?? '';
 }
 
-/** A draft the author has not started: nothing typed, picked or mapped. */
-function isUntouched(draft: BindingDraft): boolean {
+/** A draft the author has not started: nothing typed, picked or mapped beyond what it began with. */
+function isUntouched(draft: BindingDraft, startingPropPath: string): boolean {
   return (
-    draft.propPath === '' &&
+    draft.propPath === startingPropPath &&
     draft.path === '' &&
     draft.valuePath === '' &&
     draft.listedRef === '' &&
@@ -166,7 +177,8 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
 export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS, clock = Date.now }: PropertyPanelProps) {
   const [propsText, setPropsText] = useState('{}');
   const [propsError, setPropsError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<BindingDraft>(emptyDraft(initialConnectorId(adapters)));
+  const [draft, setDraft] = useState<BindingDraft>(emptyDraft(initialConnectorId(adapters), node ? defaultPropPath(node.widget) : ''));
+  const saveHintId = useId();
   // The propPath of the binding currently being edited, so a save can remove its old key when the
   // author changes the prop path instead of leaving the old binding orphaned. `null` while adding
   // a new binding (nothing to remove).
@@ -187,6 +199,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   // Read by the effects below rather than depended on: a caller may pass a fresh array (and fresh
   // adapter objects) on every render, which must neither wipe an in-progress draft nor refetch.
   const firstAdapterId = useEffectEvent(() => initialConnectorId(adapters));
+  const startingPropPath = node ? defaultPropPath(node.widget) : '';
+  const readStartingPropPath = useEffectEvent(() => startingPropPath);
   const adapterById = useEffectEvent((id: string) => adapters.find(a => a.id === id));
   const defaultConnectorId = initialConnectorId(adapters);
 
@@ -194,7 +208,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   // the whole widget — so it fires on node-switch or an actual type change (which should discard
   // an in-progress binding edit) but not on every props-only or binding-only save.
   useEffect(() => {
-    setDraft(emptyDraft(firstAdapterId()));
+    setDraft(emptyDraft(firstAdapterId(), readStartingPropPath()));
     setEditingPropPath(null);
     setPreview(null);
     setPreviewError(null);
@@ -205,8 +219,9 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   // The adapters can change after the panel opens (a host loading its connectors): a draft nobody
   // has started follows the new first adapter; one in progress keeps what the author chose.
   useEffect(() => {
+    const starting = readStartingPropPath();
     setDraft(d =>
-      isUntouched(d) && editingPropPath === null && d.connectorId !== defaultConnectorId
+      isUntouched(d, starting) && editingPropPath === null && d.connectorId !== defaultConnectorId
         ? { ...d, connectorId: defaultConnectorId }
         : d
     );
@@ -249,7 +264,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type = e.target.value;
-    if (isWidgetType(type)) onChange(seedWidget(type));
+    if (isWidgetType(type)) onChange(seedWidget(type, { label: labels.newNodeLabel, value: labels.newNodeValue }));
   };
 
   const handlePropsBlur = () => {
@@ -274,6 +289,10 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
 
   const previewMap = mapFromDraft(draft);
   const rangeIssues = invalidRanges(draft);
+  // What still keeps the binding from being saved, said next to the button. A broken range row is
+  // already named where it is.
+  const saveHint = !draft.propPath ? labels.bindingNeedsPropPath : listed && !draft.listedRef ? labels.bindingNeedsReference : null;
+  const saveBlocked = saveHint !== null || rangeIssues.length > 0;
 
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
   const previewLabel = preview
@@ -305,15 +324,16 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   };
 
   const handleSaveBinding = () => {
-    if (!draft.propPath || !selectedAdapter || rangeIssues.length > 0 || (listed && !draft.listedRef)) return;
+    if (saveBlocked || !selectedAdapter) return;
     const bindings = { ...node.widget.bindings };
     const map = mapFromDraft(draft);
     bindings[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef(), ...(map && { map }) };
     if (editingPropPath !== null && editingPropPath !== draft.propPath) {
       delete bindings[editingPropPath];
     }
-    onChange({ ...node.widget, bindings });
-    setDraft(emptyDraft(initialConnectorId(adapters)));
+    const widget = { ...node.widget, bindings };
+    onChange(widget);
+    setDraft(emptyDraft(initialConnectorId(adapters), defaultPropPath(widget)));
     setEditingPropPath(null);
     setPreview(null);
     setExploreResult(null);
@@ -345,7 +365,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
         <select value={node.widget.type} onChange={handleTypeChange}>
           {WIDGET_TYPES.map(t => (
             <option key={t} value={t}>
-              {t}
+              {labels.widgetTypeNames[t] ?? t}
             </option>
           ))}
         </select>
@@ -376,6 +396,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
               <span>
                 <code className="ub-panel__binding-path">{propPath}</code> {'→ '}
                 <span>{labelFor(binding.adapter, connectorLabels)}</span>
+                {refText(binding.ref) && <span className="ub-panel__binding-ref"> · {refText(binding.ref)}</span>}
                 {binding.map && (
                   <span className="ub-panel__binding-tag" style={MUTED_STYLE}>
                     {' '}
@@ -402,7 +423,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
         <div className="ub-panel__binding-form">
           <label className="ub-panel__field" style={FIELD_STYLE}>
             {labels.propPath}
-            <input value={draft.propPath} onChange={e => setDraft({ ...draft, propPath: e.target.value })} placeholder="data.value" />
+            <input value={draft.propPath} onChange={e => setDraft({ ...draft, propPath: e.target.value })} />
           </label>
           <label className="ub-panel__field" style={FIELD_STYLE}>
             {labels.dataSource}
@@ -523,11 +544,17 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
               type="button"
               className="ub-action ub-action--primary"
               onClick={handleSaveBinding}
-              disabled={!draft.propPath || rangeIssues.length > 0 || (listed && !draft.listedRef)}
+              disabled={saveBlocked}
+              aria-describedby={saveHint ? saveHintId : undefined}
             >
               {labels.saveBinding}
             </button>
           </div>
+          {saveHint && (
+            <p id={saveHintId} className="ub-panel__hint">
+              {saveHint}
+            </p>
+          )}
           {previewError && (
             <p role="alert" className="ub-panel__error" style={ERROR_STYLE}>
               {previewError}
@@ -536,10 +563,11 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           {preview && (
             <p className="ub-panel__preview" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }} data-quality={preview.quality}>
               <span>
-                {labels.previewValue}: {JSON.stringify(preview.value)}
-                {previewMap && preview.quality !== 'disconnected' && ` → ${JSON.stringify(applyValueMap(previewMap, preview.value))}`} ({preview.quality})
+                {labels.previewValue}: {valueText(preview.value)}
+                {previewMap && preview.quality !== 'disconnected' && ` → ${valueText(applyValueMap(previewMap, preview.value))}`}
               </span>
-              {previewLabel && (
+              {preview.quality === 'live' && <span className="ub-panel__quality">{labels.previewLive}</span>}
+              {previewLabel && preview.quality !== 'live' && (
                 <span className="ub-panel__quality" style={{ ...QUALITY_FRAME_STYLE[preview.quality], borderRadius: 4, padding: '0 4px' }}>
                   {previewLabel}
                 </span>

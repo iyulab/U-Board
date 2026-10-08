@@ -60,6 +60,17 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- The binding form starts a new binding on the widget's headline value (`data.value` for `status` and
+  `gauge`) while it is unbound, instead of an empty prop path whose placeholder looked filled in;
+  when "Save binding" still cannot be pressed, the reason is shown beside it (and is its accessible
+  description).
+- The binding list shows what each binding points at (its reference, or request path and value
+  path), not only its data source.
+- The binding preview shows the value as text — `running`, not `"running"` — and says `live` in the
+  labels' words rather than the raw quality name.
+- The widget type picker names types (`widgetTypeNames`: Status, Gauge, Line chart) instead of
+  showing their ids, and a new node starts with `newNodeLabel` / `newNodeValue` (Korean in
+  `KO_LABELS`) instead of fixed English text.
 - In `AuthoringView`, the background image and the connector lines could be selected and dragged; the
   editor then showed the board moved against its nodes while the document, and the preview, were not.
   They are drawn locked now (`@canvas-kit/core` `Shape.locked`), so a press on the drawing is a press on
@@ -83,7 +94,9 @@ All notable changes to this package are documented here. The format follows
   through `useEffectEvent`, which React 19.2 introduced.
 - `UBoardLabels` has new required members — `lastUpdated`, `notUpdating`, `time` and the value-map
   form's `valueMapHeading`, `mapFrom`, `mapTo`, `addMapping`, `removeMapping`, `mapOtherwise`,
-  `mapOtherwisePlaceholder`, `mapped`. Code that builds a whole `UBoardLabels` (rather than the
+  `mapOtherwisePlaceholder`, `mapped`, the response explorer's `wholeResponse`, and the authoring
+  view's `widgetTypeNames`, `newNodeLabel`, `newNodeValue`, `bindingNeedsPropPath`,
+  `bindingNeedsReference` and `previewLive`. Code that builds a whole `UBoardLabels` (rather than the
   `Partial` the components' `labels` prop takes) must add them; spreading `DEFAULT_LABELS` covers it.
 - The components no longer set their own look inline — spacing, type, borders and button looks come
   from `styles.css`; import it, or style the class names. Without it the views still work, with the

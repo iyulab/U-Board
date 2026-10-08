@@ -1,5 +1,5 @@
 import { Scene } from '@canvas-kit/core';
-import type { ViewDocument, Node, Shape } from '../view-document.js';
+import type { ViewDocument, Node, Shape, Widget } from '../view-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
 import { seedWidget } from './widget-catalog.js';
 
@@ -150,13 +150,13 @@ export function nextNodePosition(doc: ViewDocument, origin: { x: number; y: numb
   return { x: origin.x + NEW_NODE_BASE_OFFSET + offset, y: origin.y + NEW_NODE_BASE_OFFSET + offset };
 }
 
-export function addNode(doc: ViewDocument, position: { x: number; y: number }): ViewDocument {
+export function addNode(doc: ViewDocument, position: { x: number; y: number }, widget: Widget = seedWidget('status')): ViewDocument {
   const node: Node = {
     id: `node-${crypto.randomUUID()}`,
     x: position.x,
     y: position.y,
     anchored: false,
-    widget: seedWidget('status'),
+    widget,
   };
   return { ...doc, nodes: [...doc.nodes, node] };
 }
