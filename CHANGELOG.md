@@ -21,7 +21,8 @@ do when upgrading. Each release's notes carry its section.
 - Sharing opens a dialog. A new link can be copied or opened in a new tab, and comes with the
   `<iframe>` code that embeds the board in another page. Issued links show when they were made, last
   used and expire.
-- The binding form starts on the widget's headline value, says why "Save binding" cannot be pressed
+- The binding form picks the value to bind from the widget's own fields (상태 이름, 값, 수준 …), starts on the
+  headline value, says why "Save binding" cannot be pressed
   yet, lists what each binding points at, and shows previewed values and widget types in words
   (`running` and 정상 rather than `"running" (live)`; 상태, 게이지, 선 차트). A new node starts as
   새 노드 · 연결 전 instead of English.
