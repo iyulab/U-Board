@@ -25,6 +25,7 @@ import type { Adapter } from '../adapter.js';
 import type { ViewDocument, Widget, Shape } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
+import { TOOLBAR_STYLE, GROUP_STYLE, ERROR_STYLE } from '../ui-style.js';
 
 export interface AuthoringViewProps {
   initialDocument: ViewDocument;
@@ -51,9 +52,6 @@ export interface AuthoringViewProps {
    * form is measured by. `Date.now` by default; see `ViewerPage`'s `clock`. */
   clock?: () => number;
 }
-
-/** Width of the property/decoration panel beside the editor and preview (CSS px). */
-const PANEL_WIDTH = 320;
 
 /**
  * The authoring surface: a canvas-kit `KonvaDesigner` for adding/dragging/selecting nodes, a live
@@ -277,48 +275,45 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     : { display: 'flex', flexDirection: 'column' };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div>
-        <button onClick={handleAddNode} style={{ marginBottom: 8 }}>
-          {labels.addNode}
-        </button>{' '}
-        <button onClick={() => handleAddDecoration('rect')} style={{ marginBottom: 8 }}>
-          {labels.addRectDecoration}
-        </button>{' '}
-        <button onClick={() => handleAddDecoration('text')} style={{ marginBottom: 8 }}>
-          {labels.addTextDecoration}
-        </button>{' '}
-        {onSave && (
-          <>
-            <button onClick={handleSave} style={{ marginBottom: 8 }}>
+    <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div className="ub-authoring__toolbar" style={TOOLBAR_STYLE}>
+        <div className="ub-authoring__group" style={GROUP_STYLE}>
+          <button type="button" className="ub-action" onClick={handleAddNode}>
+            {labels.addNode}
+          </button>
+          <button type="button" className="ub-action" onClick={() => handleAddDecoration('rect')}>
+            {labels.addRectDecoration}
+          </button>
+          <button type="button" className="ub-action" onClick={() => handleAddDecoration('text')}>
+            {labels.addTextDecoration}
+          </button>
+        </div>
+        <div className="ub-authoring__group" style={GROUP_STYLE}>
+          {onSave && (
+            <button type="button" className="ub-action ub-action--primary" onClick={handleSave}>
               {labels.save}
-            </button>{' '}
-          </>
-        )}
-        <button onClick={handleExport} style={{ marginBottom: 8 }}>
-          {labels.export}
-        </button>{' '}
-        <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
-          {labels.import}
-        </button>{' '}
-        <button onClick={() => backgroundInputRef.current?.click()} style={{ marginBottom: 8 }}>
-          {labels.setBackground}
-        </button>
-        {doc.background.image && (
-          <>
-            {' '}
-            <button onClick={handleRemoveBackground} style={{ marginBottom: 8 }}>
+            </button>
+          )}
+          <button type="button" className="ub-action" onClick={handleExport}>
+            {labels.export}
+          </button>
+          <button type="button" className="ub-action" onClick={handleImportClick}>
+            {labels.import}
+          </button>
+        </div>
+        <div className="ub-authoring__group" style={GROUP_STYLE}>
+          <button type="button" className="ub-action" onClick={() => backgroundInputRef.current?.click()}>
+            {labels.setBackground}
+          </button>
+          {doc.background.image && (
+            <button type="button" className="ub-action" onClick={handleRemoveBackground}>
               {labels.removeBackground}
             </button>
-          </>
-        )}
-        {' '}
-        <ViewControls
-          view={view}
-          onFit={extent ? () => fitTo(extent) : undefined}
-          buttonStyle={{ marginBottom: 8, marginRight: 4 }}
-          labels={labels}
-        />
+          )}
+        </div>
+        <div className="ub-authoring__group" style={GROUP_STYLE}>
+          <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />
+        </div>
         <input
           ref={fileInputRef}
           type="file"
@@ -335,12 +330,16 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           style={{ display: 'none' }}
           data-testid="background-file-input"
         />
-        {fileError && <p style={{ color: '#dc2626', fontSize: 13 }}>{fileError}</p>}
       </div>
-      <div style={{ display: 'flex', gap: 24, flex: 1, minHeight: 0 }}>
-        <div style={paneStyle}>
-          <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.editorHeading}</h2>
-          <div style={{ flex: 1, minHeight: 0 }}>
+      {fileError && (
+        <p role="alert" className="ub-authoring__error" style={ERROR_STYLE}>
+          {fileError}
+        </p>
+      )}
+      <div className="ub-authoring__panes" style={{ display: 'flex', gap: 'var(--ub-space-4, 16px)', flex: 1, minHeight: 0 }}>
+        <div className="ub-authoring__pane ub-authoring__pane--editor" style={paneStyle}>
+          <h2 className="ub-authoring__pane-heading">{labels.editorHeading}</h2>
+          <div className="ub-authoring__surface" style={{ flex: 1, minHeight: 0 }}>
             <KonvaDesigner
               width={width}
               height={height}
@@ -354,10 +353,10 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
             />
           </div>
         </div>
-        <div style={paneStyle}>
-          <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.previewHeading}</h2>
+        <div className="ub-authoring__pane ub-authoring__pane--preview" style={paneStyle}>
+          <h2 className="ub-authoring__pane-heading">{labels.previewHeading}</h2>
           {preview ? (
-            <div style={{ flex: 1, minHeight: 0 }}>
+            <div className="ub-authoring__surface" style={{ flex: 1, minHeight: 0 }}>
               <Viewer
                 width={width}
                 height={height}
@@ -369,14 +368,14 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
               />
             </div>
           ) : (
-            <p>{labels.resolving}</p>
+            <p className="ub-authoring__status">{labels.resolving}</p>
           )}
         </div>
         {/* A fixed width: sized by its content, the form's inline fields would widen the panel until the
             editor and preview — which give way (`minWidth: 0`) — were squeezed to a sliver. */}
-        <div style={{ flex: `0 0 ${PANEL_WIDTH}px`, minWidth: 0, overflowY: 'auto' }}>
+        <div className="ub-authoring__panel" style={{ flex: '0 0 var(--ub-panel-width, 320px)', minWidth: 0, overflowY: 'auto' }}>
           {selectionCount > 1 ? (
-            <p>{labels.multipleSelected.replace('{count}', String(selectionCount))}</p>
+            <p className="ub-panel__hint">{labels.multipleSelected.replace('{count}', String(selectionCount))}</p>
           ) : selectedDecoration ? (
             <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} labels={labels} />
           ) : (
@@ -385,9 +384,9 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
         </div>
       </div>
       {showDocumentSource && (
-        <details style={{ marginTop: 16 }}>
+        <details className="ub-authoring__source">
           <summary>{labels.debugDocument}</summary>
-          <pre style={{ fontSize: 11, maxWidth: 900, overflowX: 'auto' }}>{JSON.stringify(doc, null, 2)}</pre>
+          <pre>{JSON.stringify(doc, null, 2)}</pre>
         </details>
       )}
     </div>

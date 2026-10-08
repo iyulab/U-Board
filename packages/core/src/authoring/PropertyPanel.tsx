@@ -6,6 +6,7 @@ import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
 import { describeQuality } from '../quality-text.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
+import { ERROR_STYLE, GROUP_STYLE, MUTED_STYLE } from '../ui-style.js';
 
 export interface PropertyPanelProps {
   node: Node | null;
@@ -72,9 +73,12 @@ function emptyDraft(connectorId: string): BindingDraft {
   return { propPath: '', connectorId, path: '', valuePath: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
 }
 
-/** One field per line, its label above-left of it — inline, a label wrapped onto the line before
- * its own field once the panel is narrower than the row. */
-const FIELD_STYLE: React.CSSProperties = { display: 'block', margin: '2px 0' };
+/** One field per line, its label above it — without the stylesheet as well. */
+const FIELD_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column' };
+
+/** A row of the value map: its inputs share the line. */
+const ROW_STYLE: React.CSSProperties = { display: 'flex', gap: 'var(--ub-space-1, 4px)', alignItems: 'center' };
+const ROW_INPUT_STYLE: React.CSSProperties = { flex: 1, minWidth: 0 };
 
 /** The form's text for a mapped value — itself when it is text, its JSON otherwise. */
 const asText = (value: unknown) => (typeof value === 'string' ? value : JSON.stringify(value));
@@ -229,7 +233,11 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   }, [draft.connectorId, offersReferences]);
 
   if (!node) {
-    return <p>{labels.selectNode}</p>;
+    return (
+      <div className="ub-panel ub-panel--properties">
+        <p className="ub-panel__hint">{labels.selectNode}</p>
+      </div>
+    );
   }
 
   // An adapter that names its references is bound by picking one; any other takes an HTTP
@@ -330,9 +338,9 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   const bindingEntries = Object.entries(node.widget.bindings ?? {});
 
   return (
-    <div>
-      <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.propertiesHeading}</h2>
-      <label style={FIELD_STYLE}>
+    <div className="ub-panel ub-panel--properties">
+      <h2 className="ub-panel__heading">{labels.propertiesHeading}</h2>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
         {labels.widgetType}
         <select value={node.widget.type} onChange={handleTypeChange}>
           {WIDGET_TYPES.map(t => (
@@ -342,46 +350,61 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           ))}
         </select>
       </label>
-      <div>
-        <label htmlFor="property-panel-props">{labels.staticProps}</label>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.staticProps}
         <textarea
-          id="property-panel-props"
+          className="ub-panel__json"
           value={propsText}
           onChange={e => setPropsText(e.target.value)}
           onBlur={handlePropsBlur}
           rows={8}
-          style={{ display: 'block', width: '100%', fontFamily: 'monospace', fontSize: 11 }}
+          style={{ width: '100%', fontFamily: 'monospace' }}
         />
-        {propsError && <p style={{ color: '#dc2626', fontSize: 12 }}>{propsError}</p>}
-      </div>
+      </label>
+      {propsError && (
+        <p role="alert" className="ub-panel__error" style={ERROR_STYLE}>
+          {propsError}
+        </p>
+      )}
 
-      <h3 style={{ fontSize: 13, margin: '12px 0 4px' }}>{labels.bindingsHeading}</h3>
-      {bindingEntries.length === 0 && <p style={{ fontSize: 12 }}>{labels.noBindings}</p>}
-      <ul>
-        {bindingEntries.map(([propPath, binding]) => (
-          <li key={propPath}>
-            <code>{propPath}</code> {'→ '}
-            <span>{labelFor(binding.adapter, connectorLabels)}</span>
-            {binding.map && <span style={{ fontSize: 11, color: '#64748b' }}> · {labels.mapped}</span>}{' '}
-            <button type="button" onClick={() => handleEditBinding(propPath, binding)}>
-              {labels.editBinding}
-            </button>{' '}
-            <button type="button" onClick={() => handleRemoveBinding(propPath)}>
-              {labels.removeBinding}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <h3 className="ub-panel__subheading">{labels.bindingsHeading}</h3>
+      {bindingEntries.length === 0 && <p className="ub-panel__hint">{labels.noBindings}</p>}
+      {bindingEntries.length > 0 && (
+        <ul className="ub-panel__bindings">
+          {bindingEntries.map(([propPath, binding]) => (
+            <li key={propPath} className="ub-panel__binding">
+              <span>
+                <code className="ub-panel__binding-path">{propPath}</code> {'→ '}
+                <span>{labelFor(binding.adapter, connectorLabels)}</span>
+                {binding.map && (
+                  <span className="ub-panel__binding-tag" style={MUTED_STYLE}>
+                    {' '}
+                    · {labels.mapped}
+                  </span>
+                )}
+              </span>
+              <span style={GROUP_STYLE}>
+                <button type="button" className="ub-action" onClick={() => handleEditBinding(propPath, binding)}>
+                  {labels.editBinding}
+                </button>
+                <button type="button" className="ub-action" onClick={() => handleRemoveBinding(propPath)}>
+                  {labels.removeBinding}
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {adapters.length === 0 ? (
-        <p style={{ fontSize: 12 }}>{labels.noDataSources}</p>
+        <p className="ub-panel__hint">{labels.noDataSources}</p>
       ) : (
-        <div>
-          <label style={FIELD_STYLE}>
+        <div className="ub-panel__binding-form">
+          <label className="ub-panel__field" style={FIELD_STYLE}>
             {labels.propPath}
             <input value={draft.propPath} onChange={e => setDraft({ ...draft, propPath: e.target.value })} placeholder="data.value" />
           </label>
-          <label style={FIELD_STYLE}>
+          <label className="ub-panel__field" style={FIELD_STYLE}>
             {labels.dataSource}
             <select value={draft.connectorId} onChange={e => setDraft({ ...draft, connectorId: e.target.value, listedRef: '' })}>
               {adapters.map(a => (
@@ -392,7 +415,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
             </select>
           </label>
           {listed ? (
-            <label style={FIELD_STYLE}>
+            <label className="ub-panel__field" style={FIELD_STYLE}>
               {labels.reference}
               <select value={draft.listedRef} onChange={e => setDraft({ ...draft, listedRef: e.target.value })}>
                 <option value="" disabled>
@@ -407,36 +430,45 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
             </label>
           ) : (
             <>
-              <label style={FIELD_STYLE}>
+              <label className="ub-panel__field" style={FIELD_STYLE}>
                 {labels.path}
                 <input value={draft.path} onChange={e => setDraft({ ...draft, path: e.target.value })} placeholder="/pumps/a" />
               </label>
-              <label style={FIELD_STYLE}>
+              <label className="ub-panel__field" style={FIELD_STYLE}>
                 {labels.valuePath}
                 <input value={draft.valuePath} onChange={e => setDraft({ ...draft, valuePath: e.target.value })} placeholder="/status" />
               </label>
-              <button type="button" onClick={handleExplore}>
+              <button type="button" className="ub-action" onClick={handleExplore}>
                 {labels.explore}
               </button>
-              {exploreError && <p style={{ color: '#dc2626', fontSize: 12 }}>{exploreError}</p>}
+              {exploreError && (
+                <p role="alert" className="ub-panel__error" style={ERROR_STYLE}>
+                  {exploreError}
+                </p>
+              )}
               {exploreResult !== null && (
-                <JsonTreeExplorer value={exploreResult} onSelectPath={path => setDraft(d => ({ ...d, valuePath: path }))} />
+                <JsonTreeExplorer
+                  value={exploreResult}
+                  onSelectPath={path => setDraft(d => ({ ...d, valuePath: path }))}
+                  wholeResponseLabel={labels.wholeResponse}
+                />
               )}
             </>
           )}
-          <fieldset style={{ border: '1px solid #e2e8f0', borderRadius: 4, margin: '8px 0', padding: '4px 8px', minWidth: 0 }}>
-            <legend style={{ fontSize: 12 }}>{labels.valueMapHeading}</legend>
+          <fieldset className="ub-panel__value-map" style={{ minWidth: 0 }}>
+            <legend>{labels.valueMapHeading}</legend>
             {draft.mappings.map((row, i) => {
               const n = String(i + 1);
               const setRow = (change: Partial<MappingRow>) =>
                 setDraft(d => ({ ...d, mappings: d.mappings.map((r, j) => (j === i ? { ...r, ...change } : r)) }));
               return (
-                <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <input style={{ flex: 1, minWidth: 0 }} aria-label={labels.mapFrom.replace('{n}', n)} value={row.from} onChange={e => setRow({ from: e.target.value })} placeholder="Fault" />
+                <div key={i} className="ub-panel__map-row" style={ROW_STYLE}>
+                  <input style={ROW_INPUT_STYLE} aria-label={labels.mapFrom.replace('{n}', n)} value={row.from} onChange={e => setRow({ from: e.target.value })} placeholder="Fault" />
                   <span aria-hidden="true">→</span>
-                  <input style={{ flex: 1, minWidth: 0 }} aria-label={labels.mapTo.replace('{n}', n)} value={row.to} onChange={e => setRow({ to: e.target.value })} placeholder="error" />
+                  <input style={ROW_INPUT_STYLE} aria-label={labels.mapTo.replace('{n}', n)} value={row.to} onChange={e => setRow({ to: e.target.value })} placeholder="error" />
                   <button
                     type="button"
+                    className="ub-action ub-action--icon"
                     aria-label={labels.removeMapping.replace('{n}', n)}
                     onClick={() => setDraft(d => ({ ...d, mappings: d.mappings.filter((_, j) => j !== i) }))}
                   >
@@ -445,7 +477,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
                 </div>
               );
             })}
-            <button type="button" onClick={() => setDraft(d => ({ ...d, mappings: [...d.mappings, { from: '', to: '' }] }))}>
+            <button type="button" className="ub-action" onClick={() => setDraft(d => ({ ...d, mappings: [...d.mappings, { from: '', to: '' }] }))}>
               {labels.addMapping}
             </button>
             {draft.ranges.map((row, i) => {
@@ -453,14 +485,15 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
               const setRow = (change: Partial<RangeRow>) =>
                 setDraft(d => ({ ...d, ranges: d.ranges.map((r, j) => (j === i ? { ...r, ...change } : r)) }));
               return (
-                <div key={i} style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                  <input type="number" style={{ flex: 1, minWidth: 0 }} aria-label={labels.rangeMin.replace('{n}', n)} value={row.min} onChange={e => setRow({ min: e.target.value })} placeholder="70" />
+                <div key={i} className="ub-panel__map-row" style={ROW_STYLE}>
+                  <input type="number" style={ROW_INPUT_STYLE} aria-label={labels.rangeMin.replace('{n}', n)} value={row.min} onChange={e => setRow({ min: e.target.value })} placeholder="70" />
                   <span aria-hidden="true">≤ x &lt;</span>
-                  <input type="number" style={{ flex: 1, minWidth: 0 }} aria-label={labels.rangeMax.replace('{n}', n)} value={row.max} onChange={e => setRow({ max: e.target.value })} placeholder="80" />
+                  <input type="number" style={ROW_INPUT_STYLE} aria-label={labels.rangeMax.replace('{n}', n)} value={row.max} onChange={e => setRow({ max: e.target.value })} placeholder="80" />
                   <span aria-hidden="true">→</span>
-                  <input style={{ flex: 1, minWidth: 0 }} aria-label={labels.rangeTo.replace('{n}', n)} value={row.to} onChange={e => setRow({ to: e.target.value })} placeholder="warning" />
+                  <input style={ROW_INPUT_STYLE} aria-label={labels.rangeTo.replace('{n}', n)} value={row.to} onChange={e => setRow({ to: e.target.value })} placeholder="warning" />
                   <button
                     type="button"
+                    className="ub-action ub-action--icon"
                     aria-label={labels.removeRange.replace('{n}', n)}
                     onClick={() => setDraft(d => ({ ...d, ranges: d.ranges.filter((_, j) => j !== i) }))}
                   >
@@ -469,34 +502,45 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
                 </div>
               );
             })}
-            <button type="button" onClick={() => setDraft(d => ({ ...d, ranges: [...d.ranges, { min: '', max: '', to: '' }] }))}>
+            <button type="button" className="ub-action" onClick={() => setDraft(d => ({ ...d, ranges: [...d.ranges, { min: '', max: '', to: '' }] }))}>
               {labels.addRange}
             </button>
             {rangeIssues.map(n => (
-              <p key={n} role="alert" style={{ color: '#dc2626', fontSize: 12, margin: '2px 0' }}>
+              <p key={n} role="alert" className="ub-panel__error" style={ERROR_STYLE}>
                 {labels.rangeInvalid.replace('{n}', String(n))}
               </p>
             ))}
-            <label style={FIELD_STYLE}>
+            <label className="ub-panel__field" style={FIELD_STYLE}>
               {labels.mapOtherwise}
               <input value={draft.otherwise} onChange={e => setDraft({ ...draft, otherwise: e.target.value })} placeholder={labels.mapOtherwisePlaceholder} />
             </label>
           </fieldset>
-          <button type="button" onClick={handlePreview}>
-            {labels.previewBinding}
-          </button>
-          <button type="button" onClick={handleSaveBinding} disabled={!draft.propPath || rangeIssues.length > 0 || (listed && !draft.listedRef)}>
-            {labels.saveBinding}
-          </button>
-          {previewError && <p style={{ color: '#dc2626', fontSize: 12 }}>{previewError}</p>}
+          <div className="ub-panel__actions" style={GROUP_STYLE}>
+            <button type="button" className="ub-action" onClick={handlePreview}>
+              {labels.previewBinding}
+            </button>
+            <button
+              type="button"
+              className="ub-action ub-action--primary"
+              onClick={handleSaveBinding}
+              disabled={!draft.propPath || rangeIssues.length > 0 || (listed && !draft.listedRef)}
+            >
+              {labels.saveBinding}
+            </button>
+          </div>
+          {previewError && (
+            <p role="alert" className="ub-panel__error" style={ERROR_STYLE}>
+              {previewError}
+            </p>
+          )}
           {preview && (
-            <p style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }} data-quality={preview.quality}>
+            <p className="ub-panel__preview" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }} data-quality={preview.quality}>
               <span>
                 {labels.previewValue}: {JSON.stringify(preview.value)}
                 {previewMap && preview.quality !== 'disconnected' && ` → ${JSON.stringify(applyValueMap(previewMap, preview.value))}`} ({preview.quality})
               </span>
               {previewLabel && (
-                <span style={{ ...QUALITY_FRAME_STYLE[preview.quality], borderRadius: 4, padding: '0 4px', fontSize: 11 }}>
+                <span className="ub-panel__quality" style={{ ...QUALITY_FRAME_STYLE[preview.quality], borderRadius: 4, padding: '0 4px' }}>
                   {previewLabel}
                 </span>
               )}

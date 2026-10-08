@@ -16,15 +16,15 @@ export interface DecorationPanelProps {
  */
 export function DecorationPanel({ decoration, onChange, labels = DEFAULT_LABELS }: DecorationPanelProps) {
   return (
-    <div>
-      <h2 style={{ fontSize: 14, margin: '0 0 4px' }}>{labels.decorationHeading}</h2>
+    <div className="ub-panel ub-panel--decoration">
+      <h2 className="ub-panel__heading">{labels.decorationHeading}</h2>
       {decoration.type === 'text' ? (
-        <label>
+        <label className="ub-panel__field">
           {labels.decorationText}
           <input value={decoration.text} onChange={e => onChange({ ...decoration, text: e.target.value })} />
         </label>
       ) : (
-        <p style={{ fontSize: 12 }}>{labels.decorationHint}</p>
+        <p className="ub-panel__hint">{labels.decorationHint}</p>
       )}
     </div>
   );

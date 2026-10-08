@@ -74,6 +74,8 @@ export interface UBoardLabels {
   valuePath: string;
   explore: string;
   exploreFailed: string;
+  /** In the response explorer: the whole response, when it is itself the value to pick. */
+  wholeResponse: string;
   previewBinding: string;
   previewFailed: string;
   saveBinding: string;
@@ -168,6 +170,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   valuePath: 'Value path',
   explore: 'Explore',
   exploreFailed: 'Exploring the response failed',
+  wholeResponse: '(whole response)',
   previewBinding: 'Preview',
   previewFailed: 'The preview request failed',
   saveBinding: 'Save binding',

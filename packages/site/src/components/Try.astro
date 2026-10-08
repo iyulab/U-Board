@@ -84,11 +84,8 @@ const playground = JSON.stringify({
     color: var(--ink);
     cursor: pointer;
   }
+  /* The editor frames its own panes; this box only gives it a height to fill. */
   .try-editor {
     height: max(560px, calc(100vh - 220px));
-    border-radius: 6px;
-    background: #fff;
-    box-shadow: inset 0 0 0 1px var(--grid);
-    overflow: hidden;
   }
 </style>

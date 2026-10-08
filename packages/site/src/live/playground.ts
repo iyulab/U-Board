@@ -5,6 +5,7 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AuthoringView, KO_LABELS, type ViewDocument } from '@iyulab/u-board';
+import '@iyulab/u-board/styles.css';
 import { savedBoard, STORAGE_KEY } from './saved-board';
 import { sampleBoard, SampleAdapter, SAMPLE_ADAPTER_ID, type SampleBoardText } from './sample-board';
 

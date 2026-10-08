@@ -52,6 +52,7 @@ export const KO_LABELS: UBoardLabels = {
   valuePath: '값 경로',
   explore: '탐색',
   exploreFailed: '탐색에 실패했습니다',
+  wholeResponse: '(전체 응답)',
   previewBinding: '미리보기',
   previewFailed: '미리보기 호출에 실패했습니다',
   saveBinding: '바인딩 저장',

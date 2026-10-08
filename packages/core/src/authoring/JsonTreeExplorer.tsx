@@ -1,3 +1,5 @@
+import { DEFAULT_LABELS } from '../labels.js';
+
 export interface JsonTreeExplorerProps {
   /** The raw value to browse — typically a `/resolve` response body fetched without `valuePath`. */
   value: unknown;
@@ -6,13 +8,21 @@ export interface JsonTreeExplorerProps {
    * response). A pointer, not a dotted path, so a key that itself contains a dot — `@odata.count`
    * — is still one step (`"/@odata.count"`). */
   onSelectPath: (path: string) => void;
+  /** How the whole response is named when it is itself the value to pick. */
+  wholeResponseLabel?: string;
 }
 
-export function JsonTreeExplorer({ value, onSelectPath }: JsonTreeExplorerProps) {
-  return <ul style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>{renderEntries(value, '', onSelectPath)}</ul>;
+const LIST_STYLE = { listStyle: 'none', margin: 0 } as const;
+
+export function JsonTreeExplorer({ value, onSelectPath, wholeResponseLabel = DEFAULT_LABELS.wholeResponse }: JsonTreeExplorerProps) {
+  return (
+    <ul className="ub-json-tree" style={{ ...LIST_STYLE, paddingLeft: 0 }}>
+      {renderEntries(value, '', onSelectPath, wholeResponseLabel)}
+    </ul>
+  );
 }
 
-function renderEntries(value: unknown, path: string, onSelectPath: (path: string) => void) {
+function renderEntries(value: unknown, path: string, onSelectPath: (path: string) => void, wholeResponseLabel: string) {
   if (value !== null && typeof value === 'object') {
     const entries: [string, unknown][] = Array.isArray(value)
       ? value.map((v, i) => [String(i), v])
@@ -23,13 +33,13 @@ function renderEntries(value: unknown, path: string, onSelectPath: (path: string
       return (
         <li key={childPath}>
           {isLeaf ? (
-            <button type="button" onClick={() => onSelectPath(childPath)}>
+            <button type="button" className="ub-json-tree__leaf" onClick={() => onSelectPath(childPath)}>
               {key}: {JSON.stringify(child)}
             </button>
           ) : (
             <details open>
               <summary>{key}</summary>
-              <ul style={{ listStyle: 'none', paddingLeft: 16, margin: 0 }}>{renderEntries(child, childPath, onSelectPath)}</ul>
+              <ul style={{ ...LIST_STYLE, paddingLeft: 16 }}>{renderEntries(child, childPath, onSelectPath, wholeResponseLabel)}</ul>
             </details>
           )}
         </li>
@@ -38,8 +48,8 @@ function renderEntries(value: unknown, path: string, onSelectPath: (path: string
   }
   return (
     <li>
-      <button type="button" onClick={() => onSelectPath('')}>
-        (전체 응답): {JSON.stringify(value)}
+      <button type="button" className="ub-json-tree__leaf" onClick={() => onSelectPath('')}>
+        {wholeResponseLabel}: {JSON.stringify(value)}
       </button>
     </li>
   );

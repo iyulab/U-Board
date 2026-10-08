@@ -26,6 +26,7 @@
   "types": "./dist/lib/index.d.ts",
   "files": [
     "dist/lib",
+    "styles.css",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"
@@ -46,7 +47,8 @@
     "./demo": {
       "types": "./dist/lib/demo-entry.d.ts",
       "import": "./dist/lib/demo-entry.js"
-    }
+    },
+    "./styles.css": "./styles.css"
   },
   "scripts": {
     "dev": "vite",

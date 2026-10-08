@@ -8,6 +8,14 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- Styling hooks: every element of `AuthoringView` and `ViewerPage` carries a stable class name
+  (`ub-authoring`, `ub-panel`, `ub-viewer`, `ub-action`, …), and an optional default stylesheet,
+  `@iyulab/u-board/styles.css`, gives them a finished look. The sheet reads `--ub-*` custom
+  properties (colors, spacing, type, `--ub-panel-width`) with its own values as fallbacks, so a host
+  restyles it with its own tokens, or with its own rules on the class names. Classes and tokens are
+  listed in the README ("Styling").
+- Label `wholeResponse`: the response explorer's name for the whole response (it was fixed Korean
+  text).
 - `AuthoringView` offers Export beside Save when the host saves (`onSave`): a board kept by the host
   can still be downloaded as the file Import opens — to carry it to another installation, or as a
   backup. That download does not count as saving.
@@ -77,6 +85,11 @@ All notable changes to this package are documented here. The format follows
   form's `valueMapHeading`, `mapFrom`, `mapTo`, `addMapping`, `removeMapping`, `mapOtherwise`,
   `mapOtherwisePlaceholder`, `mapped`. Code that builds a whole `UBoardLabels` (rather than the
   `Partial` the components' `labels` prop takes) must add them; spreading `DEFAULT_LABELS` covers it.
+- The components no longer set their own look inline — spacing, type, borders and button looks come
+  from `styles.css`; import it, or style the class names. Without it the views still work, with the
+  browser's own controls. Colors that carry meaning stay inline and read tokens: failure messages
+  (`--ub-error`), the viewer's "not updating" notice (`--ub-warning`, `--ub-warning-bg`) and node frames
+  (`--ub-quality-stale`, `--ub-quality-disconnected`). Failure messages are announced (`role="alert"`).
 
 ### Changed
 

@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Viewer } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
 import { documentExtent } from './document-extent.js';
@@ -12,6 +12,7 @@ import type { ViewDocument } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
+import { TOOLBAR_STYLE, ERROR_STYLE, MUTED_STYLE } from '../ui-style.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -112,12 +113,14 @@ export function ViewerPage({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="ub-viewer" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {(!initialDocument || viewerShown) && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+        <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
           {!initialDocument && (
             <>
-              <button onClick={handleImportClick}>{labels.import}</button>
+              <button type="button" className="ub-action" onClick={handleImportClick}>
+                {labels.import}
+              </button>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -131,11 +134,17 @@ export function ViewerPage({
           {viewerShown && pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
         </div>
       )}
-      {importError && <p style={{ color: '#dc2626', fontSize: 13 }}>{importError}</p>}
+      {importError && (
+        <p role="alert" className="ub-viewer__error" style={ERROR_STYLE}>
+          {importError}
+        </p>
+      )}
       {!doc ? (
-        <p style={{ color: '#64748b' }}>{labels.noDocument}</p>
+        <p className="ub-viewer__status" style={MUTED_STYLE}>
+          {labels.noDocument}
+        </p>
       ) : preview ? (
-        <div style={{ flex: 1, minHeight: 0 }}>
+        <div className="ub-viewer__surface" style={{ flex: 1, minHeight: 0 }}>
           <Viewer
             width={width}
             height={height}
@@ -148,7 +157,7 @@ export function ViewerPage({
           />
         </div>
       ) : (
-        <p>{labels.resolving}</p>
+        <p className="ub-viewer__status">{labels.resolving}</p>
       )}
     </div>
   );
@@ -176,18 +185,28 @@ function asLastKnown(doc: ResolvedViewDocument): ResolvedViewDocument {
  * A time of day rather than an age, so the line itself never goes out of date. The announcing region
  * is always there and only its text changes: one inserted with its text already in it is not read
  * out by many screen readers. */
+/** A board that has stopped updating says so in the warning colors — with or without the stylesheet. */
+const NOT_UPDATING_STYLE: CSSProperties = {
+  padding: '2px 8px',
+  borderRadius: 4,
+  background: 'var(--ub-warning-bg, #fef3c7)',
+  color: 'var(--ub-warning, #92400e)',
+  fontWeight: 600,
+};
+
 function Freshness({ resolvedAt, stalled, labels }: { resolvedAt: number | null; stalled: boolean; labels: UBoardLabels }) {
   const time = resolvedAt === null ? null : labels.time(resolvedAt);
   const notUpdating = stalled && time !== null;
   return (
-    <span style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 13 }}>
-      <span
-        role="status"
-        style={notUpdating ? { padding: '2px 8px', borderRadius: 4, background: '#fef3c7', color: '#92400e', fontWeight: 600 } : undefined}
-      >
+    <span className="ub-freshness" style={{ marginLeft: 'auto' }}>
+      <span role="status" className={notUpdating ? 'ub-freshness__alert' : undefined} style={notUpdating ? NOT_UPDATING_STYLE : undefined}>
         {notUpdating ? labels.notUpdating.replace('{time}', time) : ''}
       </span>
-      {!notUpdating && time !== null && <span style={{ color: '#64748b' }}>{labels.lastUpdated.replace('{time}', time)}</span>}
+      {!notUpdating && time !== null && (
+        <span className="ub-freshness__time" style={MUTED_STYLE}>
+          {labels.lastUpdated.replace('{time}', time)}
+        </span>
+      )}
     </span>
   );
 }

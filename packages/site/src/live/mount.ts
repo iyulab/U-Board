@@ -4,6 +4,7 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ViewerPage, KO_LABELS } from '@iyulab/u-board/viewer';
+import '@iyulab/u-board/styles.css';
 import { sampleBoard, SampleAdapter, type SampleBoardText } from './sample-board';
 
 const POLL_INTERVAL_MS = 3000;

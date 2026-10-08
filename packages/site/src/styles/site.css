@@ -277,3 +277,19 @@ main,
 .sign-in a {
   color: var(--muted);
 }
+
+/* The live board and the playground are the library's own views; they take the site's palette
+   through the library's `--ub-*` tokens rather than its default teal. */
+[data-live-board],
+[data-playground] {
+  --ub-text-strong: var(--ink);
+  --ub-text-normal: var(--ink);
+  --ub-text-muted: var(--muted);
+  --ub-border: var(--grid);
+  --ub-border-strong: var(--rule);
+  --ub-bg-surface: #fff;
+  --ub-bg-subtle: var(--sheet);
+  --ub-brand-solid: var(--ink);
+  --ub-quality-stale: var(--stale);
+  --ub-quality-disconnected: var(--disconnected);
+}

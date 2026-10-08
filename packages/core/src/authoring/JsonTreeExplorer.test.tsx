@@ -33,9 +33,14 @@ describe('JsonTreeExplorer', () => {
     const onSelectPath = vi.fn();
     render(<JsonTreeExplorer value={42} onSelectPath={onSelectPath} />);
 
-    fireEvent.click(screen.getByText('(전체 응답): 42'));
+    fireEvent.click(screen.getByText('(whole response): 42'));
 
     expect(onSelectPath).toHaveBeenCalledWith('');
+  });
+
+  it('names the whole response in the words it is given', () => {
+    render(<JsonTreeExplorer value={42} onSelectPath={vi.fn()} wholeResponseLabel="(전체 응답)" />);
+    expect(screen.getByText('(전체 응답): 42')).toBeInTheDocument();
   });
 
   it('escapes keys that contain / or ~, and keeps keys that contain dots whole', () => {

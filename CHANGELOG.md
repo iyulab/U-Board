@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- The board editor's toolbar, its property panel and the share viewer's zoom buttons take the
+  console's look — grouped toolbar actions, framed editor and preview, a panel with labelled fields
+  — instead of the browser's default controls.
+
 ## [0.1.1] - 2026-10-08
 
 ### Changed
