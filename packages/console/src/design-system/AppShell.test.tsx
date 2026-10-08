@@ -69,6 +69,7 @@ describe('AppShell', () => {
     const { container } = renderShell();
     const affiliation = container.querySelector('.ub-shell__sidebar uplatform-affiliation');
     expect(affiliation).toHaveAttribute('product', 'u-board');
+    expect(affiliation).toHaveAttribute('theme', 'auto');
     const shadow = affiliation!.shadowRoot!;
     expect(shadow.querySelector('[part="link"]')).toHaveAttribute('href', 'https://u-platform.kr');
     const siblings = [...shadow.querySelectorAll('[part="list"] a')].map(a => a.textContent);

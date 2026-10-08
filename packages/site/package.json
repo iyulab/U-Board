@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans-kr": "^5.3.0",
-    "@uplatform/brand": "^0.1.2",
+    "@uplatform/brand": "^0.1.3",
     "astro": "^7.3.5",
     "cookie": "^2.0.1"
   }
