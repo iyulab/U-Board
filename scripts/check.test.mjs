@@ -7,6 +7,12 @@ test('runs every step, in order, when nothing is skipped', () => {
   assert.deepEqual(plan([]).skipped, []);
 });
 
+test('builds the library before anything that imports it is typechecked or tested', () => {
+  const names = STEPS.map(s => s.name);
+  assert.ok(names.indexOf('build-lib') < names.indexOf('typecheck'));
+  assert.ok(names.indexOf('build-lib') < names.indexOf('test'));
+});
+
 test('leaves out the steps named in --skip, and says which', () => {
   const { run, skipped } = plan(['--skip=postgres,e2e']);
   assert.equal(run.some(s => s.name === 'postgres' || s.name === 'e2e'), false);

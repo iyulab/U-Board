@@ -402,7 +402,8 @@ describe('BoardEditorPage share panel', () => {
 
     fireEvent.click(screen.getByText('select-n1'));
     fireEvent.change(screen.getByLabelText('프롭 경로'), { target: { value: 'data.value' } });
-    fireEvent.change(screen.getByLabelText('참조 키'), { target: { value: 'pump-a.state' } });
+    await screen.findByRole('option', { name: 'pump-a.state' });
+    fireEvent.change(screen.getByLabelText('참조'), { target: { value: 'pump-a.state' } });
     fireEvent.click(screen.getByText('바인딩 저장'));
     await userEvent.click(screen.getByText('저장'));
 

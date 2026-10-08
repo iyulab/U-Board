@@ -26,6 +26,9 @@ export const STEPS = [
   { name: 'public-text', command: 'npm run check:public-text' },
   // Relative Markdown links must reach a file and heading that exist.
   { name: 'doc-links', command: 'npm run check:doc-links' },
+  // The console, the share viewer and the site import the library from its build (packages/core/dist/lib),
+  // so it is built before they are checked — otherwise they are checked against a stale one.
+  { name: 'build-lib', command: 'npm run build:lib' },
   { name: 'typecheck', command: 'npm run typecheck' },
   // oxlint: typescript-eslint cannot load the native TypeScript 7 compiler.
   { name: 'lint', command: 'npm run lint' },
@@ -34,7 +37,6 @@ export const STEPS = [
   // Needs Docker.
   { name: 'postgres', command: 'npm run test:postgres --workspace=packages/server' },
   { name: 'build', command: 'npm run build' },
-  { name: 'build-lib', command: 'npm run build:lib' },
   { name: 'library-smoke', command: 'npm run smoke:library' },
   // The published package is ESM-only; its declarations must resolve under node16 and bundler resolution.
   { name: 'package-types', command: 'npm run check:package-types' },
