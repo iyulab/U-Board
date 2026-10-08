@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { AuthoringView, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import { DemoAdapter } from '@iyulab/u-board/demo';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
-  listMembers, listShareTokens, createShareToken, deleteShareToken, type ShareTokenSummary, apiClock,
+  listMembers, apiClock,
 } from '../api-client.js';
 import { HttpConnectorAdapter } from '../http-connector-adapter.js';
 import './BoardEditorPage.css';
 import { Loading } from '../design-system/Loading.js';
+import { Alert } from '../design-system/Alert.js';
+import { Badge } from '../design-system/Badge.js';
+import { Button } from '../design-system/Button.js';
+import { ShareDialog } from './ShareDialog.js';
 
 /** True when any node's widget binds to `adapterId`. Used to warn before sharing a document bound
  * to the demo adapter: the server drops that adapter id from the share viewer's connector list
@@ -23,6 +27,7 @@ function documentHasBindingFor(doc: ViewDocument, adapterId: string): boolean {
 export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const { boardId } = useParams<{ boardId: string }>();
   const [document, setDocument] = useState<ViewDocument | null>(null);
+  const [boardName, setBoardName] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
   const [connectorsError, setConnectorsError] = useState<string | null>(null);
@@ -32,13 +37,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
 
   const [isOwner, setIsOwner] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
-  const [shareTokens, setShareTokens] = useState<ShareTokenSummary[]>([]);
-  // When the list was loaded — what "expired" is judged against, so a render stays a pure function.
-  const [shareTokensListedAt, setShareTokensListedAt] = useState(0);
-  const [shareError, setShareError] = useState<string | null>(null);
-  const [newShareUrl, setNewShareUrl] = useState<string | null>(null);
-  // Days until a new share link expires; 0 for a link that works until it is revoked.
-  const [shareLifetimeDays, setShareLifetimeDays] = useState(0);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   // Tracks the last *saved* document, not whatever AuthoringView holds mid-edit — a share link
   // is always generated from the server's copy (Task 4's `share.ts` reads `board.document`), so
   // this must reflect exactly what a new share link would actually serve.
@@ -52,6 +51,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     getBoard(workspaceId, boardId!)
       .then(board => {
         setDocument(board.document);
+        setBoardName(board.name);
         setHasDemoBinding(documentHasBindingFor(board.document, demoAdapter.id));
       })
       .catch(() => setLoadError('보드를 불러오지 못했습니다'));
@@ -68,49 +68,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       .then(res => setIsOwner(res.members.find(m => m.userId === userId)?.role === 'owner'))
       .catch(() => setMembersError('구성원 정보를 불러오지 못했습니다'));
   }, [workspaceId, userId]);
-
-  const reloadShareTokens = useCallback(() => {
-    return listShareTokens(workspaceId, boardId!)
-      .then(res => {
-        setShareError(null);
-        setShareTokens(res.tokens);
-        setShareTokensListedAt(Date.now());
-      })
-      .catch(() => setShareError('공유 링크 목록을 불러오지 못했습니다'));
-  }, [workspaceId, boardId]);
-
-  useEffect(() => {
-    // Gated on `isOwner`, not just the panel's visibility: the server's list route is
-    // owner-only too (Task 3), so firing this for a member would 403 and show a spurious
-    // "failed to load" alert on a page that member never sees the share panel on at all.
-    if (isOwner) reloadShareTokens();
-  }, [isOwner, reloadShareTokens]);
-
-  async function handleCreateShareToken() {
-    try {
-      const expiresAt = shareLifetimeDays > 0 ? new Date(Date.now() + shareLifetimeDays * 86_400_000).toISOString() : undefined;
-      const created = await createShareToken(workspaceId, boardId!, expiresAt);
-      setShareError(null);
-      // The server serves the share viewer under `/share/` on this same origin; local development,
-      // where the viewer runs on its own dev server, points `VITE_SHARE_BASE_URL` at it.
-      const shareBase = (import.meta.env.VITE_SHARE_BASE_URL ?? `${window.location.origin}/share`).replace(/\/+$/, '');
-      setNewShareUrl(`${shareBase}/?board=${boardId}&token=${created.token}`);
-      await reloadShareTokens();
-    } catch {
-      setShareError('공유 링크 생성에 실패했습니다');
-    }
-  }
-
-  async function handleRevokeShareToken(tokenId: string) {
-    try {
-      await deleteShareToken(workspaceId, boardId!, tokenId);
-      setShareError(null);
-      setNewShareUrl(null);
-      setShareTokens(prev => prev.filter(t => t.id !== tokenId));
-    } catch {
-      setShareError('공유 링크 회수에 실패했습니다');
-    }
-  }
 
   const adapters: readonly Adapter[] = useMemo(() => {
     const real = connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id));
@@ -137,25 +94,34 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     }
   }
 
-  const backLink = (
-    <Link className="ub-editor-back" to="/boards" onClick={handleBackClick}>
-      ◂ 보드 목록으로
-    </Link>
+  // The editor sits outside the app shell, for the room its canvas needs; this header takes the
+  // shell's place — the way back, which board this is, whether it is saved, and sharing.
+  const header = (status?: ReactNode, actions?: ReactNode) => (
+    <header className="ub-editor-header">
+      <Link className="ub-editor-header__back" to="/boards" onClick={handleBackClick}>
+        ◂ 보드 목록으로
+      </Link>
+      <h1 className="ub-editor-header__title">{boardName}</h1>
+      <span className="ub-editor-header__status" role="status">
+        {status}
+      </span>
+      <div className="ub-editor-header__actions">{actions}</div>
+    </header>
   );
 
   if (loadError)
     return (
-      <>
-        {backLink}
-        <p role="alert">{loadError}</p>
-      </>
+      <div className="ub-editor">
+        {header()}
+        <Alert>{loadError}</Alert>
+      </div>
     );
   if (!document)
     return (
-      <>
-        {backLink}
+      <div className="ub-editor">
+        {header()}
         <Loading />
-      </>
+      </div>
     );
 
   async function handleSave(doc: ViewDocument) {
@@ -180,14 +146,26 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     if (dirty) setSavedAt(null);
   }
 
+  // Always the same slot, so a change of state never moves the editor.
+  const saveStatus = hasUnsavedChanges ? (
+    <Badge variant="warning">저장되지 않은 변경 사항</Badge>
+  ) : savedAt ? (
+    <Badge variant="success">저장됨</Badge>
+  ) : null;
+
   return (
-    <>
-      {backLink}
-      {connectorsError && <p role="alert">{connectorsError}</p>}
-      {membersError && <p role="alert">{membersError}</p>}
-      {saveError && <p role="alert">{saveError}</p>}
-      {hasUnsavedChanges && <p role="status">저장되지 않은 변경 사항이 있습니다</p>}
-      {!hasUnsavedChanges && savedAt && <p role="status">저장됨</p>}
+    <div className="ub-editor">
+      {header(
+        saveStatus,
+        isOwner && (
+          <Button variant="ghost" onClick={() => setIsShareOpen(true)}>
+            공유
+          </Button>
+        )
+      )}
+      {connectorsError && <Alert>{connectorsError}</Alert>}
+      {membersError && <Alert>{membersError}</Alert>}
+      {saveError && <Alert>{saveError}</Alert>}
       <div className="ub-editor-canvas">
         <AuthoringView
           key={boardId}
@@ -200,44 +178,16 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           clock={apiClock.now}
         />
       </div>
-
       {isOwner && (
-        <details>
-          <summary>공유</summary>
-          {shareError && <p role="alert">{shareError}</p>}
-          {hasDemoBinding && (
-            <p role="alert">
-              이 보드에는 데모 데이터로 바인딩된 위젯이 있습니다 — 공유 링크에서는 해당 위젯이
-              "연결 끊김"으로 보입니다(데모 데이터는 저작 화면에서만 미리보기용으로 동작합니다).
-            </p>
-          )}
-          <ul>
-            {shareTokens.map(t => (
-              <li key={t.id}>
-                {`•••• ${t.tokenMask}`} — {t.createdAt}
-                {t.lastUsedAt ? ` (마지막 사용: ${t.lastUsedAt})` : ' (미사용)'}
-                {t.expiresAt && (Date.parse(t.expiresAt) <= shareTokensListedAt ? ' (만료됨)' : ` (만료: ${t.expiresAt})`)}{' '}
-                <button onClick={() => handleRevokeShareToken(t.id)}>회수</button>
-              </li>
-            ))}
-          </ul>
-          <label>
-            유효 기간{' '}
-            <select value={shareLifetimeDays} onChange={e => setShareLifetimeDays(Number(e.target.value))}>
-              <option value={0}>만료 없음</option>
-              <option value={7}>7일</option>
-              <option value={30}>30일</option>
-              <option value={90}>90일</option>
-            </select>
-          </label>{' '}
-          <button onClick={handleCreateShareToken}>새 공유 링크 생성</button>
-          {newShareUrl && (
-            <p>
-              이 링크는 다시 볼 수 없습니다 — 지금 복사하세요: <code>{newShareUrl}</code>
-            </p>
-          )}
-        </details>
+        <ShareDialog
+          open={isShareOpen}
+          onClose={() => setIsShareOpen(false)}
+          workspaceId={workspaceId}
+          boardId={boardId!}
+          boardName={boardName}
+          hasDemoBinding={hasDemoBinding}
+        />
       )}
-    </>
+    </div>
   );
 }

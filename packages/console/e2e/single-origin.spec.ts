@@ -47,9 +47,9 @@ test('the console, its share links and the share viewer work from one origin', a
   expect(new URL(page.url()).pathname).toBe(editorPath);
 
   // The share link points at the viewer on this same origin.
-  await page.getByText('공유', { exact: true }).click();
+  await page.getByRole('button', { name: '공유', exact: true }).click();
   await page.getByRole('button', { name: '새 공유 링크 생성' }).click();
-  const shareUrl = (await page.getByText('다시 볼 수 없습니다').locator('code').textContent())!;
+  const shareUrl = await page.getByLabel('공유 링크 주소').inputValue();
   expect(shareUrl).toMatch(new RegExp(`^${baseURL}/share/\\?board=${boardId}&token=[\\w-]+$`));
 
   // Opened without the trailing slash, the viewer is redirected to `/share/` and loads its files.

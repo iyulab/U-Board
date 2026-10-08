@@ -16,6 +16,7 @@ import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
+import { Timestamp } from '../format-time.js';
 
 type Role = 'owner' | 'member';
 type Member = { userId: string; email: string; name: string; role: Role };
@@ -188,7 +189,7 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
               <ul>
                 {invitations.map(inv => (
                   <li key={inv.id}>
-                    <span>{inv.email}</span> <Badge>{inv.role}</Badge> — 만료 {new Date(inv.expiresAt).toLocaleDateString()}{' '}
+                    <span>{inv.email}</span> <Badge>{inv.role}</Badge> — 만료 <Timestamp value={inv.expiresAt} dateOnly />{' '}
                     <Button variant="ghost" aria-label={`${inv.email} 초대 다시 보내기`} onClick={() => handleResend(inv)}>
                       다시 보내기
                     </Button>{' '}

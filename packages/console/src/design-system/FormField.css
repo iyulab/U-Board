@@ -12,7 +12,8 @@
 }
 
 .ub-field input,
-.ub-field select {
+.ub-field select,
+.ub-field textarea {
   font-family: inherit;
   font-size: var(--ub-font-size-md);
   padding: var(--ub-space-2) var(--ub-space-3);

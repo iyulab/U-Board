@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { AuditEvent, AuditEventList, AuditPerson } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
 import { Button } from '../design-system/Button.js';
+import { Timestamp } from '../format-time.js';
 
 const DELETED = '삭제된 계정';
 
@@ -124,7 +125,7 @@ export function AuditLog({
         <ul>
           {events.map(event => (
             <li key={event.id}>
-              <time dateTime={event.occurredAt}>{new Date(event.occurredAt).toLocaleString()}</time>{' '}
+              <Timestamp value={event.occurredAt} />{' '}
               {showWorkspace && event.workspace && <span>[{event.workspace.name}] </span>}
               {describeAuditEvent(event)}
             </li>

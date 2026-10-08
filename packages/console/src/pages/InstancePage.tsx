@@ -14,6 +14,7 @@ import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
 import { AuditLog } from './AuditLog.js';
+import { Timestamp } from '../format-time.js';
 
 const LAST_OPERATOR_MESSAGE = '운영자가 한 명 이상 있어야 합니다 — 먼저 다른 계정을 운영자로 지정하세요.';
 
@@ -91,7 +92,7 @@ export function InstancePage({
             <li key={w.id}>
               <span>{w.name}</span> — 멤버 {w.memberCount}명 · owner{' '}
               {w.owners.length > 0 ? w.owners.map(o => o.email).join(', ') : <Badge>없음</Badge>} · 생성{' '}
-              {new Date(w.createdAt).toLocaleDateString()}{' '}
+              <Timestamp value={w.createdAt} dateOnly />{' '}
               {!ownedByMe && (
                 <Button variant="ghost" aria-label={`${w.name}에 owner로 들어가기`} onClick={() => handleEnter(w)}>
                   owner로 들어가기

@@ -1,0 +1,146 @@
+.ub-share__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ub-space-3);
+}
+
+.ub-share__header h2 {
+  margin: 0;
+  font-size: var(--ub-font-size-lg);
+  color: var(--ub-text-strong);
+}
+
+.ub-share__intro {
+  margin: var(--ub-space-2) 0 var(--ub-space-4);
+  font-size: var(--ub-font-size-md);
+  color: var(--ub-text-muted);
+}
+
+.ub-share__warning {
+  margin: 0 0 var(--ub-space-4);
+  padding: var(--ub-space-3) var(--ub-space-4);
+  border-radius: var(--ub-radius-md);
+  background: var(--ub-warning-bg);
+  color: var(--ub-warning);
+  font-size: var(--ub-font-size-md);
+}
+
+.ub-share__section {
+  padding-top: var(--ub-space-4);
+  border-top: 1px solid var(--ub-border);
+}
+
+.ub-share__section + .ub-share__section {
+  margin-top: var(--ub-space-4);
+}
+
+.ub-share__section h3 {
+  margin: 0 0 var(--ub-space-3);
+  font-size: var(--ub-font-size-base);
+  color: var(--ub-text-strong);
+}
+
+/* The lifetime picker and the button that uses it, on one line. */
+.ub-share__create {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ub-space-3);
+  flex-wrap: wrap;
+}
+
+.ub-share__create .ub-field {
+  margin-bottom: 0;
+}
+
+.ub-share__result {
+  margin-top: var(--ub-space-4);
+  padding: var(--ub-space-4);
+  border-radius: var(--ub-radius-md);
+  background: var(--ub-bg-subtle);
+}
+
+.ub-share__result .ub-field input,
+.ub-share__result .ub-field textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: var(--ub-font-size-sm);
+}
+
+.ub-share__result .ub-field textarea {
+  resize: vertical;
+}
+
+.ub-share__once {
+  margin: 0 0 var(--ub-space-3);
+  font-size: var(--ub-font-size-md);
+  font-weight: 600;
+  color: var(--ub-text-strong);
+}
+
+.ub-share__actions {
+  display: flex;
+  gap: var(--ub-space-2);
+  flex-wrap: wrap;
+  margin: calc(-1 * var(--ub-space-2)) 0 var(--ub-space-4);
+}
+
+.ub-share__actions:last-child {
+  margin-bottom: 0;
+}
+
+.ub-share__actions a.ub-button {
+  text-decoration: none;
+}
+
+.ub-share__copied {
+  display: block;
+  min-height: 1.5em;
+  margin-top: var(--ub-space-2);
+  font-size: var(--ub-font-size-sm);
+  color: var(--ub-text-muted);
+}
+
+.ub-share__empty {
+  margin: 0;
+  font-size: var(--ub-font-size-md);
+  color: var(--ub-text-muted);
+}
+
+.ub-share__tokens {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ub-share__token {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ub-space-3);
+  padding: var(--ub-space-3) 0;
+  border-bottom: 1px solid var(--ub-border);
+}
+
+.ub-share__token:last-child {
+  border-bottom: 0;
+}
+
+.ub-share__token-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ub-space-1) var(--ub-space-2);
+  min-width: 0;
+}
+
+.ub-share__token-main code {
+  font-size: var(--ub-font-size-md);
+  color: var(--ub-text-strong);
+}
+
+.ub-share__token-meta {
+  flex-basis: 100%;
+  font-size: var(--ub-font-size-sm);
+  color: var(--ub-text-muted);
+}

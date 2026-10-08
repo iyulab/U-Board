@@ -29,18 +29,13 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
-  // 공유 패널 열고 경고 확인 → 링크 생성
-  // NOTE: 버튼 텍스트 '새 공유 링크 생성'이 '공유'를 부분 문자열로 포함해 non-exact
-  // getByText('공유')는 <summary>와 <button> 둘 다에 매치되어 strict-mode violation을
-  // 일으킨다(실측). exact match로 <summary> 하나만 특정한다.
-  await page.getByText('공유', { exact: true }).click();
+  // 머리글의 공유 버튼으로 공유 대화상자를 열고 경고 확인 → 링크 생성
+  await page.getByRole('button', { name: '공유', exact: true }).click();
   await expect(page.getByText('데모 데이터로 바인딩된 위젯이 있습니다')).toBeVisible();
   await page.getByRole('button', { name: '새 공유 링크 생성' }).click();
-  // `<code>`가 이제 두 개다 — 위 바인딩 목록의 `data.value`와 이 공유 URL. 후자만 특정하려면
-  // 감싸는 문단으로 스코프한다.
-  const urlText = await page.getByText('다시 볼 수 없습니다').locator('code').textContent();
+  const urlText = await page.getByLabel('공유 링크 주소').inputValue();
   expect(urlText).toMatch(new RegExp(`board=${boardId}&token=`));
-  const shareUrl = urlText!;
+  const shareUrl = urlText;
 
   // 쿠키 없는 별도 브라우저 컨텍스트로 공유 링크 열기
   //
@@ -114,8 +109,8 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await shareContext.close();
 
   // 콘솔에서 회수
-  await page.getByRole('button', { name: '회수' }).click();
-  await expect(page.getByRole('button', { name: '회수' })).not.toBeVisible();
+  await page.getByRole('button', { name: /링크 회수$/ }).click();
+  await expect(page.getByRole('button', { name: /링크 회수$/ })).not.toBeVisible();
 
   // 회수된 링크는 유효하지 않다고 안내함(서버 404)
   const revokedContext = await browser.newContext();

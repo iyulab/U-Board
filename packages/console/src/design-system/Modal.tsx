@@ -6,9 +6,11 @@ interface ModalProps {
   onClose: () => void;
   labelledBy: string;
   children: ReactNode;
+  /** `lg` for a dialog that carries more than a short form (a list, a code to copy). */
+  size?: 'md' | 'lg';
 }
 
-export function Modal({ open, onClose, labelledBy, children }: ModalProps) {
+export function Modal({ open, onClose, labelledBy, children, size = 'md' }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ export function Modal({ open, onClose, labelledBy, children }: ModalProps) {
   }, [open]);
 
   return (
-    <dialog ref={dialogRef} onClose={onClose} aria-labelledby={labelledBy} className="ub-modal">
+    <dialog ref={dialogRef} onClose={onClose} aria-labelledby={labelledBy} className={size === 'lg' ? 'ub-modal ub-modal--lg' : 'ub-modal'}>
       {children}
     </dialog>
   );

@@ -1,17 +1,69 @@
-.ub-editor-back {
-  display: inline-block;
-  margin-bottom: var(--ub-space-3);
+/* The whole window: a header, then the editor taking the rest — a large background is worked on in
+   view (pan/zoom inside), not by scrolling the page. */
+.ub-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  height: 100dvh;
+  padding: 0 var(--ub-space-5) var(--ub-space-5);
+}
+
+.ub-editor > .ub-alert {
+  margin-top: var(--ub-space-3);
+}
+
+.ub-editor-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ub-space-3) var(--ub-space-4);
+  flex-wrap: wrap;
+  margin: 0 calc(-1 * var(--ub-space-5)) var(--ub-space-4);
+  padding: var(--ub-space-3) var(--ub-space-5);
+  border-bottom: 1px solid var(--ub-border);
+  background: var(--ub-bg-surface);
+}
+
+.ub-editor-header__back {
   font-size: var(--ub-font-size-md);
   color: var(--ub-text-muted);
   text-decoration: none;
+  white-space: nowrap;
 }
 
-.ub-editor-back:hover {
+.ub-editor-header__back:hover {
   color: var(--ub-text-normal);
 }
 
-/* The editor and its live preview fill this box and follow its size — most of the window, so a large
-   background is worked on in view (pan/zoom inside), not by scrolling the page. */
+.ub-editor-header__title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ub-font-size-lg);
+  font-weight: 700;
+  color: var(--ub-text-strong);
+}
+
+/* Holds its place when empty, so the save state appearing never shifts the line. */
+.ub-editor-header__status {
+  display: inline-flex;
+  min-width: 9rem;
+}
+
+/* The status badge reads as a sentence, not a label. */
+.ub-editor-header__status .ub-badge {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ub-editor-header__actions {
+  display: flex;
+  gap: var(--ub-space-2);
+  margin-left: auto;
+}
+
 .ub-editor-canvas {
-  height: max(480px, calc(100dvh - 14rem));
+  flex: 1;
+  min-height: 480px;
 }

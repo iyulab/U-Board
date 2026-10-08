@@ -9,6 +9,7 @@ import { Card, CardGrid } from '../design-system/Card.js';
 import { EmptyState } from '../design-system/EmptyState.js';
 import './BoardsListPage.css';
 import { Loading } from '../design-system/Loading.js';
+import { Timestamp } from '../format-time.js';
 
 type BoardSummary = { id: string; name: string; updatedAt: string };
 
@@ -99,7 +100,9 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
           {filteredBoards.map(b => (
             <Card key={b.id}>
               <Link className="ub-board-card__link" to={`/boards/${b.id}/edit`}>{b.name}</Link>
-              <span className="ub-board-card__meta">{b.updatedAt}</span>
+              <span className="ub-board-card__meta">
+                수정 <Timestamp value={b.updatedAt} />
+              </span>
               <div className="ub-board-card__footer">
                 <Button variant="danger" aria-label={`${b.name} 삭제`} onClick={() => handleDelete(b.id)}>삭제</Button>
               </div>

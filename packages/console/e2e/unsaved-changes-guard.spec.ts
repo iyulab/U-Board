@@ -30,7 +30,7 @@ test('warns before leaving the board editor with unsaved changes, stays silent w
   await page.goto(editorUrl);
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
   await page.getByText('사각형 장식 추가').click();
-  await expect(page.getByText('저장되지 않은 변경 사항이 있습니다')).toBeVisible();
+  await expect(page.getByText('저장되지 않은 변경 사항')).toBeVisible();
 
   let dialogType: string | null = null;
   page.once('dialog', dialog => {
@@ -45,10 +45,10 @@ test('warns before leaving the board editor with unsaved changes, stays silent w
   await page.goto(editorUrl);
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
   await page.getByText('사각형 장식 추가').click();
-  await expect(page.getByText('저장되지 않은 변경 사항이 있습니다')).toBeVisible();
+  await expect(page.getByText('저장되지 않은 변경 사항')).toBeVisible();
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
-  await expect(page.getByText('저장되지 않은 변경 사항이 있습니다')).toHaveCount(0);
+  await expect(page.getByText('저장되지 않은 변경 사항')).toHaveCount(0);
 
   let dialogSeenAfterSave = false;
   page.once('dialog', () => {

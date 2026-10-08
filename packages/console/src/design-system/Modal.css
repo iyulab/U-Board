@@ -9,6 +9,10 @@
   width: 100%;
 }
 
+.ub-modal--lg {
+  max-width: 640px;
+}
+
 .ub-modal::backdrop {
   background: var(--ub-backdrop);
 }

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { BoardsListPage } from './BoardsListPage.js';
 import * as api from '../api-client.js';
+import { formatDateTime } from '../format-time.js';
 
 vi.mock('../api-client.js');
 beforeEach(() => vi.resetAllMocks());
@@ -37,6 +38,14 @@ describe('BoardsListPage', () => {
     renderPage();
     expect(await screen.findByText('Floor 1')).toBeInTheDocument();
     expect(api.listBoards).toHaveBeenCalledWith('w1');
+  });
+
+  it('says when each board was last changed, in readable words rather than raw ISO text', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: '2026-08-20T00:00:00.000Z' }] });
+    renderPage();
+    const time = await screen.findByText(formatDateTime('2026-08-20T00:00:00.000Z'));
+    expect(time).toHaveAttribute('datetime', '2026-08-20T00:00:00.000Z');
+    expect(screen.queryByText(/2026-08-20T/)).not.toBeInTheDocument();
   });
 
   it('creates a board via the create-board dialog and navigates to its editor', async () => {

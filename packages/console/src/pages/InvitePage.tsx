@@ -6,6 +6,7 @@ import { Link } from 'react-router';
 import { Loading } from '../design-system/Loading.js';
 import { Alert } from '../design-system/Alert.js';
 import { AuthLayout } from '../design-system/AuthLayout.js';
+import { Timestamp } from '../format-time.js';
 
 // Why accepting failed, in terms of what the person can do about it.
 const ACCEPT_ERROR_MESSAGES: Record<string, string> = {
@@ -64,7 +65,7 @@ export function InvitePage({ token, onJoined }: { token: string; onJoined: (work
   const context = (
     <p>
       {invitation.inviterName}님이 {invitation.workspaceName} 워크스페이스에 {invitation.role}로 초대했습니다.{' '}
-      {new Date(invitation.expiresAt).toLocaleDateString()}까지 유효합니다.
+      <Timestamp value={invitation.expiresAt} dateOnly />까지 유효합니다.
     </p>
   );
   return invitation.hasAccount ? (

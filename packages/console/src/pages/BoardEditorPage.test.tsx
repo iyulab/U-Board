@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route, Link } from 'react-router';
 import { BoardEditorPage } from './BoardEditorPage.js';
 import * as api from '../api-client.js';
+import { formatDateTime } from '../format-time.js';
 
 vi.mock('../api-client.js');
 vi.mock('@canvas-kit/designer', () => ({
@@ -44,6 +45,14 @@ describe('BoardEditorPage', () => {
     expect(await screen.findByText('저장')).toBeInTheDocument();
   });
 
+  it('names the board in its header, and keeps the save status in one place from the start', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    renderPage();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Floor 1' })).toBeInTheDocument();
+    // Present and empty before any edit, so the first edit fills it rather than inserting a line.
+    expect(screen.getByRole('status')).toHaveTextContent('');
+  });
+
   it('saves via updateBoard when Save is clicked', async () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
@@ -71,7 +80,7 @@ describe('BoardEditorPage', () => {
 
     await screen.findByText('저장');
 
-    expect(screen.queryByText('저장되지 않은 변경 사항이 있습니다')).not.toBeInTheDocument();
+    expect(screen.queryByText('저장되지 않은 변경 사항')).not.toBeInTheDocument();
   });
 
   it('shows an unsaved-changes indicator once the author edits the document', async () => {
@@ -80,7 +89,7 @@ describe('BoardEditorPage', () => {
 
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
 
-    expect(await screen.findByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
+    expect(await screen.findByText('저장되지 않은 변경 사항')).toBeInTheDocument();
   });
 
   it('clears the unsaved-changes indicator once the save succeeds', async () => {
@@ -89,11 +98,11 @@ describe('BoardEditorPage', () => {
     renderPage();
 
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
-    await screen.findByText('저장되지 않은 변경 사항이 있습니다');
+    await screen.findByText('저장되지 않은 변경 사항');
     await userEvent.click(screen.getByText('저장', { exact: true }));
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('저장됨'));
-    expect(screen.queryByText('저장되지 않은 변경 사항이 있습니다')).not.toBeInTheDocument();
+    expect(screen.queryByText('저장되지 않은 변경 사항')).not.toBeInTheDocument();
   });
 
   it('keeps the unsaved-changes indicator when the save fails', async () => {
@@ -105,7 +114,7 @@ describe('BoardEditorPage', () => {
     await userEvent.click(screen.getByText('저장', { exact: true }));
 
     await screen.findByRole('alert');
-    expect(screen.getByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
+    expect(screen.getByText('저장되지 않은 변경 사항')).toBeInTheDocument();
   });
 
   it('hides a stale "저장됨" status once the author edits again after a successful save', async () => {
@@ -120,7 +129,7 @@ describe('BoardEditorPage', () => {
     await userEvent.click(screen.getByText('텍스트 장식 추가'));
 
     expect(screen.queryByText('저장됨')).not.toBeInTheDocument();
-    expect(screen.getByText('저장되지 않은 변경 사항이 있습니다')).toBeInTheDocument();
+    expect(screen.getByText('저장되지 않은 변경 사항')).toBeInTheDocument();
   });
 
   it('navigates back to the boards list when there are no unsaved changes', async () => {
@@ -138,7 +147,7 @@ describe('BoardEditorPage', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderPage();
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
-    await screen.findByText('저장되지 않은 변경 사항이 있습니다');
+    await screen.findByText('저장되지 않은 변경 사항');
 
     await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
 
@@ -152,7 +161,7 @@ describe('BoardEditorPage', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderPage();
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
-    await screen.findByText('저장되지 않은 변경 사항이 있습니다');
+    await screen.findByText('저장되지 않은 변경 사항');
 
     await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
 
@@ -218,13 +227,13 @@ describe('BoardEditorPage', () => {
     renderPage();
 
     await userEvent.click(await screen.findByText('저장'));
-    await screen.findByRole('status');
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('저장됨'));
 
     vi.mocked(api.updateBoard).mockRejectedValueOnce(new Error('network down'));
     await userEvent.click(screen.getByText('저장'));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).not.toHaveTextContent('저장됨');
   });
 });
 
@@ -272,15 +281,43 @@ describe('BoardEditorPage share panel', () => {
     vi.mocked(api.createShareToken).mockResolvedValue({ id: 't1', token: 'plaintext-secret-value', tokenMask: 'ab12cd34', createdAt: 't' });
 
     renderPage();
-    // `<details>` renders closed by default; its content is outside the accessibility tree
-    // (hence unreachable by `getByRole`) until opened, so every test that needs the panel's
-    // contents must open it first — clicking the native `<summary>` toggles `open`.
-    fireEvent.click(await screen.findByText('공유'));
+    // The dialog is closed until the header's button opens it.
+    fireEvent.click(await screen.findByRole('button', { name: '공유' }));
     const createButton = await screen.findByRole('button', { name: '새 공유 링크 생성' });
     fireEvent.click(createButton);
 
     await waitFor(() => expect(api.createShareToken).toHaveBeenCalledWith('w1', 'b1', undefined));
-    expect(await screen.findByText(/plaintext-secret-value/)).toBeInTheDocument();
+    const link = (await screen.findByLabelText('공유 링크 주소')) as HTMLInputElement;
+    expect(link.value).toMatch(/\/share\/\?board=b1&token=plaintext-secret-value$/);
+    expect(screen.getByRole('link', { name: '새 탭에서 열기' })).toHaveAttribute('href', link.value);
+    expect(screen.getByLabelText('임베드 코드')).toHaveValue(
+      `<iframe src="${link.value.replace('&', '&amp;')}" title="A" width="960" height="600" style="border:0" loading="lazy"></iframe>`
+    );
+  });
+
+  it('copies the new link and its embed code, and says so', async () => {
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.createShareToken).mockResolvedValue({ id: 't1', token: 'secret', tokenMask: 'x', createdAt: 't' });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: '공유' }));
+    fireEvent.click(await screen.findByRole('button', { name: '새 공유 링크 생성' }));
+    const link = (await screen.findByLabelText('공유 링크 주소')) as HTMLInputElement;
+
+    fireEvent.click(screen.getByRole('button', { name: '링크 복사' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(link.value));
+    expect(await screen.findByText('링크를 복사했습니다')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '임베드 코드 복사' }));
+    await waitFor(() => expect(writeText).toHaveBeenLastCalledWith((screen.getByLabelText('임베드 코드') as HTMLTextAreaElement).value));
+    expect(await screen.findByText('임베드 코드를 복사했습니다')).toBeInTheDocument();
+
+    writeText.mockRejectedValueOnce(new Error('denied'));
+    fireEvent.click(screen.getByRole('button', { name: '링크 복사' }));
+    expect(await screen.findByText(/복사하지 못했습니다/)).toBeInTheDocument();
   });
 
   it('owner picks how long a new share link lasts, and sees which links expire or have expired', async () => {
@@ -294,9 +331,13 @@ describe('BoardEditorPage share panel', () => {
     vi.mocked(api.createShareToken).mockResolvedValue({ id: 't1', token: 'tok', tokenMask: 'x', createdAt: 't' });
 
     renderPage();
-    fireEvent.click(await screen.findByText('공유'));
-    expect(await screen.findByText(/old00000.*\(만료됨\)/)).toBeInTheDocument();
-    expect(screen.getByText(/new00000.*\(만료: 2999-01-01T00:00:00.000Z\)/)).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: '공유' }));
+    const old = (await screen.findByText('•••• old00000')).closest('li')!;
+    expect(old).toHaveTextContent('만료됨');
+    const current = screen.getByText('•••• new00000').closest('li')!;
+    expect(current).not.toHaveTextContent('만료됨');
+    expect(current).toHaveTextContent(`만료 예정 ${formatDateTime('2999-01-01T00:00:00.000Z')}`);
+    expect(current.querySelector('time[datetime="2999-01-01T00:00:00.000Z"]')).not.toBeNull();
 
     const before = Date.now();
     fireEvent.change(screen.getByLabelText(/유효 기간/), { target: { value: '30' } });
@@ -315,8 +356,8 @@ describe('BoardEditorPage share panel', () => {
     vi.mocked(api.deleteShareToken).mockResolvedValue(undefined);
 
     renderPage();
-    fireEvent.click(await screen.findByText('공유'));
-    const revokeButton = await screen.findByRole('button', { name: '회수' });
+    fireEvent.click(await screen.findByRole('button', { name: '공유' }));
+    const revokeButton = await screen.findByRole('button', { name: '•••• ab12cd34 링크 회수' });
     fireEvent.click(revokeButton);
 
     await waitFor(() => expect(api.deleteShareToken).toHaveBeenCalledWith('w1', 'b1', 't1'));
@@ -330,7 +371,7 @@ describe('BoardEditorPage share panel', () => {
     vi.mocked(api.listShareTokens).mockRejectedValue(new Error('network'));
 
     renderPage();
-    fireEvent.click(await screen.findByText('공유'));
+    fireEvent.click(await screen.findByRole('button', { name: '공유' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('공유 링크 목록을 불러오지 못했습니다');
   });
 
@@ -352,7 +393,7 @@ describe('BoardEditorPage share panel', () => {
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
     renderPage();
 
-    fireEvent.click(await screen.findByText('공유'));
+    fireEvent.click(await screen.findByRole('button', { name: '공유' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('데모 데이터로 바인딩된 위젯이 있습니다');
   });
 
@@ -377,7 +418,7 @@ describe('BoardEditorPage share panel', () => {
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
     renderPage();
 
-    fireEvent.click(await screen.findByText('공유'));
+    fireEvent.click(await screen.findByRole('button', { name: '공유' }));
     await screen.findByText('새 공유 링크 생성'); // wait for the panel to finish rendering
     expect(screen.queryByText(/데모 데이터로 바인딩된 위젯이 있습니다/)).not.toBeInTheDocument();
   });
@@ -396,7 +437,7 @@ describe('BoardEditorPage share panel', () => {
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'A', updatedAt: 't2' });
     renderPage();
 
-    fireEvent.click(await screen.findByText('공유'));
+    fireEvent.click(await screen.findByRole('button', { name: '공유' }));
     await screen.findByText('새 공유 링크 생성');
     expect(screen.queryByRole('alert', { name: /데모 데이터로 바인딩된 위젯이 있습니다/ })).not.toBeInTheDocument();
 

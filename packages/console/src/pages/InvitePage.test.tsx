@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { InvitePage } from './InvitePage.js';
 import * as api from '../api-client.js';
+import { formatDate } from '../format-time.js';
 
 vi.mock('../api-client.js');
 beforeEach(() => vi.resetAllMocks());
@@ -37,7 +38,7 @@ describe('InvitePage', () => {
     renderInvite({ token: 'tok123', onJoined: vi.fn() });
 
     const context = await screen.findByText(/Operator님이 Customer A 워크스페이스에 owner로 초대했습니다/);
-    expect(context).toHaveTextContent(new Date('2026-10-12T00:00:00.000Z').toLocaleDateString());
+    expect(context).toHaveTextContent(`${formatDate('2026-10-12T00:00:00.000Z')}까지 유효합니다`);
   });
 
   it('takes someone who already belongs to the workspace there instead of failing', async () => {
