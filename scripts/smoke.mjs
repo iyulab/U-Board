@@ -12,7 +12,10 @@ import { pathToFileURL } from 'node:url';
 
 const TIMEOUT_MS = 60_000;
 
-/** Each check: a name, the request, and what is wrong with the response (`undefined` when nothing). */
+/**
+ * Each check: a name, the request, and what is wrong with the response (`undefined` when nothing).
+ * `expect` also gets the page's URL and a `get` for what that page itself loads.
+ */
 export const CHECKS = [
   {
     name: 'health',
@@ -33,7 +36,10 @@ export const CHECKS = [
     name: 'console',
     path: '/',
     headers: { Accept: 'text/html' },
-    expect: res => expectHtml(res) ?? (!/frame-ancestors 'none'/.test(res.headers.get('content-security-policy') ?? '') ? "console may be framed (no frame-ancestors 'none')" : undefined),
+    expect: async (res, page) =>
+      expectHtml(res) ??
+      (!/frame-ancestors 'none'/.test(res.headers.get('content-security-policy') ?? '') ? "console may be framed (no frame-ancestors 'none')" : undefined) ??
+      (await expectAssets(res, page)),
   },
   {
     name: 'console route loads the console',
@@ -45,7 +51,10 @@ export const CHECKS = [
     name: 'share viewer',
     path: '/share/',
     headers: { Accept: 'text/html' },
-    expect: res => expectHtml(res) ?? (res.headers.get('referrer-policy') !== 'no-referrer' ? 'share viewer leaks its URL in Referer (no Referrer-Policy: no-referrer)' : undefined),
+    expect: async (res, page) =>
+      expectHtml(res) ??
+      (res.headers.get('referrer-policy') !== 'no-referrer' ? 'share viewer leaks its URL in Referer (no Referrer-Policy: no-referrer)' : undefined) ??
+      (await expectAssets(res, page)),
   },
   {
     name: 'share link without the trailing slash',
@@ -74,19 +83,55 @@ function expectHtml(res) {
   return undefined;
 }
 
+/**
+ * The scripts and stylesheets an HTML page loads from its own origin, resolved against the page's
+ * URL. Other origins, inline scripts, icons and preloads are left out — the page renders without
+ * checking them, or they are someone else's to serve.
+ */
+export function pageAssets(html, pageUrl) {
+  const { origin } = new URL(pageUrl);
+  const assets = [];
+  const attr = (tag, name) => tag.match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'))?.slice(1).find(v => v !== undefined);
+  for (const [tag, name] of html.matchAll(/<(script|link)\b[^>]*>/gi)) {
+    const kind = name.toLowerCase() === 'script' ? 'script' : attr(tag, 'rel')?.toLowerCase() === 'stylesheet' ? 'stylesheet' : undefined;
+    const ref = kind === 'script' ? attr(tag, 'src') : kind ? attr(tag, 'href') : undefined;
+    if (!ref) continue;
+    const url = new URL(ref, pageUrl);
+    if (url.origin === origin) assets.push({ url: url.href, kind });
+  }
+  return assets;
+}
+
+/**
+ * What is wrong with what an HTML page loads. A page whose build files are gone is the page an edge
+ * cache kept from the previous deploy (the hashed file names change with every build), or a broken
+ * build — either way it renders nothing.
+ */
+async function expectAssets(res, page) {
+  const assets = pageAssets(await res.text(), page.url);
+  if (!assets.some(a => a.kind === 'script')) return 'the page loads no script';
+  for (const { url, kind } of assets) {
+    const asset = await page.get(url);
+    await asset.body?.cancel();
+    const { pathname } = new URL(url);
+    if (asset.status !== 200) return `${pathname}: status ${asset.status} — the page points at build files that are not there (an edge cache still holding the page from before the last deploy?)`;
+    const type = asset.headers.get('content-type') ?? '';
+    if (!(kind === 'script' ? /javascript/ : /^text\/css/).test(type)) return `${pathname}: content-type ${type}, not a ${kind}`;
+  }
+  return undefined;
+}
+
 /** Runs every check against `baseUrl`, one after another (the first may wake the server). */
 export async function smoke(baseUrl, fetchImpl = fetch) {
   const base = baseUrl.replace(/\/+$/, '');
+  const get = (url, headers) => fetchImpl(url, { headers, redirect: 'manual', signal: AbortSignal.timeout(TIMEOUT_MS) });
   const results = [];
   for (const check of CHECKS) {
     let problem;
     try {
-      const res = await fetchImpl(`${base}${check.path}`, {
-        headers: check.headers,
-        redirect: 'manual',
-        signal: AbortSignal.timeout(TIMEOUT_MS),
-      });
-      problem = await check.expect(res);
+      const url = `${base}${check.path}`;
+      const res = await get(url, check.headers);
+      problem = await check.expect(res, { url, get: assetUrl => get(assetUrl, { Accept: '*/*' }) });
     } catch (err) {
       problem = `request failed: ${err.message}`;
     }

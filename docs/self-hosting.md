@@ -121,8 +121,13 @@ otherwise — use it for liveness and readiness probes.
 
 After deploying, `npm run smoke -- https://board.example.com` (from a checkout of this repository)
 checks the installation from the outside: health, the API refusing a request without a session,
-the console and share viewer served with their security headers, and a missing build file
-answering 404. It only reads public paths.
+the console and share viewer served with their security headers and able to load their scripts and
+stylesheets, and a missing build file answering 404. It only reads public paths.
+
+If a CDN or caching proxy in front of the server keeps the console or share viewer page (`/`,
+`/share/`), purge those pages on every deploy: each build names its files differently, so a page kept
+from the previous deploy points at files the new image does not have and renders nothing. The smoke
+check fails in that state.
 
 ## Share links
 
