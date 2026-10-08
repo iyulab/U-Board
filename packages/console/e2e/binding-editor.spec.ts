@@ -37,7 +37,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await clickFirstNode(page);
     await expect(page.getByLabel('위젯 타입')).toHaveValue('status');
 
-    await page.getByLabel('프롭 경로').fill('data.value');
+    await page.getByLabel('프롭 경로').selectOption('data.value');
     await page.getByLabel('데이터소스').selectOption({ label: 'Mock Plant API' });
     // '데이터소스'와 달리 '요청 경로'·'값 경로'는 서로 '경로'를 공유하고 '프롭 경로'와도 겹쳐 exact 매칭이 필요하다
     // (connector-crud.spec.ts의 '이름'/'헤더 이름'과 같은 종류의 문제).
@@ -58,7 +58,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await expect(page.getByText('· /status /status', { exact: true })).toBeVisible();
 
     // 같은 필드를 한 번 더 — 이번엔 값 매핑으로 위젯의 수준(level)에. 원천의 "running"이 "success"로 보여야 한다.
-    await page.getByLabel('프롭 경로').fill('data.level');
+    await page.getByLabel('프롭 경로').selectOption('data.level');
     await page.getByLabel('데이터소스').selectOption({ label: 'Mock Plant API' });
     await page.getByLabel('요청 경로', { exact: true }).fill('/status');
     await page.getByLabel('값 경로').fill('/status');

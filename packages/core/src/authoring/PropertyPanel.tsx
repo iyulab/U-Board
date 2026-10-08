@@ -4,6 +4,7 @@ import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, defaultPropPath, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { WidgetPropsForm } from './WidgetPropsForm.js';
+import { widgetFields } from './widget-fields.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
 import { describeQuality } from '../quality-text.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
@@ -69,6 +70,9 @@ interface RangeRow {
 function fieldValue(text: string, loaded?: { value: unknown }): unknown {
   return loaded && text === asText(loaded.value) ? loaded.value : text;
 }
+
+/** The prop picker's choice for a path the widget library does not list — typed in instead. */
+const OTHER_PATH = '\u0000other';
 
 function emptyDraft(connectorId: string, propPath = ''): BindingDraft {
   return { propPath, connectorId, path: '', valuePath: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
@@ -180,6 +184,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   const [propsError, setPropsError] = useState<string | null>(null);
   const [draft, setDraft] = useState<BindingDraft>(emptyDraft(initialConnectorId(adapters), node ? defaultPropPath(node.widget) : ''));
   const saveHintId = useId();
+  // The author chose to type a prop path the widget's data fields do not list.
+  const [typingPropPath, setTypingPropPath] = useState(false);
   // The propPath of the binding currently being edited, so a save can remove its old key when the
   // author changes the prop path instead of leaving the old binding orphaned. `null` while adding
   // a new binding (nothing to remove).
@@ -210,6 +216,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   // an in-progress binding edit) but not on every props-only or binding-only save.
   useEffect(() => {
     setDraft(emptyDraft(firstAdapterId(), readStartingPropPath()));
+    setTypingPropPath(false);
     setEditingPropPath(null);
     setPreview(null);
     setPreviewError(null);
@@ -288,6 +295,11 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
     }
   };
 
+  // The values a binding can replace, as the widget library names them; any other path is typed.
+  const dataFields = widgetFields(node.widget).fields.filter(f => f.section === 'data');
+  const fieldPaths = dataFields.map(f => `data.${f.key}`);
+  const typedPath = dataFields.length === 0 || typingPropPath || (draft.propPath !== '' && !fieldPaths.includes(draft.propPath));
+
   const previewMap = mapFromDraft(draft);
   const rangeIssues = invalidRanges(draft);
   // What still keeps the binding from being saved, said next to the button. A broken range row is
@@ -335,6 +347,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
     const widget = { ...node.widget, bindings };
     onChange(widget);
     setDraft(emptyDraft(initialConnectorId(adapters), defaultPropPath(widget)));
+    setTypingPropPath(false);
     setEditingPropPath(null);
     setPreview(null);
     setExploreResult(null);
@@ -349,6 +362,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
 
   const handleEditBinding = (propPath: string, binding: Binding) => {
     setDraft(draftFromBinding(propPath, binding));
+    setTypingPropPath(false);
     setEditingPropPath(propPath);
     setPreview(null);
     setPreviewError(null);
@@ -427,10 +441,39 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
         <p className="ub-panel__hint">{labels.noDataSources}</p>
       ) : (
         <div className="ub-panel__binding-form">
-          <label className="ub-panel__field" style={FIELD_STYLE}>
-            {labels.propPath}
-            <input value={draft.propPath} onChange={e => setDraft({ ...draft, propPath: e.target.value })} />
-          </label>
+          {dataFields.length > 0 && (
+            <label className="ub-panel__field" style={FIELD_STYLE}>
+              {labels.propPath}
+              <select
+                value={typedPath ? OTHER_PATH : draft.propPath}
+                onChange={e => {
+                  const other = e.target.value === OTHER_PATH;
+                  setTypingPropPath(other);
+                  setDraft({ ...draft, propPath: other ? '' : e.target.value });
+                }}
+              >
+                <option value="" disabled>
+                  {labels.choosePropPath}
+                </option>
+                {dataFields.map(f => {
+                  const path = `data.${f.key}`;
+                  const bound = node.widget.bindings?.[path] !== undefined && path !== editingPropPath;
+                  return (
+                    <option key={path} value={path}>
+                      {`${f.description ?? f.key} (${path})${bound ? ` · ${labels.boundField}` : ''}`}
+                    </option>
+                  );
+                })}
+                <option value={OTHER_PATH}>{labels.otherPropPath}</option>
+              </select>
+            </label>
+          )}
+          {typedPath && (
+            <label className="ub-panel__field" style={FIELD_STYLE}>
+              {dataFields.length > 0 ? labels.typedPropPath : labels.propPath}
+              <input value={draft.propPath} onChange={e => setDraft({ ...draft, propPath: e.target.value })} />
+            </label>
+          )}
           <label className="ub-panel__field" style={FIELD_STYLE}>
             {labels.dataSource}
             <select value={draft.connectorId} onChange={e => setDraft({ ...draft, connectorId: e.target.value, listedRef: '' })}>

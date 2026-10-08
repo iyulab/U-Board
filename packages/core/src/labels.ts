@@ -78,6 +78,10 @@ export interface UBoardLabels {
   removeBinding: string;
   noDataSources: string;
   propPath: string;
+  /** The prop picker's empty line, its "type a path" choice, and the field that path is typed in. */
+  choosePropPath: string;
+  otherPropPath: string;
+  typedPropPath: string;
   dataSource: string;
   /** The binding form's picker for an adapter that offers its references (`Adapter.references`),
    * and the line it shows before one is chosen. */
@@ -190,6 +194,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   removeBinding: 'Remove',
   noDataSources: 'No data source is connected.',
   propPath: 'Prop path',
+  choosePropPath: 'Choose what to bind',
+  otherPropPath: 'Another path…',
+  typedPropPath: 'Path in the widget props',
   dataSource: 'Data source',
   reference: 'Reference',
   chooseReference: 'Choose a reference',

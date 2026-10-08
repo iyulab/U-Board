@@ -23,7 +23,7 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   // 실 커넥터 대신 데모(HTTP Path/Value path 대신 데모가 나열하는 참조 중 하나).
   await page.getByText('노드 추가').click();
   await clickFirstNode(page);
-  await page.getByLabel('프롭 경로').fill('data.value');
+  await page.getByLabel('프롭 경로').selectOption('data.value');
   await page.getByRole('combobox', { name: '참조', exact: true }).selectOption('pump-a.state');
   await page.getByText('바인딩 저장', { exact: true }).click();
   await page.getByRole('button', { name: '저장', exact: true }).click();

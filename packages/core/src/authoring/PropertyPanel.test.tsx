@@ -231,6 +231,39 @@ describe('PropertyPanel bindings', () => {
     expect(screen.getByText('· pump-a.name')).toBeInTheDocument();
   });
 
+  it("picks the prop to bind from the widget's data fields, marking the ones already bound", () => {
+    render(<PropertyPanel node={statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/a' } } })} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+    const picker = screen.getByLabelText('Prop path');
+    expect(picker.tagName).toBe('SELECT');
+    expect(screen.getByRole('option', { name: /\(data\.label\)$/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /\(data\.value\) · bound$/ })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Path in the widget props')).not.toBeInTheDocument();
+  });
+
+  it('takes a path the widget does not list when the author chooses to type one', () => {
+    const onChange = vi.fn();
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: screen.getByRole('option', { name: 'Another path…' }).getAttribute('value') } });
+    const typed = screen.getByLabelText('Path in the widget props');
+    expect(typed).toHaveValue('');
+    fireEvent.change(typed, { target: { value: 'options.subtitle' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/a' } });
+    fireEvent.click(screen.getByText('Save binding'));
+    expect(onChange.mock.calls[0][0].bindings).toHaveProperty(['options.subtitle']);
+  });
+
+  it('opens a binding on an unlisted path in the typed field, and a widget with no known fields types every path', () => {
+    const custom = statusNode({ 'options.subtitle': { adapter: 'connector-1', ref: { path: '/a' } } });
+    const { unmount } = render(<PropertyPanel node={custom} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByText('Edit'));
+    expect(screen.getByLabelText('Path in the widget props')).toHaveValue('options.subtitle');
+    unmount();
+
+    const chart: Node = { id: 'c', x: 0, y: 0, anchored: false, widget: { type: 'chart.line', props: { data: [] } } };
+    render(<PropertyPanel node={chart} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+    expect(screen.getByLabelText('Prop path').tagName).toBe('INPUT');
+  });
+
   it('names widget types in the words it is given', () => {
     render(<PropertyPanel node={statusNode()} adapters={[]} onChange={vi.fn()} labels={KO_LABELS} />);
     expect(screen.getByRole('option', { name: '게이지' })).toHaveValue('gauge');

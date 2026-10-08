@@ -14,6 +14,9 @@ All notable changes to this package are documented here. The format follows
   library's description with its key. A value is written when its field is left; a cleared number is
   removed, so the widget's default applies; a bound field is marked. The JSON editor stays for
   everything else, folded under "Advanced", and the panel says how many options only it holds.
+- The binding form picks the prop to bind from the widget's data fields — named, with the bound ones
+  marked — and takes any other path when "Another path…" is chosen (or for a widget with no known
+  data fields).
 - Styling hooks: every element of `AuthoringView` and `ViewerPage` carries a stable class name
   (`ub-authoring`, `ub-panel`, `ub-viewer`, `ub-action`, …), and an optional default stylesheet,
   `@iyulab/u-board/styles.css`, gives them a finished look. The sheet reads `--ub-*` custom
@@ -103,7 +106,7 @@ All notable changes to this package are documented here. The format follows
   `mapOtherwisePlaceholder`, `mapped`, the response explorer's `wholeResponse`, and the authoring
   view's `widgetTypeNames`, `newNodeLabel`, `newNodeValue`, `bindingNeedsPropPath`,
   `bindingNeedsReference`, `previewLive`, `widgetData`, `widgetOptions`, `boundField`, `choiceDefault`,
-  `advancedProps` and `moreInAdvanced`. Code that builds a whole `UBoardLabels` (rather than the
+  `advancedProps`, `moreInAdvanced`, `choosePropPath`, `otherPropPath` and `typedPropPath`. Code that builds a whole `UBoardLabels` (rather than the
   `Partial` the components' `labels` prop takes) must add them; spreading `DEFAULT_LABELS` covers it.
 - The components no longer set their own look inline — spacing, type, borders and button looks come
   from `styles.css`; import it, or style the class names. Without it the views still work, with the
