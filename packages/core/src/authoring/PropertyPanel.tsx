@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react';
-import { applyValueMap, type Adapter, type ResolvedBinding } from '../adapter.js';
+import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
 import { describeQuality } from '../quality-text.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
-
-// Must match `DemoAdapter.id` in ../demo-adapter.js. Not imported as `DemoAdapter` itself so this
-// check stays an id comparison (robust across a duplicate-module-instance scenario, where
-// `instanceof` could silently return false) rather than a class-identity check.
-const DEMO_ADAPTER_ID = 'demo-cmms';
 
 export interface PropertyPanelProps {
   node: Node | null;
@@ -37,7 +32,8 @@ interface BindingDraft {
   connectorId: string;
   path: string;
   valuePath: string;
-  demoRef: string;
+  /** The `ref` picked from an adapter that offers its references (`Adapter.references`). */
+  listedRef: string;
   /** The value map as the form edits it — rows of source value → shown value, and the value for
    * anything else (empty: shown as it comes). Written as text: the map's usual job is a status
    * word or level. */
@@ -73,7 +69,7 @@ function fieldValue(text: string, loaded?: { value: unknown }): unknown {
 }
 
 function emptyDraft(connectorId: string): BindingDraft {
-  return { propPath: '', connectorId, path: '', valuePath: '', demoRef: '', mappings: [], ranges: [], otherwise: '' };
+  return { propPath: '', connectorId, path: '', valuePath: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
 }
 
 /** One field per line, its label above-left of it — inline, a label wrapped onto the line before
@@ -130,22 +126,24 @@ function mapFromDraft(draft: BindingDraft): ValueMap | undefined {
   };
 }
 
-/** Picks which adapter the binding form should default to: the first non-demo adapter when one
- * exists (so the real HTTP path/valuePath form — the headline feature this panel exists for — is
- * what the author sees on first open), falling back to `adapters[0]` (which may be the demo
- * adapter) only when no non-demo adapter is connected. */
+/** The adapter the binding form starts on: the first one given — the host orders them. */
 function initialConnectorId(adapters: readonly Adapter[]): string {
-  const nonDemo = adapters.find(a => a.id !== DEMO_ADAPTER_ID);
-  return (nonDemo ?? adapters[0])?.id ?? '';
+  return adapters[0]?.id ?? '';
+}
+
+/** The offered references, and the one a binding already has if the adapter no longer offers it —
+ * so opening an existing binding never quietly changes what it points at. */
+function withCurrent(references: readonly AdapterReference[], current: string): readonly AdapterReference[] {
+  return current === '' || references.some(r => r.ref === current) ? references : [...references, { ref: current }];
 }
 
 function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
   const ref = binding.ref as { path?: string; valuePath?: string } | string;
   const map = draftMap(binding.map);
   if (typeof ref === 'string') {
-    return { propPath, connectorId: binding.adapter, path: '', valuePath: '', demoRef: ref, ...map };
+    return { propPath, connectorId: binding.adapter, path: '', valuePath: '', listedRef: ref, ...map };
   }
-  return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', demoRef: '', ...map };
+  return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', listedRef: '', ...map };
 }
 
 export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS, clock = Date.now }: PropertyPanelProps) {
@@ -184,19 +182,34 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
     setExploreError(null);
   }, [node?.id, node?.widget.type, defaultConnectorId]);
 
+  // The references the chosen adapter offers, when it offers any (`Adapter.references`).
+  const [references, setReferences] = useState<readonly AdapterReference[]>([]);
+  const selectedAdapter = adapters.find(a => a.id === draft.connectorId);
+  useEffect(() => {
+    setReferences([]);
+    if (!selectedAdapter?.references) return;
+    let cancelled = false;
+    selectedAdapter.references().then(
+      list => {
+        if (!cancelled) setReferences(list);
+      },
+      () => {}
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedAdapter]);
+
   if (!node) {
     return <p>{labels.selectNode}</p>;
   }
 
-  const selectedAdapter = adapters.find(a => a.id === draft.connectorId);
-  // Scoped v1 extension seam: exactly two adapter ref-shapes exist today (the demo adapter's
-  // plain string ref, and every other adapter's `{path, valuePath}` HTTP shape), so an id check
-  // is enough. A real second connector *type* would need this to grow into something more
-  // general, but none exists yet — don't build that generality ahead of a second real case.
-  const isDemo = selectedAdapter?.id === DEMO_ADAPTER_ID;
+  // An adapter that names its references is bound by picking one; any other takes an HTTP
+  // connector reference (a request path and a JSON Pointer into the response).
+  const listed = typeof selectedAdapter?.references === 'function';
 
   const draftRef = (): unknown =>
-    isDemo ? draft.demoRef : { path: draft.path, valuePath: draft.valuePath || undefined };
+    listed ? draft.listedRef : { path: draft.path, valuePath: draft.valuePath || undefined };
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type = e.target.value;
@@ -239,7 +252,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
     : undefined;
 
   const handleExplore = async () => {
-    if (!selectedAdapter || isDemo) return;
+    if (!selectedAdapter || listed) return;
     setExploreError(null);
     try {
       const resolved = await selectedAdapter.resolve({ path: draft.path });
@@ -350,10 +363,19 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
               ))}
             </select>
           </label>
-          {isDemo ? (
+          {listed ? (
             <label style={FIELD_STYLE}>
-              {labels.demoReference}
-              <input value={draft.demoRef} onChange={e => setDraft({ ...draft, demoRef: e.target.value })} placeholder="pump-a.state" />
+              {labels.reference}
+              <select value={draft.listedRef} onChange={e => setDraft({ ...draft, listedRef: e.target.value })}>
+                <option value="" disabled>
+                  {labels.chooseReference}
+                </option>
+                {withCurrent(references, draft.listedRef).map(r => (
+                  <option key={r.ref} value={r.ref}>
+                    {r.label ?? r.ref}
+                  </option>
+                ))}
+              </select>
             </label>
           ) : (
             <>

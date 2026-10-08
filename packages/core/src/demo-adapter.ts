@@ -1,4 +1,4 @@
-import type { Adapter, ResolvedBinding } from './adapter.js';
+import type { Adapter, AdapterReference, ResolvedBinding } from './adapter.js';
 
 /** An adapter that serves fixed sample values, for previewing a board before a real data source is
  * connected. Its id is `demo-cmms`; a binding's `ref` is one of the string keys below —
@@ -11,6 +11,10 @@ export class DemoAdapter implements Adapter {
     'pump-a.load': { value: 73, quality: 'live' },
     'pump-b.state': { value: 'stopped (last known)', quality: 'stale' },
   };
+
+  async references(): Promise<readonly AdapterReference[]> {
+    return Object.keys(this.data).map(ref => ({ ref }));
+  }
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
     const key = ref as string;

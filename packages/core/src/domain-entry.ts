@@ -1,5 +1,5 @@
 export type { ViewDocument, Background, BackgroundImage, Node, Connector, Widget, Binding, ValueMap, Shape, RectShape, TextShape } from './view-document.js';
-export type { Adapter, ConnectionQuality, QualityReason, ResolvedBinding, ResolvedWidget } from './adapter.js';
+export type { Adapter, AdapterReference, ConnectionQuality, QualityReason, ResolvedBinding, ResolvedWidget } from './adapter.js';
 export { resolveWidget, applyValueMap } from './adapter.js';
 export type { ResolvedNode, ResolvedViewDocument } from './resolve-document.js';
 export { resolveDocument } from './resolve-document.js';

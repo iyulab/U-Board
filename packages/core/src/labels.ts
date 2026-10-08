@@ -66,7 +66,10 @@ export interface UBoardLabels {
   noDataSources: string;
   propPath: string;
   dataSource: string;
-  demoReference: string;
+  /** The binding form's picker for an adapter that offers its references (`Adapter.references`),
+   * and the line it shows before one is chosen. */
+  reference: string;
+  chooseReference: string;
   path: string;
   valuePath: string;
   explore: string;
@@ -159,7 +162,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   noDataSources: 'No data source is connected.',
   propPath: 'Prop path',
   dataSource: 'Data source',
-  demoReference: 'Reference key',
+  reference: 'Reference',
+  chooseReference: 'Choose a reference',
   path: 'Path',
   valuePath: 'Value path',
   explore: 'Explore',

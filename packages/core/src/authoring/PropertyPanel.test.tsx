@@ -234,13 +234,14 @@ describe('PropertyPanel bindings', () => {
     });
   });
 
-  it('uses a plain string ref for the demo adapter instead of the HTTP path/valuePath form', () => {
+  it('offers the references of an adapter that names them, instead of the HTTP path/valuePath form', async () => {
     const onChange = vi.fn();
     render(<PropertyPanel node={statusNode()} adapters={[new DemoAdapter()]} onChange={onChange} />);
 
     expect(screen.queryByLabelText('Path')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
-    fireEvent.change(screen.getByLabelText('Reference key'), { target: { value: 'pump-a.state' } });
+    await screen.findByRole('option', { name: 'pump-a.state' });
+    fireEvent.change(screen.getByLabelText('Reference'), { target: { value: 'pump-a.state' } });
     fireEvent.click(screen.getByText('Save binding'));
 
     expect(onChange).toHaveBeenCalledWith({
@@ -248,6 +249,21 @@ describe('PropertyPanel bindings', () => {
       props: { data: { label: 'Pump A', level: 'info', value: 'running' } },
       bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-a.state' } },
     });
+  });
+
+  // Not tied to one adapter: any adapter of the host's own that lists what it can resolve.
+  it("lists any adapter's references by their labels, and keeps a binding's reference the adapter no longer offers", async () => {
+    const tags: Adapter = {
+      id: 'plant-tags',
+      resolve: async () => ({ value: 1, quality: 'live' }),
+      references: async () => [{ ref: 'line2/pump-a/run', label: 'Pump A — running' }],
+    };
+    const node = statusNode({ 'data.value': { adapter: 'plant-tags', ref: 'line2/retired' } });
+    render(<PropertyPanel node={node} adapters={[tags]} onChange={vi.fn()} />);
+    fireEvent.click(screen.getByText('Edit'));
+
+    expect(await screen.findByRole('option', { name: 'Pump A — running' })).toHaveValue('line2/pump-a/run');
+    expect(screen.getByLabelText('Reference')).toHaveValue('line2/retired');
   });
 
   it('removes a binding', () => {

@@ -8,6 +8,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `Adapter.references()` (optional) and `AdapterReference`: an adapter with a known set of references
+  lists them, and the binding form of `AuthoringView` offers them to pick from — by `label` when given
+  — instead of the HTTP connector's path and value path. A binding's reference the adapter no longer
+  lists stays selected. `DemoAdapter` lists its keys.
 - `KO_LABELS`: every label in Korean, with times of day and ages in Korean (`timeText('ko')`,
   `ageText('ko')`), from the package root and `./viewer`. Pass it as `labels`, or lay your own words
   over it.
@@ -54,6 +58,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed — breaking
 
+- The binding form no longer recognises the demo adapter by its id: a string reference is picked
+  from `Adapter.references()`, and the form starts on the first adapter given (it used to skip the
+  demo adapter) — list the adapter to start on first. Label `demoReference` is now `reference`, with
+  a new `chooseReference` for the picker's empty line.
 - The `react` and `react-dom` peer range is `^19.2.0` (was `^19.0.0`): the views read the clock
   through `useEffectEvent`, which React 19.2 introduced.
 - `UBoardLabels` has new required members — `lastUpdated`, `notUpdating`, `time` and the value-map

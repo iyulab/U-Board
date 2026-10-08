@@ -79,6 +79,12 @@ to that source file, so the two can't quietly diverge from each other either.
 interface Adapter {
   readonly id: string;
   resolve(ref: unknown): Promise<ResolvedBinding>;
+  references?(): Promise<readonly AdapterReference[]>;
+}
+
+interface AdapterReference {
+  ref: string;
+  label?: string;
 }
 ```
 
@@ -95,6 +101,11 @@ interface Adapter {
   rejecting: the reason reaches the renderer, and the widget keeps its static value.
   The core does not look inside the source's answer — only the adapter knows whether the value a
   `ref` points at was there, so reporting `address` when it was not is the adapter's job.
+- `references()` — optional: the references this adapter resolves, for an adapter with a known set
+  of them (a sample's keys, the fields of a store in the host app, a broker's topics). The binding
+  form of `AuthoringView` then offers them to pick from, shown by `label` when given, and binds the
+  chosen `ref` string. Without it, the form takes an HTTP connector reference — a request path and a
+  JSON Pointer into the response. It plays no part in resolving.
 
 ### `ResolvedBinding`
 
