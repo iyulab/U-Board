@@ -10,9 +10,11 @@ interface Props {
 
 const { figure } = Astro.props;
 const n = figure.nodes;
+const liveText = JSON.stringify({ plant: figure.plant, ...n });
 ---
 
 <figure class="plant">
+  <div class="board" data-live-board={liveText}>
   <svg viewBox="0 0 600 400" role="img" aria-labelledby="plant-title plant-caption" xmlns="http://www.w3.org/2000/svg">
     <title id="plant-title">{figure.plant}</title>
     <defs>
@@ -60,6 +62,7 @@ const n = figure.nodes;
       {figure.staleNote.split(', ').map((line, i) => <tspan x="170" dy={i === 0 ? 0 : 14}>{line}</tspan>)}
     </text>
   </svg>
+  </div>
   <figcaption id="plant-caption">
     <span class="legend"><span class="swatch live" aria-hidden="true"></span>{figure.live}</span>
     <span class="legend"><span class="swatch stale" aria-hidden="true"></span>{figure.stale}</span>
@@ -68,9 +71,20 @@ const n = figure.nodes;
   </figcaption>
 </figure>
 
+<script>
+  import '../live/mount';
+</script>
+
 <style>
   .plant {
     margin: 0;
+  }
+  /* The live board takes the drawing's place at the drawing's proportions. */
+  .board.live {
+    aspect-ratio: 3 / 2;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--sheet);
   }
   svg {
     display: block;

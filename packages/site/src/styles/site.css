@@ -267,3 +267,13 @@ main,
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The demo instance is for invited accounts: a quiet link under the actions, not a call to action. */
+.sign-in {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.sign-in a {
+  color: var(--muted);
+}

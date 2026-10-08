@@ -61,9 +61,10 @@ const canonical = new URL(pathFor(locale), SITE_URL).href;
           <h1>{c.headline}</h1>
           <p class="lede" data-claim={c.lede.claim}>{c.lede.text}</p>
           <p class="actions">
-            <a class="primary" href={APP_URL} data-claim="delivery-demo">{c.tryIt}</a>
+            <a class="primary" href={SELF_HOSTING_URL}>{c.install}</a>
             <a class="secondary" href={SOURCE_URL}>{c.readSource}</a>
           </p>
+          <p class="sign-in"><a href={APP_URL}>{c.signIn}</a></p>
         </div>
         <PlantFigure figure={c.figure} />
       </section>

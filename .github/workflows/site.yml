@@ -11,6 +11,9 @@ on:
     branches: [main]
     paths:
       - 'packages/site/**'
+      # The board at the top of the site is drawn by the library, so a library change redeploys it.
+      - 'packages/core/**'
+      - 'package-lock.json'
       - '.github/workflows/site.yml'
   workflow_dispatch:
 
@@ -30,10 +33,9 @@ jobs:
           node-version: "24"
           cache: npm
 
-      # The site depends on nothing else in the workspace; skipping install scripts skips building
-      # the library, which the site does not use.
+      # Installing runs the workspace's postinstall, which builds the library the site's live board uses.
       - name: Install
-        run: npm ci --ignore-scripts
+        run: npm ci
 
       - name: Test
         run: npm test --workspace=packages/site

@@ -23,8 +23,9 @@ export interface Copy {
   description: string;
   headline: string;
   lede: { claim: string; text: string };
-  tryIt: string;
+  install: string;
   readSource: string;
+  signIn: string;
   figure: {
     caption: string;
     plant: string;
@@ -32,7 +33,7 @@ export interface Copy {
     stale: string;
     disconnected: string;
     staleNote: string;
-    nodes: { pump: string; running: string; temp: string; pressure: string; conveyor: string };
+    nodes: { pump: string; running: string; load: string; temp: string; pressure: string; conveyor: string };
   };
   sections: Section[];
   delivery: { heading: string; items: Section[] };
@@ -53,8 +54,9 @@ export const COPY: Record<Locale, Copy> = {
       claim: 'lede',
       text: '도면·네트워크도·지도 같은 배경 위에 값을 놓은 화면을 만들고, 그 화면을 운영 중인 다른 웹 페이지에 넣어 보여 줍니다. 값은 화면을 열어 둔 동안 그 값을 가진 시스템에서 계속 읽어 옵니다.',
     },
-    tryIt: '데모 열기',
+    install: '직접 설치',
     readSource: '소스 보기',
+    signIn: '초대받은 계정으로 데모 인스턴스에 로그인',
     figure: {
       caption: '값마다 자기 상태를 표시합니다. 정상인 값에는 테두리가 없습니다.',
       plant: '2라인 펌프실',
@@ -62,7 +64,7 @@ export const COPY: Record<Locale, Copy> = {
       stale: '갱신 지연',
       disconnected: '연결 끊김',
       staleNote: '데이터소스에 연결할 수 없음, 5분 전',
-      nodes: { pump: '펌프 A', running: '가동 중', temp: '온도', pressure: '압력', conveyor: '컨베이어' },
+      nodes: { pump: '펌프 A', running: '가동 중', load: '부하', temp: '온도', pressure: '압력', conveyor: '컨베이어' },
     },
     sections: [
       {
@@ -96,8 +98,8 @@ export const COPY: Record<Locale, Copy> = {
         },
         {
           claim: 'delivery-demo',
-          heading: '설치 전에 데모로',
-          body: '이유랩이 운영하는 데모 인스턴스에서 설치 없이 먼저 써 볼 수 있습니다.',
+          heading: '설치 전에 보기',
+          body: '이 페이지 맨 위의 보드는 제품의 뷰어가 지금 그리는 화면입니다. 값은 페이지 안의 예시 원천에서 읽습니다. 저작부터 공유까지는 이유랩이 운영하는 데모 인스턴스에서 초대받은 계정으로 써 볼 수 있습니다.',
         },
       ],
     },
@@ -142,8 +144,9 @@ export const COPY: Record<Locale, Copy> = {
       claim: 'lede',
       text: 'Place values on a floor plan, a network diagram or a map, and embed the view in the web pages your operators already use. Each value is read from the system that owns it for as long as the view is open.',
     },
-    tryIt: 'Try the demo',
+    install: 'Install it',
     readSource: 'Read the source',
+    signIn: 'Sign in to the demo instance with an invited account',
     figure: {
       caption: 'Every value shows its own state. A value that is live has no frame.',
       plant: 'Line 2 pump room',
@@ -151,7 +154,7 @@ export const COPY: Record<Locale, Copy> = {
       stale: 'Stale',
       disconnected: 'Disconnected',
       staleNote: 'data source unreachable, 5 minutes ago',
-      nodes: { pump: 'Pump A', running: 'Running', temp: 'Temperature', pressure: 'Pressure', conveyor: 'Conveyor' },
+      nodes: { pump: 'Pump A', running: 'Running', load: 'Load', temp: 'Temperature', pressure: 'Pressure', conveyor: 'Conveyor' },
     },
     sections: [
       {
@@ -185,8 +188,8 @@ export const COPY: Record<Locale, Copy> = {
         },
         {
           claim: 'delivery-demo',
-          heading: 'A demo before you install',
-          body: 'Try it first on the demo instance iyulab operates — nothing to install.',
+          heading: 'See it before you install',
+          body: 'The board at the top of this page is what the product\x27s viewer draws, right now, reading its values from a sample source inside the page. Authoring and sharing can be tried on the demo instance iyulab operates, with an invited account.',
         },
       ],
     },
