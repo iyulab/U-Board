@@ -1,19 +1,7 @@
 ---
-import '@fontsource/ibm-plex-sans-kr/400.css';
-import '@fontsource/ibm-plex-sans-kr/600.css';
-import '../styles/site.css';
+import Page from './Page.astro';
 import PlantFigure from './PlantFigure.astro';
-import {
-  COPY,
-  SITE_URL,
-  APP_URL,
-  SOURCE_URL,
-  DOCS_URL,
-  SELF_HOSTING_URL,
-  NPM_URL,
-  CONTACT_URL,
-  type Locale,
-} from '../copy';
+import { COPY, APP_URL, PATHS, SOURCE_URL, SELF_HOSTING_URL, type Locale } from '../copy';
 
 interface Props {
   locale: Locale;
@@ -21,119 +9,62 @@ interface Props {
 
 const { locale } = Astro.props;
 const c = COPY[locale];
-const pathFor = (l: Locale) => (l === 'ko' ? '/' : '/en/');
-const other: Locale = locale === 'ko' ? 'en' : 'ko';
-const canonical = new URL(pathFor(locale), SITE_URL).href;
 ---
 
-<!doctype html>
-<html lang={locale}>
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{c.title}</title>
-    <meta name="description" content={c.description} />
-    <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang="ko" href={new URL('/', SITE_URL).href} />
-    <link rel="alternate" hreflang="en" href={new URL('/en/', SITE_URL).href} />
-    <link rel="alternate" hreflang="x-default" href={new URL('/', SITE_URL).href} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="U-Board" />
-    <meta property="og:title" content={c.title} />
-    <meta property="og:description" content={c.description} />
-    <meta property="og:url" content={canonical} />
-    <meta property="og:locale" content={locale === 'ko' ? 'ko_KR' : 'en_US'} />
-    <meta property="og:image" content={new URL(`/og-${locale}.png`, SITE_URL).href} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={c.title} />
-    <meta name="twitter:card" content="summary_large_image" />
-  </head>
-  <body>
-    <header class="bar">
-      <a class="mark" href={pathFor(locale)}>U-Board</a>
-      <nav aria-label={locale === 'ko' ? '바로가기' : 'Shortcuts'}>
-        <a href={DOCS_URL}>{c.footer.docs}</a>
-        <a href={pathFor(other)} hreflang={other} lang={other}>{c.otherLanguage}</a>
-      </nav>
-    </header>
+<Page locale={locale} page="home" title={c.title} description={c.description}>
+  <section class="hero">
+    <div class="hero-text">
+      <h1>{c.headline}</h1>
+      <p class="lede" data-claim={c.lede.claim}>{c.lede.text}</p>
+      <p class="actions">
+        <a class="primary" href={SELF_HOSTING_URL}>{c.install}</a>
+        <a class="secondary" href={PATHS.try[locale]} data-claim="try">{c.tryIt}</a>
+      </p>
+      <p class="sign-in"><a href={SOURCE_URL}>{c.readSource}</a> · <a href={APP_URL}>{c.signIn}</a></p>
+    </div>
+    <PlantFigure figure={c.figure} />
+  </section>
 
-    <main>
-      <section class="hero">
-        <div class="hero-text">
-          <h1>{c.headline}</h1>
-          <p class="lede" data-claim={c.lede.claim}>{c.lede.text}</p>
-          <p class="actions">
-            <a class="primary" href={SELF_HOSTING_URL}>{c.install}</a>
-            <a class="secondary" href={SOURCE_URL}>{c.readSource}</a>
-          </p>
-          <p class="sign-in"><a href={APP_URL}>{c.signIn}</a></p>
-        </div>
-        <PlantFigure figure={c.figure} />
-      </section>
+  <section class="facts">
+    {
+      c.sections.map(s => (
+        <article data-claim={s.claim}>
+          <h2>{s.heading}</h2>
+          <p>{s.body}</p>
+        </article>
+      ))
+    }
+  </section>
 
-      <section class="facts">
-        {
-          c.sections.map(s => (
-            <article data-claim={s.claim}>
-              <h2>{s.heading}</h2>
-              <p>{s.body}</p>
-            </article>
-          ))
-        }
-      </section>
+  <section class="delivery" aria-labelledby="delivery-heading">
+    <h2 id="delivery-heading">{c.delivery.heading}</h2>
+    <dl>
+      {
+        c.delivery.items.map(item => (
+          <div data-claim={item.claim}>
+            <dt>{item.heading}</dt>
+            <dd>{item.body}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
 
-      <section class="delivery" aria-labelledby="delivery-heading">
-        <h2 id="delivery-heading">{c.delivery.heading}</h2>
-        <dl>
-          {
-            c.delivery.items.map(item => (
-              <div data-claim={item.claim}>
-                <dt>{item.heading}</dt>
-                <dd>{item.body}</dd>
-              </div>
-            ))
-          }
-        </dl>
-      </section>
+  <section class="not" aria-labelledby="not-heading">
+    <h2 id="not-heading">{c.notHeading}</h2>
+    <ul>
+      {
+        c.not.map(item => (
+          <li data-claim={item.claim}>
+            <strong>{item.heading}</strong> {item.body}
+          </li>
+        ))
+      }
+    </ul>
+  </section>
 
-      <section class="not" aria-labelledby="not-heading">
-        <h2 id="not-heading">{c.notHeading}</h2>
-        <ul>
-          {
-            c.not.map(item => (
-              <li data-claim={item.claim}>
-                <strong>{item.heading}</strong> {item.body}
-              </li>
-            ))
-          }
-        </ul>
-      </section>
-
-      <section class="license" data-claim={c.license.claim}>
-        <h2>{c.license.heading}</h2>
-        <p>{c.license.body}</p>
-      </section>
-    </main>
-
-    <footer class="foot">
-      <div class="foot-inner">
-        <nav aria-label={locale === 'ko' ? '사이트 바깥 링크' : 'Elsewhere'}>
-          <a href={SOURCE_URL}>{c.footer.source}</a>
-          <a href={DOCS_URL}>{c.footer.docs}</a>
-          <a href={SELF_HOSTING_URL}>{c.footer.selfHosting}</a>
-          <a href={NPM_URL}>{c.footer.npm}</a>
-          <a href={CONTACT_URL}>{c.footer.contact}</a>
-        </nav>
-        <div class="foot-meta">
-          <uplatform-affiliation product="u-board" lang={locale} theme="light"></uplatform-affiliation>
-          <p>© 2026 iyulab</p>
-        </div>
-      </div>
-    </footer>
-    <script>
-      import '@uplatform/brand';
-    </script>
-  </body>
-</html>
+  <section class="license" data-claim={c.license.claim}>
+    <h2>{c.license.heading}</h2>
+    <p>{c.license.body}</p>
+  </section>
+</Page>

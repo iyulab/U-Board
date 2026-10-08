@@ -3,7 +3,7 @@
 // (`@iyulab/u-board/viewer`), so what a visitor sees is what an installation renders — nothing to
 // sign in to, no server to wake.
 
-import type { Adapter, ResolvedBinding, ViewDocument } from '@iyulab/u-board/viewer';
+import type { Adapter, AdapterReference, ResolvedBinding, ViewDocument } from '@iyulab/u-board/viewer';
 
 export interface SampleBoardText {
   plant: string;
@@ -116,6 +116,9 @@ export function sampleBoard(text: SampleBoardText): ViewDocument {
 
 export const SAMPLE_ADAPTER_ID = 'sample';
 
+/** Every reference the sample source answers for. */
+export const SAMPLE_REFERENCES = ['pump-a.state', 'pump-a.load', 'tank.temperature', 'line.pressure', 'conveyor.state'] as const;
+
 /**
  * Values that move the way a running plant's do, computed from the clock rather than stored: the
  * pump runs and its load drifts, the tank temperature wanders a little, the line pressure stopped
@@ -127,8 +130,16 @@ export class SampleAdapter implements Adapter {
   readonly id = SAMPLE_ADAPTER_ID;
   private readonly lastPressureAt: string;
 
-  constructor(private readonly now: () => number = Date.now) {
+  /** `names` labels the references for the binding form — in the page's language. */
+  constructor(
+    private readonly now: () => number = Date.now,
+    private readonly names: Readonly<Record<string, string>> = {}
+  ) {
     this.lastPressureAt = new Date(this.now() - 5 * 60_000).toISOString();
+  }
+
+  async references(): Promise<readonly AdapterReference[]> {
+    return SAMPLE_REFERENCES.map(ref => ({ ref, label: this.names[ref] }));
   }
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {

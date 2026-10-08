@@ -4,6 +4,14 @@
 
 export type Locale = 'ko' | 'en';
 
+/** Every page of the site, in both languages — the address each language version lives at. */
+export const PATHS = {
+  home: { ko: '/', en: '/en/' },
+  try: { ko: '/try/', en: '/en/try/' },
+} as const;
+
+export type PageId = keyof typeof PATHS;
+
 export const SITE_URL = 'https://board.u-platform.kr';
 export const APP_URL = 'https://board-app.u-platform.kr/';
 export const SOURCE_URL = 'https://github.com/iyulab/U-Board';
@@ -24,6 +32,7 @@ export interface Copy {
   headline: string;
   lede: { claim: string; text: string };
   install: string;
+  tryIt: string;
   readSource: string;
   signIn: string;
   figure: {
@@ -42,6 +51,18 @@ export interface Copy {
   license: Section;
   footer: { source: string; docs: string; selfHosting: string; npm: string; contact: string };
   otherLanguage: string;
+  try: {
+    title: string;
+    description: string;
+    heading: string;
+    intro: string;
+    saved: string;
+    unsaved: string;
+    reset: string;
+    narrow: string;
+    source: string;
+    references: Record<string, string>;
+  };
 }
 
 export const COPY: Record<Locale, Copy> = {
@@ -55,6 +76,7 @@ export const COPY: Record<Locale, Copy> = {
       text: '도면·네트워크도·지도 같은 배경 위에 값을 놓은 화면을 만들고, 그 화면을 운영 중인 다른 웹 페이지에 넣어 보여 줍니다. 값은 화면을 열어 둔 동안 그 값을 가진 시스템에서 계속 읽어 옵니다.',
     },
     install: '직접 설치',
+    tryIt: '브라우저에서 만들어 보기',
     readSource: '소스 보기',
     signIn: '초대받은 계정으로 데모 인스턴스에 로그인',
     figure: {
@@ -134,6 +156,24 @@ export const COPY: Record<Locale, Copy> = {
       contact: '문의',
     },
     otherLanguage: 'English',
+    try: {
+      title: 'U-Board — 브라우저에서 만들어 보기',
+      description: '설치 없이 브라우저에서 U-Board 보드를 만들어 봅니다. 노드를 놓고, 값을 연결하고, 상태가 어떻게 보이는지 바로 확인합니다.',
+      heading: '브라우저에서 만들어 보기',
+      intro: '제품에 들어 있는 저작 화면 그대로입니다. 왼쪽에서 노드를 놓고 끌어 옮기고, 노드를 고른 뒤 오른쪽 속성에서 값을 연결해 보세요. 오른쪽 미리보기는 뷰어가 그리는 화면입니다. 값은 이 페이지 안의 예시 원천에서 읽고, 저장은 이 브라우저에만 남습니다.',
+      saved: '이 브라우저에 저장했습니다.',
+      unsaved: '저장하지 않은 변경이 있습니다.',
+      reset: '처음 상태로',
+      narrow: '저작 화면은 넓은 화면에 맞춰져 있습니다. 컴퓨터에서 열면 편하게 써 볼 수 있습니다.',
+      source: '예시 데이터',
+      references: {
+        'pump-a.state': '펌프 A 운전 상태',
+        'pump-a.load': '펌프 A 부하(%)',
+        'tank.temperature': '탱크 온도',
+        'line.pressure': '배관 압력(갱신 지연)',
+        'conveyor.state': '컨베이어 상태(연결 끊김)',
+      },
+    },
   },
   en: {
     title: 'U-Board — spatial dashboards that bind live data onto floor plans',
@@ -145,6 +185,7 @@ export const COPY: Record<Locale, Copy> = {
       text: 'Place values on a floor plan, a network diagram or a map, and embed the view in the web pages your operators already use. Each value is read from the system that owns it for as long as the view is open.',
     },
     install: 'Install it',
+    tryIt: 'Build one in your browser',
     readSource: 'Read the source',
     signIn: 'Sign in to the demo instance with an invited account',
     figure: {
@@ -224,5 +265,23 @@ export const COPY: Record<Locale, Copy> = {
       contact: 'Contact',
     },
     otherLanguage: '한국어',
+    try: {
+      title: 'U-Board — build one in your browser',
+      description: 'Build a U-Board board in your browser, nothing to install: place nodes, bind values and see at once how each state is shown.',
+      heading: 'Build one in your browser',
+      intro: 'This is the authoring view the product ships. Place and drag nodes on the left, select one and bind its values in the properties on the right; the preview beside it is what the viewer draws. Values come from a sample source inside this page, and saving keeps the board in this browser only.',
+      saved: 'Saved in this browser.',
+      unsaved: 'There are unsaved changes.',
+      reset: 'Start over',
+      narrow: 'The authoring view is made for a wide screen; it is easier to try on a computer.',
+      source: 'Sample data',
+      references: {
+        'pump-a.state': 'Pump A running state',
+        'pump-a.load': 'Pump A load (%)',
+        'tank.temperature': 'Tank temperature',
+        'line.pressure': 'Line pressure (stale)',
+        'conveyor.state': 'Conveyor state (disconnected)',
+      },
+    },
   },
 };

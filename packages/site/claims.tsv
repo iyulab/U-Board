@@ -16,3 +16,4 @@ not-hmi	design	README.md	No symbol library, alarms, control output or screen nav
 not-data	design	README.md · docs/scope.md · docs/overview.md	Boards store binding references, not values
 not-bi	design	README.md · docs/scope.md	No warehouse charts or pivot tables
 license	works	LICENSE · README.md	AGPL-3.0-or-later, commercial license available
+try	works	packages/site/src/live/playground.ts · packages/core/src/authoring/AuthoringView.tsx	The authoring view the library ships, in the page, on the sample board and source; saving keeps the board in the browser (localStorage)

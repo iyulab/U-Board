@@ -1,10 +1,8 @@
 import type { APIRoute } from 'astro';
-import { SITE_URL } from '../copy';
+import { PATHS, SITE_URL } from '../copy';
 
 // Both language versions, each naming the other (hreflang), as search engines read a sitemap.
-const PAGES = [
-  { ko: '/', en: '/en/' },
-];
+const PAGES = Object.values(PATHS);
 
 export const GET: APIRoute = () => {
   const url = (path: string) => new URL(path, SITE_URL).href;
