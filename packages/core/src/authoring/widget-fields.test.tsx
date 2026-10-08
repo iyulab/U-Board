@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { literalChoices, widgetFields, withField } from './widget-fields.js';
+import { widgetFields, withField } from './widget-fields.js';
 import { WidgetPropsForm } from './WidgetPropsForm.js';
 import { seedWidget } from './widget-catalog.js';
 import type { Widget } from '../view-document.js';
@@ -10,12 +10,6 @@ import type { Widget } from '../view-document.js';
 const summary = (widget: Widget) => widgetFields(widget).fields.map(f => `${f.section}.${f.key}:${f.kind}`);
 
 describe('widgetFields', () => {
-  it('reads choices from a union of string literals, and nothing else', () => {
-    expect(literalChoices('"info" | "success"')).toEqual(['info', 'success']);
-    expect(literalChoices('string')).toBeUndefined();
-    expect(literalChoices('"a" | number')).toBeUndefined();
-  });
-
   it("offers a status widget's data fields, its level as a choice", () => {
     const { fields, otherOptions } = widgetFields(seedWidget('status'));
     expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual(['data.label:text', 'data.value:text', 'data.level:choice']);
@@ -23,16 +17,24 @@ describe('widgetFields', () => {
     expect(otherOptions).toBe(0);
   });
 
-  it("offers a gauge's value and the options whose type the library's examples show, and counts the rest", () => {
+  it("offers a gauge's value and every option with a simple value, with the widget's defaults, and counts the rest", () => {
     const { fields, otherOptions } = widgetFields(seedWidget('gauge'));
-    expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual(['data.value:number', 'options.min:number', 'options.max:number', 'options.unit:text']);
-    expect(otherOptions).toBe(3); // thresholds (a list), label, subtitle
+    expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual([
+      'data.value:number',
+      'options.min:number',
+      'options.max:number',
+      'options.unit:text',
+      'options.label:text',
+      'options.subtitle:text',
+    ]);
+    expect(fields.find(f => f.key === 'max')?.defaultValue).toBe(100);
+    expect(otherOptions).toBe(1); // thresholds — a list
   });
 
-  it('learns an option type from the widget itself when the examples do not show it', () => {
-    const gauge = { ...seedWidget('gauge'), props: { data: { value: 1 }, options: { subtitle: 'Line 2' } } };
-    expect(summary(gauge)).toContain('options.subtitle:text');
-    expect(widgetFields(gauge).otherOptions).toBe(2);
+  it('offers a choice with its default, and a yes/no', () => {
+    const steps = widgetFields({ type: 'steps', props: { data: [] } }).fields;
+    expect(steps.find(f => f.key === 'layout')).toMatchObject({ kind: 'choice', choices: ['vertical', 'horizontal'], defaultValue: 'vertical' });
+    expect(steps.find(f => f.key === 'compact')).toMatchObject({ kind: 'boolean', defaultValue: false });
   });
 
   it('leaves data given as rows to the JSON editor', () => {
@@ -70,6 +72,11 @@ describe('WidgetPropsForm', () => {
     expect(onChange).toHaveBeenCalledWith({ ...gauge, props: { data: { value: 40 }, options: { max: 250 } } });
   });
 
+  it("shows the widget's default where the value is left out", () => {
+    render(<WidgetPropsForm widget={{ type: 'gauge', props: { data: { value: 1 } } }} onChange={vi.fn()} />);
+    expect(screen.getByLabelText(/Maximum range value/)).toHaveAttribute('placeholder', '100');
+  });
+
   it('removes a number that is cleared, so the widget default applies', () => {
     const onChange = vi.fn();
     render(<WidgetPropsForm widget={gauge} onChange={onChange} />);
@@ -96,6 +103,6 @@ describe('WidgetPropsForm', () => {
 
   it('says how many options only the JSON editor holds', () => {
     render(<WidgetPropsForm widget={gauge} onChange={vi.fn()} />);
-    expect(screen.getByText('3 more options can be set in Advanced.')).toBeInTheDocument();
+    expect(screen.getByText('More options in Advanced: 1')).toBeInTheDocument();
   });
 });

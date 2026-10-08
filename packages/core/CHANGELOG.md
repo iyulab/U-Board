@@ -8,10 +8,15 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- The default stylesheet has dark fallbacks: the authoring view and the viewer follow the page's declared theme
+  (`<html data-theme="dark" | "light">`) and, without one, the system preference — the rule the widgets follow.
+  The board itself stays light: its paper (`--ub-board-bg`, white) and the widgets on it.
+- The widget form shows each option's default where the value is left out (a gauge's range 0–100, a layout's
+  default choice).
 - The property panel edits a widget's values with controls: the data fields the widget library
   describes (`@iyulab/u-widgets/tools` `WIDGET_DATA_FIELDS` — a text box, a number, or a choice for a
-  set of words such as a status level) and the options whose value type it shows, each named by the
-  library's description with its key. A value is written when its field is left; a cleared number is
+  set of words such as a status level) and every option whose value is a text, a number, a yes/no or a
+  choice (`getWidgetOptions`), each named by the library's description with its key. A value is written when its field is left; a cleared number is
   removed, so the widget's default applies; a bound field is marked. The JSON editor stays for
   everything else, folded under "Advanced", and the panel says how many options only it holds.
 - The binding form picks the prop to bind from the widget's data fields — named, with the bound ones
@@ -116,6 +121,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- Requires `@iyulab/u-widgets` `^0.27.0`: its option metadata (types, choices, defaults) drives the widget form,
+  and its widgets follow the page or system theme when the page declares none — which is why the board pins its
+  widgets to the light palette (above).
 - Requires `@canvas-kit/viewer` `^0.5.0` (was `^0.4.0`; nothing here changes with it).
 - Requires `@iyulab/u-widgets` `^0.26.3` (was `^0.24.0`). Widgets' own built-in text — region names,
   fallback cards — now goes through the u-widgets locale table, so a host can translate it with

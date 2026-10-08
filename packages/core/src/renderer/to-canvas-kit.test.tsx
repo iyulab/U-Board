@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect } from 'vitest';
 import type { ReactElement } from 'react';
 import { toCanvasKit } from './to-canvas-kit';
@@ -130,6 +131,12 @@ describe('toCanvasKit', () => {
       const frame = overlayFor({});
       expect(frame.props.style?.border).toBeUndefined();
       expect(frame.props.title).toBeUndefined();
+    });
+
+    it('draws the widget in the light palette whatever the page or system theme — it sits on the board, not the page', () => {
+      const frame = overlayFor({});
+      const children = React.Children.toArray(frame.props.children) as React.ReactElement<{ theme?: string }>[];
+      expect(children.find(child => child.props.theme !== undefined)?.props.theme).toBe('light');
     });
 
     it('adds no border when every binding is live (ISA-101 — normal state is unmarked)', () => {

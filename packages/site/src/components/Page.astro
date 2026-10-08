@@ -32,7 +32,9 @@ const canonical = url(PATHS[page][locale]);
 ---
 
 <!doctype html>
-<html lang={locale}>
+<!-- The site has one, light, palette. Declaring it keeps the live board's widgets and frames light
+     on a dark system too (they follow a declared theme, else the system preference). -->
+<html lang={locale} data-theme="light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

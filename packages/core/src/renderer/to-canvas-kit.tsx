@@ -47,6 +47,11 @@ const VISUALLY_HIDDEN_STYLE: CSSProperties = {
 
 const WIDGET_FILL_STYLE: CSSProperties = { width: '100%', minHeight: '100%' };
 
+/** Widgets sit on the board — its background drawing, or the board's light paper (`--ub-board-bg`) —
+ * not on the page around it, so they take the light palette whatever the system or page theme. A
+ * dark page still gets dark controls around the board; the board itself reads like a drawing. */
+const BOARD_WIDGET_THEME = 'light';
+
 export interface CanvasKitRenderOutput {
   scene: Scene;
   overlays: ViewerOverlayItem[];
@@ -124,7 +129,7 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
               one a chart keeps its own default and leaves the box half empty. A minimum, not a fixed
               height: in a box smaller than what a widget can draw in, the widget stays whole and
               extends past the box, rather than a chart's plot being pressed flat or a gauge cut off. */}
-          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} />
+          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} theme={BOARD_WIDGET_THEME} />
           <span role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
             {label ?? ''}
           </span>

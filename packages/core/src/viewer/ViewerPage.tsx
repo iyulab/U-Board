@@ -189,8 +189,8 @@ function asLastKnown(doc: ResolvedViewDocument): ResolvedViewDocument {
 const NOT_UPDATING_STYLE: CSSProperties = {
   padding: '2px 8px',
   borderRadius: 4,
-  background: 'var(--ub-warning-bg, #fef3c7)',
-  color: 'var(--ub-warning, #92400e)',
+  background: 'var(--_ub-warning-bg, var(--ub-warning-bg, #fef3c7))',
+  color: 'var(--_ub-warning, var(--ub-warning, #92400e))',
   fontWeight: 600,
 };
 

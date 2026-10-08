@@ -138,6 +138,12 @@ host themes it by defining them on `:root` or on an ancestor of the view:
 | `--ub-font-sans` | Typeface |
 | `--ub-font-size-xs`, `--ub-font-size-sm`, `--ub-font-size-md`, `--ub-font-size-base` | Text sizes (11, 12, 13, 14 px by default) |
 | `--ub-panel-width` | Width of the authoring view's property panel (320 px by default) |
+| `--ub-board-bg` | The board's paper inside the editor and viewer frames — white by default, in the dark theme too |
+
+Light or dark, the fallbacks follow the page's declared theme (`<html data-theme="dark" | "light">`) and,
+without one, the system preference — the rule the widgets themselves follow. The board stays light
+in both: its paper (`--ub-board-bg`) and the widgets on it, which sit on the board's drawing rather
+than on the page.
 
 The tokens marked for failures, the "not updating" notice and node frames apply without the
 stylesheet too — those colors carry meaning. The sheet's rules select these class names, mostly one

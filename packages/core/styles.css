@@ -8,6 +8,10 @@
  * here. Define any of them on `:root` (or on an ancestor of the view) and the view follows. The
  * full list is in the package README ("Styling").
  *
+ * Light or dark: the fallbacks follow the page's declared theme (`<html data-theme="dark" | "light">`)
+ * and, without one, the system preference (`prefers-color-scheme`) — the same rule the widgets
+ * themselves (`@iyulab/u-widgets`) follow, so the view and the widgets in it never disagree.
+ *
  * Rules target the stable class names (`ub-authoring`, `ub-panel`, `ub-action`, …), mostly one class
  * each, so they hold against a host's element styles (`h2`, `button`) while any host rule on those
  * classes, loaded after this sheet, wins.
@@ -27,6 +31,9 @@
   --_ub-accent: var(--ub-brand-solid, #0f766e);
   --_ub-accent-text: var(--ub-text-inverse, #ffffff);
   --_ub-accent-subtle: var(--ub-brand-subtle, rgba(15, 118, 110, 0.08));
+  --_ub-error: var(--ub-error, #b91c1c);
+  --_ub-warning: var(--ub-warning, #92400e);
+  --_ub-warning-bg: var(--ub-warning-bg, #fef3c7);
   --_ub-radius-sm: var(--ub-radius-sm, 6px);
   --_ub-radius-md: var(--ub-radius-md, 10px);
   --_ub-space-1: var(--ub-space-1, 4px);
@@ -42,6 +49,38 @@
   font-size: var(--_ub-font-base);
   line-height: 1.5;
   color: var(--_ub-text);
+}
+
+/* The dark fallbacks — twice, because a declared theme and the system preference are separate
+   conditions: once for a page that declares dark, once for one that declares nothing on a dark system. */
+:root[data-theme='dark'] :is(.ub-authoring, .ub-viewer) {
+  --_ub-surface: var(--ub-bg-surface, #111b2f);
+  --_ub-subtle: var(--ub-bg-subtle, #16243a);
+  --_ub-border: var(--ub-border, #22324a);
+  --_ub-border-strong: var(--ub-border-strong, #2b3f5c);
+  --_ub-text-strong: var(--ub-text-strong, #e2e8f0);
+  --_ub-text: var(--ub-text-normal, #cbd5e1);
+  --_ub-text-muted: var(--ub-text-muted, #94a3b8);
+  --_ub-accent-subtle: var(--ub-brand-subtle, rgba(45, 212, 191, 0.12));
+  --_ub-error: var(--ub-error, #f87171);
+  --_ub-warning: var(--ub-warning, #fbbf24);
+  --_ub-warning-bg: var(--ub-warning-bg, #2d1d05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) :is(.ub-authoring, .ub-viewer) {
+    --_ub-surface: var(--ub-bg-surface, #111b2f);
+    --_ub-subtle: var(--ub-bg-subtle, #16243a);
+    --_ub-border: var(--ub-border, #22324a);
+    --_ub-border-strong: var(--ub-border-strong, #2b3f5c);
+    --_ub-text-strong: var(--ub-text-strong, #e2e8f0);
+    --_ub-text: var(--ub-text-normal, #cbd5e1);
+    --_ub-text-muted: var(--ub-text-muted, #94a3b8);
+    --_ub-accent-subtle: var(--ub-brand-subtle, rgba(45, 212, 191, 0.12));
+    --_ub-error: var(--ub-error, #f87171);
+    --_ub-warning: var(--ub-warning, #fbbf24);
+    --_ub-warning-bg: var(--ub-warning-bg, #2d1d05);
+  }
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────── */
@@ -115,12 +154,14 @@
   color: var(--_ub-text-muted);
 }
 
-/* The editor and the preview: framed, so a board with nothing on it still reads as a board. */
+/* The editor and the preview: framed, so a board with nothing on it still reads as a board. Inside
+   the frame is the board's paper — light in either theme, like the drawings boards are made on, and
+   what the widgets on it (always light) are drawn for. */
 .ub-authoring__surface,
 .ub-viewer__surface {
   border: 1px solid var(--_ub-border);
   border-radius: var(--_ub-radius-md);
-  background: var(--_ub-surface);
+  background: var(--ub-board-bg, #ffffff);
   overflow: hidden;
 }
 

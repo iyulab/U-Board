@@ -46,7 +46,7 @@ export const KO_LABELS: UBoardLabels = {
   boundField: '바인딩됨',
   choiceDefault: '기본값',
   advancedProps: '고급: JSON으로 편집',
-  moreInAdvanced: '고급에서 옵션 {count}개를 더 설정할 수 있습니다.',
+  moreInAdvanced: '고급에서 설정할 옵션: {count}개',
   invalidJson: '올바른 JSON이 아닙니다',
   bindingsHeading: '바인딩',
   noBindings: '바인딩 없음',

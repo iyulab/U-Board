@@ -47,7 +47,7 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: W
       case 'boolean':
         return (
           <label key={id} className="ub-panel__field ub-panel__field--check" style={CHECK_STYLE}>
-            <input type="checkbox" checked={value === true} onChange={e => set(field, e.target.checked)} />
+            <input type="checkbox" checked={value === undefined ? field.defaultValue === true : value === true} onChange={e => set(field, e.target.checked)} />
             {name}
           </label>
         );
@@ -56,7 +56,7 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: W
           <label key={id} className="ub-panel__field" style={FIELD_STYLE}>
             {name}
             <select value={typeof value === 'string' ? value : ''} onChange={e => set(field, e.target.value === '' ? undefined : e.target.value)}>
-              <option value="">{labels.choiceDefault}</option>
+              <option value="">{field.defaultValue === undefined ? labels.choiceDefault : `${labels.choiceDefault} (${text(field.defaultValue)})`}</option>
               {field.choices!.map(choice => (
                 <option key={choice} value={choice}>
                   {choice}
@@ -74,6 +74,8 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: W
               key={`${id}=${text(value)}`}
               type="number"
               defaultValue={typeof value === 'number' ? value : ''}
+              // Left empty, the widget's own default applies — shown so the empty field does not read as nothing.
+              placeholder={field.defaultValue === undefined ? undefined : text(field.defaultValue)}
               onBlur={e => {
                 const raw = e.currentTarget.value.trim();
                 // Cleared: the widget's own default applies again.
@@ -89,6 +91,7 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: W
             <input
               key={`${id}=${text(value)}`}
               defaultValue={text(value)}
+              placeholder={field.defaultValue === undefined ? undefined : text(field.defaultValue)}
               onBlur={e => {
                 // Left as shown: nothing to write (an absent value stays absent).
                 if (e.currentTarget.value !== text(value)) set(field, e.currentTarget.value);

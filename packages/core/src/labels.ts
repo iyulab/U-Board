@@ -186,7 +186,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   boundField: 'bound',
   choiceDefault: 'Default',
   advancedProps: 'Advanced: edit as JSON',
-  moreInAdvanced: '{count} more options can be set in Advanced.',
+  moreInAdvanced: 'More options in Advanced: {count}',
   invalidJson: 'Not valid JSON',
   bindingsHeading: 'Bindings',
   noBindings: 'No bindings',
