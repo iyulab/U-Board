@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ViewerPage, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
+import { ViewerPage, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
 import { API_BASE, fetchWithRetry, apiClock } from './api-base.js';
-import { KO_LABELS } from './u-board-labels.js';
 
 type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[] };
 

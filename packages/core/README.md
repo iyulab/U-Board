@@ -92,14 +92,16 @@ wheel zooms either.
 The components show English text by default. Pass `labels` — any subset of `UBoardLabels`, the
 rest stays English — to show your own; `DEFAULT_LABELS` lists every key with its English text.
 `labels.qualityText` holds the words for connection quality (the node tooltip and screen-reader
-announcement), and `labels.time` writes the time of day — `timeText(locale)` builds one:
+announcement), and `labels.time` writes the time of day — `timeText(locale)` builds one.
+
+Korean ships with the package as `KO_LABELS`, every key included; lay your own words over it as
+over the English:
 
 ```tsx
-import { ViewerPage, type UBoardLabels } from '@iyulab/u-board/viewer';
+import { ViewerPage, KO_LABELS } from '@iyulab/u-board/viewer';
 
-const labels: Partial<UBoardLabels> = { zoomIn: '확대', zoomOut: '축소', fitToView: '화면에 맞추기' };
-
-<ViewerPage initialDocument={doc} adapters={adapters} labels={labels} />;
+<ViewerPage initialDocument={doc} adapters={adapters} labels={KO_LABELS} />;
+<ViewerPage initialDocument={doc} adapters={adapters} labels={{ ...KO_LABELS, boardRegion: '2라인 펌프실' }} />;
 ```
 
 ## Widgets

@@ -1,6 +1,8 @@
-import { ageText, timeText, type UBoardLabels } from '@iyulab/u-board';
+import { timeText, type UBoardLabels } from './labels.js';
+import { ageText } from './quality-text.js';
 
-/** U-Board 저작·뷰어 컴포넌트의 한국어 문구 — 콘솔 전체와 같은 말을 쓴다("연결 끊김" 등). */
+/** Every label in Korean — what `AuthoringView` and `ViewerPage` show when given `labels: KO_LABELS`,
+ *  with times of day and ages in Korean too (`timeText('ko')`, `ageText('ko')`). */
 export const KO_LABELS: UBoardLabels = {
   addNode: '노드 추가',
   addRectDecoration: '사각형 장식 추가',

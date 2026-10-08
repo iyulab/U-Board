@@ -13,4 +13,12 @@ describe('viewer entry ("./viewer")', () => {
     expect(typeof mod.ViewerPage).toBe('function');
     expect(typeof mod.serverClock).toBe('function');
   });
+
+  it('offers the labels in Korean, ages and times of day included', () => {
+    expect(mod.KO_LABELS.zoomIn).toBe('확대');
+    expect(mod.KO_LABELS.qualityText.quality.disconnected).toMatch(/^연결 끊김/);
+    expect(mod.KO_LABELS.qualityText.age(5 * 60_000)).toMatch(/분/);
+    // Every key the English set has — a label added to one and not the other would fall back to English.
+    expect(Object.keys(mod.KO_LABELS).sort()).toEqual(Object.keys(mod.DEFAULT_LABELS).sort());
+  });
 });

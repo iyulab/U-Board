@@ -8,6 +8,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `KO_LABELS`: every label in Korean, with times of day and ages in Korean (`timeText('ko')`,
+  `ageText('ko')`), from the package root and `./viewer`. Pass it as `labels`, or lay your own words
+  over it.
 - `AuthoringView` sets the background image: "Background image" takes a PNG, JPEG, WebP, GIF or SVG
   file of up to 4 MB and keeps it inside the document as a `data:` URL at the image's own size in
   pixels — so a board needs no other store, opens the same on a network without internet access,

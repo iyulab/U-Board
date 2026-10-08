@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { Link, useParams } from 'react-router';
-import { AuthoringView, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { AuthoringView, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import { DemoAdapter } from '@iyulab/u-board/demo';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, listShareTokens, createShareToken, deleteShareToken, type ShareTokenSummary, apiClock,
 } from '../api-client.js';
 import { HttpConnectorAdapter } from '../http-connector-adapter.js';
-import { KO_LABELS } from '../u-board-labels.js';
 import './BoardEditorPage.css';
 import { Loading } from '../design-system/Loading.js';
 

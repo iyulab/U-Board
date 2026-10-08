@@ -15,4 +15,5 @@ export { serverClock } from './server-clock.js';
 export type { ServerClock, ResponseWithHeaders } from './server-clock.js';
 export type { QualityText, QualitySummary, DescribeQualityOptions } from './quality-text.js';
 export { DEFAULT_LABELS, timeText } from './labels.js';
+export { KO_LABELS } from './labels-ko.js';
 export type { UBoardLabels } from './labels.js';
