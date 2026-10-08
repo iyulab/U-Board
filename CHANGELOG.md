@@ -22,6 +22,14 @@ do when upgrading. Each release's notes carry its section.
   expired link and a server that did not answer apart, instead of calling every failure an invalid
   link. It retries a server that did not answer on its own — after 2 seconds, doubling up to a minute,
   and at once when the network comes back — so a screen left open recovers from a deploy or an outage.
+- The board editor offers Export beside Save: a board can be downloaded as a file that Import opens —
+  to move it to another installation, or as a backup.
+
+### Fixed
+
+- In the board editor, the background image and the connector lines could be selected and dragged,
+  which moved them in the editor only and showed the board shifted against its nodes. They stay in
+  place now; a press on the drawing starts a box selection.
 
 ## [0.1.0] - 2026-10-08
 

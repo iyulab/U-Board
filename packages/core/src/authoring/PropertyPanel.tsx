@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
 import { WIDGET_TYPES, seedWidget, type WidgetType } from './widget-catalog.js';
@@ -131,6 +131,19 @@ function initialConnectorId(adapters: readonly Adapter[]): string {
   return adapters[0]?.id ?? '';
 }
 
+/** A draft the author has not started: nothing typed, picked or mapped. */
+function isUntouched(draft: BindingDraft): boolean {
+  return (
+    draft.propPath === '' &&
+    draft.path === '' &&
+    draft.valuePath === '' &&
+    draft.listedRef === '' &&
+    draft.mappings.length === 0 &&
+    draft.ranges.length === 0 &&
+    draft.otherwise === ''
+  );
+}
+
 /** The offered references, and the one a binding already has if the adapter no longer offers it —
  * so opening an existing binding never quietly changes what it points at. */
 function withCurrent(references: readonly AdapterReference[], current: string): readonly AdapterReference[] {
@@ -167,29 +180,44 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
     setPropsError(null);
   }, [node?.id, node?.widget.props]);
 
+  // Read by the effects below rather than depended on: a caller may pass a fresh array (and fresh
+  // adapter objects) on every render, which must neither wipe an in-progress draft nor refetch.
+  const firstAdapterId = useEffectEvent(() => initialConnectorId(adapters));
+  const adapterById = useEffectEvent((id: string) => adapters.find(a => a.id === id));
+  const defaultConnectorId = initialConnectorId(adapters);
+
   // Resets the binding draft/preview/explore state. Keyed on the node and the widget *type* — not
   // the whole widget — so it fires on node-switch or an actual type change (which should discard
   // an in-progress binding edit) but not on every props-only or binding-only save.
-  // Depends on the default connector id — a string — rather than the `adapters` array, so a caller
-  // passing a fresh array literal on every render doesn't wipe the in-progress draft.
-  const defaultConnectorId = initialConnectorId(adapters);
   useEffect(() => {
-    setDraft(emptyDraft(defaultConnectorId));
+    setDraft(emptyDraft(firstAdapterId()));
     setEditingPropPath(null);
     setPreview(null);
     setPreviewError(null);
     setExploreResult(null);
     setExploreError(null);
-  }, [node?.id, node?.widget.type, defaultConnectorId]);
+  }, [node?.id, node?.widget.type]);
+
+  // The adapters can change after the panel opens (a host loading its connectors): a draft nobody
+  // has started follows the new first adapter; one in progress keeps what the author chose.
+  useEffect(() => {
+    setDraft(d =>
+      isUntouched(d) && editingPropPath === null && d.connectorId !== defaultConnectorId
+        ? { ...d, connectorId: defaultConnectorId }
+        : d
+    );
+  }, [defaultConnectorId, editingPropPath]);
 
   // The references the chosen adapter offers, when it offers any (`Adapter.references`).
   const [references, setReferences] = useState<readonly AdapterReference[]>([]);
   const selectedAdapter = adapters.find(a => a.id === draft.connectorId);
+  const offersReferences = typeof selectedAdapter?.references === 'function';
   useEffect(() => {
     setReferences([]);
-    if (!selectedAdapter?.references) return;
+    const adapter = adapterById(draft.connectorId);
+    if (!adapter?.references) return;
     let cancelled = false;
-    selectedAdapter.references().then(
+    adapter.references().then(
       list => {
         if (!cancelled) setReferences(list);
       },
@@ -198,7 +226,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
     return () => {
       cancelled = true;
     };
-  }, [selectedAdapter]);
+  }, [draft.connectorId, offersReferences]);
 
   if (!node) {
     return <p>{labels.selectNode}</p>;
@@ -206,7 +234,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
 
   // An adapter that names its references is bound by picking one; any other takes an HTTP
   // connector reference (a request path and a JSON Pointer into the response).
-  const listed = typeof selectedAdapter?.references === 'function';
+  const listed = offersReferences;
 
   const draftRef = (): unknown =>
     listed ? draft.listedRef : { path: draft.path, valuePath: draft.valuePath || undefined };
@@ -269,7 +297,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   };
 
   const handleSaveBinding = () => {
-    if (!draft.propPath || !selectedAdapter || rangeIssues.length > 0) return;
+    if (!draft.propPath || !selectedAdapter || rangeIssues.length > 0 || (listed && !draft.listedRef)) return;
     const bindings = { ...node.widget.bindings };
     const map = mapFromDraft(draft);
     bindings[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef(), ...(map && { map }) };
@@ -355,7 +383,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           </label>
           <label style={FIELD_STYLE}>
             {labels.dataSource}
-            <select value={draft.connectorId} onChange={e => setDraft({ ...draft, connectorId: e.target.value })}>
+            <select value={draft.connectorId} onChange={e => setDraft({ ...draft, connectorId: e.target.value, listedRef: '' })}>
               {adapters.map(a => (
                 <option key={a.id} value={a.id}>
                   {labelFor(a.id, connectorLabels)}
@@ -457,7 +485,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           <button type="button" onClick={handlePreview}>
             {labels.previewBinding}
           </button>
-          <button type="button" onClick={handleSaveBinding} disabled={!draft.propPath || rangeIssues.length > 0}>
+          <button type="button" onClick={handleSaveBinding} disabled={!draft.propPath || rangeIssues.length > 0 || (listed && !draft.listedRef)}>
             {labels.saveBinding}
           </button>
           {previewError && <p style={{ color: '#dc2626', fontSize: 12 }}>{previewError}</p>}

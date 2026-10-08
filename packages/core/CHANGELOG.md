@@ -8,6 +8,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `AuthoringView` offers Export beside Save when the host saves (`onSave`): a board kept by the host
+  can still be downloaded as the file Import opens — to carry it to another installation, or as a
+  backup. That download does not count as saving.
 - `Adapter.references()` (optional) and `AdapterReference`: an adapter with a known set of references
   lists them, and the binding form of `AuthoringView` offers them to pick from — by `label` when given
   — instead of the HTTP connector's path and value path. A binding's reference the adapter no longer

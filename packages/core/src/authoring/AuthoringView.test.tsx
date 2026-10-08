@@ -109,7 +109,6 @@ describe('AuthoringView onSave', () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} />);
 
     expect(screen.getByText('Save')).toBeInTheDocument();
-    expect(screen.queryByText('Export')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Save'));
 
@@ -127,6 +126,24 @@ describe('AuthoringView onSave', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalled());
 
     expect(clickSpy).not.toHaveBeenCalled();
+    clickSpy.mockRestore();
+  });
+
+  // A board kept by the host can still be carried to another installation, or kept as a backup —
+  // the file Import opens. That copy is not a save: the unsaved-changes guard stays.
+  it('also exports a file when onSave is provided, without counting it as saving', () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const onDirtyChange = vi.fn();
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} onDirtyChange={onDirtyChange} />);
+    fireEvent.click(screen.getByText('Add node'));
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
+
+    fireEvent.click(screen.getByText('Export'));
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+    expect(onDirtyChange).toHaveBeenLastCalledWith(true);
     clickSpy.mockRestore();
   });
 

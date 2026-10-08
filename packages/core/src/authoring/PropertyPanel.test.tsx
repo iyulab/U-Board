@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { PropertyPanel } from './PropertyPanel.js';
@@ -264,6 +264,64 @@ describe('PropertyPanel bindings', () => {
 
     expect(await screen.findByRole('option', { name: 'Pump A — running' })).toHaveValue('line2/pump-a/run');
     expect(screen.getByLabelText('Reference')).toHaveValue('line2/retired');
+  });
+
+  const listing = (id: string, refs: string[], calls?: { count: number }): Adapter => ({
+    id,
+    resolve: async () => ({ value: 1, quality: 'live' }),
+    references: async () => {
+      if (calls) calls.count++;
+      return refs.map(ref => ({ ref }));
+    },
+  });
+
+  it('will not save a binding to a listing adapter until a reference is picked', async () => {
+    const onChange = vi.fn();
+    render(<PropertyPanel node={statusNode()} adapters={[listing('tags', ['a'])]} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+    await screen.findByRole('option', { name: 'a' });
+
+    expect(screen.getByText('Save binding')).toBeDisabled();
+    fireEvent.click(screen.getByText('Save binding'));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('forgets the picked reference when the author switches to another adapter', async () => {
+    render(<PropertyPanel node={statusNode()} adapters={[listing('tags', ['a']), listing('other', ['b'])]} onChange={vi.fn()} />);
+    await screen.findByRole('option', { name: 'a' });
+    fireEvent.change(screen.getByLabelText('Reference'), { target: { value: 'a' } });
+    fireEvent.change(screen.getByLabelText('Data source'), { target: { value: 'other' } });
+
+    await screen.findByRole('option', { name: 'b' });
+    expect(screen.getByLabelText('Reference')).toHaveValue('');
+    expect(screen.queryByRole('option', { name: 'a' })).not.toBeInTheDocument();
+  });
+
+  // A host loading its connectors after the panel opened: an untouched form follows the new first
+  // adapter, one the author has started keeps its choice.
+  it('follows adapters that arrive late only while the form is untouched', () => {
+    const demo = new DemoAdapter();
+    const { rerender } = render(<PropertyPanel node={statusNode()} adapters={[demo]} onChange={vi.fn()} />);
+    rerender(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter(), demo]} onChange={vi.fn()} />);
+    expect(screen.getByLabelText('Data source')).toHaveValue('connector-1');
+
+    const other = render(<PropertyPanel node={statusNode()} adapters={[demo]} onChange={vi.fn()} />);
+    const scoped = within(other.container);
+    fireEvent.change(scoped.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+    other.rerender(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter(), demo]} onChange={vi.fn()} />);
+    expect(scoped.getByLabelText('Data source')).toHaveValue('demo-cmms');
+    expect(scoped.getByLabelText('Prop path')).toHaveValue('data.value');
+  });
+
+  it('asks a listing adapter for its references once, though the host passes fresh adapters every render', async () => {
+    const calls = { count: 0 };
+    const { rerender } = render(<PropertyPanel node={statusNode()} adapters={[listing('tags', ['a'], calls)]} onChange={vi.fn()} />);
+    await screen.findByRole('option', { name: 'a' });
+    for (let i = 0; i < 3; i++) {
+      rerender(<PropertyPanel node={statusNode()} adapters={[listing('tags', ['a'], calls)]} onChange={vi.fn()} />);
+    }
+    await screen.findByRole('option', { name: 'a' });
+    expect(calls.count).toBe(1);
   });
 
   it('removes a binding', () => {

@@ -181,16 +181,21 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
 
   const handleSave = async () => {
     setFileError(null);
-    if (onSave) {
-      try {
-        await onSave(doc);
-        setLastSavedDoc(doc);
-      } catch {
-        // `onSave` (the consumer's save action) is responsible for surfacing the failure in its
-        // own UI — this view only needs to know not to clear the unsaved-changes guard.
-      }
-      return;
+    if (!onSave) return handleExport();
+    try {
+      await onSave(doc);
+      setLastSavedDoc(doc);
+    } catch {
+      // `onSave` (the consumer's save action) is responsible for surfacing the failure in its
+      // own UI — this view only needs to know not to clear the unsaved-changes guard.
     }
+  };
+
+  /** Downloads the document as a file — what Import opens. Without `onSave` it is how the document
+   *  is kept; with one it is a copy to carry elsewhere (another installation, a backup), so it does
+   *  not count as saving. */
+  const handleExport = () => {
+    setFileError(null);
     const blob = new Blob([serializeViewDocument(doc)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -198,7 +203,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     link.download = 'view-document.json';
     link.click();
     URL.revokeObjectURL(url);
-    setLastSavedDoc(doc);
+    if (!onSave) setLastSavedDoc(doc);
   };
 
   const handleImportClick = () => fileInputRef.current?.click();
@@ -283,8 +288,15 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
         <button onClick={() => handleAddDecoration('text')} style={{ marginBottom: 8 }}>
           {labels.addTextDecoration}
         </button>{' '}
-        <button onClick={handleSave} style={{ marginBottom: 8 }}>
-          {onSave ? labels.save : labels.export}
+        {onSave && (
+          <>
+            <button onClick={handleSave} style={{ marginBottom: 8 }}>
+              {labels.save}
+            </button>{' '}
+          </>
+        )}
+        <button onClick={handleExport} style={{ marginBottom: 8 }}>
+          {labels.export}
         </button>{' '}
         <button onClick={handleImportClick} style={{ marginBottom: 8 }}>
           {labels.import}
