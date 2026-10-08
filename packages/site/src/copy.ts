@@ -121,7 +121,7 @@ export const COPY: Record<Locale, Copy> = {
         {
           claim: 'delivery-demo',
           heading: '설치 전에 보기',
-          body: '이 페이지 맨 위의 보드는 제품의 뷰어가 지금 그리는 화면입니다. 값은 페이지 안의 예시 원천에서 읽습니다. 저작부터 공유까지는 이유랩이 운영하는 데모 인스턴스에서 초대받은 계정으로 써 볼 수 있습니다.',
+          body: '이 페이지 맨 위의 보드는 제품의 뷰어가 지금 그리는 화면입니다. 값은 페이지 안의 예시 원천에서 읽습니다. 보드 만들기는 “브라우저에서 만들어 보기”에서 설치 없이 해 볼 수 있고, 공유 링크까지는 이유랩이 운영하는 데모 인스턴스에서 초대받은 계정으로 써 볼 수 있습니다.',
         },
       ],
     },
@@ -230,7 +230,7 @@ export const COPY: Record<Locale, Copy> = {
         {
           claim: 'delivery-demo',
           heading: 'See it before you install',
-          body: 'The board at the top of this page is what the product\x27s viewer draws, right now, reading its values from a sample source inside the page. Authoring and sharing can be tried on the demo instance iyulab operates, with an invited account.',
+          body: 'The board at the top of this page is what the product\x27s viewer draws, right now, reading its values from a sample source inside the page. Building a board can be tried in your browser, nothing to install; share links can be tried on the demo instance iyulab operates, with an invited account.',
         },
       ],
     },

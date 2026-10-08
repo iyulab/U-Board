@@ -6,7 +6,9 @@ network diagram, a map, or a freeform layout — and embed the result anywhere o
 ![A pump room drawn as the background, with a running pump, its load on a gauge, a temperature, a stale pressure in a dashed amber frame and a disconnected conveyor in a dotted grey frame](docs/images/board.png)
 
 The board above runs live at the top of [board.u-platform.kr](https://board.u-platform.kr/) — the
-library's own viewer, reading a sample source inside the page. iyulab also operates a demo
+library's own viewer, reading a sample source inside the page — and
+[board.u-platform.kr/try/](https://board.u-platform.kr/try/) opens the authoring view on the same
+board, kept in the browser and exported as a file an installation imports. iyulab also operates a demo
 instance at [board-app.u-platform.kr](https://board-app.u-platform.kr/), where invited accounts can
 try authoring and sharing before installing; to install U-Board on your own network, see
 [docs/self-hosting.md](docs/self-hosting.md).
@@ -55,8 +57,8 @@ authoring UI (set the background image; add/drag/resize nodes and rect/text deco
 property panel for editing the selected node's widget type, static props, and data bindings,
 including a path explorer for HTTP-shaped adapter responses and a value map that turns a source's
 words or numbers — by exact value or numeric range — into what the widget takes; a label editor for
-the selected text decoration), local save
-(export/import), and a read-only viewer mode are implemented and browser-verified. The editor and
+the selected text decoration), export/import of the document as a file (beside the host's own
+Save, when it has one), and a read-only viewer mode are implemented and browser-verified. The editor and
 the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
 or keyboard.
 Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
@@ -133,7 +135,9 @@ with a property panel for editing the selected node's widget type, static props,
 (including a path explorer that walks an HTTP adapter's response tree and writes a JSON Pointer
 to the picked value) or the selected text
 decoration's label — is exported from the package's main entry point alongside the read-only
-`ViewerPage`:
+`ViewerPage`. An adapter that lists its references (`Adapter.references()`) is bound by picking
+one from that list; any other takes an HTTP connector reference. The background and the connector
+lines stay put while nodes and decorations are edited:
 
 ```ts
 import { AuthoringView, type Adapter } from '@iyulab/u-board';
