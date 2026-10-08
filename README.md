@@ -3,6 +3,14 @@
 Spatial dashboard authoring middleware. Build data-bound views on a canvas — a floor plan, a
 network diagram, a map, or a freeform layout — and embed the result anywhere on the web.
 
+![A pump room drawn as the background, with a running pump, its load on a gauge, a temperature, a stale pressure in a dashed amber frame and a disconnected conveyor in a dotted grey frame](docs/images/board.png)
+
+The board above runs live at the top of [board.u-platform.kr](https://board.u-platform.kr/) — the
+library's own viewer, reading a sample source inside the page. iyulab also operates a demo
+instance at [board-app.u-platform.kr](https://board-app.u-platform.kr/), where invited accounts can
+try authoring and sharing before installing; to install U-Board on your own network, see
+[docs/self-hosting.md](docs/self-hosting.md).
+
 ## Who this is for
 
 Teams building operational software (asset management, industrial monitoring, facility
