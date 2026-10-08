@@ -11,6 +11,14 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- The console's pages before sign-in — sign-in, the first account, an invitation, password reset and
+  a page not found — share one layout with the product mark and the U-Platform affiliation instead of
+  rendering as unstyled forms. Sign-in says that accounts come by invitation; the first account says
+  it will run the installation. Inputs carry autocomplete hints for password managers.
+- While the console checks the session, the product mark turns in the middle of the screen.
+
 ## [0.1.0] - 2026-10-08
 
 The first release as a published image. What it does is described in the [README](README.md#status);
