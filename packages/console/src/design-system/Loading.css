@@ -1,0 +1,19 @@
+.ub-page-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ub-space-3);
+  background: var(--ub-bg-app);
+  color: var(--ub-text-muted);
+  font-size: var(--ub-font-size-base);
+}
+
+.ub-page-loading u-mark {
+  width: 48px;
+}
+
+.ub-page-loading p {
+  margin: 0;
+}

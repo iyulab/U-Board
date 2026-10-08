@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react';
 import { getInvitation, acceptInvitation, switchWorkspace, ApiError, type InvitationDetails } from '../api-client.js';
 import { SignupPage } from './SignupPage.js';
 import { LoginPage } from './LoginPage.js';
+import { Link } from 'react-router';
 import { Loading } from '../design-system/Loading.js';
+import { Alert } from '../design-system/Alert.js';
+import { AuthLayout } from '../design-system/AuthLayout.js';
 
 // Why accepting failed, in terms of what the person can do about it.
 const ACCEPT_ERROR_MESSAGES: Record<string, string> = {
@@ -49,20 +52,24 @@ export function InvitePage({ token, onJoined }: { token: string; onJoined: (work
     onJoined(workspaceId);
   }
 
-  if (error) return <p role="alert">{error}</p>;
-  if (!invitation) return <Loading />;
+  if (error) {
+    return (
+      <AuthLayout title="초대" footer={<Link to="/">로그인으로</Link>}>
+        <Alert>{error}</Alert>
+      </AuthLayout>
+    );
+  }
+  if (!invitation) return <Loading page />;
 
-  return (
-    <>
-      <p>
-        {invitation.inviterName}님이 {invitation.workspaceName} 워크스페이스에 {invitation.role}로 초대했습니다.{' '}
-        {new Date(invitation.expiresAt).toLocaleDateString()}까지 유효합니다.
-      </p>
-      {invitation.hasAccount ? (
-        <LoginPage prefillEmail={invitation.email} onSuccess={handleLoginSuccess} />
-      ) : (
-        <SignupPage invitationToken={token} prefillEmail={invitation.email} onSuccess={handleSignupSuccess} />
-      )}
-    </>
+  const context = (
+    <p>
+      {invitation.inviterName}님이 {invitation.workspaceName} 워크스페이스에 {invitation.role}로 초대했습니다.{' '}
+      {new Date(invitation.expiresAt).toLocaleDateString()}까지 유효합니다.
+    </p>
+  );
+  return invitation.hasAccount ? (
+    <LoginPage prefillEmail={invitation.email} intro={context} onSuccess={handleLoginSuccess} />
+  ) : (
+    <SignupPage invitationToken={token} prefillEmail={invitation.email} intro={context} onSuccess={handleSignupSuccess} />
   );
 }

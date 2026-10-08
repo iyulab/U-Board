@@ -1,5 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { signup, ApiError } from '../api-client.js';
+import { AuthLayout } from '../design-system/AuthLayout.js';
+import { Alert, Button, FormField } from '../design-system/index.js';
 
 const ERROR_MESSAGES: Record<string, string> = {
   EMAIL_TAKEN: '이미 가입된 이메일입니다.',
@@ -13,10 +15,12 @@ const ERROR_MESSAGES: Record<string, string> = {
 export function SignupPage({
   invitationToken,
   prefillEmail,
+  intro,
   onSuccess,
 }: {
   invitationToken?: string;
   prefillEmail?: string;
+  intro?: ReactNode;
   onSuccess: (workspaceId: string) => void;
 }) {
   const [email, setEmail] = useState(prefillEmail ?? '');
@@ -40,22 +44,36 @@ export function SignupPage({
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>가입</h1>
-      <label>
-        이메일
-        <input type="email" value={email} disabled={Boolean(prefillEmail)} onChange={e => setEmail(e.target.value)} required />
-      </label>
-      <label>
-        비밀번호
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
-      </label>
-      <label>
-        이름
-        <input type="text" value={name} onChange={e => setName(e.target.value)} required />
-      </label>
-      {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={submitting}>가입</button>
-    </form>
+    <AuthLayout title="가입" intro={intro}>
+      <form onSubmit={handleSubmit}>
+        <FormField label="이메일">
+          <input
+            type="email"
+            autoComplete="username"
+            value={email}
+            disabled={Boolean(prefillEmail)}
+            onChange={e => setEmail(e.target.value)}
+            required
+          />
+        </FormField>
+        <FormField label="비밀번호">
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            minLength={8}
+          />
+        </FormField>
+        <FormField label="이름">
+          <input type="text" autoComplete="name" value={name} onChange={e => setName(e.target.value)} required />
+        </FormField>
+        {error && <Alert>{error}</Alert>}
+        <Button type="submit" disabled={submitting}>
+          가입
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

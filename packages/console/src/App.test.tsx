@@ -36,6 +36,8 @@ describe('App', () => {
     vi.mocked(api.getBootstrapStatus).mockResolvedValue({ hasAnyUser: false });
     render(<App RouterComponent={MemoryRouter} initialEntries={['/']} />);
     expect(await screen.findByRole('heading', { name: '가입' })).toBeInTheDocument();
+    // The first account runs the installation — said before it is made, not discovered after.
+    expect(screen.getByText(/이 설치의 첫 계정을 만듭니다/)).toBeInTheDocument();
   });
 
   it('redirects "/" to /boards (inside the authenticated shell) when a session exists', async () => {

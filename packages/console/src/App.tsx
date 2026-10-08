@@ -12,6 +12,7 @@ import { AccountPage } from './pages/AccountPage.js';
 import { NotFoundPage } from './pages/NotFoundPage.js';
 import { RequireSession } from './RequireSession.js';
 import { Alert } from './design-system/Alert.js';
+import { AuthLayout } from './design-system/AuthLayout.js';
 import { BoardsListPage } from './pages/BoardsListPage.js';
 import { ConnectorsPage } from './pages/ConnectorsPage.js';
 import { ToastProvider } from './design-system/Toast.js';
@@ -52,10 +53,23 @@ function RootRoute() {
     load();
   }, []);
 
-  if (status === 'loading') return <Loading />;
-  if (status === 'error') return <Alert onRetry={load}>세션을 확인하지 못했습니다</Alert>;
+  if (status === 'loading') return <Loading page />;
+  if (status === 'error') {
+    return (
+      <AuthLayout title="연결할 수 없습니다">
+        <Alert onRetry={load}>세션을 확인하지 못했습니다</Alert>
+      </AuthLayout>
+    );
+  }
   if (status === 'authenticated') return <Navigate to="/boards" replace />;
-  if (status === 'needs-bootstrap-signup') return <SignupPage onSuccess={() => navigate(0)} />;
+  if (status === 'needs-bootstrap-signup') {
+    return (
+      <SignupPage
+        intro={<p>이 설치의 첫 계정을 만듭니다. 이 계정이 설치를 운영하고, 다른 사람은 이 계정의 초대로 들어옵니다.</p>}
+        onSuccess={() => navigate(0)}
+      />
+    );
+  }
   return <LoginPage onSuccess={() => navigate(0)} />;
 }
 

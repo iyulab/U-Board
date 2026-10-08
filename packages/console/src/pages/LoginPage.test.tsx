@@ -46,4 +46,25 @@ describe('LoginPage', () => {
     renderLogin({ onSuccess: vi.fn() });
     expect(screen.getByRole('link', { name: '비밀번호를 잊으셨나요?' })).toHaveAttribute('href', '/forgot-password');
   });
+
+  // An installation with an account takes no self-signup: a visitor without one is told where
+  // accounts come from instead of being left at a bare form.
+  it('names the product and says accounts come by invitation', () => {
+    renderLogin({ onSuccess: vi.fn() });
+    expect(screen.getByRole('heading', { name: '로그인' })).toBeInTheDocument();
+    expect(screen.getByText('U-Board')).toBeInTheDocument();
+    expect(screen.getByText(/계정은 초대로 발급됩니다/)).toBeInTheDocument();
+  });
+
+  it('lets a caller replace that sentence with its own context', () => {
+    renderLogin({ onSuccess: vi.fn(), intro: <p>초대 맥락</p> });
+    expect(screen.getByText('초대 맥락')).toBeInTheDocument();
+    expect(screen.queryByText(/계정은 초대로 발급됩니다/)).not.toBeInTheDocument();
+  });
+
+  it('marks its inputs for password managers', () => {
+    renderLogin({ onSuccess: vi.fn() });
+    expect(screen.getByLabelText('이메일')).toHaveAttribute('autocomplete', 'username');
+    expect(screen.getByLabelText('비밀번호')).toHaveAttribute('autocomplete', 'current-password');
+  });
 });
