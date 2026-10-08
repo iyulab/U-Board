@@ -65,14 +65,15 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
     await expect(sharePage.getByRole('listitem').filter({ has: sharePage.getByText('Asset 1', { exact: true }) })).toContainText('Fault');
     await expect(sharePage.locator('[title="연결 끊김 — 값을 받지 못함 (바인딩한 값이 원천에 없음)"]')).toHaveCount(1);
 
-    // One resolve request per board load, whatever the binding count. The dev server renders under
-    // React StrictMode, which runs the load effect twice — so "per load" rather than a literal 1+1.
+    // One resolve request for the board on screen, whatever the binding count. The dev server renders
+    // under React StrictMode, which runs the load effect twice; the first run is cancelled, so its
+    // board request may go out but nothing is resolved for it.
     const loads = shareRequests.filter(r => r === `GET /api/share/boards/${board.id}`).length;
     const resolves = shareRequests.filter(r => r === `POST /api/share/boards/${board.id}/resolve`).length;
     expect(shareRequests).toHaveLength(loads + resolves);
     expect(loads).toBeGreaterThanOrEqual(1);
     expect(loads).toBeLessThanOrEqual(2);
-    expect(resolves).toBe(loads);
+    expect(resolves).toBe(1);
     expect(upstreamCalls).toBeLessThanOrEqual(resolves);
     await shareContext.close();
   } finally {

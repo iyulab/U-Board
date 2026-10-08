@@ -44,7 +44,7 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
 
   // 쿠키 없는 별도 브라우저 컨텍스트로 공유 링크 열기
   //
-  // NOTE: 아래 두 negative assertion(더 이상 유효하지 않습니다가 안 보임 / 불러오는 중...이
+  // NOTE: 아래 두 negative assertion(유효하지 않다는 안내가 안 보임 / 불러오는 중...이
   // 사라짐)만으로는 완전히 빈 페이지도 통과한다(실측 — 이전 로컬 실행에서 5176 포트에 고장난
   // 잔여 서버가 붙어 있었을 때 이 두 assertion은 그대로 통과했고, 회수 후 단계의 positive
   // assertion에서야 실패가 드러났다). 그래서 board-info GET 응답이 실제로 200을 반환하는지
@@ -59,7 +59,7 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
     sharePage.goto(shareUrl),
   ]);
   expect(boardInfoResp.status()).toBe(200);
-  await expect(sharePage.getByText('더 이상 유효하지 않습니다')).not.toBeVisible();
+  await expect(sharePage.getByText('이 공유 링크는 유효하지 않습니다')).not.toBeVisible();
   await expect(sharePage.locator('body')).not.toContainText('불러오는 중...', { timeout: 10000 });
   // 위 negative assertion들은 200 응답이 실제로 뷰어에 렌더링됐음을 증명하지 않는다 — 응답
   // 파싱이나 canvas-kit 렌더 파이프라인이 조용히 실패해도 통과한다. ViewerPage는 resolveDocument
@@ -117,10 +117,10 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await page.getByRole('button', { name: '회수' }).click();
   await expect(page.getByRole('button', { name: '회수' })).not.toBeVisible();
 
-  // 회수된 링크는 더 이상 유효하지 않음
+  // 회수된 링크는 유효하지 않다고 안내함(서버 404)
   const revokedContext = await browser.newContext();
   const revokedPage = await revokedContext.newPage();
   await revokedPage.goto(shareUrl);
-  await expect(revokedPage.getByText('더 이상 유효하지 않습니다')).toBeVisible();
+  await expect(revokedPage.getByText('이 공유 링크는 유효하지 않습니다')).toBeVisible();
   await revokedContext.close();
 });

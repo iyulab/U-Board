@@ -1,0 +1,48 @@
+/* What the viewer says instead of a board — centered in the frame it is embedded in, readable at a
+   distance on a wall screen, and quiet enough to sit inside another application's page. */
+.share-message {
+  box-sizing: border-box;
+  min-height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  word-break: keep-all;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Pretendard, 'Noto Sans KR', sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: #475569;
+}
+
+.share-message p {
+  margin: 0;
+  max-width: 36em;
+}
+
+.share-message button {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  .share-message {
+    color: #cbd5e1;
+  }
+
+  .share-message button {
+    background: #1e293b;
+    border-color: #475569;
+    color: #f1f5f9;
+  }
+}

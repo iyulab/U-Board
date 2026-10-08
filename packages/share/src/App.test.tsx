@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { App, SHARE_POLL_INTERVAL_MS } from './App.js';
+import { App, SHARE_POLL_INTERVAL_MS, retryDelayMs } from './App.js';
 import { apiClock } from './api-base.js';
 
 vi.mock('@iyulab/u-board/viewer', async () => {
@@ -28,10 +28,11 @@ function setLocation(search: string) {
 const DOC = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
 
 describe('App', () => {
-  it('shows an error when board or token query params are missing', async () => {
+  it('says the address is malformed when board or token query params are missing, without asking the server', async () => {
     setLocation('');
     render(<App />);
-    expect(await screen.findByText(/더 이상 유효하지 않습니다/)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/공유 링크 주소가 올바르지 않습니다/);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('fetches the board and renders ViewerPage on success', async () => {
@@ -70,11 +71,47 @@ describe('App', () => {
     expect((await screen.findByTestId('viewer-page')).dataset.label).toBe('Line 2 floor');
   });
 
-  it('shows an error when the fetch fails', async () => {
+  it('says the link is not valid when the server does not know it (404 — unknown or revoked)', async () => {
     setLocation('?board=b1&token=bad');
-    (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers() });
+    (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 404 });
     render(<App />);
-    expect(await screen.findByText(/더 이상 유효하지 않습니다/)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/이 공유 링크는 유효하지 않습니다/);
+  });
+
+  // A screen on a wall that opens during a deploy or a cold start must not settle on "this link is
+  // dead": the server did not answer, so the viewer says so and tries again on its own.
+  it('retries a server that did not answer, and shows the board once it does', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      setLocation('?board=b1&token=tok');
+      (fetch as any)
+        .mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 502 })
+        .mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+      render(<App />);
+      expect(await screen.findByText(/보드를 불러오지 못했습니다. 2초 뒤에 다시 시도합니다/)).toBeInTheDocument();
+      await vi.advanceTimersByTimeAsync(retryDelayMs(0));
+      expect(await screen.findByTestId('viewer-page')).toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('retries at once when asked, or when the network comes back', async () => {
+    setLocation('?board=b1&token=tok');
+    (fetch as any)
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: '지금 다시 시도' }));
+    expect(await screen.findByText(/4초 뒤에 다시 시도합니다/)).toBeInTheDocument();
+    window.dispatchEvent(new Event('online'));
+    expect(await screen.findByTestId('viewer-page')).toBeInTheDocument();
+  });
+
+  it('waits longer after each failed attempt, holding at a minute', () => {
+    expect([0, 1, 2, 3, 4, 5, 10].map(retryDelayMs)).toEqual([2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000]);
   });
 
   it('wires each returned connectorId into a ShareConnectorAdapter, with no DemoAdapter mixed in', async () => {
