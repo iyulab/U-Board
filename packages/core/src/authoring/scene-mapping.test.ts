@@ -19,6 +19,23 @@ describe('documentToScene', () => {
     expect(scene.getObjects()[0]).toMatchObject({ type: 'image', src: 'plan.png', width: 800, height: 600 });
   });
 
+  // An author grabbing the drawing would move only the editor's picture of it, not the document.
+  it('locks the background and the connector lines, and nothing the author edits', () => {
+    const scene = documentToScene(
+      doc({
+        background: { image: { src: 'plan.png', width: 800, height: 600 } },
+        nodes: [
+          { id: 'a', x: 0, y: 0, anchored: false, widget: { type: 'status' } },
+          { id: 'b', x: 300, y: 0, anchored: false, widget: { type: 'status' } },
+        ],
+        connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b' }],
+        decorations: [{ type: 'rect', id: 'd', x: 0, y: 0, width: 50, height: 50 }],
+      })
+    );
+    const locked = Object.fromEntries(scene.getObjects().map(o => [o.type === 'image' ? 'background' : o.id, o.locked === true]));
+    expect(locked).toEqual({ background: true, c: true, a: false, b: false, d: false });
+  });
+
   it("adds one 'rect' per node, id'd by node id and positioned/sized by it", () => {
     const scene = documentToScene(
       doc({

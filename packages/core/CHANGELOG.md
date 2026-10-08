@@ -49,6 +49,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- In `AuthoringView`, the background image and the connector lines could be selected and dragged; the
+  editor then showed the board moved against its nodes while the document, and the preview, were not.
+  They are drawn locked now (`@canvas-kit/core` `Shape.locked`), so a press on the drawing is a press on
+  empty space.
 - A widget fills its node's height: a chart in a node taller than its own default height was drawn
   at that default, leaving the rest of the box empty. In a node smaller than what a widget can draw
   in, the widget keeps its size as before.

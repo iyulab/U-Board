@@ -28,8 +28,9 @@ const DECORATION_PLACEHOLDER_FILL = 'rgba(245, 158, 11, 0.08)';
 
 /**
  * Projects a ViewDocument into a canvas-kit Scene the designer can render and let the author
- * drag: the background image, connector lines (following current node positions), and one
- * `rect` per node — id'd by node id — standing in for its widget's footprint.
+ * drag: the background image and the connector lines (following current node positions) — both
+ * locked, drawn but not editable — and one `rect` per node, id'd by node id, standing in for its
+ * widget's footprint.
  */
 export function documentToScene(doc: ViewDocument): Scene {
   const scene = new Scene();
@@ -42,6 +43,8 @@ export function documentToScene(doc: ViewDocument): Scene {
       width: doc.background.image.width,
       height: doc.background.image.height,
       src: doc.background.image.src,
+      // The picture the board is built on: drawn under the nodes, never grabbed and moved with them.
+      locked: true,
     });
   }
 
@@ -74,6 +77,8 @@ export function documentToScene(doc: ViewDocument): Scene {
       ],
       stroke: '#94a3b8',
       strokeWidth: 2,
+      // Follows its two nodes; dragging the line itself would move nothing in the document.
+      locked: true,
     });
   }
 
