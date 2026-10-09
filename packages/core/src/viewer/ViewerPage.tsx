@@ -4,7 +4,7 @@ import { useResolvedDocument } from './useResolvedDocument.js';
 import { documentExtent } from './document-extent.js';
 import { useFittedView } from './use-fitted-view.js';
 import { ViewControls } from './ViewControls.js';
-import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
+import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import type { Adapter } from '../adapter.js';
@@ -84,17 +84,7 @@ export function ViewerPage({
       setPreview(null);
       return;
     }
-    let cancelled = false;
     setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
-    // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
-    // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
-    // pick it up.
-    chartsReady.then(() => {
-      if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
-    });
-    return () => {
-      cancelled = true;
-    };
   }, [resolved, labels]);
 
   const handleImportClick = () => fileInputRef.current?.click();

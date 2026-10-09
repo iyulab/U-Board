@@ -13,7 +13,7 @@ import {
   nextDecorationPosition,
 } from './scene-mapping.js';
 import { resolveDocument } from '../resolve-document.js';
-import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
+import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import { PropertyPanel } from './PropertyPanel.js';
@@ -156,12 +156,6 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     resolveDocument(doc, adapters).then(resolved => {
       if (cancelled) return;
       setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
-      // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
-      // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
-      // pick it up.
-      chartsReady.then(() => {
-        if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
-      });
     });
     return () => {
       cancelled = true;

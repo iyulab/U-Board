@@ -13,15 +13,10 @@ import '@iyulab/u-widgets';
 // consuming app's bundle past Vite's 500kB single-chunk warning, even for documents that never
 // use a chart.* widget. This still loads unconditionally on module init — no widget-type
 // inspection, same "opt every entry point in" policy as a static import — but as its own chunk
-// fetched in parallel, so it no longer blocks parsing/evaluating the app's main chunk.
-//
-// Unlike a plain custom element, `<u-widget>` decides *whether to even emit* a `<uw-chart>` tag
-// with a one-shot `customElements.get('uw-chart')` check inside its own `render()`
-// (u-widgets' `elements/u-widget.ts`) — it does not re-check on its own once `uw-chart` registers
-// late, so a chart.* node whose `<u-widget>` already rendered before this import resolves would
-// otherwise be stuck on the "Unknown widget" fallback forever. `chartsReady` lets a consumer force
-// one more render pass after this resolves (AuthoringView/ViewerPage do) to pick it up.
-export const chartsReady: Promise<unknown> = import('@iyulab/u-widgets/charts');
+// fetched in parallel, so it no longer blocks parsing/evaluating the app's main chunk. A chart node
+// drawn before it arrives shows u-widgets' "module not loaded" card for that moment, and the
+// widget re-renders itself once the entry registers — nothing here has to render again.
+void import('@iyulab/u-widgets/charts');
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { QUALITY_FRAME_STYLE, frameQuality } from '../quality-presentation.js';
