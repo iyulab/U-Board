@@ -16,7 +16,9 @@
     "u-platform.kr",
     "x.com",
     "test.com",
-    "169.254.169.254"
+    "169.254.169.254",
+    "openapi.seoul.go.kr",
+    "data.seoul.go.kr"
   ],
   "githubRepos": [
     "iyulab/U-Board",

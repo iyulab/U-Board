@@ -1,0 +1,36 @@
+{
+  "name": "@iyulab/u-board-samples",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sample boards on open data — documents, the data sources they bind to, and recorded answers to replay",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build:lib": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "capture": "tsx scripts/capture-snapshots.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iyulab/U-Board",
+    "directory": "packages/samples"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "@iyulab/u-board": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  }
+}
