@@ -40,6 +40,7 @@ const TEST_STAGES: Record<Extract<ConnectorTestResult, { ok: false }>['stage'], 
 const TEST_REASONS: Record<Extract<ConnectorTestResult, { ok: false }>['reason'], string> = {
   auth: '자격 증명이 거부됐습니다 — 시크릿·클라이언트 ID를 확인하세요',
   address: '주소를 찾을 수 없습니다 — Base URL·경로를 확인하세요',
+  format: '응답이 JSON이 아닙니다 — JSON으로 답하게 하는 파라미터(예: returnType=json, _type=json)를 경로에 넣으세요',
   throttled: '요청이 너무 많다고 거절됐습니다 — 잠시 뒤 다시 시도하세요',
   transport: '연결하지 못했습니다 — 주소에 닿을 수 있는지 확인하세요',
 };
@@ -71,7 +72,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [oauthScope, setOauthScope] = useState('');
   const [oauthClientAuth, setOauthClientAuth] = useState<ConnectorOAuthClientAuth>('basic');
   const [testPath, setTestPath] = useState('');
-  const [testOutcome, setTestOutcome] = useState<{ ok: boolean; text: string } | null>(null);
+  const [testOutcome, setTestOutcome] = useState<{ ok: boolean; text: string; excerpt?: string } | null>(null);
   const [isTesting, setIsTesting] = useState(false);
   const isOAuth = authType === 'oauth2-client-credentials';
   // On edit the stored secret is kept when the field is left blank — but only while it is still
@@ -160,7 +161,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
         ...(editingId ? { connectorId: editingId } : {}),
         ...(path ? { path } : {}),
       });
-      setTestOutcome({ ok: result.ok, text: describeTestResult(result, path) });
+      setTestOutcome({ ok: result.ok, text: describeTestResult(result, path), excerpt: result.excerpt });
     } catch (err) {
       setTestOutcome({
         ok: false,
@@ -293,6 +294,12 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
             <p role="status" className={testOutcome.ok ? 'ub-connector-test--ok' : 'ub-connector-test--failed'}>
               {testOutcome.text}
             </p>
+          )}
+          {testOutcome?.excerpt && (
+            <figure className="ub-connector-excerpt">
+              <figcaption>원천이 보낸 응답(앞부분)</figcaption>
+              <pre>{testOutcome.excerpt}</pre>
+            </figure>
           )}
           <Button type="submit">{editingId ? '데이터소스 수정' : '데이터소스 추가'}</Button>
           {editingId && (

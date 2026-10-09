@@ -5,8 +5,8 @@ import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
 
 export type ResolveQuality = 'live' | 'stale' | 'disconnected';
 
-/** Why a resolve is not `live` — the core's `QualityReason`, same four words. */
-export type ResolveReason = 'transport' | 'auth' | 'address' | 'throttled';
+/** Why a resolve is not `live` — the core's `QualityReason`, same words. */
+export type ResolveReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled';
 
 export interface ResolveResult {
   value: unknown;
@@ -200,11 +200,30 @@ class StageError extends Error {
   readonly reason: ResolveReason;
   /** The status the upstream answered with, when it answered at all. */
   readonly status?: number;
+  /** The start of a body the binding could not read — shown to whoever tries the connector, never logged. */
+  excerpt?: string;
   constructor(readonly stage: ResolveStage, cause: unknown, reason?: ResolveReason) {
     super(describeFailure(cause));
     this.reason = reason ?? reasonFor(stage, cause);
     if (cause instanceof HttpStatusError) this.status = cause.status;
   }
+}
+
+/** How much of a response a connection test shows. */
+const EXCERPT_LENGTH = 400;
+
+function excerptOf(body: unknown): string {
+  const text = typeof body === 'string' ? body : JSON.stringify(body);
+  return text.length > EXCERPT_LENGTH ? `${text.slice(0, EXCERPT_LENGTH)}…` : text;
+}
+
+/** A body in a form no binding reads: markup (XML, HTML) or anything else that is neither JSON nor plain
+ *  text. Public APIs commonly answer XML unless asked for JSON (`returnType=json`, `_type=json`), and an
+ *  HTML page is usually a login or error page — either way the source was reached, and asked wrongly. */
+function unreadable(contentType: string, text: string): StageError {
+  const error = new StageError('response', new Error(`the response is ${contentType.split(';')[0] || 'untyped'}, not JSON`), 'format');
+  error.excerpt = excerptOf(text);
+  return error;
 }
 
 /** What an upstream failure means for whoever has to fix it. A status the data source or token
@@ -289,9 +308,12 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
     }
     stage = 'response';
     const contentType = response.headers.get('content-type') ?? '';
-    return contentType.includes('json') ? await response.json() : await response.text();
+    if (contentType.includes('json')) return await response.json();
+    const text = await response.text();
+    if (contentType !== '' && !contentType.startsWith('text/plain')) throw unreadable(contentType, text);
+    return text;
   } catch (err) {
-    throw new StageError(stage, err);
+    throw err instanceof StageError ? err : new StageError(stage, err);
   }
 }
 
@@ -345,6 +367,10 @@ export async function resolveConnectorValue(
     }
     let value: unknown = body;
     if (ref.valuePath) {
+      // Plain text has no fields: a value path into it asks for a form the source does not answer in.
+      if (typeof body === 'string') {
+        throw new StageError('response', new Error('the response is plain text, which a value path cannot read into'), 'format');
+      }
       const extracted = getByPath(body, ref.valuePath);
       if (!extracted.found) {
         throw new StageError('response', new Error(`valuePath "${ref.valuePath}" not found in the response`), 'address');
@@ -381,8 +407,8 @@ export async function resolveConnectorValue(
  *  means for whoever fixes it (`reason`), the status the upstream answered with, and a message
  *  that names the failure — never the request, whose headers carry the credentials. */
 export type ConnectorTestResult =
-  | { ok: true }
-  | { ok: false; stage: ResolveStage; reason: ResolveReason; status?: number; message: string };
+  | { ok: true; excerpt?: string }
+  | { ok: false; stage: ResolveStage; reason: ResolveReason; status?: number; message: string; excerpt?: string };
 
 /** Tries `connector` as a binding would use it: obtains an OAuth access token, then, given a
  *  target, requests it once. A token cache of its own, so a token already obtained with the stored
@@ -391,7 +417,9 @@ export async function testConnector(connector: Connector, target: URL | null, fe
   const tokens = new ClientCredentialsTokens(Date.now, fetchFn);
   try {
     if (target) {
-      await fetchBody(connector, target, tokens, fetchFn);
+      // The start of what came back, so the owner sees whether it is the data or an error the source
+      // answered with success (some report a bad key or an empty query in a 200 body).
+      return { ok: true, excerpt: excerptOf(await fetchBody(connector, target, tokens, fetchFn)) };
     } else if (connector.authType === 'oauth2-client-credentials') {
       try {
         await tokens.get(clientCredentialsOf(connector));
@@ -408,6 +436,7 @@ export async function testConnector(connector: Connector, target: URL | null, fe
       reason: failure.reason,
       ...(failure.status !== undefined && { status: failure.status }),
       message: failure.message,
+      ...(failure.excerpt !== undefined && { excerpt: failure.excerpt }),
     };
   }
 }

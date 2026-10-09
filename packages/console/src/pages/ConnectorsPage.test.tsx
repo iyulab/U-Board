@@ -334,6 +334,21 @@ describe('ConnectorsPage', () => {
       );
     }
 
+    it('says an XML answer is not JSON, how to ask for JSON, and shows what came back', async () => {
+      vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [BEARER] });
+      vi.mocked(api.listMembers).mockResolvedValue(OWNER);
+      vi.mocked(api.testConnector).mockResolvedValue({
+        ok: false, stage: 'response', reason: 'format', message: 'the response is application/xml, not JSON', excerpt: '<RESULT><CODE>ERROR-335</CODE></RESULT>',
+      });
+      renderPage();
+      await userEvent.click(await screen.findByRole('button', { name: 'Bearer API 수정' }));
+      await userEvent.type(screen.getByLabelText('시험할 경로'), '/air');
+      await userEvent.click(screen.getByRole('button', { name: '연결 테스트' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('응답 읽기 단계 실패: 응답이 JSON이 아닙니다 — JSON으로 답하게 하는 파라미터');
+      expect(screen.getByText('<RESULT><CODE>ERROR-335</CODE></RESULT>')).toBeInTheDocument();
+    });
+
     it('tries an edit with the stored secret and the given path, and says it connected', async () => {
       vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [BEARER] });
       vi.mocked(api.listMembers).mockResolvedValue(OWNER);

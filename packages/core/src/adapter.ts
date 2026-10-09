@@ -36,9 +36,10 @@ export type ConnectionQuality = 'live' | 'stale' | 'disconnected';
  * operator reading "disconnected" knows whom to call. `transport` — the source could not be reached
  * (network, timeout, server error). `auth` — the source refused the credentials. `address` — the
  * source answered, but not with what the binding points at (unknown path, empty result, renamed
- * field): the binding, not the network, needs attention. `throttled` — requests are being rate
- * limited. It annotates `quality` and never changes it. */
-export type QualityReason = 'transport' | 'auth' | 'address' | 'throttled';
+ * field): the binding, not the network, needs attention. `format` — the source answered in a form the
+ * binding cannot read (XML or HTML where JSON was needed): how it is asked, not what it points at, needs
+ * attention. `throttled` — requests are being rate limited. It annotates `quality` and never changes it. */
+export type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled';
 
 export interface ResolvedBinding {
   value: unknown;

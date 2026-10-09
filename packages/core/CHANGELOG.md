@@ -16,6 +16,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A reason for an answer that cannot be read: `QualityReason` `format`.** The source answered, but in a form
+  the binding cannot read — XML or HTML where JSON was needed, or a value path into plain text — which reported
+  `address` ("bound value not found at the source") and sent the author looking for a wrong field.
+  `REASON_LABEL.format` and `KO_LABELS` say it. A `QualityText` of your own needs a `format` entry.
 - **The binding form warns about a key in the request path.** A path carrying what looks like a credential
   (`serviceKey=`, `apiKey=`, `access_token=`, …) shows `keyInPath` under it: a board keeps its paths and a share link
   hands them out. New label `keyInPath` (`KO_LABELS` included).

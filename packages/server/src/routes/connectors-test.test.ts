@@ -93,7 +93,7 @@ describe('POST /workspaces/:id/connectors/test', () => {
 
     const res = await test({ connectorId: bearerConnectorId, baseUrl: 'https://plant-2.example.com', path: '/pumps/a' });
 
-    expect(res.body).toEqual({ ok: true });
+    expect(res.body).toMatchObject({ ok: true });
     const [url, options] = (fetch as any).mock.calls[0];
     expect(String(url)).toBe('https://plant-2.example.com/pumps/a');
     expect(options.headers).toEqual({ Authorization: 'Bearer stored-token' });

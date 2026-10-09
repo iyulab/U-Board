@@ -18,6 +18,7 @@ export const REASON_LABEL: Record<QualityReason, string> = {
   transport: 'data source unreachable',
   auth: 'credentials refused',
   address: 'bound value not found at the source',
+  format: 'the source answered in a form that cannot be read',
   throttled: 'rate limited',
 };
 

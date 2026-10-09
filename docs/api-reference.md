@@ -145,7 +145,7 @@ source" itself.
 ### `QualityReason`
 
 ```ts
-type QualityReason = 'transport' | 'auth' | 'address' | 'throttled';
+type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled';
 ```
 
 Why a binding is not `live`, reported by the adapter when it can tell. Each names a different fix,
@@ -155,6 +155,9 @@ so an operator reading "disconnected" knows where to look:
 - `auth` — the source refused the credentials.
 - `address` — the source answered, but not with what the binding points at (an unknown path, an
   empty result, a renamed field). The binding needs attention, not the network.
+- `format` — the source answered in a form the binding cannot read: XML or HTML where JSON was needed,
+  or a value path into plain text. How the source is asked needs attention (many APIs answer JSON only
+  when asked, with a parameter such as `returnType=json`).
 - `throttled` — requests are being rate limited.
 
 A reason annotates `quality`; it never changes it. A binding with no matching adapter, or whose

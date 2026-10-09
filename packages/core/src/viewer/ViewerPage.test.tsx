@@ -213,7 +213,7 @@ describe('ViewerPage labels', () => {
     boardRegion: '보드',
     qualityText: {
       quality: { stale: '갱신 지연', disconnected: '연결 끊김' },
-      reason: { transport: '연결 불가', auth: '자격 거부', address: '값 없음', throttled: '한도 초과' },
+      reason: { transport: '연결 불가', auth: '자격 거부', address: '값 없음', format: '형식 오류', throttled: '한도 초과' },
       age: () => '조금 전',
     },
   };

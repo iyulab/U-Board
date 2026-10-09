@@ -31,3 +31,22 @@
   font-size: var(--ub-font-size-sm);
   color: var(--ub-text-muted);
 }
+
+.ub-connector-excerpt {
+  margin: 0;
+  font-size: var(--ub-font-size-sm);
+  color: var(--ub-text-muted);
+}
+
+.ub-connector-excerpt pre {
+  margin: var(--ub-space-1) 0 0;
+  padding: var(--ub-space-2);
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  background: var(--ub-bg-subtle);
+  border: 1px solid var(--ub-border);
+  border-radius: var(--ub-radius-sm);
+  color: var(--ub-text);
+}

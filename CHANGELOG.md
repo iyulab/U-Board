@@ -18,6 +18,15 @@ do when upgrading. Each release's notes carry its section.
   could only be a header. The key is sealed like every connector secret and put into the address only when the
   request is sent, so it is never stored in a board, never served with a share link, and never written to the log.
   The binding form warns when a request path itself carries what looks like a key — move it into the connector.
+- **The connection test shows what the source answered.** Its first 400 characters appear under the result, so a
+  source that reports an error in a successful answer (a bad key, an empty query) can be seen as such.
+
+### Fixed
+
+- **An answer in XML or HTML no longer passes the connection test.** A source answering XML (as many public APIs
+  do unless asked for JSON) or an HTML page (a login or error page) reported "connected", and its bindings then
+  showed "bound value not found at the source". Both now say the answer is not JSON — the test with a hint to ask
+  for JSON, the bindings with the reason "the source answered in a form that cannot be read".
 
 ### Changed
 

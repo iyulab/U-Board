@@ -111,6 +111,7 @@ export const KO_LABELS: UBoardLabels = {
       transport: '데이터소스에 연결할 수 없음',
       auth: '자격 증명이 거부됨',
       address: '바인딩한 값이 원천에 없음',
+      format: '원천의 응답 형식을 읽을 수 없음',
       throttled: '요청 한도 초과',
     },
     age: ageText('ko'),

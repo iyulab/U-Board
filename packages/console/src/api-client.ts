@@ -254,13 +254,15 @@ export function createConnector(
  *  request; `request` — the data source; `response` — reading its answer), why, and what the
  *  upstream answered with. */
 export type ConnectorTestResult =
-  | { ok: true }
+  | { ok: true; excerpt?: string }
   | {
       ok: false;
       stage: 'token' | 'request' | 'response';
-      reason: 'transport' | 'auth' | 'address' | 'throttled';
+      reason: 'transport' | 'auth' | 'address' | 'format' | 'throttled';
       status?: number;
       message: string;
+      /** The start of the body the source answered with, when it could not be read. */
+      excerpt?: string;
     };
 
 /** Tries settings without saving them: the OAuth token request and, given `path`, one request to the

@@ -157,13 +157,13 @@ describe('connector resolve proxy', () => {
     expect(res.body).toEqual({ value: null, quality: 'live', observedAt: expect.any(String) });
   });
 
-  it('returns disconnected when valuePath is given but the response is not JSON', async () => {
+  it('returns disconnected when valuePath is given but the response is plain text, which a value path cannot read into (format)', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: true, status: 200, headers: { get: () => 'text/plain' }, text: async () => 'running' });
     const res = await request(app)
       .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'address' });
+    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'format' });
   });
 
   it('shares one upstream request among concurrent resolves of the same URL, each reading its own valuePath', async () => {
