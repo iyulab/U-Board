@@ -70,6 +70,7 @@ export const KO_LABELS: UBoardLabels = {
   reference: '참조',
   chooseReference: '참조를 고르세요',
   path: '요청 경로',
+  keyInPath: '이 경로에 키가 들어 있는 것 같습니다. 보드는 경로를 그대로 저장하고 공유 링크는 그것을 보여 줍니다 — 키는 데이터소스의 인증 방식으로 보내세요.',
   valuePath: '값 경로',
   explore: '탐색',
   exploreFailed: '탐색에 실패했습니다',

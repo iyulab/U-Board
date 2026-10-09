@@ -1,4 +1,4 @@
-import type { Connector } from './db/connectors.js';
+import { PATH_KEY_PLACEHOLDER, type Connector } from './db/connectors.js';
 import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
 import { HttpStatusError } from './http-status-error.js';
 import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
@@ -245,6 +245,24 @@ async function errorBody(response: Response): Promise<unknown> {
   }
 }
 
+/** The address a request for `target` is sent to: `target` itself, or — for a connector that sends
+ *  its key in the address — `target` with the key put in. Only the request carries it: `target` is
+ *  what a binding names, what reads are shared and cached by, and what a log may describe. */
+function requestUrl(connector: Connector, target: URL): URL {
+  if (connector.authValue === undefined) return target;
+  if (connector.authType === 'query' && connector.authParamName) {
+    const url = new URL(target);
+    url.searchParams.set(connector.authParamName, connector.authValue);
+    return url;
+  }
+  if (connector.authType === 'path') {
+    const url = new URL(target);
+    url.pathname = url.pathname.replace(encodeURI(PATH_KEY_PLACEHOLDER), encodeURIComponent(connector.authValue));
+    return url;
+  }
+  return target;
+}
+
 /** Fetches and parses `target` with `connector`'s auth headers. An OAuth connector whose token is
  * rejected (401) gets one fresh token and one retry — the authorization server may revoke a token
  * before the expiry it advertised. */
@@ -257,7 +275,7 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
     stage = 'token';
     const headers = await authHeaders(connector, tokens);
     stage = 'request';
-    return fetchFn(target, { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
+    return fetchFn(requestUrl(connector, target), { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
   };
   try {
     let response = await send();

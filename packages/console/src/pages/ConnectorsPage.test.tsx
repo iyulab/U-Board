@@ -62,6 +62,31 @@ describe('ConnectorsPage', () => {
     }));
   });
 
+  it('creates a connector that sends its key as a query parameter, and explains the path form', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.createConnector).mockResolvedValue(CONNECTOR);
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    const addButton = await screen.findByRole('button', { name: '데이터소스 추가' });
+    fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Air API' } });
+    fireEvent.change(screen.getByLabelText('Base URL'), { target: { value: 'https://api.example.com' } });
+    fireEvent.change(screen.getByLabelText('인증 방식'), { target: { value: 'path' } });
+    expect(screen.getByText(/키는 요청을 보낼 때만 넣고/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('인증 방식'), { target: { value: 'query' } });
+    fireEvent.change(screen.getByLabelText('파라미터 이름'), { target: { value: 'serviceKey' } });
+    fireEvent.change(screen.getByLabelText('값'), { target: { value: 'the-key' } });
+    fireEvent.click(addButton);
+
+    await waitFor(() => expect(api.createConnector).toHaveBeenCalledWith('w1', {
+      name: 'Air API', baseUrl: 'https://api.example.com', authType: 'query', authParamName: 'serviceKey', authValue: 'the-key',
+    }));
+  });
+
   it('shows an empty state when the workspace has no connectors yet', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });

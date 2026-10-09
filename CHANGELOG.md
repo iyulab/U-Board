@@ -11,6 +11,20 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- **Data sources that take their key in the address.** A connector can send its secret as a query parameter
+  (`serviceKey=…`) or as a path segment (`{key}` in its base URL), as many public open-data APIs require, where it
+  could only be a header. The key is sealed like every connector secret and put into the address only when the
+  request is sent, so it is never stored in a board, never served with a share link, and never written to the log.
+  The binding form warns when a request path itself carries what looks like a key — move it into the connector.
+
+### Changed
+
+- **Charts and tables read data as an API returns it** (`@iyulab/u-widgets` 0.30): a time series answered as one
+  array per field, and records with nested fields (`properties.mag`), where the share viewer showed "Invalid widget
+  spec" or `[object Object]`. A widget whose value still does not fit lists why in the board's language.
+
 ## [0.1.4] - 2026-10-09
 
 ### Changed

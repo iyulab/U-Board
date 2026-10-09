@@ -25,3 +25,9 @@
 .ub-connector-test--failed {
   color: var(--ub-error);
 }
+
+.ub-connector-hint {
+  margin: 0;
+  font-size: var(--ub-font-size-sm);
+  color: var(--ub-text-muted);
+}

@@ -101,6 +101,9 @@ export interface UBoardLabels {
   reference: string;
   chooseReference: string;
   path: string;
+  /** Under the request path when it carries what looks like a key (`serviceKey=`, `apiKey=`, …): a board
+   *  keeps its paths as written, and a share link hands them to whoever opens it. */
+  keyInPath: string;
   valuePath: string;
   explore: string;
   exploreFailed: string;
@@ -219,6 +222,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   reference: 'Reference',
   chooseReference: 'Choose a reference',
   path: 'Path',
+  keyInPath:
+    "This path seems to carry a key. A board keeps its paths and a share link shows them — send the key through the data source's authentication instead.",
   valuePath: 'Value path',
   explore: 'Explore',
   exploreFailed: 'Exploring the response failed',

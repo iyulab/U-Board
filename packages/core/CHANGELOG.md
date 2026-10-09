@@ -6,6 +6,20 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Widgets take data as an API returns it.** A chart bound to a time series answered as one array per field
+  (`{ "time": [...], "temp": [...] }`) now draws it, where the viewer showed "Invalid widget spec"; a chart or table
+  bound to records with nested fields (GeoJSON `properties`) reads them by dotted path (`properties.mag`), and a
+  table shows them as columns instead of `[object Object]`. A widget whose bound value still does not fit lists why in
+  the board's language. Requires `@iyulab/u-widgets` 0.30, which this release depends on.
+
+### Added
+
+- **The binding form warns about a key in the request path.** A path carrying what looks like a credential
+  (`serviceKey=`, `apiKey=`, `access_token=`, …) shows `keyInPath` under it: a board keeps its paths and a share link
+  hands them out. New label `keyInPath` (`KO_LABELS` included).
+
 ## [0.7.0] - 2026-10-09
 
 ### Changed

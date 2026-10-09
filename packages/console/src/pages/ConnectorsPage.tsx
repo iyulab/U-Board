@@ -26,6 +26,8 @@ const AUTH_TYPE_LABELS: Record<ConnectorAuthType, string> = {
   none: '없음',
   bearer: 'Bearer 토큰',
   header: '커스텀 헤더',
+  query: 'URL 쿼리 파라미터',
+  path: 'URL 경로 속 키',
   'oauth2-client-credentials': 'OAuth 2.0 클라이언트 자격 증명',
 };
 
@@ -62,6 +64,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [baseUrl, setBaseUrl] = useState('');
   const [authType, setAuthType] = useState<ConnectorAuthType>('none');
   const [authHeaderName, setAuthHeaderName] = useState('');
+  const [authParamName, setAuthParamName] = useState('');
   const [authValue, setAuthValue] = useState('');
   const [oauthTokenUrl, setOauthTokenUrl] = useState('');
   const [oauthClientId, setOauthClientId] = useState('');
@@ -105,6 +108,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setBaseUrl('');
     setAuthType('none');
     setAuthHeaderName('');
+    setAuthParamName('');
     setAuthValue('');
     setOauthTokenUrl('');
     setOauthClientId('');
@@ -121,6 +125,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setBaseUrl(c.baseUrl);
     setAuthType(c.authType);
     setAuthHeaderName(c.authHeaderName ?? '');
+    setAuthParamName(c.authParamName ?? '');
     setAuthValue('');
     setOauthTokenUrl(c.oauthTokenUrl ?? '');
     setOauthClientId(c.oauthClientId ?? '');
@@ -135,6 +140,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       baseUrl,
       authType,
       authHeaderName: authType === 'header' ? authHeaderName : undefined,
+      authParamName: authType === 'query' ? authParamName : undefined,
       authValue: authType === 'none' ? undefined : authValue || undefined,
       ...(isOAuth ? { oauthTokenUrl, oauthClientId, oauthScope, oauthClientAuth } : {}),
     };
@@ -260,6 +266,17 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
             <FormField label="헤더 이름">
               <input value={authHeaderName} onChange={e => setAuthHeaderName(e.target.value)} required />
             </FormField>
+          )}
+          {authType === 'query' && (
+            <FormField label="파라미터 이름">
+              <input value={authParamName} onChange={e => setAuthParamName(e.target.value)} placeholder="serviceKey" required />
+            </FormField>
+          )}
+          {authType === 'path' && (
+            <p className="ub-connector-hint">
+              Base URL에 <code>{'{key}'}</code>를 키가 들어갈 자리에 한 번 적으세요(예: <code>https://api.example.com/{'{key}'}/json</code>).
+              키는 요청을 보낼 때만 넣고, 보드와 공유 링크에는 남지 않습니다.
+            </p>
           )}
           {authType !== 'none' && (
             <FormField label={`${isOAuth ? '클라이언트 시크릿' : '값'}${canKeepStoredSecret ? '(변경 시에만 입력)' : ''}`}>

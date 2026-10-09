@@ -211,7 +211,7 @@ export function deleteBoard(workspaceId: string, boardId: string) {
   return request<void>(`/workspaces/${workspaceId}/boards/${boardId}`, { method: 'DELETE' });
 }
 
-export type ConnectorAuthType = 'none' | 'bearer' | 'header' | 'oauth2-client-credentials';
+export type ConnectorAuthType = 'none' | 'bearer' | 'header' | 'query' | 'path' | 'oauth2-client-credentials';
 
 /** How an `oauth2-client-credentials` connector authenticates to its token endpoint: HTTP Basic
  * (the server default), or client id/secret as form parameters. */
@@ -232,6 +232,7 @@ export interface ConnectorSummary extends ConnectorOAuthSettings {
   baseUrl: string;
   authType: ConnectorAuthType;
   authHeaderName?: string;
+  authParamName?: string;
   updatedAt: string;
 }
 
@@ -241,7 +242,7 @@ export function listConnectors(workspaceId: string) {
 
 export function createConnector(
   workspaceId: string,
-  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authValue?: string } & ConnectorOAuthSettings
+  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors`, {
     method: 'POST',
@@ -267,7 +268,7 @@ export type ConnectorTestResult =
  *  the stored one. Fails with `PATH_REQUIRED` when there is nothing to call without a path. */
 export function testConnector(
   workspaceId: string,
-  input: { connectorId?: string; path?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authValue?: string } & ConnectorOAuthSettings
+  input: { connectorId?: string; path?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string } & ConnectorOAuthSettings
 ) {
   return request<ConnectorTestResult>(`/workspaces/${workspaceId}/connectors/test`, {
     method: 'POST',
@@ -278,7 +279,7 @@ export function testConnector(
 export function updateConnector(
   workspaceId: string,
   connectorId: string,
-  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authValue?: string } & ConnectorOAuthSettings
+  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors/${connectorId}`, {
     method: 'PUT',

@@ -107,6 +107,17 @@ describe('PropertyPanel', () => {
     expect(advanced).toHaveAttribute('open');
   });
 
+  it('warns when the request path carries what looks like a key, which a share link would show', () => {
+    render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
+    const hint = /seems to carry a key/;
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/air?sidoName=Seoul&key=' } });
+    expect(screen.queryByText(hint)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/air?sidoName=Seoul&serviceKey=abc123' } });
+    expect(screen.getByText(hint)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/air?api_key=abc' } });
+    expect(screen.getByText(hint)).toBeInTheDocument();
+  });
+
   it('does not discard an invalid-JSON props edit (and its error) when a binding is saved afterwards', () => {
     const onChange = vi.fn();
     let node = statusNode();

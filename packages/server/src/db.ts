@@ -65,8 +65,9 @@ CREATE TABLE IF NOT EXISTS connectors (
   name TEXT NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('http')),
   base_url TEXT NOT NULL,
-  auth_type TEXT NOT NULL CHECK (auth_type IN ('none', 'bearer', 'header', 'oauth2-client-credentials')),
+  auth_type TEXT NOT NULL CHECK (auth_type IN ('none', 'bearer', 'header', 'query', 'path', 'oauth2-client-credentials')),
   auth_header_name TEXT,
+  auth_param_name TEXT,
   auth_value TEXT,
   oauth_token_url TEXT,
   oauth_client_id TEXT,
@@ -84,16 +85,17 @@ ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_token_url TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_client_id TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_scope TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_client_auth TEXT CHECK (oauth_client_auth IN ('basic', 'body'));
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS auth_param_name TEXT;
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conrelid = 'connectors'::regclass AND conname = 'connectors_auth_type_check'
-      AND pg_get_constraintdef(oid) LIKE '%oauth2-client-credentials%'
+      AND pg_get_constraintdef(oid) LIKE '%''path''%'
   ) THEN
     ALTER TABLE connectors DROP CONSTRAINT IF EXISTS connectors_auth_type_check;
     ALTER TABLE connectors ADD CONSTRAINT connectors_auth_type_check
-      CHECK (auth_type IN ('none', 'bearer', 'header', 'oauth2-client-credentials'));
+      CHECK (auth_type IN ('none', 'bearer', 'header', 'query', 'path', 'oauth2-client-credentials'));
   END IF;
 END
 $$;

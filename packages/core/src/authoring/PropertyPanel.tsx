@@ -75,6 +75,14 @@ function fieldValue(text: string, loaded?: { value: unknown }): unknown {
 /** The prop picker's choice for a path the widget library does not list — typed in instead. */
 const OTHER_PATH = '\u0000other';
 
+/** A query parameter named the way API keys are (`serviceKey`, `apiKey`, `access_token`, …). */
+const KEY_PARAMETER = /[?&](service_?key|api_?key|access_?key|auth_?key|key|access_?token|token|secret)=[^&]/i;
+
+/** Whether a request path carries what looks like a credential — which a board would keep and a share link show. */
+function carriesKey(path: string): boolean {
+  return KEY_PARAMETER.test(path);
+}
+
 function emptyDraft(connectorId: string, propPath = ''): BindingDraft {
   return { propPath, connectorId, path: '', valuePath: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
 }
@@ -505,6 +513,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
                 {labels.path}
                 <input value={draft.path} onChange={e => setDraft({ ...draft, path: e.target.value })} placeholder="/pumps/a" />
               </label>
+              {carriesKey(draft.path) && <p className="ub-panel__hint">{labels.keyInPath}</p>}
               <label className="ub-panel__field" style={FIELD_STYLE}>
                 {labels.valuePath}
                 <input value={draft.valuePath} onChange={e => setDraft({ ...draft, valuePath: e.target.value })} placeholder="/status" />

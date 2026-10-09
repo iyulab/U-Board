@@ -14,11 +14,12 @@ import {
   type ConnectorChanges,
   type ConnectorOAuthSettings,
   type ConnectorSummary,
+  PATH_KEY_PLACEHOLDER,
 } from '../db/connectors.js';
 import { isValidRef, buildResolveTarget, resolveConnectorValue, testConnector, forgetConnector, type ResolveState } from '../resolve-connector.js';
 
 const OAUTH = 'oauth2-client-credentials';
-const AUTH_TYPES = new Set(['none', 'bearer', 'header', OAUTH]);
+const AUTH_TYPES = new Set(['none', 'bearer', 'header', 'query', 'path', OAUTH]);
 const CLIENT_AUTH_METHODS = new Set(['basic', 'body']);
 
 /**
@@ -37,6 +38,15 @@ function parseBaseUrl(value: unknown): URL | null {
   } catch {
     return null;
   }
+}
+
+/** A `path` connector's base URL names where its key goes: `{key}` once, in the path — never in the
+ *  host, which would let the secret choose where the credentialed request is sent. */
+function hasPathKeyPlaceholder(baseUrl: string): boolean {
+  const at = baseUrl.indexOf(PATH_KEY_PLACEHOLDER);
+  if (at < 0 || baseUrl.indexOf(PATH_KEY_PLACEHOLDER, at + 1) >= 0) return false;
+  const url = parseBaseUrl(baseUrl);
+  return url !== null && url.pathname.includes(encodeURI(PATH_KEY_PLACEHOLDER));
 }
 
 /**
@@ -59,6 +69,10 @@ function validateAuthFields(body: any, existing?: Connector): string | null {
     // otherwise the stored value is not a live header name we may keep.
     const storedHeaderName = existing?.authType === 'header' ? existing.authHeaderName : undefined;
     if (!authFieldSatisfied(body.authHeaderName, storedHeaderName)) return 'INVALID_INPUT';
+  }
+  if (body.authType === 'query') {
+    const storedParamName = existing?.authType === 'query' ? existing.authParamName : undefined;
+    if (!authFieldSatisfied(body.authParamName, storedParamName)) return 'INVALID_INPUT';
   }
   if (body.authType !== 'none') {
     // A bearer token and a header value are the same kind of secret, so switching between those
@@ -99,10 +113,12 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
   if (!parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
   const authError = validateAuthFields(body);
   if (authError) return authError;
+  if (body.authType === 'path' && !hasPathKeyPlaceholder(body.baseUrl)) return 'INVALID_INPUT';
   return {
     baseUrl: body.baseUrl,
     authType: body.authType,
     authHeaderName: body.authType === 'header' ? body.authHeaderName : undefined,
+    authParamName: body.authType === 'query' ? body.authParamName.trim() : undefined,
     authValue: body.authType === 'none' ? undefined : body.authValue,
     ...(body.authType === OAUTH ? oauthSettings(body) : {}),
   };
@@ -121,16 +137,24 @@ function connectorChanges(body: any, existing: Connector): ConnectorChanges | st
   if (body.name !== undefined && (typeof body.name !== 'string' || body.name.trim() === '')) return 'INVALID_INPUT';
   if (body.baseUrl !== undefined && !parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
   const changes: ConnectorChanges = { name: body.name, baseUrl: body.baseUrl };
-  if (body.authType === undefined) return changes;
+  if (body.authType === undefined) return pathKeyKept(changes, existing);
   const authError = validateAuthFields(body, existing);
   if (authError) return authError;
-  return {
+  return pathKeyKept({
     ...changes,
     authType: body.authType,
     authHeaderName: body.authType === 'header' ? body.authHeaderName : null,
+    authParamName: body.authType === 'query' ? (typeof body.authParamName === 'string' ? body.authParamName.trim() : undefined) : null,
     authValue: body.authType === 'none' ? null : (body.authValue ?? undefined),
     oauth: body.authType === OAUTH ? oauthSettings(body, existing) : null,
-  };
+  }, existing);
+}
+
+/** `changes`, unless they would leave a `path` connector without `{key}` in its base URL — a base URL
+ *  edit alone reaches here too, and the key would then go nowhere. */
+function pathKeyKept(changes: ConnectorChanges, existing: Connector): ConnectorChanges | string {
+  const merged = applyConnectorChanges(existing, changes);
+  return merged.authType === 'path' && !hasPathKeyPlaceholder(merged.baseUrl) ? 'INVALID_INPUT' : changes;
 }
 
 function toSummary(connector: Connector): ConnectorSummary {

@@ -62,7 +62,8 @@ Save, when it has one), and a read-only viewer mode are implemented and browser-
 the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
 or keyboard.
 Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
-adapter (with SSRF-safe origin pinning, and either static bearer/header credentials or OAuth 2.0
+adapter (with SSRF-safe origin pinning, and either a static credential — a bearer token, a header, or a key in the address (a query parameter or a
+path segment, put in only when the request is sent) — or OAuth 2.0
 client credentials with cached, auto-renewed access tokens) is wired into both the authoring UI
 and the read-only embed viewer. It picks a value out of a JSON response with an RFC 6901 JSON
 Pointer, reports why a binding is not live (source unreachable, credentials refused, value not
