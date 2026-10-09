@@ -73,7 +73,12 @@ const PANEL: Node[] = [
     anchored: false,
     widget: {
       type: 'chart.bar',
-      props: { title: '미세먼지·초미세먼지(㎍/㎥)', data: [], mapping: { x: 'MSRSTN_NM', y: ['PM', 'FPM'] } },
+      props: {
+        title: '미세먼지·초미세먼지(㎍/㎥)',
+        data: [],
+        mapping: { x: 'MSRSTN_NM', y: ['PM', 'FPM'] },
+        options: { series: [{ label: '미세먼지(PM10)' }, { label: '초미세먼지(PM2.5)' }] },
+      },
       bindings: { data: bind('/row') },
     },
   },
