@@ -15,6 +15,18 @@ export interface Adapter {
    * `AuthoringView` offers them to pick from and binds the chosen `ref` string. Omitted, the form
    * takes an HTTP connector reference: a request path and a JSON Pointer into its response. */
   references?(): Promise<readonly AdapterReference[]>;
+  /** Where this adapter's data comes from, as its source asks to be named — an agency and its open-data
+   * portal, a weather service. A viewer names it under every board that binds to this adapter, since a
+   * source's license often makes that a condition of use. Omitted, nothing is shown. */
+  readonly attribution?: Attribution;
+}
+
+/** How a data source is named where its data is shown (`Adapter.attribution`). */
+export interface Attribution {
+  /** The credit as the source words it, e.g. "Seoul Open Data Plaza (KOGL Type 1)". */
+  text: string;
+  /** Where it links — the source's site or the dataset's page. http(s) only; anything else is shown as text. */
+  url?: string;
 }
 
 /** One reference an adapter offers (`Adapter.references`): the `ref` a binding stores, and how to

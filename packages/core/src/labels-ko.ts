@@ -36,6 +36,7 @@ export const KO_LABELS: UBoardLabels = {
   editorRegion: '편집기',
   previewRegion: '보드 보기',
   boardRegion: '보드',
+  dataSources: '데이터 출처',
   resolving: '불러오는 중…',
   lastUpdated: '갱신 {time}',
   notUpdating: '갱신이 멈춤 — 마지막 갱신 {time}',

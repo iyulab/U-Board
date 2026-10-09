@@ -10,7 +10,7 @@ vi.mock('@iyulab/u-board/viewer', async () => {
   return {
     ...actual,
     ViewerPage: (props: any) => (
-      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')} data-label={props.ariaLabel} data-poll={props.pollIntervalMs} data-server-clock={String(props.clock === apiClock.now)}>
+      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')} data-attributions={JSON.stringify(props.adapters.map((a: any) => a.attribution ?? null))} data-attribution-shown={String(props.attribution !== false)} data-label={props.ariaLabel} data-poll={props.pollIntervalMs} data-server-clock={String(props.clock === apiClock.now)}>
         {props.initialDocument.background ? 'rendered' : ''}
       </div>
     ),
@@ -124,6 +124,20 @@ describe('App', () => {
     render(<App />);
     const viewer = await screen.findByTestId('viewer-page');
     expect(viewer.dataset.adapterIds).toBe('c1,c2');
+  });
+
+  it('gives each adapter the credit its source asks for, and always shows it', async () => {
+    setLocation('?board=b1&token=tok');
+    const credit = { text: 'Seoul Open Data Plaza', url: 'https://data.example.org' };
+    (fetch as any).mockResolvedValueOnce({
+      ok: true,
+      headers: new Headers(),
+      json: async () => ({ name: 'A', document: DOC, connectorIds: ['c1', 'c2'], attributions: { c1: credit } }),
+    });
+    render(<App />);
+    const viewer = await screen.findByTestId('viewer-page');
+    expect(JSON.parse(viewer.dataset.attributions!)).toEqual([credit, null]);
+    expect(viewer.dataset.attributionShown).toBe('true');
   });
 
   it('renders with no adapters when the board has no connectors, rather than falling back to DemoAdapter', async () => {

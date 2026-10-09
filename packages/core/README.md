@@ -55,6 +55,10 @@ import { ViewerPage } from '@iyulab/u-board/viewer';
 </div>;
 ```
 
+An adapter whose source asks to be credited sets `attribution` (`{ text, url? }`); the viewer names
+every credited source the board binds to on a line under it. `attribution={false}` leaves that line
+to the host.
+
 The board opens fitted into view — shrunk to fit, never magnified past its natural size — and stays
 fitted as the view resizes until the viewer pans or zooms; a "Fit to view" control restores that,
 and zoom in/out controls do what the wheel does from the keyboard. Pass `width`/`height` (CSS px) for a
@@ -179,6 +183,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-json-tree`, `ub-json-tree__leaf` | The response explorer, and a value in it to pick |
 | `ub-viewer`, `ub-viewer__toolbar`, `ub-viewer__surface` | The viewer, its toolbar and the frame the board draws in |
 | `ub-viewer__error`, `ub-viewer__status` | A file that could not be opened; "no document" and "resolving" |
+| `ub-viewer__attribution` | The line under a board naming where its data comes from (`Adapter.attribution`) — in `ViewerPage` and in `AuthoringView`'s view mode |
 | `ub-view-controls` | The zoom out / zoom in / fit buttons |
 | `ub-freshness`, `ub-freshness__time`, `ub-freshness__alert` | When the values were last updated, and the "not updating" notice |
 | `ub-action` (`--primary`, `--icon`) | Every button; the primary one; a button holding one symbol |

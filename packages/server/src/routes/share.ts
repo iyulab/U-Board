@@ -15,7 +15,7 @@ const MAX_BATCH_BINDINGS = 500;
 const DISCONNECTED: ResolveResult = { value: undefined, quality: 'disconnected' };
 
 /** Every `(connectorId, ref)` pair a document's widgets declare via their bindings — the single
- * traversal `referencedConnectorIds` and `isDeclaredBinding` below both build on, so the
+ * traversal `referencedConnectors` and `isDeclaredBinding` below both build on, so the
  * `doc.nodes` → `node.widget?.bindings` → `Object.values(...)` walk exists in exactly one place. */
 function* declaredBindings(doc: ViewDocument): Generator<{ connectorId: string; ref: unknown }> {
   for (const node of doc.nodes) {
@@ -27,17 +27,25 @@ function* declaredBindings(doc: ViewDocument): Generator<{ connectorId: string; 
 
 /** Every adapter id a document's widgets reference, intersected with the connectors that actually
  * exist in this workspace — an id like `demo-cmms` (the client-side mock, never a DB row) is
- * dropped without any special-casing. Used to report the `connectorIds` list to the viewer, so it
- * knows which `ShareConnectorAdapter`s to construct. Access to the resolve endpoint is gated
+ * dropped without any special-casing. Used to tell the viewer which `ShareConnectorAdapter`s to
+ * construct, and how each source asks to be credited. Access to the resolve endpoint is gated
  * separately and more narrowly by `isDeclaredBinding` below. Because `findConnector` is async,
  * candidate ids are checked via `Promise.all` rather than a plain synchronous `.filter(...)`. */
-async function referencedConnectorIds(db: AppConfig['db'], workspaceId: string, doc: ViewDocument): Promise<string[]> {
+async function referencedConnectors(db: AppConfig['db'], workspaceId: string, doc: ViewDocument): Promise<Connector[]> {
   const ids = new Set<string>();
   for (const { connectorId } of declaredBindings(doc)) ids.add(connectorId);
-  const checked = await Promise.all(
-    [...ids].map(async id => ((await findConnector(db, workspaceId, id)) ? id : null))
-  );
-  return checked.filter((id): id is string => id !== null);
+  const found = await Promise.all([...ids].map(id => findConnector(db, workspaceId, id)));
+  return found.filter((connector): connector is Connector => connector !== undefined);
+}
+
+/** What the viewer needs about a board's data sources: their ids, and the credit of each that has one —
+ *  never their address or settings. */
+async function connectorsForViewer(db: AppConfig['db'], workspaceId: string, doc: ViewDocument) {
+  const connectors = await referencedConnectors(db, workspaceId, doc);
+  return {
+    connectorIds: connectors.map(c => c.id),
+    attributions: Object.fromEntries(connectors.flatMap(c => (c.attribution ? [[c.id, c.attribution]] : []))),
+  };
 }
 
 /** True when `(connectorId, ref)` matches some binding this board's document actually declares —
@@ -94,7 +102,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     res.status(200).json({
       name: board.name,
       document: board.document,
-      connectorIds: await referencedConnectorIds(db, token.workspaceId, board.document),
+      ...(await connectorsForViewer(db, token.workspaceId, board.document)),
     });
   });
 

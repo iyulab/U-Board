@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ViewerPage, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board/viewer';
+import { ViewerPage, KO_LABELS, type ViewDocument, type Adapter, type Attribution } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
 import { API_BASE, fetchWithRetry, apiClock } from './api-base.js';
 import './App.css';
@@ -57,12 +57,17 @@ export function App() {
         if (res.status === 410) return setState({ kind: 'expired' });
         if (res.status === 404 || res.status === 401 || res.status === 403) return setState({ kind: 'not-found' });
         if (!res.ok) return unavailable();
-        const body = (await res.json()) as { name: string; document: ViewDocument; connectorIds: string[] };
+        const body = (await res.json()) as {
+          name: string;
+          document: ViewDocument;
+          connectorIds: string[];
+          attributions?: Record<string, Attribution>;
+        };
         if (cancelled) return;
         // A link that expires while the board is open says so, rather than leaving every value
         // to turn "disconnected" with no explanation.
         const batcher = new ShareResolveBatcher(boardId, token, () => setState({ kind: 'expired' }));
-        const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id));
+        const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id, body.attributions?.[id]));
         setState({ name: body.name, document: body.document, adapters });
       })
       .catch(unavailable);

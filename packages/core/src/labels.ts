@@ -53,6 +53,8 @@ export interface UBoardLabels {
   previewRegion: string;
   /** The accessible name of a `ViewerPage` board view when no `ariaLabel` is given. */
   boardRegion: string;
+  /** Before the sources a board's data comes from, under the board (`Adapter.attribution`). */
+  dataSources: string;
   resolving: string;
   noDocument: string;
   /** A polling `ViewerPage`'s "last updated" line; `{time}` is replaced by the time of day. */
@@ -188,6 +190,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   editorRegion: 'Editor',
   previewRegion: 'Board view',
   boardRegion: 'Board',
+  dataSources: 'Data',
   resolving: 'Resolving…',
   noDocument: 'No document loaded — Import one to view it.',
   lastUpdated: 'Updated {time}',

@@ -15,6 +15,7 @@ import {
   type ConnectorOAuthSettings,
   type ConnectorSummary,
   PATH_KEY_PLACEHOLDER,
+  type ConnectorAttribution,
 } from '../db/connectors.js';
 import { isValidRef, buildResolveTarget, resolveConnectorValue, testConnector, forgetConnector, type ResolveState } from '../resolve-connector.js';
 
@@ -38,6 +39,20 @@ function parseBaseUrl(value: unknown): URL | null {
   } catch {
     return null;
   }
+}
+
+/** The longest credit a connector may carry — a line under a board, not a paragraph. */
+const ATTRIBUTION_MAX_LENGTH = 200;
+
+/** A request's `attribution`: `undefined` when absent (leave it), `null` to clear it, the credit to store,
+ *  or `false` when it is not one — text required, and a link, if any, an absolute http(s) URL. */
+function parseAttribution(value: unknown): ConnectorAttribution | null | undefined | false {
+  if (value === undefined || value === null) return value;
+  if (typeof value !== 'object') return false;
+  const { text, url } = value as { text?: unknown; url?: unknown };
+  if (typeof text !== 'string' || text.trim() === '' || text.trim().length > ATTRIBUTION_MAX_LENGTH) return false;
+  if (url !== undefined && url !== null && url !== '' && (typeof url !== 'string' || !parseBaseUrl(url))) return false;
+  return { text: text.trim(), ...(typeof url === 'string' && url !== '' ? { url } : {}) };
 }
 
 /** A `path` connector's base URL names where its key goes: `{key}` once, in the path — never in the
@@ -114,8 +129,11 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
   const authError = validateAuthFields(body);
   if (authError) return authError;
   if (body.authType === 'path' && !hasPathKeyPlaceholder(body.baseUrl)) return 'INVALID_INPUT';
+  const attribution = parseAttribution(body.attribution);
+  if (attribution === false) return 'INVALID_INPUT';
   return {
     baseUrl: body.baseUrl,
+    attribution: attribution ?? undefined,
     authType: body.authType,
     authHeaderName: body.authType === 'header' ? body.authHeaderName : undefined,
     authParamName: body.authType === 'query' ? body.authParamName.trim() : undefined,
@@ -136,7 +154,9 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
 function connectorChanges(body: any, existing: Connector): ConnectorChanges | string {
   if (body.name !== undefined && (typeof body.name !== 'string' || body.name.trim() === '')) return 'INVALID_INPUT';
   if (body.baseUrl !== undefined && !parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
-  const changes: ConnectorChanges = { name: body.name, baseUrl: body.baseUrl };
+  const attribution = parseAttribution(body.attribution);
+  if (attribution === false) return 'INVALID_INPUT';
+  const changes: ConnectorChanges = { name: body.name, baseUrl: body.baseUrl, attribution };
   if (body.authType === undefined) return pathKeyKept(changes, existing);
   const authError = validateAuthFields(body, existing);
   if (authError) return authError;

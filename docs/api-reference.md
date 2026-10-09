@@ -80,11 +80,17 @@ interface Adapter {
   readonly id: string;
   resolve(ref: unknown): Promise<ResolvedBinding>;
   references?(): Promise<readonly AdapterReference[]>;
+  readonly attribution?: Attribution;
 }
 
 interface AdapterReference {
   ref: string;
   label?: string;
+}
+
+interface Attribution {
+  text: string;
+  url?: string;
 }
 ```
 
@@ -106,6 +112,11 @@ interface AdapterReference {
   form of `AuthoringView` then offers them to pick from, shown by `label` when given, and binds the
   chosen `ref` string. Without it, the form takes an HTTP connector reference — a request path and a
   JSON Pointer into the response. It plays no part in resolving.
+- `attribution` — optional: how the adapter's source asks to be credited where its data is shown
+  (an agency and its open-data portal, a weather service — a license often makes it a condition of
+  use). `ViewerPage`, and `AuthoringView` in view mode, name the credit of every adapter a board's
+  bindings use, once each, on a line under the board; `url` becomes a link when it is http(s).
+  `ViewerPage`'s `attribution={false}` leaves the line out, for a host that shows it itself.
 
 ### `ResolvedBinding`
 

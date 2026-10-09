@@ -68,6 +68,8 @@ CREATE TABLE IF NOT EXISTS connectors (
   auth_type TEXT NOT NULL CHECK (auth_type IN ('none', 'bearer', 'header', 'query', 'path', 'oauth2-client-credentials')),
   auth_header_name TEXT,
   auth_param_name TEXT,
+  attribution_text TEXT,
+  attribution_url TEXT,
   auth_value TEXT,
   oauth_token_url TEXT,
   oauth_client_id TEXT,
@@ -86,6 +88,8 @@ ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_client_id TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_scope TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_client_auth TEXT CHECK (oauth_client_auth IN ('basic', 'body'));
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS auth_param_name TEXT;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS attribution_text TEXT;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS attribution_url TEXT;
 DO $$
 BEGIN
   IF NOT EXISTS (

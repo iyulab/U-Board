@@ -66,6 +66,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [authType, setAuthType] = useState<ConnectorAuthType>('none');
   const [authHeaderName, setAuthHeaderName] = useState('');
   const [authParamName, setAuthParamName] = useState('');
+  const [attributionText, setAttributionText] = useState('');
+  const [attributionUrl, setAttributionUrl] = useState('');
   const [authValue, setAuthValue] = useState('');
   const [oauthTokenUrl, setOauthTokenUrl] = useState('');
   const [oauthClientId, setOauthClientId] = useState('');
@@ -114,6 +116,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setOauthTokenUrl('');
     setOauthClientId('');
     setOauthScope('');
+    setAttributionText('');
+    setAttributionUrl('');
     setOauthClientAuth('basic');
     setTestPath('');
     setTestOutcome(null);
@@ -131,6 +135,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setOauthTokenUrl(c.oauthTokenUrl ?? '');
     setOauthClientId(c.oauthClientId ?? '');
     setOauthScope(c.oauthScope ?? '');
+    setAttributionText(c.attribution?.text ?? '');
+    setAttributionUrl(c.attribution?.url ?? '');
     setOauthClientAuth(c.oauthClientAuth ?? 'basic');
     setTestOutcome(null);
   }
@@ -142,6 +148,10 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       authType,
       authHeaderName: authType === 'header' ? authHeaderName : undefined,
       authParamName: authType === 'query' ? authParamName : undefined,
+      // Blank clears a credit the connector has; otherwise there is nothing to send.
+      attribution: attributionText.trim()
+        ? { text: attributionText.trim(), ...(attributionUrl.trim() ? { url: attributionUrl.trim() } : {}) }
+        : connectors.find(c => c.id === editingId)?.attribution ? null : undefined,
       authValue: authType === 'none' ? undefined : authValue || undefined,
       ...(isOAuth ? { oauthTokenUrl, oauthClientId, oauthScope, oauthClientAuth } : {}),
     };
@@ -284,6 +294,15 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
               <input type="password" value={authValue} onChange={e => setAuthValue(e.target.value)} required={!canKeepStoredSecret} />
             </FormField>
           )}
+          <FormField label="출처 표시(선택)">
+            <input value={attributionText} onChange={e => setAttributionText(e.target.value)} maxLength={200} placeholder="예: 서울 열린데이터광장 (공공누리 제1유형)" />
+          </FormField>
+          {attributionText.trim() !== '' && (
+            <FormField label="출처 링크(선택)">
+              <input type="url" value={attributionUrl} onChange={e => setAttributionUrl(e.target.value)} placeholder="https://" />
+            </FormField>
+          )}
+          <p className="ub-connector-hint">출처는 이 데이터소스를 쓰는 보드 아래와 공유 링크에 표시됩니다. 공공누리·CC BY 같은 이용 조건이 요구하는 경우 적으세요.</p>
           <FormField label={isOAuth ? '시험할 경로(선택 — 비우면 토큰만)' : '시험할 경로'}>
             <input value={testPath} onChange={e => setTestPath(e.target.value)} placeholder="/assets" />
           </FormField>

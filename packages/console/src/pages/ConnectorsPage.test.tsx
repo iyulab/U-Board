@@ -87,6 +87,25 @@ describe('ConnectorsPage', () => {
     }));
   });
 
+  it('stores how a source is credited, and clears it when the field is emptied on an edit', async () => {
+    const credited = { ...CONNECTOR, id: 'c9', name: 'Air', attribution: { text: '서울 열린데이터광장', url: 'https://data.example.org' } };
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [credited] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.updateConnector).mockResolvedValue({ ...credited, attribution: undefined });
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Air 수정' }));
+    expect(screen.getByLabelText('출처 표시(선택)')).toHaveValue('서울 열린데이터광장');
+    expect(screen.getByLabelText('출처 링크(선택)')).toHaveValue('https://data.example.org');
+    fireEvent.change(screen.getByLabelText('출처 표시(선택)'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 수정' }));
+    await waitFor(() => expect(api.updateConnector).toHaveBeenCalledWith('w1', 'c9', expect.objectContaining({ attribution: null })));
+  });
+
   it('shows an empty state when the workspace has no connectors yet', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });

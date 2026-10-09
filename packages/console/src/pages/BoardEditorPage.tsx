@@ -70,7 +70,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   }, [workspaceId, userId]);
 
   const adapters: readonly Adapter[] = useMemo(() => {
-    const real = connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id));
+    const real = connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id, c.attribution));
     // The binding form starts on the first: a real connector when there is one, the demo data otherwise.
     return [...real, demoAdapter];
   }, [demoAdapter, workspaceId, connectors]);

@@ -30,6 +30,7 @@ import type { BoardAppearance, ViewDocument, Widget, Shape } from '../view-docum
 import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, GROUP_STYLE, ERROR_STYLE } from '../ui-style.js';
+import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
 
 export interface AuthoringViewProps {
   initialDocument: ViewDocument;
@@ -161,6 +162,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
       cancelled = true;
     };
   }, [doc, adapters, labels]);
+  const attributions = useMemo(() => boardAttributions(doc, adapters), [doc, adapters]);
 
   useEffect(() => {
     if (selectedNodeId && !doc.nodes.some(n => n.id === selectedNodeId)) {
@@ -402,6 +404,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           ) : (
             <p className="ub-authoring__status">{labels.resolving}</p>
           )}
+          {mode === 'view' && preview && <AttributionLine attributions={attributions} labels={labels} />}
         </div>
         {/* A fixed width: sized by its content, the form's inline fields would widen the panel until the
             editor and preview — which give way (`minWidth: 0`) — were squeezed to a sliver. */}

@@ -18,6 +18,10 @@ do when upgrading. Each release's notes carry its section.
   could only be a header. The key is sealed like every connector secret and put into the address only when the
   request is sent, so it is never stored in a board, never served with a share link, and never written to the log.
   The binding form warns when a request path itself carries what looks like a key — move it into the connector.
+- **A data source's credit under every board that shows its data.** A connector can carry an attribution — the
+  credit text and, optionally, a link — which the share viewer and the editor's view mode show under each board
+  bound to it; a share link serves the credit and nothing else about the source. Open-data licenses such as
+  KOGL Type 1 and CC BY make crediting the source a condition of use.
 - **The connection test shows what the source answered.** Its first 400 characters appear under the result, so a
   source that reports an error in a successful answer (a bad key, an empty query) can be seen as such.
 

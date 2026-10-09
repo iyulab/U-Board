@@ -16,6 +16,11 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **Where a board's data comes from, under the board.** An adapter can carry `attribution` (`{ text, url? }`,
+  new type `Attribution`) — how its source asks to be credited, which open-data licenses commonly require.
+  `ViewerPage`, and `AuthoringView` in view mode, name the credit of every adapter the board binds to, once each,
+  on a line under the board ("Data:", `KO_LABELS` "데이터 출처:"); a link only for an http(s) `url`.
+  `ViewerPage`'s new `attribution={false}` leaves the line to a host that shows it itself. New label `dataSources`.
 - **A reason for an answer that cannot be read: `QualityReason` `format`.** The source answered, but in a form
   the binding cannot read — XML or HTML where JSON was needed, or a value path into plain text — which reported
   `address` ("bound value not found at the source") and sent the author looking for a wrong field.

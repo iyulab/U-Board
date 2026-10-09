@@ -13,6 +13,7 @@ import type { UBoardLabels } from '../labels.js';
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, ERROR_STYLE, MUTED_STYLE } from '../ui-style.js';
+import { AttributionLine, boardAttributions } from './attribution.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -36,6 +37,9 @@ export interface ViewerPageProps {
    * source's side; when this machine's clock may be off from that one (an unattended screen whose
    * clock has drifted), pass a clock corrected to the source's — see `serverClock`. */
   clock?: () => number;
+  /** Name where the board's data comes from — each bound adapter's `attribution` — under the board.
+   * Default `true`. Turn it off only to show it yourself: a source's license often requires it. */
+  attribution?: boolean;
 }
 
 /**
@@ -56,6 +60,7 @@ export function ViewerPage({
   ariaLabel,
   labels: labelsProp,
   clock = Date.now,
+  attribution = true,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
   const [doc, setDoc] = useState<ViewDocument | null>(initialDocument ?? null);
@@ -70,6 +75,7 @@ export function ViewerPage({
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
 
   const extent = useMemo(() => (doc ? documentExtent(doc) : null), [doc]);
+  const attributions = useMemo(() => (doc && attribution ? boardAttributions(doc, adapters) : []), [doc, adapters, attribution]);
   const view = useFittedView();
   const { fitTo } = view;
   // Fit whenever a document is loaded — not on a preview refresh, which is only new values for the
@@ -149,6 +155,7 @@ export function ViewerPage({
       ) : (
         <p className="ub-viewer__status">{labels.resolving}</p>
       )}
+      {preview && <AttributionLine attributions={attributions} labels={labels} />}
     </div>
   );
 }

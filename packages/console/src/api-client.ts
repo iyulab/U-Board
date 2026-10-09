@@ -233,6 +233,8 @@ export interface ConnectorSummary extends ConnectorOAuthSettings {
   authType: ConnectorAuthType;
   authHeaderName?: string;
   authParamName?: string;
+  /** How the source is credited under a board that shows its data. */
+  attribution?: { text: string; url?: string };
   updatedAt: string;
 }
 
@@ -242,7 +244,7 @@ export function listConnectors(workspaceId: string) {
 
 export function createConnector(
   workspaceId: string,
-  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string } & ConnectorOAuthSettings
+  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors`, {
     method: 'POST',
@@ -281,7 +283,7 @@ export function testConnector(
 export function updateConnector(
   workspaceId: string,
   connectorId: string,
-  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string } & ConnectorOAuthSettings
+  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors/${connectorId}`, {
     method: 'PUT',
