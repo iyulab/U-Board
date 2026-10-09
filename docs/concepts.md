@@ -20,7 +20,10 @@ nothing about what the board depicts, and it does not follow the viewer's theme:
 the same to everyone who opens it.
 
 **Node** — a positioned point in a canvas view that carries a widget. A node can be anchored to a
-fixed coordinate or placed without an anchor.
+fixed coordinate or placed without an anchor. It has a box (`width` × `height`, a default size when left out), and its widget is
+drawn inside that box, fitted to it: a chart fills it — compactly when the box is small — a gauge or
+an image scales down, and a table or a list scrolls within it. The box the author drew is what the
+board shows; a widget never spills over a neighbouring node.
 
 **Connector** — a line drawn between two nodes, used when the relationship between them needs to
 be shown (for example, a network link).
