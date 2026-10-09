@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-10-09
+
 ### Changed
 
 - A widget on a board stays inside the box its node was drawn with: a small chart switches to a compact layout, a

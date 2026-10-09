@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-09
+
 ### Changed
 
 - **A widget stays inside its node.** The widget takes the node's box exactly, where before the box was only its
