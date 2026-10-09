@@ -40,6 +40,12 @@ All notable changes to this package are documented here. The format follows
   `coordinateOf` reads it (the center of the node's box), `placeAt` places a node at one, `coordinateAt` and
   `pointAt` map any point. Each axis maps linearly; no projection is applied. `validateViewDocument` checks
   the two points are apart on both axes. New types `ReferencePoint`, `Coordinate`.
+- **Place a node by coordinate in the editor.** With nothing selected, the board panel takes the background's
+  two reference points (saved once all eight numbers are in and apart on both axes, cleared together). A
+  node's panel anchors or frees it and, for an anchored node on such a background, shows its coordinate and
+  moves it there when one is typed. New labels `referencePoints`, `referencePointsHint`, `referencePoint`,
+  `imageX`, `imageY`, `coordinateX`, `coordinateY`, `referencePointsApart`, `referencePointsIncomplete`,
+  `clearReferencePoints`, `anchored`, `anchorNeedsReferencePoints` (`KO_LABELS` included).
 - **`@iyulab/u-board/domain` reads the HTTP connector reference.** `HttpRef`, `isHttpRef`, `readHttpRef` (a
   parsed response → the value and its observed time, or why not), `parseSourceTime`, `valueAtPath` and
   `findHttpRefItem` — the reading the hosted connector does, for a host that answers the same references.

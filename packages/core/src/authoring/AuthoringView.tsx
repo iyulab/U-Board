@@ -26,7 +26,7 @@ import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
 import type { Adapter } from '../adapter.js';
-import type { BoardAppearance, ViewDocument, Widget, Shape } from '../view-document.js';
+import type { BoardAppearance, Node, ReferencePoint, ViewDocument, Widget, Shape } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, GROUP_STYLE, ERROR_STYLE } from '../ui-style.js';
@@ -288,6 +288,16 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     });
   };
 
+  const handleNodeChange = (change: Partial<Pick<Node, 'x' | 'y' | 'anchored'>>) => {
+    setDoc(prev => ({ ...prev, nodes: prev.nodes.map(n => (n.id === selectedNodeId ? { ...n, ...change } : n)) }));
+  };
+  const handleReferencePointsChange = (referencePoints: [ReferencePoint, ReferencePoint] | undefined) => {
+    setDoc(prev => {
+      if (!prev.background.image) return prev;
+      const { referencePoints: _points, ...image } = prev.background.image;
+      return { ...prev, background: { ...prev.background, image: referencePoints ? { ...image, referencePoints } : image } };
+    });
+  };
   const handleWidgetChange = (widget: Widget) => {
     setDoc(prev => ({
       ...prev,
@@ -414,7 +424,16 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           ) : selectedDecoration ? (
             <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} labels={labels} />
           ) : selectedNode ? (
-            <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} labels={labels} clock={clock} />
+            <PropertyPanel
+              node={selectedNode}
+              adapters={adapters}
+              connectorLabels={connectorLabels}
+              onChange={handleWidgetChange}
+              background={doc.background}
+              onNodeChange={handleNodeChange}
+              labels={labels}
+              clock={clock}
+            />
           ) : (
             <BoardPanel
               hasBackground={!!doc.background.image}
@@ -422,6 +441,8 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
               onChooseBackground={() => backgroundInputRef.current?.click()}
               onRemoveBackground={handleRemoveBackground}
               onAppearanceChange={handleAppearanceChange}
+              referencePoints={doc.background.image?.referencePoints}
+              onReferencePointsChange={handleReferencePointsChange}
               labels={labels}
             />
           )}

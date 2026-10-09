@@ -13,6 +13,11 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
+- **Place nodes by coordinate.** A background image can carry two reference points — a point of the image and
+  the coordinate it stands for, such as a map's longitude and latitude — set in the board panel. An anchored
+  node then shows the coordinate it stands at, and moves there when one is typed. The Gwanghwamun sample's map
+  declares its points.
+
 - **A value's age as its source gives it.** An HTTP binding can name the field where the source says when it
   observed the value (`observedAtPath`) and the time zone the source writes in (`timeZone`). The reading's time
   is then the source's — an hourly air measurement fetched at :50 was observed fifty minutes earlier — and a

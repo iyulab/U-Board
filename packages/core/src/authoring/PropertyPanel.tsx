@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useId, useMemo, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
-import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
+import type { Background, Node, Widget, Binding, ValueMap } from '../view-document.js';
+import { NodeAnchorFields } from './AnchorFields.js';
 import { findHttpRefItem, isTimeZone, parseSourceTime, type HttpRef, type HttpRefItem } from '../http-ref.js';
 import { deviceTimeZone, knownTimeZones, lacksOffset, timeFieldsIn, type TimeField } from './time-fields.js';
 import { getWidgetLabel } from '@iyulab/u-widgets/tools';
@@ -19,6 +20,10 @@ export interface PropertyPanelProps {
   /** Adapter id → human-readable label. Falls back to the raw id when absent. */
   connectorLabels?: Record<string, string>;
   onChange: (widget: Widget) => void;
+  /** The board's background, which an anchored node's coordinate is read by, and where a change to the
+   *  node itself — its anchor, its place — goes. Without them the panel edits the widget only. */
+  background?: Background;
+  onNodeChange?: (change: Partial<Pick<Node, 'x' | 'y' | 'anchored'>>) => void;
   labels?: UBoardLabels;
   /** The current time in epoch milliseconds, which a stale preview value's age is measured to —
    * `Date.now` by default. */
@@ -251,7 +256,16 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
   };
 }
 
-export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS, clock = Date.now }: PropertyPanelProps) {
+export function PropertyPanel({
+  node,
+  adapters,
+  connectorLabels,
+  onChange,
+  background,
+  onNodeChange,
+  labels = DEFAULT_LABELS,
+  clock = Date.now,
+}: PropertyPanelProps) {
   const [propsText, setPropsText] = useState('{}');
   const [propsError, setPropsError] = useState<string | null>(null);
   const [draft, setDraft] = useState<BindingDraft>(emptyDraft(initialConnectorId(adapters), node ? defaultPropPath(node.widget) : ''));
@@ -486,6 +500,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           ))}
         </select>
       </label>
+      {background && onNodeChange && <NodeAnchorFields node={node} background={background} onChange={onNodeChange} labels={labels} />}
       <WidgetPropsForm widget={node.widget} onChange={onChange} labels={labels} />
       {/* Open while it holds an edit that is not valid JSON, so the error is never folded away. */}
       <details className="ub-panel__advanced" open={propsError !== null || undefined}>

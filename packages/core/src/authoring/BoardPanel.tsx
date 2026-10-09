@@ -1,4 +1,5 @@
-import type { BoardAppearance } from '../view-document.js';
+import type { BoardAppearance, ReferencePoint } from '../view-document.js';
+import { ReferencePointsFields } from './AnchorFields.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
 
@@ -12,6 +13,10 @@ export interface BoardPanelProps {
   onChooseBackground: () => void;
   onRemoveBackground: () => void;
   onAppearanceChange: (appearance: BoardAppearance) => void;
+  /** The background image's reference points, and where a change to them goes — offered while there is a
+   *  background. */
+  referencePoints?: readonly ReferencePoint[];
+  onReferencePointsChange?: (points: [ReferencePoint, ReferencePoint] | undefined) => void;
   labels?: UBoardLabels;
 }
 
@@ -27,6 +32,8 @@ export function BoardPanel({
   onChooseBackground,
   onRemoveBackground,
   onAppearanceChange,
+  referencePoints,
+  onReferencePointsChange,
   labels = DEFAULT_LABELS,
 }: BoardPanelProps) {
   return (
@@ -42,6 +49,9 @@ export function BoardPanel({
           </button>
         )}
       </div>
+      {hasBackground && onReferencePointsChange && (
+        <ReferencePointsFields points={referencePoints} onChange={onReferencePointsChange} labels={labels} />
+      )}
       <label className="ub-panel__field ub-authoring__appearance">
         {labels.appearance}
         <select value={appearance} onChange={e => onAppearanceChange(e.target.value as BoardAppearance)}>

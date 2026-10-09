@@ -26,6 +26,23 @@ export interface UBoardLabels {
   /** Chooses an image file as the board's background; `removeBackground` takes it away. */
   setBackground: string;
   removeBackground: string;
+  /** The background image's reference points (`BackgroundImage.referencePoints`): the fieldset, what they
+   *  do, one point's group ("{n}" is 1 or 2), its fields — a point of the image and the coordinate it stands
+   *  for — and why they are not saved yet. */
+  referencePoints: string;
+  referencePointsHint: string;
+  referencePoint: string;
+  imageX: string;
+  imageY: string;
+  coordinateX: string;
+  coordinateY: string;
+  referencePointsApart: string;
+  referencePointsIncomplete: string;
+  clearReferencePoints: string;
+  /** A node's anchor (`Node.anchored`), and the hint shown for an anchored node while the background has no
+   *  reference points to read its coordinate by. */
+  anchored: string;
+  anchorNeedsReferencePoints: string;
   /** The board's tone (`ViewDocument.appearance`): the picker's name and its two choices. */
   appearance: string;
   appearanceLight: string;
@@ -198,6 +215,19 @@ export const DEFAULT_LABELS: UBoardLabels = {
   boardHeading: 'Board',
   setBackground: 'Background image',
   removeBackground: 'Remove background',
+  referencePoints: 'Reference points',
+  referencePointsHint:
+    "Two points of the image and the coordinates they stand for — a map's longitude and latitude, a plan's metres. An anchored node then reads as a coordinate.",
+  referencePoint: 'Point {n}',
+  imageX: 'Image x',
+  imageY: 'Image y',
+  coordinateX: 'Coordinate x',
+  coordinateY: 'Coordinate y',
+  referencePointsApart: 'The two points must differ on both axes, in the image and in their coordinates.',
+  referencePointsIncomplete: 'Fill in all eight numbers to save the points.',
+  clearReferencePoints: 'Clear reference points',
+  anchored: 'Anchored to a place on the background',
+  anchorNeedsReferencePoints: 'Give the background reference points (in the board settings) to place this node by coordinate.',
   appearance: 'Tone',
   appearanceLight: 'Light',
   appearanceDark: 'Dark',
