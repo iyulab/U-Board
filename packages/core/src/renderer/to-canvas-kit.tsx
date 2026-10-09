@@ -62,6 +62,8 @@ export interface ToCanvasKitOptions {
   qualityText?: QualityText;
   /** The time a stale value's age is measured to, in epoch milliseconds — `Date.now()` by default. */
   now?: number;
+  /** The language the widgets speak (BCP 47) — the labels' `locale`. Left out, a widget follows the page's. */
+  locale?: string;
 }
 
 /**
@@ -71,7 +73,7 @@ export interface ToCanvasKitOptions {
  * (docs/principles.md) — it depends on canvas-kit and u-widgets so the document format itself
  * doesn't have to.
  */
-export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_QUALITY_TEXT, now }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
+export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_QUALITY_TEXT, now, locale }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
   const scene = new Scene();
 
   if (doc.background.image) {
@@ -129,7 +131,7 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
               one a chart keeps its own default and leaves the box half empty. A minimum, not a fixed
               height: in a box smaller than what a widget can draw in, the widget stays whole and
               extends past the box, rather than a chart's plot being pressed flat or a gauge cut off. */}
-          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} theme={BOARD_WIDGET_THEME} />
+          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} theme={BOARD_WIDGET_THEME} locale={locale} />
           <span role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
             {label ?? ''}
           </span>

@@ -37,6 +37,13 @@ describe('widgetFields', () => {
     expect(steps.find(f => f.key === 'compact')).toMatchObject({ kind: 'boolean', defaultValue: false });
   });
 
+  it("names each field as the widget library does, in the labels' language", () => {
+    const names = (locale?: string) => widgetFields(seedWidget('gauge'), locale).fields.map(f => f.label);
+    expect(names()).toEqual(['Value', 'Minimum', 'Maximum', 'Unit', 'Label', 'Subtitle']);
+    expect(names('ko-KR')).toEqual(['값', '최솟값', '최댓값', '단위', '라벨', '부제']);
+    expect(widgetFields(seedWidget('gauge')).fields[1].description).toBe('Minimum range value');
+  });
+
   it('leaves data given as rows to the JSON editor', () => {
     expect(summary(seedWidget('chart.line')).filter(f => f.startsWith('data.'))).toEqual([]);
     expect(summary({ type: 'status', props: { data: [{ label: 'A', value: 'x' }] } }).filter(f => f.startsWith('data.'))).toEqual([]);
@@ -65,7 +72,7 @@ describe('WidgetPropsForm', () => {
   it('writes a number when the field is left, keeping the rest of the props', () => {
     const onChange = vi.fn();
     render(<WidgetPropsForm widget={gauge} onChange={onChange} />);
-    const max = screen.getByLabelText(/Maximum range value/);
+    const max = screen.getByLabelText(/^Maximum/);
     fireEvent.change(max, { target: { value: '250' } });
     expect(onChange).not.toHaveBeenCalled();
     fireEvent.blur(max);
@@ -74,13 +81,13 @@ describe('WidgetPropsForm', () => {
 
   it("shows the widget's default where the value is left out", () => {
     render(<WidgetPropsForm widget={{ type: 'gauge', props: { data: { value: 1 } } }} onChange={vi.fn()} />);
-    expect(screen.getByLabelText(/Maximum range value/)).toHaveAttribute('placeholder', '100');
+    expect(screen.getByLabelText(/^Maximum/)).toHaveAttribute('placeholder', '100');
   });
 
   it('removes a number that is cleared, so the widget default applies', () => {
     const onChange = vi.fn();
     render(<WidgetPropsForm widget={gauge} onChange={onChange} />);
-    const max = screen.getByLabelText(/Maximum range value/);
+    const max = screen.getByLabelText(/^Maximum/);
     fireEvent.change(max, { target: { value: '' } });
     fireEvent.blur(max);
     expect(onChange.mock.calls[0][0].props).toEqual({ data: { value: 40 } });
@@ -88,16 +95,16 @@ describe('WidgetPropsForm', () => {
 
   it('marks a field that is bound', () => {
     render(<WidgetPropsForm widget={gauge} onChange={vi.fn()} />);
-    expect(screen.getByLabelText(/Current value on the arc/).closest('label')).toHaveTextContent('· bound');
+    expect(screen.getByLabelText(/^Value/).closest('label')).toHaveTextContent('· bound');
   });
 
   it('sets a choice at once, and leaves an untouched text field alone', () => {
     const onChange = vi.fn();
     const status: Widget = { type: 'status', props: { data: { label: 'Pump' } } };
     render(<WidgetPropsForm widget={status} onChange={onChange} />);
-    fireEvent.blur(screen.getByLabelText(/Status value/));
+    fireEvent.blur(screen.getByLabelText(/^Value/));
     expect(onChange).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText(/Severity level/), { target: { value: 'error' } });
+    fireEvent.change(screen.getByLabelText(/^Level/), { target: { value: 'error' } });
     expect(onChange).toHaveBeenCalledWith({ type: 'status', props: { data: { label: 'Pump', level: 'error' } } });
   });
 

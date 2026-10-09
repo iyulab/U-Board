@@ -139,6 +139,15 @@ describe('toCanvasKit', () => {
       expect(children.find(child => child.props.theme !== undefined)?.props.theme).toBe('light');
     });
 
+    it("has the widget speak the labels' language", () => {
+      const { overlays } = toCanvasKit(
+        doc({ nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, quality: {} } }] }),
+        { locale: 'ko-KR' }
+      );
+      const children = React.Children.toArray((overlays[0].content as ReactElement<{ children?: ReactElement[] }>).props.children) as React.ReactElement<{ locale?: string }>[];
+      expect(children.find(child => child.props.locale !== undefined)?.props.locale).toBe('ko-KR');
+    });
+
     it('adds no border when every binding is live (ISA-101 — normal state is unmarked)', () => {
       const frame = overlayFor({ state: 'live', load: 'live' });
       expect(frame.props.style?.border).toBeUndefined();

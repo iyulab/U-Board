@@ -133,12 +133,12 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     let cancelled = false;
     resolveDocument(doc, adapters).then(resolved => {
       if (cancelled) return;
-      setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock() }));
+      setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
       // chart.* renders through the dynamically-loaded @iyulab/u-widgets/charts subpath (see
       // to-canvas-kit.tsx) — a node mounted before that resolves needs one more render pass to
       // pick it up.
       chartsReady.then(() => {
-        if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock() }));
+        if (!cancelled) setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
       });
     });
     return () => {

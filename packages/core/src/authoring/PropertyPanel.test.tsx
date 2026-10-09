@@ -95,7 +95,7 @@ describe('PropertyPanel', () => {
     const advanced = container.querySelector('details.ub-panel__advanced')!;
     expect(advanced).not.toHaveAttribute('open');
 
-    const label = screen.getByLabelText(/Status label/);
+    const label = screen.getByLabelText(/^Label/);
     expect(label).toHaveValue('Pump A');
     fireEvent.change(label, { target: { value: 'Pump B' } });
     fireEvent.blur(label);
@@ -264,10 +264,12 @@ describe('PropertyPanel bindings', () => {
     expect(screen.getByLabelText('Prop path').tagName).toBe('INPUT');
   });
 
-  it('names widget types in the words it is given', () => {
+  it('names widget types and fields in the language of the labels it is given', () => {
     render(<PropertyPanel node={statusNode()} adapters={[]} onChange={vi.fn()} labels={KO_LABELS} />);
     expect(screen.getByRole('option', { name: '게이지' })).toHaveValue('gauge');
     expect(screen.getByRole('option', { name: '선 차트' })).toHaveValue('chart.line');
+    // A field's name comes from the widget library, in the labels' language.
+    expect(screen.getByLabelText(/^라벨/)).toHaveValue('Pump A');
   });
 
   it('renders the preview badge with the same label the canvas frame uses for a degraded binding', async () => {

@@ -6,6 +6,18 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `labels.locale` — the language of the labels (`en` in `DEFAULT_LABELS`, `ko-KR` in `KO_LABELS`). The widgets on
+  the board speak it (their own text, such as a table's pagination or a region's name), and the property panel
+  names widget types, data fields and options in it — short names from the widget library ("Minimum", "최솟값"),
+  with the library's description as the field's tooltip. With `KO_LABELS` the widgets' own text is Korean too.
+
+### Changed
+
+- **Breaking:** `labels.widgetTypeNames` is removed — the type picker names every widget type as the widget library
+  does, in `labels.locale`, where the labels named three. Requires `@iyulab/u-widgets` 0.28.
+
 ## [0.5.0] - 2026-10-08
 
 ### Added

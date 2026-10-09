@@ -25,7 +25,7 @@ const text = (value: unknown) => (value === undefined || value === null ? '' : t
  * (or a choice is made), not on every keystroke: each change re-resolves the preview's bindings.
  */
 export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: WidgetPropsFormProps) {
-  const { fields, otherOptions } = useMemo(() => widgetFields(widget), [widget]);
+  const { fields, otherOptions } = useMemo(() => widgetFields(widget, labels.locale), [widget, labels.locale]);
   if (fields.length === 0 && otherOptions === 0) return null;
 
   const set = (field: WidgetField, value: unknown) => {
@@ -37,8 +37,8 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: W
     const value = read(widget, field);
     const bound = field.section === 'data' && widget.bindings?.[`data.${field.key}`] !== undefined;
     const name = (
-      <span className="ub-panel__field-name">
-        {field.description ?? field.key} <code>{field.key}</code>
+      <span className="ub-panel__field-name" title={field.description}>
+        {field.label} <code>{field.key}</code>
         {bound && <span className="ub-panel__binding-tag"> · {labels.boundField}</span>}
       </span>
     );

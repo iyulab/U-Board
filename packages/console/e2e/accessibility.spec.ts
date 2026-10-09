@@ -42,6 +42,12 @@ test('the board list, the board editor, the share dialog and the shared board pa
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
+  // The board speaks the console's language: the status widget names its list in Korean, and the
+  // property panel names the widget's fields as the widget library does, in Korean.
+  await expect(page.getByTestId('viewer-container').getByRole('list', { name: '상태' }).first()).toBeVisible();
+  await clickFirstNode(page);
+  await expect(page.getByLabel(/^라벨/)).toBeVisible();
+
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
     await clickFirstNode(page);

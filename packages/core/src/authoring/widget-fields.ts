@@ -1,4 +1,7 @@
-import { WIDGET_DATA_FIELDS, getWidgetOptions } from '@iyulab/u-widgets/tools';
+import { getWidgetDataFields, getWidgetOptions } from '@iyulab/u-widgets/tools';
+// The widget library's names in Korean — the language U-Board ships labels for besides English
+// (`KO_LABELS`). Registered here, with the authoring code, so a viewer never loads them.
+import '@iyulab/u-widgets/tools/locales/ko';
 import type { Widget } from '../view-document.js';
 
 /** A value of a widget's props the property panel offers its own control for. */
@@ -6,6 +9,8 @@ export interface WidgetField {
   /** Where it lives: `props.data` or `props.options`. */
   section: 'data' | 'options';
   key: string;
+  /** Its name, in the requested language, from the widget library. */
+  label: string;
   kind: 'text' | 'number' | 'boolean' | 'choice';
   /** The values a `choice` field takes. */
   choices?: readonly string[];
@@ -37,21 +42,22 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  * The fields of `widget` the panel can edit with a control, as the widget library describes them
  * (`@iyulab/u-widgets/tools`): its known data fields — when `props.data` is a single object; data
  * given as an array of rows is edited as JSON — and the options it reads whose value is a text, a
- * number, a yes/no or a choice. Anything else stays in the JSON editor.
+ * number, a yes/no or a choice. Anything else stays in the JSON editor. Names are in `locale` (the
+ * labels' language).
  */
-export function widgetFields(widget: Widget): WidgetFields {
+export function widgetFields(widget: Widget, locale?: string): WidgetFields {
   const props = isRecord(widget.props) ? widget.props : {};
   const fields: WidgetField[] = [];
 
   if (props.data === undefined || isRecord(props.data)) {
-    for (const field of WIDGET_DATA_FIELDS[widget.type] ?? []) {
+    for (const field of getWidgetDataFields(widget.type, locale)) {
       const kind = kindOf(field.type, field.enum);
-      if (kind) fields.push({ section: 'data', key: field.key, ...kind, description: field.desc });
+      if (kind) fields.push({ section: 'data', key: field.key, label: field.label, ...kind, description: field.desc });
     }
   }
 
   let otherOptions = 0;
-  for (const option of getWidgetOptions(widget.type)) {
+  for (const option of getWidgetOptions(widget.type, locale)) {
     const kind = kindOf(option.type, option.enum);
     if (!kind) {
       otherOptions++;
@@ -60,6 +66,7 @@ export function widgetFields(widget: Widget): WidgetFields {
     fields.push({
       section: 'options',
       key: option.key,
+      label: option.label,
       ...kind,
       ...(option.default !== undefined && { defaultValue: option.default }),
       description: option.desc,

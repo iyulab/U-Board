@@ -1,9 +1,14 @@
+// The widget library's own text in Korean (a table's pagination, a region's name): with `locale` below,
+// the widgets on a Korean board speak Korean too.
+import '@iyulab/u-widgets/locales/ko';
 import { timeText, type UBoardLabels } from './labels.js';
 import { ageText } from './quality-text.js';
 
 /** Every label in Korean — what `AuthoringView` and `ViewerPage` show when given `labels: KO_LABELS`,
- *  with times of day and ages in Korean too (`timeText('ko')`, `ageText('ko')`). */
+ *  with times of day and ages in Korean too (`timeText('ko')`, `ageText('ko')`), and the widgets'
+ *  own text and names in Korean. */
 export const KO_LABELS: UBoardLabels = {
+  locale: 'ko-KR',
   addNode: '노드 추가',
   addRectDecoration: '사각형 장식 추가',
   addTextDecoration: '텍스트 장식 추가',
@@ -37,7 +42,6 @@ export const KO_LABELS: UBoardLabels = {
   multipleSelected: '{count}개 선택됨 — 하나를 선택하면 편집할 수 있습니다.',
   propertiesHeading: '속성',
   widgetType: '위젯 타입',
-  widgetTypeNames: { status: '상태', gauge: '게이지', 'chart.line': '선 차트' },
   newNodeLabel: '새 노드',
   newNodeValue: '연결 전',
   staticProps: '정적 props (JSON)',

@@ -6,6 +6,11 @@ import { DEFAULT_QUALITY_TEXT, type QualityText } from './quality-text.js';
  * language — any subset, the rest stays English.
  */
 export interface UBoardLabels {
+  /** The language of these labels, as a BCP 47 tag (`en`, `ko-KR`). The widgets on the board speak it
+   * too — their own text (a table's pagination, a region's name) and the names the property panel gives
+   * a widget type, a data field and an option, which come from the widget library in that language. */
+  locale: string;
+
   // Toolbar
   addNode: string;
   addRectDecoration: string;
@@ -57,8 +62,6 @@ export interface UBoardLabels {
   multipleSelected: string;
   propertiesHeading: string;
   widgetType: string;
-  /** What each widget type is called in the type picker; a type without an entry shows its id. */
-  widgetTypeNames: Record<string, string>;
   /** The text a new node starts with: its label, and the value it shows until it is bound. */
   newNodeLabel: string;
   newNodeValue: string;
@@ -144,6 +147,7 @@ export function timeText(locale: string): (epochMs: number) => string {
 }
 
 export const DEFAULT_LABELS: UBoardLabels = {
+  locale: 'en',
   addNode: 'Add node',
   addRectDecoration: 'Add rect decoration',
   addTextDecoration: 'Add text decoration',
@@ -177,7 +181,6 @@ export const DEFAULT_LABELS: UBoardLabels = {
   multipleSelected: '{count} items selected — select one to edit it.',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
-  widgetTypeNames: { status: 'Status', gauge: 'Gauge', 'chart.line': 'Line chart' },
   newNodeLabel: 'New node',
   newNodeValue: 'Not bound',
   staticProps: 'Static props (JSON)',

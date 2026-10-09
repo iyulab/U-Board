@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useId, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
+import { getWidgetLabel } from '@iyulab/u-widgets/tools';
 import { WIDGET_TYPES, seedWidget, defaultPropPath, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { WidgetPropsForm } from './WidgetPropsForm.js';
@@ -296,7 +297,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   };
 
   // The values a binding can replace, as the widget library names them; any other path is typed.
-  const dataFields = widgetFields(node.widget).fields.filter(f => f.section === 'data');
+  const dataFields = widgetFields(node.widget, labels.locale).fields.filter(f => f.section === 'data');
   const fieldPaths = dataFields.map(f => `data.${f.key}`);
   const typedPath = dataFields.length === 0 || typingPropPath || (draft.propPath !== '' && !fieldPaths.includes(draft.propPath));
 
@@ -380,7 +381,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
         <select value={node.widget.type} onChange={handleTypeChange}>
           {WIDGET_TYPES.map(t => (
             <option key={t} value={t}>
-              {labels.widgetTypeNames[t] ?? t}
+              {getWidgetLabel(t, labels.locale)}
             </option>
           ))}
         </select>
@@ -460,7 +461,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
                   const bound = node.widget.bindings?.[path] !== undefined && path !== editingPropPath;
                   return (
                     <option key={path} value={path}>
-                      {`${f.description ?? f.key} (${path})${bound ? ` · ${labels.boundField}` : ''}`}
+                      {`${f.label} (${path})${bound ? ` · ${labels.boundField}` : ''}`}
                     </option>
                   );
                 })}

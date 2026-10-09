@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- Boards in a Korean console and share viewer are Korean throughout: the widgets write their own text in Korean
+  (a table's pagination, a region's name a screen reader reads), and the property panel names every widget type,
+  data field and option in Korean, with the widget library's description as a tooltip.
+
 ## [0.1.2] - 2026-10-08
 
 ### Changed

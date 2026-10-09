@@ -93,9 +93,12 @@ The components show English text by default. Pass `labels` — any subset of `UB
 rest stays English — to show your own; `DEFAULT_LABELS` lists every key with its English text.
 `labels.qualityText` holds the words for connection quality (the node tooltip and screen-reader
 announcement), and `labels.time` writes the time of day — `timeText(locale)` builds one.
+`labels.locale` is the language of the labels: the widgets on the board speak it too (their own text,
+such as a table's pagination), and the property panel names widget types, data fields and options
+in it, as the widget library names them.
 
-Korean ships with the package as `KO_LABELS`, every key included; lay your own words over it as
-over the English:
+Korean ships with the package as `KO_LABELS`, every key included — with it the widgets' own text
+and names are Korean too. Lay your own words over it as over the English:
 
 ```tsx
 import { ViewerPage, KO_LABELS } from '@iyulab/u-board/viewer';
