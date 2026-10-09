@@ -144,7 +144,7 @@ export function ViewerPage({
           {labels.noDocument}
         </p>
       ) : preview ? (
-        <div className="ub-viewer__surface" style={{ flex: 1, minHeight: 0 }}>
+        <div className="ub-viewer__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
           <Viewer
             width={width}
             height={height}

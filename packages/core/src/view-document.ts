@@ -20,7 +20,13 @@ export interface ViewDocument {
    * older saved documents predate this field. Domain-neutral like `Background`: U-Board does not
    * interpret what a decoration's border or label groups. */
   decorations?: Shape[];
+  /** How the board itself looks — its paper and the widgets on it. `light` (the default; absent means
+   * it) for a light drawing or none; `dark` for a dark one, where the widgets take their dark palette
+   * so their text reads on it. Like `Background`, it says the background's tone, not what it depicts. */
+  appearance?: BoardAppearance;
 }
+
+export type BoardAppearance = 'light' | 'dark';
 
 /** A purely visual drawing primitive placed on the canvas. Deliberately its own type rather than
  * a re-export of canvas-kit's `Shape`/`Rect`/`Text` — the renderer-agnostic principle above means

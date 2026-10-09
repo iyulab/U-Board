@@ -2,6 +2,7 @@ import { Scene } from '@canvas-kit/core';
 import type { ViewDocument, Node, Shape, Widget } from '../view-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
 import { seedWidget } from './widget-catalog.js';
+import { onBoard } from '../renderer/board-appearance.js';
 
 /** A newly-added rect decoration's default border — distinct from a node placeholder's blue
  * (`NODE_PLACEHOLDER_STROKE` below) so an author can tell a structural frame apart from a widget
@@ -55,7 +56,7 @@ export function documentToScene(doc: ViewDocument): Scene {
       // stay clickable across its interior, not just its stroke.
       scene.add({ ...shape, fill: DECORATION_PLACEHOLDER_FILL, stroke: shape.stroke ?? DECORATION_STROKE });
     } else {
-      scene.add(shape);
+      scene.add(onBoard(shape, doc.appearance));
     }
   }
 

@@ -592,4 +592,21 @@ describe('AuthoringView background image', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls[0][0].background).toEqual({});
   });
+
+  it('makes a dark board for a dark drawing, and a light one leaves the document as it was', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const { container } = render(<AuthoringView initialDocument={doc()} adapters={[]} onSave={onSave} />);
+    const picker = screen.getByLabelText('Board');
+    expect(picker).toHaveValue('light');
+    fireEvent.change(picker, { target: { value: 'dark' } });
+    container.querySelectorAll('.ub-authoring__surface').forEach(surface => expect(surface).toHaveAttribute('data-appearance', 'dark'));
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0][0].appearance).toBe('dark');
+
+    fireEvent.change(picker, { target: { value: 'light' } });
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect('appearance' in onSave.mock.calls[1][0]).toBe(false);
+  });
 });

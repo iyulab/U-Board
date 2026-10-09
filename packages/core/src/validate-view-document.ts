@@ -39,6 +39,10 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
     }
   }
 
+  if (value.appearance !== undefined && value.appearance !== 'light' && value.appearance !== 'dark') {
+    doc.fail(['appearance'], 'expected "light" or "dark"');
+  }
+
   if (doc.array(value, ['nodes'])) {
     (value.nodes as unknown[]).forEach((node, i) => checkNode(doc, node, ['nodes', String(i)]));
   }

@@ -13,6 +13,12 @@ Different kinds have different capabilities; a view does not mix kinds.
 attach domain meaning to a background — what it depicts is left to the author's and viewer's
 interpretation.
 
+**Appearance** — the board's tone: `light` (the default) or `dark`. It is set by the author to
+match the background — a dark drawing, or a dark board with none — and the board's paper and the
+widgets on it follow it, so their text reads against the background. Like the background it says
+nothing about what the board depicts, and it does not follow the viewer's theme: the board looks
+the same to everyone who opens it.
+
 **Node** — a positioned point in a canvas view that carries a widget. A node can be anchored to a
 fixed coordinate or placed without an anchor.
 

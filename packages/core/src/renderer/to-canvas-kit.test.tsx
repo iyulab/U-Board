@@ -139,6 +139,25 @@ describe('toCanvasKit', () => {
       expect(children.find(child => child.props.theme !== undefined)?.props.theme).toBe('light');
     });
 
+    it('draws a text decoration with no colour of its own in a light ink on a dark board, and keeps a chosen one', () => {
+      const decorations = [
+        { id: 't1', type: 'text' as const, x: 0, y: 0, text: 'Zone A' },
+        { id: 't2', type: 'text' as const, x: 0, y: 20, text: 'Zone B', fill: '#f59e0b' },
+      ];
+      const fills = (appearance?: 'light' | 'dark') =>
+        toCanvasKit(doc({ appearance, decorations })).scene.getObjects().filter(o => o.type === 'text').map(o => (o as { fill?: string }).fill);
+      expect(fills('dark')).toEqual(['#e5e7eb', '#f59e0b']);
+      expect(fills()).toEqual([undefined, '#f59e0b']);
+    });
+
+    it('draws the widget in the dark palette on a dark board', () => {
+      const { overlays } = toCanvasKit(
+        doc({ appearance: 'dark', nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, quality: {} } }] })
+      );
+      const children = React.Children.toArray((overlays[0].content as ReactElement<{ children?: ReactElement[] }>).props.children) as React.ReactElement<{ theme?: string }>[];
+      expect(children.find(child => child.props.theme !== undefined)?.props.theme).toBe('dark');
+    });
+
     it("has the widget speak the labels' language", () => {
       const { overlays } = toCanvasKit(
         doc({ nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, quality: {} } }] }),

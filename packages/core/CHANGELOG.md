@@ -13,6 +13,12 @@ All notable changes to this package are documented here. The format follows
   names widget types, data fields and options in it — short names from the widget library ("Minimum", "최솟값"),
   with the library's description as the field's tooltip. With `KO_LABELS` the widgets' own text is Korean too.
 
+- `ViewDocument.appearance` (`'light' | 'dark'`, light when absent) — the board's tone, set to match its
+  background. On a dark board the widgets take their dark palette and the paper is dark (`--ub-board-bg-dark`),
+  so a dark drawing's widgets read; a text decoration given no colour is drawn in a light ink there. The
+  authoring toolbar picks it (`labels.appearance`, `appearanceLight`, `appearanceDark`); a light board leaves the
+  field out. The validator accepts only the two values.
+
 ### Changed
 
 - **Breaking:** `labels.widgetTypeNames` is removed — the type picker names every widget type as the widget library

@@ -320,7 +320,7 @@ interface Widget {
 These carry no resolution logic — see [`concepts.md`](concepts.md) for what each represents, and
 the exported TypeScript types themselves for the exact fields (`Node.anchored`,
 `Connector.fromNodeId`/`toNodeId`, `Background.image`, `Shape` (`RectShape`/`TextShape`, the
-`decorations` array's element type), `ViewDocument.kind`/`nodes`/`connectors`/`decorations`).
+`decorations` array's element type), `ViewDocument.kind`/`nodes`/`connectors`/`decorations`/`appearance`).
 They are included in the walkthrough above for context, not repeated field-by-field here since
 none of them have a resolution-time contract to document.
 

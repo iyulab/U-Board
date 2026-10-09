@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A board can be dark: the editor's toolbar sets the board's tone to match its background. On a dark board — a
+  dark drawing, or none — the widgets use their dark colours and the paper is dark, so values read; the shared
+  board looks the same. Boards made before stay light.
+
 ### Changed
 
 - Boards in a Korean console and share viewer are Korean throughout: the widgets write their own text in Korean

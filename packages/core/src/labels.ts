@@ -24,6 +24,10 @@ export interface UBoardLabels {
   /** Chooses an image file as the board's background; `removeBackground` takes it away. */
   setBackground: string;
   removeBackground: string;
+  /** The board's tone (`ViewDocument.appearance`): the picker's name and its two choices. */
+  appearance: string;
+  appearanceLight: string;
+  appearanceDark: string;
   /** Said when a chosen background is refused: not an image type browsers draw, over the size
    *  limit (`{max}` is replaced by it), or unreadable. */
   backgroundType: string;
@@ -157,6 +161,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   importFailed: 'Import failed.',
   setBackground: 'Background image',
   removeBackground: 'Remove background',
+  appearance: 'Board',
+  appearanceLight: 'Light',
+  appearanceDark: 'Dark',
   backgroundType: 'Choose a PNG, JPEG, WebP, GIF or SVG image.',
   backgroundTooLarge: 'The image is larger than {max}.',
   backgroundUnreadable: 'The image could not be read.',

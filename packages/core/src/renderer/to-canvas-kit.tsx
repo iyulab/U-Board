@@ -26,6 +26,7 @@ import type { ResolvedViewDocument } from '../resolve-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { QUALITY_FRAME_STYLE, frameQuality } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
+import { onBoard } from './board-appearance.js';
 
 // Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
 // on screen. Kept off the frame `<div>` itself and off `UWidget` — each `uw-*` custom element
@@ -47,10 +48,9 @@ const VISUALLY_HIDDEN_STYLE: CSSProperties = {
 
 const WIDGET_FILL_STYLE: CSSProperties = { width: '100%', minHeight: '100%' };
 
-/** Widgets sit on the board — its background drawing, or the board's light paper (`--ub-board-bg`) —
- * not on the page around it, so they take the light palette whatever the system or page theme. A
- * dark page still gets dark controls around the board; the board itself reads like a drawing. */
-const BOARD_WIDGET_THEME = 'light';
+/** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
+ * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
+ * theme. A dark page still gets dark controls around a light board; the board reads like a drawing. */
 
 export interface CanvasKitRenderOutput {
   scene: Scene;
@@ -88,7 +88,7 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
   }
 
   for (const shape of doc.decorations ?? []) {
-    scene.add(shape);
+    scene.add(onBoard(shape, doc.appearance));
   }
 
   const nodesById = new Map(doc.nodes.map(node => [node.id, node]));
@@ -131,7 +131,7 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
               one a chart keeps its own default and leaves the box half empty. A minimum, not a fixed
               height: in a box smaller than what a widget can draw in, the widget stays whole and
               extends past the box, rather than a chart's plot being pressed flat or a gauge cut off. */}
-          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} theme={BOARD_WIDGET_THEME} locale={locale} />
+          <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} theme={doc.appearance ?? 'light'} locale={locale} />
           <span role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
             {label ?? ''}
           </span>

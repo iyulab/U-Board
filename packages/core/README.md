@@ -142,11 +142,13 @@ host themes it by defining them on `:root` or on an ancestor of the view:
 | `--ub-font-size-xs`, `--ub-font-size-sm`, `--ub-font-size-md`, `--ub-font-size-base` | Text sizes (11, 12, 13, 14 px by default) |
 | `--ub-panel-width` | Width of the authoring view's property panel (320 px by default) |
 | `--ub-board-bg` | The board's paper inside the editor and viewer frames — white by default, in the dark theme too |
+| `--ub-board-bg-dark` | The paper of a dark board (`appearance: "dark"`) — `#111827` by default |
 
 Light or dark, the fallbacks follow the page's declared theme (`<html data-theme="dark" | "light">`) and,
-without one, the system preference — the rule the widgets themselves follow. The board stays light
-in both: its paper (`--ub-board-bg`) and the widgets on it, which sit on the board's drawing rather
-than on the page.
+without one, the system preference — the rule the widgets themselves follow. The board keeps its own
+tone in both: its paper and the widgets on it sit on the board's drawing rather than on the page, so
+they follow the document's `appearance` — light (`--ub-board-bg`) unless the author made a dark board
+for a dark drawing (`--ub-board-bg-dark`, the widgets in their dark palette).
 
 The tokens marked for failures, the "not updating" notice and node frames apply without the
 stylesheet too — those colors carry meaning. The sheet's rules select these class names, mostly one
@@ -157,6 +159,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 |---|---|
 | `ub-authoring` | The authoring view |
 | `ub-authoring__toolbar`, `ub-authoring__group` | Its toolbar, and each group of related actions in it |
+| `ub-authoring__appearance` | The board tone picker (light or dark board) in the toolbar |
 | `ub-authoring__panes`, `ub-authoring__pane` (`--editor`, `--preview`) | The row holding the editor, preview and panel; the editor and the preview columns |
 | `ub-authoring__pane-heading`, `ub-authoring__surface` | A column's heading; the frame the editor or the preview draws in |
 | `ub-authoring__panel` | The column holding the property or decoration panel |

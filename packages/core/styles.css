@@ -165,6 +165,13 @@
   overflow: hidden;
 }
 
+/* A dark board (`appearance: "dark"`) — for a dark drawing, or none: dark paper, and the widgets on it
+   take their dark palette. */
+.ub-authoring__surface[data-appearance="dark"],
+.ub-viewer__surface[data-appearance="dark"] {
+  background: var(--ub-board-bg-dark, #111827);
+}
+
 .ub-authoring__panel {
   box-sizing: border-box;
   padding: var(--_ub-space-3);

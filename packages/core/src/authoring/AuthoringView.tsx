@@ -23,7 +23,7 @@ import { documentExtent } from '../viewer/document-extent.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
 import type { Adapter } from '../adapter.js';
-import type { ViewDocument, Widget, Shape } from '../view-document.js';
+import type { BoardAppearance, ViewDocument, Widget, Shape } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, GROUP_STYLE, ERROR_STYLE } from '../ui-style.js';
@@ -253,6 +253,14 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     setFileError(null);
   };
 
+  // Light is the default, so a light board leaves the field out and its document stays as it was.
+  const handleAppearanceChange = (appearance: BoardAppearance) => {
+    setDoc(prev => {
+      const { appearance: _appearance, ...rest } = prev;
+      return appearance === 'dark' ? { ...rest, appearance } : rest;
+    });
+  };
+
   const handleWidgetChange = (widget: Widget) => {
     setDoc(prev => ({
       ...prev,
@@ -312,6 +320,13 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
               {labels.removeBackground}
             </button>
           )}
+          <label className="ub-authoring__appearance">
+            {labels.appearance}{' '}
+            <select value={doc.appearance ?? 'light'} onChange={e => handleAppearanceChange(e.target.value as BoardAppearance)}>
+              <option value="light">{labels.appearanceLight}</option>
+              <option value="dark">{labels.appearanceDark}</option>
+            </select>
+          </label>
         </div>
         <div className="ub-authoring__group" style={GROUP_STYLE}>
           <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />
@@ -341,7 +356,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
       <div className="ub-authoring__panes" style={{ display: 'flex', gap: 'var(--ub-space-4, 16px)', flex: 1, minHeight: 0 }}>
         <div className="ub-authoring__pane ub-authoring__pane--editor" style={paneStyle}>
           <h2 className="ub-authoring__pane-heading">{labels.editorHeading}</h2>
-          <div className="ub-authoring__surface" style={{ flex: 1, minHeight: 0 }}>
+          <div className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
             <KonvaDesigner
               width={width}
               height={height}
@@ -358,7 +373,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
         <div className="ub-authoring__pane ub-authoring__pane--preview" style={paneStyle}>
           <h2 className="ub-authoring__pane-heading">{labels.previewHeading}</h2>
           {preview ? (
-            <div className="ub-authoring__surface" style={{ flex: 1, minHeight: 0 }}>
+            <div className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
               <Viewer
                 width={width}
                 height={height}

@@ -118,6 +118,11 @@ describe('validateViewDocument', () => {
     expect(paths(broken(d => { d.decorations[1].text = 5; d.decorations[1].fill = 0; }))).toEqual(['/decorations/1/text', '/decorations/1/fill']);
   });
 
+  it('takes a board appearance of light or dark, and no other', () => {
+    expect(validateViewDocument(broken(d => { d.appearance = 'dark'; }))).toEqual([]);
+    expect(paths(broken(d => { d.appearance = 'dim'; }))).toEqual(['/appearance']);
+  });
+
   it('does not judge references between parts of a document — a connector to a missing node is drawn as nothing, not rejected', () => {
     expect(validateViewDocument(broken(d => { d.connectors[0].toNodeId = 'gone'; }))).toEqual([]);
   });
