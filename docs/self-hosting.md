@@ -75,7 +75,7 @@ address. Records older than `UBOARD_AUDIT_RETENTION_DAYS` are deleted.
 | `UBOARD_SESSION_SECRET` | yes | Signs session cookies; at least 16 characters. Changing it signs everyone out. |
 | `UBOARD_SECRETS_KEY` | yes | Seals connector credentials in the database (AES-256-GCM), so a copy of the database does not hand them out; at least 32 characters (`openssl rand -base64 32`). Keep it apart from the session secret and from backups. The server seals credentials stored before it was set when it starts, and refuses to start with a key other than the one they were sealed with. A lost key leaves the credentials unreadable: clear them (`UPDATE connectors SET auth_value = NULL`) and have owners enter them again. |
 | `PORT` | no | Port to listen on (default `4000`). |
-| `UBOARD_STALE_MAX_AGE_SECONDS` | no | How old a connector's last value may be and still be shown as stale when the data source stops answering. Past it, the binding shows as disconnected. Unset: no limit — the value is shown however old, with its age. |
+| `UBOARD_STALE_MAX_AGE_SECONDS` | no | How long after it was last read a connector's value may still be shown as stale when the data source stops answering — counted from the read, not from the time the source says it observed the value. Past it, the binding shows as disconnected. Unset: no limit — the value is shown however old, with its age. |
 | `UBOARD_SHARE_FRAME_ANCESTORS` | no | Which pages may embed a share link in a frame, as a CSP `frame-ancestors` source list. Default `https:` (any page served over HTTPS). An intranet page served over plain HTTP needs to be named, e.g. `http://hmi.example.com https:`. |
 | `UBOARD_WORKSPACE_CREATION` | no | Who may create workspaces: `operator` (default — the installation's operator only) or `anyone` (every signed-in account). Any other value stops the server from starting. |
 | `UBOARD_CONNECTOR_ADDRESSES` | no | Which addresses connectors may reach — the data sources they read and their OAuth token endpoints. `private` (default): public addresses and private networks (10/8, 172.16/12, 192.168/16, 100.64/10, 198.18/15, IPv6 unique local), where an installation's own systems usually are. `public`: public addresses only — set it when workspace owners are not trusted with the network the server runs in, as on an installation run for others. `any`: no restriction. Under every setting but `any`, the server's own loopback and link-local addresses and the cloud host services a server can reach (instance metadata services, Azure's host endpoint) are refused, checked on the address a connection is actually made to. |
@@ -144,7 +144,11 @@ part of the document, and the binding form warns about one.
 An open board keeps itself current: every 30 seconds it asks for all of its values in one request,
 and a link that expires while it is open turns into an expiry notice. Many screens showing the same
 board do not multiply the load on a data source — the server answers requests for the same source
-URL from one read for 10 seconds, and forgets it as soon as the connector's settings change. If the
+URL from one read for 10 seconds, and forgets it as soon as the connector's settings change. A binding
+that says how old its source's value may normally be (`maxAgeSeconds` — a source that publishes hourly
+is current while up to a couple of hours old) is read from one read for an eighth of that: an hourly
+source is asked about every fifteen minutes however many screens show it, which keeps a daily request
+quota (often 1,000–10,000 calls for public open-data keys) in reach. If the
 share path sits behind a per-address rate limit, allow for one request per open screen every 30
 seconds, plus one when it opens or is shown again — screens behind one network address all count
 against that address.

@@ -58,7 +58,7 @@ authoring UI (set the background image; add/drag/resize nodes and rect/text deco
 property panel for editing the selected node's widget type, static props, and data bindings,
 including a path explorer for HTTP-shaped adapter responses and a value map that turns a source's
 words or numbers — by exact value or numeric range — into what the widget takes; a label editor for
-the selected text decoration), export/import of the document as a file (beside the host's own
+the selected text decoration; reference points that make an anchored node's place a coordinate), export/import of the document as a file (beside the host's own
 Save, when it has one), and a read-only viewer mode are implemented and browser-verified. The editor and
 the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
 or keyboard.
@@ -67,8 +67,10 @@ adapter (with SSRF-safe origin pinning, and either a static credential — a bea
 path segment, put in only when the request is sent) — or OAuth 2.0
 client credentials with cached, auto-renewed access tokens) is wired into both the authoring UI
 and the read-only embed viewer. It picks a value out of a JSON response with an RFC 6901 JSON
-Pointer, reports why a binding is not live (source unreachable, credentials refused, value not
-found at the source, rate limited), and the embed viewer resolves all of a board's bindings in one
+Pointer — or out of a list item named by its fields — reads the time the source says it observed the
+value, shows a source that has fallen behind its own updates as stale, reports why a binding is not
+live (source unreachable, credentials refused, value not found at the source, an answer it cannot
+read, rate limited, the source behind), and the embed viewer resolves all of a board's bindings in one
 request, again every 30 seconds while it is open. A connector's settings can be tried before they are saved, its credentials are kept on the server
 sealed under an installation key, and the addresses connectors may
 reach are an installation setting — never the server's own loopback, link-local or cloud host addresses. A connector to a specific external system that needs its own
