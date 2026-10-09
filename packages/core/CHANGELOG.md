@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-09
+
 ### Added
 
 - `labels.locale` — the language of the labels (`en` in `DEFAULT_LABELS`, `ko-KR` in `KO_LABELS`). The widgets on

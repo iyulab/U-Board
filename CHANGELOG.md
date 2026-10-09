@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-09
+
 ### Added
 
 - A board can be dark: the editor's toolbar sets the board's tone to match its background. On a dark board — a
