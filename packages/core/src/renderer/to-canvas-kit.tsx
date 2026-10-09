@@ -46,7 +46,7 @@ const VISUALLY_HIDDEN_STYLE: CSSProperties = {
   border: 0,
 };
 
-const WIDGET_FILL_STYLE: CSSProperties = { width: '100%', minHeight: '100%' };
+const WIDGET_FILL_STYLE: CSSProperties = { width: '100%', height: '100%' };
 
 /** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
  * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
@@ -127,10 +127,10 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
       height: node.height ?? DEFAULT_NODE_HEIGHT,
       content: (
         <div style={{ width: '100%', height: '100%', ...frameStyle }} title={label}>
-          {/* A widget fills its node: u-widgets grows into the height its host is given, and without
-              one a chart keeps its own default and leaves the box half empty. A minimum, not a fixed
-              height: in a box smaller than what a widget can draw in, the widget stays whole and
-              extends past the box, rather than a chart's plot being pressed flat or a gauge cut off. */}
+          {/* A widget takes its node's box exactly — the box the author drew is the layout. u-widgets fits
+              a host height in both directions: a chart fills it and lays itself out compactly when small,
+              media (a gauge, an image) scales down whole, and content that runs on (a table, a list)
+              scrolls inside the node. Nothing spills over a neighbouring node. */}
           <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} theme={doc.appearance ?? 'light'} locale={locale} />
           <span role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
             {label ?? ''}

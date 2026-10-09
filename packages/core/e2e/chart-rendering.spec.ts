@@ -106,10 +106,39 @@ test('a widget fills a node taller than its own default — the chart is as tall
   expect(Math.abs(sizes.widget - sizes.overlay)).toBeLessThan(2);
 });
 
-// …but is not squeezed below what it can draw in: a chart's plot is not pressed flat, a gauge not cut off.
-test('a widget keeps its own size in a node smaller than that', async ({ page }) => {
+// …and stays inside a node smaller than it would draw itself: nothing spills over a neighbour. The widget
+// fits the box rather than being cut by it — a gauge's whole dial is in view with nothing scrolled away,
+// and a chart keeps a plot to read rather than one pressed flat.
+test('a widget stays whole inside a node smaller than its own size', async ({ page }) => {
   for (const id of ['seed-chart-line-check', 'seed-gauge-check']) {
     const sizes = await heights(page, id);
-    expect(sizes.widget, id).toBeGreaterThan(sizes.overlay);
+    expect(Math.abs(sizes.widget - sizes.overlay), id).toBeLessThan(2);
   }
+
+  const fit = await page.evaluate(() => {
+    const overlay = (id: string) => document.querySelector(`[data-testid="designer-overlay-${id}"]`) as HTMLElement;
+    const deep = (root: ParentNode, sel: string): Element | null => {
+      const hit = root.querySelector(sel);
+      if (hit) return hit;
+      for (const el of Array.from(root.querySelectorAll('*'))) {
+        if (el.shadowRoot) { const d = deep(el.shadowRoot, sel); if (d) return d; }
+      }
+      return null;
+    };
+    const gaugeBox = overlay('seed-gauge-check').getBoundingClientRect();
+    const dial = deep(overlay('seed-gauge-check'), 'svg.gauge-svg')!.getBoundingClientRect();
+    const scroller = deep(overlay('seed-gauge-check'), '.gauge-container') as HTMLElement;
+    type Grid = { coordinateSystem: { getRect(): { height: number } } };
+    const chart = deep(overlay('seed-chart-line-check'), 'uw-chart') as HTMLElement & {
+      _chart?: { getModel(): { getComponent(t: string): Grid } };
+    };
+    return {
+      dialInside: dial.bottom <= gaugeBox.bottom + 1 && dial.top >= gaugeBox.top - 1,
+      dialScrolls: scroller.scrollHeight > scroller.clientHeight + 1,
+      plot: chart._chart?.getModel().getComponent('grid').coordinateSystem.getRect().height ?? 0,
+    };
+  });
+  expect(fit.dialInside, JSON.stringify(fit)).toBe(true);
+  expect(fit.dialScrolls, JSON.stringify(fit)).toBe(false);
+  expect(fit.plot, JSON.stringify(fit)).toBeGreaterThan(40);
 });

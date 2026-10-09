@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- A widget on a board stays inside the box its node was drawn with: a small chart switches to a compact layout, a
+  gauge or image scales down, and a table or list scrolls inside the node, instead of running over neighbouring
+  nodes.
+
 ## [0.1.3] - 2026-10-09
 
 ### Added

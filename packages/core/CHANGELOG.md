@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **A widget stays inside its node.** The widget takes the node's box exactly, where before the box was only its
+  minimum: in a node smaller than the widget drew itself, a gauge or chart ran past the box and over its neighbours.
+  Now a chart lays itself out compactly, a gauge or image scales down whole, and a table or list scrolls inside the
+  node. Requires `@iyulab/u-widgets` 0.29, which this release depends on.
+
 ## [0.6.0] - 2026-10-09
 
 ### Added
