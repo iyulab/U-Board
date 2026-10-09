@@ -133,8 +133,8 @@ package is ESM-only and needs Node 22.12 or later.
 SVG file of up to 4 MB, kept inside the document) and adding/dragging/resizing nodes and decorations, paired
 with a property panel for editing the selected node's widget type, static props, and data bindings
 (including a path explorer that walks an HTTP adapter's response tree and writes a JSON Pointer
-to the picked value) or the selected text
-decoration's label — is exported from the package's main entry point alongside the read-only
+to the picked value), the selected text
+decoration's label, or — with nothing selected — the board's own background and tone — is exported from the package's main entry point alongside the read-only
 `ViewerPage`. An adapter that lists its references (`Adapter.references()`) is bound by picking
 one from that list; any other takes an HTTP connector reference. The background and the connector
 lines stay put while nodes and decorations are edited:
