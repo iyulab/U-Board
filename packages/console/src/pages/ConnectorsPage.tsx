@@ -283,6 +283,12 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
               <input value={authParamName} onChange={e => setAuthParamName(e.target.value)} placeholder="serviceKey" required />
             </FormField>
           )}
+          {authType === 'query' && (
+            <p className="ub-connector-hint">
+              키는 인코딩하지 않은 그대로 넣으세요 — 보낼 때 서버가 인코딩합니다. 공공데이터포털처럼 Encoding·Decoding 두 키를 주면
+              Decoding 키입니다.
+            </p>
+          )}
           {authType === 'path' && (
             <p className="ub-connector-hint">
               Base URL에 <code>{'{key}'}</code>를 키가 들어갈 자리에 한 번 적으세요(예: <code>https://api.example.com/{'{key}'}/json</code>).

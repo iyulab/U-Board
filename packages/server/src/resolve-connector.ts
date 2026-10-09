@@ -176,6 +176,7 @@ function findItem(body: unknown, item: RefItem): { found: true; value: unknown }
       element !== null &&
       typeof element === 'object' &&
       Object.entries(item.where).every(([field, expected]) => {
+        if (!Object.hasOwn(element, field)) return false;
         const actual = (element as Record<string, unknown>)[field];
         return actual !== undefined && actual !== null && String(actual) === String(expected);
       })
@@ -301,7 +302,7 @@ function isODataError(body: unknown): boolean {
 /** A failed response's body, if it is JSON — read only to diagnose the failure, so any problem
  * reading it just means "no body". */
 async function errorBody(response: Response): Promise<unknown> {
-  if (!(response.headers.get('content-type') ?? '').includes('json')) return undefined;
+  if (!(response.headers.get('content-type') ?? '').toLowerCase().includes('json')) return undefined;
   try {
     return await response.json();
   } catch {
@@ -312,11 +313,29 @@ async function errorBody(response: Response): Promise<unknown> {
 /** The address a request for `target` is sent to: `target` itself, or — for a connector that sends
  *  its key in the address — `target` with the key put in. Only the request carries it: `target` is
  *  what a binding names, what reads are shared and cached by, and what a log may describe. */
+/** The decoded name of one `name=value` pair of a query string — as written when it does not decode. */
+function parameterName(pair: string): string {
+  const raw = pair.split('=')[0].replace(/\+/g, ' ');
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
 function requestUrl(connector: Connector, target: URL): URL {
   if (connector.authValue === undefined) return target;
   if (connector.authType === 'query' && connector.authParamName) {
+    // Appended to the query as the binding wrote it, rather than through `searchParams`, which would
+    // re-encode every other parameter — `$filter=Name eq 'a'` must reach an OData source as written.
+    // A parameter of the same name in the binding gives way to the key.
     const url = new URL(target);
-    url.searchParams.set(connector.authParamName, connector.authValue);
+    const name = encodeURIComponent(connector.authParamName);
+    const others = url.search
+      .slice(1)
+      .split('&')
+      .filter(pair => pair !== '' && parameterName(pair) !== connector.authParamName);
+    url.search = [...others, `${name}=${encodeURIComponent(connector.authValue)}`].join('&');
     return url;
   }
   if (connector.authType === 'path') {
@@ -352,7 +371,7 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
       throw new HttpStatusError(response.status, `upstream responded ${response.status}`, body);
     }
     stage = 'response';
-    const contentType = response.headers.get('content-type') ?? '';
+    const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
     if (contentType.includes('json')) return await response.json();
     const text = await response.text();
     if (contentType !== '' && !contentType.startsWith('text/plain')) throw unreadable(contentType, text);

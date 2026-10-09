@@ -128,7 +128,7 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
   if (!parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
   const authError = validateAuthFields(body);
   if (authError) return authError;
-  if (body.authType === 'path' && !hasPathKeyPlaceholder(body.baseUrl)) return 'INVALID_INPUT';
+  if (!keyPlaceMatches(body.authType, body.baseUrl)) return 'INVALID_INPUT';
   const attribution = parseAttribution(body.attribution);
   if (attribution === false) return 'INVALID_INPUT';
   return {
@@ -174,7 +174,13 @@ function connectorChanges(body: any, existing: Connector): ConnectorChanges | st
  *  edit alone reaches here too, and the key would then go nowhere. */
 function pathKeyKept(changes: ConnectorChanges, existing: Connector): ConnectorChanges | string {
   const merged = applyConnectorChanges(existing, changes);
-  return merged.authType === 'path' && !hasPathKeyPlaceholder(merged.baseUrl) ? 'INVALID_INPUT' : changes;
+  return keyPlaceMatches(merged.authType, merged.baseUrl) ? changes : 'INVALID_INPUT';
+}
+
+/** `{key}` is in the base URL exactly when the key goes there: a `path` connector needs it, and any other
+ *  would send a literal `{key}` in every request — left behind when a connector leaves `path`. */
+function keyPlaceMatches(authType: string, baseUrl: string): boolean {
+  return authType === 'path' ? hasPathKeyPlaceholder(baseUrl) : !baseUrl.includes(PATH_KEY_PLACEHOLDER);
 }
 
 function toSummary(connector: Connector): ConnectorSummary {

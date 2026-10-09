@@ -32,6 +32,7 @@ export function findItem(body: unknown, item: NonNullable<HttpRef['item']>): { f
       element !== null &&
       typeof element === 'object' &&
       Object.entries(item.where).every(([field, expected]) => {
+        if (!Object.hasOwn(element, field)) return false;
         const actual = (element as Record<string, unknown>)[field];
         return actual !== undefined && actual !== null && String(actual) === String(expected);
       })

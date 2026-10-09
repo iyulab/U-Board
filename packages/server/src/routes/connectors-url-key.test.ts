@@ -71,6 +71,14 @@ describe('a key sent as a query parameter', () => {
     expect(new URL(requested[0]).searchParams.getAll('key')).toEqual([KEY]);
   });
 
+  it('leaves the rest of the query as the binding wrote it', async () => {
+    const { body: created } = await create({ baseUrl: 'https://api.example.com', authType: 'query', authParamName: 'serviceKey', authValue: KEY });
+    await resolve(created.id, { path: "/odata/Assets?$filter=Name%20eq%20'a'&$select=Id,Name" });
+    const sent = new URL(requested[0]);
+    // `'` is percent-encoded by URL parsing itself (as before any key); `$`, `,` and `%20` stay as written.
+    expect(sent.search).toBe(`?$filter=Name%20eq%20%27a%27&$select=Id,Name&serviceKey=${encodeURIComponent(KEY)}`);
+  });
+
   it('needs the parameter name', async () => {
     expect((await create({ baseUrl: 'https://api.example.com', authType: 'query', authValue: KEY })).status).toBe(400);
     expect((await create({ baseUrl: 'https://api.example.com', authType: 'query', authParamName: ' ', authValue: KEY })).status).toBe(400);
@@ -102,6 +110,17 @@ describe('a key sent in the path', () => {
     for (const baseUrl of ['http://open.example.com', 'http://open.example.com/{key}/{key}', 'http://open.example.com/?k={key}']) {
       expect((await create({ baseUrl, authType: 'path', authValue: KEY })).status, baseUrl).toBe(400);
     }
+  });
+
+  it('refuses leaving the path form while {key} stays in the base URL, and {key} on another form', async () => {
+    const { body: created } = await create({ baseUrl: 'http://open.example.com/{key}', authType: 'path', authValue: KEY });
+    const toBearer = await request(app).put(`/api/workspaces/${workspaceId}/connectors/${created.id}`).set('Cookie', ownerCookie)
+      .send({ authType: 'bearer' });
+    expect(toBearer.status).toBe(400);
+    const moved = await request(app).put(`/api/workspaces/${workspaceId}/connectors/${created.id}`).set('Cookie', ownerCookie)
+      .send({ authType: 'bearer', baseUrl: 'http://open.example.com' });
+    expect(moved.status).toBe(200);
+    expect((await create({ baseUrl: 'http://open.example.com/{key}', authType: 'none' })).status).toBe(400);
   });
 
   it('refuses a base URL edit that would drop {key}', async () => {

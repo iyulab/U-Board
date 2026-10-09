@@ -59,6 +59,11 @@ describe('a binding to a list item by its fields', () => {
     expect((await resolve(byId('ST-9'))).body).toEqual({ quality: 'disconnected', reason: 'address' });
   });
 
+  it('matches only fields the item has, never inherited ones', async () => {
+    const { body } = await resolve({ path: '/stations', item: { list: '/data/stations', where: { constructor: 'function Object() { [native code] }' } } });
+    expect(body).toEqual({ quality: 'disconnected', reason: 'address' });
+  });
+
   it('refuses an item that is not a list pointer and fields to match', async () => {
     for (const item of [{ list: 'data', where: { id: 'x' } }, { list: '/data/stations', where: {} }, { list: '/data/stations', where: { id: { nested: 1 } } }, '/data/stations/0']) {
       expect((await resolve({ path: '/stations', item })).status, JSON.stringify(item)).toBe(400);
