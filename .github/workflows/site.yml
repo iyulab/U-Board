@@ -13,6 +13,8 @@ on:
       - 'packages/site/**'
       # The board at the top of the site is drawn by the library, so a library change redeploys it.
       - 'packages/core/**'
+      # The gallery draws the sample boards in packages/samples.
+      - 'packages/samples/**'
       - 'package-lock.json'
       - '.github/workflows/site.yml'
   workflow_dispatch:

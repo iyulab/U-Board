@@ -8,6 +8,7 @@ export type Locale = 'ko' | 'en';
 export const PATHS = {
   home: { ko: '/', en: '/en/' },
   try: { ko: '/try/', en: '/en/try/' },
+  gallery: { ko: '/gallery/', en: '/en/gallery/' },
 } as const;
 
 export type PageId = keyof typeof PATHS;
@@ -62,6 +63,17 @@ export interface Copy {
     narrow: string;
     source: string;
     references: Record<string, string>;
+  };
+  gallery: {
+    nav: string;
+    title: string;
+    description: string;
+    heading: string;
+    intro: string;
+    field: string;
+    kind: string;
+    /** `{time}` — when the source's answers shown were recorded. */
+    recorded: string;
   };
 }
 
@@ -174,6 +186,16 @@ export const COPY: Record<Locale, Copy> = {
         'conveyor.state': '컨베이어 상태(연결 끊김)',
       },
     },
+    gallery: {
+      nav: '갤러리',
+      title: 'U-Board — 오픈 데이터 보드',
+      description: '공공기관이 개방한 데이터로 만든 U-Board 보드. 장소를 그린 약도 위, 값이 그 자리에 놓인 모습을 분야별로 봅니다.',
+      heading: '오픈 데이터 보드',
+      intro: '공공기관이 개방한 실시간 데이터를 U-Board 보드에 연결한 예시입니다. 배경은 장소를 그린 약도이고, 값은 그 값이 가리키는 자리에 놓입니다. 이 페이지는 녹화한 원천 응답을 보여 주며, 설치한 U-Board에서는 같은 보드가 원천을 직접 읽어 30초마다 갱신합니다.',
+      field: '분야',
+      kind: '배경',
+      recorded: '{time}에 녹화한 원천 응답입니다.',
+    },
   },
   en: {
     title: 'U-Board — spatial dashboards that bind live data onto floor plans',
@@ -282,6 +304,16 @@ export const COPY: Record<Locale, Copy> = {
         'line.pressure': 'Line pressure (stale)',
         'conveyor.state': 'Conveyor state (disconnected)',
       },
+    },
+    gallery: {
+      nav: 'Gallery',
+      title: 'U-Board — Boards on open data',
+      description: 'U-Board boards built on public open data: values placed where they belong on a plan of the place, by field.',
+      heading: 'Boards on open data',
+      intro: 'Live data that public bodies open to everyone, bound to U-Board boards. The background is a plan of the place, and each value sits where it belongs. This page shows recorded answers from the sources; in an installed U-Board the same board reads the source itself and updates every 30 seconds.',
+      field: 'Field',
+      kind: 'Background',
+      recorded: 'Answers from the source recorded at {time}.',
     },
   },
 };

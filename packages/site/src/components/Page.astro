@@ -61,6 +61,7 @@ const canonical = url(PATHS[page][locale]);
     <header class="bar">
       <a class="mark" href={PATHS.home[locale]}>U-Board</a>
       <nav aria-label={locale === 'ko' ? '바로가기' : 'Shortcuts'}>
+        <a href={PATHS.gallery[locale]} aria-current={page === 'gallery' ? 'page' : undefined}>{c.gallery.nav}</a>
         <a href={DOCS_URL}>{c.footer.docs}</a>
         <a href={PATHS[page][other]} hreflang={other} lang={other}>{c.otherLanguage}</a>
       </nav>

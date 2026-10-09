@@ -1,0 +1,123 @@
+---
+// Sample boards on public open data, one card each: what field and what kind of background, the board
+// itself (drawn by the library viewer from recorded answers once the page runs script), when the answers
+// were recorded and where they come from.
+import Page from './Page.astro';
+import { COPY, type Locale } from '../copy';
+import { SAMPLE_PACKS } from '@iyulab/u-board-samples';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const c = COPY[locale];
+const g = c.gallery;
+const time = (iso: string) =>
+  new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-GB', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Seoul', timeZoneName: 'short',
+  }).format(new Date(iso));
+const cards = SAMPLE_PACKS.map(pack => {
+  const { width, height } = pack.document.background.image ?? { width: 4, height: 3 };
+  return { pack, aspect: `${width} / ${height}`, recorded: g.recorded.replace('{time}', time(pack.snapshot.capturedAt)) };
+});
+---
+
+<Page locale={locale} page="gallery" title={g.title} description={g.description}>
+  <section class="gallery" data-claim="gallery">
+    <div class="gallery-head">
+      <h1>{g.heading}</h1>
+      <p>{g.intro}</p>
+    </div>
+    {
+      cards.map(({ pack, aspect, recorded }) => (
+        <article class="sample" id={pack.id}>
+          <header class="sample-head">
+            <h2>{pack.title[locale]}</h2>
+            <dl class="sample-tags">
+              <div>
+                <dt>{g.field}</dt>
+                <dd>{pack.field[locale]}</dd>
+              </div>
+              <div>
+                <dt>{g.kind}</dt>
+                <dd>{pack.kind[locale]}</dd>
+              </div>
+            </dl>
+            <p class="sample-summary">{pack.summary[locale]}</p>
+          </header>
+          <div class="sample-board" style={`aspect-ratio: ${aspect}`} data-sample-board={pack.id} data-label={pack.title[locale]}>
+            <noscript>{pack.summary[locale]}</noscript>
+          </div>
+          <p class="sample-recorded">{recorded}</p>
+        </article>
+      ))
+    }
+  </section>
+</Page>
+
+<script>
+  import '../live/gallery';
+</script>
+
+<style>
+  .gallery {
+    padding-block: 2.5rem 3rem;
+  }
+  .gallery-head {
+    max-width: 46rem;
+    margin-bottom: 2rem;
+  }
+  .gallery-head h1 {
+    margin: 0 0 0.75rem;
+  }
+  .gallery-head p,
+  .sample-summary {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.65;
+    word-break: keep-all;
+  }
+  .sample {
+    margin-block: 0 3rem;
+  }
+  .sample-head h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.35rem;
+  }
+  .sample-tags {
+    display: flex;
+    gap: 1.25rem;
+    margin: 0 0 0.5rem;
+    font-size: 0.875rem;
+  }
+  .sample-tags div {
+    display: flex;
+    gap: 0.4rem;
+  }
+  .sample-tags dt {
+    color: var(--muted);
+  }
+  .sample-tags dd {
+    margin: 0;
+    font-weight: 600;
+  }
+  .sample-board {
+    width: 100%;
+    margin-top: 1rem;
+    border: 1px solid var(--line, #d6dedb);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+  }
+  /* The viewer's toolbar and its credit line sit inside the box with the board, so give them room. */
+  .sample-board.live {
+    aspect-ratio: auto !important;
+    height: min(80vh, 760px);
+  }
+  .sample-recorded {
+    margin: 0.5rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+</style>

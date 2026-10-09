@@ -16,4 +16,5 @@ not-hmi	design	README.md	No symbol library, alarms, control output or screen nav
 not-data	design	README.md · docs/scope.md · docs/overview.md	Boards store binding references, not values
 not-bi	design	README.md · docs/scope.md	No warehouse charts or pivot tables
 license	works	LICENSE · README.md	AGPL-3.0-or-later, commercial license available
+gallery	works	packages/samples/src/samples.test.ts · packages/samples/src/snapshot-adapter.ts · packages/site/src/live/gallery.ts · packages/server/src/resolve-connector.ts	Sample boards on public open data (packages/samples), drawn by the library viewer from recorded answers (SnapshotAdapter); the same document binds the live source through the HTTP connector (path key, list items by field), and an open share link re-reads every 30 s
 try	works	packages/site/src/live/playground.ts · packages/core/src/authoring/AuthoringView.tsx	The authoring view the library ships, in the page, on the sample board and source; saving keeps the board in the browser (localStorage)

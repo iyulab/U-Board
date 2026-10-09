@@ -20,7 +20,7 @@ const c = COPY[locale];
         <a class="primary" href={SELF_HOSTING_URL}>{c.install}</a>
         <a class="secondary" href={PATHS.try[locale]} data-claim="try">{c.tryIt}</a>
       </p>
-      <p class="sign-in"><a href={SOURCE_URL}>{c.readSource}</a> · <a href={APP_URL}>{c.signIn}</a></p>
+      <p class="sign-in"><a href={PATHS.gallery[locale]} data-claim="gallery">{c.gallery.heading}</a> · <a href={SOURCE_URL}>{c.readSource}</a> · <a href={APP_URL}>{c.signIn}</a></p>
     </div>
     <PlantFigure figure={c.figure} />
   </section>
