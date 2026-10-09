@@ -11,24 +11,29 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-10-10
+
 ### Added
 
+- **A value's age as its source gives it.** An HTTP binding can name the field where the source says when it
+  observed the value (`observedAtPath`) and the time zone the source writes in (`timeZone`); the binding form
+  offers the response's time fields to pick from, fills in the author's time zone, and shows what the picked
+  field reads as. The reading's time is then the source's — an hourly air measurement fetched at :50 was observed
+  fifty minutes earlier — and a last-known value shown while the source is unreachable says its age by that
+  time. How long such a value is still served counts from when it was last read.
+- **A source that falls behind shows as stale.** A binding can say how old the source's value may normally be
+  (`maxAgeSeconds`, minutes in the form). Older, the value shows as stale with the cause "the source has not
+  updated it as often as expected" — not the network, not the binding. The source is then asked again no sooner
+  than an eighth of that age instead of on every poll, which spends a daily request quota far more slowly.
 - **Place nodes by coordinate.** A background image can carry two reference points — a point of the image and
   the coordinate it stands for, such as a map's longitude and latitude — set in the board panel. An anchored
-  node then shows the coordinate it stands at, and moves there when one is typed. The Gwanghwamun sample's map
-  declares its points.
+  node then shows the coordinate it stands at, and moves there when one is typed.
 
-- **A value's age as its source gives it.** An HTTP binding can name the field where the source says when it
-  observed the value (`observedAtPath`) and the time zone the source writes in (`timeZone`). The reading's time
-  is then the source's — an hourly air measurement fetched at :50 was observed fifty minutes earlier — and a
-  last-known value shown while the source is unreachable says its age by that time. How long such a value is
-  still served counts from when it was last read, not from its older observed time.
-  A binding can also say how old the source's value may normally be (`maxAgeSeconds`, minutes in the form):
-  older, the value shows as stale — the source is behind on its own updates — and the source is asked again
-  no sooner than an eighth of that, instead of on every poll, which spends a daily request quota far more
-  slowly. The binding form offers the response's time fields to pick from, fills in the author's time zone, and shows
-  what the picked field reads as. The open-data samples name their sources' times (Seoul's real-time city data
-  and air measurements).
+### Changed
+
+- The open-data samples name their sources' times and how old their values normally are, and the
+  Gwanghwamun map declares its reference points. Its forecast charts label their time axes as dates instead of
+  the source's digits (`202610092100`).
 
 ## [0.1.5] - 2026-10-09
 

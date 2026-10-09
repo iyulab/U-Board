@@ -6,6 +6,15 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-10
+
+### Changed
+
+- **Breaking: `QualityReason` has `lagging`** (see `maxAgeSeconds` below). A `QualityText` written out in full needs
+  text for it — `REASON_LABEL` and `KO_LABELS` have it. `observedAtReads` takes `{age}`.
+- **Requires `@iyulab/u-widgets` 0.30.1**, whose `date` and `datetime` formats read dates as APIs write them
+  (`202610092100`, `2026-10-09 21:00`) — a chart axis of such times shows dates instead of digits.
+
 ### Added
 
 - **Bind a list item by its fields, not its position.** Picking a value inside a list's element in the binding
@@ -18,8 +27,8 @@ All notable changes to this package are documented here. The format follows
   pointer, read where `valuePath` is, to the source's own time for the value — and `timeZone`, the IANA zone of
   a time written without an offset. A reading's `observedAt` is then that time: an hourly measurement fetched at
   :50 says it is fifty minutes old instead of new. Epoch seconds and milliseconds, ISO 8601 and its common
-  variations, and compact digits (`202610091900`, as text or as a number) are read; a field that holds no time, or one later than the
-  read, makes the binding `disconnected` with reason `format`.
+  variations, and compact digits (`202610091900`, as text or as a number) are read; a field that holds no time,
+  or one later than the read, makes the binding `disconnected` with reason `format`.
 - **Pick the observed time in the binding form.** Once the response is explored, the form offers the fields
   that read as a time where the value is read (inside the list item when there is one) and the time zone of
   the source — filled in with the author's own for a time written without an offset — and shows what the
@@ -31,10 +40,7 @@ All notable changes to this package are documented here. The format follows
   response. Older, the reading is `stale` with the new reason `lagging` — the source answered with its latest,
   but the source is behind, not the network or the binding. The binding form takes it in minutes, and shows how
   long ago the picked time field's value was observed to choose it by. `stale` now covers that case too: the
-  value shown is not current.
-- **Breaking: `QualityReason` has `lagging`.** A `QualityText` written out in full needs text for it
-  (`REASON_LABEL` and `KO_LABELS` have it). New labels `maxAge`, `maxAgeHint`, `invalidMaxAge`; `observedAtReads`
-  takes `{age}`.
+  value shown is not current. New labels `maxAge`, `maxAgeHint`, `invalidMaxAge`.
 - **Anchors as coordinates.** A background image can declare two reference points — a point of the image
   and the coordinate it stands for (`referencePoints`) — and an anchored node's place is then a coordinate:
   `coordinateOf` reads it (the center of the node's box), `placeAt` places a node at one, `coordinateAt` and
