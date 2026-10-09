@@ -190,19 +190,26 @@ function readValueAndTime(
 
 /** `yyyy-MM-dd HH:mm:ss.SSS±hh:mm` and its parts left out: date only, no seconds, `T` or a space between,
  *  `.` or `/` between the date's fields, `Z` or no offset. */
-const DELIMITED = /^(\d{4})[-./](\d{2})[-./](\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3})\d*)?)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/i;
+const DELIMITED = /^(\d{4})[-./](\d{2})[-./](\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3})\d*)?)?)?\s*(Z|[+-]\d{2}(?::?\d{2})?)?$/i;
 /** `yyyyMMdd`, `yyyyMMddHHmm`, `yyyyMMddHHmmss`, and the same with a space or `T` before the time. */
 const COMPACT = /^(\d{4})(\d{2})(\d{2})(?:[T ]?(\d{2})(\d{2})(\d{2})?)?$/;
 
 /**
  * The instant (epoch ms) a source's time names, or `null` when it names none. A number is seconds since the
  * epoch, or milliseconds once it is too large to be seconds (from 1e11 — the year 5138 in seconds, 1973 in
- * milliseconds); a string of 10 or 13 digits is the same. Other strings are a date and time — delimited
+ * milliseconds); a string of 10 or 13 digits is the same — except a number whose digits are a compact date
+ * of this era (`20261009`, `202610091900`), which some sources write as a number. Other strings are a date and time — delimited
  * (ISO 8601 and the variations sources write) or compact (`202610091900`). A time without an offset is a
  * wall-clock time in `timeZone`, or in UTC when none is given.
  */
 export function parseSourceTime(raw: unknown, timeZone?: string): number | null {
-  if (typeof raw === 'number') return Number.isFinite(raw) && raw > 0 ? (raw >= 1e11 ? raw : raw * 1000) : null;
+  if (typeof raw === 'number') {
+    if (Number.isInteger(raw) && /^(19|20|21)\d{6}(\d{4}(\d{2})?)?$/.test(String(raw))) {
+      const compact = parseSourceTime(String(raw), timeZone);
+      if (compact !== null) return compact;
+    }
+    return Number.isFinite(raw) && raw > 0 ? (raw >= 1e11 ? raw : raw * 1000) : null;
+  }
   if (typeof raw !== 'string') return null;
   const text = raw.trim();
   if (/^\d{10}$|^\d{13}$/.test(text)) return parseSourceTime(Number(text));
@@ -227,7 +234,7 @@ export function parseSourceTime(raw: unknown, timeZone?: string): number | null 
   const offset = delimited?.[8];
   if (offset) {
     if (/^z$/i.test(offset)) return wall;
-    const [, sign, oh, om] = /^([+-])(\d{2}):?(\d{2})$/.exec(offset)!;
+    const [, sign, oh, om = '0'] = /^([+-])(\d{2}):?(\d{2})?$/.exec(offset)!;
     return wall - (sign === '-' ? -1 : 1) * (Number(oh) * 60 + Number(om)) * 60_000;
   }
   return timeZone ? wallClockToInstant(wall, timeZone) : wall;

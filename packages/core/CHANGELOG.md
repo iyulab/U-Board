@@ -18,7 +18,7 @@ All notable changes to this package are documented here. The format follows
   pointer, read where `valuePath` is, to the source's own time for the value — and `timeZone`, the IANA zone of
   a time written without an offset. A reading's `observedAt` is then that time: an hourly measurement fetched at
   :50 says it is fifty minutes old instead of new. Epoch seconds and milliseconds, ISO 8601 and its common
-  variations, and compact digits (`202610091900`) are read; a field that holds no time, or one later than the
+  variations, and compact digits (`202610091900`, as text or as a number) are read; a field that holds no time, or one later than the
   read, makes the binding `disconnected` with reason `format`.
 - **Pick the observed time in the binding form.** Once the response is explored, the form offers the fields
   that read as a time where the value is read (inside the list item when there is one) and the time zone of

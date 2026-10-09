@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
@@ -33,6 +34,13 @@ describe('NodeAnchorFields', () => {
     expect(onChange).toHaveBeenCalledWith({ x: 20, y: 230 });
   });
 
+  it('leaves the node where it is when a field is left without a change', () => {
+    const onChange = vi.fn();
+    render(<NodeAnchorFields node={node()} background={plan} onChange={onChange} labels={labels} />);
+    fireEvent.blur(screen.getByLabelText('Coordinate x'));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('says what a coordinate needs when the background has no reference points', () => {
     render(<NodeAnchorFields node={node()} background={{ image: { src: 'plan.png', width: 1000, height: 500 } }} onChange={vi.fn()} labels={labels} />);
     expect(screen.getByText(labels.anchorNeedsReferencePoints)).toBeInTheDocument();
@@ -64,6 +72,21 @@ describe('ReferencePointsFields', () => {
     fill(2, [1000, 0, 100, 0]);
     expect(onChange).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent(labels.referencePointsApart);
+  });
+
+  it('keeps the field as typed while the points it saves come back', () => {
+    function Board() {
+      const [saved, setSaved] = useState<[ReferencePoint, ReferencePoint] | undefined>(points);
+      return <ReferencePointsFields points={saved} onChange={setSaved} labels={labels} />;
+    }
+    render(<Board />);
+    const latitude = within(screen.getByRole('group', { name: 'Point 1' })).getByLabelText('Coordinate y');
+    // Typing "50.05" one key at a time: "50.0" is a valid number, saved — and the field must still say "50.0".
+    fireEvent.change(latitude, { target: { value: '50.0' } });
+    expect((latitude as HTMLInputElement).value).toBe('50.0');
+    // A west or south coordinate starts as "-0", which must keep its sign.
+    fireEvent.change(latitude, { target: { value: '-0' } });
+    expect((latitude as HTMLInputElement).value).toBe('-0');
   });
 
   it('shows saved points, and clears them', () => {

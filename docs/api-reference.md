@@ -350,7 +350,8 @@ for an adapter that lists no references of its own. Implement this shape to have
 
 The observed time is read as epoch seconds or milliseconds (a number, or a string of 10 or 13
 digits), ISO 8601 and the variations sources write (`2026-10-09 19:10`, `2026.10.09`, a missing
-offset), or compact digits (`202610091900`, `20261009 1910`, `20261009`). A field that holds
+offset, or an offset in hours alone such as `+09`), or compact digits (`202610091900`, `20261009 1910`,
+`20261009` — also when written as a number). A field that holds
 something else makes the binding `disconnected` with reason `format`; a time more than five minutes
 after the read does too, since a source cannot have observed it yet — the usual cause is a missing
 `timeZone`.

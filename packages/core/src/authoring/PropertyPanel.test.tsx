@@ -596,7 +596,7 @@ describe('PropertyPanel bindings', () => {
 
     it('will not save a max age that is not a number of minutes above 0, and shows a saved one in minutes', async () => {
       await pickNorthLevel();
-      fireEvent.change(screen.getByLabelText('Normally at most (minutes old)'), { target: { value: '0' } });
+      fireEvent.change(screen.getByLabelText('Normally at most (minutes old)'), { target: { value: '0.005' } });
       expect(screen.getByText('Enter a number of minutes above 0, or leave it empty.')).toBeInTheDocument();
       expect(screen.getByText('Save binding')).toBeDisabled();
       cleanup();

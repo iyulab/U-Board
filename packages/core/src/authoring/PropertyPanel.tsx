@@ -883,6 +883,7 @@ function ObservedTimeFields({
  *  minutes above 0. */
 function maxAgeSeconds(draft: BindingDraft): number | undefined | null {
   if (draft.maxAgeMinutes.trim() === '') return undefined;
-  const minutes = Number(draft.maxAgeMinutes);
-  return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes * 60) : null;
+  const seconds = Math.round(Number(draft.maxAgeMinutes) * 60);
+  // Under half a second rounds to none, which a reference cannot hold.
+  return Number.isFinite(seconds) && seconds >= 1 ? seconds : null;
 }

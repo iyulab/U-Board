@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { coordinateOf, placeAt } from '../anchor.js';
 import type { Background, Node, ReferencePoint } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
@@ -45,6 +45,8 @@ export function NodeAnchorFields({
   }, [atX, atY]);
 
   const place = () => {
+    // Only what was typed moves the node: leaving an untouched field must not re-place it by its rounding.
+    if (x === atX && y === atY) return;
     const cx = parsed(x);
     const cy = parsed(y);
     if (cx === null || cy === null) return;
@@ -119,7 +121,15 @@ export function ReferencePointsFields({
   labels: UBoardLabels;
 }) {
   const [draft, setDraft] = useState(() => draftOf(points));
-  useEffect(() => setDraft(draftOf(points)), [points]);
+  // The points this form last saved. When they come back as `points`, the fields already say them, as the
+  // author typed them — rewriting them in normal form would turn "35.0" into "35" mid-keystroke. Points
+  // from elsewhere (another background, an undo) replace the fields.
+  const saved = useRef(points);
+  useEffect(() => {
+    if (points === saved.current) return;
+    saved.current = points;
+    setDraft(draftOf(points));
+  }, [points]);
   const result = pointsOf(draft);
   const blank = draft.every(row => row.every(field => field.trim() === ''));
 
@@ -127,7 +137,15 @@ export function ReferencePointsFields({
     const next = draft.map((row, r) => (r === i ? row.map((field, f) => (f === j ? text : field)) : row)) as [PointDraft, PointDraft];
     setDraft(next);
     const changed = pointsOf(next);
-    if (typeof changed !== 'string') onChange(changed);
+    if (typeof changed !== 'string') {
+      saved.current = changed;
+      onChange(changed);
+    }
+  };
+  const clear = () => {
+    saved.current = undefined;
+    setDraft(draftOf(undefined));
+    onChange(undefined);
   };
   const names = [labels.imageX, labels.imageY, labels.coordinateX, labels.coordinateY];
 
@@ -150,12 +168,12 @@ export function ReferencePointsFields({
           {labels.referencePointsApart}
         </p>
       )}
+      {!blank && result === 'incomplete' && <p className="ub-panel__hint">{labels.referencePointsIncomplete}</p>}
       {points && (
-        <button type="button" className="ub-action" onClick={() => onChange(undefined)}>
+        <button type="button" className="ub-action" onClick={clear}>
           {labels.clearReferencePoints}
         </button>
       )}
-      {!points && !blank && result === 'incomplete' && <p className="ub-panel__hint">{labels.referencePointsIncomplete}</p>}
     </fieldset>
   );
 }

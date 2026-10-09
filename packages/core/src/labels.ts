@@ -224,7 +224,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   coordinateX: 'Coordinate x',
   coordinateY: 'Coordinate y',
   referencePointsApart: 'The two points must differ on both axes, in the image and in their coordinates.',
-  referencePointsIncomplete: 'Fill in all eight numbers to save the points.',
+  referencePointsIncomplete: 'Fill in all eight numbers to save the points — until then, the saved ones stay.',
   clearReferencePoints: 'Clear reference points',
   anchored: 'Anchored to a place on the background',
   anchorNeedsReferencePoints: 'Give the background reference points (in the board settings) to place this node by coordinate.',

@@ -140,6 +140,7 @@ describe('parseSourceTime', () => {
     expect(parseSourceTime('2026-10-09T19:00:00+09:00', 'America/New_York')).toBe(utc('2026-10-09T10:00:00Z'));
     expect(parseSourceTime('2026-10-09T10:00:00.250Z')).toBe(utc('2026-10-09T10:00:00.250Z'));
     expect(parseSourceTime('2026-10-09T05:00:00-0500')).toBe(utc('2026-10-09T10:00:00Z'));
+    expect(parseSourceTime('2026-10-09T19:00:00+09')).toBe(utc('2026-10-09T10:00:00Z'));
   });
 
   it('reads a time without an offset in the given zone, else in UTC', () => {
@@ -154,6 +155,11 @@ describe('parseSourceTime', () => {
     expect(parseSourceTime('20261009190030', 'Asia/Seoul')).toBe(utc('2026-10-09T10:00:30Z'));
     expect(parseSourceTime('20261009 2310', 'Asia/Seoul')).toBe(utc('2026-10-09T14:10:00Z'));
     expect(parseSourceTime('20261009', 'Asia/Seoul')).toBe(utc('2026-10-08T15:00:00Z'));
+  });
+
+  it('reads a compact date some sources write as a number, not as an epoch', () => {
+    expect(parseSourceTime(202610091900, 'Asia/Seoul')).toBe(utc('2026-10-09T10:00:00Z'));
+    expect(parseSourceTime(20261009, 'Asia/Seoul')).toBe(utc('2026-10-08T15:00:00Z'));
   });
 
   it('reads epoch seconds and milliseconds, as numbers or digit strings', () => {

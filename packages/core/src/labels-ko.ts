@@ -26,7 +26,7 @@ export const KO_LABELS: UBoardLabels = {
   coordinateX: '좌표 x',
   coordinateY: '좌표 y',
   referencePointsApart: '두 점은 이미지에서도 좌표에서도 두 축 모두 달라야 합니다.',
-  referencePointsIncomplete: '여덟 칸을 모두 채우면 저장됩니다.',
+  referencePointsIncomplete: '여덟 칸을 모두 채우면 저장됩니다 — 그 전까지는 저장된 기준점이 그대로입니다.',
   clearReferencePoints: '기준점 지우기',
   anchored: '배경의 한 지점에 고정',
   anchorNeedsReferencePoints: '좌표로 놓으려면 보드 설정에서 배경에 기준점을 주세요.',
