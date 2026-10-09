@@ -59,6 +59,20 @@ describe('validateViewDocument', () => {
     expect(paths(broken(d => { d.background.image = { src: 'plan.png' }; }))).toEqual(['/background/image/width', '/background/image/height']);
   });
 
+  it("checks a background's reference points: two of them, numbers, apart on both axes", () => {
+    const points = (value: unknown) => paths(broken(d => { (d.background.image as unknown as Record<string, unknown>).referencePoints = value; }));
+    const a = { x: 0, y: 0, coordinate: { x: 126.9, y: 37.6 } };
+    const b = { x: 800, y: 600, coordinate: { x: 127.1, y: 37.4 } };
+    expect(points([a, b])).toEqual([]);
+    expect(points([a])).toEqual(['/background/image/referencePoints']);
+    expect(points([a, { x: 800, y: '600', coordinate: { x: 127.1 } }])).toEqual([
+      '/background/image/referencePoints/1/y',
+      '/background/image/referencePoints/1/coordinate/y',
+    ]);
+    expect(points([a, { ...b, y: 0 }])).toEqual(['/background/image/referencePoints']);
+    expect(points([a, { ...b, coordinate: { x: 126.9, y: 37.4 } }])).toEqual(['/background/image/referencePoints']);
+  });
+
   it('checks every field a node promises', () => {
     expect(paths(broken(d => { d.nodes[0] = { foo: 1 }; }))).toEqual([
       '/nodes/0/id', '/nodes/0/x', '/nodes/0/y', '/nodes/0/anchored', '/nodes/0/widget',

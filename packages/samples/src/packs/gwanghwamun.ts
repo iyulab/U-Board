@@ -1,6 +1,6 @@
-import type { Binding, Node, Shape, ViewDocument } from '@iyulab/u-board/domain';
+import { placeAt, type Background, type Binding, type Node, type Shape, type ViewDocument } from '@iyulab/u-board/domain';
 import type { SampleConnector, SamplePack } from '../sample-pack.js';
-import { escapeXml, project, svgDataUrl, type AreaFrame } from '../frame.js';
+import { escapeXml, project, referencePoints, svgDataUrl, type AreaFrame } from '../frame.js';
 import { snapshot } from '../snapshots/gwanghwamun.js';
 
 // Gwanghwamun and Deoksugung as Seoul's real-time city data describes them every few minutes: how crowded
@@ -11,6 +11,8 @@ import { snapshot } from '../snapshots/gwanghwamun.js';
 const WIDTH = 1240;
 const HEIGHT = 920;
 const MAP: AreaFrame = { x: 20, y: 70, width: 680, height: 820, north: 37.5775, south: 37.563, west: 126.9692, east: 126.9844 };
+/** The drawing's size and what its map part stands for; its `src` is drawn below. */
+const BACKGROUND: Background = { image: { src: '', width: WIDTH, height: HEIGHT, referencePoints: referencePoints(MAP) } };
 
 export const SEOUL_CITY_DATA: SampleConnector = {
   key: 'seoul-city-data',
@@ -71,8 +73,14 @@ const TRAFFIC_LEVEL = { values: { 원활: 'success', 서행: 'warning', 정체: 
 /** Bikes docked: none, a couple, or enough to take one. */
 const BIKES_LEVEL = { ranges: [{ max: 1, value: 'error' }, { min: 1, max: 3, value: 'warning' }, { min: 3, value: 'success' }] };
 
+/** Where a node goes for its anchor — its box's center — to stand at a place on the map. */
+function at(node: { width: number; height: number }, lat: number, lng: number): { x: number; y: number } {
+  const { x, y } = placeAt(BACKGROUND, node, { x: lng, y: lat })!;
+  return { x: Math.round(x), y: Math.round(y) };
+}
+
 /** Bike stations on the drawing, by their id in the source (`SBIKE_SPOT_ID`) and where they stand. */
-const BIKE_STATIONS: { id: string; lat: number; lng: number }[] = [
+export const BIKE_STATIONS: { id: string; lat: number; lng: number }[] = [
   { id: 'ST-119', lat: 37.5717697, lng: 126.9746628 },
   { id: 'ST-1611', lat: 37.5698929, lng: 126.9775696 },
   { id: 'ST-121', lat: 37.5725594, lng: 126.9783325 },
@@ -83,12 +91,10 @@ const BIKE_STATIONS: { id: string; lat: number; lng: number }[] = [
 const STATION = { width: 160, height: 52 };
 
 function bikeStation({ id, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
-  const at = project(MAP, lat, lng);
   const field = (name: string, map?: Binding['map']) => bindItem('/SBIKE_STTS', { SBIKE_SPOT_ID: id }, `/${name}`, map);
   return {
     id: `bike-${id}`,
-    x: Math.round(at.x - STATION.width / 2),
-    y: Math.round(at.y - STATION.height / 2),
+    ...at(STATION, lat, lng),
     ...STATION,
     anchored: true,
     widget: {
@@ -103,18 +109,22 @@ function bikeStation({ id, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
   };
 }
 
+/** 세종로 공영주차장, where it stands. Its gauge sits beside the spot, not on it — centered there it would cover
+ *  the bike station next to it — so it is placed, not anchored. */
+const CAR_PARK = { lat: 37.57340269, lng: 126.97588429 };
+
 function carPark(): Node {
-  const at = project(MAP, 37.57340269, 126.97588429);
+  const spot = project(MAP, CAR_PARK.lat, CAR_PARK.lng);
   // 세종로 공영주차장 — the car park in the area that reports how many cars are in it. The source lists it
   // twice under one code, once without the count; `CUR_PRK_YN` picks the entry that has it.
   const field = (name: string) => bindItem('/PRK_STTS', { PRK_CD: '171721', CUR_PRK_YN: 'Y' }, `/${name}`);
   return {
     id: 'car-park',
-    x: Math.round(at.x - 170),
-    y: Math.round(at.y - 60),
+    x: Math.round(spot.x - 170),
+    y: Math.round(spot.y - 60),
     width: 150,
     height: 120,
-    anchored: true,
+    anchored: false,
     widget: {
       type: 'gauge',
       props: { data: { value: 0, max: 1260 }, options: { unit: '대', subtitle: '세종로 공영주차장' } },
@@ -258,7 +268,7 @@ ${station(37.5758, 126.9735, '경복궁역')}
 
 const document: ViewDocument = {
   kind: 'canvas',
-  background: { image: { src: drawing(), width: WIDTH, height: HEIGHT } },
+  background: { image: { ...BACKGROUND.image!, src: drawing() } },
   nodes: [...BIKE_STATIONS.map(bikeStation), carPark(), ...panel()],
   connectors: [],
   decorations: DECORATIONS,

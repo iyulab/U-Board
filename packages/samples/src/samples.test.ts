@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { resolveDocument, validateViewDocument, type Node } from '@iyulab/u-board/domain';
+import { coordinateOf, resolveDocument, validateViewDocument, type Node } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS, snapshotAdapters } from './index.js';
+import { BIKE_STATIONS } from './packs/gwanghwamun.js';
 import { keepPointers } from './prune.js';
 
 const overlaps = (a: Node, b: Node) =>
@@ -75,6 +76,20 @@ describe('a list item bound by its fields', () => {
     }
     const after = await resolveDocument(pack.document, snapshotAdapters({ ...pack, snapshot: reordered }));
     expect(after.nodes.map(n => n.widget.props)).toEqual(before.nodes.map(n => n.widget.props));
+  });
+});
+
+describe('a map whose anchors are coordinates', () => {
+  it('reads each bike station back at its longitude and latitude, within the rounding of its place on the drawing', () => {
+    const pack = SAMPLE_PACKS.find(p => p.id === 'gwanghwamun')!;
+    for (const { id, lat, lng } of BIKE_STATIONS) {
+      const node = pack.document.nodes.find(n => n.id === `bike-${id}`)!;
+      expect(node.anchored, id).toBe(true);
+      const coordinate = coordinateOf(pack.document.background, node)!;
+      // Half a scene unit on this drawing is about a metre either way.
+      expect(Math.abs(coordinate.x - lng), id).toBeLessThan(0.00002);
+      expect(Math.abs(coordinate.y - lat), id).toBeLessThan(0.00002);
+    }
   });
 });
 

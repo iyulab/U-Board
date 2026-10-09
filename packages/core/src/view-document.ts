@@ -69,6 +69,19 @@ export interface BackgroundImage {
   src: string;
   width: number;
   height: number;
+  /** Two points of the image and the coordinates they stand for in the space it depicts — a floor plan's
+   *  metres, a map's longitude and latitude. They make an anchored node's place a coordinate
+   *  (`coordinateOf`, `placeAt`). Each axis maps linearly between the two points, so the image must already
+   *  be drawn in the projection its coordinates are read in; the two points differ on both axes, in the
+   *  image and in their coordinates. Absent: the image's coordinates are its own. */
+  referencePoints?: [ReferencePoint, ReferencePoint];
+}
+
+/** A point of a background image (`x`/`y` in scene units, as a node's) and the coordinate it stands for. */
+export interface ReferencePoint {
+  x: number;
+  y: number;
+  coordinate: { x: number; y: number };
 }
 
 /** A positioned point in a canvas view that carries a widget. */

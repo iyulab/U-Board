@@ -35,6 +35,11 @@ All notable changes to this package are documented here. The format follows
 - **Breaking: `QualityReason` has `lagging`.** A `QualityText` written out in full needs text for it
   (`REASON_LABEL` and `KO_LABELS` have it). New labels `maxAge`, `maxAgeHint`, `invalidMaxAge`; `observedAtReads`
   takes `{age}`.
+- **Anchors as coordinates.** A background image can declare two reference points — a point of the image
+  and the coordinate it stands for (`referencePoints`) — and an anchored node's place is then a coordinate:
+  `coordinateOf` reads it (the center of the node's box), `placeAt` places a node at one, `coordinateAt` and
+  `pointAt` map any point. Each axis maps linearly; no projection is applied. `validateViewDocument` checks
+  the two points are apart on both axes. New types `ReferencePoint`, `Coordinate`.
 - **`@iyulab/u-board/domain` reads the HTTP connector reference.** `HttpRef`, `isHttpRef`, `readHttpRef` (a
   parsed response → the value and its observed time, or why not), `parseSourceTime`, `valueAtPath` and
   `findHttpRefItem` — the reading the hosted connector does, for a host that answers the same references.

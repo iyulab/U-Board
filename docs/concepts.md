@@ -58,7 +58,9 @@ core binding surface is generic; system-specific knowledge lives in an adapter, 
 renderer displays one. They do not share a runtime.
 
 **Anchor** — a fixed coordinate a node is placed at, used when the background represents real
-space that the position should correspond to.
+space that the position should correspond to. A background that declares two of its points and the
+coordinates they stand for makes each anchored node's place a coordinate — the center of its box, read
+through those points.
 
 **View document** — the saved output of authoring a view: layout, bindings, and widget
 references, in a format the renderer can read without the editor present.

@@ -1,4 +1,4 @@
-export type { ViewDocument, Background, BackgroundImage, Node, Connector, Widget, Binding, ValueMap, Shape, RectShape, TextShape, BoardAppearance } from './view-document.js';
+export type { ViewDocument, Background, BackgroundImage, ReferencePoint, Node, Connector, Widget, Binding, ValueMap, Shape, RectShape, TextShape, BoardAppearance } from './view-document.js';
 export type { Adapter, AdapterReference, Attribution, ConnectionQuality, QualityReason, ResolvedBinding, ResolvedWidget } from './adapter.js';
 export { resolveWidget, applyValueMap } from './adapter.js';
 export type { ResolvedNode, ResolvedViewDocument } from './resolve-document.js';
@@ -8,5 +8,7 @@ export { validateViewDocument, isViewDocumentShape } from './validate-view-docum
 export type { ViewDocumentIssue } from './validate-view-document.js';
 export { QUALITY_LABEL, REASON_LABEL, DEFAULT_QUALITY_TEXT, ageText, worstQuality, describeQuality } from './quality-text.js';
 export type { QualityText, QualitySummary, DescribeQualityOptions } from './quality-text.js';
+export { anchorPoint, coordinateAt, pointAt, coordinateOf, placeAt } from './anchor.js';
+export type { Coordinate } from './anchor.js';
 export { isHttpRef, readHttpRef, parseSourceTime, valueAtPath, findHttpRefItem, isTimeZone } from './http-ref.js';
 export type { HttpRef, HttpRefItem, HttpRefReading } from './http-ref.js';

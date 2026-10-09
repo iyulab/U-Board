@@ -36,6 +36,7 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
       doc.string(image, ['background', 'image', 'src']);
       doc.number(image, ['background', 'image', 'width']);
       doc.number(image, ['background', 'image', 'height']);
+      if (image.referencePoints !== undefined) checkReferencePoints(doc, image.referencePoints, ['background', 'image', 'referencePoints']);
     }
   }
 
@@ -65,6 +66,30 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
 /** True when `value` is a valid `ViewDocument` — `validateViewDocument` found nothing. */
 export function isViewDocumentShape(value: unknown): value is ViewDocument {
   return validateViewDocument(value).length === 0;
+}
+
+/** Two points, each a place on the image and its coordinate, apart on both axes in both — a mapping from
+ *  two points that share an axis value cannot say how that axis scales. */
+function checkReferencePoints(doc: Checker, value: unknown, at: string[]): void {
+  if (!Array.isArray(value) || value.length !== 2) {
+    doc.fail(at, 'expected two reference points');
+    return;
+  }
+  const points = value.map((point, i) => {
+    const pointAt = [...at, String(i)];
+    if (!doc.isRecordAt(point, pointAt)) return null;
+    doc.number(point, [...pointAt, 'x']);
+    doc.number(point, [...pointAt, 'y']);
+    if (!doc.record(point, [...pointAt, 'coordinate'])) return null;
+    const coordinate = point.coordinate as Record<string, unknown>;
+    doc.number(coordinate, [...pointAt, 'coordinate', 'x']);
+    doc.number(coordinate, [...pointAt, 'coordinate', 'y']);
+    return point as { x: unknown; y: unknown; coordinate: { x: unknown; y: unknown } };
+  });
+  const [a, b] = points;
+  if (a && b && (a.x === b.x || a.y === b.y || a.coordinate.x === b.coordinate.x || a.coordinate.y === b.coordinate.y)) {
+    doc.fail(at, 'expected two points apart on both axes, in the image and in their coordinates');
+  }
 }
 
 function checkNode(doc: Checker, node: unknown, at: string[]): void {

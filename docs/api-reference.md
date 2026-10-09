@@ -392,6 +392,41 @@ the exported TypeScript types themselves for the exact fields (`Node.anchored`,
 They are included in the walkthrough above for context, not repeated field-by-field here since
 none of them have a resolution-time contract to document.
 
+### Anchors and reference points
+
+```ts
+interface BackgroundImage {
+  src: string;
+  width: number;
+  height: number;
+  referencePoints?: [ReferencePoint, ReferencePoint];
+}
+
+interface ReferencePoint {
+  x: number; // a point of the image, in scene units
+  y: number;
+  coordinate: { x: number; y: number }; // what it stands for
+}
+```
+
+A background image can declare two of its points and the coordinates they stand for in the space it
+depicts — a floor plan's metres, a map's longitude and latitude. An anchored node's place is then a
+coordinate: its anchor is the center of its box (default-sized when it has none), read through the two
+points.
+
+- `coordinateOf(background, node)` — the coordinate a node is anchored at.
+- `placeAt(background, node, coordinate)` — where a node goes (`x`/`y`) for its anchor to be at a
+  coordinate.
+- `coordinateAt(background, point)` / `pointAt(background, coordinate)` — the same mapping for any point.
+- `anchorPoint(node)` — a node's anchor in scene units.
+
+Each returns `null` for a background without reference points. Each axis maps linearly between the two
+points, which differ on both axes in the image and in their coordinates (`validateViewDocument` checks
+it). U-Board does not interpret what the image depicts, and so applies no projection: an image drawn in
+a projection (a web map in Mercator, say) is read in that projection's coordinates, and a small area —
+a site, a few city blocks — is flat enough to draw in longitude and latitude directly. The node stores
+its scene `x`/`y` as before, so a renderer needs none of this.
+
 ### `resolveDocument(doc, adapters)`
 
 ```ts
