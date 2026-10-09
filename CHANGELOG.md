@@ -16,6 +16,8 @@ do when upgrading. Each release's notes carry its section.
 - A widget on a board stays inside the box its node was drawn with: a small chart switches to a compact layout, a
   gauge or image scales down, and a table or list scrolls inside the node, instead of running over neighbouring
   nodes.
+- The board editor's toolbar fits one row: the board's background and tone moved to the side panel, which shows
+  them while nothing is selected.
 
 ## [0.1.3] - 2026-10-09
 

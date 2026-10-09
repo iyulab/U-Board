@@ -21,6 +21,8 @@ export interface UBoardLabels {
   export: string;
   import: string;
   importFailed: string;
+  /** The heading of the board's own settings, shown in the panel while nothing is selected. */
+  boardHeading: string;
   /** Chooses an image file as the board's background; `removeBackground` takes it away. */
   setBackground: string;
   removeBackground: string;
@@ -63,6 +65,7 @@ export interface UBoardLabels {
   debugDocument: string;
 
   // Node property panel
+  /** Under the board's settings while nothing is selected: how to edit a node or a decoration. */
   selectNode: string;
   /** Shown instead of a property panel while several items are selected; `{count}` is replaced by
    * how many. */
@@ -162,9 +165,10 @@ export const DEFAULT_LABELS: UBoardLabels = {
   export: 'Export',
   import: 'Import',
   importFailed: 'Import failed.',
+  boardHeading: 'Board',
   setBackground: 'Background image',
   removeBackground: 'Remove background',
-  appearance: 'Board',
+  appearance: 'Tone',
   appearanceLight: 'Light',
   appearanceDark: 'Dark',
   backgroundType: 'Choose a PNG, JPEG, WebP, GIF or SVG image.',
@@ -188,7 +192,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   time: timeText('en'),
   debugDocument: 'ViewDocument (debug)',
 
-  selectNode: 'Select a node.',
+  selectNode: 'Select a node or a decoration to edit it.',
   multipleSelected: '{count} items selected — select one to edit it.',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',

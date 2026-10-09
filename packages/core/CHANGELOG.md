@@ -12,6 +12,11 @@ All notable changes to this package are documented here. The format follows
   minimum: in a node smaller than the widget drew itself, a gauge or chart ran past the box and over its neighbours.
   Now a chart lays itself out compactly, a gauge or image scales down whole, and a table or list scrolls inside the
   node. Requires `@iyulab/u-widgets` 0.29, which this release depends on.
+- **The board's settings are in the panel.** While nothing is selected, the panel shows the board itself — its
+  background image and its tone — where it showed only "Select a node."; the toolbar keeps adding, saving, the mode
+  and the view, and fits one row at 1024px. Labels: `boardHeading` is new (the panel's heading), `appearance` now
+  names the tone picker ("Tone", `KO_LABELS` "바탕") rather than the board, and `selectNode` says how to edit a node
+  or a decoration. The `ub-authoring__appearance` class stays on the picker; the panel is `ub-panel--board`.
 
 ## [0.6.0] - 2026-10-09
 

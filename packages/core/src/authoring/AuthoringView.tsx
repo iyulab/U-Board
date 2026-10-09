@@ -17,6 +17,7 @@ import { toCanvasKit, chartsReady } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import { PropertyPanel } from './PropertyPanel.js';
+import { BoardPanel } from './BoardPanel.js';
 import { seedWidget } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
@@ -341,23 +342,6 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
             {labels.import}
           </button>
         </div>
-        <div className="ub-authoring__group" style={GROUP_STYLE}>
-          <button type="button" className="ub-action" onClick={() => backgroundInputRef.current?.click()}>
-            {labels.setBackground}
-          </button>
-          {doc.background.image && (
-            <button type="button" className="ub-action" onClick={handleRemoveBackground}>
-              {labels.removeBackground}
-            </button>
-          )}
-          <label className="ub-authoring__appearance">
-            {labels.appearance}{' '}
-            <select value={doc.appearance ?? 'light'} onChange={e => handleAppearanceChange(e.target.value as BoardAppearance)}>
-              <option value="light">{labels.appearanceLight}</option>
-              <option value="dark">{labels.appearanceDark}</option>
-            </select>
-          </label>
-        </div>
         <div className="ub-authoring__group ub-authoring__mode" style={GROUP_STYLE} role="group" aria-label={labels.mode}>
           <button type="button" className="ub-action" aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}>
             {labels.editMode}
@@ -432,8 +416,17 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
             <p className="ub-panel__hint">{labels.multipleSelected.replace('{count}', String(selectionCount))}</p>
           ) : selectedDecoration ? (
             <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} labels={labels} />
-          ) : (
+          ) : selectedNode ? (
             <PropertyPanel node={selectedNode} adapters={adapters} connectorLabels={connectorLabels} onChange={handleWidgetChange} labels={labels} clock={clock} />
+          ) : (
+            <BoardPanel
+              hasBackground={!!doc.background.image}
+              appearance={doc.appearance ?? 'light'}
+              onChooseBackground={() => backgroundInputRef.current?.click()}
+              onRemoveBackground={handleRemoveBackground}
+              onAppearanceChange={handleAppearanceChange}
+              labels={labels}
+            />
           )}
         </div>
       </div>

@@ -35,7 +35,7 @@ class FakeHttpAdapter implements Adapter {
 describe('PropertyPanel', () => {
   it('shows a placeholder when no node is selected', () => {
     render(<PropertyPanel node={null} adapters={[]} onChange={vi.fn()} />);
-    expect(screen.getByText('Select a node.')).toBeInTheDocument();
+    expect(screen.getByText('Select a node or a decoration to edit it.')).toBeInTheDocument();
   });
 
   it("shows the selected node's widget type and static props", () => {

@@ -265,9 +265,23 @@ describe('AuthoringView node selection', () => {
     };
   }
 
-  it('shows the placeholder when nothing is selected', () => {
+  it('shows the board settings when nothing is selected', () => {
     render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} />);
-    expect(screen.getByText('Select a node.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Board' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Background image' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Tone')).toHaveValue('light');
+    expect(screen.getByText('Select a node or a decoration to edit it.')).toBeInTheDocument();
+  });
+
+  it('keeps the board settings out of the toolbar, and gives the panel to a selected node', () => {
+    const { container } = render(<AuthoringView initialDocument={docWithNode()} adapters={[]} width={400} height={300} />);
+    const toolbar = container.querySelector('.ub-authoring__toolbar')!;
+    expect(toolbar.textContent).not.toContain('Background image');
+
+    fireEvent.click(screen.getByText('select-node-1'));
+
+    expect(screen.queryByRole('heading', { name: 'Board' })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Tone')).not.toBeInTheDocument();
   });
 
   it('shows the selected node in the property panel', () => {
@@ -284,7 +298,7 @@ describe('AuthoringView node selection', () => {
     fireEvent.click(screen.getByText('select-node-1'));
     fireEvent.click(screen.getByText('deselect'));
 
-    expect(screen.getByText('Select a node.')).toBeInTheDocument();
+    expect(screen.getByText('Select a node or a decoration to edit it.')).toBeInTheDocument();
   });
 
   it('clears the selection when the selected node disappears from an imported document', async () => {
@@ -299,7 +313,7 @@ describe('AuthoringView node selection', () => {
     const file = new File([JSON.stringify(doc())], 'empty.json', { type: 'application/json' });
     fireEvent.change(input, { target: { files: [file] } });
 
-    await waitFor(() => expect(screen.getByText('Select a node.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Select a node or a decoration to edit it.')).toBeInTheDocument());
   });
 
   it('writes a widget-type change back onto the selected node in the document', async () => {
@@ -536,10 +550,10 @@ describe('AuthoringView multiple selection', () => {
 
     fireEvent.click(screen.getByText('select-both'));
     expect(screen.getByText('2 items selected — select one to edit it.')).toBeInTheDocument();
-    expect(screen.queryByText('Select a node.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select a node or a decoration to edit it.')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('deselect'));
-    expect(screen.getByText('Select a node.')).toBeInTheDocument();
+    expect(screen.getByText('Select a node or a decoration to edit it.')).toBeInTheDocument();
   });
 });
 
@@ -633,7 +647,7 @@ describe('AuthoringView background image', () => {
   it('makes a dark board for a dark drawing, and a light one leaves the document as it was', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     const { container } = render(<AuthoringView initialDocument={doc()} adapters={[]} onSave={onSave} />);
-    const picker = screen.getByLabelText('Board');
+    const picker = screen.getByLabelText('Tone');
     expect(picker).toHaveValue('light');
     fireEvent.change(picker, { target: { value: 'dark' } });
     container.querySelectorAll('.ub-authoring__surface').forEach(surface => expect(surface).toHaveAttribute('data-appearance', 'dark'));
