@@ -1,7 +1,8 @@
 import { useEffect, useEffectEvent, useId, useMemo, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
-import type { HttpRef, HttpRefItem } from '../http-ref.js';
+import { findHttpRefItem, isTimeZone, parseSourceTime, type HttpRef, type HttpRefItem } from '../http-ref.js';
+import { deviceTimeZone, knownTimeZones, lacksOffset, timeFieldsIn, type TimeField } from './time-fields.js';
 import { getWidgetLabel } from '@iyulab/u-widgets/tools';
 import { WIDGET_TYPES, seedWidget, defaultPropPath, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
@@ -262,6 +263,14 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   const [exploreResult, setExploreResult] = useState<unknown>(null);
   // A value picked inside a list's element can name that element by its fields instead of its position.
   const keyStep = useMemo(() => (exploreResult === null ? null : listStep(exploreResult, draft.valuePath)), [exploreResult, draft.valuePath]);
+  // The fields that read as a time where the value is read — inside the list item when there is one.
+  const timeFields = useMemo(() => {
+    if (exploreResult === null) return [];
+    if (!draft.item) return timeFieldsIn(exploreResult);
+    const found = findHttpRefItem(exploreResult, draft.item);
+    return found.found ? timeFieldsIn(found.value) : [];
+  }, [exploreResult, draft.item]);
+  const timeZones = useMemo(() => knownTimeZones(), []);
   const [exploreError, setExploreError] = useState<string | null>(null);
 
   // Resets the static-props editor. Keyed on the node and the specific `props` reference — not on
@@ -343,8 +352,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           path: draft.path,
           ...(draft.item ? { item: draft.item } : {}),
           valuePath: draft.valuePath || undefined,
-          ...(draft.observedAtPath !== undefined ? { observedAtPath: draft.observedAtPath } : {}),
-          ...(draft.timeZone !== undefined ? { timeZone: draft.timeZone } : {}),
+          // A time zone places the observed time; without one named, it has nothing to place.
+          ...(draft.observedAtPath !== undefined ? { observedAtPath: draft.observedAtPath, ...(draft.timeZone ? { timeZone: draft.timeZone } : {}) } : {}),
         };
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -381,7 +390,14 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   const rangeIssues = invalidRanges(draft);
   // What still keeps the binding from being saved, said next to the button. A broken range row is
   // already named where it is.
-  const saveHint = !draft.propPath ? labels.bindingNeedsPropPath : listed && !draft.listedRef ? labels.bindingNeedsReference : null;
+  const zoneInvalid = !listed && draft.observedAtPath !== undefined && !!draft.timeZone && !isTimeZone(draft.timeZone);
+  const saveHint = !draft.propPath
+    ? labels.bindingNeedsPropPath
+    : listed && !draft.listedRef
+      ? labels.bindingNeedsReference
+      : zoneInvalid
+        ? labels.unknownTimeZone
+        : null;
   const saveBlocked = saveHint !== null || rangeIssues.length > 0;
 
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
@@ -630,6 +646,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
                   wholeResponseLabel={labels.wholeResponse}
                 />
               )}
+              <ObservedTimeFields draft={draft} setDraft={setDraft} fields={timeFields} explored={exploreResult !== null} zones={timeZones} labels={labels} clock={clock} />
             </>
           )}
           <fieldset className="ub-panel__value-map" style={{ minWidth: 0 }}>
@@ -733,5 +750,89 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
         </div>
       )}
     </div>
+  );
+}
+
+/** Where the source says when it observed the value — picked among the fields that read as a time where the
+ *  value is read — and the time zone that places a time written without an offset (`observedAtPath`,
+ *  `timeZone`). What the picked field reads as is shown, so a wrong zone shows before the binding is saved. */
+function ObservedTimeFields({
+  draft,
+  setDraft,
+  fields,
+  explored,
+  zones,
+  labels,
+  clock,
+}: {
+  draft: BindingDraft;
+  setDraft: React.Dispatch<React.SetStateAction<BindingDraft>>;
+  fields: readonly TimeField[];
+  explored: boolean;
+  zones: readonly string[];
+  labels: UBoardLabels;
+  clock: () => number;
+}) {
+  const zonesId = useId();
+  const current = draft.observedAtPath;
+  const picked = fields.find(f => f.pointer === current);
+  const instant = picked ? parseSourceTime(picked.raw, draft.timeZone && isTimeZone(draft.timeZone) ? draft.timeZone : undefined) : null;
+  const choose = (pointer: string) => {
+    const field = fields.find(f => f.pointer === pointer);
+    setDraft(d => ({
+      ...d,
+      observedAtPath: pointer === '' ? undefined : pointer,
+      // A wall-clock time needs a zone; the author's own is the likeliest for a source they are binding.
+      timeZone: d.timeZone ?? (field && lacksOffset(field.raw) ? deviceTimeZone() : undefined),
+    }));
+  };
+  return (
+    <>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.observedAt}
+        <select value={current ?? ''} onChange={e => choose(e.target.value)}>
+          <option value="">{labels.observedAtWhenRead}</option>
+          {fields.map(f => (
+            <option key={f.pointer} value={f.pointer}>
+              {f.pointer || labels.wholeResponse} = {String(f.raw)}
+            </option>
+          ))}
+          {current !== undefined && !picked && <option value={current}>{current || labels.wholeResponse}</option>}
+        </select>
+      </label>
+      {!explored && current === undefined && <p className="ub-panel__hint">{labels.observedAtHint}</p>}
+      {current !== undefined && (
+        <label className="ub-panel__field" style={FIELD_STYLE}>
+          {labels.timeZone}
+          <input
+            list={zonesId}
+            value={draft.timeZone ?? ''}
+            onChange={e => setDraft(d => ({ ...d, timeZone: e.target.value.trim() === '' ? undefined : e.target.value.trim() }))}
+            placeholder="UTC"
+            aria-invalid={!!draft.timeZone && !isTimeZone(draft.timeZone)}
+          />
+        </label>
+      )}
+      {current !== undefined && (
+        // Outside the label: its options' text would otherwise become part of the field's name.
+        <datalist id={zonesId}>
+          {zones.map(zone => (
+            <option key={zone} value={zone}>
+              {zone}
+            </option>
+          ))}
+        </datalist>
+      )}
+      {instant !== null && (
+        <p className="ub-panel__hint">
+          {labels.observedAtReads.replace('{time}', new Intl.DateTimeFormat(labels.locale, { dateStyle: 'medium', timeStyle: 'short' }).format(instant))}
+        </p>
+      )}
+      {instant !== null && instant > clock() + 5 * 60_000 && (
+        <p role="alert" className="ub-panel__error" style={ERROR_STYLE}>
+          {labels.observedAtLater}
+        </p>
+      )}
+    </>
   );
 }

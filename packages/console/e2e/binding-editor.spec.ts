@@ -7,7 +7,8 @@ test('binds a node to a live value via the property panel and its path explorer'
   // 어떤 경로로 요청이 와도 같은 JSON을 돌려주는 로컬 mock — connector-crud.spec.ts와 동일 패턴.
   const mockServer = createServer((req, res) => {
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ status: 'running', metrics: { load: 73 } }));
+    // `updatedAt`: when the source says it observed its values — a minute before each answer.
+    res.end(JSON.stringify({ status: 'running', metrics: { load: 73 }, updatedAt: new Date(Date.now() - 60_000).toISOString() }));
   });
   await new Promise<void>(resolve => mockServer.listen(0, resolve));
   const mockBaseUrl = `http://127.0.0.1:${(mockServer.address() as AddressInfo).port}`;
@@ -46,6 +47,9 @@ test('binds a node to a live value via the property panel and its path explorer'
     await expect(page.getByText('load: 73')).toBeVisible();
     await page.getByText('status: "running"').click();
     await expect(page.getByLabel('값 경로')).toHaveValue('/status');
+    // 원천이 적은 관측 시각을 고른다 — 오프셋(Z)이 있으니 시간대 없이도 읽히고, 무엇으로 읽혔는지 보인다.
+    await page.getByLabel('관측 시각').selectOption({ value: '/updatedAt' });
+    await expect(page.getByText(/^읽은 결과: /)).toBeVisible();
 
     await page.getByText('미리보기', { exact: true }).click();
     // The preview line itself — the explorer's `status: "running"` entry can still be on screen.

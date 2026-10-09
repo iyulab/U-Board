@@ -19,8 +19,13 @@ All notable changes to this package are documented here. The format follows
   a time written without an offset. A reading's `observedAt` is then that time: an hourly measurement fetched at
   :50 says it is fifty minutes old instead of new. Epoch seconds and milliseconds, ISO 8601 and its common
   variations, and compact digits (`202610091900`) are read; a field that holds no time, or one later than the
-  read, makes the binding `disconnected` with reason `format`. The binding form keeps both when a binding is
-  edited, and drops `observedAtPath` when the list item it is read in changes.
+  read, makes the binding `disconnected` with reason `format`.
+- **Pick the observed time in the binding form.** Once the response is explored, the form offers the fields
+  that read as a time where the value is read (inside the list item when there is one) and the time zone of
+  the source — filled in with the author's own for a time written without an offset — and shows what the
+  picked field reads as, warning when that is later than now. A binding edited later keeps both; changing the
+  list item drops the field, which was read inside it. New labels `observedAt`, `observedAtWhenRead`,
+  `observedAtHint`, `timeZone`, `unknownTimeZone`, `observedAtReads`, `observedAtLater` (`KO_LABELS` included).
 - **`@iyulab/u-board/domain` reads the HTTP connector reference.** `HttpRef`, `isHttpRef`, `readHttpRef` (a
   parsed response → the value and its observed time, or why not), `parseSourceTime`, `valueAtPath` and
   `findHttpRefItem` — the reading the hosted connector does, for a host that answers the same references.

@@ -114,6 +114,19 @@ export interface UBoardLabels {
   /** A binding that reads a list item named by its fields: "{list} · {field} = {value}" follows. */
   listItem: string;
   clearListItem: string;
+  /** The select naming the field where the source says when it observed the value (`observedAtPath`), its
+   *  first option (no field: the value counts as observed when it is read), and the hint shown before the
+   *  response has been explored for such fields. */
+  observedAt: string;
+  observedAtWhenRead: string;
+  observedAtHint: string;
+  /** The IANA time zone a source's time without an offset is in (`timeZone`), and why it cannot be saved. */
+  timeZone: string;
+  unknownTimeZone: string;
+  /** Under the observed-time field once explored: "{time}" is the instant it reads as, in the author's
+   *  words; and the warning when that is later than now. */
+  observedAtReads: string;
+  observedAtLater: string;
   explore: string;
   exploreFailed: string;
   /** In the response explorer: the whole response, when it is itself the value to pick. */
@@ -236,6 +249,13 @@ export const DEFAULT_LABELS: UBoardLabels = {
   pickItemByPosition: 'its position in the list',
   listItem: 'List item',
   clearListItem: 'Pick by position',
+  observedAt: 'Observed time',
+  observedAtWhenRead: 'When it is read',
+  observedAtHint: 'Explore the response to pick the field where the source says when it observed the value.',
+  timeZone: 'Time zone of the source',
+  unknownTimeZone: 'Enter a time zone such as Asia/Seoul or UTC.',
+  observedAtReads: 'Reads as {time}',
+  observedAtLater: 'This is later than now — check the time zone.',
   keyInPath:
     "This path seems to carry a key. A board keeps its paths and a share link shows them — send the key through the data source's authentication instead.",
   valuePath: 'Value path',

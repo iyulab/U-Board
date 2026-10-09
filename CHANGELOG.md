@@ -18,7 +18,9 @@ do when upgrading. Each release's notes carry its section.
   is then the source's — an hourly air measurement fetched at :50 was observed fifty minutes earlier — and a
   last-known value shown while the source is unreachable says its age by that time. How long such a value is
   still served counts from when it was last read, not from its older observed time.
-  The open-data samples name their sources' times (Seoul's real-time city data and air measurements).
+  The binding form offers the response's time fields to pick from, fills in the author's time zone, and shows
+  what the picked field reads as. The open-data samples name their sources' times (Seoul's real-time city data
+  and air measurements).
 
 ## [0.1.5] - 2026-10-09
 

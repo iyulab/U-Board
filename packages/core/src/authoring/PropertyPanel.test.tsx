@@ -538,7 +538,70 @@ describe('PropertyPanel bindings', () => {
     fireEvent.click(screen.getByText('Edit'));
     fireEvent.click(screen.getByText('Pick by position'));
     fireEvent.click(screen.getByText('Save binding'));
-    expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual({ path: '/stations', timeZone: 'Asia/Seoul' });
+    expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual({ path: '/stations' });
+  });
+
+  describe('the time the source says it observed the value', () => {
+    class AirAdapter implements Adapter {
+      readonly id = 'connector-1';
+      async resolve(): Promise<ResolvedBinding> {
+        return {
+          value: { rows: [{ station: 'north', level: 36, measured: '202610092300' }, { station: 'south', level: 41, measured: '202610092300' }] },
+          quality: 'live',
+        };
+      }
+    }
+    const NOW = Date.parse('2026-10-09T14:30:00Z');
+
+    async function pickNorthLevel(clock = () => NOW) {
+      const onChange = vi.fn();
+      render(<PropertyPanel node={statusNode()} adapters={[new AirAdapter()]} onChange={onChange} clock={clock} />);
+      fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+      fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/air' } });
+      fireEvent.click(screen.getByText('Explore'));
+      await waitFor(() => expect(screen.getByText('level: 36')).toBeInTheDocument());
+      fireEvent.click(screen.getByText('level: 36'));
+      fireEvent.change(screen.getByLabelText('Pick the list item by'), { target: { value: 'station' } });
+      return onChange;
+    }
+
+    it('offers the fields that read as a time in the item, places it in the chosen zone, and saves both', async () => {
+      const onChange = await pickNorthLevel();
+      fireEvent.change(screen.getByLabelText('Observed time'), { target: { value: '/measured' } });
+      fireEvent.change(screen.getByLabelText('Time zone of the source'), { target: { value: 'Asia/Seoul' } });
+      const reads = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(Date.parse('2026-10-09T14:00:00Z'));
+      expect(screen.getByText(`Reads as ${reads}`)).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Save binding'));
+      expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual({
+        path: '/air', item: { list: '/rows', where: { station: 'north' } }, valuePath: '/level', observedAtPath: '/measured', timeZone: 'Asia/Seoul',
+      });
+    });
+
+    it('fills in the author’s own time zone for a time written without an offset', async () => {
+      await pickNorthLevel();
+      fireEvent.change(screen.getByLabelText('Observed time'), { target: { value: '/measured' } });
+      expect(screen.getByLabelText('Time zone of the source')).toHaveValue(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    });
+
+    it('warns when the time reads as later than now, and will not save a zone it does not know', async () => {
+      await pickNorthLevel();
+      fireEvent.change(screen.getByLabelText('Observed time'), { target: { value: '/measured' } });
+      fireEvent.change(screen.getByLabelText('Time zone of the source'), { target: { value: 'UTC' } });
+      expect(screen.getByText('This is later than now — check the time zone.')).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Time zone of the source'), { target: { value: 'Seoul' } });
+      expect(screen.getByText('Enter a time zone such as Asia/Seoul or UTC.')).toBeInTheDocument();
+      expect(screen.getByText('Save binding')).toBeDisabled();
+    });
+
+    it('saves no time zone when the value counts as observed when it is read', async () => {
+      const onChange = await pickNorthLevel();
+      fireEvent.change(screen.getByLabelText('Observed time'), { target: { value: '/measured' } });
+      fireEvent.change(screen.getByLabelText('Observed time'), { target: { value: '' } });
+      fireEvent.click(screen.getByText('Save binding'));
+      expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual({
+        path: '/air', item: { list: '/rows', where: { station: 'north' } }, valuePath: '/level',
+      });
+    });
   });
 
   it('shows an inline error when explore fails, without blocking manual valuePath entry', async () => {

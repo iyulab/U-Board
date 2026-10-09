@@ -54,8 +54,8 @@ takes the HTTP connector's reference, `{ path, item?, valuePath?, observedAtPath
   value; `timeZone` (IANA) is the zone of a time written without an offset. The reading's `observedAt`
   is then the source's time rather than the time of the request.
 
-The form's response explorer writes the pointer, and offers `item` when the picked value sits inside a
-list. Implement the same shape to have the form fill it in for you — `readHttpRef` (from
+The form's response explorer writes the pointer, offers `item` when the picked value sits inside a
+list, and offers the fields that read as a time for `observedAtPath`. Implement the same shape to have the form fill it in for you — `readHttpRef` (from
 `@iyulab/u-board/domain`) reads a parsed response with it the way the hosted connector does.
 
 ## Showing a board
