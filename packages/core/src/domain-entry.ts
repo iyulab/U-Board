@@ -8,3 +8,5 @@ export { validateViewDocument, isViewDocumentShape } from './validate-view-docum
 export type { ViewDocumentIssue } from './validate-view-document.js';
 export { QUALITY_LABEL, REASON_LABEL, DEFAULT_QUALITY_TEXT, ageText, worstQuality, describeQuality } from './quality-text.js';
 export type { QualityText, QualitySummary, DescribeQualityOptions } from './quality-text.js';
+export { isHttpRef, readHttpRef, parseSourceTime, valueAtPath, findHttpRefItem, isTimeZone } from './http-ref.js';
+export type { HttpRef, HttpRefItem, HttpRefReading } from './http-ref.js';

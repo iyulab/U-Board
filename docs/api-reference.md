@@ -133,7 +133,9 @@ What an `Adapter.resolve()` call returns — the current value, how current it i
 not `live` and the adapter can tell, why. `reason` is ignored on a `live` reading. `observedAt`, when
 the adapter knows it, is when `value` was obtained from the source: the time of this reading for
 `live`, of the last successful one for `stale` — what tells a last-known value of seconds ago from
-one of days ago. It is ignored on a `disconnected` reading. The hosted HTTP connector reports it.
+one of days ago. It is ignored on a `disconnected` reading. The hosted HTTP connector reports it —
+the time the source gives when the binding's reference names one ([`HttpRef`](#httpref)), else the
+time it read the source.
 
 ### `ConnectionQuality`
 
@@ -305,6 +307,46 @@ alarms from 80:
   map: { ranges: [{ min: 80, value: 'error' }, { min: 70, max: 80, value: 'warning' }], otherwise: 'neutral' },
 }
 ```
+
+### `HttpRef`
+
+```ts
+interface HttpRef {
+  path: string;
+  item?: { list: string; where: Record<string, string | number | boolean> };
+  valuePath?: string;
+  observedAtPath?: string;
+  timeZone?: string;
+}
+```
+
+The reference the hosted HTTP connector reads, and the one the authoring view's binding form writes
+for an adapter that lists no references of its own. Implement this shape to have the form fill it in.
+
+- `path` — the request, relative to the connector's base URL: a path starting with a single `/`,
+  with its query.
+- `item` — one element of the list at the JSON Pointer `list`: the first whose fields equal every one
+  in `where` (`"12"` and `12` match). Sources reorder their lists, so a position would name another
+  element.
+- `valuePath` — an RFC 6901 JSON Pointer to the value, inside `item` when there is one, else inside
+  the whole response. Absent or `''`: the whole of it.
+- `observedAtPath` — a JSON Pointer, read where `valuePath` is, to the time the source says it
+  observed the value. A source that publishes its readings on a schedule says how old they are this
+  way: an hourly measurement fetched at :50 is fifty minutes old. Absent, or the field empty: the
+  value counts as observed when it was read.
+- `timeZone` — the IANA time zone (`Asia/Seoul`) a time without an offset is in. Absent: UTC.
+
+The observed time is read as epoch seconds or milliseconds (a number, or a string of 10 or 13
+digits), ISO 8601 and the variations sources write (`2026-10-09 19:10`, `2026.10.09`, a missing
+offset), or compact digits (`202610091900`, `20261009 1910`, `20261009`). A field that holds
+something else makes the binding `disconnected` with reason `format`; a time more than five minutes
+after the read does too, since a source cannot have observed it yet — the usual cause is a missing
+`timeZone`.
+
+`readHttpRef(body, ref, readAt)` is that reading of a parsed response — the value and its observed
+time (epoch ms), or why it failed (`address`: the response lacks what the reference names; `format`:
+it has it in a form the reference cannot read). `isHttpRef(ref)` checks the shape, and
+`parseSourceTime(raw, timeZone?)` reads one time. All are exported from `@iyulab/u-board/domain`.
 
 ### `Widget`
 

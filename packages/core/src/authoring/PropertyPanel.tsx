@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useId, useMemo, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
+import type { HttpRef, HttpRefItem } from '../http-ref.js';
 import { getWidgetLabel } from '@iyulab/u-widgets/tools';
 import { WIDGET_TYPES, seedWidget, defaultPropPath, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
@@ -38,6 +39,10 @@ interface BindingDraft {
   valuePath: string;
   /** The list item the value path reads in, named by its fields — an HTTP connector reference's `item`. */
   item?: ListItem;
+  /** Where the source says when it observed the value, read where `valuePath` is, and the zone of a time
+   *  written without an offset — an HTTP connector reference's `observedAtPath` and `timeZone`, kept as loaded. */
+  observedAtPath?: string;
+  timeZone?: string;
   /** The `ref` picked from an adapter that offers its references (`Adapter.references`). */
   listedRef: string;
   /** The value map as the form edits it — rows of source value → shown value, and the value for
@@ -86,10 +91,7 @@ function carriesKey(path: string): boolean {
 }
 
 /** One item of a list in the response, named by its fields rather than its position (`ref.item`). */
-interface ListItem {
-  list: string;
-  where: Record<string, string | number | boolean>;
-}
+type ListItem = HttpRefItem;
 
 /** The tokens of an RFC 6901 JSON Pointer. */
 function pointerTokens(pointer: string): string[] {
@@ -226,12 +228,22 @@ function withCurrent(references: readonly AdapterReference[], current: string): 
 }
 
 function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
-  const ref = binding.ref as { path?: string; valuePath?: string; item?: ListItem } | string;
+  const ref = binding.ref as Partial<HttpRef> | string;
   const map = draftMap(binding.map);
   if (typeof ref === 'string') {
     return { propPath, connectorId: binding.adapter, path: '', valuePath: '', listedRef: ref, ...map };
   }
-  return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', item: ref.item, listedRef: '', ...map };
+  return {
+    propPath,
+    connectorId: binding.adapter,
+    path: ref.path ?? '',
+    valuePath: ref.valuePath ?? '',
+    item: ref.item,
+    observedAtPath: ref.observedAtPath,
+    timeZone: ref.timeZone,
+    listedRef: '',
+    ...map,
+  };
 }
 
 export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS, clock = Date.now }: PropertyPanelProps) {
@@ -325,7 +337,15 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   const listed = offersReferences;
 
   const draftRef = (): unknown =>
-    listed ? draft.listedRef : { path: draft.path, ...(draft.item ? { item: draft.item } : {}), valuePath: draft.valuePath || undefined };
+    listed
+      ? draft.listedRef
+      : {
+          path: draft.path,
+          ...(draft.item ? { item: draft.item } : {}),
+          valuePath: draft.valuePath || undefined,
+          ...(draft.observedAtPath !== undefined ? { observedAtPath: draft.observedAtPath } : {}),
+          ...(draft.timeZone !== undefined ? { timeZone: draft.timeZone } : {}),
+        };
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type = e.target.value;
@@ -577,7 +597,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
               {draft.item && (
                 <p className="ub-panel__hint">
                   {labels.listItem}: {itemText(draft.item)}{' '}
-                  <button type="button" className="ub-action" onClick={() => setDraft(d => ({ ...d, item: undefined, valuePath: '' }))}>
+                  <button type="button" className="ub-action" onClick={() => setDraft(d => ({ ...d, item: undefined, valuePath: '', observedAtPath: undefined }))}>
                     {labels.clearListItem}
                   </button>
                 </p>
@@ -591,7 +611,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
                       const field = e.target.value;
                       const value = keyStep.keys.find(([key]) => key === field)?.[1];
                       if (value === undefined) return;
-                      setDraft(d => ({ ...d, item: { list: keyStep.list, where: { [field]: value } }, valuePath: keyStep.rest }));
+                      setDraft(d => ({ ...d, item: { list: keyStep.list, where: { [field]: value } }, valuePath: keyStep.rest, observedAtPath: undefined }));
                     }}
                   >
                     <option value="">{labels.pickItemByPosition}</option>
@@ -606,7 +626,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
               {exploreResult !== null && (
                 <JsonTreeExplorer
                   value={exploreResult}
-                  onSelectPath={path => setDraft(d => ({ ...d, item: undefined, valuePath: path }))}
+                  onSelectPath={path => setDraft(d => ({ ...d, item: undefined, valuePath: path, observedAtPath: d.item ? undefined : d.observedAtPath }))}
                   wholeResponseLabel={labels.wholeResponse}
                 />
               )}

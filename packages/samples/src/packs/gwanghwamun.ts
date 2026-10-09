@@ -24,9 +24,29 @@ export const SEOUL_CITY_DATA: SampleConnector = {
 /** The request: the city data of one place, by its name. */
 export const CITY_DATA_PATH = `/json/citydata/1/5/${encodeURIComponent('광화문·덕수궁')}`;
 
-const bind = (valuePath: string, map?: Binding['map']): Binding => ({
+/** The time zone the source writes its times in — `2026-10-09 19:10`, with no offset. */
+export const SEOUL_TIME_ZONE = 'Asia/Seoul';
+
+/** A part of the answer that says when it was observed: where it is, and its time field there. */
+interface Section {
+  at: string;
+  time: string;
+}
+
+const PEOPLE: Section = { at: '/LIVE_PPLTN_STTS/0', time: '/PPLTN_TIME' };
+const WEATHER: Section = { at: '/WEATHER_STTS/0', time: '/WEATHER_TIME' };
+const ROADS: Section = { at: '/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA', time: '/ROAD_TRAFFIC_TIME' };
+
+/** A field of `section`, observed when the section says — the people count every few minutes, the weather and
+ *  traffic on their own clocks. */
+const bind = (section: Section, field: string, map?: Binding['map']): Binding => ({
   adapter: SEOUL_CITY_DATA.key,
-  ref: { path: CITY_DATA_PATH, valuePath: `/CITYDATA${valuePath}` },
+  ref: {
+    path: CITY_DATA_PATH,
+    valuePath: `/CITYDATA${section.at}${field}`,
+    observedAtPath: `/CITYDATA${section.at}${section.time}`,
+    timeZone: SEOUL_TIME_ZONE,
+  },
   ...(map ? { map } : {}),
 });
 
@@ -107,56 +127,54 @@ function panel(): Node[] {
   const node = (id: string, x: number, y: number, width: number, height: number, widget: Node['widget']): Node => ({
     id, x, y, width, height, anchored: false, widget,
   });
-  const people = '/LIVE_PPLTN_STTS/0';
-  const weather = '/WEATHER_STTS/0';
   return [
     node('crowd', PANEL_X, 104, 220, 60, {
       type: 'status',
       props: { data: { label: '지금 혼잡도', value: '', level: 'neutral' } },
-      bindings: { 'data.value': bind(`${people}/AREA_CONGEST_LVL`), 'data.level': bind(`${people}/AREA_CONGEST_LVL`, CROWD_LEVEL) },
+      bindings: { 'data.value': bind(PEOPLE, '/AREA_CONGEST_LVL'), 'data.level': bind(PEOPLE, '/AREA_CONGEST_LVL', CROWD_LEVEL) },
     }),
     node('people', PANEL_X + 240, 96, 220, 80, {
       type: 'metric',
       props: { data: { label: '추정 인구(최대)', value: 0, unit: '명' } },
-      bindings: { 'data.value': bind(`${people}/AREA_PPLTN_MAX`) },
+      bindings: { 'data.value': bind(PEOPLE, '/AREA_PPLTN_MAX') },
     }),
     node('forecast', PANEL_X, 190, 460, 210, {
       type: 'chart.line',
       props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' } },
-      bindings: { data: bind(`${people}/FCST_PPLTN`) },
+      bindings: { data: bind(PEOPLE, '/FCST_PPLTN') },
     }),
     node('temperature', PANEL_X, 424, 140, 80, {
       type: 'metric',
       props: { data: { label: '기온', value: 0, unit: '°C' } },
-      bindings: { 'data.value': bind(`${weather}/TEMP`) },
+      bindings: { 'data.value': bind(WEATHER, '/TEMP') },
     }),
     node('humidity', PANEL_X + 160, 424, 140, 80, {
       type: 'metric',
       props: { data: { label: '습도', value: 0, unit: '%' } },
-      bindings: { 'data.value': bind(`${weather}/HUMIDITY`) },
+      bindings: { 'data.value': bind(WEATHER, '/HUMIDITY') },
     }),
     node('fine-dust', PANEL_X + 320, 432, 140, 60, {
       type: 'status',
       props: { data: { label: '미세먼지', value: '', level: 'neutral' } },
-      bindings: { 'data.value': bind(`${weather}/PM10_INDEX`), 'data.level': bind(`${weather}/PM10_INDEX`, AIR_LEVEL) },
+      bindings: { 'data.value': bind(WEATHER, '/PM10_INDEX'), 'data.level': bind(WEATHER, '/PM10_INDEX', AIR_LEVEL) },
     }),
     node('temperature-forecast', PANEL_X, 524, 460, 200, {
       type: 'chart.line',
       props: { title: '24시간 기온 예보(°C)', data: [], mapping: { x: 'FCST_DT', y: 'TEMP' } },
-      bindings: { data: bind(`${weather}/FCST24HOURS`) },
+      bindings: { data: bind(WEATHER, '/FCST24HOURS') },
     }),
     node('traffic', PANEL_X, 752, 220, 60, {
       type: 'status',
       props: { data: { label: '도로 소통', value: '', level: 'neutral' } },
       bindings: {
-        'data.value': bind('/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA/ROAD_TRAFFIC_IDX'),
-        'data.level': bind('/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA/ROAD_TRAFFIC_IDX', TRAFFIC_LEVEL),
+        'data.value': bind(ROADS, '/ROAD_TRAFFIC_IDX'),
+        'data.level': bind(ROADS, '/ROAD_TRAFFIC_IDX', TRAFFIC_LEVEL),
       },
     }),
     node('speed', PANEL_X + 240, 744, 220, 80, {
       type: 'metric',
       props: { data: { label: '평균 속도', value: 0, unit: 'km/h' } },
-      bindings: { 'data.value': bind('/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA/ROAD_TRAFFIC_SPD') },
+      bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_SPD') },
     }),
   ];
 }

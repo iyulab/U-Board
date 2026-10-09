@@ -526,6 +526,21 @@ describe('PropertyPanel bindings', () => {
     });
   });
 
+  it('keeps where the source says when it observed the value when a binding is edited, and drops it once the list item changes', async () => {
+    const ref = { path: '/stations', item: { list: '/data/stations', where: { id: 'ST-2' } }, valuePath: '/bikes', observedAtPath: '/updated', timeZone: 'Asia/Seoul' };
+    const onChange = vi.fn();
+    render(<PropertyPanel node={statusNode({ 'data.value': { adapter: 'connector-1', ref } })} adapters={[new FakeExplorableAdapter()]} onChange={onChange} />);
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.change(screen.getByLabelText('Value path'), { target: { value: '/name' } });
+    fireEvent.click(screen.getByText('Save binding'));
+    expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual({ ...ref, valuePath: '/name' });
+
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText('Pick by position'));
+    fireEvent.click(screen.getByText('Save binding'));
+    expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual({ path: '/stations', timeZone: 'Asia/Seoul' });
+  });
+
   it('shows an inline error when explore fails, without blocking manual valuePath entry', async () => {
     render(<PropertyPanel node={statusNode()} adapters={[new FakeExplorableAdapter()]} onChange={vi.fn()} />);
 

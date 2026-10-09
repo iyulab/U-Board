@@ -1,5 +1,5 @@
 export type { Localized, SampleConnector, SamplePack, SampleSnapshot } from './sample-pack.js';
-export { SnapshotAdapter, snapshotAdapters, valueAtPointer, findItem, type HttpRef } from './snapshot-adapter.js';
+export { SnapshotAdapter, snapshotAdapters } from './snapshot-adapter.js';
 export { gwanghwamun } from './packs/gwanghwamun.js';
 export { seoulAir } from './packs/seoul-air.js';
 

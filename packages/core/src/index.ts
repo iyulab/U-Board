@@ -14,6 +14,8 @@ export { QUALITY_LABEL, REASON_LABEL, DEFAULT_QUALITY_TEXT, ageText, worstQualit
 export { serverClock } from './server-clock.js';
 export type { ServerClock, ResponseWithHeaders } from './server-clock.js';
 export type { QualityText, QualitySummary, DescribeQualityOptions } from './quality-text.js';
+export { isHttpRef, readHttpRef, parseSourceTime, valueAtPath, findHttpRefItem, isTimeZone } from './http-ref.js';
+export type { HttpRef, HttpRefItem, HttpRefReading } from './http-ref.js';
 export { DEFAULT_LABELS, timeText } from './labels.js';
 export { KO_LABELS } from './labels-ko.js';
 export type { UBoardLabels } from './labels.js';

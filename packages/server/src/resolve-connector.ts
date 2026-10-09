@@ -1,5 +1,6 @@
 import { PATH_KEY_PLACEHOLDER, type Connector } from './db/connectors.js';
 import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
+import { isHttpRef, readHttpRef, type HttpRef } from '@iyulab/u-board/domain';
 import { HttpStatusError } from './http-status-error.js';
 import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
 
@@ -17,10 +18,14 @@ export interface ResolveResult {
   observedAt?: string;
 }
 
-/** A last-known value and when it was read from the data source (ISO 8601). */
+/** A last-known value: when the source says it observed it (ISO 8601) and when it was read from the
+ *  source (epoch ms). The two differ for a source that publishes its readings on a schedule — an hourly
+ *  measurement read at :50 is fifty minutes old the moment it arrives, but was as fresh as the source
+ *  could give. */
 export interface CachedValue {
   value: unknown;
   observedAt: string;
+  readAt: number;
 }
 
 /** Process-wide state the resolve proxy keeps between requests. */
@@ -46,9 +51,11 @@ export interface ResolveState {
   /** How long a successful upstream read answers later resolves of the same URL (milliseconds).
    * 0: only resolves that start while the read is still open share it. */
   reuseMs: number;
-  /** How old a last-known value may be and still be served as `stale` (milliseconds). Past it, a
-   * failed read is `disconnected` — the value is too old to stand in for the current one. Unset:
-   * no limit, the last value is served however old (its `observedAt` says how old). */
+  /** How long after its last successful read a value may still be served as `stale` (milliseconds) —
+   * counted from the read, not from the time the source says it observed the value, which for a source
+   * that publishes on a schedule is older from the start. Past it, a failed read is `disconnected` — the
+   * value is too old to stand in for the current one. Unset: no limit, the last value is served however
+   * old (its `observedAt` says how old). */
   staleMaxAgeMs?: number;
 }
 
@@ -95,93 +102,15 @@ function describeFailure(err: unknown): string {
   return String(err);
 }
 
-/** The keys `valuePath` names, in order. A path starting with `/` is an RFC 6901 JSON Pointer —
- * the form the authoring path explorer writes, and the only one that can name a key containing a
- * dot (`/@odata.count`) or a slash (`/a~1b`). Anything else is the older dot-separated form
- * (`value.0.Status`), still read so bindings saved before pointers keep resolving. */
-function pathTokens(path: string): string[] {
-  if (!path.startsWith('/')) return path.split('.');
-  return path.slice(1).split('/').map(token => token.replace(/~1/g, '/').replace(/~0/g, '~'));
-}
+/** An HTTP connector binding's reference — the core's, read the same way here as wherever else a board
+ *  is shown (`readHttpRef`). */
+export type { HttpRef } from '@iyulab/u-board/domain';
 
-/** Follows `path` through `obj`, telling "the path ends at `null`/`undefined`" (a value the source
- * sent) apart from "the path leads nowhere" (a response that does not contain what the binding
- * addresses — an empty result set, a renamed field). Only the first is a live reading. Only the
- * response's own keys count, and an array index is a plain decimal without leading zeros
- * (RFC 6901 §4) — never an inherited property or the append token `-`. */
-function getByPath(obj: unknown, path: string): { found: true; value: unknown } | { found: false } {
-  let cursor = obj;
-  for (const token of pathTokens(path)) {
-    if (Array.isArray(cursor)) {
-      if (!/^(0|[1-9][0-9]*)$/.test(token) || Number(token) >= cursor.length) return { found: false };
-      cursor = cursor[Number(token)];
-    } else if (cursor && typeof cursor === 'object' && Object.prototype.hasOwnProperty.call(cursor, token)) {
-      cursor = (cursor as Record<string, unknown>)[token];
-    } else {
-      return { found: false };
-    }
-  }
-  return { found: true, value: cursor };
-}
-
-/** One item of a list in the response, named by its fields rather than its place: the first element
- *  of the array at `list` (a JSON Pointer) whose fields equal every one in `where`. A source's list can
- *  come in another order, or with an item missing, from one read to the next — a position would then
- *  name another item, and show its value as live. */
-export interface RefItem {
-  list: string;
-  where: Record<string, string | number | boolean>;
-}
-
-/** An HTTP connector binding's reference: the request `path`, optionally the list `item` it reads,
- *  and the JSON Pointer `valuePath` into that item (or into the whole response when there is none). */
-export interface HttpRef {
-  path: string;
-  valuePath?: string;
-  item?: RefItem;
-}
-
-function isRefItem(item: unknown): item is RefItem {
-  if (!item || typeof item !== 'object') return false;
-  const { list, where } = item as { list?: unknown; where?: unknown };
-  if (typeof list !== 'string' || (list !== '' && !list.startsWith('/'))) return false;
-  if (!where || typeof where !== 'object' || Array.isArray(where)) return false;
-  const values = Object.values(where);
-  return values.length > 0 && values.every(v => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean');
-}
-
-/** `ref.path` is caller-controlled and the request carries the connector's credentials, so it
- * must not be able to move the request off the connector's origin. A path that does not start
- * with a single `/` could otherwise be parsed as URL authority — `"@attacker.example/"` appended
- * to `https://plant.example.com` yields `plant.example.com` as *userinfo* and `attacker.example`
- * as the host, sending the owner's secret to the caller's server. */
+/** Whether `ref` is a reference this proxy may request — the core's `isHttpRef`, which also keeps the
+ *  request on the connector's origin (a path that does not start with a single `/` could be read as URL
+ *  authority, sending the owner's credentials elsewhere). */
 export function isValidRef(ref: unknown): ref is HttpRef {
-  return (
-    !!ref &&
-    typeof (ref as { path?: unknown }).path === 'string' &&
-    (ref as { path: string }).path.startsWith('/') &&
-    !(ref as { path: string }).path.startsWith('//') &&
-    ((ref as { item?: unknown }).item === undefined || isRefItem((ref as { item?: unknown }).item))
-  );
-}
-
-/** The element of `body`'s list that `item` names, or `found: false` — no such list, or no element
- *  matches. A field matches when the source's value reads the same as the expected one (`"12"` and
- *  `12` are one id: sources are not consistent about the type of a code). */
-function findItem(body: unknown, item: RefItem): { found: true; value: unknown } | { found: false } {
-  const list = getByPath(body, item.list);
-  if (!list.found || !Array.isArray(list.value)) return { found: false };
-  const match = list.value.find(
-    element =>
-      element !== null &&
-      typeof element === 'object' &&
-      Object.entries(item.where).every(([field, expected]) => {
-        if (!Object.hasOwn(element, field)) return false;
-        const actual = (element as Record<string, unknown>)[field];
-        return actual !== undefined && actual !== null && String(actual) === String(expected);
-      })
-  );
-  return match === undefined ? { found: false } : { found: true, value: match };
+  return isHttpRef(ref);
 }
 
 /** Resolves `ref.path` against `connector.baseUrl`, pinned to the connector's own origin *and*,
@@ -429,28 +358,11 @@ export async function resolveConnectorValue(
     } catch (err) {
       throw err instanceof StageError ? err : new StageError('request', err);
     }
-    let value: unknown = body;
-    if ((ref.valuePath || ref.item) && typeof body === 'string') {
-      // Plain text has no fields: a value path into it asks for a form the source does not answer in.
-      throw new StageError('response', new Error('the response is plain text, which a value path cannot read into'), 'format');
-    }
-    if (ref.item) {
-      const found = findItem(body, ref.item);
-      if (!found.found) {
-        const where = Object.entries(ref.item.where).map(([field, expected]) => `${field}=${String(expected)}`).join(', ');
-        throw new StageError('response', new Error(`no item of "${ref.item.list}" where ${where}`), 'address');
-      }
-      value = found.value;
-    }
-    if (ref.valuePath) {
-      const extracted = getByPath(value, ref.valuePath);
-      if (!extracted.found) {
-        throw new StageError('response', new Error(`valuePath "${ref.valuePath}" not found in the response`), 'address');
-      }
-      value = extracted.value;
-    }
-    const observedAt = new Date(readAt).toISOString();
-    state.values.set(cacheKey, { value, observedAt });
+    const reading = readHttpRef(body, ref, readAt);
+    if (!reading.ok) throw new StageError('response', new Error(reading.message), reading.reason);
+    const { value } = reading;
+    const observedAt = new Date(reading.observedAt).toISOString();
+    state.values.set(cacheKey, { value, observedAt, readAt });
     if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
     return { value, quality: 'live', observedAt };
   } catch (err) {
@@ -459,7 +371,7 @@ export async function resolveConnectorValue(
     const tooOld =
       cached !== undefined &&
       state.staleMaxAgeMs !== undefined &&
-      Date.now() - Date.parse(cached.observedAt) > state.staleMaxAgeMs;
+      Date.now() - cached.readAt > state.staleMaxAgeMs;
     const servable = cached !== undefined && !tooOld;
     // The served outcome is part of the logged failure, so crossing the age limit mid-outage logs once.
     const failure = `${stage} failed: ${message} — ${

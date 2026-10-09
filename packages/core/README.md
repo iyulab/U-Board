@@ -44,15 +44,19 @@ const resolved = await resolveDocument(doc, adapters);
 
 The authoring view's binding form writes one of two reference shapes. An adapter that lists its
 references (`references()`) is bound by picking one, and the reference is that string. Any other adapter
-takes the HTTP connector's reference, `{ path, item?, valuePath? }`:
+takes the HTTP connector's reference, `{ path, item?, valuePath?, observedAtPath?, timeZone? }`:
 
 - `path`: the request.
 - `valuePath`: an RFC 6901 JSON Pointer into the response.
 - `item: { list, where }`: one element of the list at `list`, named by its fields rather than its
   position — sources reorder their lists. `valuePath` is then read inside that element.
+- `observedAtPath`: a pointer, read where `valuePath` is, to the time the source says it observed the
+  value; `timeZone` (IANA) is the zone of a time written without an offset. The reading's `observedAt`
+  is then the source's time rather than the time of the request.
 
 The form's response explorer writes the pointer, and offers `item` when the picked value sits inside a
-list. Implement the same shape to have the form fill it in for you.
+list. Implement the same shape to have the form fill it in for you — `readHttpRef` (from
+`@iyulab/u-board/domain`) reads a parsed response with it the way the hosted connector does.
 
 ## Showing a board
 

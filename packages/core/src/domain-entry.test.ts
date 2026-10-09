@@ -17,5 +17,7 @@ describe('domain entry', () => {
   it('re-exports the domain surface a server process needs', () => {
     expect(typeof mod.resolveDocument).toBe('function');
     expect(typeof mod.isViewDocumentShape).toBe('function');
+    expect(typeof mod.readHttpRef).toBe('function');
+    expect(typeof mod.isHttpRef).toBe('function');
   });
 });

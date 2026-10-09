@@ -11,6 +11,15 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- **A value's age as its source gives it.** An HTTP binding can name the field where the source says when it
+  observed the value (`observedAtPath`) and the time zone the source writes in (`timeZone`). The reading's time
+  is then the source's — an hourly air measurement fetched at :50 was observed fifty minutes earlier — and a
+  last-known value shown while the source is unreachable says its age by that time. How long such a value is
+  still served counts from when it was last read, not from its older observed time.
+  The open-data samples name their sources' times (Seoul's real-time city data and air measurements).
+
 ## [0.1.5] - 2026-10-09
 
 ### Added

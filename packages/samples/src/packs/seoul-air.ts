@@ -1,7 +1,7 @@
 import type { Binding, Node, Shape, ViewDocument } from '@iyulab/u-board/domain';
 import type { SampleConnector, SamplePack } from '../sample-pack.js';
 import { svgDataUrl } from '../frame.js';
-import { SEOUL_CITY_DATA } from './gwanghwamun.js';
+import { SEOUL_CITY_DATA, SEOUL_TIME_ZONE } from './gwanghwamun.js';
 import { snapshot } from '../snapshots/seoul-air.js';
 
 // Fine dust in five central districts of Seoul, from the city's hourly air measurements: each district's
@@ -14,16 +14,23 @@ const HEIGHT = 640;
 export const SEOUL_AIR: SampleConnector = { ...SEOUL_CITY_DATA, key: 'seoul-air', name: '서울시 실시간 대기환경' };
 export const AIR_PATH = '/json/RealtimeCityAir/1/5/';
 
+/** Every row is measured on the hour, and says which (`MSRMT_DT`, `202610091900`). */
 const bind = (valuePath: string, map?: Binding['map']): Binding => ({
   adapter: SEOUL_AIR.key,
-  ref: { path: AIR_PATH, valuePath: `/RealtimeCityAir${valuePath}` },
+  ref: { path: AIR_PATH, valuePath: `/RealtimeCityAir${valuePath}`, observedAtPath: '/RealtimeCityAir/row/0/MSRMT_DT', timeZone: SEOUL_TIME_ZONE },
   ...(map ? { map } : {}),
 });
 
 /** A district's row, by the station's name (`MSRSTN_NM`) — not its place in the list, which can change. */
 const bindDistrict = (name: string, field: string, map?: Binding['map']): Binding => ({
   adapter: SEOUL_AIR.key,
-  ref: { path: AIR_PATH, item: { list: '/RealtimeCityAir/row', where: { MSRSTN_NM: name } }, valuePath: `/${field}` },
+  ref: {
+    path: AIR_PATH,
+    item: { list: '/RealtimeCityAir/row', where: { MSRSTN_NM: name } },
+    valuePath: `/${field}`,
+    observedAtPath: '/MSRMT_DT',
+    timeZone: SEOUL_TIME_ZONE,
+  },
   ...(map ? { map } : {}),
 });
 

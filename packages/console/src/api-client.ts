@@ -1,5 +1,5 @@
 import type { ViewDocument } from '@iyulab/u-board';
-import type { ResolvedBinding } from '@iyulab/u-board';
+import type { HttpRef, ResolvedBinding } from '@iyulab/u-board';
 import { serverClock } from '@iyulab/u-board';
 
 export class ApiError extends Error {
@@ -295,7 +295,7 @@ export function deleteConnector(workspaceId: string, connectorId: string) {
   return request<void>(`/workspaces/${workspaceId}/connectors/${connectorId}`, { method: 'DELETE' });
 }
 
-export function resolveConnector(workspaceId: string, connectorId: string, ref: { path: string; valuePath?: string }) {
+export function resolveConnector(workspaceId: string, connectorId: string, ref: HttpRef) {
   return request<ResolvedBinding>(
     `/workspaces/${workspaceId}/connectors/${connectorId}/resolve`,
     { method: 'POST', body: JSON.stringify({ ref }) }

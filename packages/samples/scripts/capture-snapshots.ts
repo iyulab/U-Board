@@ -4,9 +4,9 @@
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { findHttpRefItem, type HttpRef } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS } from '../src/index.js';
 import { keepPointers } from '../src/prune.js';
-import { findItem, type HttpRef } from '../src/snapshot-adapter.js';
 import type { SampleConnector, SamplePack } from '../src/sample-pack.js';
 
 function requestUrl(connector: SampleConnector, path: string): URL {
@@ -30,14 +30,15 @@ function requests(pack: SamplePack): Map<string, Map<string, HttpRef[]>> {
   return byConnector;
 }
 
-/** The pointers into `body` that `ref` reads — for a list item, the item's place in this answer, with the
- *  fields it is matched by, so the recording still finds it. */
+/** The pointers into `body` that `ref` reads — the value and the time the source observed it, and for a list
+ *  item, the item's place in this answer with the fields it is matched by, so the recording still finds it. */
 function pointersOf(body: unknown, ref: HttpRef): string[] {
-  if (!ref.item) return [ref.valuePath ?? ''];
-  const found = findItem(body, ref.item);
+  const inScope = [ref.valuePath ?? '', ...(ref.observedAtPath !== undefined ? [ref.observedAtPath] : [])];
+  if (!ref.item) return inScope;
+  const found = findHttpRefItem(body, ref.item);
   if (!found.found) throw new Error(`no item of ${ref.item.list} where ${JSON.stringify(ref.item.where)} in the answer to ${ref.path}`);
   const at = `${ref.item.list}/${found.index}`;
-  return [`${at}${ref.valuePath ?? ''}`, ...Object.keys(ref.item.where).map(field => `${at}/${field.replace(/~/g, '~0').replace(/\//g, '~1')}`)];
+  return [...inScope.map(pointer => `${at}${pointer}`), ...Object.keys(ref.item.where).map(field => `${at}/${field.replace(/~/g, '~0').replace(/\//g, '~1')}`)];
 }
 
 for (const pack of SAMPLE_PACKS) {

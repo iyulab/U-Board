@@ -14,6 +14,16 @@ All notable changes to this package are documented here. The format follows
   lists its records in another order on the next read no longer moves another record's value into the binding.
   The form keeps an existing `item` when a binding is edited. New labels `pickItemBy`, `pickItemByPosition`,
   `listItem`, `clearListItem` (`KO_LABELS` included).
+- **The time a source says it observed a value.** The HTTP connector reference takes `observedAtPath` — a
+  pointer, read where `valuePath` is, to the source's own time for the value — and `timeZone`, the IANA zone of
+  a time written without an offset. A reading's `observedAt` is then that time: an hourly measurement fetched at
+  :50 says it is fifty minutes old instead of new. Epoch seconds and milliseconds, ISO 8601 and its common
+  variations, and compact digits (`202610091900`) are read; a field that holds no time, or one later than the
+  read, makes the binding `disconnected` with reason `format`. The binding form keeps both when a binding is
+  edited, and drops `observedAtPath` when the list item it is read in changes.
+- **`@iyulab/u-board/domain` reads the HTTP connector reference.** `HttpRef`, `isHttpRef`, `readHttpRef` (a
+  parsed response → the value and its observed time, or why not), `parseSourceTime`, `valueAtPath` and
+  `findHttpRefItem` — the reading the hosted connector does, for a host that answers the same references.
 
 ## [0.8.0] - 2026-10-09
 

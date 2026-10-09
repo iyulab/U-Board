@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveDocument, validateViewDocument, type Node } from '@iyulab/u-board/domain';
-import { SAMPLE_PACKS, snapshotAdapters, valueAtPointer } from './index.js';
+import { SAMPLE_PACKS, snapshotAdapters } from './index.js';
 import { keepPointers } from './prune.js';
 
 const overlaps = (a: Node, b: Node) =>
@@ -38,6 +38,19 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     }
   });
 
+  it('says when the source observed each value it gives a time for — before the recording, within the hour or two a source lags', async () => {
+    const adapters = new Map(snapshotAdapters(pack).map(a => [a.id, a]));
+    const capturedAt = Date.parse(pack.snapshot.capturedAt);
+    for (const node of pack.document.nodes) {
+      for (const [prop, binding] of Object.entries(node.widget.bindings ?? {})) {
+        if ((binding.ref as { observedAtPath?: string }).observedAtPath === undefined) continue;
+        const observedAt = Date.parse((await adapters.get(binding.adapter)!.resolve(binding.ref)).observedAt!);
+        expect(observedAt, `${node.id} ${prop}`).toBeLessThanOrEqual(capturedAt);
+        expect(capturedAt - observedAt, `${node.id} ${prop}`).toBeLessThan(2 * 60 * 60_000);
+      }
+    }
+  });
+
   it('places every node on its background, none over another', () => {
     const { width, height } = pack.document.background.image!;
     const nodes = pack.document.nodes;
@@ -70,10 +83,5 @@ describe('a recording', () => {
     const body = { a: { rows: [{ n: 1, x: 'drop' }, { n: 2 }, { n: 3 }], other: 'drop' }, b: 'drop' };
     expect(keepPointers(body, ['/a/rows/0/n', '/a/rows/2'])).toEqual({ a: { rows: [{ n: 1 }, null, { n: 3 }] } });
     expect(keepPointers(body, [''])).toBe(body);
-  });
-
-  it('is read by JSON Pointer, escapes included', () => {
-    expect(valueAtPointer({ 'a/b': { '~c': 1 } }, '/a~1b/~0c')).toEqual({ found: true, value: 1 });
-    expect(valueAtPointer({ a: 1 }, '/b')).toEqual({ found: false });
   });
 });
