@@ -143,8 +143,9 @@ lines stay put while nodes and decorations are edited:
 import { AuthoringView, type Adapter } from '@iyulab/u-board';
 ```
 
-The editor and its live preview share one pan/zoom; without a `width`/`height` both fill the
-parent, which needs a definite height. The [package README](packages/core/README.md) covers sizing
+The board is edited with each widget drawn in place, and an Edit / View switch shows it as a shared
+link does, pan and zoom kept; without a `width`/`height` the board fills the parent beside the
+property panel, so give the parent a definite height. The [package README](packages/core/README.md) covers sizing
 and view controls.
 
 Unlike the domain layer above, this surface depends on canvas-kit and renders to the DOM directly —

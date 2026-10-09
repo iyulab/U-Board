@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 // How the board looks, compared with a picture of it — the regressions a DOM assertion cannot see: a
 // widget that renders but in the wrong colours, a frame that lost its border, a tag that covers what it
 // names. Fonts and anti-aliasing differ between operating systems, so the reference pictures are made on
-// Linux, as CI runs it (`npm run test:visual:update` makes them in the Playwright container), and the
-// comparison runs on Linux only.
+// Linux, as CI runs it (`npm run test:visual:update` in this package makes them in the Playwright
+// container), and the comparison runs on Linux only.
 test.skip(process.platform !== 'linux', 'reference pictures are rendered on Linux, where CI runs');
 
 test.beforeEach(async ({ page }) => {

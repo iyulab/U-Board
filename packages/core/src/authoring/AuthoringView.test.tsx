@@ -473,6 +473,25 @@ describe('AuthoringView viewport', () => {
     expect(designerProps.mock.lastCall![0].transform).toEqual({ x: 5, y: 6, scale: 2 });
   });
 
+  it("places each node's widget where the node is now, before its bindings resolve", () => {
+    const pending = { id: 'cmms', resolve: () => new Promise<never>(() => {}) };
+    const bound: ViewDocument = {
+      ...doc(),
+      nodes: [{ id: 'n1', x: 10, y: 20, width: 200, height: 120, anchored: false, widget: { type: 'gauge', props: {}, bindings: { 'data.value': { adapter: 'cmms', ref: 'k' } } } }],
+    };
+    render(<AuthoringView initialDocument={bound} adapters={[pending]} />);
+    expect(designerProps.mock.lastCall![0].overlays).toMatchObject([{ id: 'n1', x: 10, y: 20, width: 200, height: 120 }]);
+  });
+
+  it('lets go of the selection when the board is viewed', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} />);
+    fireEvent.click(screen.getByText('Add node'));
+    act(() => lastDesignerProps().onSelectionChange([{ type: 'rect', id: lastDesignerProps().overlays[0].id, x: 0, y: 0, width: 10, height: 10 }]));
+    expect(screen.getByText('Widget type')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(screen.queryByText('Widget type')).not.toBeInTheDocument();
+  });
+
   it("draws each node's widget in place on the editor, named by its widget type", async () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} />);
     fireEvent.click(screen.getByText('Add node'));

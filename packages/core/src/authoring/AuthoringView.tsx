@@ -21,6 +21,7 @@ import { seedWidget } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
 import { documentExtent } from '../viewer/document-extent.js';
+import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
 import type { Adapter } from '../adapter.js';
@@ -32,9 +33,9 @@ import { TOOLBAR_STYLE, GROUP_STYLE, ERROR_STYLE } from '../ui-style.js';
 export interface AuthoringViewProps {
   initialDocument: ViewDocument;
   adapters: readonly Adapter[];
-  /** Size (CSS px) of the editor and of the live preview beside it. Omit either and the two panes
-   * split the available width and fill the height — `AuthoringView` then fills its parent, so give
-   * the parent a definite height. */
+  /** Size (CSS px) of the board, in either mode. Omit either and the board takes the width beside
+   * the property panel and fills the height — `AuthoringView` then fills its parent, so give the
+   * parent a definite height. */
   width?: number;
   height?: number;
   /** Adapter id → human-readable label for the binding editor's connector picker. Falls back to
@@ -56,16 +57,17 @@ export interface AuthoringViewProps {
 }
 
 /**
- * The authoring surface: a canvas-kit `KonvaDesigner` for adding/dragging/selecting nodes, a live
- * preview rendered through the same path a real viewer would use (`resolveDocument` +
- * `toCanvasKit`), and a `PropertyPanel` for editing the selected node's widget type, static props,
- * and bindings (docs/principles.md — editor/renderer separation; the designer never renders a
- * widget itself, it only owns the node's footprint and selection).
+ * The authoring surface: one board, shown in one of two modes, beside a `PropertyPanel` for editing
+ * the selected node's widget type, static props and bindings. In Edit, a canvas-kit `KonvaDesigner`
+ * adds, drags and selects nodes, and each node's widget — rendered through the same path a real
+ * viewer uses (`resolveDocument` + `toCanvasKit`) — is laid over its footprint, display-only. In
+ * View, the canvas-kit `Viewer` shows the board as a shared link does (docs/principles.md —
+ * editor/renderer separation; the designer never renders a widget itself, it only owns the node's
+ * footprint and selection).
  *
- * The editor and the preview share one pan/zoom — moving either moves both, so the preview stays a
- * mirror of what is being edited. A document opens fitted into view (shrunk to fit, never
- * magnified) and stays fitted as the panes resize until the author pans or zooms; "Fit to view"
- * restores that, and a new node or decoration is placed in view.
+ * Both modes share one pan/zoom. A document opens fitted into view (shrunk to fit, never magnified)
+ * and stays fitted as the board resizes until the author pans or zooms; "Fit to view" restores
+ * that, and a new node or decoration is placed in view.
  */
 export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now }: AuthoringViewProps) {
   const labels = useLabels(labelsProp);
@@ -92,12 +94,18 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const scene = useMemo(() => documentToScene(doc), [doc]);
   const extent = useMemo(() => documentExtent(doc), [doc]);
   // The widgets the viewer would draw, laid over the nodes being edited — display-only, so a press on
-  // one reaches the node beneath — each with its widget type named above it.
+  // one reaches the node beneath — each with its widget type named above it. Where and how big each is
+  // comes from the document as edited now; only what it shows waits for the bindings to resolve, so a
+  // moved or resized node does not leave its widget behind while a slow source answers.
   const editorOverlays = useMemo(() => {
-    const types = new Map(doc.nodes.map(node => [node.id, node.widget.type]));
-    return (preview?.overlays ?? []).map(overlay => ({
-      ...overlay,
-      content: <NodeInPlace widget={overlay.content} name={getWidgetLabel(types.get(overlay.id) ?? '', labels.locale)} />,
+    const widgets = new Map((preview?.overlays ?? []).map(overlay => [overlay.id, overlay.content]));
+    return doc.nodes.map(node => ({
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      width: node.width ?? DEFAULT_NODE_WIDTH,
+      height: node.height ?? DEFAULT_NODE_HEIGHT,
+      content: <NodeInPlace widget={widgets.get(node.id) ?? null} name={getWidgetLabel(node.widget.type, labels.locale)} />,
     }));
   }, [preview, doc.nodes, labels.locale]);
   // Every state-changing handler below (`setDoc`) replaces the document with a new object, so a
@@ -174,6 +182,15 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
 
   // A decoration can be a scene `rect`, same as a node — told apart by which array of the
   // document actually contains the selected id, not by the DrawingObject's own `type`.
+  // Nothing is selected on a board being viewed — and the editor, mounted again on the way back, starts
+  // with no selection — so the panel lets go of the selected item rather than show one the board does not.
+  const handleViewMode = () => {
+    setMode('view');
+    setSelectionCount(0);
+    setSelectedNodeId(null);
+    setSelectedDecorationId(null);
+  };
+
   const handleSelectionChange = (selection: DrawingObject[]) => {
     setSelectionCount(selection.length);
     const id = selection.length === 1 ? (selection[0].id ?? null) : null;
@@ -345,7 +362,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           <button type="button" className="ub-action" aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}>
             {labels.editMode}
           </button>
-          <button type="button" className="ub-action" aria-pressed={mode === 'view'} onClick={() => setMode('view')}>
+          <button type="button" className="ub-action" aria-pressed={mode === 'view'} onClick={handleViewMode}>
             {labels.viewMode}
           </button>
         </div>
