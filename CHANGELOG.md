@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-10-09
+
 ### Added
 
 - **Start a board from an open-data sample.** The new-board dialog offers sample boards built on public open
