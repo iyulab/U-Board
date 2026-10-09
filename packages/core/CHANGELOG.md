@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-09
+
 ### Changed
 
 - **Widgets take data as an API returns it.** A chart bound to a time series answered as one array per field
