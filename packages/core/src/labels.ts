@@ -39,12 +39,15 @@ export interface UBoardLabels {
   zoomOut: string;
   fitToView: string;
 
-  // Panes and states
-  editorHeading: string;
+  // Modes and states
+  /** The authoring view's two modes — editing the board, and viewing it as it is shared — and the
+   * name of the switch between them. */
+  mode: string;
+  editMode: string;
+  viewMode: string;
   /** The accessible name of the editor canvas. */
   editorRegion: string;
-  previewHeading: string;
-  /** The accessible name of the authoring live preview. */
+  /** The accessible name of the board in the authoring view's view mode. */
   previewRegion: string;
   /** The accessible name of a `ViewerPage` board view when no `ariaLabel` is given. */
   boardRegion: string;
@@ -172,10 +175,11 @@ export const DEFAULT_LABELS: UBoardLabels = {
   zoomOut: 'Zoom out',
   fitToView: 'Fit to view',
 
-  editorHeading: 'Editor',
+  mode: 'Mode',
+  editMode: 'Edit',
+  viewMode: 'View',
   editorRegion: 'Editor',
-  previewHeading: 'Live preview',
-  previewRegion: 'Live preview',
+  previewRegion: 'Board view',
   boardRegion: 'Board',
   resolving: 'Resolving…',
   noDocument: 'No document loaded — Import one to view it.',

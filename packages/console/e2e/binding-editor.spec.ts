@@ -71,7 +71,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await page.getByText('바인딩 저장', { exact: true }).click();
     await expect(page.getByText('data.level', { exact: true })).toBeVisible();
     await expect(page.getByText('· 매핑됨')).toBeVisible();
-    // 미리보기 캔버스의 위젯이 매핑된 수준으로 그려진다.
+    // 편집기에 제자리로 그려진 위젯이 매핑된 수준으로 그려진다.
     await expect(page.locator('[data-level="success"]').first()).toBeVisible();
 
     await page.getByRole('button', { name: '저장', exact: true }).click();

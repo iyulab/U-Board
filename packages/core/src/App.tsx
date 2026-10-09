@@ -146,10 +146,10 @@ export function App() {
       {mode === 'author' ? (
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>
-            Add and drag nodes on the left; the right pane renders the same ViewDocument through
-            the real render path (resolveDocument + canvas-kit Viewer + u-widgets overlays)
-            against a demo adapter (one live value, one deliberately stale, one that never
-            resolves). Widgets whose binding isn't live get a frame — amber dashed for stale,
+            Add and drag nodes; each node's widget is drawn in place through the real render path
+            (resolveDocument + u-widgets overlays) against a demo adapter (one live value, one
+            deliberately stale, one that never resolves), and View shows the board as a shared
+            link does. Widgets whose binding isn't live get a frame — amber dashed for stale,
             gray dotted for disconnected (distinct border style, not just color, so the two
             don't rely on color perception alone). This is the library's development harness,
             with no server behind it: Export/Import save and restore the document as a local

@@ -40,7 +40,7 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
 
   // 빈 영역에서 끌어 상자로 두 장식을 함께 고르면, 한 항목의 패널 대신 선택 개수를 알린다
   // (열 때 fit에 16px 여백이 있어 편집기 모서리는 비어 있다).
-  const editor = (await page.getByRole('region', { name: '편집기' }).boundingBox())!;
+  const editor = (await page.getByRole('application', { name: '편집기' }).boundingBox())!;
   await page.mouse.move(editor.x + 2, editor.y + 2);
   await page.mouse.down();
   await page.mouse.move(editor.x + editor.width / 2, editor.y + editor.height / 2, { steps: 4 });

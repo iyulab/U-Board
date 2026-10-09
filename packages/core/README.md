@@ -79,13 +79,15 @@ const clock = serverClock();
 <ViewerPage initialDocument={doc} adapters={adapters} pollIntervalMs={30_000} clock={clock.now} />;
 ```
 
-`AuthoringView` sizes the same way: without `width`/`height` the editor and its live preview split
-the parent's width and fill its height. Both share one pan/zoom and the document opens fitted into
-view the same way; a new node or decoration is placed where the author is looking. In the editor,
-drag across empty space to select several items and drag one of them to move them all; pan with
-Space + drag or the middle mouse button, or from the keyboard (arrow keys move the selection, or
-pan when nothing is selected; Tab steps through the items). In the live preview a drag pans. The
-wheel zooms either.
+`AuthoringView` sizes the same way: without `width`/`height` the board fills the parent's width
+beside the property panel, and its height. The document opens fitted into view the same way; a new
+node or decoration is placed where the author is looking. The board is shown in one of two modes,
+switched from the toolbar with pan and zoom kept. **Edit**: each node's widget is drawn in place,
+live, over its footprint, its widget type named above it; drag across empty space to select several
+items and drag one of them to move them all; pan with Space + drag or the middle mouse button, or
+from the keyboard (arrow keys move the selection, or pan when nothing is selected; Tab steps through
+the items). **View**: the board exactly as a shared link shows it, where a drag pans. The wheel
+zooms in both.
 
 ### Text in another language
 
@@ -160,8 +162,10 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-authoring` | The authoring view |
 | `ub-authoring__toolbar`, `ub-authoring__group` | Its toolbar, and each group of related actions in it |
 | `ub-authoring__appearance` | The board tone picker (light or dark board) in the toolbar |
-| `ub-authoring__panes`, `ub-authoring__pane` (`--editor`, `--preview`) | The row holding the editor, preview and panel; the editor and the preview columns |
-| `ub-authoring__pane-heading`, `ub-authoring__surface` | A column's heading; the frame the editor or the preview draws in |
+| `ub-authoring__mode` | The Edit / View switch in the toolbar (the chosen button has `aria-pressed="true"`) |
+| `ub-authoring__panes`, `ub-authoring__pane` | The row holding the board and the panel; the board's column |
+| `ub-authoring__surface` | The frame the board draws in — the editor, or the board in view mode |
+| `ub-authoring__node`, `ub-authoring__node-tag` | A node's widget drawn in place on the editor; the widget type named above it |
 | `ub-authoring__panel` | The column holding the property or decoration panel |
 | `ub-authoring__error`, `ub-authoring__status`, `ub-authoring__source` | A file that could not be used; "resolving"; the document source (`showDocumentSource`) |
 | `ub-panel` (`--properties`, `--decoration`) | A property or decoration panel |

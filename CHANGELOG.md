@@ -19,6 +19,8 @@ do when upgrading. Each release's notes carry its section.
 
 ### Changed
 
+- The board editor shows each widget where it sits on the board, live, with its type named above it, and uses
+  the whole width for the board: the separate live preview is replaced by an Edit / View switch.
 - Boards in a Korean console and share viewer are Korean throughout: the widgets write their own text in Korean
   (a table's pagination, a region's name a screen reader reads), and the property panel names every widget type,
   data field and option in Korean, with the widget library's description as a tooltip.

@@ -1,5 +1,6 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { KonvaDesigner } from '@canvas-kit/designer';
+import { getWidgetLabel } from '@iyulab/u-widgets/tools';
 import { Viewer } from '@canvas-kit/viewer';
 import { viewToScene } from '@canvas-kit/core';
 import type { Scene, DrawingObject } from '@canvas-kit/core';
@@ -72,6 +73,9 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const readClock = useEffectEvent(() => clock());
   const [doc, setDoc] = useState(initialDocument);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
+  // One board, in one of two modes: edited (the designer, with each node's widget drawn in place over
+  // its footprint) or viewed (the viewer, exactly as a shared board shows it). Pan and zoom carry over.
+  const [mode, setMode] = useState<'edit' | 'view'>('edit');
   const [fileError, setFileError] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
@@ -87,6 +91,15 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   const [openedDoc, setOpenedDoc] = useState(initialDocument);
   const scene = useMemo(() => documentToScene(doc), [doc]);
   const extent = useMemo(() => documentExtent(doc), [doc]);
+  // The widgets the viewer would draw, laid over the nodes being edited — display-only, so a press on
+  // one reaches the node beneath — each with its widget type named above it.
+  const editorOverlays = useMemo(() => {
+    const types = new Map(doc.nodes.map(node => [node.id, node.widget.type]));
+    return (preview?.overlays ?? []).map(overlay => ({
+      ...overlay,
+      content: <NodeInPlace widget={overlay.content} name={getWidgetLabel(types.get(overlay.id) ?? '', labels.locale)} />,
+    }));
+  }, [preview, doc.nodes, labels.locale]);
   // Every state-changing handler below (`setDoc`) replaces the document with a new object, so a
   // plain reference check against the last-saved snapshot is enough to know "the author has
   // unsaved changes" — no per-field diffing needed. Kept in state (not a ref) because updating it
@@ -328,6 +341,14 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
             </select>
           </label>
         </div>
+        <div className="ub-authoring__group ub-authoring__mode" style={GROUP_STYLE} role="group" aria-label={labels.mode}>
+          <button type="button" className="ub-action" aria-pressed={mode === 'edit'} onClick={() => setMode('edit')}>
+            {labels.editMode}
+          </button>
+          <button type="button" className="ub-action" aria-pressed={mode === 'view'} onClick={() => setMode('view')}>
+            {labels.viewMode}
+          </button>
+        </div>
         <div className="ub-authoring__group" style={GROUP_STYLE}>
           <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />
         </div>
@@ -354,25 +375,23 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
         </p>
       )}
       <div className="ub-authoring__panes" style={{ display: 'flex', gap: 'var(--ub-space-4, 16px)', flex: 1, minHeight: 0 }}>
-        <div className="ub-authoring__pane ub-authoring__pane--editor" style={paneStyle}>
-          <h2 className="ub-authoring__pane-heading">{labels.editorHeading}</h2>
-          <div className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
-            <KonvaDesigner
-              width={width}
-              height={height}
-              scene={scene}
-              transform={transform}
-              onTransformChange={view.onUserTransform}
-              onViewportResize={view.onViewportResize}
-              onSceneChange={handleSceneChange}
-              onSelectionChange={handleSelectionChange}
-              ariaLabel={labels.editorRegion}
-            />
-          </div>
-        </div>
-        <div className="ub-authoring__pane ub-authoring__pane--preview" style={paneStyle}>
-          <h2 className="ub-authoring__pane-heading">{labels.previewHeading}</h2>
-          {preview ? (
+        <div className="ub-authoring__pane" style={paneStyle}>
+          {mode === 'edit' ? (
+            <div className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
+              <KonvaDesigner
+                width={width}
+                height={height}
+                scene={scene}
+                transform={transform}
+                onTransformChange={view.onUserTransform}
+                onViewportResize={view.onViewportResize}
+                onSceneChange={handleSceneChange}
+                onSelectionChange={handleSelectionChange}
+                overlays={editorOverlays}
+                ariaLabel={labels.editorRegion}
+              />
+            </div>
+          ) : preview ? (
             <div className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
               <Viewer
                 width={width}
@@ -381,6 +400,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
                 overlays={preview.overlays}
                 transform={transform}
                 onTransformChange={view.onUserTransform}
+                onViewportResize={view.onViewportResize}
                 ariaLabel={labels.previewRegion}
               />
             </div>
@@ -406,6 +426,23 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
           <pre>{JSON.stringify(doc, null, 2)}</pre>
         </details>
       )}
+    </div>
+  );
+}
+
+const NODE_IN_PLACE_STYLE: CSSProperties = { position: 'relative', width: '100%', height: '100%' };
+// Above the node's box, so it never covers the widget; the tag is a hint, not part of the board.
+const NODE_TAG_STYLE: CSSProperties = { position: 'absolute', left: 0, bottom: '100%', whiteSpace: 'nowrap' };
+
+/** A node's widget drawn where the node is being edited, with the widget type named above it — what
+ * tells two nodes apart, and what an unbound widget that draws nothing still shows. */
+function NodeInPlace({ widget, name }: { widget: ReactNode; name: string }) {
+  return (
+    <div className="ub-authoring__node" style={NODE_IN_PLACE_STYLE}>
+      {widget}
+      <span className="ub-authoring__node-tag" style={NODE_TAG_STYLE}>
+        {name}
+      </span>
     </div>
   );
 }

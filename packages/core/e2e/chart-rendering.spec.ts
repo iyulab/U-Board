@@ -57,9 +57,9 @@ test('page loads without JS errors', async ({ page }) => {
 });
 
 test('the demo document\'s chart.line node renders a canvas, not the "Unknown widget" fallback', async ({ page }) => {
-  // node id from src/App.tsx's demoDocument — canvas-kit's Viewer exposes each overlay via
-  // data-testid="overlay-<node.id>" (packages/viewer/src/viewer.tsx), not a plain DOM id.
-  const overlayTestId = 'overlay-pump-a-load-trend';
+  // node id from src/App.tsx's demoDocument — the authoring editor draws each node's widget in place
+  // as a canvas-kit designer overlay, data-testid="designer-overlay-<node.id>", not a plain DOM id.
+  const overlayTestId = 'designer-overlay-pump-a-load-trend';
 
   const hasCanvas = await overlayShadowHas(page, overlayTestId, 'canvas');
   expect(hasCanvas).toBe(true);
@@ -75,12 +75,12 @@ test('the demo document\'s chart.line node renders a canvas, not the "Unknown wi
 // banner comment). App.tsx's `seed-gauge-check`/`seed-chart-line-check` demo nodes exist to close
 // exactly this gap (bindings-editor final review, 2026-08-25).
 test('the authoring seed shape for gauge renders through the real pipeline, not the "Unknown widget" fallback', async ({ page }) => {
-  const text = await overlayShadowText(page, 'overlay-seed-gauge-check');
+  const text = await overlayShadowText(page, 'designer-overlay-seed-gauge-check');
   expect(text).not.toContain('Unknown widget');
 });
 
 test('the authoring seed shape for chart.line renders a canvas, not the "Unknown widget" fallback', async ({ page }) => {
-  const overlayTestId = 'overlay-seed-chart-line-check';
+  const overlayTestId = 'designer-overlay-seed-chart-line-check';
 
   const hasCanvas = await overlayShadowHas(page, overlayTestId, 'canvas');
   expect(hasCanvas).toBe(true);
@@ -92,7 +92,7 @@ test('the authoring seed shape for chart.line renders a canvas, not the "Unknown
 /** On-screen heights of a node's box and of the widget drawn in it. */
 async function heights(page: Page, nodeId: string) {
   return page.evaluate(id => {
-    const overlay = document.querySelector(`[data-testid="overlay-${id}"]`) as HTMLElement;
+    const overlay = document.querySelector(`[data-testid="designer-overlay-${id}"]`) as HTMLElement;
     const widget = overlay.querySelector('u-widget') as HTMLElement;
     return { overlay: overlay.getBoundingClientRect().height, widget: widget.getBoundingClientRect().height };
   }, nodeId);

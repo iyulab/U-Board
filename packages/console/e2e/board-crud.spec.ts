@@ -27,6 +27,6 @@ test('create a board, add a node, save, and see it persisted after reopening', a
   await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
   await page.getByRole('link', { name: 'E2E Board' }).click();
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
-  // 추가한 노드가 저장된 문서에 남아 있다 — 실시간 미리보기에 노드 오버레이가 하나 그려진다.
-  await expect(page.locator('[data-testid^="overlay-"]:not([data-testid="overlay-layer"])')).toHaveCount(1);
+  // 추가한 노드가 저장된 문서에 남아 있다 — 편집기에 노드의 위젯이 제자리에 하나 그려진다.
+  await expect(page.locator('[data-testid^="designer-overlay-node-"]')).toHaveCount(1);
 });

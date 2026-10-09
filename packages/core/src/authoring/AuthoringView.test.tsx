@@ -398,18 +398,20 @@ describe('AuthoringView viewport', () => {
     return { kind: 'canvas', background: { image: { src: 'plan.png', width: 3000, height: 2000 } }, nodes: [], connectors: [] };
   }
 
-  it('lets the editor and preview follow their panes when width/height are omitted', async () => {
+  it('lets the board follow its pane when width/height are omitted, in either mode', async () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} />);
-    await screen.findByTestId('viewer');
     expect(designerProps.mock.lastCall![0].width).toBeUndefined();
     expect(designerProps.mock.lastCall![0].height).toBeUndefined();
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    await screen.findByTestId('viewer');
     expect(viewerProps.mock.lastCall![0].width).toBeUndefined();
   });
 
-  it('passes an explicit width/height through to both panes', async () => {
+  it('passes an explicit width/height through to the editor and the view', async () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
-    await screen.findByTestId('viewer');
     expect(designerProps.mock.lastCall![0]).toMatchObject({ width: 400, height: 300 });
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    await screen.findByTestId('viewer');
     expect(viewerProps.mock.lastCall![0]).toMatchObject({ width: 400, height: 300 });
   });
 
@@ -454,16 +456,31 @@ describe('AuthoringView viewport', () => {
     expect(screen.getByRole('button', { name: 'Zoom out' })).toBeEnabled();
   });
 
-  it('keeps the preview on the same pan/zoom as the editor, whichever pane moves it', async () => {
+  it('keeps the pan/zoom when switching between edit and view, whichever mode moved it', async () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} />);
-    await screen.findByTestId('viewer');
-
+    expect(screen.getByRole('button', { name: 'Edit' })).toHaveAttribute('aria-pressed', 'true');
     act(() => lastDesignerProps().onTransformChange({ x: -30, y: -20, scale: 0.5 }));
-    expect(designerProps.mock.lastCall![0].transform).toEqual({ x: -30, y: -20, scale: 0.5 });
+
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(screen.getByRole('button', { name: 'View' })).toHaveAttribute('aria-pressed', 'true');
+    await screen.findByTestId('viewer');
+    expect(screen.queryByTestId('konva-designer')).not.toBeInTheDocument();
     expect(viewerProps.mock.lastCall![0].transform).toEqual({ x: -30, y: -20, scale: 0.5 });
 
     act(() => viewerProps.mock.lastCall![0].onTransformChange({ x: 5, y: 6, scale: 2 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(screen.queryByTestId('viewer')).not.toBeInTheDocument();
     expect(designerProps.mock.lastCall![0].transform).toEqual({ x: 5, y: 6, scale: 2 });
+  });
+
+  it("draws each node's widget in place on the editor, named by its widget type", async () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} />);
+    fireEvent.click(screen.getByText('Add node'));
+    await waitFor(() => expect(designerProps.mock.lastCall![0].overlays).toHaveLength(1));
+    const [overlay] = designerProps.mock.lastCall![0].overlays;
+    expect(overlay.interactive).toBeUndefined(); // display-only: a press reaches the node beneath
+    render(<>{overlay.content}</>);
+    expect(screen.getByText('Status')).toHaveClass('ub-authoring__node-tag');
   });
 
   it('adds a node where the author is looking, not at the scene origin', async () => {
@@ -531,6 +548,7 @@ describe('AuthoringView clock', () => {
     };
     try {
       render(<AuthoringView initialDocument={staleDoc} adapters={[adapter]} clock={() => Date.parse('2026-10-07T05:02:00Z')} />);
+      fireEvent.click(screen.getByRole('button', { name: 'View' }));
       await waitFor(() => {
         const props = viewerProps.mock.lastCall?.[0] as Record<string, any> | undefined;
         const content = props?.overlays?.[0]?.content as React.ReactElement<{ title?: string }> | undefined;

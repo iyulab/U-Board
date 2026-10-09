@@ -21,6 +21,14 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **The authoring view edits the board where its widgets are.** Each node's widget is drawn live in place on the
+  editor, over the node's footprint, with its widget type named above it; the pointer passes through to the
+  node, so selecting, dragging and resizing work as before. The live preview beside the editor is gone: an
+  Edit / View switch in the toolbar shows the same board as a shared link does, pan and zoom kept — the editor
+  has the width the two panes used to share. **Breaking:** `labels.editorHeading` and `labels.previewHeading`
+  are removed and `labels.mode`, `editMode`, `viewMode` added; the class `ub-authoring__pane-heading` and the
+  `ub-authoring__pane--editor`/`--preview` modifiers are gone, `ub-authoring__mode`, `ub-authoring__node` and
+  `ub-authoring__node-tag` are new. The editor's accessible role is `application` (canvas-kit designer 0.7).
 - **Breaking:** `labels.widgetTypeNames` is removed — the type picker names every widget type as the widget library
   does, in `labels.locale`, where the labels named three. Requires `@iyulab/u-widgets` 0.28.
 

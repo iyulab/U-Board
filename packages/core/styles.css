@@ -117,6 +117,13 @@
   color: var(--_ub-accent-text);
 }
 
+/* The chosen one of a set of toggles (the authoring view's Edit and View). */
+.ub-action[aria-pressed="true"] {
+  border-color: var(--_ub-accent);
+  background: var(--_ub-accent-subtle);
+  color: var(--_ub-text);
+}
+
 .ub-action--primary:hover:not(:disabled) {
   background: var(--_ub-accent);
   filter: brightness(1.08);
@@ -146,17 +153,19 @@
   font-size: var(--_ub-font-md);
 }
 
-.ub-authoring__pane-heading {
-  margin: 0 0 var(--_ub-space-1);
-  font-size: var(--_ub-font-sm);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--_ub-text-muted);
+/* The widget type named above a node on the editor — a quiet hint over the board, never covering the widget. */
+.ub-authoring__node-tag {
+  padding: 0 var(--_ub-space-1);
+  border-radius: var(--_ub-radius-sm) var(--_ub-radius-sm) 0 0;
+  background: var(--_ub-accent);
+  color: var(--_ub-accent-text);
+  font-size: var(--_ub-font-xs);
+  line-height: 1.5;
 }
 
-/* The editor and the preview: framed, so a board with nothing on it still reads as a board. Inside
-   the frame is the board's paper — light in either theme, like the drawings boards are made on, and
-   what the widgets on it (always light) are drawn for. */
+/* The board's frame (the editor, or the board in view mode; the viewer), so a board with nothing on
+   it still reads as a board. Inside the frame is the board's paper — the board's own tone, not the
+   page theme: light like the drawings boards are made on, unless the board is dark (below). */
 .ub-authoring__surface,
 .ub-viewer__surface {
   border: 1px solid var(--_ub-border);
