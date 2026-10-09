@@ -58,6 +58,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:visual:update": "bash ../../scripts/update-visual-baselines.sh",
     "prepack": "node scripts/prepack.mjs"
   },
   "engines": {
@@ -67,7 +68,7 @@
     "@canvas-kit/core": "^0.5.0",
     "@canvas-kit/designer": "^0.7.0",
     "@canvas-kit/viewer": "^0.5.1",
-    "@iyulab/u-widgets": "^0.28.0",
+    "@iyulab/u-widgets": "^0.28.1",
     "@lit/react": "^1.0.8",
     "echarts": "^6.1.0"
   },
