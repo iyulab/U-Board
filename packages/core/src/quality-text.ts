@@ -20,6 +20,7 @@ export const REASON_LABEL: Record<QualityReason, string> = {
   address: 'bound value not found at the source',
   format: 'the source answered in a form that cannot be read',
   throttled: 'rate limited',
+  lagging: 'the source has not updated it as often as expected',
 };
 
 /** The words `describeQuality` builds its text from — pass your own to describe quality in another

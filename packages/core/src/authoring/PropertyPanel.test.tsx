@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { PropertyPanel } from './PropertyPanel.js';
@@ -570,10 +570,11 @@ describe('PropertyPanel bindings', () => {
       fireEvent.change(screen.getByLabelText('Observed time'), { target: { value: '/measured' } });
       fireEvent.change(screen.getByLabelText('Time zone of the source'), { target: { value: 'Asia/Seoul' } });
       const reads = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(Date.parse('2026-10-09T14:00:00Z'));
-      expect(screen.getByText(`Reads as ${reads}`)).toBeInTheDocument();
+      expect(screen.getByText(`Reads as ${reads} — 30 minutes ago`)).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Normally at most (minutes old)'), { target: { value: '90' } });
       fireEvent.click(screen.getByText('Save binding'));
       expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual({
-        path: '/air', item: { list: '/rows', where: { station: 'north' } }, valuePath: '/level', observedAtPath: '/measured', timeZone: 'Asia/Seoul',
+        path: '/air', item: { list: '/rows', where: { station: 'north' } }, valuePath: '/level', observedAtPath: '/measured', timeZone: 'Asia/Seoul', maxAgeSeconds: 5400,
       });
     });
 
@@ -591,6 +592,18 @@ describe('PropertyPanel bindings', () => {
       fireEvent.change(screen.getByLabelText('Time zone of the source'), { target: { value: 'Seoul' } });
       expect(screen.getByText('Enter a time zone such as Asia/Seoul or UTC.')).toBeInTheDocument();
       expect(screen.getByText('Save binding')).toBeDisabled();
+    });
+
+    it('will not save a max age that is not a number of minutes above 0, and shows a saved one in minutes', async () => {
+      await pickNorthLevel();
+      fireEvent.change(screen.getByLabelText('Normally at most (minutes old)'), { target: { value: '0' } });
+      expect(screen.getByText('Enter a number of minutes above 0, or leave it empty.')).toBeInTheDocument();
+      expect(screen.getByText('Save binding')).toBeDisabled();
+      cleanup();
+      const ref = { path: '/air', valuePath: '/rows/0/level', maxAgeSeconds: 7200 };
+      render(<PropertyPanel node={statusNode({ 'data.value': { adapter: 'connector-1', ref } })} adapters={[new AirAdapter()]} onChange={vi.fn()} />);
+      fireEvent.click(screen.getByText('Edit'));
+      expect(screen.getByLabelText('Normally at most (minutes old)')).toHaveValue(120);
     });
 
     it('saves no time zone when the value counts as observed when it is read', async () => {

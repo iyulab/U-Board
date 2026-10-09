@@ -18,7 +18,10 @@ do when upgrading. Each release's notes carry its section.
   is then the source's — an hourly air measurement fetched at :50 was observed fifty minutes earlier — and a
   last-known value shown while the source is unreachable says its age by that time. How long such a value is
   still served counts from when it was last read, not from its older observed time.
-  The binding form offers the response's time fields to pick from, fills in the author's time zone, and shows
+  A binding can also say how old the source's value may normally be (`maxAgeSeconds`, minutes in the form):
+  older, the value shows as stale — the source is behind on its own updates — and the source is asked again
+  no sooner than an eighth of that, instead of on every poll, which spends a daily request quota far more
+  slowly. The binding form offers the response's time fields to pick from, fills in the author's time zone, and shows
   what the picked field reads as. The open-data samples name their sources' times (Seoul's real-time city data
   and air measurements).
 

@@ -37,8 +37,9 @@ export interface AdapterReference {
 }
 
 /** How current a resolved binding's value is (docs/concepts.md — "Binding"). `live` — the
- * adapter reached the source system just now. `stale` — it could not reach the source, but is
- * showing a previously-live value as last-known. `disconnected` — no value has ever been
+ * adapter reached the source system just now. `stale` — the value shown is not current: the adapter
+ * could not reach the source and shows the last-known value, or the source's latest value is older
+ * than the binding expects (`lagging`). `disconnected` — no value has ever been
  * reached (no matching adapter, or the source has never resolved). SCADA/HMI practice treats
  * these as distinct operator-facing states rather than one binary flag — a renderer decides how
  * to show each. */
@@ -50,8 +51,10 @@ export type ConnectionQuality = 'live' | 'stale' | 'disconnected';
  * source answered, but not with what the binding points at (unknown path, empty result, renamed
  * field): the binding, not the network, needs attention. `format` — the source answered in a form the
  * binding cannot read (XML or HTML where JSON was needed): how it is asked, not what it points at, needs
- * attention. `throttled` — requests are being rate limited. It annotates `quality` and never changes it. */
-export type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled';
+ * attention. `throttled` — requests are being rate limited. `lagging` — the source answered, but its latest
+ * value is older than the binding expects of it: the source has stopped or fallen behind updating, not the
+ * network or the binding. It annotates `quality` and never changes it. */
+export type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled' | 'lagging';
 
 export interface ResolvedBinding {
   value: unknown;

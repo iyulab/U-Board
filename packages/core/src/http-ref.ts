@@ -29,6 +29,12 @@ export interface HttpRef {
   /** The IANA time zone (`Asia/Seoul`) the source writes times in when a time carries no offset of its own.
    *  Absent: such times are UTC. */
   timeZone?: string;
+  /** How old the source's value may be and still be current, in seconds — as HTTP's `max-age` says of a
+   *  response. A source that publishes on a schedule, and late, has values that are normally some minutes
+   *  old: an hourly measurement published half an hour after the hour is up to ninety minutes old before the
+   *  next one arrives. A value older than this, by the time the source says it observed it, is `lagging`.
+   *  It also bounds how often the source is asked again: no sooner than an eighth of it. Absent: no limit. */
+  maxAgeSeconds?: number;
 }
 
 /**
@@ -42,7 +48,7 @@ export interface HttpRef {
  */
 export function isHttpRef(ref: unknown): ref is HttpRef {
   if (!ref || typeof ref !== 'object' || Array.isArray(ref)) return false;
-  const { path, item, valuePath, observedAtPath, timeZone } = ref as Record<string, unknown>;
+  const { path, item, valuePath, observedAtPath, timeZone, maxAgeSeconds } = ref as Record<string, unknown>;
   return (
     typeof path === 'string' &&
     path.startsWith('/') &&
@@ -50,7 +56,8 @@ export function isHttpRef(ref: unknown): ref is HttpRef {
     (item === undefined || isHttpRefItem(item)) &&
     (valuePath === undefined || typeof valuePath === 'string') &&
     (observedAtPath === undefined || isPointer(observedAtPath)) &&
-    (timeZone === undefined || (typeof timeZone === 'string' && isTimeZone(timeZone)))
+    (timeZone === undefined || (typeof timeZone === 'string' && isTimeZone(timeZone))) &&
+    (maxAgeSeconds === undefined || (typeof maxAgeSeconds === 'number' && Number.isFinite(maxAgeSeconds) && maxAgeSeconds > 0))
   );
 }
 
@@ -115,11 +122,13 @@ export function findHttpRefItem(body: unknown, item: HttpRefItem): { found: true
   return index < 0 ? { found: false } : { found: true, value: list.value[index], index };
 }
 
-/** What reading a response with a reference gave: the value and when the source observed it (epoch ms) —
- *  or why it could not be read, in the words of `QualityReason`. `address`: the response does not contain
- *  what the reference points at. `format`: it does, in a form the reference cannot read. */
+/** What reading a response with a reference gave: the value, when the source observed it (epoch ms), and
+ *  whether that was longer ago than the reference's `maxAgeSeconds` allows at the read (`lagging` — the
+ *  value is the source's latest, but the source is behind) — or why it could not be read, in the words of
+ *  `QualityReason`. `address`: the response does not contain what the reference points at. `format`: it
+ *  does, in a form the reference cannot read. */
 export type HttpRefReading =
-  | { ok: true; value: unknown; observedAt: number }
+  | { ok: true; value: unknown; observedAt: number; lagging: boolean }
   | { ok: false; reason: 'address' | 'format'; message: string };
 
 /** How far ahead of the read a source's time may be and still count as the read's own — the two clocks
@@ -128,11 +137,23 @@ const CLOCK_TOLERANCE_MS = 5 * 60_000;
 
 /**
  * Reads `body` — a response the source answered at `readAt` (epoch ms) — with `ref`: the list item, the
- * value, and the time the source observed it. The observed time is the read's when `ref` names none or the
- * source leaves the named field empty (it said nothing about when); a time ahead of the read by less than
- * the clocks' tolerance is the read's too.
+ * value, the time the source observed it, and whether that is older than `ref.maxAgeSeconds` allows at
+ * `now` (the read, unless a read is being reused later). The observed time is the read's when `ref` names
+ * none or the source leaves the named field empty (it said nothing about when); a time ahead of the read by
+ * less than the clocks' tolerance is the read's too.
  */
-export function readHttpRef(body: unknown, ref: HttpRef, readAt: number): HttpRefReading {
+export function readHttpRef(body: unknown, ref: HttpRef, readAt: number, now = readAt): HttpRefReading {
+  const reading = readValueAndTime(body, ref, readAt);
+  if (!reading.ok) return reading;
+  const lagging = ref.maxAgeSeconds !== undefined && now - reading.observedAt > ref.maxAgeSeconds * 1000;
+  return { ...reading, lagging };
+}
+
+function readValueAndTime(
+  body: unknown,
+  ref: HttpRef,
+  readAt: number
+): { ok: true; value: unknown; observedAt: number } | { ok: false; reason: 'address' | 'format'; message: string } {
   if ((ref.valuePath || ref.item || ref.observedAtPath) && typeof body === 'string') {
     // Plain text has no fields: a path into it asks for a form the source does not answer in.
     return { ok: false, reason: 'format', message: 'the response is plain text, which a path cannot read into' };

@@ -22,6 +22,11 @@ describe('isHttpRef', () => {
     expect(isHttpRef({ path: '/r', timeZone: 9 })).toBe(false);
   });
 
+  it('refuses a max age that is not a positive number of seconds', () => {
+    for (const maxAgeSeconds of [0, -60, '3600', Number.POSITIVE_INFINITY]) expect(isHttpRef({ path: '/r', maxAgeSeconds })).toBe(false);
+    expect(isHttpRef({ path: '/r', maxAgeSeconds: 90 })).toBe(true);
+  });
+
   it('refuses an item with no fields to match', () => {
     expect(isHttpRef({ path: '/r', item: { list: '/rows', where: {} } })).toBe(false);
   });
@@ -63,7 +68,7 @@ describe('readHttpRef', () => {
   };
 
   it('reads the value as observed at the read when the reference names no time', () => {
-    expect(readHttpRef(body, { path: '/r', valuePath: '/rows/0/level' }, READ_AT)).toEqual({ ok: true, value: 36, observedAt: READ_AT });
+    expect(readHttpRef(body, { path: '/r', valuePath: '/rows/0/level' }, READ_AT)).toEqual({ ok: true, value: 36, observedAt: READ_AT, lagging: false });
   });
 
   it('reads the observed time where the value is — inside the item when there is one', () => {
@@ -72,17 +77,17 @@ describe('readHttpRef', () => {
       { path: '/r', item: { list: '/rows', where: { station: 'north' } }, valuePath: '/level', observedAtPath: '/measuredAt', timeZone: 'Asia/Seoul' },
       READ_AT
     );
-    expect(reading).toEqual({ ok: true, value: 36, observedAt: Date.parse('2026-10-09T14:00:00Z') });
+    expect(reading).toEqual({ ok: true, value: 36, observedAt: Date.parse('2026-10-09T14:00:00Z'), lagging: false });
   });
 
   it('reads the observed time from the whole response when there is no item', () => {
     const reading = readHttpRef(body, { path: '/r', valuePath: '/rows/0/level', observedAtPath: '/updatedAt', timeZone: 'Asia/Seoul' }, READ_AT);
-    expect(reading).toEqual({ ok: true, value: 36, observedAt: Date.parse('2026-10-09T14:20:00Z') });
+    expect(reading).toEqual({ ok: true, value: 36, observedAt: Date.parse('2026-10-09T14:20:00Z'), lagging: false });
   });
 
   it('counts a value as observed at the read when the source leaves the time empty', () => {
     const reading = readHttpRef(body, { path: '/r', item: { list: '/rows', where: { station: 'south' } }, valuePath: '/level', observedAtPath: '/measuredAt' }, READ_AT);
-    expect(reading).toEqual({ ok: true, value: 41, observedAt: READ_AT });
+    expect(reading).toEqual({ ok: true, value: 41, observedAt: READ_AT, lagging: false });
   });
 
   it('says the address is wrong when the observed-time path leads nowhere', () => {
@@ -108,7 +113,14 @@ describe('readHttpRef', () => {
 
   it('takes a time a little ahead of the read as the read — the two clocks differ', () => {
     const reading = readHttpRef({ v: 1, t: '2026-10-09T14:32:00Z' }, { path: '/r', valuePath: '/v', observedAtPath: '/t' }, READ_AT);
-    expect(reading).toEqual({ ok: true, value: 1, observedAt: READ_AT });
+    expect(reading).toEqual({ ok: true, value: 1, observedAt: READ_AT, lagging: false });
+  });
+
+  it('says a value older than the reference’s max age is lagging — the source’s latest, but behind', () => {
+    const ref = { path: '/r', item: { list: '/rows', where: { station: 'north' } }, valuePath: '/level', observedAtPath: '/measuredAt', timeZone: 'Asia/Seoul' };
+    // Observed 14:00, read 14:30: thirty minutes old.
+    expect(readHttpRef(body, { ...ref, maxAgeSeconds: 3600 }, READ_AT)).toMatchObject({ ok: true, value: 36, lagging: false });
+    expect(readHttpRef(body, { ...ref, maxAgeSeconds: 1200 }, READ_AT)).toMatchObject({ ok: true, value: 36, lagging: true });
   });
 
   it('says the format is wrong for a path into plain text', () => {

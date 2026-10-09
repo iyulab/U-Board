@@ -87,7 +87,7 @@ describe('worstQuality', () => {
 describe('describeQuality with other words', () => {
   const text = {
     quality: { stale: 'S', disconnected: 'D' },
-    reason: { transport: 'T', auth: 'A', address: 'AD', format: 'F', throttled: 'TH' },
+    reason: { transport: 'T', auth: 'A', address: 'AD', format: 'F', throttled: 'TH', lagging: 'L' },
     age: (ms: number) => `${ms}ms`,
   };
 

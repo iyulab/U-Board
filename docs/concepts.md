@@ -40,10 +40,11 @@ canvas layer itself.
 **Binding** — a reference from a widget to a value in an external system. U-Board reads through a
 binding; it does not store the value it resolves to. A resolved binding carries a connection
 quality alongside its value — `live` (the adapter reached the source just now), `stale` (the
-adapter couldn't reach it, but is showing a previously-live value as last-known), or
-`disconnected` (no value has been reached) — and, when the adapter can tell, the reason it is
-not live (the source unreachable, credentials refused, the bound value not found at the source, or
-rate limiting). A binding can also translate the value it reads into the one its widget takes —
+value shown is not current: the adapter couldn't reach the source and shows the last-known value, or
+the source's latest value is older than the binding expects of it), or `disconnected` (no value has
+been reached) — and, when the adapter can tell, the reason it is not live (the source unreachable,
+credentials refused, the bound value not found at the source, an answer it cannot read, rate
+limiting, or the source behind on its own updates). A binding can also translate the value it reads into the one its widget takes —
 the source's own words (`Fault`) or numbers (a temperature) into a status level — by exact values
 and numeric ranges the author sets; U-Board attaches no meaning to either side of that table.
 This is deliberately narrower than a full alarm

@@ -34,7 +34,8 @@ happened to be good enough.
 
 Every bound value carries its own connection quality — live, stale, or disconnected — and, when it
 is not live, the reason: the source is unreachable, the credentials were refused, the value was not
-found at the source, or the request was rate limited. Each widget shows its own state (a distinct
+found at the source, the answer could not be read, the request was rate limited, or the source itself
+has fallen behind on its updates. Each widget shows its own state (a distinct
 frame, with the reason as its tooltip and for screen readers), so one failing source does not turn
 the whole view into an error.
 

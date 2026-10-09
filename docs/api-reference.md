@@ -144,8 +144,9 @@ type ConnectionQuality = 'live' | 'stale' | 'disconnected';
 ```
 
 - `live` — the adapter reached the source system just now.
-- `stale` — the adapter could not reach the source, but is showing a previously-live value as
-  last-known.
+- `stale` — the value shown is not current: the adapter could not reach the source and shows a
+  previously-live value as last-known, or the source answered with its latest value and that is older
+  than the binding expects of it (reason `lagging`).
 - `disconnected` — no value has been reached (no matching adapter, the adapter rejected, the
   source could not be reached, or it answered without the value the binding points at).
 
@@ -158,7 +159,7 @@ source" itself.
 ### `QualityReason`
 
 ```ts
-type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled';
+type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled' | 'lagging';
 ```
 
 Why a binding is not `live`, reported by the adapter when it can tell. Each names a different fix,
@@ -172,6 +173,9 @@ so an operator reading "disconnected" knows where to look:
   or a value path into plain text. How the source is asked needs attention (many APIs answer JSON only
   when asked, with a parameter such as `returnType=json`).
 - `throttled` — requests are being rate limited.
+- `lagging` — the source answered, but its latest value is older than the binding expects of it (the
+  HTTP connector's `maxAgeSeconds`): the source has stopped or fallen behind updating — neither the
+  network nor the binding needs attention.
 
 A reason annotates `quality`; it never changes it. A binding with no matching adapter, or whose
 adapter rejected, carries no reason — the core cannot tell a misconfiguration from a host that
@@ -317,6 +321,7 @@ interface HttpRef {
   valuePath?: string;
   observedAtPath?: string;
   timeZone?: string;
+  maxAgeSeconds?: number;
 }
 ```
 
@@ -335,6 +340,13 @@ for an adapter that lists no references of its own. Implement this shape to have
   way: an hourly measurement fetched at :50 is fifty minutes old. Absent, or the field empty: the
   value counts as observed when it was read.
 - `timeZone` — the IANA time zone (`Asia/Seoul`) a time without an offset is in. Absent: UTC.
+- `maxAgeSeconds` — how old the source's value may normally be and still be current, as HTTP's
+  `max-age` says of a response. A source that publishes on a schedule, and late, has values that are
+  always some minutes old: an hourly measurement published forty minutes after the hour is up to two
+  hours old before the next one arrives. Older than this by the observed time, the reading is `stale`
+  with reason `lagging` — the source's latest, but behind. It also spaces the source's requests: a read
+  answers later resolves of the same request for an eighth of it (at least the installation's reuse
+  window), which spends a daily request quota that much more slowly. Absent: no age limit.
 
 The observed time is read as epoch seconds or milliseconds (a number, or a string of 10 or 13
 digits), ISO 8601 and the variations sources write (`2026-10-09 19:10`, `2026.10.09`, a missing
@@ -343,8 +355,8 @@ something else makes the binding `disconnected` with reason `format`; a time mor
 after the read does too, since a source cannot have observed it yet — the usual cause is a missing
 `timeZone`.
 
-`readHttpRef(body, ref, readAt)` is that reading of a parsed response — the value and its observed
-time (epoch ms), or why it failed (`address`: the response lacks what the reference names; `format`:
+`readHttpRef(body, ref, readAt, now?)` is that reading of a parsed response — the value, its observed
+time (epoch ms) and whether it is `lagging` at `now` (the read, by default), or why it failed (`address`: the response lacks what the reference names; `format`:
 it has it in a form the reference cannot read). `isHttpRef(ref)` checks the shape, and
 `parseSourceTime(raw, timeZone?)` reads one time. All are exported from `@iyulab/u-board/domain`.
 

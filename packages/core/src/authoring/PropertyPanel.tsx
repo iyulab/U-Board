@@ -44,6 +44,8 @@ interface BindingDraft {
    *  written without an offset — an HTTP connector reference's `observedAtPath` and `timeZone`, kept as loaded. */
   observedAtPath?: string;
   timeZone?: string;
+  /** `maxAgeSeconds` in minutes, as typed — empty: none. */
+  maxAgeMinutes: string;
   /** The `ref` picked from an adapter that offers its references (`Adapter.references`). */
   listedRef: string;
   /** The value map as the form edits it — rows of source value → shown value, and the value for
@@ -132,7 +134,7 @@ function itemText(item: ListItem): string {
 }
 
 function emptyDraft(connectorId: string, propPath = ''): BindingDraft {
-  return { propPath, connectorId, path: '', valuePath: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
+  return { propPath, connectorId, path: '', valuePath: '', maxAgeMinutes: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
 }
 
 /** One field per line, its label above it — without the stylesheet as well. */
@@ -215,6 +217,7 @@ function isUntouched(draft: BindingDraft, startingPropPath: string): boolean {
     draft.path === '' &&
     draft.valuePath === '' &&
     draft.item === undefined &&
+    draft.maxAgeMinutes === '' &&
     draft.listedRef === '' &&
     draft.mappings.length === 0 &&
     draft.ranges.length === 0 &&
@@ -232,7 +235,7 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
   const ref = binding.ref as Partial<HttpRef> | string;
   const map = draftMap(binding.map);
   if (typeof ref === 'string') {
-    return { propPath, connectorId: binding.adapter, path: '', valuePath: '', listedRef: ref, ...map };
+    return { propPath, connectorId: binding.adapter, path: '', valuePath: '', maxAgeMinutes: '', listedRef: ref, ...map };
   }
   return {
     propPath,
@@ -242,6 +245,7 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
     item: ref.item,
     observedAtPath: ref.observedAtPath,
     timeZone: ref.timeZone,
+    maxAgeMinutes: ref.maxAgeSeconds === undefined ? '' : String(ref.maxAgeSeconds / 60),
     listedRef: '',
     ...map,
   };
@@ -354,6 +358,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
           valuePath: draft.valuePath || undefined,
           // A time zone places the observed time; without one named, it has nothing to place.
           ...(draft.observedAtPath !== undefined ? { observedAtPath: draft.observedAtPath, ...(draft.timeZone ? { timeZone: draft.timeZone } : {}) } : {}),
+          ...(typeof maxAgeSeconds(draft) === 'number' ? { maxAgeSeconds: maxAgeSeconds(draft) } : {}),
         };
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -391,13 +396,16 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   // What still keeps the binding from being saved, said next to the button. A broken range row is
   // already named where it is.
   const zoneInvalid = !listed && draft.observedAtPath !== undefined && !!draft.timeZone && !isTimeZone(draft.timeZone);
+  const maxAgeInvalid = !listed && maxAgeSeconds(draft) === null;
   const saveHint = !draft.propPath
     ? labels.bindingNeedsPropPath
     : listed && !draft.listedRef
       ? labels.bindingNeedsReference
       : zoneInvalid
         ? labels.unknownTimeZone
-        : null;
+        : maxAgeInvalid
+          ? labels.invalidMaxAge
+          : null;
   const saveBlocked = saveHint !== null || rangeIssues.length > 0;
 
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
@@ -774,9 +782,11 @@ function ObservedTimeFields({
   clock: () => number;
 }) {
   const zonesId = useId();
+  const maxAgeHintId = useId();
   const current = draft.observedAtPath;
   const picked = fields.find(f => f.pointer === current);
   const instant = picked ? parseSourceTime(picked.raw, draft.timeZone && isTimeZone(draft.timeZone) ? draft.timeZone : undefined) : null;
+  const now = clock();
   const choose = (pointer: string) => {
     const field = fields.find(f => f.pointer === pointer);
     setDraft(d => ({
@@ -825,14 +835,39 @@ function ObservedTimeFields({
       )}
       {instant !== null && (
         <p className="ub-panel__hint">
-          {labels.observedAtReads.replace('{time}', new Intl.DateTimeFormat(labels.locale, { dateStyle: 'medium', timeStyle: 'short' }).format(instant))}
+          {labels.observedAtReads
+            .replace('{time}', new Intl.DateTimeFormat(labels.locale, { dateStyle: 'medium', timeStyle: 'short' }).format(instant))
+            .replace('{age}', labels.qualityText.age(Math.max(0, now - instant)))}
         </p>
       )}
-      {instant !== null && instant > clock() + 5 * 60_000 && (
+      {instant !== null && instant > now + 5 * 60_000 && (
         <p role="alert" className="ub-panel__error" style={ERROR_STYLE}>
           {labels.observedAtLater}
         </p>
       )}
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.maxAge}
+        <input
+          type="number"
+          min="0"
+          step="any"
+          value={draft.maxAgeMinutes}
+          onChange={e => setDraft(d => ({ ...d, maxAgeMinutes: e.target.value }))}
+          aria-invalid={maxAgeSeconds(draft) === null}
+          aria-describedby={maxAgeHintId}
+        />
+      </label>
+      <p id={maxAgeHintId} className="ub-panel__hint">
+        {labels.maxAgeHint}
+      </p>
     </>
   );
+}
+
+/** The draft's max age in seconds: `undefined` when left empty, `null` when what is typed is not a number of
+ *  minutes above 0. */
+function maxAgeSeconds(draft: BindingDraft): number | undefined | null {
+  if (draft.maxAgeMinutes.trim() === '') return undefined;
+  const minutes = Number(draft.maxAgeMinutes);
+  return Number.isFinite(minutes) && minutes > 0 ? Math.round(minutes * 60) : null;
 }

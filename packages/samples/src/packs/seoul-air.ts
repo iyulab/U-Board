@@ -14,10 +14,19 @@ const HEIGHT = 640;
 export const SEOUL_AIR: SampleConnector = { ...SEOUL_CITY_DATA, key: 'seoul-air', name: '서울시 실시간 대기환경' };
 export const AIR_PATH = '/json/RealtimeCityAir/1/5/';
 
-/** Every row is measured on the hour, and says which (`MSRMT_DT`, `202610091900`). */
+/** Every row is measured on the hour, and says which (`MSRMT_DT`, `202610091900`); the hour's measurement is
+ *  published within about forty minutes, so a reading is up to two hours old before the next arrives. */
+const MAX_AGE_SECONDS = 2 * 60 * 60;
+
 const bind = (valuePath: string, map?: Binding['map']): Binding => ({
   adapter: SEOUL_AIR.key,
-  ref: { path: AIR_PATH, valuePath: `/RealtimeCityAir${valuePath}`, observedAtPath: '/RealtimeCityAir/row/0/MSRMT_DT', timeZone: SEOUL_TIME_ZONE },
+  ref: {
+    path: AIR_PATH,
+    valuePath: `/RealtimeCityAir${valuePath}`,
+    observedAtPath: '/RealtimeCityAir/row/0/MSRMT_DT',
+    timeZone: SEOUL_TIME_ZONE,
+    maxAgeSeconds: MAX_AGE_SECONDS,
+  },
   ...(map ? { map } : {}),
 });
 
@@ -30,6 +39,7 @@ const bindDistrict = (name: string, field: string, map?: Binding['map']): Bindin
     valuePath: `/${field}`,
     observedAtPath: '/MSRMT_DT',
     timeZone: SEOUL_TIME_ZONE,
+    maxAgeSeconds: MAX_AGE_SECONDS,
   },
   ...(map ? { map } : {}),
 });

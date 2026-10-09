@@ -7,7 +7,7 @@ import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
 export type ResolveQuality = 'live' | 'stale' | 'disconnected';
 
 /** Why a resolve is not `live` — the core's `QualityReason`, same words. */
-export type ResolveReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled';
+export type ResolveReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled' | 'lagging';
 
 export interface ResolveResult {
   value: unknown;
@@ -42,14 +42,15 @@ export interface ResolveState {
    * against a data source that is down fails on every poll; logging only when the failure starts,
    * changes, or clears keeps the log a record of what happened rather than a repeat of it. */
   failures: Map<string, string>;
-  /** Upstream reads per connector and URL — the ones still open, and successful ones for `reuseMs`
-   * after they finished. Bindings that read different `valuePath`s of the same response (one
-   * collection, many assets) share one request instead of each fetching it, and so do the polls of
-   * every viewer that has the board open: the upstream sees about one call per URL per `reuseMs`,
-   * however many nodes read it and however many screens show it. */
+  /** Upstream reads per connector and URL — the ones still open, and successful ones for as long as some
+   * binding reuses them (`reuseWindowMs`). Bindings that read different `valuePath`s of the same response
+   * (one collection, many assets) share one request instead of each fetching it, and so do the polls of
+   * every viewer that has the board open: the upstream sees about one call per URL per window, however
+   * many nodes read it and however many screens show it. */
   reads: Map<string, UpstreamRead>;
-  /** How long a successful upstream read answers later resolves of the same URL (milliseconds).
-   * 0: only resolves that start while the read is still open share it. */
+  /** How long a successful upstream read answers later resolves of the same URL (milliseconds), unless
+   * the binding's reference allows longer (`maxAgeSeconds`). 0: only resolves that start while the read
+   * is still open share it. */
   reuseMs: number;
   /** How long after its last successful read a value may still be served as `stale` (milliseconds) —
    * counted from the read, not from the time the source says it observed the value, which for a source
@@ -61,16 +62,26 @@ export interface ResolveState {
 
 /** One read of a data source URL: its parsed body and when it was read (epoch ms) — the time a
  * value taken from it was observed, however much later a resolve reuses it. `settledAt` is set
- * once a successful read finishes, which starts its reuse window. */
+ * once a successful read finishes, which starts its reuse window; `keepMs` is the longest window a
+ * binding has asked of it, how long it is kept for one to reuse. */
 export interface UpstreamRead {
   result: Promise<{ body: unknown; readAt: number }>;
   settledAt?: number;
+  keepMs: number;
+}
+
+/** How long a binding reuses a successful read of its URL: the installation's window, or an eighth of the
+ *  age its reference allows the source's value (`maxAgeSeconds`), whichever is longer. A source that is
+ *  current while ninety minutes old need not be asked every ten seconds — every eleven minutes still shows
+ *  its new value within an eighth of that, and spends a daily request quota a hundred times more slowly. */
+export function reuseWindowMs(ref: HttpRef, reuseMs: number): number {
+  return ref.maxAgeSeconds === undefined ? reuseMs : Math.max(reuseMs, (ref.maxAgeSeconds * 1000) / 8);
 }
 
 function sweepExpiredReads(state: ResolveState): void {
   const now = Date.now();
   for (const [key, read] of state.reads) {
-    if (read.settledAt !== undefined && now - read.settledAt >= state.reuseMs) state.reads.delete(key);
+    if (read.settledAt !== undefined && now - read.settledAt >= read.keepMs) state.reads.delete(key);
   }
 }
 
@@ -327,20 +338,23 @@ export async function resolveConnectorValue(
   const requestKey = `${connector.id} ${target.href}`;
   const where = `[resolve] connector ${connector.id} ${ref.path}`;
 
+  const windowMs = reuseWindowMs(ref, state.reuseMs);
   let read = state.reads.get(requestKey);
-  if (read?.settledAt !== undefined && Date.now() - read.settledAt >= state.reuseMs) read = undefined;
+  if (read?.settledAt !== undefined && Date.now() - read.settledAt >= windowMs) read = undefined;
+  if (read) read.keepMs = Math.max(read.keepMs, windowMs);
   if (!read) {
     // Each entry holds a whole response body, so finished reads past their window go whenever a new
     // read starts: what stays is at most the reads of the last window (and the ones still open).
     sweepExpiredReads(state);
     const started: UpstreamRead = {
       result: fetchBody(connector, target, state.tokens, state.fetch).then(body => ({ body, readAt: Date.now() })),
+      keepMs: windowMs,
     };
     state.reads.set(requestKey, started);
     // A failed read is never reused — the next resolve asks the data source again.
     started.result.then(
       () => {
-        if (state.reuseMs > 0) started.settledAt = Date.now();
+        if (started.keepMs > 0) started.settledAt = Date.now();
         else if (state.reads.get(requestKey) === started) state.reads.delete(requestKey);
       },
       () => {
@@ -358,13 +372,14 @@ export async function resolveConnectorValue(
     } catch (err) {
       throw err instanceof StageError ? err : new StageError('request', err);
     }
-    const reading = readHttpRef(body, ref, readAt);
+    const reading = readHttpRef(body, ref, readAt, Date.now());
     if (!reading.ok) throw new StageError('response', new Error(reading.message), reading.reason);
     const { value } = reading;
     const observedAt = new Date(reading.observedAt).toISOString();
     state.values.set(cacheKey, { value, observedAt, readAt });
     if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
-    return { value, quality: 'live', observedAt };
+    // The source answered with its latest, which is older than the binding expects: shown, but not as current.
+    return reading.lagging ? { value, quality: 'stale', reason: 'lagging', observedAt } : { value, quality: 'live', observedAt };
   } catch (err) {
     const { stage, message, reason } = err as StageError;
     const cached = state.values.get(cacheKey);

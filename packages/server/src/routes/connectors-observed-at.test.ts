@@ -74,9 +74,42 @@ describe('a binding that names where the source says when it observed the value'
     expect((await resolve({ ...north, observedAtPath: '/updatedAt' })).body).toEqual({ quality: 'disconnected', reason: 'address' });
   });
 
+  it('shows the source’s latest value as stale, lagging, once it is older than the binding’s max age', async () => {
+    const resolve = await setup();
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+    // Observed 14:00, read 14:30.
+    expect((await resolve({ ...north, maxAgeSeconds: 3600 })).body).toEqual({ value: 36, quality: 'live', observedAt: '2026-10-09T14:00:00.000Z' });
+    expect((await resolve({ ...north, maxAgeSeconds: 1200 })).body).toEqual({
+      value: 36, quality: 'stale', reason: 'lagging', observedAt: '2026-10-09T14:00:00.000Z',
+    });
+  });
+
+  it('asks the source again no sooner than an eighth of the max age, and every poll without one', async () => {
+    const calls = vi.fn();
+    const app = createApp({ db, sessionSecret: SECRET, upstreamReuseMs: 10_000, connectorFetch: () => (calls(), answer()) });
+    const { body: connector } = await request(app).post(`/api/workspaces/${workspaceId}/connectors`).set('Cookie', ownerCookie)
+      .send({ name: 'Air', baseUrl: 'https://air.example.org', authType: 'none' });
+    const resolve = (ref: unknown) =>
+      request(app).post(`/api/workspaces/${workspaceId}/connectors/${connector.id}/resolve`).set('Cookie', ownerCookie).send({ ref });
+    const hourly = { ...north, maxAgeSeconds: 2 * 3600 };
+
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+    await resolve(hourly);
+    vi.spyOn(Date, 'now').mockReturnValue(NOW + 14 * 60_000);
+    await resolve(hourly);
+    expect(calls).toHaveBeenCalledTimes(1);
+    // A binding without a max age on the same request still asks after the installation's ten seconds.
+    await resolve(north);
+    expect(calls).toHaveBeenCalledTimes(2);
+    vi.spyOn(Date, 'now').mockReturnValue(NOW + 30 * 60_000);
+    await resolve(hourly);
+    expect(calls).toHaveBeenCalledTimes(3);
+  });
+
   it('refuses a time zone it does not know and an observed-time path that is not a pointer', async () => {
     const resolve = await setup();
     expect((await resolve({ ...north, timeZone: 'Seoul' })).status).toBe(400);
     expect((await resolve({ ...north, observedAtPath: 'measuredAt' })).status).toBe(400);
+    expect((await resolve({ ...north, maxAgeSeconds: 0 })).status).toBe(400);
   });
 });

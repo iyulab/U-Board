@@ -24,9 +24,9 @@ export class SnapshotAdapter implements Adapter {
   async resolve(ref: unknown): Promise<ResolvedBinding> {
     if (!isHttpRef(ref) || !Object.hasOwn(this.responses, ref.path)) return { value: undefined, quality: 'disconnected', reason: 'address' };
     const reading = readHttpRef(this.responses[ref.path], ref, Date.parse(this.capturedAt));
-    return reading.ok
-      ? { value: reading.value, quality: 'live', observedAt: new Date(reading.observedAt).toISOString() }
-      : { value: undefined, quality: 'disconnected', reason: reading.reason };
+    if (!reading.ok) return { value: undefined, quality: 'disconnected', reason: reading.reason };
+    const observedAt = new Date(reading.observedAt).toISOString();
+    return reading.lagging ? { value: reading.value, quality: 'stale', reason: 'lagging', observedAt } : { value: reading.value, quality: 'live', observedAt };
   }
 }
 

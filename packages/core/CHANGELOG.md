@@ -26,6 +26,15 @@ All notable changes to this package are documented here. The format follows
   picked field reads as, warning when that is later than now. A binding edited later keeps both; changing the
   list item drops the field, which was read inside it. New labels `observedAt`, `observedAtWhenRead`,
   `observedAtHint`, `timeZone`, `unknownTimeZone`, `observedAtReads`, `observedAtLater` (`KO_LABELS` included).
+- **A source that falls behind shows as stale.** The HTTP connector reference takes `maxAgeSeconds`: how old
+  the source's value may normally be, by the time it says it observed it, as HTTP's `max-age` says of a
+  response. Older, the reading is `stale` with the new reason `lagging` — the source answered with its latest,
+  but the source is behind, not the network or the binding. The binding form takes it in minutes, and shows how
+  long ago the picked time field's value was observed to choose it by. `stale` now covers that case too: the
+  value shown is not current.
+- **Breaking: `QualityReason` has `lagging`.** A `QualityText` written out in full needs text for it
+  (`REASON_LABEL` and `KO_LABELS` have it). New labels `maxAge`, `maxAgeHint`, `invalidMaxAge`; `observedAtReads`
+  takes `{age}`.
 - **`@iyulab/u-board/domain` reads the HTTP connector reference.** `HttpRef`, `isHttpRef`, `readHttpRef` (a
   parsed response → the value and its observed time, or why not), `parseSourceTime`, `valueAtPath` and
   `findHttpRefItem` — the reading the hosted connector does, for a host that answers the same references.

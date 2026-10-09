@@ -27,15 +27,20 @@ export const CITY_DATA_PATH = `/json/citydata/1/5/${encodeURIComponent('광화�
 /** The time zone the source writes its times in — `2026-10-09 19:10`, with no offset. */
 export const SEOUL_TIME_ZONE = 'Asia/Seoul';
 
-/** A part of the answer that says when it was observed: where it is, and its time field there. */
+/** A part of the answer that says when it was observed: where it is, its time field there, and how old its
+ *  values normally are — each part is measured on its own clock and published some minutes later. */
 interface Section {
   at: string;
   time: string;
+  maxAgeSeconds: number;
 }
 
-const PEOPLE: Section = { at: '/LIVE_PPLTN_STTS/0', time: '/PPLTN_TIME' };
-const WEATHER: Section = { at: '/WEATHER_STTS/0', time: '/WEATHER_TIME' };
-const ROADS: Section = { at: '/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA', time: '/ROAD_TRAFFIC_TIME' };
+/** Estimated every five minutes, published about half an hour later. */
+const PEOPLE: Section = { at: '/LIVE_PPLTN_STTS/0', time: '/PPLTN_TIME', maxAgeSeconds: 60 * 60 };
+/** Updated every ten minutes or so, within minutes. */
+const WEATHER: Section = { at: '/WEATHER_STTS/0', time: '/WEATHER_TIME', maxAgeSeconds: 30 * 60 };
+/** Updated every five minutes, within minutes. */
+const ROADS: Section = { at: '/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA', time: '/ROAD_TRAFFIC_TIME', maxAgeSeconds: 20 * 60 };
 
 /** A field of `section`, observed when the section says — the people count every few minutes, the weather and
  *  traffic on their own clocks. */
@@ -46,6 +51,7 @@ const bind = (section: Section, field: string, map?: Binding['map']): Binding =>
     valuePath: `/CITYDATA${section.at}${field}`,
     observedAtPath: `/CITYDATA${section.at}${section.time}`,
     timeZone: SEOUL_TIME_ZONE,
+    maxAgeSeconds: section.maxAgeSeconds,
   },
   ...(map ? { map } : {}),
 });
