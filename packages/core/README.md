@@ -42,6 +42,18 @@ const adapters: Adapter[] = [/* your Adapter implementations */];
 const resolved = await resolveDocument(doc, adapters);
 ```
 
+The authoring view's binding form writes one of two reference shapes. An adapter that lists its
+references (`references()`) is bound by picking one, and the reference is that string. Any other adapter
+takes the HTTP connector's reference, `{ path, item?, valuePath? }`:
+
+- `path`: the request.
+- `valuePath`: an RFC 6901 JSON Pointer into the response.
+- `item: { list, where }`: one element of the list at `list`, named by its fields rather than its
+  position — sources reorder their lists. `valuePath` is then read inside that element.
+
+The form's response explorer writes the pointer, and offers `item` when the picked value sits inside a
+list. Implement the same shape to have the form fill it in for you.
+
 ## Showing a board
 
 `ViewerPage` renders a view document read-only. Without `width`/`height` it fills its parent and

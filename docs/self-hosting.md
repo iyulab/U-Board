@@ -135,6 +135,12 @@ A share link (`https://<host>/share/?board=…&token=…`) opens one board read-
 in, until it is revoked or reaches the expiry its owner chose. Embed it in another application's
 page with an `<iframe>`; `UBOARD_SHARE_FRAME_ANCESTORS` decides which pages may.
 
+A link serves the board's document, its values, and the credit each of its data sources carries (shown
+under the board) — never a data source's address or credentials. A source that takes its key in the
+address (a query parameter, or `{key}` in the connector's base URL) keeps it in the connector, which puts
+it into the request only when the request is sent; a key typed into a binding's request path would be
+part of the document, and the binding form warns about one.
+
 An open board keeps itself current: every 30 seconds it asks for all of its values in one request,
 and a link that expires while it is open turns into an expiry notice. Many screens showing the same
 board do not multiply the load on a data source — the server answers requests for the same source
@@ -153,7 +159,8 @@ and their OAuth token endpoints, and Sendway when `SENDWAY_*` is set. The consol
 viewer load nothing from other origins — no fonts, scripts or stylesheets from a CDN — so an
 installation runs on a closed network. The one exception is a board's background image, which a
 page shows from the address its author gave; on a closed network, give it one that is reachable
-there.
+there. The sample boards the console offers to start from read public open-data sources: picking one
+creates data sources for those addresses, and on a closed network their values read as disconnected.
 
 Getting the image is the one step that needs a connection, and a release covers it: each one
 carries the image as an archive, `u-board-<version>-linux-amd64.tar.gz`, with its SHA-256 beside it.
