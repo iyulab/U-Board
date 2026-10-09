@@ -8,6 +8,8 @@ COPY packages/core packages/core
 COPY packages/server packages/server
 COPY packages/console packages/console
 COPY packages/share packages/share
+# Sample boards the console offers to start from — read as source by its build.
+COPY packages/samples packages/samples
 # The root postinstall builds the core library the other three compile against.
 RUN npm ci
 RUN npm run build --workspace=packages/console \

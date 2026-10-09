@@ -13,6 +13,11 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
+- **Start a board from an open-data sample.** The new-board dialog offers sample boards built on public open
+  data (Gwanghwamun live, fine dust in central Seoul): picking one creates its data sources — or uses the
+  workspace's own for the same address, keeping a key the owner has put in — and the board, bound to them, and
+  opens it in the editor. The dialog says which addresses the sources connect to; an installation that cannot
+  reach them shows the values as disconnected.
 - **Data sources that take their key in the address.** A connector can send its secret as a query parameter
   (`serviceKey=…`) or as a path segment (`{key}` in its base URL), as many public open-data APIs require, where it
   could only be a header. The key is sealed like every connector secret and put into the address only when the

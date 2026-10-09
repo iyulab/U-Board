@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { listBoards, createBoard, deleteBoard } from '../api-client.js';
+import { listBoards, createBoard, deleteBoard, ApiError } from '../api-client.js';
+import { createBoardFromSample, loadSamplePacks, sampleHosts } from '../sample-boards.js';
+import type { SamplePack } from '@iyulab/u-board-samples';
 import { Alert } from '../design-system/Alert.js';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
@@ -22,6 +24,8 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   const [newBoardName, setNewBoardName] = useState('');
   const [createError, setCreateError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [samples, setSamples] = useState<readonly SamplePack[]>([]);
+  const [creatingSample, setCreatingSample] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const filteredBoards = useMemo(
@@ -45,6 +49,26 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
     setNewBoardName('');
     setCreateError(null);
     setIsCreateOpen(true);
+    // Offered once they arrive; the dialog works without them.
+    loadSamplePacks().then(setSamples, () => setSamples([]));
+  }
+
+  async function handleSample(pack: SamplePack) {
+    setCreateError(null);
+    setCreatingSample(pack.id);
+    try {
+      const boardId = await createBoardFromSample(workspaceId, pack, newBoardName.trim() || pack.title.ko);
+      setIsCreateOpen(false);
+      navigate(`/boards/${boardId}/edit`);
+    } catch (err) {
+      setCreateError(
+        err instanceof ApiError && err.status === 403
+          ? '샘플은 데이터소스를 함께 만들기 때문에 워크스페이스 소유자만 추가할 수 있습니다'
+          : '샘플로 보드를 만들지 못했습니다'
+      );
+    } finally {
+      setCreatingSample(null);
+    }
   }
 
   async function handleCreateSubmit(e: FormEvent) {
@@ -122,6 +146,38 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
             취소
           </Button>
         </form>
+        {samples.length > 0 && (
+          <section className="ub-samples" aria-labelledby="samples-heading">
+            <h4 id="samples-heading">샘플에서 시작</h4>
+            <p className="ub-samples__note">
+              공공기관이 개방한 데이터로 만든 보드입니다. 데이터소스를 함께 만들어 아래 주소에 연결하며, 이 설치본이
+              인터넷에 닿지 않으면 값이 ‘연결 끊김’으로 보입니다. 보드 이름을 적지 않으면 샘플 이름을 씁니다.
+            </p>
+            <ul className="ub-samples__list">
+              {samples.map(pack => (
+                <li key={pack.id} className="ub-samples__item">
+                  <div className="ub-samples__title">
+                    <strong>{pack.title.ko}</strong>
+                    <span>
+                      {pack.field.ko} · {pack.kind.ko}
+                    </span>
+                  </div>
+                  <p>{pack.summary.ko}</p>
+                  <p className="ub-samples__meta">연결: {sampleHosts(pack).join(', ')}</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={`${pack.title.ko} 샘플로 만들기`}
+                    disabled={creatingSample !== null}
+                    onClick={() => handleSample(pack)}
+                  >
+                    {creatingSample === pack.id ? '만드는 중…' : '이 샘플로 만들기'}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </Modal>
     </div>
   );

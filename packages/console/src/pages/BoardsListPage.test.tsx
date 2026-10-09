@@ -197,4 +197,38 @@ describe('BoardsListPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('보드 삭제에 실패했습니다');
     expect(screen.getByText('Floor 1')).toBeInTheDocument();
   });
+  it('starts a board from an open-data sample: makes its data source, points the bindings at it, opens the editor', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: `new-${input.name}`, type: 'http', updatedAt: 't', ...input, attribution: input.attribution ?? undefined }));
+    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't' });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '첫 보드 만들기' }));
+    await userEvent.click(await screen.findByRole('button', { name: '서울 도심 미세먼지 샘플로 만들기' }));
+
+    expect(await screen.findByText('editor page')).toBeInTheDocument();
+    expect(api.createConnector).toHaveBeenCalledWith('w1', expect.objectContaining({ authType: 'path', authValue: 'sample', attribution: expect.objectContaining({ text: expect.stringContaining('공공누리') }) }));
+    expect(api.createBoard).toHaveBeenCalledWith('w1', '서울 도심 미세먼지');
+    const document = vi.mocked(api.updateBoard).mock.calls[0][2].document!;
+    const adapters = new Set(document.nodes.flatMap(n => Object.values(n.widget.bindings ?? {}).map(b => b.adapter)));
+    expect([...adapters]).toEqual(['new-서울시 실시간 대기환경']);
+  });
+
+  it('reuses a data source the workspace already has for the same address', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
+    vi.mocked(api.listConnectors).mockResolvedValue({
+      connectors: [{ id: 'mine', name: '내 키', type: 'http', baseUrl: 'http://openapi.seoul.go.kr:8088/{key}', authType: 'path', updatedAt: 't' }],
+    });
+    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't' });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '첫 보드 만들기' }));
+    await userEvent.type(screen.getByLabelText('보드 이름'), '광장');
+    await userEvent.click(await screen.findByRole('button', { name: '광화문·덕수궁 실시간 샘플로 만들기' }));
+
+    await screen.findByText('editor page');
+    expect(api.createConnector).not.toHaveBeenCalled();
+    expect(api.createBoard).toHaveBeenCalledWith('w1', '광장');
+  });
 });
