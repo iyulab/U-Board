@@ -30,6 +30,14 @@ const bind = (valuePath: string, map?: Binding['map']): Binding => ({
   ...(map ? { map } : {}),
 });
 
+/** A field of one item of a list in the answer, named by the item's id — the source lists its stations and
+ *  car parks in a different order from one read to the next, so a position would name another one. */
+const bindItem = (list: string, where: Record<string, string>, valuePath: string, map?: Binding['map']): Binding => ({
+  adapter: SEOUL_CITY_DATA.key,
+  ref: { path: CITY_DATA_PATH, item: { list: `/CITYDATA${list}`, where }, valuePath },
+  ...(map ? { map } : {}),
+});
+
 /** The source's own words for each level, in the colours its site gives them. */
 const CROWD_LEVEL = { values: { 여유: 'success', 보통: 'neutral', '약간 붐빔': 'warning', 붐빔: 'error' }, otherwise: 'neutral' };
 const AIR_LEVEL = { values: { 좋음: 'info', 보통: 'success', 나쁨: 'warning', 매우나쁨: 'error' }, otherwise: 'neutral' };
@@ -37,34 +45,33 @@ const TRAFFIC_LEVEL = { values: { 원활: 'success', 서행: 'warning', 정체: 
 /** Bikes docked: none, a couple, or enough to take one. */
 const BIKES_LEVEL = { ranges: [{ max: 1, value: 'error' }, { min: 1, max: 3, value: 'warning' }, { min: 3, value: 'success' }] };
 
-/** Bike stations on the drawing, by their place in the source's list (`SBIKE_STTS`) and where they stand. */
-const BIKE_STATIONS: { index: number; lat: number; lng: number }[] = [
-  { index: 0, lat: 37.5717697, lng: 126.9746628 },
-  { index: 2, lat: 37.5698929, lng: 126.9775696 },
-  { index: 4, lat: 37.5725594, lng: 126.9783325 },
-  { index: 5, lat: 37.565052, lng: 126.9734039 },
-  { index: 7, lat: 37.5655785, lng: 126.9770203 },
-  { index: 8, lat: 37.5757141, lng: 126.9805069 },
+/** Bike stations on the drawing, by their id in the source (`SBIKE_SPOT_ID`) and where they stand. */
+const BIKE_STATIONS: { id: string; lat: number; lng: number }[] = [
+  { id: 'ST-119', lat: 37.5717697, lng: 126.9746628 },
+  { id: 'ST-1611', lat: 37.5698929, lng: 126.9775696 },
+  { id: 'ST-121', lat: 37.5725594, lng: 126.9783325 },
+  { id: 'ST-977', lat: 37.565052, lng: 126.9734039 },
+  { id: 'ST-3297', lat: 37.5655785, lng: 126.9770203 },
+  { id: 'ST-3090', lat: 37.5757141, lng: 126.9805069 },
 ];
 const STATION = { width: 160, height: 52 };
 
-function bikeStation({ index, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
+function bikeStation({ id, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
   const at = project(MAP, lat, lng);
-  const row = `/SBIKE_STTS/${index}`;
+  const field = (name: string, map?: Binding['map']) => bindItem('/SBIKE_STTS', { SBIKE_SPOT_ID: id }, `/${name}`, map);
   return {
-    id: `bike-${index}`,
+    id: `bike-${id}`,
     x: Math.round(at.x - STATION.width / 2),
     y: Math.round(at.y - STATION.height / 2),
     ...STATION,
     anchored: true,
     widget: {
       type: 'status',
-      // The name comes from the same row as the count: whatever the list's order, the label is the truth.
       props: { data: { label: '따릉이', value: '', level: 'neutral' } },
       bindings: {
-        'data.label': bind(`${row}/SBIKE_SPOT_NM`),
-        'data.value': bind(`${row}/SBIKE_PARKING_CNT`),
-        'data.level': bind(`${row}/SBIKE_PARKING_CNT`, BIKES_LEVEL),
+        'data.label': field('SBIKE_SPOT_NM'),
+        'data.value': field('SBIKE_PARKING_CNT'),
+        'data.level': field('SBIKE_PARKING_CNT', BIKES_LEVEL),
       },
     },
   };
@@ -72,7 +79,9 @@ function bikeStation({ index, lat, lng }: (typeof BIKE_STATIONS)[number]): Node 
 
 function carPark(): Node {
   const at = project(MAP, 37.57340269, 126.97588429);
-  const row = '/PRK_STTS/28';
+  // 세종로 공영주차장 — the car park in the area that reports how many cars are in it. The source lists it
+  // twice under one code, once without the count; `CUR_PRK_YN` picks the entry that has it.
+  const field = (name: string) => bindItem('/PRK_STTS', { PRK_CD: '171721', CUR_PRK_YN: 'Y' }, `/${name}`);
   return {
     id: 'car-park',
     x: Math.round(at.x - 170),
@@ -84,9 +93,9 @@ function carPark(): Node {
       type: 'gauge',
       props: { data: { value: 0, max: 1260 }, options: { unit: '대', subtitle: '세종로 공영주차장' } },
       bindings: {
-        'data.value': bind(`${row}/CUR_PRK_CNT`),
-        'data.max': bind(`${row}/CPCTY`),
-        'options.subtitle': bind(`${row}/PRK_NM`),
+        'data.value': field('CUR_PRK_CNT'),
+        'data.max': field('CPCTY'),
+        'options.subtitle': field('PRK_NM'),
       },
     },
   };

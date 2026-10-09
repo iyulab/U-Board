@@ -18,6 +18,12 @@ do when upgrading. Each release's notes carry its section.
   could only be a header. The key is sealed like every connector secret and put into the address only when the
   request is sent, so it is never stored in a board, never served with a share link, and never written to the log.
   The binding form warns when a request path itself carries what looks like a key — move it into the connector.
+- **A binding can read one item of a list by its fields.** An HTTP connector reference can carry
+  `item: { list, where }` — the first element of the list at `list` (a JSON Pointer) whose fields equal `where` —
+  and the value path is then read inside that item. Lists of stations, sites or meters often come in another
+  order from one read to the next; a binding by position then showed another record's value as live. When no
+  item matches, the binding says the value is not at the source. The binding form offers it when a value is
+  picked inside a list.
 - **A data source's credit under every board that shows its data.** A connector can carry an attribution — the
   credit text and, optionally, a link — which the share viewer and the editor's view mode show under each board
   bound to it; a share link serves the credit and nothing else about the source. Open-data licenses such as

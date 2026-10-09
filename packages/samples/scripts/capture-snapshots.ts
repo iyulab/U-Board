@@ -6,6 +6,7 @@ import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { SAMPLE_PACKS } from '../src/index.js';
 import { keepPointers } from '../src/prune.js';
+import { findItem, type HttpRef } from '../src/snapshot-adapter.js';
 import type { SampleConnector, SamplePack } from '../src/sample-pack.js';
 
 function requestUrl(connector: SampleConnector, path: string): URL {
@@ -15,20 +16,28 @@ function requestUrl(connector: SampleConnector, path: string): URL {
   return url;
 }
 
-/** The value paths each request of `pack` is read at, per connector key. */
-function requests(pack: SamplePack): Map<string, Map<string, Set<string>>> {
-  const byConnector = new Map<string, Map<string, Set<string>>>();
+/** The references each request of `pack` is read with, per connector key. */
+function requests(pack: SamplePack): Map<string, Map<string, HttpRef[]>> {
+  const byConnector = new Map<string, Map<string, HttpRef[]>>();
   for (const node of pack.document.nodes) {
     for (const binding of Object.values(node.widget.bindings ?? {})) {
-      const { path, valuePath } = binding.ref as { path: string; valuePath?: string };
-      const paths = byConnector.get(binding.adapter) ?? new Map<string, Set<string>>();
+      const ref = binding.ref as HttpRef;
+      const paths = byConnector.get(binding.adapter) ?? new Map<string, HttpRef[]>();
       byConnector.set(binding.adapter, paths);
-      const pointers = paths.get(path) ?? new Set<string>();
-      paths.set(path, pointers);
-      pointers.add(valuePath ?? '');
+      paths.set(ref.path, [...(paths.get(ref.path) ?? []), ref]);
     }
   }
   return byConnector;
+}
+
+/** The pointers into `body` that `ref` reads — for a list item, the item's place in this answer, with the
+ *  fields it is matched by, so the recording still finds it. */
+function pointersOf(body: unknown, ref: HttpRef): string[] {
+  if (!ref.item) return [ref.valuePath ?? ''];
+  const found = findItem(body, ref.item);
+  if (!found.found) throw new Error(`no item of ${ref.item.list} where ${JSON.stringify(ref.item.where)} in the answer to ${ref.path}`);
+  const at = `${ref.item.list}/${found.index}`;
+  return [`${at}${ref.valuePath ?? ''}`, ...Object.keys(ref.item.where).map(field => `${at}/${field.replace(/~/g, '~0').replace(/\//g, '~1')}`)];
 }
 
 for (const pack of SAMPLE_PACKS) {
@@ -37,12 +46,13 @@ for (const pack of SAMPLE_PACKS) {
     const connector = pack.connectors.find(c => c.key === key);
     if (!connector) throw new Error(`${pack.id}: a binding names "${key}", which is not one of its connectors`);
     responses[key] = {};
-    for (const [path, pointers] of paths) {
+    for (const [path, refs] of paths) {
       const res = await fetch(requestUrl(connector, path));
       if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) {
         throw new Error(`${pack.id}: ${path} answered ${res.status} ${res.headers.get('content-type')}`);
       }
-      responses[key][path] = keepPointers(await res.json(), [...pointers]);
+      const body = await res.json();
+      responses[key][path] = keepPointers(body, refs.flatMap(ref => pointersOf(body, ref)));
     }
   }
   const file = fileURLToPath(new URL(`../src/snapshots/${pack.id}.ts`, import.meta.url));

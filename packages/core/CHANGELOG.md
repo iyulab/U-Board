@@ -6,6 +6,15 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Bind a list item by its fields, not its position.** Picking a value inside a list's element in the binding
+  form's response explorer offers to name that element by one of its fields (`pickItemBy` — "id = ST-2"); the
+  HTTP connector reference then carries `item: { list, where }` and a value path inside the item. A source that
+  lists its records in another order on the next read no longer moves another record's value into the binding.
+  The form keeps an existing `item` when a binding is edited. New labels `pickItemBy`, `pickItemByPosition`,
+  `listItem`, `clearListItem` (`KO_LABELS` included).
+
 ## [0.8.0] - 2026-10-09
 
 ### Changed

@@ -124,18 +124,63 @@ function getByPath(obj: unknown, path: string): { found: true; value: unknown } 
   return { found: true, value: cursor };
 }
 
+/** One item of a list in the response, named by its fields rather than its place: the first element
+ *  of the array at `list` (a JSON Pointer) whose fields equal every one in `where`. A source's list can
+ *  come in another order, or with an item missing, from one read to the next — a position would then
+ *  name another item, and show its value as live. */
+export interface RefItem {
+  list: string;
+  where: Record<string, string | number | boolean>;
+}
+
+/** An HTTP connector binding's reference: the request `path`, optionally the list `item` it reads,
+ *  and the JSON Pointer `valuePath` into that item (or into the whole response when there is none). */
+export interface HttpRef {
+  path: string;
+  valuePath?: string;
+  item?: RefItem;
+}
+
+function isRefItem(item: unknown): item is RefItem {
+  if (!item || typeof item !== 'object') return false;
+  const { list, where } = item as { list?: unknown; where?: unknown };
+  if (typeof list !== 'string' || (list !== '' && !list.startsWith('/'))) return false;
+  if (!where || typeof where !== 'object' || Array.isArray(where)) return false;
+  const values = Object.values(where);
+  return values.length > 0 && values.every(v => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean');
+}
+
 /** `ref.path` is caller-controlled and the request carries the connector's credentials, so it
  * must not be able to move the request off the connector's origin. A path that does not start
  * with a single `/` could otherwise be parsed as URL authority — `"@attacker.example/"` appended
  * to `https://plant.example.com` yields `plant.example.com` as *userinfo* and `attacker.example`
  * as the host, sending the owner's secret to the caller's server. */
-export function isValidRef(ref: unknown): ref is { path: string; valuePath?: string } {
+export function isValidRef(ref: unknown): ref is HttpRef {
   return (
     !!ref &&
     typeof (ref as { path?: unknown }).path === 'string' &&
     (ref as { path: string }).path.startsWith('/') &&
-    !(ref as { path: string }).path.startsWith('//')
+    !(ref as { path: string }).path.startsWith('//') &&
+    ((ref as { item?: unknown }).item === undefined || isRefItem((ref as { item?: unknown }).item))
   );
+}
+
+/** The element of `body`'s list that `item` names, or `found: false` — no such list, or no element
+ *  matches. A field matches when the source's value reads the same as the expected one (`"12"` and
+ *  `12` are one id: sources are not consistent about the type of a code). */
+function findItem(body: unknown, item: RefItem): { found: true; value: unknown } | { found: false } {
+  const list = getByPath(body, item.list);
+  if (!list.found || !Array.isArray(list.value)) return { found: false };
+  const match = list.value.find(
+    element =>
+      element !== null &&
+      typeof element === 'object' &&
+      Object.entries(item.where).every(([field, expected]) => {
+        const actual = (element as Record<string, unknown>)[field];
+        return actual !== undefined && actual !== null && String(actual) === String(expected);
+      })
+  );
+  return match === undefined ? { found: false } : { found: true, value: match };
 }
 
 /** Resolves `ref.path` against `connector.baseUrl`, pinned to the connector's own origin *and*,
@@ -327,7 +372,7 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
 export async function resolveConnectorValue(
   connector: Connector,
   target: URL,
-  ref: { path: string; valuePath?: string },
+  ref: HttpRef,
   state: ResolveState
 ): Promise<ResolveResult> {
   const cacheKey = `${connector.id}:${JSON.stringify(ref)}`;
@@ -366,12 +411,20 @@ export async function resolveConnectorValue(
       throw err instanceof StageError ? err : new StageError('request', err);
     }
     let value: unknown = body;
-    if (ref.valuePath) {
+    if ((ref.valuePath || ref.item) && typeof body === 'string') {
       // Plain text has no fields: a value path into it asks for a form the source does not answer in.
-      if (typeof body === 'string') {
-        throw new StageError('response', new Error('the response is plain text, which a value path cannot read into'), 'format');
+      throw new StageError('response', new Error('the response is plain text, which a value path cannot read into'), 'format');
+    }
+    if (ref.item) {
+      const found = findItem(body, ref.item);
+      if (!found.found) {
+        const where = Object.entries(ref.item.where).map(([field, expected]) => `${field}=${String(expected)}`).join(', ');
+        throw new StageError('response', new Error(`no item of "${ref.item.list}" where ${where}`), 'address');
       }
-      const extracted = getByPath(body, ref.valuePath);
+      value = found.value;
+    }
+    if (ref.valuePath) {
+      const extracted = getByPath(value, ref.valuePath);
       if (!extracted.found) {
         throw new StageError('response', new Error(`valuePath "${ref.valuePath}" not found in the response`), 'address');
       }

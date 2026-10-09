@@ -20,37 +20,42 @@ const bind = (valuePath: string, map?: Binding['map']): Binding => ({
   ...(map ? { map } : {}),
 });
 
+/** A district's row, by the station's name (`MSRSTN_NM`) — not its place in the list, which can change. */
+const bindDistrict = (name: string, field: string, map?: Binding['map']): Binding => ({
+  adapter: SEOUL_AIR.key,
+  ref: { path: AIR_PATH, item: { list: '/RealtimeCityAir/row', where: { MSRSTN_NM: name } }, valuePath: `/${field}` },
+  ...(map ? { map } : {}),
+});
+
 /** PM10 (㎍/㎥) in the bands of Korea's air quality index — 좋음 0–30, 보통 31–80, 나쁨 81–150, 매우나쁨
  *  151 and over — in the colours its public sites give them (blue, green, yellow, red). */
 const PM10_LEVEL = {
   ranges: [{ max: 31, value: 'info' }, { min: 31, max: 81, value: 'success' }, { min: 81, max: 151, value: 'warning' }, { min: 151, value: 'error' }],
 };
 
-/** Each district as the source lists it (`row`), the shape drawn for it, and where its reading sits — `name` says which shape is which. */
-const DISTRICTS: { row: number; name: string; outline: string; at: [number, number] }[] = [
-  { row: 3, name: '은평구', outline: '70,90 250,62 300,190 210,270 80,240', at: [175, 165] },
-  { row: 4, name: '서대문구', outline: '80,240 210,270 300,190 340,310 270,392 130,372', at: [215, 312] },
-  { row: 1, name: '종로구', outline: '300,190 250,62 470,96 572,206 480,288 340,310', at: [420, 190] },
-  { row: 0, name: '중구', outline: '340,310 480,288 572,206 590,312 530,392 370,402 270,392', at: [430, 345] },
-  { row: 2, name: '용산구', outline: '270,392 370,402 530,392 560,512 410,580 280,512', at: [415, 480] },
+/** Each district by the station name the source gives it, the shape drawn for it, and where its reading sits. */
+const DISTRICTS: { name: string; outline: string; at: [number, number] }[] = [
+  { name: '은평구', outline: '70,90 250,62 300,190 210,270 80,240', at: [175, 165] },
+  { name: '서대문구', outline: '80,240 210,270 300,190 340,310 270,392 130,372', at: [215, 312] },
+  { name: '종로구', outline: '300,190 250,62 470,96 572,206 480,288 340,310', at: [420, 190] },
+  { name: '중구', outline: '340,310 480,288 572,206 590,312 530,392 370,402 270,392', at: [430, 345] },
+  { name: '용산구', outline: '270,392 370,402 530,392 560,512 410,580 280,512', at: [415, 480] },
 ];
 const READING = { width: 150, height: 56 };
 
-function reading({ row, at }: (typeof DISTRICTS)[number]): Node {
+function reading({ name, at }: (typeof DISTRICTS)[number]): Node {
   return {
-    id: `district-${row}`,
+    id: `district-${name}`,
     x: at[0] - READING.width / 2,
     y: at[1] - READING.height / 2,
     ...READING,
     anchored: true,
     widget: {
       type: 'status',
-      props: { data: { label: '', value: '', level: 'neutral' } },
+      props: { data: { label: name, value: '', level: 'neutral' } },
       bindings: {
-        // The district's name comes from the same row as its reading, so a reordered list cannot mislabel it.
-        'data.label': bind(`/row/${row}/MSRSTN_NM`),
-        'data.value': bind(`/row/${row}/PM`),
-        'data.level': bind(`/row/${row}/PM`, PM10_LEVEL),
+        'data.value': bindDistrict(name, 'PM'),
+        'data.level': bindDistrict(name, 'PM', PM10_LEVEL),
       },
     },
   };
@@ -82,7 +87,7 @@ const PANEL: Node[] = [
     widget: {
       type: 'metric',
       props: { data: { label: '오존(중구)', value: 0, unit: 'ppm' } },
-      bindings: { 'data.value': bind('/row/0/OZON') },
+      bindings: { 'data.value': bindDistrict('중구', 'OZON') },
     },
   },
   {
@@ -96,8 +101,8 @@ const PANEL: Node[] = [
       type: 'status',
       props: { data: { label: '대기지수(중구)', value: '', level: 'neutral' } },
       bindings: {
-        'data.value': bind('/row/0/CAI_GRD'),
-        'data.level': bind('/row/0/CAI_GRD', { values: { 좋음: 'info', 보통: 'success', 나쁨: 'warning', 매우나쁨: 'error' }, otherwise: 'neutral' }),
+        'data.value': bindDistrict('중구', 'CAI_GRD'),
+        'data.level': bindDistrict('중구', 'CAI_GRD', { values: { 좋음: 'info', 보통: 'success', 나쁨: 'warning', 매우나쁨: 'error' }, otherwise: 'neutral' }),
       },
     },
   },
@@ -110,8 +115,6 @@ const DECORATIONS: Shape[] = [
   { id: 'bands', type: 'text', x: PANEL_X, y: 500, text: '좋음 0–30 · 보통 31–80 · 나쁨 81–150 · 매우나쁨 151~', fontSize: 12, fill: '#5b6b70' },
 ];
 
-// The districts are not named in the drawing: each reading is labelled from its own row, and a name drawn
-// beside it would contradict that label if the source listed its rows in another order.
 function drawing(): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
 <rect width="${WIDTH}" height="${HEIGHT}" fill="#f6f8f7"/>

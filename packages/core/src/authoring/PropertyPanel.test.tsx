@@ -500,6 +500,32 @@ describe('PropertyPanel bindings', () => {
     expect(screen.getByLabelText('Value path')).toHaveValue('/status');
   });
 
+  it('names a list item by one of its fields when a value inside it is picked, and keeps that on save', async () => {
+    class StationsAdapter implements Adapter {
+      readonly id = 'connector-1';
+      async resolve(): Promise<ResolvedBinding> {
+        return { value: { data: { stations: [{ id: 'ST-1', name: 'Hall', bikes: 3 }, { id: 'ST-2', name: 'Park', bikes: 0 }] } }, quality: 'live' };
+      }
+    }
+    const onChange = vi.fn();
+    render(<PropertyPanel node={statusNode()} adapters={[new StationsAdapter()]} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/stations' } });
+    fireEvent.click(screen.getByText('Explore'));
+    await waitFor(() => expect(screen.getByText('bikes: 0')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText('bikes: 0'));
+    expect(screen.getByLabelText('Value path')).toHaveValue('/data/stations/1/bikes');
+    fireEvent.change(screen.getByLabelText('Pick the list item by'), { target: { value: 'id' } });
+
+    expect(screen.getByLabelText('Value path')).toHaveValue('/bikes');
+    expect(screen.getByText(/List item: \/data\/stations · id = ST-2/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Save binding'));
+    expect(onChange.mock.calls[0][0].bindings['data.value'].ref).toEqual({
+      path: '/stations', item: { list: '/data/stations', where: { id: 'ST-2' } }, valuePath: '/bikes',
+    });
+  });
+
   it('shows an inline error when explore fails, without blocking manual valuePath entry', async () => {
     render(<PropertyPanel node={statusNode()} adapters={[new FakeExplorableAdapter()]} onChange={vi.fn()} />);
 

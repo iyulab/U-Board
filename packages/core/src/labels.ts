@@ -107,6 +107,13 @@ export interface UBoardLabels {
    *  keeps its paths as written, and a share link hands them to whoever opens it. */
   keyInPath: string;
   valuePath: string;
+  /** Picking a value inside a list's element: the select that names the element by one of its fields
+   *  instead of its position (sources reorder their lists), and its first option, which keeps the position. */
+  pickItemBy: string;
+  pickItemByPosition: string;
+  /** A binding that reads a list item named by its fields: "{list} · {field} = {value}" follows. */
+  listItem: string;
+  clearListItem: string;
   explore: string;
   exploreFailed: string;
   /** In the response explorer: the whole response, when it is itself the value to pick. */
@@ -225,6 +232,10 @@ export const DEFAULT_LABELS: UBoardLabels = {
   reference: 'Reference',
   chooseReference: 'Choose a reference',
   path: 'Path',
+  pickItemBy: 'Pick the list item by',
+  pickItemByPosition: 'its position in the list',
+  listItem: 'List item',
+  clearListItem: 'Pick by position',
   keyInPath:
     "This path seems to carry a key. A board keeps its paths and a share link shows them — send the key through the data source's authentication instead.",
   valuePath: 'Value path',

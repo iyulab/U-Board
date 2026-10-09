@@ -28,6 +28,14 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     for (const node of resolved.nodes) {
       for (const [prop, quality] of Object.entries(node.widget.quality)) expect(quality, `${node.id} ${prop}`).toBe('live');
     }
+    // A blank reading is how a source says "no value here" — an entry that reports nothing, picked by mistake.
+    const adapters = new Map(snapshotAdapters(pack).map(a => [a.id, a]));
+    for (const node of pack.document.nodes) {
+      for (const [prop, binding] of Object.entries(node.widget.bindings ?? {})) {
+        const { value } = await adapters.get(binding.adapter)!.resolve(binding.ref);
+        expect(value === '' || value === null, `${node.id} ${prop} reads "${String(value)}"`).toBe(false);
+      }
+    }
   });
 
   it('places every node on its background, none over another', () => {
@@ -40,6 +48,20 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
       expect(node.y + (node.height ?? 0), node.id).toBeLessThanOrEqual(height);
     }
     for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) expect(overlaps(a, b), `${a.id} × ${b.id}`).toBe(false);
+  });
+});
+
+describe('a list item bound by its fields', () => {
+  it('reads the same item when the source lists them in another order', async () => {
+    const pack = SAMPLE_PACKS.find(p => p.id === 'gwanghwamun')!;
+    const before = await resolveDocument(pack.document, snapshotAdapters(pack));
+    const reordered = structuredClone(pack.snapshot);
+    for (const answer of Object.values(reordered.responses['seoul-city-data'])) {
+      const city = (answer as { CITYDATA: { SBIKE_STTS: unknown[] } }).CITYDATA;
+      city.SBIKE_STTS.reverse();
+    }
+    const after = await resolveDocument(pack.document, snapshotAdapters({ ...pack, snapshot: reordered }));
+    expect(after.nodes.map(n => n.widget.props)).toEqual(before.nodes.map(n => n.widget.props));
   });
 });
 

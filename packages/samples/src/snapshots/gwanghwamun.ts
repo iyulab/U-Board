@@ -2,7 +2,7 @@
 import type { SampleSnapshot } from '../sample-pack.js';
 
 export const snapshot: SampleSnapshot = {
-  "capturedAt": "2026-10-09T12:38:37.442Z",
+  "capturedAt": "2026-10-09T12:57:15.652Z",
   "responses": {
     "seoul-city-data": {
       "/json/citydata/1/5/%EA%B4%91%ED%99%94%EB%AC%B8%C2%B7%EB%8D%95%EC%88%98%EA%B6%81": {
@@ -10,33 +10,39 @@ export const snapshot: SampleSnapshot = {
           "SBIKE_STTS": [
             {
               "SBIKE_SPOT_NM": "303. 광화문역 1번출구 앞",
-              "SBIKE_PARKING_CNT": "3"
+              "SBIKE_SPOT_ID": "ST-119",
+              "SBIKE_PARKING_CNT": "2"
             },
+            null,
             null,
             {
               "SBIKE_SPOT_NM": "458. 광화문역 5번출구",
-              "SBIKE_PARKING_CNT": "5"
+              "SBIKE_SPOT_ID": "ST-1611",
+              "SBIKE_PARKING_CNT": "0"
             },
-            null,
             {
               "SBIKE_SPOT_NM": "305. 종로구청 옆",
+              "SBIKE_SPOT_ID": "ST-121",
               "SBIKE_PARKING_CNT": "2"
             },
             {
               "SBIKE_SPOT_NM": "391. 시립미술관",
+              "SBIKE_SPOT_ID": "ST-977",
               "SBIKE_PARKING_CNT": "0"
             },
             null,
+            null,
             {
               "SBIKE_SPOT_NM": "4719. 종로문화원 건너편",
+              "SBIKE_SPOT_ID": "ST-3090",
               "SBIKE_PARKING_CNT": "5"
             },
-            {
-              "SBIKE_SPOT_NM": "4718. 광화문역 6번출구 옆 A",
-              "SBIKE_PARKING_CNT": "2"
-            },
             null,
-            null
+            {
+              "SBIKE_SPOT_NM": "6058. 시청역 2번출구",
+              "SBIKE_SPOT_ID": "ST-3297",
+              "SBIKE_PARKING_CNT": "1"
+            }
           ],
           "PRK_STTS": [
             null,
@@ -68,7 +74,9 @@ export const snapshot: SampleSnapshot = {
             null,
             null,
             {
-              "CUR_PRK_CNT": "214",
+              "CUR_PRK_CNT": "193",
+              "PRK_CD": "171721",
+              "CUR_PRK_YN": "Y",
               "CPCTY": "1260",
               "PRK_NM": "세종로 공영주차장(시)"
             }
@@ -76,7 +84,7 @@ export const snapshot: SampleSnapshot = {
           "LIVE_PPLTN_STTS": [
             {
               "AREA_CONGEST_LVL": "여유",
-              "AREA_PPLTN_MAX": "22000",
+              "AREA_PPLTN_MAX": "20000",
               "FCST_PPLTN": [
                 {
                   "FCST_TIME": "2026-10-09 22:00",
@@ -155,8 +163,8 @@ export const snapshot: SampleSnapshot = {
           ],
           "WEATHER_STTS": [
             {
-              "TEMP": "20.1",
-              "HUMIDITY": "57",
+              "TEMP": "19.1",
+              "HUMIDITY": "61",
               "PM10_INDEX": "보통",
               "FCST24HOURS": [
                 {
@@ -181,7 +189,7 @@ export const snapshot: SampleSnapshot = {
                   "PRECIPITATION": "-",
                   "PRECPT_TYPE": "없음",
                   "RAIN_CHANCE": "20",
-                  "SKY_STTS": "흐림"
+                  "SKY_STTS": "구름많음"
                 },
                 {
                   "FCST_DT": "202610100100",
@@ -189,7 +197,7 @@ export const snapshot: SampleSnapshot = {
                   "PRECIPITATION": "-",
                   "PRECPT_TYPE": "없음",
                   "RAIN_CHANCE": "0",
-                  "SKY_STTS": "구름많음"
+                  "SKY_STTS": "흐림"
                 },
                 {
                   "FCST_DT": "202610100200",
@@ -197,7 +205,7 @@ export const snapshot: SampleSnapshot = {
                   "PRECIPITATION": "-",
                   "PRECPT_TYPE": "없음",
                   "RAIN_CHANCE": "0",
-                  "SKY_STTS": "맑음"
+                  "SKY_STTS": "흐림"
                 },
                 {
                   "FCST_DT": "202610100300",
@@ -205,7 +213,7 @@ export const snapshot: SampleSnapshot = {
                   "PRECIPITATION": "-",
                   "PRECPT_TYPE": "없음",
                   "RAIN_CHANCE": "0",
-                  "SKY_STTS": "맑음"
+                  "SKY_STTS": "흐림"
                 },
                 {
                   "FCST_DT": "202610100400",
@@ -357,7 +365,7 @@ export const snapshot: SampleSnapshot = {
           "ROAD_TRAFFIC_STTS": {
             "AVG_ROAD_DATA": {
               "ROAD_TRAFFIC_IDX": "서행",
-              "ROAD_TRAFFIC_SPD": 19
+              "ROAD_TRAFFIC_SPD": 20
             }
           }
         }

@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useId, useState } from 'react';
+import { useEffect, useEffectEvent, useId, useMemo, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Node, Widget, Binding, ValueMap } from '../view-document.js';
 import { getWidgetLabel } from '@iyulab/u-widgets/tools';
@@ -36,6 +36,8 @@ interface BindingDraft {
   connectorId: string;
   path: string;
   valuePath: string;
+  /** The list item the value path reads in, named by its fields — an HTTP connector reference's `item`. */
+  item?: ListItem;
   /** The `ref` picked from an adapter that offers its references (`Adapter.references`). */
   listedRef: string;
   /** The value map as the form edits it — rows of source value → shown value, and the value for
@@ -83,6 +85,49 @@ function carriesKey(path: string): boolean {
   return KEY_PARAMETER.test(path);
 }
 
+/** One item of a list in the response, named by its fields rather than its position (`ref.item`). */
+interface ListItem {
+  list: string;
+  where: Record<string, string | number | boolean>;
+}
+
+/** The tokens of an RFC 6901 JSON Pointer. */
+function pointerTokens(pointer: string): string[] {
+  return pointer === '' ? [] : pointer.slice(1).split('/').map(t => t.replace(/~1/g, '/').replace(/~0/g, '~'));
+}
+
+const toPointer = (tokens: readonly string[]) => tokens.map(t => `/${t.replace(/~/g, '~0').replace(/\//g, '~1')}`).join('');
+
+/** Where a value path picked in a response passes through a list: the list's pointer, the element it
+ *  went through (the innermost list), the rest of the path inside that element, and the element's fields
+ *  an author can name it by — or `null` when the path goes through no list of records. */
+function listStep(response: unknown, valuePath: string) {
+  if (!valuePath.startsWith('/')) return null;
+  const tokens = pointerTokens(valuePath);
+  let cursor = response;
+  let step: { list: string; element: Record<string, unknown>; rest: string } | null = null;
+  for (const [i, token] of tokens.entries()) {
+    if (Array.isArray(cursor)) {
+      const element = cursor[Number(token)];
+      if (element !== null && typeof element === 'object' && !Array.isArray(element)) {
+        step = { list: toPointer(tokens.slice(0, i)), element: element as Record<string, unknown>, rest: toPointer(tokens.slice(i + 1)) };
+      }
+    }
+    if (cursor === null || typeof cursor !== 'object' || !Object.hasOwn(cursor, token)) return null;
+    cursor = (cursor as Record<string, unknown>)[token];
+  }
+  if (!step) return null;
+  const keys = Object.entries(step.element).filter(([, v]) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') as [
+    string,
+    string | number | boolean,
+  ][];
+  return keys.length > 0 ? { ...step, keys } : null;
+}
+
+function itemText(item: ListItem): string {
+  return `${item.list} · ${Object.entries(item.where).map(([field, value]) => `${field} = ${String(value)}`).join(', ')}`;
+}
+
 function emptyDraft(connectorId: string, propPath = ''): BindingDraft {
   return { propPath, connectorId, path: '', valuePath: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
 }
@@ -104,8 +149,8 @@ const valueText = (value: unknown) => (value === undefined ? '—' : asText(valu
  * value path into its response. */
 function refText(ref: unknown): string {
   if (typeof ref === 'string') return ref;
-  const { path, valuePath } = (ref ?? {}) as { path?: string; valuePath?: string };
-  return [path, valuePath].filter(Boolean).join(' ');
+  const { path, valuePath, item } = (ref ?? {}) as { path?: string; valuePath?: string; item?: ListItem };
+  return [path, item && `[${itemText(item)}]`, valuePath].filter(Boolean).join(' ');
 }
 
 const boundText = (bound: number | undefined) => (bound === undefined ? '' : String(bound));
@@ -166,6 +211,7 @@ function isUntouched(draft: BindingDraft, startingPropPath: string): boolean {
     draft.propPath === startingPropPath &&
     draft.path === '' &&
     draft.valuePath === '' &&
+    draft.item === undefined &&
     draft.listedRef === '' &&
     draft.mappings.length === 0 &&
     draft.ranges.length === 0 &&
@@ -180,12 +226,12 @@ function withCurrent(references: readonly AdapterReference[], current: string): 
 }
 
 function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
-  const ref = binding.ref as { path?: string; valuePath?: string } | string;
+  const ref = binding.ref as { path?: string; valuePath?: string; item?: ListItem } | string;
   const map = draftMap(binding.map);
   if (typeof ref === 'string') {
     return { propPath, connectorId: binding.adapter, path: '', valuePath: '', listedRef: ref, ...map };
   }
-  return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', listedRef: '', ...map };
+  return { propPath, connectorId: binding.adapter, path: ref.path ?? '', valuePath: ref.valuePath ?? '', item: ref.item, listedRef: '', ...map };
 }
 
 export function PropertyPanel({ node, adapters, connectorLabels, onChange, labels = DEFAULT_LABELS, clock = Date.now }: PropertyPanelProps) {
@@ -202,6 +248,8 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   const [preview, setPreview] = useState<ResolvedBinding | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [exploreResult, setExploreResult] = useState<unknown>(null);
+  // A value picked inside a list's element can name that element by its fields instead of its position.
+  const keyStep = useMemo(() => (exploreResult === null ? null : listStep(exploreResult, draft.valuePath)), [exploreResult, draft.valuePath]);
   const [exploreError, setExploreError] = useState<string | null>(null);
 
   // Resets the static-props editor. Keyed on the node and the specific `props` reference — not on
@@ -277,7 +325,7 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
   const listed = offersReferences;
 
   const draftRef = (): unknown =>
-    listed ? draft.listedRef : { path: draft.path, valuePath: draft.valuePath || undefined };
+    listed ? draft.listedRef : { path: draft.path, ...(draft.item ? { item: draft.item } : {}), valuePath: draft.valuePath || undefined };
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type = e.target.value;
@@ -526,10 +574,39 @@ export function PropertyPanel({ node, adapters, connectorLabels, onChange, label
                   {exploreError}
                 </p>
               )}
+              {draft.item && (
+                <p className="ub-panel__hint">
+                  {labels.listItem}: {itemText(draft.item)}{' '}
+                  <button type="button" className="ub-action" onClick={() => setDraft(d => ({ ...d, item: undefined, valuePath: '' }))}>
+                    {labels.clearListItem}
+                  </button>
+                </p>
+              )}
+              {!draft.item && keyStep && (
+                <label className="ub-panel__field" style={FIELD_STYLE}>
+                  {labels.pickItemBy}
+                  <select
+                    value=""
+                    onChange={e => {
+                      const field = e.target.value;
+                      const value = keyStep.keys.find(([key]) => key === field)?.[1];
+                      if (value === undefined) return;
+                      setDraft(d => ({ ...d, item: { list: keyStep.list, where: { [field]: value } }, valuePath: keyStep.rest }));
+                    }}
+                  >
+                    <option value="">{labels.pickItemByPosition}</option>
+                    {keyStep.keys.map(([key, value]) => (
+                      <option key={key} value={key}>
+                        {key} = {String(value)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {exploreResult !== null && (
                 <JsonTreeExplorer
                   value={exploreResult}
-                  onSelectPath={path => setDraft(d => ({ ...d, valuePath: path }))}
+                  onSelectPath={path => setDraft(d => ({ ...d, item: undefined, valuePath: path }))}
                   wholeResponseLabel={labels.wholeResponse}
                 />
               )}

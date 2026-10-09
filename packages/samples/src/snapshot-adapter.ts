@@ -14,6 +14,31 @@ export function valueAtPointer(body: unknown, pointer: string): { found: true; v
   return { found: true, value: current };
 }
 
+/** The HTTP connector's reference: the request, optionally the list item it reads (by its fields), and a
+ *  JSON Pointer into that item or the whole answer. */
+export interface HttpRef {
+  path: string;
+  valuePath?: string;
+  item?: { list: string; where: Record<string, string | number | boolean> };
+}
+
+/** The element of the list at `item.list` whose fields all read as `item.where` says — as the server's HTTP
+ *  connector finds it. */
+export function findItem(body: unknown, item: NonNullable<HttpRef['item']>): { found: true; value: unknown; index: number } | { found: false } {
+  const list = valueAtPointer(body, item.list);
+  if (!list.found || !Array.isArray(list.value)) return { found: false };
+  const index = list.value.findIndex(
+    element =>
+      element !== null &&
+      typeof element === 'object' &&
+      Object.entries(item.where).every(([field, expected]) => {
+        const actual = (element as Record<string, unknown>)[field];
+        return actual !== undefined && actual !== null && String(actual) === String(expected);
+      })
+  );
+  return index < 0 ? { found: false } : { found: true, value: list.value[index], index };
+}
+
 /**
  * Answers a sample's bindings from what its source said when the sample was recorded — for a page with no
  * server to read the live source through. A binding's `ref` is the HTTP connector's (`{ path, valuePath }`),
@@ -34,9 +59,15 @@ export class SnapshotAdapter implements Adapter {
   }
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
-    const { path, valuePath } = (ref ?? {}) as { path?: unknown; valuePath?: unknown };
+    const { path, valuePath, item } = (ref ?? {}) as Partial<HttpRef>;
     if (typeof path !== 'string' || !Object.hasOwn(this.responses, path)) return { value: undefined, quality: 'disconnected', reason: 'address' };
-    const read = valueAtPointer(this.responses[path], typeof valuePath === 'string' ? valuePath : '');
+    let body = this.responses[path];
+    if (item) {
+      const found = findItem(body, item);
+      if (!found.found) return { value: undefined, quality: 'disconnected', reason: 'address' };
+      body = found.value;
+    }
+    const read = valueAtPointer(body, typeof valuePath === 'string' ? valuePath : '');
     return read.found
       ? { value: read.value, quality: 'live', observedAt: this.capturedAt }
       : { value: undefined, quality: 'disconnected', reason: 'address' };
