@@ -19,8 +19,8 @@ import '@iyulab/u-widgets';
 void import('@iyulab/u-widgets/charts');
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
-import { QUALITY_FRAME_STYLE, frameQuality } from '../quality-presentation.js';
-import { describeQuality, DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
+import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding } from '../quality-presentation.js';
+import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
 import { onBoard } from './board-appearance.js';
 
 // Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
@@ -42,6 +42,38 @@ const VISUALLY_HIDDEN_STYLE: CSSProperties = {
 };
 
 const WIDGET_FILL_STYLE: CSSProperties = { width: '100%', height: '100%' };
+
+// The visible half of a node's quality, for a screen nobody hovers over or listens to — a wall display.
+// The frame tells how current the value is (by style as well as colour); this says why, and how old
+// it is, in a few words over the widget's corner. Hidden from assistive technology: the status region
+// below announces the full text.
+const BADGE_STYLE: CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  maxWidth: '100%',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  boxSizing: 'border-box',
+  padding: '1px 6px',
+  borderBottomLeftRadius: 4,
+  font: '600 11px/1.4 system-ui, sans-serif',
+  pointerEvents: 'none',
+  zIndex: 1,
+};
+
+/** The few words on a node's mark: the cause of its headline binding's state when the adapter gave
+ *  one, else the state; for a stale value, how long ago it was obtained. */
+function badgeText(widget: QualitySummary, key: string, text: QualityText, now: number): string | undefined {
+  const quality = widget.quality[key];
+  if (!quality || quality === 'live') return undefined;
+  const reason = widget.reasons?.[key];
+  const what = reason ? text.brief.reason[reason] : text.brief.quality[quality];
+  if (!what) return undefined;
+  const observed = quality === 'stale' && widget.observedAt?.[key] ? Date.parse(widget.observedAt[key]) : NaN;
+  return Number.isNaN(observed) ? what : `${what} · ${text.age(now - observed)}`;
+}
 
 /** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
  * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
@@ -110,9 +142,11 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
   // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
   // `data`/`mapping`/`options` — `type` + `props` here recombine into exactly that shape.
   const overlays: ViewerOverlayItem[] = doc.nodes.map(node => {
-    const quality = frameQuality(node.widget.quality, node.widget.type);
+    const key = frameBinding(node.widget.quality, node.widget.type);
+    const quality = key === undefined ? undefined : node.widget.quality[key];
     const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
     const label = describeQuality(node.widget, { text: qualityText, now });
+    const badge = key === undefined ? undefined : badgeText(node.widget, key, qualityText, now ?? Date.now());
 
     return {
       id: node.id,
@@ -121,12 +155,17 @@ export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_Q
       width: node.width ?? DEFAULT_NODE_WIDTH,
       height: node.height ?? DEFAULT_NODE_HEIGHT,
       content: (
-        <div style={{ width: '100%', height: '100%', ...frameStyle }} title={label}>
+        <div style={{ position: 'relative', width: '100%', height: '100%', ...frameStyle }} title={label}>
           {/* A widget takes its node's box exactly — the box the author drew is the layout. u-widgets fits
               a host height in both directions: a chart fills it and lays itself out compactly when small,
               media (a gauge, an image) scales down whole, and content that runs on (a table, a list)
               scrolls inside the node. Nothing spills over a neighbouring node. */}
           <UWidget spec={{ widget: node.widget.type, ...node.widget.props }} style={WIDGET_FILL_STYLE} theme={doc.appearance ?? 'light'} locale={locale} />
+          {badge && quality && (
+            <span aria-hidden="true" data-quality-badge="" style={{ ...BADGE_STYLE, ...QUALITY_BADGE_STYLE[quality] }}>
+              {badge}
+            </span>
+          )}
           <span role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
             {label ?? ''}
           </span>

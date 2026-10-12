@@ -292,7 +292,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   observedAtReads: 'Reads as {time} — {age}',
   observedAtLater: 'This is later than now — check the time zone.',
   maxAge: 'Normally at most (minutes old)',
-  maxAgeHint: "Older than this by the source's time, the value shows as lagging. The source is asked again no sooner than an eighth of it.",
+  maxAgeHint: "Older than this by the source's time, the value is marked 'Source behind'. The source is asked again no sooner than an eighth of it.",
   invalidMaxAge: 'Enter a number of minutes above 0, or leave it empty.',
   keyInPath:
     "This path seems to carry a key. A board keeps its paths and a share link shows them — send the key through the data source's authentication instead.",

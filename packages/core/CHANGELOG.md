@@ -6,6 +6,19 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: `QualityText` has `brief`** — a few words per state and per cause for the mark the renderer now shows
+  on a node (below). A `QualityText` written out in full needs them; `DEFAULT_QUALITY_TEXT` and `KO_LABELS` have them.
+
+### Added
+
+- **A node whose value is not current says why, on screen.** The renderer marks the node's corner with the cause of
+  its headline binding's state and, for a stale value, its age — "Source behind · 3 minutes ago", "No reply from
+  source · 30 seconds ago". Until now the cause and the age were in the tooltip and the screen-reader announcement
+  only, so a wall display showed a source that stopped updating and one that could not be reached as the same
+  dashed frame.
+
 ## [0.9.0] - 2026-10-10
 
 ### Changed

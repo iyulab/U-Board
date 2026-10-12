@@ -215,6 +215,10 @@ describe('ViewerPage labels', () => {
       quality: { stale: '갱신 지연', disconnected: '연결 끊김' },
       reason: { transport: '연결 불가', auth: '자격 거부', address: '값 없음', format: '형식 오류', throttled: '한도 초과', lagging: '갱신 지연' },
       age: () => '조금 전',
+      brief: {
+        quality: { stale: '지난 값', disconnected: '값 없음' },
+        reason: { transport: '응답 없음', auth: '인증 거부', address: '값 못 찾음', format: '형식 오류', throttled: '한도', lagging: '늦음' },
+      },
     },
   };
 

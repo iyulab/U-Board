@@ -3,6 +3,8 @@ import { describe, it, expect } from 'vitest';
 import type { ReactElement } from 'react';
 import { toCanvasKit } from './to-canvas-kit';
 import type { ResolvedViewDocument } from '../resolve-document';
+import type { ResolvedWidget } from '../adapter';
+import { KO_LABELS } from '../labels-ko';
 
 function doc(overrides: Partial<ResolvedViewDocument> = {}): ResolvedViewDocument {
   return {
@@ -29,9 +31,23 @@ function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>, 
   }>;
 }
 
+function childrenOf(frame: ReactElement<{ children?: ReactElement[] }>) {
+  return React.Children.toArray(frame.props.children) as ReactElement<Record<string, unknown>>[];
+}
+
 function liveRegionFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>, widgetType = 'unknown-widget') {
-  const [, liveRegion] = overlayFor(quality, widgetType).props.children ?? [];
+  const liveRegion = childrenOf(overlayFor(quality, widgetType)).find(child => child.props.role === 'status');
   return liveRegion as ReactElement<{ role?: string; 'aria-live'?: string; children?: string }>;
+}
+
+/** The visible quality mark of a node built from `widget`, or `undefined` when it has none. */
+function badgeFor(widget: Partial<ResolvedWidget> & Pick<ResolvedWidget, 'quality'>, options: Parameters<typeof toCanvasKit>[1] = {}) {
+  const { overlays } = toCanvasKit(
+    doc({ nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, ...widget } }] }),
+    options
+  );
+  const badge = childrenOf(overlays[0].content as ReactElement<{ children?: ReactElement[] }>).find(child => 'data-quality-badge' in child.props);
+  return badge as ReactElement<{ 'aria-hidden'?: string; style?: Record<string, unknown>; children?: string }> | undefined;
 }
 
 describe('toCanvasKit', () => {
@@ -220,7 +236,7 @@ describe('toCanvasKit', () => {
       );
       const frame = overlays[0].content as ReactElement<{ title?: string; children?: ReactElement<{ children?: string }>[] }>;
       expect(frame.props.title).toBe('stale — showing last known value (data source unreachable, 5 minutes ago)');
-      expect(frame.props.children?.[1].props.children).toBe(frame.props.title);
+      expect(childrenOf(frame).find(child => child.props.role === 'status')?.props.children).toBe(frame.props.title);
     });
 
     it('gives stale and disconnected distinct border *styles*, not just distinct colors', () => {
@@ -274,6 +290,55 @@ describe('toCanvasKit', () => {
         const frame = overlayFor({ x: 'live', y: 'disconnected' }, 'chart.line');
         expect(frame.props.style?.border).toContain('dotted');
       });
+    });
+  });
+
+  describe('connection-quality mark on the node — readable without hovering or a screen reader', () => {
+    const now = Date.parse('2026-10-12T22:33:00Z');
+    const minuteAgo = '2026-10-12T22:32:00Z';
+
+    it('shows none while the value is live', () => {
+      expect(badgeFor({ quality: { 'data.value': 'live' } })).toBeUndefined();
+    });
+
+    it('names a source that answers but has not updated, and how old its value is', () => {
+      const badge = badgeFor(
+        { quality: { 'data.value': 'stale' }, reasons: { 'data.value': 'lagging' }, observedAt: { 'data.value': minuteAgo } },
+        { now }
+      );
+      expect(badge?.props.children).toBe('Source behind · 1 minute ago');
+    });
+
+    it('names a source that does not answer in other words than one that is behind — they call for different people', () => {
+      const behind = badgeFor({ quality: { 'data.value': 'stale' }, reasons: { 'data.value': 'lagging' } });
+      const unreachable = badgeFor({ quality: { 'data.value': 'stale' }, reasons: { 'data.value': 'transport' } });
+      expect(unreachable?.props.children).toBe('No reply from source');
+      expect(unreachable?.props.children).not.toBe(behind?.props.children);
+    });
+
+    it('names the state when the adapter gave no cause', () => {
+      expect(badgeFor({ quality: { 'data.value': 'disconnected' } })?.props.children).toBe('No value');
+    });
+
+    it('is hidden from assistive technology, which hears the full text from the status region', () => {
+      expect(badgeFor({ quality: { 'data.value': 'stale' } })?.props['aria-hidden']).toBe('true');
+    });
+
+    it("takes the frame's colour, and the binding the frame reports — not a secondary one", () => {
+      expect(badgeFor({ quality: { 'data.value': 'stale' } })?.props.style?.background).toContain('--ub-quality-stale');
+      const { overlays } = toCanvasKit(
+        doc({ nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', props: {}, quality: { 'data.value': 'live', 'data.threshold': 'disconnected' } } }] })
+      );
+      const children = childrenOf(overlays[0].content as ReactElement<{ children?: ReactElement[] }>);
+      expect(children.some(child => 'data-quality-badge' in child.props)).toBe(false);
+    });
+
+    it("speaks the labels' language", () => {
+      const badge = badgeFor(
+        { quality: { 'data.value': 'stale' }, reasons: { 'data.value': 'lagging' }, observedAt: { 'data.value': minuteAgo } },
+        { now, qualityText: KO_LABELS.qualityText }
+      );
+      expect(badge?.props.children).toBe('원천 갱신 늦음 · 1분 전');
     });
   });
 

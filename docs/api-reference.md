@@ -190,8 +190,12 @@ interface QualityText {
   quality: Partial<Record<ConnectionQuality, string>>;
   reason: Record<QualityReason, string>;
   age: (elapsedMs: number) => string;
+  brief: {
+    quality: Partial<Record<ConnectionQuality, string>>;
+    reason: Record<QualityReason, string>;
+  };
 }
-const DEFAULT_QUALITY_TEXT: QualityText; // { quality: QUALITY_LABEL, reason: REASON_LABEL, age: ageText('en') }
+const DEFAULT_QUALITY_TEXT: QualityText; // { quality: QUALITY_LABEL, reason: REASON_LABEL, age: ageText('en'), brief: … }
 function ageText(locale: string): (elapsedMs: number) => string;
 function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined;
 type QualitySummary = Pick<ResolvedWidget, 'quality' | 'reasons' | 'observedAt'>;
@@ -242,6 +246,14 @@ response without a readable `Date` changes nothing — a cross-origin response d
 unless the server lists it in `Access-Control-Expose-Headers`.
 
 `live` has no label on purpose: normal operation is not announced, only departures from it.
+
+The shipped renderer also marks a node whose headline value is not current with a few visible words in
+its corner — for a screen nobody hovers over or listens to, such as a wall display. They come from
+`brief`: the cause when the adapter reported one (`brief.reason` — "Source behind" for `lagging`, "No
+reply from source" for `transport`), else the state (`brief.quality`), and for a `stale` value how long
+ago it was obtained — "Source behind · 3 minutes ago". The frame's style shows how current the value is;
+the mark says why, because the cause decides whom an operator calls. Assistive technology hears the full
+`describeQuality` text instead.
 
 Pass `text` to describe quality in another language; it defaults to `DEFAULT_QUALITY_TEXT`.
 `ageText(locale)` builds the `age` words from the platform's relative-time formatting

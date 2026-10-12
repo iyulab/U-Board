@@ -31,6 +31,13 @@ export interface QualityText {
   quality: Partial<Record<ConnectionQuality, string>>;
   reason: Record<QualityReason, string>;
   age: (elapsedMs: number) => string;
+  /** A few words for the mark the shipped renderer shows on a node whose value is not current — read
+   *  from across a room, with no tooltip to hover: the cause when the adapter reported one, else the
+   *  state. Distinct words per cause, because the cause decides whom an operator calls. */
+  brief: {
+    quality: Partial<Record<ConnectionQuality, string>>;
+    reason: Record<QualityReason, string>;
+  };
 }
 
 const SECOND = 1000;
@@ -52,7 +59,22 @@ export function ageText(locale: string): (elapsedMs: number) => string {
 }
 
 /** The English text the shipped renderer uses unless given other `QualityText`. */
-export const DEFAULT_QUALITY_TEXT: QualityText = { quality: QUALITY_LABEL, reason: REASON_LABEL, age: ageText('en') };
+export const DEFAULT_QUALITY_TEXT: QualityText = {
+  quality: QUALITY_LABEL,
+  reason: REASON_LABEL,
+  age: ageText('en'),
+  brief: {
+    quality: { stale: 'Last known value', disconnected: 'No value' },
+    reason: {
+      transport: 'No reply from source',
+      auth: 'Access refused',
+      address: 'Value not found',
+      format: 'Unreadable reply',
+      throttled: 'Rate limited',
+      lagging: 'Source behind',
+    },
+  },
+};
 
 // Worst-first: a node with several bindings shows whichever one needs the operator's attention
 // most (ISA-18.2 alarm-precedence convention — the least-current binding governs the indicator).

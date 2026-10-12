@@ -35,7 +35,25 @@ export function frameQuality(
   quality: Record<string, ConnectionQuality>,
   widgetType: string
 ): ConnectionQuality | undefined {
-  const primaryField = getPrimaryDataField(widgetType);
-  if (primaryField === undefined) return worstQuality(quality);
-  return quality[`data.${primaryField}`];
+  const key = frameBinding(quality, widgetType);
+  return key === undefined ? undefined : quality[key];
 }
+
+/** The binding whose quality `frameQuality` reports — the headline field's when u-widgets names one
+ *  for the widget type, else the least current binding's. `undefined` when there is none. */
+export function frameBinding(quality: Record<string, ConnectionQuality>, widgetType: string): string | undefined {
+  const primaryField = getPrimaryDataField(widgetType);
+  if (primaryField !== undefined) {
+    const key = `data.${primaryField}`;
+    return key in quality ? key : undefined;
+  }
+  const worst = worstQuality(quality);
+  return worst === undefined ? undefined : Object.keys(quality).find(key => quality[key] === worst);
+}
+
+/** The mark on a node whose headline value is not current: the frame's colour as its background,
+ *  with text dark or light enough to read on it (the colours are the frame's, `QUALITY_FRAME_STYLE`). */
+export const QUALITY_BADGE_STYLE: Partial<Record<ConnectionQuality, CSSProperties>> = {
+  stale: { background: 'var(--ub-quality-stale, #f59e0b)', color: '#1f2937' },
+  disconnected: { background: 'var(--ub-quality-disconnected, #6b7280)', color: '#ffffff' },
+};

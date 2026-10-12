@@ -95,7 +95,7 @@ export const KO_LABELS: UBoardLabels = {
   observedAtReads: '읽은 결과: {time} — {age}',
   observedAtLater: '지금보다 늦은 시각입니다 — 시간대를 확인하세요.',
   maxAge: '정상일 때 최대 나이(분)',
-  maxAgeHint: '원천 시각으로 이보다 오래되면 «갱신 지연»으로 보입니다. 원천에는 이 시간의 8분의 1보다 자주 다시 묻지 않습니다.',
+  maxAgeHint: '원천 시각으로 이보다 오래되면 «원천 갱신 늦음»으로 보입니다. 원천에는 이 시간의 8분의 1보다 자주 다시 묻지 않습니다.',
   invalidMaxAge: '0보다 큰 분 수를 입력하거나 비워 두세요.',
   keyInPath: '이 경로에 키가 들어 있는 것 같습니다. 보드는 경로를 그대로 저장하고 공유 링크는 그것을 보여 줍니다 — 키는 데이터소스의 인증 방식으로 보내세요.',
   valuePath: '값 경로',
@@ -143,5 +143,16 @@ export const KO_LABELS: UBoardLabels = {
       lagging: '원천이 기대만큼 갱신하지 않음',
     },
     age: ageText('ko'),
+    brief: {
+      quality: { stale: '지난 값', disconnected: '값 없음' },
+      reason: {
+        transport: '원천 응답 없음',
+        auth: '인증 거부',
+        address: '값을 찾지 못함',
+        format: '읽을 수 없는 응답',
+        throttled: '요청 한도',
+        lagging: '원천 갱신 늦음',
+      },
+    },
   },
 };
