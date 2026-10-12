@@ -61,9 +61,10 @@ export interface ResolvedBinding {
   quality: ConnectionQuality;
   /** Why `quality` is not `live`, if the adapter knows. Ignored on a `live` reading. */
   reason?: QualityReason;
-  /** When `value` was obtained from the source (ISO 8601), if the adapter knows — the time of
-   * this reading when `live`, the time of the last successful one when `stale`. It tells a
-   * last-known value of seconds ago from one of days ago. Ignored on a `disconnected` reading. */
+  /** When `value` was observed (ISO 8601), if the adapter knows — the time the source says it
+   * observed the value when it says so (an HTTP reference's `observedAtPath`), else the time it was
+   * read; for `stale`, that of the last successful reading. It tells a last-known value of seconds
+   * ago from one of days ago. Ignored on a `disconnected` reading. */
   observedAt?: string;
 }
 

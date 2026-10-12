@@ -18,6 +18,16 @@ All notable changes to this package are documented here. The format follows
   source · 30 seconds ago". Until now the cause and the age were in the tooltip and the screen-reader announcement
   only, so a wall display showed a source that stopped updating and one that could not be reached as the same
   dashed frame.
+- **Anchored nodes keep their coordinates when the background changes.** Replacing the background image with one of
+  the same size keeps its reference points (the same drawing redone); one of another size clears them and says so.
+  After the points change — edited, or given again for a new image — the board panel names how many anchored nodes
+  no longer sit at the coordinates they had and offers to put them back (`placeAt`) or leave them. New labels
+  `referencePointsNeeded`, `anchorsMoved`, `relocateAnchors`, `keepAnchors` (`KO_LABELS` included).
+
+### Fixed
+
+- `ResolvedBinding.observedAt` is documented as what it is since 0.9.0: the time the source says it observed the
+  value when the reference names one (`observedAtPath`), else the time it was read.
 
 ## [0.9.0] - 2026-10-10
 

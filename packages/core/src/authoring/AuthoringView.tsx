@@ -21,6 +21,7 @@ import { BoardPanel } from './BoardPanel.js';
 import { seedWidget } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
+import { movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
@@ -81,6 +82,18 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   // its footprint) or viewed (the viewer, exactly as a shared board shows it). Pan and zoom carry over.
   const [mode, setMode] = useState<'edit' | 'view'>('edit');
   const [fileError, setFileError] = useState<string | null>(null);
+  // The anchored nodes' coordinates from before the reference points last changed or went away, until the
+  // author puts the nodes back there or leaves them (anchor-snapshot.ts).
+  // `byImage`: the points went with the image (replaced by one of another size, or removed), so the author
+  // is told to give them again; points the author edited or cleared need no telling.
+  const [anchorSnapshot, setAnchorSnapshot] = useState<{ snapshot: AnchorSnapshot; byImage: boolean } | null>(null);
+  // The first change since the last answer is what the nodes are measured against, not each keystroke's.
+  const holdAnchors = (current: ViewDocument, byImage: boolean) =>
+    setAnchorSnapshot(held => {
+      if (held) return byImage ? { ...held, byImage } : held;
+      const snapshot = snapshotAnchors(current);
+      return snapshot ? { snapshot, byImage } : null;
+    });
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
   // How many items the editor has selected. With several (a box selection), they can be moved
@@ -244,6 +257,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
       const imported = parseViewDocument(await file.text());
       setDoc(imported);
       setOpenedDoc(imported);
+      setAnchorSnapshot(null);
       setFileError(null);
     } catch (err) {
       setFileError(err instanceof InvalidViewDocumentError ? err.message : labels.importFailed);
@@ -256,8 +270,17 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     if (!file) return;
     try {
       const image = await readBackgroundImage(file);
+      // An image of the same size is taken as the same drawing redone (a plan exported again), so the points
+      // stay; any other size leaves them pointing at the wrong pixels, so they go, and the anchored nodes'
+      // coordinates are held until the new image has points.
+      const previous = doc.background.image;
+      const keepsPoints = previous?.width === image.width && previous.height === image.height;
+      if (previous?.referencePoints && !keepsPoints) holdAnchors(doc, true);
       // Onto the document as it is now — the author may have kept editing while the file was read.
-      setDoc(prev => ({ ...prev, background: { ...prev.background, image } }));
+      setDoc(prev => {
+        const points = prev.background.image?.referencePoints;
+        return { ...prev, background: { ...prev.background, image: points && keepsPoints ? { ...image, referencePoints: points } : image } };
+      });
       setFitPending(true);
       setFileError(null);
     } catch (err) {
@@ -273,6 +296,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   };
 
   const handleRemoveBackground = () => {
+    holdAnchors(doc, true);
     setDoc(prev => {
       const { image: _image, ...background } = prev.background;
       return { ...prev, background };
@@ -292,6 +316,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     setDoc(prev => ({ ...prev, nodes: prev.nodes.map(n => (n.id === selectedNodeId ? { ...n, ...change } : n)) }));
   };
   const handleReferencePointsChange = (referencePoints: [ReferencePoint, ReferencePoint] | undefined) => {
+    holdAnchors(doc, false);
     setDoc(prev => {
       if (!prev.background.image) return prev;
       const { referencePoints: _points, ...image } = prev.background.image;
@@ -443,6 +468,19 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
               onAppearanceChange={handleAppearanceChange}
               referencePoints={doc.background.image?.referencePoints}
               onReferencePointsChange={handleReferencePointsChange}
+              anchors={
+                anchorSnapshot
+                  ? {
+                      awaitingPoints: anchorSnapshot.byImage && !doc.background.image?.referencePoints,
+                      moved: movedAnchors(doc, anchorSnapshot.snapshot).length,
+                      onRelocate: () => {
+                        setDoc(prev => relocateAnchors(prev, anchorSnapshot.snapshot));
+                        setAnchorSnapshot(null);
+                      },
+                      onKeep: () => setAnchorSnapshot(null),
+                    }
+                  : undefined
+              }
               labels={labels}
             />
           )}

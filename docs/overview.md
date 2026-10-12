@@ -6,7 +6,8 @@
 
 U-Board is authoring middleware for spatial, data-bound views. An author places a background (a
 floor plan image, a network diagram, a map, or nothing at all), positions nodes on it — anchored
-to real coordinates or freely arranged — connects them where a relationship needs to be shown,
+to a place on the background (read as a real coordinate once the background declares two reference
+points) or freely arranged — connects them where a relationship needs to be shown,
 and binds each node's widget to a live data source. The result is a view that can be embedded in
 any web application.
 

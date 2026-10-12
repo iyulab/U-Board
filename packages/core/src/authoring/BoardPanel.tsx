@@ -15,8 +15,11 @@ export interface BoardPanelProps {
   onAppearanceChange: (appearance: BoardAppearance) => void;
   /** The background image's reference points, and where a change to them goes — offered while there is a
    *  background. */
-  referencePoints?: readonly ReferencePoint[];
+  referencePoints?: [ReferencePoint, ReferencePoint];
   onReferencePointsChange?: (points: [ReferencePoint, ReferencePoint] | undefined) => void;
+  /** Anchored nodes that the points' change left off their coordinates: whether the points are still to be
+   *  given again, how many nodes moved, and the two answers. */
+  anchors?: { awaitingPoints: boolean; moved: number; onRelocate: () => void; onKeep: () => void };
   labels?: UBoardLabels;
 }
 
@@ -34,6 +37,7 @@ export function BoardPanel({
   onAppearanceChange,
   referencePoints,
   onReferencePointsChange,
+  anchors,
   labels = DEFAULT_LABELS,
 }: BoardPanelProps) {
   return (
@@ -51,6 +55,22 @@ export function BoardPanel({
       </div>
       {hasBackground && onReferencePointsChange && (
         <ReferencePointsFields points={referencePoints} onChange={onReferencePointsChange} labels={labels} />
+      )}
+      {hasBackground && anchors?.awaitingPoints && (
+        <p className="ub-panel__hint" role="status">
+          {labels.referencePointsNeeded}
+        </p>
+      )}
+      {hasBackground && anchors && !anchors.awaitingPoints && anchors.moved > 0 && (
+        <div role="status" className="ub-panel__actions" style={ACTIONS_STYLE}>
+          <p className="ub-panel__hint">{labels.anchorsMoved.replace('{count}', String(anchors.moved))}</p>
+          <button type="button" className="ub-action" onClick={anchors.onRelocate}>
+            {labels.relocateAnchors}
+          </button>
+          <button type="button" className="ub-action" onClick={anchors.onKeep}>
+            {labels.keepAnchors}
+          </button>
+        </div>
       )}
       <label className="ub-panel__field ub-authoring__appearance">
         {labels.appearance}

@@ -39,6 +39,13 @@ export interface UBoardLabels {
   referencePointsApart: string;
   referencePointsIncomplete: string;
   clearReferencePoints: string;
+  /** After the reference points changed or went away with an image: that the points are to be given again
+   *  (shown while the background has none), and — once it has them — how many anchored nodes ("{count}") no
+   *  longer read as the coordinate they had, with the choice to put them back there or leave them. */
+  referencePointsNeeded: string;
+  anchorsMoved: string;
+  relocateAnchors: string;
+  keepAnchors: string;
   /** A node's anchor (`Node.anchored`), and the hint shown for an anchored node while the background has no
    *  reference points to read its coordinate by. */
   anchored: string;
@@ -226,6 +233,10 @@ export const DEFAULT_LABELS: UBoardLabels = {
   referencePointsApart: 'The two points must differ on both axes, in the image and in their coordinates.',
   referencePointsIncomplete: 'Fill in all eight numbers to save the points — until then, the saved ones stay.',
   clearReferencePoints: 'Clear reference points',
+  referencePointsNeeded: "The earlier points do not fit this image, so they were cleared. Give it its reference points — anchored nodes, if any, can then go back to their coordinates.",
+  anchorsMoved: 'Anchored nodes no longer at the coordinates they had: {count}.',
+  relocateAnchors: 'Put them back at their coordinates',
+  keepAnchors: 'Leave them',
   anchored: 'Anchored to a place on the background',
   anchorNeedsReferencePoints: 'Give the background reference points (in the board settings) to place this node by coordinate.',
   appearance: 'Tone',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { AuthoringView } from './AuthoringView';
@@ -642,6 +642,73 @@ describe('AuthoringView background image', () => {
     fireEvent.click(screen.getByText('Save'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls[0][0].background).toEqual({});
+  });
+
+  describe('reference points and anchored nodes', () => {
+    const points = [
+      { x: 100, y: 100, coordinate: { x: 126.95, y: 37.6 } },
+      { x: 700, y: 500, coordinate: { x: 127.05, y: 37.55 } },
+    ];
+    const anchoredDoc = (): ViewDocument => ({
+      ...doc(),
+      background: { image: { src: 'map.png', width: 800, height: 600, referencePoints: points as never } },
+      nodes: [{ id: 'n1', x: 196.4, y: 266, width: 160, height: 100, anchored: true, widget: { type: 'status', props: {} } }],
+    });
+    const setPoint = (n: 1 | 2, values: [number, number, number, number]) => {
+      const group = within(screen.getByRole('group', { name: `Point ${n}` }));
+      ['Image x', 'Image y', 'Coordinate x', 'Coordinate y'].forEach((name, i) =>
+        fireEvent.change(group.getByLabelText(name), { target: { value: String(values[i]) } })
+      );
+    };
+    const saved = async (onSave: ReturnType<typeof vi.fn>) => {
+      fireEvent.click(screen.getByText('Save'));
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      return onSave.mock.calls.at(-1)![0] as ViewDocument;
+    };
+
+    it('keeps the points when the image is replaced by one of the same size — the same drawing redone', async () => {
+      readBackgroundImage.mockResolvedValueOnce({ src: 'map-v2.png', width: 800, height: 600 });
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      render(<AuthoringView initialDocument={anchoredDoc()} adapters={[]} onSave={onSave} />);
+      choose();
+      await waitFor(async () => expect((await saved(onSave)).background.image?.src).toBe('map-v2.png'));
+      expect((await saved(onSave)).background.image?.referencePoints).toEqual(points);
+      expect(screen.queryByText(/do not fit this image/)).not.toBeInTheDocument();
+    });
+
+    it('clears the points of an image of another size, says so, and once given new ones puts the node back at its coordinate', async () => {
+      readBackgroundImage.mockResolvedValueOnce({ src: 'map-big.png', width: 1600, height: 1200 });
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      render(<AuthoringView initialDocument={anchoredDoc()} adapters={[]} onSave={onSave} />);
+      choose();
+      expect(await screen.findByText(/do not fit this image/)).toBeInTheDocument();
+
+      // The same places, drawn at twice the scale.
+      setPoint(1, [200, 200, 126.95, 37.6]);
+      setPoint(2, [1400, 1000, 127.05, 37.55]);
+      expect(screen.getByText('Anchored nodes no longer at the coordinates they had: 1.')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Put them back at their coordinates'));
+      expect(screen.queryByText(/no longer at the coordinates/)).not.toBeInTheDocument();
+
+      const node = (await saved(onSave)).nodes[0];
+      // Its box's center at the coordinate's place on the new image: (276.4, 316) × 2.
+      expect(node.x + 80).toBeCloseTo(552.8, 6);
+      expect(node.y + 50).toBeCloseTo(632, 6);
+    });
+
+    it('lets the author leave the nodes where they are', async () => {
+      render(<AuthoringView initialDocument={anchoredDoc()} adapters={[]} />);
+      setPoint(2, [700, 500, 127.1, 37.55]);
+      expect(screen.getByText(/no longer at the coordinates/)).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Leave them'));
+      expect(screen.queryByText(/no longer at the coordinates/)).not.toBeInTheDocument();
+    });
+
+    it('does not claim the image was the cause when the author clears the points', () => {
+      render(<AuthoringView initialDocument={anchoredDoc()} adapters={[]} />);
+      fireEvent.click(screen.getByText('Clear reference points'));
+      expect(screen.queryByText(/do not fit this image/)).not.toBeInTheDocument();
+    });
   });
 
   it('makes a dark board for a dark drawing, and a light one leaves the document as it was', async () => {

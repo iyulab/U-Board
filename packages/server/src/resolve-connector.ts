@@ -13,8 +13,9 @@ export interface ResolveResult {
   value: unknown;
   quality: ResolveQuality;
   reason?: ResolveReason;
-  /** When `value` was read from the data source (ISO 8601) — now for `live`, the last
-   * successful read for `stale`; absent for `disconnected`. The core's `ResolvedBinding.observedAt`. */
+  /** When `value` was observed (ISO 8601) — the time the source gives at `observedAtPath` when the
+   * reference names one, else the read; for `stale`, that of the last successful read; absent for
+   * `disconnected`. The core's `ResolvedBinding.observedAt`. */
   observedAt?: string;
 }
 
