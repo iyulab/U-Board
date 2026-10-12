@@ -10,6 +10,9 @@ export interface Board {
   document: ViewDocument;
   createdAt: string;
   updatedAt: string;
+  /** How many times the board has been saved, counting its creation as 1 — what a save names to say
+   *  which copy it was made against (`updateBoard`'s `expectedRevision`). */
+  revision: number;
 }
 
 interface BoardRow {
@@ -19,6 +22,7 @@ interface BoardRow {
   document: string;
   created_at: string;
   updated_at: string;
+  revision: number;
 }
 
 function rowToBoard(row: BoardRow): Board {
@@ -29,6 +33,7 @@ function rowToBoard(row: BoardRow): Board {
     document: JSON.parse(row.document),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    revision: Number(row.revision),
   };
 }
 
@@ -41,6 +46,7 @@ export async function createBoard(db: DbClient, input: { workspaceId: string; na
     document: { kind: 'canvas', background: {}, nodes: [], connectors: [] },
     createdAt: now,
     updatedAt: now,
+    revision: 1,
   };
   await db.withTransaction(async tx => {
     await tx.query(
@@ -73,26 +79,36 @@ export async function findBoard(db: DbClient, workspaceId: string, boardId: stri
   return rows[0] ? rowToBoard(rows[0]) : undefined;
 }
 
+/** What a save came to: the board as saved, no such board, or — when the save named the revision it was
+ *  made against and the board has been saved since — the revision it is at now. */
+export type UpdateBoardResult = { board: Board } | { notFound: true } | { conflict: { revision: number } };
+
+/** Saves a board's name and/or document. With `expectedRevision`, only if the board is still at that
+ *  revision — checked and bumped in one statement, so two saves of the same copy cannot both succeed. */
 export async function updateBoard(
   db: DbClient,
   workspaceId: string,
   boardId: string,
-  input: { name?: string; document?: ViewDocument }
-): Promise<Board | undefined> {
-  const existing = await findBoard(db, workspaceId, boardId);
-  if (!existing) return undefined;
-
-  const updated: Board = {
-    ...existing,
-    name: input.name ?? existing.name,
-    document: input.document ?? existing.document,
-    updatedAt: new Date().toISOString(),
-  };
-  await db.query(
-    `UPDATE boards SET name = $1, document = $2, updated_at = $3 WHERE id = $4 AND workspace_id = $5`,
-    [updated.name, JSON.stringify(updated.document), updated.updatedAt, boardId, workspaceId]
+  input: { name?: string; document?: ViewDocument },
+  expectedRevision?: number
+): Promise<UpdateBoardResult> {
+  const { rows } = await db.query<BoardRow>(
+    `UPDATE boards
+        SET name = COALESCE($1, name), document = COALESCE($2, document), updated_at = $3, revision = revision + 1
+      WHERE id = $4 AND workspace_id = $5 AND ($6::integer IS NULL OR revision = $6::integer)
+      RETURNING *`,
+    [
+      input.name ?? null,
+      input.document === undefined ? null : JSON.stringify(input.document),
+      new Date().toISOString(),
+      boardId,
+      workspaceId,
+      expectedRevision ?? null,
+    ]
   );
-  return updated;
+  if (rows[0]) return { board: rowToBoard(rows[0]) };
+  const current = await findBoard(db, workspaceId, boardId);
+  return current ? { conflict: { revision: current.revision } } : { notFound: true };
 }
 
 export async function deleteBoard(db: DbClient, workspaceId: string, boardId: string, actorUserId: string): Promise<boolean> {

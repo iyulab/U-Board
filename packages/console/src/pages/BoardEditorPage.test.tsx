@@ -39,14 +39,14 @@ const EMPTY_DOC = { kind: 'canvas' as const, background: {}, nodes: [], connecto
 
 describe('BoardEditorPage', () => {
   it('loads the board and renders the editor with a Save button', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     renderPage();
     expect(api.getBoard).toHaveBeenCalledWith('w1', 'b1');
     expect(await screen.findByText('저장')).toBeInTheDocument();
   });
 
   it('names the board in its header, and keeps the save status in one place from the start', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     renderPage();
     expect(await screen.findByRole('heading', { level: 1, name: 'Floor 1' })).toBeInTheDocument();
     // Present and empty before any edit, so the first edit fills it rather than inserting a line.
@@ -54,18 +54,18 @@ describe('BoardEditorPage', () => {
   });
 
   it('saves via updateBoard when Save is clicked', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
-    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2', revision: 2 });
     renderPage();
 
     await userEvent.click(await screen.findByText('저장'));
 
-    await waitFor(() => expect(api.updateBoard).toHaveBeenCalledWith('w1', 'b1', { document: EMPTY_DOC }));
+    await waitFor(() => expect(api.updateBoard).toHaveBeenCalledWith('w1', 'b1', { document: EMPTY_DOC }, 1));
     expect(await screen.findByRole('status')).toHaveTextContent('저장됨');
   });
 
   it('shows an error message when saving fails', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.updateBoard).mockRejectedValue(new Error('network down'));
     renderPage();
 
@@ -75,7 +75,7 @@ describe('BoardEditorPage', () => {
   });
 
   it('shows no unsaved-changes indicator right after loading', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     renderPage();
 
     await screen.findByText('저장');
@@ -84,7 +84,7 @@ describe('BoardEditorPage', () => {
   });
 
   it('shows an unsaved-changes indicator once the author edits the document', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     renderPage();
 
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
@@ -93,8 +93,8 @@ describe('BoardEditorPage', () => {
   });
 
   it('clears the unsaved-changes indicator once the save succeeds', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
-    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2', revision: 2 });
     renderPage();
 
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
@@ -106,7 +106,7 @@ describe('BoardEditorPage', () => {
   });
 
   it('keeps the unsaved-changes indicator when the save fails', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.updateBoard).mockRejectedValue(new Error('network down'));
     renderPage();
 
@@ -118,8 +118,8 @@ describe('BoardEditorPage', () => {
   });
 
   it('hides a stale "저장됨" status once the author edits again after a successful save', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
-    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2', revision: 2 });
     renderPage();
 
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
@@ -133,7 +133,7 @@ describe('BoardEditorPage', () => {
   });
 
   it('navigates back to the boards list when there are no unsaved changes', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     renderPage();
     await screen.findByText('저장');
 
@@ -143,7 +143,7 @@ describe('BoardEditorPage', () => {
   });
 
   it('confirms before navigating back when there are unsaved changes, and stays on the editor if declined', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderPage();
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
@@ -157,7 +157,7 @@ describe('BoardEditorPage', () => {
   });
 
   it('navigates back after confirming, when there are unsaved changes', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderPage();
     await userEvent.click(await screen.findByText('사각형 장식 추가'));
@@ -178,7 +178,7 @@ describe('BoardEditorPage', () => {
   });
 
   it('shows an error when the member list fails to load, and keeps the owner-only share panel hidden', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listMembers).mockRejectedValue(new Error('network down'));
     renderPage();
 
@@ -187,9 +187,9 @@ describe('BoardEditorPage', () => {
   });
 
   it('does not keep showing the previous board while the next one is still loading after an in-place navigation', async () => {
-    let resolveB2: (v: { id: string; name: string; document: typeof EMPTY_DOC; updatedAt: string }) => void;
+    let resolveB2: (v: { id: string; name: string; document: typeof EMPTY_DOC; updatedAt: string; revision: number }) => void;
     vi.mocked(api.getBoard).mockImplementation((_workspaceId: string, boardId: string) => {
-      if (boardId === 'b1') return Promise.resolve({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't' });
+      if (boardId === 'b1') return Promise.resolve({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
       return new Promise(resolve => {
         resolveB2 = resolve;
       });
@@ -217,13 +217,13 @@ describe('BoardEditorPage', () => {
     expect(screen.queryByText('저장')).not.toBeInTheDocument();
     expect(screen.getByText('불러오는 중...')).toBeInTheDocument();
 
-    resolveB2!({ id: 'b2', name: 'B', document: EMPTY_DOC, updatedAt: 't2' });
+    resolveB2!({ id: 'b2', name: 'B', document: EMPTY_DOC, updatedAt: 't2', revision: 2 });
     await screen.findByText('저장');
   });
 
   it('clears the "saved" status when a save fails after a previous successful save', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't' });
-    vi.mocked(api.updateBoard).mockResolvedValueOnce({ id: 'b1', name: 'A', updatedAt: 't2' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
+    vi.mocked(api.updateBoard).mockResolvedValueOnce({ id: 'b1', name: 'A', updatedAt: 't2', revision: 2 });
     renderPage();
 
     await userEvent.click(await screen.findByText('저장'));
@@ -239,7 +239,7 @@ describe('BoardEditorPage', () => {
 
 describe('BoardEditorPage connector wiring', () => {
   it('loads workspace connectors alongside the board document', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({
       connectors: [{ id: 'c1', name: 'Plant API', type: 'http', baseUrl: 'https://plant.example.com', authType: 'none', updatedAt: 't' }],
     });
@@ -250,7 +250,7 @@ describe('BoardEditorPage connector wiring', () => {
   });
 
   it('still renders the editor when the connector list fails to load (DemoAdapter still works)', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockRejectedValue(new Error('network'));
     renderPage();
 
@@ -263,7 +263,7 @@ describe('BoardEditorPage share panel', () => {
   const DOC = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
 
   it('hides the entire share panel for a non-owner, and never calls listShareTokens', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'm@x.com', name: 'M', role: 'member' }] });
     renderPage();
@@ -274,7 +274,7 @@ describe('BoardEditorPage share panel', () => {
   });
 
   it('owner creates a share link and sees the one-time URL', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
     vi.mocked(api.listShareTokens).mockResolvedValue({ tokens: [] });
@@ -296,7 +296,7 @@ describe('BoardEditorPage share panel', () => {
   });
 
   it('copies the new link and its embed code, and says so', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
     vi.mocked(api.createShareToken).mockResolvedValue({ id: 't1', token: 'secret', tokenMask: 'x', createdAt: 't' });
     const writeText = vi.fn().mockResolvedValue(undefined);
@@ -321,7 +321,7 @@ describe('BoardEditorPage share panel', () => {
   });
 
   it('owner picks how long a new share link lasts, and sees which links expire or have expired', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
     vi.mocked(api.listShareTokens).mockResolvedValue({ tokens: [
@@ -349,7 +349,7 @@ describe('BoardEditorPage share panel', () => {
   });
 
   it('owner revokes a share link', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
     vi.mocked(api.listShareTokens).mockResolvedValue({ tokens: [{ id: 't1', tokenMask: 'ab12cd34', createdAt: 't' }] });
@@ -365,7 +365,7 @@ describe('BoardEditorPage share panel', () => {
   });
 
   it('shows an error when the share token list fails to load', async () => {
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
     vi.mocked(api.listShareTokens).mockRejectedValue(new Error('network'));
@@ -384,9 +384,44 @@ describe('BoardEditorPage share panel', () => {
     },
   };
 
+  describe('when someone else saved the board meanwhile', () => {
+    const conflictError = () => new api.ApiError('BOARD_CHANGED', 412, { code: 'BOARD_CHANGED', revision: 5 });
+
+    it('says the change was not saved, and keeps it to save over theirs at the revision the board is at now', async () => {
+      vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
+      vi.mocked(api.updateBoard)
+        .mockRejectedValueOnce(conflictError())
+        .mockResolvedValueOnce({ id: 'b1', name: 'Floor 1', updatedAt: 't3', revision: 6 });
+      renderPage();
+      await userEvent.click(await screen.findByText('저장'));
+      expect(await screen.findByText(/다른 사람이 그사이 이 보드를 저장해/)).toBeInTheDocument();
+
+      await userEvent.click(screen.getByText('내 변경으로 덮어쓰기'));
+      await waitFor(() => expect(api.updateBoard).toHaveBeenLastCalledWith('w1', 'b1', { document: EMPTY_DOC }, 5));
+      await waitFor(() => expect(screen.queryByText(/다른 사람이 그사이/)).not.toBeInTheDocument());
+      expect(await screen.findByRole('status')).toHaveTextContent('저장됨');
+    });
+
+    it('can drop the change for the board as saved now', async () => {
+      vi.mocked(api.getBoard)
+        .mockResolvedValueOnce({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 })
+        .mockResolvedValueOnce({ id: 'b1', name: 'Floor 1 (theirs)', document: EMPTY_DOC, updatedAt: 't2', revision: 5 });
+      vi.mocked(api.updateBoard).mockRejectedValueOnce(conflictError()).mockResolvedValueOnce({ id: 'b1', name: 'x', updatedAt: 't4', revision: 6 });
+      renderPage();
+      await userEvent.click(await screen.findByText('저장'));
+      await userEvent.click(await screen.findByText('그쪽 보드 불러오기(내 변경 버림)'));
+      expect(await screen.findByRole('heading', { level: 1, name: 'Floor 1 (theirs)' })).toBeInTheDocument();
+      expect(screen.queryByText(/다른 사람이 그사이/)).not.toBeInTheDocument();
+
+      // The next save is made against the revision just read.
+      await userEvent.click(screen.getByText('저장'));
+      await waitFor(() => expect(api.updateBoard).toHaveBeenLastCalledWith('w1', 'b1', { document: EMPTY_DOC }, 5));
+    });
+  });
+
   it('warns in the share panel when the loaded document has a demo-adapter binding', async () => {
     vi.mocked(api.getBoard).mockResolvedValue({
-      id: 'b1', name: 'A', updatedAt: 't',
+      id: 'b1', name: 'A', updatedAt: 't', revision: 1,
       document: { kind: 'canvas' as const, background: {}, nodes: [DEMO_BOUND_NODE], connectors: [] },
     });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
@@ -399,7 +434,7 @@ describe('BoardEditorPage share panel', () => {
 
   it('does not warn when bindings only reference a real connector', async () => {
     vi.mocked(api.getBoard).mockResolvedValue({
-      id: 'b1', name: 'A', updatedAt: 't',
+      id: 'b1', name: 'A', updatedAt: 't', revision: 1,
       document: {
         kind: 'canvas' as const, background: {}, connectors: [],
         nodes: [{
@@ -431,10 +466,10 @@ describe('BoardEditorPage share panel', () => {
         widget: { type: 'status' as const, props: { data: { label: 'A', level: 'info' as const, value: 'x' } } },
       }],
     };
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: unboundDoc, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: unboundDoc, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
-    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'A', updatedAt: 't2' });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'A', updatedAt: 't2', revision: 2 });
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: '공유' }));
@@ -469,7 +504,7 @@ describe('BoardEditorPage binding editor wiring', () => {
       ],
       connectors: [],
     };
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: doc, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: doc, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({
       connectors: [{ id: 'c1', name: 'Plant API', type: 'http', baseUrl: 'https://plant.example.com', authType: 'none', updatedAt: 't' }],
     });
@@ -496,7 +531,7 @@ describe('BoardEditorPage binding editor wiring', () => {
       ],
       connectors: [],
     };
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: doc, updatedAt: 't' });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: doc, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     renderPage();
 

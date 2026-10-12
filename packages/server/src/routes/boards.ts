@@ -9,6 +9,20 @@ import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoar
 /** How many document issues a 400 names at most. */
 const MAX_REPORTED_ISSUES = 20;
 
+/** A board revision as an entity tag. */
+function etagOf(revision: number): string {
+  return `"${revision}"`;
+}
+
+/** The revision an If-Match header names: `undefined` when there is none or it is `*` (any current
+ *  board), a number for one strong tag of a revision, and `'unmatchable'` for anything else — a weak or
+ *  foreign tag, or a list, which no revision of a board matches. */
+function ifMatchRevision(header: string | undefined): number | undefined | 'unmatchable' {
+  if (header === undefined || header.trim() === '*') return undefined;
+  const match = /^\s*"(\d{1,9})"\s*$/.exec(header);
+  return match ? Number(match[1]) : 'unmatchable';
+}
+
 export function createBoardsRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent router's mount path
@@ -28,7 +42,7 @@ export function createBoardsRouter(config: AppConfig): Router {
       return;
     }
     const board = await createBoard(db, { workspaceId, name, actorUserId: req.userId! });
-    res.status(201).json({ id: board.id, name: board.name, updatedAt: board.updatedAt });
+    res.status(201).set('ETag', etagOf(board.revision)).json({ id: board.id, name: board.name, updatedAt: board.updatedAt, revision: board.revision });
   });
 
   router.get('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {
@@ -39,7 +53,10 @@ export function createBoardsRouter(config: AppConfig): Router {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    res.status(200).json({ id: board.id, name: board.name, document: board.document, updatedAt: board.updatedAt });
+    res
+      .status(200)
+      .set('ETag', etagOf(board.revision))
+      .json({ id: board.id, name: board.name, document: board.document, updatedAt: board.updatedAt, revision: board.revision });
   });
 
   router.put('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {
@@ -60,12 +77,28 @@ export function createBoardsRouter(config: AppConfig): Router {
         return;
       }
     }
-    const updated = await updateBoard(db, workspaceId, boardId, { name, document });
-    if (!updated) {
+    // A save names the copy it was made against with If-Match (RFC 9110 §13.1.1), the ETag its read
+    // returned. Without it the save is unconditional — the header is how a client opts in, as HTTP has it.
+    const precondition = ifMatchRevision(req.get('If-Match'));
+    if (precondition === 'unmatchable') {
+      res.status(412).json({ code: 'BOARD_CHANGED', revision: (await findBoard(db, workspaceId, boardId))?.revision });
+      return;
+    }
+    const result = await updateBoard(db, workspaceId, boardId, { name, document }, precondition);
+    if ('notFound' in result) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    res.status(200).json({ id: updated.id, name: updated.name, updatedAt: updated.updatedAt });
+    if ('conflict' in result) {
+      // Someone saved the board since this copy was read: refused, with the revision it is at now.
+      res.status(412).json({ code: 'BOARD_CHANGED', revision: result.conflict.revision });
+      return;
+    }
+    const { board } = result;
+    res
+      .status(200)
+      .set('ETag', etagOf(board.revision))
+      .json({ id: board.id, name: board.name, updatedAt: board.updatedAt, revision: board.revision });
   });
 
   router.delete('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {

@@ -202,7 +202,7 @@ describe('BoardsListPage', () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: `new-${input.name}`, type: 'http', updatedAt: 't', ...input, attribution: input.attribution ?? undefined }));
     vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't' });
-    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't', revision: 2 });
     renderPage();
     await userEvent.click(await screen.findByRole('button', { name: '첫 보드 만들기' }));
     await userEvent.click(await screen.findByRole('button', { name: '서울 도심 미세먼지 샘플로 만들기' }));
@@ -221,7 +221,7 @@ describe('BoardsListPage', () => {
       connectors: [{ id: 'mine', name: '내 키', type: 'http', baseUrl: 'http://openapi.seoul.go.kr:8088/{key}', authType: 'path', updatedAt: 't' }],
     });
     vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't' });
-    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't', revision: 2 });
     renderPage();
     await userEvent.click(await screen.findByRole('button', { name: '첫 보드 만들기' }));
     await userEvent.type(screen.getByLabelText('보드 이름'), '광장');

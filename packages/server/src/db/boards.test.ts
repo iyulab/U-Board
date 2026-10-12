@@ -51,16 +51,39 @@ describe('board repository', () => {
     const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     await new Promise(r => setTimeout(r, 2)); // ensure a distinguishable ISO timestamp
     const newDoc = { kind: 'canvas' as const, background: {}, nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status' } }], connectors: [] };
-    const updated = await updateBoard(db, workspaceId, board.id, { name: 'Renamed', document: newDoc });
-    expect(updated).toMatchObject({ name: 'Renamed', document: newDoc });
-    expect(updated!.updatedAt).not.toBe(board.updatedAt);
-    expect(updated!.createdAt).toBe(board.createdAt);
+    const result = await updateBoard(db, workspaceId, board.id, { name: 'Renamed', document: newDoc });
+    if (!('board' in result)) throw new Error('expected the board');
+    expect(result.board).toMatchObject({ name: 'Renamed', document: newDoc, revision: 2 });
+    expect(result.board.updatedAt).not.toBe(board.updatedAt);
+    expect(result.board.createdAt).toBe(board.createdAt);
   });
 
-  it('updateBoard returns undefined for a board in another workspace', async () => {
+  it('starts a board at revision 1 and counts each save', async () => {
+    const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
+    expect(board.revision).toBe(1);
+    await updateBoard(db, workspaceId, board.id, { name: 'B' });
+    await updateBoard(db, workspaceId, board.id, { name: 'C' });
+    expect((await findBoard(db, workspaceId, board.id))?.revision).toBe(3);
+  });
+
+  it('saves against the revision it names, and refuses a save made against an older one', async () => {
+    const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
+    expect('board' in (await updateBoard(db, workspaceId, board.id, { name: 'Mine' }, 1))).toBe(true);
+    // A second save of the same copy (revision 1) would overwrite the first one unseen.
+    expect(await updateBoard(db, workspaceId, board.id, { name: 'Theirs' }, 1)).toEqual({ conflict: { revision: 2 } });
+    expect((await findBoard(db, workspaceId, board.id))?.name).toBe('Mine');
+  });
+
+  it('keeps what a save leaves out', async () => {
+    const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
+    await updateBoard(db, workspaceId, board.id, { name: 'Renamed' });
+    expect((await findBoard(db, workspaceId, board.id))?.document).toEqual(board.document);
+  });
+
+  it('updateBoard finds no board in another workspace', async () => {
     const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     const otherWorkspaceId = (await createWorkspace(db, 'Other')).id;
-    expect(await updateBoard(db, otherWorkspaceId, board.id, { name: 'X' })).toBeUndefined();
+    expect(await updateBoard(db, otherWorkspaceId, board.id, { name: 'X' })).toEqual({ notFound: true });
   });
 
   it('deletes a board and returns true, false if it did not exist', async () => {

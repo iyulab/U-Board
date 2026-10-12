@@ -62,6 +62,7 @@ describe('public share routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Board A');
     expect(res.body.document).toEqual(doc);
+    expect(res.body.revision).toBe(2);
     expect(res.body.connectorIds).toEqual([connector.id]);
   });
 
@@ -178,7 +179,8 @@ describe('public share routes', () => {
         { connectorId: a.id, ref: { path: '/assets', valuePath: 'value.0.Status' } },
       ] });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ results: [
+    // The board's revision rides along — created, then saved once with these bindings.
+    expect(res.body).toEqual({ revision: 2, results: [
       { value: true, quality: 'live', observedAt: expect.any(String) },
       { value: 'Fault', quality: 'live', observedAt: expect.any(String) },
       { value: 'Running', quality: 'live', observedAt: expect.any(String) },
@@ -270,6 +272,6 @@ describe('public share routes', () => {
       .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
       .send({ bindings: [{ connectorId: binding.adapter, ref: binding.ref }] });
     expect(resolveRes.status).toBe(200);
-    expect(resolveRes.body).toEqual({ results: [{ value: 'running', quality: 'live', observedAt: expect.any(String) }] });
+    expect(resolveRes.body).toEqual({ revision: 2, results: [{ value: 'running', quality: 'live', observedAt: expect.any(String) }] });
   });
 });

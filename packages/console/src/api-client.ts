@@ -195,14 +195,22 @@ export function createBoard(workspaceId: string, name: string) {
 }
 
 export function getBoard(workspaceId: string, boardId: string) {
-  return request<{ id: string; name: string; document: ViewDocument; updatedAt: string }>(
+  return request<{ id: string; name: string; document: ViewDocument; updatedAt: string; revision: number }>(
     `/workspaces/${workspaceId}/boards/${boardId}`
   );
 }
 
-export function updateBoard(workspaceId: string, boardId: string, input: { name?: string; document?: ViewDocument }) {
-  return request<{ id: string; name: string; updatedAt: string }>(`/workspaces/${workspaceId}/boards/${boardId}`, {
+/** Saves a board. With `revision` — the one its copy was read at — only if nobody has saved it since:
+ *  otherwise it fails with `ApiError` `BOARD_CHANGED` (412), whose body names the revision it is at now. */
+export function updateBoard(
+  workspaceId: string,
+  boardId: string,
+  input: { name?: string; document?: ViewDocument },
+  revision?: number
+) {
+  return request<{ id: string; name: string; updatedAt: string; revision: number }>(`/workspaces/${workspaceId}/boards/${boardId}`, {
     method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...(revision === undefined ? {} : { 'If-Match': `"${revision}"` }) },
     body: JSON.stringify(input),
   });
 }

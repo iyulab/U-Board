@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS boards (
 );
 
 CREATE INDEX IF NOT EXISTS idx_boards_workspace_id ON boards(workspace_id);
+-- Counts the board's saves, so a save made against an older copy is refused instead of silently
+-- overwriting the one in between (HTTP If-Match), and an open share link knows its document changed.
+ALTER TABLE boards ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 1;
 
 CREATE TABLE IF NOT EXISTS connectors (
   id TEXT PRIMARY KEY,

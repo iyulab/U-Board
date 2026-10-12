@@ -116,6 +116,53 @@ describe('boards routes', () => {
     expect(res.status).toBe(404);
   });
 
+  describe('saving against the copy that was read (If-Match)', () => {
+    const board = () => `/api/workspaces/${workspaceId}/boards`;
+    async function created() {
+      const res = await request(app).post(board()).set('Cookie', memberCookie).send({ name: 'B' });
+      return res.body.id as string;
+    }
+
+    it("tags a read with the board's revision", async () => {
+      const id = await created();
+      const res = await request(app).get(`${board()}/${id}`).set('Cookie', memberCookie);
+      expect(res.headers.etag).toBe('"1"');
+      expect(res.body.revision).toBe(1);
+    });
+
+    it('saves when If-Match names the current revision, and tags the answer with the next', async () => {
+      const id = await created();
+      const res = await request(app).put(`${board()}/${id}`).set('Cookie', memberCookie).set('If-Match', '"1"').send({ name: 'Mine' });
+      expect(res.status).toBe(200);
+      expect(res.headers.etag).toBe('"2"');
+      expect(res.body.revision).toBe(2);
+    });
+
+    it('refuses with 412 a save made against a revision someone has saved over, naming the current one', async () => {
+      const id = await created();
+      await request(app).put(`${board()}/${id}`).set('Cookie', memberCookie).set('If-Match', '"1"').send({ name: 'Theirs' });
+      const res = await request(app).put(`${board()}/${id}`).set('Cookie', memberCookie).set('If-Match', '"1"').send({ name: 'Mine' });
+      expect(res.status).toBe(412);
+      expect(res.body).toEqual({ code: 'BOARD_CHANGED', revision: 2 });
+      const read = await request(app).get(`${board()}/${id}`).set('Cookie', memberCookie);
+      expect(read.body.name).toBe('Theirs');
+    });
+
+    it('treats a tag no revision has — weak, foreign, a list — as not matching', async () => {
+      const id = await created();
+      for (const tag of ['W/"1"', 'abc', '"1", "2"']) {
+        const res = await request(app).put(`${board()}/${id}`).set('Cookie', memberCookie).set('If-Match', tag).send({ name: 'X' });
+        expect(res.status).toBe(412);
+      }
+    });
+
+    it('saves unconditionally without If-Match, or with *', async () => {
+      const id = await created();
+      expect((await request(app).put(`${board()}/${id}`).set('Cookie', memberCookie).send({ name: 'A' })).status).toBe(200);
+      expect((await request(app).put(`${board()}/${id}`).set('Cookie', memberCookie).set('If-Match', '*').send({ name: 'B' })).status).toBe(200);
+    });
+  });
+
   it('returns 400 INVALID_INPUT when PUT has an empty name', async () => {
     const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
     const boardId = create.body.id;

@@ -11,6 +11,17 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- **A save no longer overwrites someone else's unseen.** Each board counts its saves (`revision`); reading a board
+  answers with it as an `ETag`, and a save that names the copy it was made against (`If-Match`) is refused with
+  `412` (`BOARD_CHANGED`, with the revision the board is at now) when someone has saved it since. The console
+  saves this way: when two people edit the same board, the second to save is told so and chooses between loading
+  the board as saved and keeping their own over it. A save without `If-Match` stays unconditional.
+- **A node whose value is not current says why, on screen** — the cause and the age in its corner ("원천 갱신 늦음
+  · 1분 전"), readable on a wall display with no tooltip to hover (see `@iyulab/u-board`).
+- **Anchored nodes keep their coordinates when the background changes** (see `@iyulab/u-board`).
+
 ## [0.1.6] - 2026-10-10
 
 ### Added

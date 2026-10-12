@@ -102,6 +102,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     res.status(200).json({
       name: board.name,
       document: board.document,
+      revision: board.revision,
       ...(await connectorsForViewer(db, token.workspaceId, board.document)),
     });
   });
@@ -146,7 +147,9 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
         return resolveConnectorValue(connector, target, ref, resolveState);
       })
     );
-    res.status(200).json({ results });
+    // The board's revision rides along, so an open viewer learns its document was saved again since it
+    // was read — and reads it again — without a request of its own.
+    res.status(200).json({ results, revision: board.revision });
   });
 
   return router;
