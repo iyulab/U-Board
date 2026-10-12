@@ -297,7 +297,12 @@ export async function createDb(url: string): Promise<Database> {
   }
   // `:memory:` (tests) or any local path (local `npm run dev` default) both use PGlite — a real
   // Postgres engine compiled to WASM, not a mock, so the SQL executed is identical to production.
-  const pglite = url === ':memory:' ? new PGlite() : new PGlite(url);
+  return openPglite(url === ':memory:' ? new PGlite() : new PGlite(url));
+}
+
+/** An embedded PGlite engine as a database, its schema brought up to date — the one path every
+ *  PGlite database takes, whether the engine starts empty or from a prepared data directory. */
+export async function openPglite(pglite: PGlite): Promise<Database> {
   await pglite.exec(SCHEMA_SQL); // .exec (not .query) runs the semicolon-separated statement list
   return Object.assign(new PgliteDbClient(pglite, pglite), { close: () => pglite.close() });
 }

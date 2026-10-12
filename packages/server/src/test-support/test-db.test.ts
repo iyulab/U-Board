@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createTestDb } from './test-db.js';
+import { createIsolatedTestDb, createTestDb } from './test-db.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace } from '../db/workspaces.js';
 
@@ -32,6 +32,19 @@ describe('createTestDb', () => {
   it('fails loudly, naming the fix, when an earlier test changed the schema', async () => {
     const db = await createTestDb();
     await db.query('DROP TABLE password_reset_tokens');
-    await expect(createTestDb()).rejects.toThrow(/schema.*createDb/);
+    await expect(createTestDb()).rejects.toThrow(/schema.*createIsolatedTestDb/);
+  });
+
+  it('gives a test that changes the schema an engine of its own, with the full schema and no rows', async () => {
+    const shared = await createTestDb();
+    const own = await createIsolatedTestDb();
+    try {
+      await own.query('DROP TABLE password_reset_tokens');
+      // The shared engine is untouched: its schema still has the table the isolated one dropped.
+      expect((await shared.query('SELECT * FROM password_reset_tokens')).rows).toEqual([]);
+      expect((await own.query('SELECT * FROM users')).rows).toEqual([]);
+    } finally {
+      await own.close();
+    }
   });
 });

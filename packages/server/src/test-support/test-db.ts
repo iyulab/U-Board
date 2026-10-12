@@ -1,9 +1,13 @@
-import { createDb, type DbClient } from '../db.js';
+import { readFileSync } from 'node:fs';
+import { PGlite } from '@electric-sql/pglite';
+import { inject } from 'vitest';
+import { openPglite, type Database, type DbClient } from '../db.js';
 
-// Starting an in-memory PGlite and applying the schema costs about a second on an idle machine,
-// and several times that when every test file does it in parallel — enough to push individual
-// tests past vitest's 5s timeout. Vitest runs each test file in its own module scope, so this
-// holds one engine per test file; each call empties it instead of starting another.
+// Starting a PGlite engine is mostly `initdb`, which the global setup (pglite-template.ts) runs once
+// for the whole run; an engine here starts from the data directory it saved, schema included. Vitest
+// runs each test file in its own module scope, so `createTestDb` still holds one engine per test
+// file and empties it on each call instead of starting another.
+let template: Blob | undefined;
 let shared: Promise<{ db: DbClient; tables: string }> | undefined;
 
 async function listTables(db: DbClient): Promise<string[]> {
@@ -23,16 +27,23 @@ export async function truncateAllTables(db: DbClient): Promise<void> {
   }
 }
 
+/** A database of its own — a new engine with the full schema and no rows — for a test that changes
+ *  the schema (drops a table to force a failure, say), which the shared one cannot undo. Close it
+ *  when done. */
+export async function createIsolatedTestDb(): Promise<Database> {
+  template ??= new Blob([readFileSync(inject('pgliteTemplate'))]);
+  return openPglite(new PGlite({ loadDataDir: template }));
+}
+
 /** A database with the full schema and no rows. Every call in the same test file returns the
  *  same client, emptied — so call it once per test (e.g. in `beforeEach`), not once per suite.
  *
- *  A test that changes the schema itself (drops a table to force a failure, say) must use its
- *  own `createDb(':memory:')` instead: emptying rows cannot undo a schema change, so it would
- *  leak into every later test in the file. That case is detected and reported here rather than
- *  surfacing as unrelated failures further down. */
+ *  A test that changes the schema itself must use `createIsolatedTestDb` instead: emptying rows
+ *  cannot undo a schema change, so it would leak into every later test in the file. That case is
+ *  detected and reported here rather than surfacing as unrelated failures further down. */
 export async function createTestDb(): Promise<DbClient> {
   shared ??= (async () => {
-    const db = await createDb(':memory:');
+    const db = await createIsolatedTestDb();
     return { db, tables: (await listTables(db)).join(',') };
   })();
   const { db, tables } = await shared;
@@ -42,7 +53,7 @@ export async function createTestDb(): Promise<DbClient> {
     shared = undefined;
     throw new Error(
       'An earlier test in this file changed the database schema, so the shared test database ' +
-        "can't be reused. Give that test its own database with createDb(':memory:')."
+        "can't be reused. Give that test its own database with createIsolatedTestDb()."
     );
   }
   await truncateAllTables(db);

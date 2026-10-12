@@ -12,8 +12,11 @@ export default defineConfig({
     // split (packages/core, packages/console) for the same reason: expensive,
     // environment-dependent checks get their own invocation, not bundled into the default one.
     exclude: [...configDefaults.exclude, '**/*.postgres.test.ts'],
-    // Most tests here start (or are the first in their file to start) a PGlite engine, which takes
-    // 1–2s on an idle machine and several times that while every test file does it in parallel.
+    // Runs `initdb` once for the run and saves the data directory every test file's PGlite engine
+    // starts from (src/test-support/pglite-template.ts) — start-up is mostly `initdb`.
+    globalSetup: ['src/test-support/pglite-template.ts'],
+    // Most tests here start (or are the first in their file to start) a PGlite engine. From the
+    // prepared data directory that is a few hundred milliseconds, more while every file does it at once.
     // Vitest already gives hooks 10s for exactly that startup when it happens in `beforeEach`; a
     // test that starts the engine in its own body pays the same cost and gets the same budget,
     // instead of the 5s default that it overran whenever the machine was busy.

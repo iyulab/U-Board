@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, onTestFinished, vi } from 'vitest';
 import request from 'supertest';
-import { createDb, type DbClient } from '../db.js';
-import { createTestDb } from '../test-support/test-db.js';
+import type { DbClient } from '../db.js';
+import { createIsolatedTestDb, createTestDb } from '../test-support/test-db.js';
 import { createApp } from '../app.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
@@ -142,7 +142,9 @@ describe('POST /auth/signup', () => {
     // Makes `addWorkspaceUser` — the last write of the sequence — fail, after the workspace and
     // the user rows have already been inserted within the same transaction. Dropping a table
     // changes the schema, so this test gets its own database instead of the shared one.
-    db = await createDb(':memory:');
+    const own = await createIsolatedTestDb();
+    onTestFinished(() => own.close());
+    db = own;
     app = createApp({ db, sessionSecret: SECRET });
     await db.query('DROP TABLE workspace_users');
 
