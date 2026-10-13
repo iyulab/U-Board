@@ -184,8 +184,6 @@ simply did not provide that adapter.
 ### Describing connection quality
 
 ```ts
-const QUALITY_LABEL: Partial<Record<ConnectionQuality, string>>; // stale, disconnected
-const REASON_LABEL: Record<QualityReason, string>;
 interface QualityText {
   quality: Partial<Record<ConnectionQuality, string>>;
   reason: Record<QualityReason, string>;
@@ -195,7 +193,7 @@ interface QualityText {
     reason: Record<QualityReason, string>;
   };
 }
-const DEFAULT_QUALITY_TEXT: QualityText; // { quality: QUALITY_LABEL, reason: REASON_LABEL, age: ageText('en'), brief: … }
+const DEFAULT_QUALITY_TEXT: QualityText; // the English words, age by ageText('en')
 function ageText(locale: string): (elapsedMs: number) => string;
 function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined;
 type QualitySummary = Pick<ResolvedWidget, 'quality' | 'reasons' | 'observedAt'>;
@@ -370,8 +368,10 @@ after the read does too, since a source cannot have observed it yet — the usua
 
 `readHttpRef(body, ref, readAt, now?)` is that reading of a parsed response — the value, its observed
 time (epoch ms) and whether it is `lagging` at `now` (the read, by default), or why it failed (`address`: the response lacks what the reference names; `format`:
-it has it in a form the reference cannot read). `isHttpRef(ref)` checks the shape, and
-`parseSourceTime(raw, timeZone?)` reads one time. All are exported from `@iyulab/u-board/domain`.
+it has it in a form the reference cannot read). `resolvedReading(reading)` turns a reading that found its
+value into the binding's result — `live`, or `stale` with reason `lagging` — so every reader of a reference
+reports it alike. `isHttpRef(ref)` checks the shape, and `parseSourceTime(raw, timeZone?)` reads one time.
+All are exported from `@iyulab/u-board/domain`.
 
 ### `Widget`
 
@@ -430,8 +430,6 @@ points.
 - `coordinateOf(background, node)` — the coordinate a node is anchored at.
 - `placeAt(background, node, coordinate)` — where a node goes (`x`/`y`) for its anchor to be at a
   coordinate.
-- `coordinateAt(background, point)` / `pointAt(background, coordinate)` — the same mapping for any point.
-- `anchorPoint(node)` — a node's anchor in scene units.
 
 Each returns `null` for a background without reference points. Each axis maps linearly between the two
 points, which differ on both axes in the image and in their coordinates (`validateViewDocument` checks
@@ -506,19 +504,17 @@ A `ViewDocument` that comes from outside your own code — a file the author pic
 body — should be checked before anything renders it. These functions do that, and the hosted
 server applies the same check to every document it stores.
 
-### `validateViewDocument(value)` / `isViewDocumentShape(value)`
+### `validateViewDocument(value)`
 
 ```ts
 interface ViewDocumentIssue { path: string; message: string }
 function validateViewDocument(value: unknown): ViewDocumentIssue[];
-function isViewDocumentShape(value: unknown): value is ViewDocument;
 ```
 
 `validateViewDocument` checks every field the `ViewDocument` type promises — nodes, each widget
 and binding, connectors, decorations, the background — and returns every problem it finds, each
 located by an RFC 6901 JSON Pointer into the value
-(`""` is the value itself). An empty array means the value is a valid document;
-`isViewDocumentShape` is that test as a type guard.
+(`""` is the value itself). An empty array means the value is a valid document.
 
 It checks structure only: a binding's `ref` belongs to its adapter and a widget's `type`/`props`
 (and the values a binding's `map` gives) to its widget library, so their contents are not inspected; references between parts of a

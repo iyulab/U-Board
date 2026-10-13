@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useEffectEvent, useMemo, useState, type CSSProperties } from 'react';
 import { Viewer } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
 import { documentExtent } from './document-extent.js';
@@ -6,13 +6,12 @@ import { useFittedView } from './use-fitted-view.js';
 import { ViewControls } from './ViewControls.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
-import { parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
-import { TOOLBAR_STYLE, ERROR_STYLE, MUTED_STYLE } from '../ui-style.js';
+import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from './attribution.js';
 
 export interface ViewerPageProps {
@@ -21,12 +20,10 @@ export interface ViewerPageProps {
    * `ViewerPage` then fills its parent, so give the parent a definite size. */
   width?: number;
   height?: number;
-  /** The document to show. Given, it renders at once with no import control (the embed case);
-   * omitted, the page offers an Import button that opens a local document file. A different
-   * document given later replaces it — a board saved again while it is open — keeping the user's
-   * pan and zoom unless the new one covers a different area. Pass the same object until the
-   * document changes: each new one is resolved again. */
-  document?: ViewDocument;
+  /** The document to show. A different document given later replaces it — a board saved again while
+   * it is open — keeping the user's pan and zoom unless the new one covers a different area. Pass the
+   * same object until the document changes: each new one is resolved again. */
+  document: ViewDocument;
   /** Re-resolve the bindings every this many milliseconds, so values and connection quality stay
    * current. Omitted, bindings resolve once when the document opens. */
   pollIntervalMs?: number;
@@ -46,7 +43,7 @@ export interface ViewerPageProps {
 }
 
 /**
- * A read-only view of an imported ViewDocument — no `KonvaDesigner`, no editing controls. It opens
+ * A read-only view of a ViewDocument — no `KonvaDesigner`, no editing controls. It opens
  * with the whole document fitted into view (shrunk to fit, never magnified) and keeps it fitted as
  * the view resizes until the user pans or zooms; "Fit to view" brings that back. Refreshed binding
  * values (polling) leave the user's pan/zoom alone. This
@@ -66,36 +63,25 @@ export function ViewerPage({
   attribution = true,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
-  const [doc, setDoc] = useState<ViewDocument | null>(document ?? null);
-  // A new document from the host is shown as it arrives; the first one is already the state.
-  const shownDocument = useRef(document);
-  useEffect(() => {
-    if (!document || document === shownDocument.current) return;
-    shownDocument.current = document;
-    setDoc(document);
-  }, [document]);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
-  const [importError, setImportError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Read when a result is drawn, not watched: a new function on every render must not redraw the view.
   const readClock = useEffectEvent(() => clock());
-  const { resolved: received, resolvedAt, stalled } = useResolvedDocument(doc, adapters, { pollIntervalMs, clock });
+  const { resolved: received, resolvedAt, stalled } = useResolvedDocument(document, adapters, { pollIntervalMs, clock });
   // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
 
   // Kept while the area stays the same, so a document replaced in place leaves the view where it is.
-  const extentKey = doc ? JSON.stringify(documentExtent(doc)) : null;
-  const extent = useMemo(() => (extentKey ? (JSON.parse(extentKey) as ReturnType<typeof documentExtent>) : null), [extentKey]);
-  const attributions = useMemo(() => (doc && attribution ? boardAttributions(doc, adapters) : []), [doc, adapters, attribution]);
+  const extentKey = JSON.stringify(documentExtent(document));
+  const extent = useMemo(() => JSON.parse(extentKey) as ReturnType<typeof documentExtent>, [extentKey]);
+  const attributions = useMemo(() => (attribution ? boardAttributions(document, adapters) : []), [document, adapters, attribution]);
   const view = useFittedView();
   const { fitTo } = view;
-  // Fit whenever a document covering a new area is loaded — not on a preview refresh, which is only
+  // Fit whenever a document covering a new area is shown — not on a preview refresh, which is only
   // new values for the same document, nor on a document replaced within the same area.
   useEffect(() => {
     fitTo(extent);
   }, [fitTo, extent]);
-  const viewerShown = preview !== null;
 
   useEffect(() => {
     if (!resolved) {
@@ -105,54 +91,16 @@ export function ViewerPage({
     setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
   }, [resolved, labels]);
 
-  const handleImportClick = () => fileInputRef.current?.click();
-
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // allow re-selecting the same file later
-    if (!file) return;
-
-    try {
-      setDoc(parseViewDocument(await file.text()));
-      setImportError(null);
-    } catch (err) {
-      setImportError(err instanceof InvalidViewDocumentError ? err.message : labels.importFailed);
-    }
-  };
-
   return (
     <div className="ub-viewer" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {(!document || viewerShown) && (
+      {preview && (
         <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
-          {!document && (
-            <>
-              <button type="button" className="ub-action" onClick={handleImportClick}>
-                {labels.import}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="application/json"
-                onChange={handleImportFile}
-                style={{ display: 'none' }}
-              />
-            </>
-          )}
-          {viewerShown && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
-          {viewerShown && pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
+          <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />
+          {pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
         </div>
       )}
-      {importError && (
-        <p role="alert" className="ub-viewer__error" style={ERROR_STYLE}>
-          {importError}
-        </p>
-      )}
-      {!doc ? (
-        <p className="ub-viewer__status" style={MUTED_STYLE}>
-          {labels.noDocument}
-        </p>
-      ) : preview ? (
-        <div className="ub-viewer__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
+      {preview ? (
+        <div className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
           <Viewer
             width={width}
             height={height}

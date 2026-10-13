@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validateViewDocument, isViewDocumentShape } from './validate-view-document';
+import { validateViewDocument } from './validate-view-document';
 import type { ViewDocument } from './view-document';
 
 const valid: ViewDocument = {
@@ -149,9 +149,3 @@ describe('validateViewDocument', () => {
   });
 });
 
-describe('isViewDocumentShape', () => {
-  it('is true exactly when validateViewDocument finds nothing', () => {
-    expect(isViewDocumentShape(valid)).toBe(true);
-    expect(isViewDocumentShape(broken(d => { d.nodes[0].widget.bindings['data.value'] = null; }))).toBe(false);
-  });
-});

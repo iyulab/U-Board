@@ -15,8 +15,8 @@ import {
   type ConnectorOAuthSettings,
   type ConnectorSummary,
   PATH_KEY_PLACEHOLDER,
-  type ConnectorAttribution,
 } from '../db/connectors.js';
+import type { Attribution } from '@iyulab/u-board/domain';
 import { isValidRef, buildResolveTarget, resolveConnectorValue, testConnector, forgetConnector, type ResolveState } from '../resolve-connector.js';
 
 const OAUTH = 'oauth2-client-credentials';
@@ -46,7 +46,7 @@ const ATTRIBUTION_MAX_LENGTH = 200;
 
 /** A request's `attribution`: `undefined` when absent (leave it), `null` to clear it, the credit to store,
  *  or `false` when it is not one — text required, and a link, if any, an absolute http(s) URL. */
-function parseAttribution(value: unknown): ConnectorAttribution | null | undefined | false {
+function parseAttribution(value: unknown): Attribution | null | undefined | false {
   if (value === undefined || value === null) return value;
   if (typeof value !== 'object') return false;
   const { text, url } = value as { text?: unknown; url?: unknown };

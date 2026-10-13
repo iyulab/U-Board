@@ -1,5 +1,3 @@
-import type { ViewDocument } from './view-document.js';
-
 /** One way a value fails to be a `ViewDocument`: where (an RFC 6901 JSON Pointer into the value,
  * `""` for the value itself) and what was expected there. */
 export interface ViewDocumentIssue {
@@ -61,11 +59,6 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
   }
 
   return issues;
-}
-
-/** True when `value` is a valid `ViewDocument` — `validateViewDocument` found nothing. */
-export function isViewDocumentShape(value: unknown): value is ViewDocument {
-  return validateViewDocument(value).length === 0;
 }
 
 /** Two points, each a place on the image and its coordinate, apart on both axes in both — a mapping from

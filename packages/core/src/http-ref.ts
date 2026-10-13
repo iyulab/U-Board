@@ -6,6 +6,8 @@
  * viewer another.
  */
 
+import type { ResolvedBinding } from './adapter.js';
+
 /** One item of a list in the response, named by its fields rather than its place: the first element of the
  *  array at `list` (a JSON Pointer) whose fields equal every one in `where`. A source's list can come in
  *  another order, or with an item missing, from one read to the next — a position would then name another
@@ -149,6 +151,16 @@ export function readHttpRef(body: unknown, ref: HttpRef, readAt: number, now = r
   return { ...reading, lagging };
 }
 
+/** A reading that found its value, as the binding's result: `live`, or `stale` for the cause `lagging`
+ *  when the source's value is older than the reference allows — the value shown either way, with the time
+ *  the source observed it. One place for what every reader of a reference (a server, a recording) reports. */
+export function resolvedReading(reading: Extract<HttpRefReading, { ok: true }>): ResolvedBinding {
+  const observedAt = new Date(reading.observedAt).toISOString();
+  return reading.lagging
+    ? { value: reading.value, quality: 'stale', reason: 'lagging', observedAt }
+    : { value: reading.value, quality: 'live', observedAt };
+}
+
 function readValueAndTime(
   body: unknown,
   ref: HttpRef,
@@ -202,6 +214,12 @@ const COMPACT = /^(\d{4})(\d{2})(\d{2})(?:[T ]?(\d{2})(\d{2})(\d{2})?)?$/;
  * (ISO 8601 and the variations sources write) or compact (`202610091900`). A time without an offset is a
  * wall-clock time in `timeZone`, or in UTC when none is given.
  */
+/** Whether text is a run of 10 or 13 digits — epoch seconds or milliseconds to `parseSourceTime`, though
+ *  as often an id; the binding form does not offer such text as a time. */
+export function isEpochText(text: string): boolean {
+  return /^\d{10}$|^\d{13}$/.test(text.trim());
+}
+
 export function parseSourceTime(raw: unknown, timeZone?: string): number | null {
   if (typeof raw === 'number') {
     if (Number.isInteger(raw) && /^(19|20|21)\d{6}(\d{4}(\d{2})?)?$/.test(String(raw))) {
@@ -212,7 +230,7 @@ export function parseSourceTime(raw: unknown, timeZone?: string): number | null 
   }
   if (typeof raw !== 'string') return null;
   const text = raw.trim();
-  if (/^\d{10}$|^\d{13}$/.test(text)) return parseSourceTime(Number(text));
+  if (isEpochText(text)) return parseSourceTime(Number(text));
   const delimited = DELIMITED.exec(text);
   const parts = delimited ?? COMPACT.exec(text);
   if (!parts) return null;

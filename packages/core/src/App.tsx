@@ -162,12 +162,11 @@ export function App() {
       ) : (
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>
-            Read-only — import a ViewDocument (e.g. one exported from Author mode) and it renders
-            through the same path a standalone viewer app would use, with no editing controls and
-            no dependency on the designer.
+            Read-only — the demo document through the same path a standalone viewer app would use,
+            with no editing controls and no dependency on the designer.
           </p>
           <div style={{ height: 560, maxWidth: 900 }}>
-            <ViewerPage adapters={adapters} />
+            <ViewerPage document={demoDocument} adapters={adapters} />
           </div>
         </>
       )}

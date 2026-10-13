@@ -411,11 +411,6 @@
   padding-bottom: var(--_ub-space-2);
 }
 
-.ub-viewer__error {
-  margin: 0 0 var(--_ub-space-2);
-  font-size: var(--_ub-font-md);
-}
-
 .ub-freshness {
   font-size: var(--_ub-font-md);
 }

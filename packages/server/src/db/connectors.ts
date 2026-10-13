@@ -1,4 +1,5 @@
 import type { DbClient } from '../db.js';
+import type { Attribution } from '@iyulab/u-board/domain';
 import { randomUUID } from 'node:crypto';
 import type { ClientAuthMethod } from '../oauth-client-credentials.js';
 import { recordAuditEvent } from './audit.js';
@@ -10,11 +11,6 @@ import { UNSEALED, isSealed, type SecretBox } from '../secret-box.js';
  * open-data APIs do; the key is put in at request time, so it never appears in a board. */
 export type ConnectorAuthType = 'none' | 'bearer' | 'header' | 'query' | 'path' | 'oauth2-client-credentials';
 
-/** How a connector's source asks to be named where its data is shown — the core's `Attribution`. */
-export interface ConnectorAttribution {
-  text: string;
-  url?: string;
-}
 
 /** Where a `path` connector's base URL takes its key. */
 export const PATH_KEY_PLACEHOLDER = '{key}';
@@ -41,7 +37,7 @@ export interface Connector extends ConnectorOAuthSettings {
   authParamName?: string;
   authValue?: string;
   /** How the source is credited under a board that shows its data. */
-  attribution?: ConnectorAttribution;
+  attribution?: Attribution;
   createdAt: string;
   updatedAt: string;
 }
@@ -54,7 +50,7 @@ export interface ConnectorSummary extends ConnectorOAuthSettings {
   authType: ConnectorAuthType;
   authHeaderName?: string;
   authParamName?: string;
-  attribution?: ConnectorAttribution;
+  attribution?: Attribution;
   updatedAt: string;
 }
 
@@ -92,7 +88,7 @@ interface ConnectorSummaryRow extends OAuthColumns {
   updated_at: string;
 }
 
-function attributionFromRow(row: OAuthColumns): ConnectorAttribution | undefined {
+function attributionFromRow(row: OAuthColumns): Attribution | undefined {
   return row.attribution_text === null ? undefined : { text: row.attribution_text, url: row.attribution_url ?? undefined };
 }
 
@@ -133,7 +129,7 @@ export async function createConnector(
     authHeaderName?: string;
     authParamName?: string;
     authValue?: string;
-    attribution?: ConnectorAttribution;
+    attribution?: Attribution;
     actorUserId: string;
   } & ConnectorOAuthSettings,
   secrets: SecretBox = UNSEALED
@@ -239,7 +235,7 @@ export interface ConnectorChanges {
   authParamName?: string | null;
   authValue?: string | null;
   /** `undefined` leaves it alone; `null` clears it. */
-  attribution?: ConnectorAttribution | null;
+  attribution?: Attribution | null;
   /** `undefined` leaves the stored OAuth settings alone; `null` clears them (the connector is
    * leaving OAuth); an object replaces them as a set. */
   oauth?: ConnectorOAuthSettings | null;

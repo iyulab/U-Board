@@ -1,4 +1,4 @@
-import { isHttpRef, readHttpRef, type Adapter, type Attribution, type ResolvedBinding } from '@iyulab/u-board/domain';
+import { isHttpRef, readHttpRef, resolvedReading, type Adapter, type Attribution, type ResolvedBinding } from '@iyulab/u-board/domain';
 import type { SampleConnector, SamplePack } from './sample-pack.js';
 
 /**
@@ -25,8 +25,7 @@ export class SnapshotAdapter implements Adapter {
     if (!isHttpRef(ref) || !Object.hasOwn(this.responses, ref.path)) return { value: undefined, quality: 'disconnected', reason: 'address' };
     const reading = readHttpRef(this.responses[ref.path], ref, Date.parse(this.capturedAt));
     if (!reading.ok) return { value: undefined, quality: 'disconnected', reason: reading.reason };
-    const observedAt = new Date(reading.observedAt).toISOString();
-    return reading.lagging ? { value: reading.value, quality: 'stale', reason: 'lagging', observedAt } : { value: reading.value, quality: 'live', observedAt };
+    return resolvedReading(reading);
   }
 }
 

@@ -1,23 +1,8 @@
 import { PATH_KEY_PLACEHOLDER, type Connector } from './db/connectors.js';
 import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
-import { isHttpRef, readHttpRef, type HttpRef } from '@iyulab/u-board/domain';
+import { isHttpRef, readHttpRef, resolvedReading, type HttpRef, type QualityReason, type ResolvedBinding } from '@iyulab/u-board/domain';
 import { HttpStatusError } from './http-status-error.js';
 import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
-
-export type ResolveQuality = 'live' | 'stale' | 'disconnected';
-
-/** Why a resolve is not `live` — the core's `QualityReason`, same words. */
-export type ResolveReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled' | 'lagging';
-
-export interface ResolveResult {
-  value: unknown;
-  quality: ResolveQuality;
-  reason?: ResolveReason;
-  /** When `value` was observed (ISO 8601) — the time the source gives at `observedAtPath` when the
-   * reference names one, else the read; for `stale`, that of the last successful read; absent for
-   * `disconnected`. The core's `ResolvedBinding.observedAt`. */
-  observedAt?: string;
-}
 
 /** A last-known value: when the source says it observed it (ISO 8601) and when it was read from the
  *  source (epoch ms). The two differ for a source that publishes its readings on a schedule — an hourly
@@ -184,12 +169,12 @@ async function authHeaders(connector: Connector, tokens: ClientCredentialsTokens
 /** A failure tagged with the stage it happened in, so a shared request's failure is reported
  * the same way to every binding waiting on it. */
 class StageError extends Error {
-  readonly reason: ResolveReason;
+  readonly reason: QualityReason;
   /** The status the upstream answered with, when it answered at all. */
   readonly status?: number;
   /** The start of a body the binding could not read — shown to whoever tries the connector, never logged. */
   excerpt?: string;
-  constructor(readonly stage: ResolveStage, cause: unknown, reason?: ResolveReason) {
+  constructor(readonly stage: ResolveStage, cause: unknown, reason?: QualityReason) {
     super(describeFailure(cause));
     this.reason = reason ?? reasonFor(stage, cause);
     if (cause instanceof HttpStatusError) this.status = cause.status;
@@ -216,7 +201,7 @@ function unreadable(contentType: string, text: string): StageError {
 /** What an upstream failure means for whoever has to fix it. A status the data source or token
  * endpoint answered with says it; anything else (network, timeout, 5xx, a redirect not followed,
  * an unparseable body) means the source could not be used at all. */
-function reasonFor(stage: ResolveStage, cause: unknown): ResolveReason {
+function reasonFor(stage: ResolveStage, cause: unknown): QualityReason {
   // An address the installation does not let connectors reach: the connector points somewhere it
   // may not go, which its owner fixes like an address that does not exist.
   if ((cause as { cause?: { code?: unknown } } | null)?.cause?.code === CONNECTOR_ADDRESS_REFUSED) return 'address';
@@ -334,7 +319,7 @@ export async function resolveConnectorValue(
   target: URL,
   ref: HttpRef,
   state: ResolveState
-): Promise<ResolveResult> {
+): Promise<ResolvedBinding> {
   const cacheKey = `${connector.id}:${JSON.stringify(ref)}`;
   const requestKey = `${connector.id} ${target.href}`;
   const where = `[resolve] connector ${connector.id} ${ref.path}`;
@@ -375,12 +360,11 @@ export async function resolveConnectorValue(
     }
     const reading = readHttpRef(body, ref, readAt, Date.now());
     if (!reading.ok) throw new StageError('response', new Error(reading.message), reading.reason);
-    const { value } = reading;
-    const observedAt = new Date(reading.observedAt).toISOString();
-    state.values.set(cacheKey, { value, observedAt, readAt });
+    const result = resolvedReading(reading);
+    state.values.set(cacheKey, { value: result.value, observedAt: result.observedAt!, readAt });
     if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
-    // The source answered with its latest, which is older than the binding expects: shown, but not as current.
-    return reading.lagging ? { value, quality: 'stale', reason: 'lagging', observedAt } : { value, quality: 'live', observedAt };
+    // The source answered with its latest — shown as `stale` (`lagging`) when older than the binding expects.
+    return result;
   } catch (err) {
     const { stage, message, reason } = err as StageError;
     const cached = state.values.get(cacheKey);
@@ -408,7 +392,7 @@ export async function resolveConnectorValue(
  *  that names the failure — never the request, whose headers carry the credentials. */
 export type ConnectorTestResult =
   | { ok: true; excerpt?: string }
-  | { ok: false; stage: ResolveStage; reason: ResolveReason; status?: number; message: string; excerpt?: string };
+  | { ok: false; stage: ResolveStage; reason: QualityReason; status?: number; message: string; excerpt?: string };
 
 /** Tries `connector` as a binding would use it: obtains an OAuth access token, then, given a
  *  target, requests it once. A token cache of its own, so a token already obtained with the stored

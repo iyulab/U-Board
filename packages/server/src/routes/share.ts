@@ -5,14 +5,15 @@ import { findBoard } from '../db/boards.js';
 import { findConnector } from '../db/connectors.js';
 import { findBoardShareTokenByHash, touchBoardShareTokenLastUsed, type BoardShareToken } from '../db/board-share-tokens.js';
 import { hashShareToken } from './board-share-tokens.js';
-import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState, type ResolveResult } from '../resolve-connector.js';
+import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from '../resolve-connector.js';
+import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { Connector } from '../db/connectors.js';
 
 /** Upper bound on one batch resolve request. A board's own bindings are the only entries that
  * resolve, so this only bounds the work a malformed or hostile request can make the server do. */
 const MAX_BATCH_BINDINGS = 500;
 
-const DISCONNECTED: ResolveResult = { value: undefined, quality: 'disconnected' };
+const DISCONNECTED: ResolvedBinding = { value: undefined, quality: 'disconnected' };
 
 /** Every `(connectorId, ref)` pair a document's widgets declare via their bindings — the single
  * traversal `referencedConnectors` and `isDeclaredBinding` below both build on, so the

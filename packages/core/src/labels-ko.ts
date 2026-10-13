@@ -57,7 +57,6 @@ export const KO_LABELS: UBoardLabels = {
   lastUpdated: '갱신 {time}',
   notUpdating: '갱신이 멈춤 — 마지막 갱신 {time}',
   time: timeText('ko'),
-  noDocument: '불러온 문서가 없습니다 — 가져오기로 여세요.',
   debugDocument: 'ViewDocument (디버그)',
 
   selectNode: '노드나 장식을 선택하면 여기서 편집합니다.',

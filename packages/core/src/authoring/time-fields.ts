@@ -1,4 +1,4 @@
-import { parseSourceTime } from '../http-ref.js';
+import { isEpochText, parseSourceTime } from '../http-ref.js';
 
 /** A field of a response that reads as a time: where it is (a JSON Pointer) and what the source wrote there. */
 export interface TimeField {
@@ -29,7 +29,7 @@ export function timeFieldsIn(value: unknown): TimeField[] {
   const visit = (node: unknown, pointer: string, key: string) => {
     if (fields.length >= MAX_FIELDS || ++visited > MAX_VISITED) return;
     if (typeof node === 'string') {
-      if (!/^\s*(\d{10}|\d{13})\s*$/.test(node) && parseSourceTime(node) !== null) fields.push({ pointer, raw: node });
+      if (!isEpochText(node) && parseSourceTime(node) !== null) fields.push({ pointer, raw: node });
     } else if (typeof node === 'number') {
       if (TIME_KEY.test(key) && parseSourceTime(node) !== null) fields.push({ pointer, raw: node });
     } else if (Array.isArray(node)) {

@@ -8,6 +8,13 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **Breaking: a smaller public surface.** Removed exports nothing outside the package used:
+  `anchorPoint`, `coordinateAt`, `pointAt` (use `coordinateOf` / `placeAt`); `QUALITY_LABEL`, `REASON_LABEL` (the
+  same words are `DEFAULT_QUALITY_TEXT.quality` / `.reason`); `isViewDocumentShape` (an empty
+  `validateViewDocument(value)`); `valueAtPath`, `isTimeZone`. `ViewerPage` drops its file-import mode — `document`
+  is required — and with it the `noDocument` label and the `ub-viewer__error` class.
+- **The entry points carry the same document types.** `ValueRange` is exported, and `./viewer` now has
+  `ReferencePoint`; the package root exports everything `./domain` and `./viewer` do (so `useResolvedDocument` too).
 - **Breaking: `ViewerPage`'s `initialDocument` is `document`, and it follows a new one.** A different document
   given later replaces the one shown — a board saved again while it is open — resolving its bindings and keeping the
   user's pan and zoom unless it covers a different area. Pass the same object until the document changes.
@@ -17,6 +24,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `resolvedReading(reading)` (`./domain`): a reading that found its value as the binding's result — `live`, or
+  `stale` with reason `lagging`. One place for what every reader of a reference reports.
 - **A node whose value is not current says why, on screen.** The renderer marks the node's corner with the cause of
   its headline binding's state and, for a stale value, its age — "Source behind · 3 minutes ago", "No reply from
   source · 30 seconds ago". Until now the cause and the age were in the tooltip and the screen-reader announcement

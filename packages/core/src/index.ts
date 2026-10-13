@@ -1,23 +1,5 @@
-export type { ViewDocument, Background, BackgroundImage, ReferencePoint, Node, Connector, Widget, Binding, ValueMap, Shape, RectShape, TextShape, BoardAppearance } from './view-document.js';
-export type { Adapter, AdapterReference, Attribution, ConnectionQuality, QualityReason, ResolvedBinding, ResolvedWidget } from './adapter.js';
-export { resolveWidget, applyValueMap } from './adapter.js';
-export type { ResolvedNode, ResolvedViewDocument } from './resolve-document.js';
-export { resolveDocument } from './resolve-document.js';
+// Everything: what `./domain` and `./viewer` export, plus the authoring tool.
+export * from './domain-entry.js';
+export * from './viewer-entry.js';
 export { AuthoringView } from './authoring/AuthoringView.js';
 export type { AuthoringViewProps } from './authoring/AuthoringView.js';
-export { ViewerPage } from './viewer/ViewerPage.js';
-export type { ViewerPageProps } from './viewer/ViewerPage.js';
-export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
-export { validateViewDocument, isViewDocumentShape } from './validate-view-document.js';
-export type { ViewDocumentIssue } from './validate-view-document.js';
-export { QUALITY_LABEL, REASON_LABEL, DEFAULT_QUALITY_TEXT, ageText, worstQuality, describeQuality } from './quality-text.js';
-export { serverClock } from './server-clock.js';
-export type { ServerClock, ResponseWithHeaders } from './server-clock.js';
-export type { QualityText, QualitySummary, DescribeQualityOptions } from './quality-text.js';
-export { anchorPoint, coordinateAt, pointAt, coordinateOf, placeAt } from './anchor.js';
-export type { Coordinate } from './anchor.js';
-export { isHttpRef, readHttpRef, parseSourceTime, valueAtPath, findHttpRefItem, isTimeZone } from './http-ref.js';
-export type { HttpRef, HttpRefItem, HttpRefReading } from './http-ref.js';
-export { DEFAULT_LABELS, timeText } from './labels.js';
-export { KO_LABELS } from './labels-ko.js';
-export type { UBoardLabels } from './labels.js';

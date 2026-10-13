@@ -51,16 +51,9 @@ class SpyAdapter implements Adapter {
 }
 
 describe('ViewerPage', () => {
-  it('shows the Import UI and "no document" message when document is omitted (no regression)', () => {
-    render(<ViewerPage adapters={[]} width={400} height={300} />);
-    expect(screen.getByText('Import')).toBeInTheDocument();
-    expect(screen.getByText(/No document loaded/i)).toBeInTheDocument();
-  });
-
-  it('renders the given document immediately with no Import UI when document is provided', async () => {
+  it('renders the given document at once, with no import control of its own', async () => {
     render(<ViewerPage adapters={[]} width={400} height={300} document={doc()} />);
     expect(screen.queryByText('Import')).not.toBeInTheDocument();
-    expect(screen.queryByText(/No document loaded/i)).not.toBeInTheDocument();
     expect(await screen.findByTestId('viewer')).toBeInTheDocument();
   });
 

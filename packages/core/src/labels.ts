@@ -80,7 +80,6 @@ export interface UBoardLabels {
   /** Before the sources a board's data comes from, under the board (`Adapter.attribution`). */
   dataSources: string;
   resolving: string;
-  noDocument: string;
   /** A polling `ViewerPage`'s "last updated" line; `{time}` is replaced by the time of day. */
   lastUpdated: string;
   /** Shown instead, prominently, while a polling `ViewerPage` is not updating; `{time}` as above. */
@@ -258,7 +257,6 @@ export const DEFAULT_LABELS: UBoardLabels = {
   boardRegion: 'Board',
   dataSources: 'Data',
   resolving: 'Resolving…',
-  noDocument: 'No document loaded — Import one to view it.',
   lastUpdated: 'Updated {time}',
   notUpdating: 'Not updating — last updated {time}',
   time: timeText('en'),

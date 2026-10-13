@@ -200,7 +200,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-panel__preview`, `ub-panel__quality` | A binding's previewed value, and its connection quality |
 | `ub-json-tree`, `ub-json-tree__leaf` | The response explorer, and a value in it to pick |
 | `ub-viewer`, `ub-viewer__toolbar`, `ub-viewer__surface` | The viewer, its toolbar and the frame the board draws in |
-| `ub-viewer__error`, `ub-viewer__status` | A file that could not be opened; "no document" and "resolving" |
+| `ub-viewer__status` | "Resolving", before the board's values first arrive |
 | `ub-viewer__attribution` | The line under a board naming where its data comes from (`Adapter.attribution`) — in `ViewerPage` and in `AuthoringView`'s view mode |
 | `ub-view-controls` | The zoom out / zoom in / fit buttons |
 | `ub-freshness`, `ub-freshness__time`, `ub-freshness__alert` | When the values were last updated, and the "not updating" notice |
