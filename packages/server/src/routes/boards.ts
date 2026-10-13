@@ -9,6 +9,9 @@ import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoar
 /** How many document issues a 400 names at most. */
 const MAX_REPORTED_ISSUES = 20;
 
+/** A revision no board has (they count from 1): what a save names when its If-Match cannot match any. */
+const NO_REVISION = 0;
+
 /** A board revision as an entity tag. */
 function etagOf(revision: number): string {
   return `"${revision}"`;
@@ -63,7 +66,8 @@ export function createBoardsRouter(config: AppConfig): Router {
     const workspaceId = pathParam(req, 'workspaceId');
     const { boardId } = req.params;
     const { name, document } = req.body ?? {};
-    if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+    // A save of nothing would still count as one, and make every open share link read the board again.
+    if ((name !== undefined && (typeof name !== 'string' || name.trim() === '')) || (name === undefined && document === undefined)) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
@@ -80,11 +84,8 @@ export function createBoardsRouter(config: AppConfig): Router {
     // A save names the copy it was made against with If-Match (RFC 9110 §13.1.1), the ETag its read
     // returned. Without it the save is unconditional — the header is how a client opts in, as HTTP has it.
     const precondition = ifMatchRevision(req.get('If-Match'));
-    if (precondition === 'unmatchable') {
-      res.status(412).json({ code: 'BOARD_CHANGED', revision: (await findBoard(db, workspaceId, boardId))?.revision });
-      return;
-    }
-    const result = await updateBoard(db, workspaceId, boardId, { name, document }, precondition);
+    // A tag no revision has still finds a missing board missing (404), as any other save does.
+    const result = await updateBoard(db, workspaceId, boardId, { name, document }, precondition === 'unmatchable' ? NO_REVISION : precondition);
     if ('notFound' in result) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;

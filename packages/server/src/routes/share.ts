@@ -102,9 +102,9 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     await touchBoardShareTokenLastUsed(db, token.id);
     // An open viewer whose board has no bindings has no value batch to learn the revision from, so it
     // asks here with the revision it shows (If-None-Match): unchanged, the answer is a bodiless 304.
-    const etag = `"${board.revision}"`;
-    res.set('ETag', etag);
-    if (req.get('If-None-Match') === etag) {
+    res.set('ETag', `"${board.revision}"`);
+    // Express compares If-None-Match with the ETag as HTTP has it (weak comparison, lists, `*`).
+    if (req.fresh) {
       res.status(304).end();
       return;
     }

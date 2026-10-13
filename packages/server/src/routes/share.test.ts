@@ -69,6 +69,9 @@ describe('public share routes', () => {
     expect(res.headers.etag).toBe('"2"');
     const unchanged = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`).set('If-None-Match', '"2"');
     expect(unchanged.status).toBe(304);
+    // A proxy may weaken the tag; it still matches (weak comparison).
+    const weakened = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`).set('If-None-Match', 'W/"2"');
+    expect(weakened.status).toBe(304);
     await updateBoard(db, workspaceId, boardId, { name: 'Board A, again' });
     const changed = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`).set('If-None-Match', '"2"');
     expect(changed.status).toBe(200);

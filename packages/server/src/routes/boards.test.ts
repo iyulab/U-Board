@@ -156,6 +156,18 @@ describe('boards routes', () => {
       }
     });
 
+    it('finds a missing board missing (404), whatever tag the save names', async () => {
+      const res = await request(app).put(`${board()}/no-such-board`).set('Cookie', memberCookie).set('If-Match', 'W/"1"').send({ name: 'X' });
+      expect(res.status).toBe(404);
+    });
+
+    it('refuses a save of nothing, which would still count as one', async () => {
+      const id = await created();
+      const res = await request(app).put(`${board()}/${id}`).set('Cookie', memberCookie).set('If-Match', '"1"').send({});
+      expect(res.status).toBe(400);
+      expect((await request(app).get(`${board()}/${id}`).set('Cookie', memberCookie)).body.revision).toBe(1);
+    });
+
     it('saves unconditionally without If-Match, or with *', async () => {
       const id = await created();
       expect((await request(app).put(`${board()}/${id}`).set('Cookie', memberCookie).send({ name: 'A' })).status).toBe(200);
