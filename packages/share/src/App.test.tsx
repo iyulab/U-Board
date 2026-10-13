@@ -66,6 +66,38 @@ describe('App', () => {
       expect(fetch).toHaveBeenLastCalledWith('/api/share/boards/b1', expect.objectContaining({ headers: { Authorization: 'Bearer tok', 'If-None-Match': '"1"' } }));
     });
 
+    it('stops checking once the link turns out expired', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        setLocation('?board=b1&token=tok');
+        (fetch as any).mockResolvedValueOnce(board('before', 1)).mockResolvedValueOnce({ ok: false, status: 410, headers: new Headers() });
+        render(<App />);
+        await screen.findByTestId('node-ids');
+        await vi.advanceTimersByTimeAsync(SHARE_POLL_INTERVAL_MS);
+        expect(await screen.findByText(/만료되었습니다/)).toBeInTheDocument();
+        await vi.advanceTimersByTimeAsync(3 * SHARE_POLL_INTERVAL_MS);
+        expect(fetch).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('takes an answer of the revision on screen as the same board, though the proxy dropped the tag', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        setLocation('?board=b1&token=tok');
+        (fetch as any).mockResolvedValueOnce(board('before', 1)).mockResolvedValueOnce(board('same-revision', 1));
+        render(<App />);
+        await screen.findByTestId('node-ids');
+        await vi.advanceTimersByTimeAsync(SHARE_POLL_INTERVAL_MS);
+        await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+        await new Promise(r => setTimeout(r, 20));
+        expect(screen.getByTestId('node-ids').textContent).toBe('before');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('asks for a board with no bindings itself once a poll goes by without a value batch, and follows it', async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       try {

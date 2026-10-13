@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { movedAnchors, relocateAnchors, snapshotAnchors } from './anchor-snapshot.js';
+import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors } from './anchor-snapshot.js';
 import { coordinateOf } from '../anchor.js';
 import type { ReferencePoint, ViewDocument } from '../view-document.js';
 
@@ -47,6 +47,15 @@ describe('anchor snapshot', () => {
   it('waits for points: nothing reads as moved while the background has none', () => {
     const snapshot = snapshotAnchors(doc(points()))!;
     expect(movedAnchors(doc(undefined, { width: 1600, height: 1200 }), snapshot)).toEqual([]);
+  });
+
+  it('forgets a node the author moved after the points changed: where the author put it is where it belongs', () => {
+    const before = doc(points());
+    const snapshot = snapshotAnchors(before)!;
+    const after = { ...before, nodes: before.nodes.map(n => (n.id === 'anchored' ? { ...n, x: n.x + 40 } : n)) };
+    expect(forgetMoved(snapshot, before, after).at).toEqual({});
+    // Nodes left where they were stay held.
+    expect(forgetMoved(snapshot, before, { ...before })).toBe(snapshot);
   });
 
   it('puts each moved node back at the coordinate it had, and leaves free nodes where they are', () => {

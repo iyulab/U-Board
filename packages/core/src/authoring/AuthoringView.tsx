@@ -21,7 +21,7 @@ import { BoardPanel } from './BoardPanel.js';
 import { seedWidget } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
-import { movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
+import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
@@ -87,6 +87,18 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   // `byImage`: the points went with the image (replaced by one of another size, or removed), so the author
   // is told to give them again; points the author edited or cleared need no telling.
   const [anchorSnapshot, setAnchorSnapshot] = useState<{ snapshot: AnchorSnapshot; byImage: boolean } | null>(null);
+  // A node the author moves or resizes while the snapshot is held is where the author wants it: forgotten.
+  const documentBefore = useRef(doc);
+  useEffect(() => {
+    const before = documentBefore.current;
+    documentBefore.current = doc;
+    if (before === doc) return;
+    setAnchorSnapshot(held => {
+      if (!held) return held;
+      const snapshot = forgetMoved(held.snapshot, before, doc);
+      return snapshot === held.snapshot ? held : { ...held, snapshot };
+    });
+  }, [doc]);
   // The first change since the last answer is what the nodes are measured against, not each keystroke's.
   const holdAnchors = (current: ViewDocument, byImage: boolean) =>
     setAnchorSnapshot(held => {

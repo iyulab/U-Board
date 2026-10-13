@@ -69,15 +69,24 @@ export function App() {
       });
     // Reads the board again in place — the document on screen stays if this fails, to be tried at the
     // next poll. Asked with the revision on screen, an unchanged board answers 304.
+    // A link that has expired or gone stays so: the board's checks stop with it.
+    const close = (end: NotShown) => {
+      cancelled = true;
+      clearInterval(check);
+      setState(end);
+    };
     const refresh = () => {
       if (cancelled || shown.current.reading || shown.current.revision === undefined) return;
       shown.current.reading = true;
       read(`"${shown.current.revision}"`)
         .then(async res => {
           if (cancelled) return;
-          if (res.status === 410) return setState({ kind: 'expired' });
-          if (res.status === 404 || res.status === 401 || res.status === 403) return setState({ kind: 'not-found' });
-          if (res.ok) show((await res.json()) as BoardBody);
+          if (res.status === 410) return close({ kind: 'expired' });
+          if (res.status === 404 || res.status === 401 || res.status === 403) return close({ kind: 'not-found' });
+          if (!res.ok) return;
+          const body = (await res.json()) as BoardBody;
+          // An answer that ignored the revision asked with (a proxy dropping the tag) is the same board.
+          if (!cancelled && body.revision !== shown.current.revision) show(body);
         })
         .catch(() => {})
         .finally(() => {
@@ -89,7 +98,7 @@ export function App() {
       // to turn "disconnected" with no explanation. Each value batch also says which revision of the
       // board it was resolved for: a newer one means the board was saved again since it was read.
       const batcher = new ShareResolveBatcher(boardId, token, {
-        onExpired: () => setState({ kind: 'expired' }),
+        onExpired: () => close({ kind: 'expired' }),
         onRevision: revision => {
           shown.current.heard = true;
           if (shown.current.revision !== undefined && revision > shown.current.revision) refresh();

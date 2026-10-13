@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { AuthoringView, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import { DemoAdapter } from '@iyulab/u-board/demo';
@@ -35,11 +35,17 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   // The revision the editor's copy was read or last saved at — what a save names (If-Match), so a save
-  // made after someone else's is refused instead of overwriting it unseen.
-  const [revision, setRevision] = useState<number | undefined>(undefined);
+  // made after someone else's is refused instead of overwriting it unseen. A ref, read when a save is
+  // sent: a save queued behind another must name the revision that one produced.
+  const revision = useRef<number | undefined>(undefined);
+  // Saves go one after another, so a second click while one is on its way is not refused as a conflict
+  // with the first.
+  const saving = useRef<Promise<unknown>>(Promise.resolve());
+  // The author chose to keep their changes over someone else's save: the next save overwrites it.
+  const [overwriteArmed, setOverwriteArmed] = useState(false);
   // A save refused because the board was saved by someone else meanwhile: the author's document, and
   // the revision the board is at now.
-  const [conflict, setConflict] = useState<{ document: ViewDocument; revision: number } | null>(null);
+  const [conflict, setConflict] = useState<{ revision: number } | null>(null);
   // Bumped to start the editor afresh on a document — after a conflict is settled either way.
   const [editorGeneration, setEditorGeneration] = useState(0);
 
@@ -54,17 +60,26 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const demoAdapter = useMemo(() => new DemoAdapter(), []);
 
   useEffect(() => {
+    // A board opened after another must not be overwritten by the first one's late answer.
+    let cancelled = false;
     setDocument(null);
     setLoadError(null);
     setConflict(null);
+    setOverwriteArmed(false);
     getBoard(workspaceId, boardId!)
       .then(board => {
+        if (cancelled) return;
         setDocument(board.document);
-        setRevision(board.revision);
+        revision.current = board.revision;
         setBoardName(board.name);
         setHasDemoBinding(documentHasBindingFor(board.document, demoAdapter.id));
       })
-      .catch(() => setLoadError('보드를 불러오지 못했습니다'));
+      .catch(() => {
+        if (!cancelled) setLoadError('보드를 불러오지 못했습니다');
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [workspaceId, boardId, demoAdapter]);
 
   useEffect(() => {
@@ -134,17 +149,25 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       </div>
     );
 
-  async function handleSave(doc: ViewDocument) {
+  function handleSave(doc: ViewDocument): Promise<void> {
+    const save = saving.current.catch(() => {}).then(() => saveNow(doc));
+    saving.current = save;
+    return save;
+  }
+
+  async function saveNow(doc: ViewDocument) {
     try {
-      const saved = await updateBoard(workspaceId, boardId!, { document: doc }, revision);
-      setRevision(saved.revision);
+      const saved = await updateBoard(workspaceId, boardId!, { document: doc }, revision.current);
+      revision.current = saved.revision;
       setSaveError(null);
       setConflict(null);
+      setOverwriteArmed(false);
       setSavedAt(new Date());
       setHasDemoBinding(documentHasBindingFor(doc, demoAdapter.id));
     } catch (err) {
       if (err instanceof ApiError && err.code === 'BOARD_CHANGED' && typeof err.body.revision === 'number') {
-        setConflict({ document: doc, revision: err.body.revision });
+        setConflict({ revision: err.body.revision });
+        setOverwriteArmed(false);
         setSaveError(null);
       } else {
         setSaveError('저장 실패');
@@ -156,25 +179,13 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     }
   }
 
-  // Keeps the author's document over the other save — named against the revision the board is at now,
-  // so a third save in between is caught the same way.
-  async function overwriteWithMine() {
+  // Keeps the author's changes — including any made since the refused save — over the other save: the
+  // next save names the revision the board is at now, so a third save in between is caught the same way.
+  function keepMine() {
     if (!conflict) return;
-    try {
-      const saved = await updateBoard(workspaceId, boardId!, { document: conflict.document }, conflict.revision);
-      setRevision(saved.revision);
-      setDocument(conflict.document);
-      setConflict(null);
-      setSavedAt(new Date());
-      setHasDemoBinding(documentHasBindingFor(conflict.document, demoAdapter.id));
-      setEditorGeneration(g => g + 1);
-    } catch (err) {
-      if (err instanceof ApiError && err.code === 'BOARD_CHANGED' && typeof err.body.revision === 'number') {
-        setConflict({ document: conflict.document, revision: err.body.revision });
-      } else {
-        setSaveError('저장 실패');
-      }
-    }
+    revision.current = conflict.revision;
+    setConflict(null);
+    setOverwriteArmed(true);
   }
 
   // Drops the author's unsaved document for the board as it is saved now.
@@ -182,11 +193,13 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     try {
       const board = await getBoard(workspaceId, boardId!);
       setDocument(board.document);
-      setRevision(board.revision);
+      revision.current = board.revision;
       setBoardName(board.name);
       setHasDemoBinding(documentHasBindingFor(board.document, demoAdapter.id));
       setConflict(null);
+      setOverwriteArmed(false);
       setSavedAt(null);
+      setSaveError(null);
       setEditorGeneration(g => g + 1);
     } catch {
       setSaveError('보드를 불러오지 못했습니다');
@@ -226,11 +239,12 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           <Button variant="ghost" onClick={reloadTheirs}>
             그쪽 보드 불러오기(내 변경 버림)
           </Button>{' '}
-          <Button variant="ghost" onClick={overwriteWithMine}>
-            내 변경으로 덮어쓰기
+          <Button variant="ghost" onClick={keepMine}>
+            내 변경 유지(다음 저장 때 덮어씀)
           </Button>
         </Alert>
       )}
+      {overwriteArmed && <Alert>저장하면 다른 사람이 그사이 저장한 내용을 내 변경으로 덮어씁니다.</Alert>}
       <div className="ub-editor-canvas">
         <AuthoringView
           key={`${boardId}:${editorGeneration}`}

@@ -387,7 +387,7 @@ describe('BoardEditorPage share panel', () => {
   describe('when someone else saved the board meanwhile', () => {
     const conflictError = () => new api.ApiError('BOARD_CHANGED', 412, { code: 'BOARD_CHANGED', revision: 5 });
 
-    it('says the change was not saved, and keeps it to save over theirs at the revision the board is at now', async () => {
+    it('says the change was not saved, and keeps the editor as it is to save over theirs next time', async () => {
       vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
       vi.mocked(api.updateBoard)
         .mockRejectedValueOnce(conflictError())
@@ -396,10 +396,32 @@ describe('BoardEditorPage share panel', () => {
       await userEvent.click(await screen.findByText('저장'));
       expect(await screen.findByText(/다른 사람이 그사이 이 보드를 저장해/)).toBeInTheDocument();
 
-      await userEvent.click(screen.getByText('내 변경으로 덮어쓰기'));
+      await userEvent.click(screen.getByText('내 변경 유지(다음 저장 때 덮어씀)'));
+      expect(screen.queryByText(/다른 사람이 그사이 이 보드를 저장해/)).not.toBeInTheDocument();
+      expect(screen.getByText(/저장하면 다른 사람이 그사이 저장한 내용을/)).toBeInTheDocument();
+      // Nothing is saved until the author saves — then what the editor holds, against the current revision.
+      expect(api.updateBoard).toHaveBeenCalledTimes(1);
+      await userEvent.click(screen.getByText('저장'));
       await waitFor(() => expect(api.updateBoard).toHaveBeenLastCalledWith('w1', 'b1', { document: EMPTY_DOC }, 5));
-      await waitFor(() => expect(screen.queryByText(/다른 사람이 그사이/)).not.toBeInTheDocument());
       expect(await screen.findByRole('status')).toHaveTextContent('저장됨');
+      expect(screen.queryByText(/저장하면 다른 사람이 그사이 저장한 내용을/)).not.toBeInTheDocument();
+    });
+
+    it('sends a second save made while the first is on its way after it, at the revision the first produced', async () => {
+      vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
+      let finishFirst!: (v: { id: string; name: string; updatedAt: string; revision: number }) => void;
+      vi.mocked(api.updateBoard)
+        .mockReturnValueOnce(new Promise(r => { finishFirst = r; }))
+        .mockResolvedValueOnce({ id: 'b1', name: 'Floor 1', updatedAt: 't3', revision: 3 });
+      renderPage();
+      const save = await screen.findByText('저장');
+      fireEvent.click(save);
+      fireEvent.click(save);
+      await waitFor(() => expect(api.updateBoard).toHaveBeenCalledTimes(1));
+      finishFirst({ id: 'b1', name: 'Floor 1', updatedAt: 't2', revision: 2 });
+      await waitFor(() => expect(api.updateBoard).toHaveBeenCalledTimes(2));
+      expect(vi.mocked(api.updateBoard).mock.calls.map(call => call[3])).toEqual([1, 2]);
+      expect(screen.queryByText(/다른 사람이 그사이/)).not.toBeInTheDocument();
     });
 
     it('can drop the change for the board as saved now', async () => {

@@ -52,3 +52,19 @@ export function relocateAnchors(doc: ViewDocument, snapshot: AnchorSnapshot): Vi
     }),
   };
 }
+
+/** The snapshot without the nodes the author moved or resized between two versions of the document — where
+ *  the author put a node is where it is meant to be, not a place the points' change took it to. */
+export function forgetMoved(snapshot: AnchorSnapshot, before: ViewDocument, after: ViewDocument): AnchorSnapshot {
+  const was = new Map(before.nodes.map(node => [node.id, node]));
+  const moved = new Set(
+    after.nodes
+      .filter(node => {
+        const old = was.get(node.id);
+        return old && (old.x !== node.x || old.y !== node.y || old.width !== node.width || old.height !== node.height);
+      })
+      .map(node => node.id)
+  );
+  if (![...moved].some(id => id in snapshot.at)) return snapshot;
+  return { at: Object.fromEntries(Object.entries(snapshot.at).filter(([id]) => !moved.has(id))) };
+}
