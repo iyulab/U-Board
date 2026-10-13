@@ -45,19 +45,19 @@ const WIDGET_FILL_STYLE: CSSProperties = { width: '100%', height: '100%' };
 
 // The visible half of a node's quality, for a screen nobody hovers over or listens to — a wall display.
 // The frame tells how current the value is (by style as well as colour); this says why, and how old
-// it is, in a few words over the widget's corner. Hidden from assistive technology: the status region
-// below announces the full text.
+// it is, in a few words on a tag just above the frame's top-left corner — outside the widget, so it
+// covers none of it, and in full however narrow the node: cut to fit, the age (the part that matters
+// most) would be the first to go. Hidden from assistive technology: the status region below announces
+// the full text.
 const BADGE_STYLE: CSSProperties = {
   position: 'absolute',
-  top: 0,
-  right: 0,
-  maxWidth: '100%',
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  left: 0,
+  bottom: '100%',
+  marginBottom: 2,
   whiteSpace: 'nowrap',
   boxSizing: 'border-box',
   padding: '1px 6px',
-  borderBottomLeftRadius: 4,
+  borderRadius: 4,
   font: '600 11px/1.4 system-ui, sans-serif',
   pointerEvents: 'none',
   zIndex: 1,

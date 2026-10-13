@@ -3,7 +3,7 @@
 Spatial dashboard authoring middleware. Build data-bound views on a canvas — a floor plan, a
 network diagram, a map, or a freeform layout — and embed the result anywhere on the web.
 
-![A pump room drawn as the background, with a running pump, its load on a gauge, a temperature, a stale pressure in a dashed amber frame and a disconnected conveyor in a dotted grey frame](docs/images/board.png)
+![A pump room drawn as the background, with a running pump, its load on a gauge, a temperature, a stale pressure in a dashed amber frame tagged "No reply from source · 5 minutes ago", and a disconnected conveyor in a dotted grey frame tagged "No reply from source"](docs/images/board.png)
 
 The board above runs live at the top of [board.u-platform.kr](https://board.u-platform.kr/) — the
 library's own viewer, reading a sample source inside the page — and
@@ -35,9 +35,10 @@ happened to be good enough.
 Every bound value carries its own connection quality — live, stale, or disconnected — and, when it
 is not live, the reason: the source is unreachable, the credentials were refused, the value was not
 found at the source, the answer could not be read, the request was rate limited, or the source itself
-has fallen behind on its updates. Each widget shows its own state (a distinct
-frame, with the reason as its tooltip and for screen readers), so one failing source does not turn
-the whole view into an error.
+has fallen behind on its updates. Each widget shows its own state — a distinct frame, and on a tag
+above it the reason and how old the value is, readable on a wall display nobody hovers over (in full as
+its tooltip and for screen readers) — so one failing source does not turn the whole view into an
+error.
 
 ## What this is not
 
@@ -58,7 +59,7 @@ authoring UI (set the background image; add/drag/resize nodes and rect/text deco
 property panel for editing the selected node's widget type, static props, and data bindings,
 including a path explorer for HTTP-shaped adapter responses and a value map that turns a source's
 words or numbers — by exact value or numeric range — into what the widget takes; a label editor for
-the selected text decoration; reference points that make an anchored node's place a coordinate), export/import of the document as a file (beside the host's own
+the selected text decoration; reference points that make an anchored node's place a coordinate, kept when the background image is redone), export/import of the document as a file (beside the host's own
 Save, when it has one), and a read-only viewer mode are implemented and browser-verified. The editor and
 the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
 or keyboard.
@@ -71,7 +72,8 @@ Pointer — or out of a list item named by its fields — reads the time the sou
 value, shows a source that has fallen behind its own updates as stale, reports why a binding is not
 live (source unreachable, credentials refused, value not found at the source, an answer it cannot
 read, rate limited, the source behind), and the embed viewer resolves all of a board's bindings in one
-request, again every 30 seconds while it is open. A connector's settings can be tried before they are saved, its credentials are kept on the server
+request, again every 30 seconds while it is open — and shows the board as saved again within the same
+interval. A connector's settings can be tried before they are saved, its credentials are kept on the server
 sealed under an installation key, and the addresses connectors may
 reach are an installation setting — never the server's own loopback, link-local or cloud host addresses. A connector to a specific external system that needs its own
 domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
@@ -80,7 +82,9 @@ board can be wired up and previewed before any real connector is configured. The
 applications (see [Repository layout](#repository-layout)) add workspaces with members,
 server-side board storage, managed connectors, and read-only share links — on an installation run by
 an operator who creates each organization's workspace and can recover one whose owners are gone,
-and a record of who changed members, roles, invitations, boards, share links and connectors.
+and a record of who changed members, roles, invitations, boards, share links and connectors. A save
+made against an older copy of a board is refused rather than overwriting someone else's (HTTP
+`If-Match`), and the console lets its author reload or keep their own.
 They are released together as a versioned container image — on GitHub Releases with an archive for
 networks without internet access, both carrying a build provenance attestation, and changes recorded
 in [`CHANGELOG.md`](CHANGELOG.md); an operator sees the installed version in the console.

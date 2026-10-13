@@ -26,9 +26,9 @@ All notable changes to this package are documented here. The format follows
 
 - `resolvedReading(reading)` (`./domain`): a reading that found its value as the binding's result — `live`, or
   `stale` with reason `lagging`. One place for what every reader of a reference reports.
-- **A node whose value is not current says why, on screen.** The renderer marks the node's corner with the cause of
-  its headline binding's state and, for a stale value, its age — "Source behind · 3 minutes ago", "No reply from
-  source · 30 seconds ago". Until now the cause and the age were in the tooltip and the screen-reader announcement
+- **A node whose value is not current says why, on screen.** The renderer tags the node, just above its frame, with
+  the cause of its headline binding's state and, for a stale value, its age ("Source behind · 3 minutes ago", "No
+  reply from source · 30 seconds ago"), in full however narrow the node and covering none of the widget. Until now the cause and the age were in the tooltip and the screen-reader announcement
   only, so a wall display showed a source that stopped updating and one that could not be reached as the same
   dashed frame.
 - **Anchored nodes keep their coordinates when the background changes.** Replacing the background image with one of

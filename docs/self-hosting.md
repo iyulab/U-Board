@@ -142,7 +142,10 @@ it into the request only when the request is sent; a key typed into a binding's 
 part of the document, and the binding form warns about one.
 
 An open board keeps itself current: every 30 seconds it asks for all of its values in one request,
-and a link that expires while it is open turns into an expiry notice. Many screens showing the same
+and a link that expires while it is open turns into an expiry notice. A board saved again while it is
+open is shown as saved within the same 30 seconds — each answer says which revision of the board it is
+for; a board with no bindings asks for the board itself instead, with `If-None-Match`, and gets a `304`
+while it is unchanged — so either way an open screen costs one request every 30 seconds. Many screens showing the same
 board do not multiply the load on a data source — the server answers requests for the same source
 URL from one read for 10 seconds, and forgets it as soon as the connector's settings change. A binding
 that says how old its source's value may normally be (`maxAgeSeconds` — a source that publishes hourly

@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The mark of a node whose value is not current is shown in full.** It sits on a tag just above the node's frame
+  instead of inside its corner, where a narrow node cut it short — first of all the value's age — and covered the
+  widget.
+
 ## [0.1.7] - 2026-10-13
 
 ### Added
