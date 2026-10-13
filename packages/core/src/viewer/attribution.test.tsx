@@ -56,12 +56,12 @@ describe('AttributionLine', () => {
 
 describe('ViewerPage', () => {
   it('names the board’s sources under it, unless the host shows them itself', async () => {
-    const { unmount } = render(<ViewerPage adapters={[adapter('seoul', SEOUL)]} initialDocument={board('seoul')} width={400} height={300} />);
+    const { unmount } = render(<ViewerPage adapters={[adapter('seoul', SEOUL)]} document={board('seoul')} width={400} height={300} />);
     expect(await screen.findByText(/^Data:/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: SEOUL.text })).toBeInTheDocument();
     unmount();
 
-    render(<ViewerPage adapters={[adapter('seoul', SEOUL)]} initialDocument={board('seoul')} width={400} height={300} attribution={false} />);
+    render(<ViewerPage adapters={[adapter('seoul', SEOUL)]} document={board('seoul')} width={400} height={300} attribution={false} />);
     await screen.findByTestId('viewer');
     expect(screen.queryByText(/^Data:/)).not.toBeInTheDocument();
   });

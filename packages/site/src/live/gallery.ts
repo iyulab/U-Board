@@ -16,7 +16,7 @@ for (const host of document.querySelectorAll<HTMLElement>('[data-sample-board]')
   host.classList.add('live');
   createRoot(host).render(
     createElement(ViewerPage, {
-      initialDocument: pack.document,
+      document: pack.document,
       adapters: snapshotAdapters(pack),
       ariaLabel: host.dataset.label,
       labels: korean ? KO_LABELS : undefined,

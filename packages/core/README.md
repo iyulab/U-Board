@@ -69,7 +69,7 @@ follows its size, so give the parent a definite height:
 import { ViewerPage } from '@iyulab/u-board/viewer';
 
 <div style={{ height: '100vh' }}>
-  <ViewerPage initialDocument={doc} adapters={adapters} pollIntervalMs={30_000} />
+  <ViewerPage document={doc} adapters={adapters} pollIntervalMs={30_000} />
 </div>;
 ```
 
@@ -98,7 +98,7 @@ import { ViewerPage, serverClock } from '@iyulab/u-board/viewer';
 
 const clock = serverClock();
 // in your adapter: const sentAt = Date.now(); const res = await fetch(…); clock.observe(res, sentAt);
-<ViewerPage initialDocument={doc} adapters={adapters} pollIntervalMs={30_000} clock={clock.now} />;
+<ViewerPage document={doc} adapters={adapters} pollIntervalMs={30_000} clock={clock.now} />;
 ```
 
 `AuthoringView` sizes the same way: without `width`/`height` the board fills the parent's width
@@ -127,8 +127,8 @@ and names are Korean too. Lay your own words over it as over the English:
 ```tsx
 import { ViewerPage, KO_LABELS } from '@iyulab/u-board/viewer';
 
-<ViewerPage initialDocument={doc} adapters={adapters} labels={KO_LABELS} />;
-<ViewerPage initialDocument={doc} adapters={adapters} labels={{ ...KO_LABELS, boardRegion: '2라인 펌프실' }} />;
+<ViewerPage document={doc} adapters={adapters} labels={KO_LABELS} />;
+<ViewerPage document={doc} adapters={adapters} labels={{ ...KO_LABELS, boardRegion: '2라인 펌프실' }} />;
 ```
 
 ### Styling

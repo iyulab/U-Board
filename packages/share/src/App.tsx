@@ -1,10 +1,18 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ViewerPage, KO_LABELS, type ViewDocument, type Adapter, type Attribution } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
 import { API_BASE, fetchWithRetry, apiClock } from './api-base.js';
 import './App.css';
 
-type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[] };
+type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[]; revision?: number };
+
+type BoardBody = {
+  name: string;
+  document: ViewDocument;
+  revision?: number;
+  connectorIds: string[];
+  attributions?: Record<string, Attribution>;
+};
 
 /** Why the board is not on screen. Each names a different next step for the person looking at it:
  *  a malformed address is never going to work, a link the server does not know needs a new one from
@@ -39,11 +47,15 @@ export function App() {
   );
   const [attempt, setAttempt] = useState(0);
   const retryNow = useCallback(() => setAttempt(a => a + 1), []);
+  // The revision of the document on screen, whether a newer one is being read, and whether the server has
+  // said which revision is current since the last check.
+  const shown = useRef<{ revision?: number; reading: boolean; heard: boolean }>({ reading: false, heard: false });
 
   useEffect(() => {
     if (!boardId || !token) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let check: ReturnType<typeof setInterval> | undefined;
     const unavailable = () => {
       if (cancelled) return;
       const retryInMs = retryDelayMs(attempt);
@@ -51,29 +63,63 @@ export function App() {
       timer = setTimeout(() => setAttempt(a => a + 1), retryInMs);
     };
     // The token travels in a header from here on: the page URL is the only place it appears.
-    fetchWithRetry(`${API_BASE}/share/boards/${boardId}`, { headers: { Authorization: `Bearer ${token}` } })
+    const read = (ifNoneMatch?: string) =>
+      fetchWithRetry(`${API_BASE}/share/boards/${boardId}`, {
+        headers: { Authorization: `Bearer ${token}`, ...(ifNoneMatch ? { 'If-None-Match': ifNoneMatch } : {}) },
+      });
+    // Reads the board again in place — the document on screen stays if this fails, to be tried at the
+    // next poll. Asked with the revision on screen, an unchanged board answers 304.
+    const refresh = () => {
+      if (cancelled || shown.current.reading || shown.current.revision === undefined) return;
+      shown.current.reading = true;
+      read(`"${shown.current.revision}"`)
+        .then(async res => {
+          if (cancelled) return;
+          if (res.status === 410) return setState({ kind: 'expired' });
+          if (res.status === 404 || res.status === 401 || res.status === 403) return setState({ kind: 'not-found' });
+          if (res.ok) show((await res.json()) as BoardBody);
+        })
+        .catch(() => {})
+        .finally(() => {
+          shown.current.reading = false;
+        });
+    };
+    const show = (body: BoardBody) => {
+      // A link that expires while the board is open says so, rather than leaving every value
+      // to turn "disconnected" with no explanation. Each value batch also says which revision of the
+      // board it was resolved for: a newer one means the board was saved again since it was read.
+      const batcher = new ShareResolveBatcher(boardId, token, {
+        onExpired: () => setState({ kind: 'expired' }),
+        onRevision: revision => {
+          shown.current.heard = true;
+          if (shown.current.revision !== undefined && revision > shown.current.revision) refresh();
+        },
+      });
+      const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id, body.attributions?.[id]));
+      shown.current.revision = body.revision;
+      setState({ name: body.name, document: body.document, adapters, revision: body.revision });
+    };
+    read()
       .then(async res => {
         if (cancelled) return;
         if (res.status === 410) return setState({ kind: 'expired' });
         if (res.status === 404 || res.status === 401 || res.status === 403) return setState({ kind: 'not-found' });
         if (!res.ok) return unavailable();
-        const body = (await res.json()) as {
-          name: string;
-          document: ViewDocument;
-          connectorIds: string[];
-          attributions?: Record<string, Attribution>;
-        };
+        const body = (await res.json()) as BoardBody;
         if (cancelled) return;
-        // A link that expires while the board is open says so, rather than leaving every value
-        // to turn "disconnected" with no explanation.
-        const batcher = new ShareResolveBatcher(boardId, token, () => setState({ kind: 'expired' }));
-        const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id, body.attributions?.[id]));
-        setState({ name: body.name, document: body.document, adapters });
+        show(body);
+        // A board with no bindings sends no value batch to carry the revision: when a whole poll went
+        // by without one, ask for the board itself — one request a poll either way.
+        check = setInterval(() => {
+          if (!shown.current.heard) refresh();
+          shown.current.heard = false;
+        }, SHARE_POLL_INTERVAL_MS);
       })
       .catch(unavailable);
     return () => {
       cancelled = true;
       clearTimeout(timer);
+      clearInterval(check);
     };
   }, [boardId, token, attempt]);
 
@@ -89,7 +135,7 @@ export function App() {
 
   return (
     <ViewerPage
-      initialDocument={state.document}
+      document={state.document}
       adapters={state.adapters}
       pollIntervalMs={SHARE_POLL_INTERVAL_MS}
       ariaLabel={state.name}

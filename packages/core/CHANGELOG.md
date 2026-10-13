@@ -8,6 +8,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **Breaking: `ViewerPage`'s `initialDocument` is `document`, and it follows a new one.** A different document
+  given later replaces the one shown — a board saved again while it is open — resolving its bindings and keeping the
+  user's pan and zoom unless it covers a different area. Pass the same object until the document changes.
+  `AuthoringView` keeps `initialDocument`: the editor owns its copy once opened.
 - **Breaking: `QualityText` has `brief`** — a few words per state and per cause for the mark the renderer now shows
   on a node (below). A `QualityText` written out in full needs them; `DEFAULT_QUALITY_TEXT` and `KO_LABELS` have them.
 

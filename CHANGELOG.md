@@ -18,6 +18,12 @@ do when upgrading. Each release's notes carry its section.
   `412` (`BOARD_CHANGED`, with the revision the board is at now) when someone has saved it since. The console
   saves this way: when two people edit the same board, the second to save is told so and chooses between loading
   the board as saved and keeping their own over it. A save without `If-Match` stays unconditional.
+- **An open share link follows the board.** A board saved again while its share link is open on a screen is shown
+  as saved within one poll (30 seconds): each value batch carries the board's revision, and a newer one makes the
+  viewer read the board again, in place. A board with no bindings, which sends no value batch, asks for the board
+  itself instead (`If-None-Match`, answered `304` while unchanged) — one request a poll either way. Until now the
+  screen kept the layout it opened with — while its update time said it was current — until someone reloaded it.
+  A failed read leaves the board on screen and tries again at the next poll.
 - **A node whose value is not current says why, on screen** — the cause and the age in its corner ("원천 갱신 늦음
   · 1분 전"), readable on a wall display with no tooltip to hover (see `@iyulab/u-board`).
 - **Anchored nodes keep their coordinates when the background changes** (see `@iyulab/u-board`).

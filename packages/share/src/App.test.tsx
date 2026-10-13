@@ -11,7 +11,11 @@ vi.mock('@iyulab/u-board/viewer', async () => {
     ...actual,
     ViewerPage: (props: any) => (
       <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')} data-attributions={JSON.stringify(props.adapters.map((a: any) => a.attribution ?? null))} data-attribution-shown={String(props.attribution !== false)} data-label={props.ariaLabel} data-poll={props.pollIntervalMs} data-server-clock={String(props.clock === apiClock.now)}>
-        {props.initialDocument.background ? 'rendered' : ''}
+        {props.document.background ? 'rendered' : ''}
+        <span data-testid="node-ids">{props.document.nodes.map((n: any) => n.id).join(',')}</span>
+        <button type="button" onClick={() => props.adapters[0]?.resolve({ path: '/x' })}>
+          resolve
+        </button>
       </div>
     ),
   };
@@ -41,6 +45,73 @@ describe('App', () => {
     render(<App />);
     expect(await screen.findByTestId('viewer-page')).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('/api/share/boards/b1', expect.objectContaining({ headers: { Authorization: 'Bearer tok' } }));
+  });
+
+  describe('a board saved again while it is open', () => {
+    const board = (nodeId: string, revision: number) => ({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => ({ name: 'A', revision, document: { ...DOC, nodes: [{ id: nodeId }] }, connectorIds: ['c1'] }),
+    });
+    const values = (revision: number) => ({ ok: true, status: 200, headers: new Headers(), json: async () => ({ revision, results: [{ value: 1, quality: 'live' }] }) });
+
+    it('shows the new document once a value batch says the board has a newer revision', async () => {
+      setLocation('?board=b1&token=tok');
+      (fetch as any).mockResolvedValueOnce(board('before', 1)).mockResolvedValueOnce(values(2)).mockResolvedValueOnce(board('after', 2));
+      render(<App />);
+      expect((await screen.findByTestId('node-ids')).textContent).toBe('before');
+      fireEvent.click(screen.getByText('resolve'));
+      await vi.waitFor(() => expect(screen.getByTestId('node-ids').textContent).toBe('after'));
+      expect(fetch).toHaveBeenLastCalledWith('/api/share/boards/b1', expect.objectContaining({ headers: { Authorization: 'Bearer tok', 'If-None-Match': '"1"' } }));
+    });
+
+    it('asks for a board with no bindings itself once a poll goes by without a value batch, and follows it', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        setLocation('?board=b1&token=tok');
+        const unchanged = { ok: false, status: 304, headers: new Headers() };
+        (fetch as any).mockResolvedValueOnce(board('before', 1)).mockResolvedValueOnce(unchanged).mockResolvedValueOnce(board('after', 2));
+        render(<App />);
+        expect((await screen.findByTestId('node-ids')).textContent).toBe('before');
+
+        await vi.advanceTimersByTimeAsync(SHARE_POLL_INTERVAL_MS);
+        await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+        expect(fetch).toHaveBeenLastCalledWith('/api/share/boards/b1', expect.objectContaining({ headers: { Authorization: 'Bearer tok', 'If-None-Match': '"1"' } }));
+        expect(screen.getByTestId('node-ids').textContent).toBe('before');
+
+        await vi.advanceTimersByTimeAsync(SHARE_POLL_INTERVAL_MS);
+        await vi.waitFor(() => expect(screen.getByTestId('node-ids').textContent).toBe('after'));
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('reads nothing again while the revision stays the same', async () => {
+      setLocation('?board=b1&token=tok');
+      (fetch as any).mockResolvedValueOnce(board('before', 1)).mockResolvedValueOnce(values(1));
+      render(<App />);
+      await screen.findByTestId('node-ids');
+      fireEvent.click(screen.getByText('resolve'));
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+      await new Promise(r => setTimeout(r, 20));
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(screen.getByTestId('node-ids').textContent).toBe('before');
+    });
+
+    it('keeps the board on screen when reading the new revision fails, to try again at the next poll', async () => {
+      setLocation('?board=b1&token=tok');
+      (fetch as any)
+        .mockResolvedValueOnce(board('before', 1))
+        .mockResolvedValueOnce(values(2))
+        .mockResolvedValueOnce({ ok: false, status: 503, headers: new Headers() });
+      render(<App />);
+      await screen.findByTestId('node-ids');
+      fireEvent.click(screen.getByText('resolve'));
+      await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+      await new Promise(r => setTimeout(r, 20));
+      expect(screen.getByTestId('node-ids').textContent).toBe('before');
+    });
   });
 
   it('says the link has expired when the server answers 410', async () => {

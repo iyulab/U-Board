@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act, fireEvent } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { ViewerPage } from './ViewerPage';
@@ -51,14 +51,14 @@ class SpyAdapter implements Adapter {
 }
 
 describe('ViewerPage', () => {
-  it('shows the Import UI and "no document" message when initialDocument is omitted (no regression)', () => {
+  it('shows the Import UI and "no document" message when document is omitted (no regression)', () => {
     render(<ViewerPage adapters={[]} width={400} height={300} />);
     expect(screen.getByText('Import')).toBeInTheDocument();
     expect(screen.getByText(/No document loaded/i)).toBeInTheDocument();
   });
 
-  it('renders the given document immediately with no Import UI when initialDocument is provided', async () => {
-    render(<ViewerPage adapters={[]} width={400} height={300} initialDocument={doc()} />);
+  it('renders the given document immediately with no Import UI when document is provided', async () => {
+    render(<ViewerPage adapters={[]} width={400} height={300} document={doc()} />);
     expect(screen.queryByText('Import')).not.toBeInTheDocument();
     expect(screen.queryByText(/No document loaded/i)).not.toBeInTheDocument();
     expect(await screen.findByTestId('viewer')).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('ViewerPage', () => {
         adapters={adapters}
         width={400}
         height={300}
-        initialDocument={initialDocument}
+        document={initialDocument}
         pollIntervalMs={1000}
       />
     );
@@ -91,13 +91,32 @@ describe('ViewerPage', () => {
     expect(adapter.resolve).toHaveBeenCalledTimes(2);
   });
 
+  it('shows a document given later in place of the first, resolving its bindings', async () => {
+    const adapter = new SpyAdapter();
+    const adapters = [adapter];
+    const first = docWithBinding();
+    const { rerender } = render(<ViewerPage adapters={adapters} width={400} height={300} document={first} />);
+    await waitFor(() => expect(adapter.resolve).toHaveBeenCalledWith('k'));
+
+    const second = docWithBinding();
+    second.nodes[0].widget.bindings = { value: { adapter: 'cmms', ref: 'k2' } };
+    rerender(<ViewerPage adapters={adapters} width={400} height={300} document={second} />);
+    await waitFor(() => expect(adapter.resolve).toHaveBeenCalledWith('k2'));
+
+    // The same document object again is not a new document.
+    const calls = adapter.resolve.mock.calls.length;
+    rerender(<ViewerPage adapters={adapters} width={400} height={300} document={second} />);
+    await new Promise(r => setTimeout(r, 20));
+    expect(adapter.resolve.mock.calls.length).toBe(calls);
+  });
+
   describe('sizing and fit', () => {
     function docWithBackground(): ViewDocument {
       return { kind: 'canvas', background: { image: { src: 'bg.png', width: 1200, height: 800 } }, nodes: [], connectors: [] };
     }
 
     it('lets the viewer follow its container when width/height are omitted', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={doc()} />);
+      render(<ViewerPage adapters={[]} document={doc()} />);
       await screen.findByTestId('viewer');
       const props = viewerProps.mock.lastCall![0];
       expect(props.width).toBeUndefined();
@@ -105,7 +124,7 @@ describe('ViewerPage', () => {
     });
 
     it('passes an explicit width/height through to the viewer', async () => {
-      render(<ViewerPage adapters={[]} width={400} height={300} initialDocument={doc()} />);
+      render(<ViewerPage adapters={[]} width={400} height={300} document={doc()} />);
       await screen.findByTestId('viewer');
       const props = viewerProps.mock.lastCall![0];
       expect(props.width).toBe(400);
@@ -113,7 +132,7 @@ describe('ViewerPage', () => {
     });
 
     it('fits the whole document into view when it opens, once the viewport size is known', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      render(<ViewerPage adapters={[]} document={docWithBackground()} />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
       // (632 - 2×16) / 1200 = 0.5, centered
@@ -121,14 +140,14 @@ describe('ViewerPage', () => {
     });
 
     it('never magnifies a board smaller than the view', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      render(<ViewerPage adapters={[]} document={docWithBackground()} />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 4000, height: 3000 }));
       expect(lastViewerProps().transform.scale).toBe(1);
     });
 
     it('keeps the board fitted as the view resizes, until the user pans or zooms', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      render(<ViewerPage adapters={[]} document={docWithBackground()} />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
       act(() => lastViewerProps().onViewportResize({ width: 332, height: 232 }));
@@ -140,7 +159,7 @@ describe('ViewerPage', () => {
     });
 
     it('fits again on demand from the "Fit to view" control', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      render(<ViewerPage adapters={[]} document={docWithBackground()} />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
       act(() => lastViewerProps().onTransformChange({ x: 1, y: 2, scale: 0.7 }));
@@ -152,7 +171,7 @@ describe('ViewerPage', () => {
 
     it("does not re-fit when a poll refreshes the values, so the user's pan/zoom survives", async () => {
       vi.useFakeTimers();
-      render(<ViewerPage adapters={[new SpyAdapter()]} initialDocument={docWithBinding()} pollIntervalMs={1000} />);
+      render(<ViewerPage adapters={[new SpyAdapter()]} document={docWithBinding()} pollIntervalMs={1000} />);
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);
       });
@@ -166,13 +185,13 @@ describe('ViewerPage', () => {
     });
 
     it('names the board view for assistive technology', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={doc()} ariaLabel="Line 2 floor" />);
+      render(<ViewerPage adapters={[]} document={doc()} ariaLabel="Line 2 floor" />);
       await screen.findByTestId('viewer');
       expect(lastViewerProps().ariaLabel).toBe('Line 2 floor');
     });
 
     it('lets a keyboard pan or zoom in the view end following, like a pointer one', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      render(<ViewerPage adapters={[]} document={docWithBackground()} />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
       act(() => lastViewerProps().onTransformChange({ x: -24, y: 16, scale: 0.5 })); // an arrow press
@@ -181,7 +200,7 @@ describe('ViewerPage', () => {
     });
 
     it('zooms in and out from keyboard-operable controls, around the middle of the view', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={docWithBackground()} />);
+      render(<ViewerPage adapters={[]} document={docWithBackground()} />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
 
@@ -192,7 +211,7 @@ describe('ViewerPage', () => {
     });
 
     it('offers no fit control for an empty document, and leaves its view at identity', async () => {
-      render(<ViewerPage adapters={[]} initialDocument={doc()} />);
+      render(<ViewerPage adapters={[]} document={doc()} />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
       expect(screen.queryByRole('button', { name: 'Fit to view' })).not.toBeInTheDocument();
@@ -223,7 +242,7 @@ describe('ViewerPage labels', () => {
   };
 
   it('shows the given text on its controls, view and quality tooltips', async () => {
-    render(<ViewerPage adapters={[new FailingAdapter()]} initialDocument={docWithBinding()} labels={ko} />);
+    render(<ViewerPage adapters={[new FailingAdapter()]} document={docWithBinding()} labels={ko} />);
     await screen.findByTestId('viewer');
     expect(screen.getByRole('button', { name: '확대' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '축소' })).toBeInTheDocument();
@@ -235,16 +254,16 @@ describe('ViewerPage labels', () => {
   });
 
   it('keeps English for any label not given', async () => {
-    render(<ViewerPage adapters={[new SpyAdapter()]} initialDocument={docWithBinding()} labels={{ zoomIn: '확대' }} />);
+    render(<ViewerPage adapters={[new SpyAdapter()]} document={docWithBinding()} labels={{ zoomIn: '확대' }} />);
     await screen.findByTestId('viewer');
     expect(screen.getByRole('button', { name: 'Zoom out' })).toBeInTheDocument();
     expect(lastViewerProps().ariaLabel).toBe('Board');
   });
 
   it('settles when labels are passed as a new object on every render', async () => {
-    const { rerender } = render(<ViewerPage adapters={[new SpyAdapter()]} initialDocument={docWithBinding()} labels={{ ...ko }} />);
+    const { rerender } = render(<ViewerPage adapters={[new SpyAdapter()]} document={docWithBinding()} labels={{ ...ko }} />);
     await screen.findByTestId('viewer');
-    rerender(<ViewerPage adapters={[new SpyAdapter()]} initialDocument={docWithBinding()} labels={{ ...ko }} />);
+    rerender(<ViewerPage adapters={[new SpyAdapter()]} document={docWithBinding()} labels={{ ...ko }} />);
     await new Promise(resolve => setTimeout(resolve, 50));
     const calls = viewerProps.mock.calls.length;
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -264,7 +283,7 @@ describe('ViewerPage liveness', () => {
   it('shows when the values were last updated while it polls, and nothing of the kind when it does not', async () => {
     vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
     const adapters = [new GatedAdapter()];
-    const { unmount } = render(<ViewerPage adapters={adapters} initialDocument={docWithBinding()} pollIntervalMs={1000} />);
+    const { unmount } = render(<ViewerPage adapters={adapters} document={docWithBinding()} pollIntervalMs={1000} />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -272,7 +291,7 @@ describe('ViewerPage liveness', () => {
     expect(screen.getByText(`Updated ${time}`)).toBeInTheDocument();
     unmount();
 
-    render(<ViewerPage adapters={adapters} initialDocument={docWithBinding()} />);
+    render(<ViewerPage adapters={adapters} document={docWithBinding()} />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -282,7 +301,7 @@ describe('ViewerPage liveness', () => {
   it('says it is not updating and shows every value as last known, once a poll goes unanswered', async () => {
     vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
     const adapter = new GatedAdapter();
-    render(<ViewerPage adapters={[adapter]} initialDocument={docWithBinding()} pollIntervalMs={1000} />);
+    render(<ViewerPage adapters={[adapter]} document={docWithBinding()} pollIntervalMs={1000} />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -306,7 +325,7 @@ describe('ViewerPage liveness', () => {
     render(
       <ViewerPage
         adapters={[new GatedAdapter()]}
-        initialDocument={docWithBinding()}
+        document={docWithBinding()}
         pollIntervalMs={1000}
         labels={{ lastUpdated: '갱신 {time}', time: () => '오후 2:00:00' }}
       />
@@ -332,7 +351,7 @@ describe('ViewerPage clock', () => {
 
   it('measures how long ago a value was obtained against the clock it is given', async () => {
     vi.useFakeTimers({ now: new Date('2026-10-07T05:10:00Z') });
-    render(<ViewerPage adapters={[new StaleAdapter()]} initialDocument={docWithBinding()} clock={clock} />);
+    render(<ViewerPage adapters={[new StaleAdapter()]} document={docWithBinding()} clock={clock} />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
@@ -342,7 +361,7 @@ describe('ViewerPage clock', () => {
 
   it('tells the time of the last update by the clock it is given', async () => {
     vi.useFakeTimers({ now: new Date('2026-10-07T05:10:00Z') });
-    render(<ViewerPage adapters={[new StaleAdapter()]} initialDocument={docWithBinding()} pollIntervalMs={1000} clock={clock} />);
+    render(<ViewerPage adapters={[new StaleAdapter()]} document={docWithBinding()} pollIntervalMs={1000} clock={clock} />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });

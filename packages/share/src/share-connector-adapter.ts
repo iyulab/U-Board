@@ -27,8 +27,13 @@ export class ShareResolveBatcher {
   private pending: Pending[] = [];
 
   /** `onExpired` runs when the server says the share link has expired (410) — the board is open,
-   * and from now on every binding would only read `disconnected`. */
-  constructor(private boardId: string, private token: string, private onExpired?: () => void) {}
+   * and from now on every binding would only read `disconnected`. `onRevision` gets the board's
+   * revision each answer carries — how an open board learns it was saved again since it was read. */
+  constructor(
+    private boardId: string,
+    private token: string,
+    private handlers: { onExpired?: () => void; onRevision?: (revision: number) => void } = {}
+  ) {}
 
   resolve(connectorId: string, ref: unknown): Promise<ResolvedBinding> {
     return new Promise<ResolvedBinding>(settle => {
@@ -68,12 +73,13 @@ export class ShareResolveBatcher {
         body: JSON.stringify({ bindings }),
       }
     );
-    if (res.status === 410) this.onExpired?.();
+    if (res.status === 410) this.handlers.onExpired?.();
     if (!res.ok) {
       const refused = { ...DISCONNECTED, reason: refusalReason(res.status) };
       return bindings.map(() => refused);
     }
-    const body = (await res.json()) as { results: ResolvedBinding[] };
+    const body = (await res.json()) as { results: ResolvedBinding[]; revision?: number };
+    if (typeof body.revision === 'number') this.handlers.onRevision?.(body.revision);
     return body.results;
   }
 }

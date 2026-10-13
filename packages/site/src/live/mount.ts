@@ -16,7 +16,7 @@ for (const host of document.querySelectorAll<HTMLElement>('[data-live-board]')) 
   host.classList.add('live');
   createRoot(host).render(
     createElement(ViewerPage, {
-      initialDocument: sampleBoard(text),
+      document: sampleBoard(text),
       adapters: [new SampleAdapter()],
       pollIntervalMs: POLL_INTERVAL_MS,
       ariaLabel: text.plant,

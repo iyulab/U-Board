@@ -64,6 +64,15 @@ describe('public share routes', () => {
     expect(res.body.document).toEqual(doc);
     expect(res.body.revision).toBe(2);
     expect(res.body.connectorIds).toEqual([connector.id]);
+
+    // Asked again with the revision it shows, an open viewer gets a bodiless 304 until the board changes.
+    expect(res.headers.etag).toBe('"2"');
+    const unchanged = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`).set('If-None-Match', '"2"');
+    expect(unchanged.status).toBe(304);
+    await updateBoard(db, workspaceId, boardId, { name: 'Board A, again' });
+    const changed = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`).set('If-None-Match', '"2"');
+    expect(changed.status).toBe(200);
+    expect(changed.body.revision).toBe(3);
   });
 
   it('excludes referenced adapter ids that are not real stored connectors (e.g. demo-cmms)', async () => {

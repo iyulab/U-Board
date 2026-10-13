@@ -113,7 +113,7 @@ describe('ShareConnectorAdapter', () => {
   it('tells its owner when the share link has expired, and reports the binding refused', async () => {
     (fetch as any).mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 410, json: async () => ({ code: 'SHARE_LINK_EXPIRED' }) });
     let expired = 0;
-    const adapter = new ShareConnectorAdapter(new ShareResolveBatcher('b1', 'tok', () => expired++), 'c1');
+    const adapter = new ShareConnectorAdapter(new ShareResolveBatcher('b1', 'tok', { onExpired: () => expired++ }), 'c1');
     expect(await adapter.resolve({ path: '/status' })).toEqual({ value: undefined, quality: 'disconnected', reason: 'auth' });
     expect(expired).toBe(1);
   });

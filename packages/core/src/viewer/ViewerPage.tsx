@@ -22,8 +22,11 @@ export interface ViewerPageProps {
   width?: number;
   height?: number;
   /** The document to show. Given, it renders at once with no import control (the embed case);
-   * omitted, the page offers an Import button that opens a local document file. */
-  initialDocument?: ViewDocument;
+   * omitted, the page offers an Import button that opens a local document file. A different
+   * document given later replaces it — a board saved again while it is open — keeping the user's
+   * pan and zoom unless the new one covers a different area. Pass the same object until the
+   * document changes: each new one is resolved again. */
+  document?: ViewDocument;
   /** Re-resolve the bindings every this many milliseconds, so values and connection quality stay
    * current. Omitted, bindings resolve once when the document opens. */
   pollIntervalMs?: number;
@@ -55,7 +58,7 @@ export function ViewerPage({
   adapters,
   width,
   height,
-  initialDocument,
+  document,
   pollIntervalMs,
   ariaLabel,
   labels: labelsProp,
@@ -63,7 +66,14 @@ export function ViewerPage({
   attribution = true,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
-  const [doc, setDoc] = useState<ViewDocument | null>(initialDocument ?? null);
+  const [doc, setDoc] = useState<ViewDocument | null>(document ?? null);
+  // A new document from the host is shown as it arrives; the first one is already the state.
+  const shownDocument = useRef(document);
+  useEffect(() => {
+    if (!document || document === shownDocument.current) return;
+    shownDocument.current = document;
+    setDoc(document);
+  }, [document]);
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,12 +84,14 @@ export function ViewerPage({
   // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
 
-  const extent = useMemo(() => (doc ? documentExtent(doc) : null), [doc]);
+  // Kept while the area stays the same, so a document replaced in place leaves the view where it is.
+  const extentKey = doc ? JSON.stringify(documentExtent(doc)) : null;
+  const extent = useMemo(() => (extentKey ? (JSON.parse(extentKey) as ReturnType<typeof documentExtent>) : null), [extentKey]);
   const attributions = useMemo(() => (doc && attribution ? boardAttributions(doc, adapters) : []), [doc, adapters, attribution]);
   const view = useFittedView();
   const { fitTo } = view;
-  // Fit whenever a document is loaded — not on a preview refresh, which is only new values for the
-  // same document.
+  // Fit whenever a document covering a new area is loaded — not on a preview refresh, which is only
+  // new values for the same document, nor on a document replaced within the same area.
   useEffect(() => {
     fitTo(extent);
   }, [fitTo, extent]);
@@ -110,9 +122,9 @@ export function ViewerPage({
 
   return (
     <div className="ub-viewer" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {(!initialDocument || viewerShown) && (
+      {(!document || viewerShown) && (
         <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
-          {!initialDocument && (
+          {!document && (
             <>
               <button type="button" className="ub-action" onClick={handleImportClick}>
                 {labels.import}
