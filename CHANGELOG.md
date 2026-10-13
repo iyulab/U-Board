@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-10-13
+
 ### Added
 
 - **A save no longer overwrites someone else's unseen.** Each board counts its saves (`revision`); reading a board
