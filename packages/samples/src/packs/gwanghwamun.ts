@@ -156,7 +156,7 @@ function panel(): Node[] {
     }),
     node('forecast', PANEL_X, 190, 460, 210, {
       type: 'chart.line',
-      props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' }, options: { xFormat: { type: 'datetime' } } },
+      props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' }, options: { xFormat: { type: 'time' } } },
       bindings: { data: bind(PEOPLE, '/FCST_PPLTN') },
     }),
     node('temperature', PANEL_X, 424, 140, 80, {
@@ -177,7 +177,7 @@ function panel(): Node[] {
     node('temperature-forecast', PANEL_X, 524, 460, 200, {
       type: 'chart.line',
       // The source writes each hour as digits (`202610092100`); the axis shows it as a date and time.
-      props: { title: '24시간 기온 예보(°C)', data: [], mapping: { x: 'FCST_DT', y: 'TEMP' }, options: { xFormat: { type: 'datetime' } } },
+      props: { title: '24시간 기온 예보(°C)', data: [], mapping: { x: 'FCST_DT', y: 'TEMP' }, options: { xFormat: { type: 'time' } } },
       bindings: { data: bind(WEATHER, '/FCST24HOURS') },
     }),
     node('traffic', PANEL_X, 752, 220, 60, {

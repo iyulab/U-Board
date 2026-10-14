@@ -11,6 +11,11 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- Widgets come from `@iyulab/u-widgets` 0.32. The sample boards' forecast charts label their axis with the time of
+  day alone instead of repeating the date on every label.
+
 ### Fixed
 
 - **The mark of a node whose value is not current is shown in full.** It sits on a tag just above the node's frame

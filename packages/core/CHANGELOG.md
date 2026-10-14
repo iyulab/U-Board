@@ -21,6 +21,9 @@ All notable changes to this package are documented here. The format follows
   `AuthoringView` keeps `initialDocument`: the editor owns its copy once opened.
 - **Breaking: `QualityText` has `brief`** — a few words per state and per cause for the mark the renderer now shows
   on a node (below). A `QualityText` written out in full needs them; `DEFAULT_QUALITY_TEXT` and `KO_LABELS` have them.
+- **Widgets come from `@iyulab/u-widgets` 0.32.** Widget text now takes the page's `--u-widget-font-family` (and
+  `--u-widget-font-mono` for code); an app that set `--u-widget-shadow-hover` can drop it — nothing reads it. A chart
+  axis can show the time of day alone (`xFormat: { type: 'time' }`).
 
 ### Added
 
