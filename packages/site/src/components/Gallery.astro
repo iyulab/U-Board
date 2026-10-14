@@ -1,10 +1,10 @@
 ---
-// Sample boards on public open data, one card each: what field and what kind of background, the board
-// itself (drawn by the library viewer from recorded answers once the page runs script), when the answers
-// were recorded and where they come from.
+// Sample boards, one card each: what field and what kind of background, the board itself (drawn by the
+// library viewer from recorded answers once the page runs script), and when the answers were recorded — or,
+// for a board on example data, that they are an example.
 import Page from './Page.astro';
 import { COPY, type Locale } from '../copy';
-import { SAMPLE_PACKS } from '@iyulab/u-board-samples';
+import { SAMPLE_PACKS, isInstallable } from '@iyulab/u-board-samples';
 
 interface Props {
   locale: Locale;
@@ -19,7 +19,8 @@ const time = (iso: string) =>
   }).format(new Date(iso));
 const cards = SAMPLE_PACKS.map(pack => {
   const { width, height } = pack.document.background.image ?? { width: 4, height: 3 };
-  return { pack, aspect: `${width} / ${height}`, recorded: g.recorded.replace('{time}', time(pack.snapshot.capturedAt)) };
+  const recorded = isInstallable(pack) ? g.recorded.replace('{time}', time(pack.snapshot.capturedAt)) : g.example;
+  return { pack, aspect: `${width} / ${height}`, recorded };
 });
 ---
 

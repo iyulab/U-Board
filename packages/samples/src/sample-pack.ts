@@ -11,7 +11,7 @@ export interface Localized {
  * is the `adapter` the sample's bindings name; an installation that adds the sample creates the connector
  * and rewrites that `adapter` to the new connector's id.
  */
-export interface SampleConnector {
+export interface LiveSampleConnector {
   key: string;
   name: string;
   baseUrl: string;
@@ -22,17 +22,39 @@ export interface SampleConnector {
   attribution: Attribution;
 }
 
-/** What the source answered when the sample was recorded, per connector key and request path — only the
- *  fields the sample's bindings read (see `scripts/capture-snapshots.ts`). */
+/**
+ * Example data written for a sample, where no public source carries the kind of data the board shows (a
+ * plant's machines, its inspection stations, its feeders). It has no address: the sample's snapshot is all
+ * of it, so the sample is shown where a snapshot is replayed and is not offered to an installation. Its
+ * credit says it is an example, and the board shows that credit as it shows a real source's.
+ */
+export interface ExampleSampleConnector {
+  key: string;
+  name: string;
+  example: true;
+  attribution: Attribution;
+}
+
+export type SampleConnector = LiveSampleConnector | ExampleSampleConnector;
+
+export const isLiveConnector = (connector: SampleConnector): connector is LiveSampleConnector => !('example' in connector);
+
+/** Whether an installation can create `pack` — every source it reads is a live one to connect to. */
+export const isInstallable = (pack: SamplePack): boolean => pack.connectors.every(isLiveConnector);
+
+/** What the source answered when the sample was recorded — or, for example data, what it is written to
+ *  answer — per connector key and request path: only the fields the sample's bindings read (see
+ *  `scripts/capture-snapshots.ts`). */
 export interface SampleSnapshot {
-  /** When it was recorded (ISO 8601). */
+  /** When it was recorded (ISO 8601) — for example data, the moment its values are written as of. */
   capturedAt: string;
   responses: Record<string, Record<string, unknown>>;
 }
 
 /**
- * A board on open data that can be shown anywhere: on a page with no server (its snapshot replayed), or in
- * an installation, where it is created with its connectors and reads the live source.
+ * A sample board that can be shown anywhere a snapshot is replayed (a page with no server). One on open data
+ * can also be created in an installation, with its connectors, and read its live source there; one on example
+ * data (`isInstallable` false) is shown only.
  */
 export interface SamplePack {
   id: string;

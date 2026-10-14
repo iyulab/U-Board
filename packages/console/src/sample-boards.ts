@@ -1,16 +1,20 @@
 import type { ViewDocument } from '@iyulab/u-board';
-import type { SamplePack } from '@iyulab/u-board-samples';
+import type { LiveSampleConnector, SamplePack } from '@iyulab/u-board-samples';
 import { createBoard, createConnector, listConnectors, updateBoard, type ConnectorSummary } from './api-client.js';
 
-/** The samples, loaded when they are first offered — they carry drawings and recordings the rest of the
- *  console never needs. */
+/** The samples an installation can create — those on live sources, not example data — loaded when they are
+ *  first offered: they carry drawings and recordings the rest of the console never needs. */
 export async function loadSamplePacks(): Promise<readonly SamplePack[]> {
-  return (await import('@iyulab/u-board-samples')).SAMPLE_PACKS;
+  const { SAMPLE_PACKS, isInstallable } = await import('@iyulab/u-board-samples');
+  return SAMPLE_PACKS.filter(isInstallable);
 }
+
+/** A sample's sources, every one live — what `loadSamplePacks` offers. */
+const liveConnectors = (pack: SamplePack) => pack.connectors as LiveSampleConnector[];
 
 /** A data source this workspace already has for a sample's connector: the same address, asked the same way.
  *  Its stored key may be the owner's own rather than the sample's — reusing it keeps that. */
-function existingFor(connectors: readonly ConnectorSummary[], sample: SamplePack['connectors'][number]): ConnectorSummary | undefined {
+function existingFor(connectors: readonly ConnectorSummary[], sample: LiveSampleConnector): ConnectorSummary | undefined {
   return connectors.find(
     c => c.baseUrl === sample.baseUrl && c.authType === sample.authType && (sample.authType !== 'query' || c.authParamName === sample.authParamName)
   );
@@ -23,7 +27,7 @@ function existingFor(connectors: readonly ConnectorSummary[], sample: SamplePack
 export async function createBoardFromSample(workspaceId: string, pack: SamplePack, name: string): Promise<string> {
   const { connectors } = await listConnectors(workspaceId);
   const ids = new Map<string, string>();
-  for (const sample of pack.connectors) {
+  for (const sample of liveConnectors(pack)) {
     const existing = existingFor(connectors, sample);
     if (existing) {
       ids.set(sample.key, existing.id);
@@ -43,5 +47,5 @@ export async function createBoardFromSample(workspaceId: string, pack: SamplePac
 
 /** The hosts a sample reads, to name where its data sources will connect. */
 export function sampleHosts(pack: SamplePack): string[] {
-  return [...new Set(pack.connectors.map(c => new URL(c.baseUrl.replace('{key}', 'key')).host))];
+  return [...new Set(liveConnectors(pack).map(c => new URL(c.baseUrl.replace('{key}', 'key')).host))];
 }

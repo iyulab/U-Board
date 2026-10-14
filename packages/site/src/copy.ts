@@ -74,6 +74,8 @@ export interface Copy {
     kind: string;
     /** `{time}` — when the source's answers shown were recorded. */
     recorded: string;
+    /** Under a board on example data, in place of `recorded`: there is no source to have recorded. */
+    example: string;
   };
 }
 
@@ -188,13 +190,14 @@ export const COPY: Record<Locale, Copy> = {
     },
     gallery: {
       nav: '갤러리',
-      title: 'U-Board — 오픈 데이터 보드',
-      description: '공공기관이 개방한 데이터로 만든 U-Board 보드. 장소를 그린 약도 위, 값이 그 자리에 놓인 모습을 분야별로 봅니다.',
-      heading: '오픈 데이터 보드',
-      intro: '공공기관이 개방한 실시간 데이터를 U-Board 보드에 연결한 예시입니다. 배경은 장소를 그린 약도이고, 값은 그 값이 가리키는 자리에 놓입니다. 이 페이지는 녹화한 원천 응답을 보여 주며, 설치한 U-Board에서는 같은 보드가 원천을 직접 읽어 30초마다 갱신합니다.',
+      title: 'U-Board — 보드 갤러리',
+      description: 'U-Board로 그린 보드. 장소를 그린 약도·배치도 위, 값이 그 자리에 놓인 모습을 분야별로 봅니다.',
+      heading: 'U-Board로 그린 보드',
+      intro: '배경은 장소를 그린 약도나 배치도이고, 값은 그 값이 가리키는 자리에 놓입니다. 공공기관이 개방한 실시간 데이터에 연결한 보드는 녹화한 원천 응답을 보여 주며, 설치한 U-Board에서는 같은 보드가 원천을 직접 읽어 30초마다 갱신합니다. 공장처럼 공개 원천이 없는 분야는 예시 데이터로 그렸습니다.',
       field: '분야',
       kind: '배경',
       recorded: '{time}에 녹화한 원천 응답입니다.',
+      example: '예시 데이터입니다 — 실제 설비나 원천의 값이 아닙니다.',
     },
   },
   en: {
@@ -307,13 +310,14 @@ export const COPY: Record<Locale, Copy> = {
     },
     gallery: {
       nav: 'Gallery',
-      title: 'U-Board — Boards on open data',
-      description: 'U-Board boards built on public open data: values placed where they belong on a plan of the place, by field.',
-      heading: 'Boards on open data',
-      intro: 'Live data that public bodies open to everyone, bound to U-Board boards. The background is a plan of the place, and each value sits where it belongs. This page shows recorded answers from the sources; in an installed U-Board the same board reads the source itself and updates every 30 seconds.',
+      title: 'U-Board — Board gallery',
+      description: 'Boards drawn with U-Board: values placed where they belong on a plan or layout of the place, by field.',
+      heading: 'Boards drawn with U-Board',
+      intro: 'The background is a plan or layout of the place, and each value sits where it belongs. Boards bound to live data that public bodies open to everyone show recorded answers from the sources; in an installed U-Board the same board reads the source itself and updates every 30 seconds. Fields with no public source, such as a plant, are drawn on example data.',
       field: 'Field',
       kind: 'Background',
       recorded: 'Answers from the source recorded at {time}.',
+      example: 'Example data — not the values of a real plant or source.',
     },
   },
 };

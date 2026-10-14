@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { coordinateOf, resolveDocument, validateViewDocument, type Node } from '@iyulab/u-board/domain';
-import { SAMPLE_PACKS, snapshotAdapters } from './index.js';
+import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
 import { BIKE_STATIONS } from './packs/gwanghwamun.js';
 import { keepPointers } from './prune.js';
 
@@ -19,7 +19,8 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     }
     for (const connector of pack.connectors) {
       expect(connector.attribution.text.trim()).not.toBe('');
-      if (connector.authType === 'path') expect(connector.baseUrl.split('{key}')).toHaveLength(2);
+      if (!isLiveConnector(connector)) expect(connector.attribution.text, connector.key).toContain('예시 데이터');
+      else if (connector.authType === 'path') expect(connector.baseUrl.split('{key}')).toHaveLength(2);
     }
   });
 
@@ -98,5 +99,15 @@ describe('a recording', () => {
     const body = { a: { rows: [{ n: 1, x: 'drop' }, { n: 2 }, { n: 3 }], other: 'drop' }, b: 'drop' };
     expect(keepPointers(body, ['/a/rows/0/n', '/a/rows/2'])).toEqual({ a: { rows: [{ n: 1 }, null, { n: 3 }] } });
     expect(keepPointers(body, [''])).toBe(body);
+  });
+});
+
+describe('example data', () => {
+  it('is never offered to an installation, and every pack on it says so in its summary', () => {
+    for (const pack of SAMPLE_PACKS.filter(p => !isInstallable(p))) {
+      expect(pack.summary.ko, pack.id).toContain('예시 데이터');
+      expect(pack.summary.en, pack.id).toContain('Example data');
+    }
+    expect(SAMPLE_PACKS.filter(isInstallable).map(p => p.id)).toEqual(['gwanghwamun', 'seoul-air']);
   });
 });

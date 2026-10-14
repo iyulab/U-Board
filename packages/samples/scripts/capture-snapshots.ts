@@ -7,9 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { findHttpRefItem, type HttpRef } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS } from '../src/index.js';
 import { keepPointers } from '../src/prune.js';
-import type { SampleConnector, SamplePack } from '../src/sample-pack.js';
+import { isInstallable, type LiveSampleConnector, type SamplePack } from '../src/sample-pack.js';
 
-function requestUrl(connector: SampleConnector, path: string): URL {
+function requestUrl(connector: LiveSampleConnector, path: string): URL {
   const base = connector.authType === 'path' ? connector.baseUrl.replace('{key}', encodeURIComponent(connector.authValue ?? '')) : connector.baseUrl;
   const url = new URL(base.replace(/\/+$/, '') + path);
   if (connector.authType === 'query' && connector.authParamName) url.searchParams.set(connector.authParamName, connector.authValue ?? '');
@@ -41,10 +41,11 @@ function pointersOf(body: unknown, ref: HttpRef): string[] {
   return [...inScope.map(pointer => `${at}${pointer}`), ...Object.keys(ref.item.where).map(field => `${at}/${field.replace(/~/g, '~0').replace(/\//g, '~1')}`)];
 }
 
-for (const pack of SAMPLE_PACKS) {
+// Example data is written by hand in its snapshot; there is no source to record it from.
+for (const pack of SAMPLE_PACKS.filter(isInstallable)) {
   const responses: Record<string, Record<string, unknown>> = {};
   for (const [key, paths] of requests(pack)) {
-    const connector = pack.connectors.find(c => c.key === key);
+    const connector = pack.connectors.find(c => c.key === key) as LiveSampleConnector | undefined;
     if (!connector) throw new Error(`${pack.id}: a binding names "${key}", which is not one of its connectors`);
     responses[key] = {};
     for (const [path, refs] of paths) {
