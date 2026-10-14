@@ -51,8 +51,9 @@ dependencies, check the tarball with `npm pack --dry-run --workspace=packages/co
 
 ## Open, not yet decided
 
-- View kinds beyond the canvas view (an automatic-layout grid kind, and any future kind) are not
-  designed. Do not add one speculatively.
+- A grid view kind is planned (see `docs/principles.md` — widgets by order, span and screen width,
+  sharing widgets and bindings with the canvas kind) but not designed yet. Do not build it before
+  its design is written down; no other kind is planned.
 - How the authoring tool is packaged/distributed is not decided. Do not assume a specific
   runtime (browser-only vs. a desktop shell) without checking current guidance.
 
