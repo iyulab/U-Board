@@ -4,11 +4,13 @@ export { SnapshotAdapter, snapshotAdapters } from './snapshot-adapter.js';
 export { gwanghwamun } from './packs/gwanghwamun.js';
 export { seoulAir } from './packs/seoul-air.js';
 export { factoryFloor } from './packs/factory-floor.js';
+export { lineSpc } from './packs/line-spc.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
 import { factoryFloor } from './packs/factory-floor.js';
+import { lineSpc } from './packs/line-spc.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, factoryFloor];
+export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, factoryFloor, lineSpc];
