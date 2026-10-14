@@ -15,8 +15,8 @@ describe('domain entry', () => {
     expect('ViewerPage' in mod).toBe(false);
   });
 
-  it('does not export DemoAdapter — no server process consumes it, it lives at ./demo instead', () => {
-    expect('DemoAdapter' in mod).toBe(false);
+  it("does not export FixtureAdapter — the fixture serves only this package's demo app and tests", () => {
+    expect('FixtureAdapter' in mod).toBe(false);
   });
 
   it('re-exports the domain surface a server process needs', () => {

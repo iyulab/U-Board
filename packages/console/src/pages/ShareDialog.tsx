@@ -14,8 +14,6 @@ interface ShareDialogProps {
   workspaceId: string;
   boardId: string;
   boardName: string;
-  /** The saved document binds a widget to the demo data, which a share link does not serve. */
-  hasDemoBinding: boolean;
 }
 
 /** Escapes a value for an HTML attribute in double quotes. */
@@ -41,7 +39,7 @@ const COPIED_TEXT: Record<Exclude<Copied, null>, string> = {
  * links already issued. The server's share routes are owner-only, so the page opens this for an
  * owner only.
  */
-export function ShareDialog({ open, onClose, workspaceId, boardId, boardName, hasDemoBinding }: ShareDialogProps) {
+export function ShareDialog({ open, onClose, workspaceId, boardId, boardName }: ShareDialogProps) {
   const [tokens, setTokens] = useState<ShareTokenSummary[]>([]);
   // When the list was loaded — what "expired" is judged against, so a render stays a pure function.
   const [listedAt, setListedAt] = useState(0);
@@ -122,12 +120,6 @@ export function ShareDialog({ open, onClose, workspaceId, boardId, boardName, ha
         <p className="ub-share__intro">
           공유 링크는 로그인 없이 이 보드를 읽기 전용으로 엽니다. 임베드 코드로 다른 웹 페이지에 넣을 수 있습니다.
         </p>
-        {hasDemoBinding && (
-          <p role="alert" className="ub-share__warning">
-            이 보드에는 데모 데이터로 바인딩된 위젯이 있습니다 — 공유 링크에서는 해당 위젯이 "연결 끊김"으로
-            보입니다(데모 데이터는 저작 화면에서만 미리보기용으로 동작합니다).
-          </p>
-        )}
         {error && <Alert>{error}</Alert>}
 
         <section className="ub-share__section" aria-labelledby="share-new-heading">

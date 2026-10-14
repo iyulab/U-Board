@@ -13,11 +13,18 @@ do when upgrading. Each release's notes carry its section.
 
 ### Changed
 
+- **The editor no longer offers «데모 데이터».** It was a stand-in that worked only in the editor — a shared board
+  showed it as not connected. With no data source, the binding form now says where one comes from: a workspace
+  owner adds it under «데이터소스», or a new board starts from a sample, which brings its own.
+  **Upgrading:** a board that used it shows those widgets as not connected (the binding names `demo-cmms`). Bind
+  them to a data source, or remove the binding.
 - Widgets come from `@iyulab/u-widgets` 0.32. The sample boards' forecast charts label their axis with the time of
   day alone instead of repeating the date on every label.
 
 ### Fixed
 
+- **A shared board follows a dark system theme to the page edge.** The page stayed white while the viewer's text
+  took its dark colors, so the «갱신» time beside the board was too faint to read (contrast 2.6:1).
 - **The mark of a node whose value is not current is shown in full.** It sits on a tag just above the node's frame
   instead of inside its corner, where a narrow node cut it short — first of all the value's age — and covered the
   widget.

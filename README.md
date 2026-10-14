@@ -76,9 +76,9 @@ request, again every 30 seconds while it is open — and shows the board as save
 interval. A connector's settings can be tried before they are saved, its credentials are kept on the server
 sealed under an installation key, and the addresses connectors may
 reach are an installation setting — never the server's own loopback, link-local or cloud host addresses. A connector to a specific external system that needs its own
-domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet —
-until then, a built-in demo adapter with fixed sample values is available in the authoring UI so a
-board can be wired up and previewed before any real connector is configured. The hosted
+domain knowledge (e.g. a real CMMS) still requires access to that system and doesn't exist yet. To see
+a board on real data before connecting any of your own, start a new board from a sample: it brings its
+own connectors to public open-data sources. The hosted
 applications (see [Repository layout](#repository-layout)) add workspaces with members,
 server-side board storage, managed connectors, and read-only share links — on an installation run by
 an operator who creates each organization's workspace and can recover one whose owners are gone,

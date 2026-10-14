@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { clickFirstNode } from './support/authoring';
 
 test('create a share link, view the board unauthenticated, then revoke it', async ({ page, browser }) => {
   // 부트스트랩: 이 invocation의 첫(그리고 유일한) 가입 — owner + 기본 워크스페이스 자동생성
@@ -18,20 +17,13 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
   const boardId = new URL(page.url()).pathname.split('/')[2]; // /boards/:boardId/edit
 
-  // 데모 데이터로 바인딩한 노드 하나 추가 — 아래 공유 패널 경고(ISSUE-U-Board-20260829-*)가
-  // 실 브라우저에서도 뜨는지 확인하기 위함. binding-editor.spec.ts와 동일 패턴, 데이터소스만
-  // 실 커넥터 대신 데모(HTTP Path/Value path 대신 데모가 나열하는 참조 중 하나).
+  // 노드 하나 추가 — 공유 뷰어가 맞춤·확대·팬을 보여 줄 대상(바인딩은 binding-editor.spec.ts가 본다).
   await page.getByText('노드 추가').click();
-  await clickFirstNode(page);
-  await page.getByLabel('프롭 경로').selectOption('data.value');
-  await page.getByRole('combobox', { name: '참조', exact: true }).selectOption('pump-a.state');
-  await page.getByText('바인딩 저장', { exact: true }).click();
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
-  // 머리글의 공유 버튼으로 공유 대화상자를 열고 경고 확인 → 링크 생성
+  // 머리글의 공유 버튼으로 공유 대화상자를 열고 링크 생성
   await page.getByRole('button', { name: '공유', exact: true }).click();
-  await expect(page.getByText('데모 데이터로 바인딩된 위젯이 있습니다')).toBeVisible();
   await page.getByRole('button', { name: '새 공유 링크 생성' }).click();
   const urlText = await page.getByLabel('공유 링크 주소').inputValue();
   expect(urlText).toMatch(new RegExp(`board=${boardId}&token=`));

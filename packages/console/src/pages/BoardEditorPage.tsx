@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { AuthoringView, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board';
-import { DemoAdapter } from '@iyulab/u-board/demo';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, apiClock, ApiError,
@@ -14,15 +13,12 @@ import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
 import { ShareDialog } from './ShareDialog.js';
 
-/** True when any node's widget binds to `adapterId`. Used to warn before sharing a document bound
- * to the demo adapter: the server drops that adapter id from the share viewer's connector list
- * (`packages/server/src/routes/share.ts`, by design — a client-side mock must never reach a real
- * data path), so every such binding renders as `disconnected` there with no other indication. */
-function documentHasBindingFor(doc: ViewDocument, adapterId: string): boolean {
-  return doc.nodes.some(node =>
-    Object.values(node.widget.bindings ?? {}).some(binding => binding.adapter === adapterId)
-  );
-}
+// The editor's words, plus where a workspace without a data source goes next: the console's own
+// screens, which the library's generic wording cannot name.
+const EDITOR_LABELS = {
+  ...KO_LABELS,
+  noDataSources: '연결된 데이터소스가 없습니다. 워크스페이스 소유자가 «데이터소스»에서 추가하면 여기서 고를 수 있습니다. 실제 데이터로 바로 보려면 보드 목록의 «샘플에서 시작»을 쓰세요.',
+};
 
 export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const { boardId } = useParams<{ boardId: string }>();
@@ -52,13 +48,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const [isOwner, setIsOwner] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  // Tracks the last *saved* document, not whatever AuthoringView holds mid-edit — a share link
-  // is always generated from the server's copy (Task 4's `share.ts` reads `board.document`), so
-  // this must reflect exactly what a new share link would actually serve.
-  const [hasDemoBinding, setHasDemoBinding] = useState(false);
-
-  const demoAdapter = useMemo(() => new DemoAdapter(), []);
-
   useEffect(() => {
     // A board opened after another must not be overwritten by the first one's late answer.
     let cancelled = false;
@@ -72,7 +61,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         setDocument(board.document);
         revision.current = board.revision;
         setBoardName(board.name);
-        setHasDemoBinding(documentHasBindingFor(board.document, demoAdapter.id));
       })
       .catch(() => {
         if (!cancelled) setLoadError('보드를 불러오지 못했습니다');
@@ -80,7 +68,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     return () => {
       cancelled = true;
     };
-  }, [workspaceId, boardId, demoAdapter]);
+  }, [workspaceId, boardId]);
 
   useEffect(() => {
     listConnectors(workspaceId)
@@ -94,21 +82,12 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       .catch(() => setMembersError('구성원 정보를 불러오지 못했습니다'));
   }, [workspaceId, userId]);
 
-  const adapters: readonly Adapter[] = useMemo(() => {
-    const real = connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id, c.attribution));
-    // The binding form starts on the first: a real connector when there is one, the demo data otherwise.
-    return [...real, demoAdapter];
-  }, [demoAdapter, workspaceId, connectors]);
-
-  const connectorLabels = useMemo(
-    () => ({
-      // The demo adapter's id is never in `connectors` (a real workspace data source), so this
-      // never collides with — or gets overwritten by — a real connector's label below.
-      [demoAdapter.id]: '데모 데이터 (예시, 실제 연결 아님)',
-      ...Object.fromEntries(connectors.map(c => [c.id, c.name])),
-    }),
-    [demoAdapter, connectors]
+  const adapters: readonly Adapter[] = useMemo(
+    () => connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id, c.attribution)),
+    [workspaceId, connectors]
   );
+
+  const connectorLabels = useMemo(() => Object.fromEntries(connectors.map(c => [c.id, c.name])), [connectors]);
 
   function handleBackClick(e: MouseEvent) {
     // AuthoringView's unsaved-changes guard is a native `beforeunload` listener, which only
@@ -163,7 +142,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       setConflict(null);
       setOverwriteArmed(false);
       setSavedAt(new Date());
-      setHasDemoBinding(documentHasBindingFor(doc, demoAdapter.id));
     } catch (err) {
       if (err instanceof ApiError && err.code === 'BOARD_CHANGED' && typeof err.body.revision === 'number') {
         setConflict({ revision: err.body.revision });
@@ -195,7 +173,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       setDocument(board.document);
       revision.current = board.revision;
       setBoardName(board.name);
-      setHasDemoBinding(documentHasBindingFor(board.document, demoAdapter.id));
       setConflict(null);
       setOverwriteArmed(false);
       setSavedAt(null);
@@ -253,7 +230,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           connectorLabels={connectorLabels}
           onDirtyChange={handleDirtyChange}
           onSave={handleSave}
-          labels={KO_LABELS}
+          labels={EDITOR_LABELS}
           clock={apiClock.now}
         />
       </div>
@@ -264,7 +241,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           workspaceId={workspaceId}
           boardId={boardId!}
           boardName={boardName}
-          hasDemoBinding={hasDemoBinding}
         />
       )}
     </div>

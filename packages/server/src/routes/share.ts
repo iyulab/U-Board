@@ -27,7 +27,7 @@ function* declaredBindings(doc: ViewDocument): Generator<{ connectorId: string; 
 }
 
 /** Every adapter id a document's widgets reference, intersected with the connectors that actually
- * exist in this workspace — an id like `demo-cmms` (the client-side mock, never a DB row) is
+ * exist in this workspace — an id with no stored connector (a binding to a data source since removed) is
  * dropped without any special-casing. Used to tell the viewer which `ShareConnectorAdapter`s to
  * construct, and how each source asks to be credited. Access to the resolve endpoint is gated
  * separately and more narrowly by `isDeclaredBinding` below. Because `findConnector` is async,

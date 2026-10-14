@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-li
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { PropertyPanel } from './PropertyPanel.js';
-import { DemoAdapter } from '../demo-adapter.js';
+import { FixtureAdapter } from '../fixture-adapter.js';
 import type { Adapter, ResolvedBinding } from '../adapter.js';
 import type { Node } from '../view-document.js';
 import { QUALITY_LABEL, REASON_LABEL } from '../quality-text.js';
@@ -350,7 +350,7 @@ describe('PropertyPanel bindings', () => {
 
   it('offers the references of an adapter that names them, instead of the HTTP path/valuePath form', async () => {
     const onChange = vi.fn();
-    render(<PropertyPanel node={statusNode()} adapters={[new DemoAdapter()]} onChange={onChange} />);
+    render(<PropertyPanel node={statusNode()} adapters={[new FixtureAdapter()]} onChange={onChange} />);
 
     expect(screen.queryByLabelText('Path')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
@@ -361,7 +361,7 @@ describe('PropertyPanel bindings', () => {
     expect(onChange).toHaveBeenCalledWith({
       type: 'status',
       props: { data: { label: 'Pump A', level: 'info', value: 'running' } },
-      bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-a.state' } },
+      bindings: { 'data.value': { adapter: 'fixture', ref: 'pump-a.state' } },
     });
   });
 
@@ -414,7 +414,7 @@ describe('PropertyPanel bindings', () => {
   // A host loading its connectors after the panel opened: an untouched form follows the new first
   // adapter, one the author has started keeps its choice.
   it('follows adapters that arrive late only while the form is untouched', () => {
-    const demo = new DemoAdapter();
+    const demo = new FixtureAdapter();
     const { rerender } = render(<PropertyPanel node={statusNode()} adapters={[demo]} onChange={vi.fn()} />);
     rerender(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter(), demo]} onChange={vi.fn()} />);
     expect(screen.getByLabelText('Data source')).toHaveValue('connector-1');
@@ -423,7 +423,7 @@ describe('PropertyPanel bindings', () => {
     const scoped = within(other.container);
     fireEvent.change(scoped.getByLabelText('Prop path'), { target: { value: 'data.label' } });
     other.rerender(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter(), demo]} onChange={vi.fn()} />);
-    expect(scoped.getByLabelText('Data source')).toHaveValue('demo-cmms');
+    expect(scoped.getByLabelText('Data source')).toHaveValue('fixture');
     expect(scoped.getByLabelText('Prop path')).toHaveValue('data.label');
   });
 

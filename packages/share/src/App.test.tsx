@@ -217,7 +217,7 @@ describe('App', () => {
     expect([0, 1, 2, 3, 4, 5, 10].map(retryDelayMs)).toEqual([2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000]);
   });
 
-  it('wires each returned connectorId into a ShareConnectorAdapter, with no DemoAdapter mixed in', async () => {
+  it('wires each returned connectorId into a ShareConnectorAdapter, and nothing else', async () => {
     setLocation('?board=b1&token=tok');
     (fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -243,7 +243,7 @@ describe('App', () => {
     expect(viewer.dataset.attributionShown).toBe('true');
   });
 
-  it('renders with no adapters when the board has no connectors, rather than falling back to DemoAdapter', async () => {
+  it('renders with no adapters when the board has no connectors, rather than a stand-in', async () => {
     setLocation('?board=b1&token=tok');
     (fetch as any).mockResolvedValueOnce({
       ok: true,

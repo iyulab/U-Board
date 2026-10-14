@@ -8,8 +8,8 @@ import { dirname, relative, resolve } from 'node:path';
 import * as mod from './viewer-entry.js';
 
 describe('viewer entry ("./viewer")', () => {
-  it('does not export DemoAdapter — it lives at the ./demo subpath, and no viewer consumer uses it', () => {
-    expect('DemoAdapter' in mod).toBe(false);
+  it("does not export FixtureAdapter — the fixture serves only this package's demo app and tests", () => {
+    expect('FixtureAdapter' in mod).toBe(false);
   });
 
   it('still re-exports the viewer surface', () => {

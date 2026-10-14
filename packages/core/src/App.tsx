@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { AuthoringView } from './authoring/AuthoringView.js';
 import { ViewerPage } from './viewer/ViewerPage.js';
 import type { ViewDocument } from './view-document.js';
-import { DemoAdapter } from './demo-adapter.js';
+import { FixtureAdapter } from './fixture-adapter.js';
 import { seedWidget } from './authoring/widget-catalog.js';
 
 const FLOOR_PLAN = `data:image/svg+xml,${encodeURIComponent(`
@@ -28,7 +28,7 @@ const demoDocument: ViewDocument = {
       widget: {
         type: 'status',
         props: { data: { label: 'Pump A', level: 'success' } },
-        bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-a.state' } },
+        bindings: { 'data.value': { adapter: 'fixture', ref: 'pump-a.state' } },
       },
     },
     {
@@ -41,7 +41,7 @@ const demoDocument: ViewDocument = {
       widget: {
         type: 'gauge',
         props: { data: { label: 'Load %', min: 0, max: 100 } },
-        bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-a.load' } },
+        bindings: { 'data.value': { adapter: 'fixture', ref: 'pump-a.load' } },
       },
     },
     {
@@ -54,11 +54,11 @@ const demoDocument: ViewDocument = {
       widget: {
         type: 'status',
         props: { data: { label: 'Pump B', level: 'warning' } },
-        bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-b.state' } },
+        bindings: { 'data.value': { adapter: 'fixture', ref: 'pump-b.state' } },
       },
     },
     {
-      // Bound to a ref DemoAdapter has no entry for, so it resolves `disconnected` — exercises
+      // Bound to a ref FixtureAdapter has no entry for, so it resolves `disconnected` — exercises
       // the third connection-quality state (the other two nodes above cover live and stale).
       id: 'pump-c',
       x: 340,
@@ -69,14 +69,14 @@ const demoDocument: ViewDocument = {
       widget: {
         type: 'status',
         props: { data: { label: 'Pump C' } },
-        bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-c.state' } },
+        bindings: { 'data.value': { adapter: 'fixture', ref: 'pump-c.state' } },
       },
     },
     {
       // Trend chart, unverified in the actual render path until now (u-widgets unit-tests
       // chart.* on its own, but this pipeline — resolveDocument → canvas-kit overlay → the
       // uw-chart custom element — had not been exercised end-to-end). No binding: a real trend
-      // needs a time-series adapter method the current DemoAdapter (single-value resolve)
+      // needs a time-series adapter method the current FixtureAdapter (single-value resolve)
       // doesn't have, so this uses static sample data to verify rendering alone.
       id: 'pump-a-load-trend',
       x: 540,
@@ -129,7 +129,7 @@ const demoDocument: ViewDocument = {
 };
 
 export function App() {
-  const adapters = useMemo(() => [new DemoAdapter()], []);
+  const adapters = useMemo(() => [new FixtureAdapter()], []);
   const [mode, setMode] = useState<'author' | 'view'>('author');
 
   return (
@@ -147,7 +147,7 @@ export function App() {
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>
             Add and drag nodes; each node's widget is drawn in place through the real render path
-            (resolveDocument + u-widgets overlays) against a demo adapter (one live value, one
+            (resolveDocument + u-widgets overlays) against a fixture adapter (one live value, one
             deliberately stale, one that never resolves), and View shows the board as a shared
             link does. Widgets whose binding isn't live get a frame — amber dashed for stale,
             gray dotted for disconnected (distinct border style, not just color, so the two

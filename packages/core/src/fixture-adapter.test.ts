@@ -1,18 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { DemoAdapter } from './demo-adapter';
+import { FixtureAdapter } from './fixture-adapter';
 
-describe('DemoAdapter', () => {
+describe('FixtureAdapter', () => {
   it('resolves a known key as live', async () => {
-    const adapter = new DemoAdapter();
+    const adapter = new FixtureAdapter();
     await expect(adapter.resolve('pump-a.state')).resolves.toEqual({ value: 'running', quality: 'live' });
   });
 
   it('resolves an unknown key as disconnected', async () => {
-    const adapter = new DemoAdapter();
+    const adapter = new FixtureAdapter();
     await expect(adapter.resolve('unknown.key')).resolves.toEqual({ value: undefined, quality: 'disconnected' });
   });
 
-  it('has id "demo-cmms"', () => {
-    expect(new DemoAdapter().id).toBe('demo-cmms');
+  it('has id "fixture"', () => {
+    expect(new FixtureAdapter().id).toBe('fixture');
   });
 });

@@ -17,15 +17,6 @@
   color: var(--ub-text-muted);
 }
 
-.ub-share__warning {
-  margin: 0 0 var(--ub-space-4);
-  padding: var(--ub-space-3) var(--ub-space-4);
-  border-radius: var(--ub-radius-md);
-  background: var(--ub-warning-bg);
-  color: var(--ub-warning);
-  font-size: var(--ub-font-size-md);
-}
-
 .ub-share__section {
   padding-top: var(--ub-space-4);
   border-top: 1px solid var(--ub-border);

@@ -5,8 +5,8 @@ import { describe, it, expect } from 'vitest';
 import * as mod from './index.js';
 
 describe('index entry (".")', () => {
-  it('does not export DemoAdapter — it lives at the ./demo subpath so a published build never ships a demo-only class on its main surface', () => {
-    expect('DemoAdapter' in mod).toBe(false);
+  it("does not export FixtureAdapter — the fixture serves only this package's demo app and tests", () => {
+    expect('FixtureAdapter' in mod).toBe(false);
   });
 
   it('still re-exports the authoring surface', () => {

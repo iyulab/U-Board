@@ -78,10 +78,10 @@ describe('public share routes', () => {
     expect(changed.body.revision).toBe(3);
   });
 
-  it('excludes referenced adapter ids that are not real stored connectors (e.g. demo-cmms)', async () => {
+  it('excludes referenced adapter ids that are not real stored connectors (a data source since removed)', async () => {
     const doc = {
       kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: 'demo-cmms', ref: 'pump-a.state' } } } }],
+      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: 'removed-source', ref: 'pump-a.state' } } } }],
       connectors: [],
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });

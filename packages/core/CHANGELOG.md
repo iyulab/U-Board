@@ -8,6 +8,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **Breaking: the `./demo` entry point and `DemoAdapter` are gone.** Its fixed values under the id `demo-cmms` were
+  a stand-in for a data source, and they could not follow a board anywhere it was shared. Bind to a real adapter;
+  a binding whose adapter is not given resolves `disconnected`, as before.
 - **Breaking: a smaller public surface.** Removed exports nothing outside the package used:
   `anchorPoint`, `coordinateAt`, `pointAt` (use `coordinateOf` / `placeAt`); `QUALITY_LABEL`, `REASON_LABEL` (the
   same words are `DEFAULT_QUALITY_TEXT.quality` / `.reason`); `isViewDocumentShape` (an empty
