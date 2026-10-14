@@ -24,8 +24,8 @@ own pull request — no external service, no account. See [`CLA.md`](CLA.md) for
 the signing steps.
 
 An automated check on each pull request looks for your signature file and tells you what to add if
-it is missing. Members of the iyulab organization, and bots such as dependency updaters, are
-exempt.
+it is missing. Everyone signs, members of the iyulab organization included; only bots such as
+dependency updaters are exempt.
 
 ## Architecture boundaries
 

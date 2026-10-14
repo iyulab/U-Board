@@ -9,5 +9,5 @@ Do not edit or remove someone else's signature. If the agreement is revised, the
 `v2/` directory beside this one and contributors sign again there — signatures are never carried
 forward to terms the signer did not read.
 
-`.github/workflows/cla.yml` checks that a pull request author has a file here. Members of the
-iyulab organization and bots are exempt and have no file.
+`.github/workflows/cla.yml` checks that a pull request author has a file here. Everyone signs,
+members of the iyulab organization included; only bots are exempt and have no file.
