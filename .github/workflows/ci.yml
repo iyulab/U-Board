@@ -18,7 +18,10 @@ concurrency:
 jobs:
   verify:
     name: verify
-    runs-on: ubuntu-latest
+    # Pinned to the release the reference pictures are drawn on (`scripts/update-visual-baselines.sh` uses
+    # the Playwright `-noble` image, Ubuntu 24.04): its fonts and anti-aliasing are what the visual
+    # comparison expects, and `ubuntu-latest` moves to a newer release on its own schedule.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:
@@ -33,7 +36,7 @@ jobs:
         run: npm ci
 
       # The checks themselves live in scripts/check.mjs, so a local `npm run check` runs exactly this
-      # list. Only machine setup stays here: the browsers its last step (E2E) drives. ubuntu-latest
+      # list. Only machine setup stays here: the browsers its last step (E2E) drives. The runner image
       # ships Docker preinstalled, which its Postgres and image steps need.
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
