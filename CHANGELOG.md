@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-10-15
+
 ### Changed
 
 - **The editor no longer offers «데모 데이터».** It was a stand-in that worked only in the editor — a shared board

@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-15
+
 ### Changed
 
 - **Breaking: the `./demo` entry point and `DemoAdapter` are gone.** Its fixed values under the id `demo-cmms` were
