@@ -18,6 +18,10 @@ do when upgrading. Each release's notes carry its section.
   runs in a sandboxed frame with no network, its data arriving through the board's bindings. The editor and share
   links draw both. The server serves a script element's frame at `/api/element-frames/<board>/<element>/<hash>`,
   named by the saved definition, with a policy that sandboxes it, allows only its own code and closes the network.
+- **API tokens** — a program (an AI assistant's tool server, a script) reads and draws a workspace's boards with a
+  token made in the workspace settings: it acts as the person who made it, in that workspace only, `read` or `write`,
+  and is shown once. It reaches boards and data sources but never a data source's credential, which a person enters
+  in the console. `GET /api/token` says what a token is. Making and deleting one is recorded in the activity record.
 - `UBOARD_ELEMENT_ORIGINS` — the origins a board's elements may load from when they list them too (a font, a script
   library). Unset: none, so an installation on a closed network loads nothing from another origin, as before. Board
   answers carry `elementOrigins`.

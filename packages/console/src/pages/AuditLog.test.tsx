@@ -57,6 +57,12 @@ describe('describeAuditEvent — boards, share links, connectors', () => {
     expect(describeAuditEvent(event({ action: 'connector.updated', target: { id: 'c1', name: 'Plant API' }, detail: 'base_url,auth' }))).toBe(
       'Kim님이 커넥터 "Plant API"의 주소·인증 정보을(를) 바꿨습니다.'
     );
+    expect(describeAuditEvent(event({ action: 'api_token.created', target: { id: 'k1', name: '내 AI 도우미' }, detail: 'write ubt_…abc123' }))).toBe(
+      'Kim님이 API 토큰 "내 AI 도우미"(쓰기, ubt_…abc123)을(를) 만들었습니다.'
+    );
+    expect(describeAuditEvent(event({ action: 'api_token.deleted', target: { id: 'k1', name: 'R' }, detail: 'read ubt_…abc123' }))).toBe(
+      'Kim님이 API 토큰 "R"(읽기, ubt_…abc123)을(를) 삭제했습니다.'
+    );
   });
 });
 

@@ -160,6 +160,27 @@ against that address.
 An open board's ages ("updated 2 minutes ago") are measured against the server's clock, read from
 its responses, so a display's own clock does not need to be set exactly.
 
+## API tokens
+
+A program — an AI assistant's tool server, a script — reaches a workspace's boards with an API token,
+made in the console's workspace settings (**API 토큰**). A token acts as the person who made it, in that
+one workspace, `read` (it may only look) or `write`; its text is shown once, and only a hash of it is
+kept. Send it as `Authorization: Bearer ubt_…`:
+
+```sh
+curl -H "Authorization: Bearer $UBOARD_TOKEN" https://<host>/api/token
+# → {"workspace":{"id":"…","name":"…"},"scope":"write","role":"owner"}
+curl -H "Authorization: Bearer $UBOARD_TOKEN" https://<host>/api/workspaces/<workspace id>/boards
+```
+
+A token reaches the workspace's boards (`/api/workspaces/<id>/boards…`) and data sources
+(`/api/workspaces/<id>/connectors…`) — the latter as far as its person's role allows. It never carries a
+data source's credential: a request with one is refused (`CREDENTIALS_IN_CONSOLE`), and the credential is
+entered by a person in the console. Accounts, members, invitations, share links, other tokens and the
+installation are a person's to manage and do not accept tokens. A token stops working when it is
+deleted, when it expires (if it was given an expiry), or when its person leaves the workspace; making
+and deleting one is in the workspace's activity record.
+
 ## Networks without internet access
 
 The server reaches out only to what an installation sets up: the data sources its connectors read

@@ -191,7 +191,17 @@ function toSummary(connector: Connector): ConnectorSummary {
 export function createConnectorsRouter(config: AppConfig, resolveState: ResolveState): Router {
   const { db, sessionSecret, secrets } = config;
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent mount path
-  router.use(requireAuth(db, sessionSecret));
+  // A program with an API token may set a data source up — its address, format, how its values are read — but not
+  // its credential: a secret is entered by a person, in the console, and never passes through a program's hands or
+  // the conversation that drives it.
+  router.use(requireAuth(db, sessionSecret, { acceptApiTokens: true }));
+  router.use((req: AuthedRequest, res, next) => {
+    if (req.apiToken && req.body?.authValue != null) {
+      res.status(403).json({ code: 'CREDENTIALS_IN_CONSOLE' });
+      return;
+    }
+    next();
+  });
 
   router.get('/', requireWorkspaceMember(db), async (req, res) => {
     res.status(200).json({ connectors: await listConnectorsForWorkspace(db, pathParam(req, 'workspaceId')) });

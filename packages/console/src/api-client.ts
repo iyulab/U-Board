@@ -333,6 +333,32 @@ export function createShareToken(workspaceId: string, boardId: string, expiresAt
   );
 }
 
+/** An API token as the console lists it: a program acting as `userId` in this workspace, `read` or `write`. */
+export interface ApiTokenSummary {
+  id: string;
+  userId: string;
+  name: string;
+  scope: 'read' | 'write';
+  tokenMask: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  expiresAt?: string;
+}
+
+/** The workspace's API tokens — every one for an owner, the caller's own for a member. */
+export function listApiTokens(workspaceId: string) {
+  return request<{ tokens: ApiTokenSummary[] }>(`/workspaces/${workspaceId}/api-tokens`);
+}
+
+/** Makes a token acting as the caller. Its text comes back this once. */
+export function createApiToken(workspaceId: string, input: { name: string; scope: 'read' | 'write'; expiresAt?: string }) {
+  return request<ApiTokenSummary & { token: string }>(`/workspaces/${workspaceId}/api-tokens`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function deleteApiToken(workspaceId: string, tokenId: string) {
+  return request<void>(`/workspaces/${workspaceId}/api-tokens/${tokenId}`, { method: 'DELETE' });
+}
+
 export function deleteShareToken(workspaceId: string, boardId: string, tokenId: string) {
   return request<void>(`/workspaces/${workspaceId}/boards/${boardId}/share-tokens/${tokenId}`, { method: 'DELETE' });
 }
@@ -396,7 +422,9 @@ export type AuditAction =
   | 'share_link.deleted'
   | 'connector.created'
   | 'connector.updated'
-  | 'connector.deleted';
+  | 'connector.deleted'
+  | 'api_token.created'
+  | 'api_token.deleted';
 
 /** Someone a record names — `userId` and `name` are null once their account has been deleted. */
 export interface AuditPerson {

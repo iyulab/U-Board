@@ -12,6 +12,7 @@ import {
   type PendingInvitation,
 } from '../api-client.js';
 import { AuditLog } from './AuditLog.js';
+import { ApiTokens } from './ApiTokens.js';
 import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
@@ -214,6 +215,8 @@ export function SettingsPage({ workspaceId, userId, onLeft }: { workspaceId: str
           <input type="text" readOnly value={inviteLink} onFocus={e => e.target.select()} />
         </FormField>
       )}
+
+      <ApiTokens workspaceId={workspaceId} onChange={refreshAudit} />
 
       {isOwner && (
         <>

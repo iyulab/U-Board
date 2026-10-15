@@ -26,6 +26,12 @@ function targetOf(event: AuditEvent): string {
 }
 
 /** One record as a sentence. */
+/** An API token record's particular — `"<scope> <visible ending>"` — in words. */
+function apiTokenDetail(detail: string | null): string {
+  const [scope, mask] = (detail ?? '').split(' ');
+  return [scope === 'write' ? '쓰기' : scope === 'read' ? '읽기' : scope, mask].filter(Boolean).join(', ');
+}
+
 export function describeAuditEvent(event: AuditEvent): string {
   const actor = person(event.actor);
   switch (event.action) {
@@ -71,6 +77,10 @@ export function describeAuditEvent(event: AuditEvent): string {
     }
     case 'connector.deleted':
       return `${actor}이 커넥터 ${targetOf(event)}을(를) 삭제했습니다.`;
+    case 'api_token.created':
+      return `${actor}이 API 토큰 ${targetOf(event)}(${apiTokenDetail(event.detail)})을(를) 만들었습니다.`;
+    case 'api_token.deleted':
+      return `${actor}이 API 토큰 ${targetOf(event)}(${apiTokenDetail(event.detail)})을(를) 삭제했습니다.`;
   }
 }
 

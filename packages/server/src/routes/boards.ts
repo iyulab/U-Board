@@ -29,7 +29,8 @@ function ifMatchRevision(header: string | undefined): number | undefined | 'unma
 export function createBoardsRouter(config: AppConfig): Router {
   const { db, sessionSecret } = config;
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent router's mount path
-  router.use(requireAuth(db, sessionSecret));
+  // Boards are what a program writes for its person — an AI assistant drawing one — so an API token reaches them.
+  router.use(requireAuth(db, sessionSecret, { acceptApiTokens: true }));
   router.use(requireWorkspaceMember(db));
 
   router.get('/', async (req: AuthedRequest, res) => {

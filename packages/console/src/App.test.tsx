@@ -9,6 +9,7 @@ vi.mock('./api-client.js');
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.listWorkspaceAudit).mockResolvedValue({ events: [], nextBefore: null });
+  vi.mocked(api.listApiTokens).mockResolvedValue({ tokens: [] });
   vi.mocked(api.listInstanceAudit).mockResolvedValue({ events: [], nextBefore: null });
 });
 

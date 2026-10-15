@@ -13,6 +13,7 @@ import { createConnectorsRouter } from './routes/connectors.js';
 import { createShareRouter } from './routes/share.js';
 import { createInstanceRouter } from './routes/instance.js';
 import { createElementFramesRouter } from './routes/element-frames.js';
+import { createApiTokensRouter, createTokenInfoRouter } from './routes/api-tokens.js';
 import { ClientCredentialsTokens } from './oauth-client-credentials.js';
 import { DEFAULT_UPSTREAM_REUSE_MS, type ResolveState } from './resolve-connector.js';
 import { serveWebApps, type WebApps } from './web-apps.js';
@@ -149,10 +150,14 @@ export function createApp(config: AppConfig): express.Express {
   api.delete('/auth/me', accountRateLimiter);
   api.use('/auth', createAuthRouter(config));
   api.use('/invitations', createInvitationsRouter(config));
-  api.use('/workspaces', createWorkspacesRouter(config));
   api.use('/workspaces/:workspaceId/boards', createBoardsRouter(config));
   api.use('/workspaces/:workspaceId/boards/:boardId/share-tokens', createBoardShareTokensRouter(config));
   api.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveState));
+  api.use('/workspaces/:workspaceId/api-tokens', createApiTokensRouter(config));
+  api.use('/token', createTokenInfoRouter(config));
+  // After the routers of a workspace's parts: this one's own `requireAuth` runs for every request under `/workspaces`
+  // it receives, and it accepts no API token — a token reaching a board must not meet it first.
+  api.use('/workspaces', createWorkspacesRouter(config));
   api.use('/share', createShareRouter(config, resolveState));
   api.use('/instance', createInstanceRouter(config));
   api.use('/element-frames', createElementFramesRouter(config));

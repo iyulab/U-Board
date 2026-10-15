@@ -9,6 +9,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(api.listInvitations).mockResolvedValue({ invitations: [] });
   vi.mocked(api.listWorkspaceAudit).mockResolvedValue({ events: [], nextBefore: null });
+  vi.mocked(api.listApiTokens).mockResolvedValue({ tokens: [] });
   vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
 afterEach(() => vi.restoreAllMocks());

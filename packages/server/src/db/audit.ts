@@ -22,7 +22,9 @@ export type AuditAction =
   | 'share_link.deleted'
   | 'connector.created'
   | 'connector.updated'
-  | 'connector.deleted';
+  | 'connector.deleted'
+  | 'api_token.created'
+  | 'api_token.deleted';
 
 const INSTANCE_ACTIONS: readonly AuditAction[] = [
   'workspace.created',

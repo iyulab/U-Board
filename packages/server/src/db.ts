@@ -165,6 +165,24 @@ $$;
 
 CREATE INDEX IF NOT EXISTS idx_board_share_tokens_board_id ON board_share_tokens(board_id);
 
+-- A workspace's API tokens: a program — a tool server an AI assistant drives, a script — acting as the person who
+-- made the token, in that one workspace, with read or write scope. Only a hash of the token is kept; the console
+-- shows its visible ending. Deleting the account or the workspace deletes its tokens.
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id TEXT PRIMARY KEY,
+  workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  scope TEXT NOT NULL CHECK (scope IN ('read', 'write')),
+  token_hash TEXT NOT NULL UNIQUE,
+  token_mask TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  last_used_at TEXT,
+  expires_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_tokens_workspace_id ON api_tokens(workspace_id);
+
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
