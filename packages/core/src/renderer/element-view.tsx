@@ -32,6 +32,12 @@ const NOTICE_STYLE: CSSProperties = {
 /** How long a loaded frame has to say it is ready before its box says it did not start. */
 const FRAME_READY_WAIT_MS = 3000;
 
+/** How often a running frame is asked whether it still answers, and how long it has to answer before it is stopped.
+ *  A frame whose code never yields cannot answer; where the browser runs the frame in a process of its own (Chrome
+ *  and Edge with site isolation) this page stays responsive and stops it. Elsewhere the loop holds the page too. */
+export const FRAME_PING_INTERVAL_MS = 2000;
+export const FRAME_STALL_MS = 6000;
+
 const FRAME_STYLE: CSSProperties = { ...FILL, display: 'block', border: 0, background: 'transparent' };
 
 const ERROR_STYLE: CSSProperties = {
@@ -114,12 +120,19 @@ function ElementFrame({ name, url, props, appearance }: { name: string; url: str
   const [loaded, setLoaded] = useState(false);
   const [silent, setSilent] = useState(false);
   const [error, setError] = useState<string>();
+  const [heartbeat, setHeartbeat] = useState(false);
+  const [stalled, setStalled] = useState(false);
+  // When the last ping that has not been answered was sent.
+  const unanswered = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (!frame.current || event.source !== frame.current.contentWindow) return;
       const message = event.data as ElementFrameMessage | undefined;
-      if (message?.type === 'ub:ready') setReady(true);
+      if (message?.type === 'ub:ready') {
+        setReady(true);
+        setHeartbeat(message.heartbeat === true);
+      } else if (message?.type === 'ub:pong') unanswered.current = undefined;
       else if (message?.type === 'ub:error') setError(String(message.message).slice(0, 300));
     };
     window.addEventListener('message', onMessage);
@@ -141,6 +154,31 @@ function ElementFrame({ name, url, props, appearance }: { name: string; url: str
     const timer = window.setTimeout(() => setSilent(true), FRAME_READY_WAIT_MS);
     return () => window.clearTimeout(timer);
   }, [loaded, ready]);
+
+  // A running frame is asked, one ping at a time, whether it still answers; one that leaves a ping unanswered for
+  // FRAME_STALL_MS is removed, which stops its code. The age counts from when the ping was sent, so a page whose timers
+  // a browser slows down (a background tab) never mistakes its own delay for the frame's.
+  useEffect(() => {
+    if (!ready || !heartbeat || stalled) return;
+    const timer = window.setInterval(() => {
+      const sent = unanswered.current;
+      if (sent === undefined) {
+        unanswered.current = Date.now();
+        frame.current?.contentWindow?.postMessage({ type: 'ub:ping' } satisfies ElementFrameMessage, '*');
+      } else if (Date.now() - sent > FRAME_STALL_MS) {
+        setStalled(true);
+      }
+    }, FRAME_PING_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [ready, heartbeat, stalled]);
+
+  if (stalled) {
+    return (
+      <div style={{ ...NOTICE_STYLE, position: 'absolute', inset: 0 }} data-element-notice="" role="status">
+        {`“${name}” stopped answering and was stopped — its code may never finish`}
+      </div>
+    );
+  }
 
   return (
     <>

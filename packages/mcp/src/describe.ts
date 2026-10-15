@@ -84,6 +84,7 @@ placement  = { type: "element:<name>", props: { … }, bindings?: { … } }
 ## script
 - Runs in <iframe sandbox="allow-scripts"> served by the board's server: an origin of its own, no cookies, no page access, no network (connect-src 'none').
 - ub.onProps((props, appearance) => draw(props)) — called with the latest props and on every change; ub.reportError(error) shows on its box.
+- Code must always return: no loop that waits for a condition, no long synchronous work. A frame that stops answering is removed; in some browsers it freezes the whole board first.
 - A library is loaded from an origin in resources (e.g. a <script src> it adds, or import()), and only where the installation allows that origin.
 - The frame is drawn from the saved board — save before checking it.`;
 

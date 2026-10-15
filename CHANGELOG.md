@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A **script element whose code stops answering** — a loop that never ends — is stopped after six seconds, with a
+  notice on its box, in the editor and on share links alike. In Chrome and Edge the board stays usable meanwhile; in
+  browsers that run the element with the page, such code holds the page too (`docs/api-reference.md`).
+
 ## [0.3.0] - 2026-10-15
 
 ### Added

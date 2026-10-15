@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
+// Desktop Chrome and Edge run a sandboxed frame in a process of its own (site isolation); the automation build does
+// not unless told to. With it, a frame whose code never yields cannot hold the page, which can then stop it.
+test.use({ launchOptions: { args: ['--site-per-process'] } });
+
 // A script element runs in a frame of its own origin with no network: it draws from its props, and cannot read the
 // console's cookies, reach into the page, or fetch the API — in the editor and from a share link alike.
 const COUNTER_SCRIPT = `
@@ -57,4 +61,16 @@ test('a script element runs sandboxed, in the editor and from a share link', asy
   await sharePage.goto(shareUrl);
   await expectCounterDrawn(sharePage);
   await shareContext.close();
+
+  // An element whose code never finishes: the editor stays usable, and the frame is stopped with a notice.
+  const spinning = {
+    ...document,
+    elements: { ...document.elements, counter: { ...document.elements.counter, script: 'ub.onProps(function () { while (true) {} });' } },
+  };
+  const resaved = await page.request.put(`/api/workspaces/${session.activeWorkspaceId}/boards/${boardId}`, { data: { document: spinning } });
+  expect(resaved.status()).toBe(200);
+  await page.reload();
+  await expect(page.locator('[data-element="counter"]')).toContainText('stopped answering', { timeout: 20_000 });
+  await expect(page.locator('[data-element="counter"] iframe')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, render, waitFor } from '@testing-library/react';
 import { ELEMENT_THEME, fillTemplate, renderTemplateElement } from './element-template';
-import { ElementHost, ElementOriginsContext, ElementView } from './element-view';
+import { ElementHost, ElementOriginsContext, ElementView, FRAME_PING_INTERVAL_MS, FRAME_STALL_MS } from './element-view';
 import { elementDefinitionHash } from '../elements/definition-hash';
 import { parseTemplate } from '../elements/template';
 import type { ElementDefinition } from '../view-document';
@@ -165,5 +165,62 @@ describe('ElementView — script element', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('a frame that stops answering', () => {
+    const from = (frame: HTMLIFrameElement, data: unknown) =>
+      act(() => window.dispatchEvent(new MessageEvent('message', { data, source: frame.contentWindow })));
+
+    it('is pinged once at a time, and removed with a notice when a ping goes unanswered', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const { view, frame } = await mounted();
+        const posted = vi.spyOn(frame.contentWindow!, 'postMessage');
+        from(frame, { type: 'ub:ready', heartbeat: true });
+        act(() => vi.advanceTimersByTime(FRAME_PING_INTERVAL_MS));
+        expect(posted).toHaveBeenLastCalledWith({ type: 'ub:ping' }, '*');
+        from(frame, { type: 'ub:pong' });
+        act(() => vi.advanceTimersByTime(FRAME_PING_INTERVAL_MS));
+        const pings = () => posted.mock.calls.filter(([message]) => (message as { type: string }).type === 'ub:ping').length;
+        expect(pings()).toBe(2);
+        // No answer: no second ping on top of the first, and the frame is stopped once the ping is old enough.
+        act(() => vi.advanceTimersByTime(FRAME_STALL_MS));
+        expect(pings()).toBe(2);
+        act(() => vi.advanceTimersByTime(FRAME_PING_INTERVAL_MS));
+        expect(view.container.querySelector('iframe')).toBeNull();
+        expect(view.container.textContent).toContain('“chart” stopped answering');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('keeps running while it answers', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const { view, frame } = await mounted();
+        vi.spyOn(frame.contentWindow!, 'postMessage').mockImplementation(message => {
+          if ((message as { type: string }).type === 'ub:ping') queueMicrotask(() => from(frame, { type: 'ub:pong' }));
+        });
+        from(frame, { type: 'ub:ready', heartbeat: true });
+        for (let i = 0; i < 10; i++) await act(async () => vi.advanceTimersByTime(FRAME_PING_INTERVAL_MS));
+        expect(view.container.querySelector('iframe')).not.toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('is not pinged when it does not say it answers — a frame from an older server', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const { view, frame } = await mounted();
+        const posted = vi.spyOn(frame.contentWindow!, 'postMessage');
+        from(frame, { type: 'ub:ready' });
+        act(() => vi.advanceTimersByTime(FRAME_STALL_MS * 3));
+        expect(posted.mock.calls.some(([message]) => (message as { type: string }).type === 'ub:ping')).toBe(false);
+        expect(view.container.querySelector('iframe')).not.toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });

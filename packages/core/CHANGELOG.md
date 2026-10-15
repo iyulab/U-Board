@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A script element whose code stops answering is stopped** — the page asks a running frame every two seconds
+  whether it still answers (`ub:ping`/`ub:pong`) and removes one that leaves a question unanswered for six seconds, with
+  a notice on its box. Where the browser runs the frame in a process of its own (Chrome and Edge with site isolation)
+  the page stays usable meanwhile. A frame says it answers in its ready message, so frames from an older server are not
+  asked.
+
 ### Changed
 
 - `@iyulab/u-widgets` ^0.33.2: a horizontal chart lists its categories in the data's order, a reference line the data

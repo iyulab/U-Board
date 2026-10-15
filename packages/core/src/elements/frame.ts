@@ -4,19 +4,24 @@ import type { ElementDefinition } from '../view-document.js';
  * A `script` element runs in a frame of its own, from a document its server builds out of the definition. The page
  * and the frame talk by message only:
  *
- * - frame → page `{ type: 'ub:ready' }` once the frame can take props;
+ * - frame → page `{ type: 'ub:ready', heartbeat: true }` once the frame can take props — `heartbeat` says it answers
+ *   pings (a frame from an older server does not);
  * - page → frame `{ type: 'ub:props', props, appearance, theme }` then and whenever they change — `theme` is the
  *   `--u-widget-*` variables for the board's tone, which the frame sets on its root;
- * - frame → page `{ type: 'ub:error', message }` when the element's code throws or the frame's policy blocks a load.
+ * - frame → page `{ type: 'ub:error', message }` when the element's code throws or the frame's policy blocks a load;
+ * - page → frame `{ type: 'ub:ping' }`, answered `{ type: 'ub:pong' }` — a frame whose code never yields cannot
+ *   answer, and the page stops it.
  *
  * In the frame, the element's code reads its props through `ub.onProps((props, appearance) => …)`, called at once
  * with the latest props if they have arrived, and again on every change; `ub.reportError(error)` says something
  * went wrong. The frame has no network: its data arrives as props.
  */
 export type ElementFrameMessage =
-  | { type: 'ub:ready' }
+  | { type: 'ub:ready'; heartbeat?: boolean }
   | { type: 'ub:props'; props: unknown; appearance: 'light' | 'dark'; theme: Record<string, string> }
-  | { type: 'ub:error'; message: string };
+  | { type: 'ub:error'; message: string }
+  | { type: 'ub:ping' }
+  | { type: 'ub:pong' };
 
 /** The code every element frame runs before the element's own: the `ub` object and its half of the messages. */
 export const ELEMENT_FRAME_RUNTIME = `(function () {
@@ -30,7 +35,9 @@ export const ELEMENT_FRAME_RUNTIME = `(function () {
   };
   addEventListener('message', function (event) {
     var message = event.data;
-    if (event.source !== parent || !message || message.type !== 'ub:props') return;
+    if (event.source !== parent || !message) return;
+    if (message.type === 'ub:ping') { send({ type: 'ub:pong' }); return; }
+    if (message.type !== 'ub:props') return;
     last = message;
     var style = document.documentElement.style;
     for (var name in message.theme) style.setProperty(name, message.theme[name]);
@@ -41,7 +48,7 @@ export const ELEMENT_FRAME_RUNTIME = `(function () {
   addEventListener('securitypolicyviolation', function (event) {
     send({ type: 'ub:error', message: 'blocked by the element policy: ' + (event.blockedURI || 'inline') + ' (' + event.effectiveDirective + ')' });
   });
-  send({ type: 'ub:ready' });
+  send({ type: 'ub:ready', heartbeat: true });
 })();`;
 
 const FRAME_BASE_CSS =

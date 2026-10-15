@@ -485,7 +485,11 @@ ub.reportError(error);                             // shown on the element's box
 
 The board's theme is set on the frame's root as the same `--u-widget-*` variables; an uncaught error,
 or a load its policy blocks, is reported on the element's box as well. The frame loads when the element
-nears the screen. `ViewerPage`'s and `AuthoringView`'s `elementFrames` says where the frames are served —
+nears the screen. The page asks a running frame every two seconds whether it still answers, and removes one
+that has left a question unanswered for six seconds — code that never yields, such as a loop that never ends —
+with a notice on its box; the element runs again when its definition changes. That needs the browser to run the
+frame in a process of its own, as Chrome and Edge do with site isolation; a browser that runs it with the page
+(Firefox, Safari) is held by such code too, so an element's code must always return. `ViewerPage`'s and `AuthoringView`'s `elementFrames` says where the frames are served —
 `/api/element-frames/<board id>` on a U-Board server, which answers
 `/api/element-frames/<board id>/<element>/<definition hash>` (`elementDefinitionHash`) only while the
 saved board defines that element exactly so. Without `elementFrames`, a script element shows a notice in

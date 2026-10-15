@@ -8,6 +8,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- The rules tell an assistant that a script element's code must always return.
+
 - `@iyulab/u-widgets` ^0.33.2.
 
 ## [0.1.0] - 2026-10-15
