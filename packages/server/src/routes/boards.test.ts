@@ -49,7 +49,7 @@ describe('boards routes', () => {
 
     const list = await request(app).get(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie);
     expect(list.status).toBe(200);
-    expect(list.body.boards).toEqual([{ id: boardId, name: 'My Board', updatedAt: create.body.updatedAt }]);
+    expect(list.body.boards).toEqual([{ id: boardId, name: 'My Board', kind: 'canvas', updatedAt: create.body.updatedAt }]);
 
     const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(get.status).toBe(200);
@@ -70,6 +70,25 @@ describe('boards routes', () => {
 
     const getAfterDelete = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(getAfterDelete.status).toBe(404);
+  });
+
+  it('creates a board of the kind asked for, and lists each board with the kind its document is now', async () => {
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'Grid', kind: 'grid' });
+    expect(create.status).toBe(201);
+    expect(create.body.kind).toBe('grid');
+    const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie);
+    expect(get.body.document).toEqual({ kind: 'grid', items: [] });
+
+    const canvas = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+    await request(app).put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie).send({ document: canvas });
+    const list = await request(app).get(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie);
+    expect(list.body.boards.find((b: { id: string }) => b.id === create.body.id).kind).toBe('canvas');
+  });
+
+  it('refuses a kind it does not know with 400 INVALID_INPUT', async () => {
+    const res = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'X', kind: 'table' });
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_INPUT');
   });
 
   it('returns 400 INVALID_DOCUMENT when the PUT body is not a ViewDocument', async () => {

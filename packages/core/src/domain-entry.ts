@@ -9,7 +9,7 @@ export type {
   ResolvedViewDocument,
   ResolvedOf,
 } from './resolve-document.js';
-export { placedIn } from './view-document.js';
+export { emptyViewDocument, placedIn } from './view-document.js';
 export { resolveDocument } from './resolve-document.js';
 export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
 export { validateViewDocument } from './validate-view-document.js';

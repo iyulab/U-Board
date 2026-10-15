@@ -1,4 +1,4 @@
-import type { ViewDocument } from '@iyulab/u-board';
+import type { ViewDocument, ViewKind } from '@iyulab/u-board';
 import type { HttpRef, ResolvedBinding } from '@iyulab/u-board';
 import { serverClock } from '@iyulab/u-board';
 
@@ -184,13 +184,14 @@ export function createWorkspace(name: string) {
 }
 
 export function listBoards(workspaceId: string) {
-  return request<{ boards: { id: string; name: string; updatedAt: string }[] }>(`/workspaces/${workspaceId}/boards`);
+  return request<{ boards: { id: string; name: string; kind: ViewKind; updatedAt: string }[] }>(`/workspaces/${workspaceId}/boards`);
 }
 
-export function createBoard(workspaceId: string, name: string) {
-  return request<{ id: string; name: string; updatedAt: string }>(`/workspaces/${workspaceId}/boards`, {
+/** Creates a board with an empty document of `kind` — a canvas unless told otherwise. */
+export function createBoard(workspaceId: string, name: string, kind?: ViewKind) {
+  return request<{ id: string; name: string; kind: ViewKind; updatedAt: string }>(`/workspaces/${workspaceId}/boards`, {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(kind ? { name, kind } : { name }),
   });
 }
 

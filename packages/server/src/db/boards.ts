@@ -1,7 +1,7 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import { recordAuditEvent } from './audit.js';
-import type { ViewDocument } from '@iyulab/u-board/domain';
+import { emptyViewDocument, type ViewDocument, type ViewKind } from '@iyulab/u-board/domain';
 
 export interface Board {
   id: string;
@@ -37,21 +37,22 @@ function rowToBoard(row: BoardRow): Board {
   };
 }
 
-export async function createBoard(db: DbClient, input: { workspaceId: string; name: string; actorUserId: string }): Promise<Board> {
+/** Creates a board with an empty document of `kind` — a canvas unless told otherwise. */
+export async function createBoard(db: DbClient, input: { workspaceId: string; name: string; actorUserId: string; kind?: ViewKind }): Promise<Board> {
   const now = new Date().toISOString();
   const board: Board = {
     id: randomUUID(),
     workspaceId: input.workspaceId,
     name: input.name,
-    document: { kind: 'canvas', background: {}, nodes: [], connectors: [] },
+    document: emptyViewDocument(input.kind ?? 'canvas'),
     createdAt: now,
     updatedAt: now,
     revision: 1,
   };
   await db.withTransaction(async tx => {
     await tx.query(
-      `INSERT INTO boards (id, workspace_id, name, document, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`,
-      [board.id, board.workspaceId, board.name, JSON.stringify(board.document), board.createdAt, board.updatedAt]
+      `INSERT INTO boards (id, workspace_id, name, document, kind, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [board.id, board.workspaceId, board.name, JSON.stringify(board.document), board.document.kind, board.createdAt, board.updatedAt]
     );
     await recordAuditEvent(tx, {
       action: 'board.created',
@@ -66,12 +67,12 @@ export async function createBoard(db: DbClient, input: { workspaceId: string; na
 export async function listBoardsForWorkspace(
   db: DbClient,
   workspaceId: string
-): Promise<Array<{ id: string; name: string; updatedAt: string }>> {
-  const { rows } = await db.query<{ id: string; name: string; updated_at: string }>(
-    `SELECT id, name, updated_at FROM boards WHERE workspace_id = $1`,
+): Promise<Array<{ id: string; name: string; kind: ViewKind; updatedAt: string }>> {
+  const { rows } = await db.query<{ id: string; name: string; kind: ViewKind; updated_at: string }>(
+    `SELECT id, name, kind, updated_at FROM boards WHERE workspace_id = $1`,
     [workspaceId]
   );
-  return rows.map(r => ({ id: r.id, name: r.name, updatedAt: r.updated_at }));
+  return rows.map(r => ({ id: r.id, name: r.name, kind: r.kind, updatedAt: r.updated_at }));
 }
 
 export async function findBoard(db: DbClient, workspaceId: string, boardId: string): Promise<Board | undefined> {
@@ -94,7 +95,8 @@ export async function updateBoard(
 ): Promise<UpdateBoardResult> {
   const { rows } = await db.query<BoardRow>(
     `UPDATE boards
-        SET name = COALESCE($1, name), document = COALESCE($2, document), updated_at = $3, revision = revision + 1
+        SET name = COALESCE($1, name), document = COALESCE($2, document), kind = COALESCE($7, kind), updated_at = $3,
+            revision = revision + 1
       WHERE id = $4 AND workspace_id = $5 AND ($6::integer IS NULL OR revision = $6::integer)
       RETURNING *`,
     [
@@ -104,6 +106,7 @@ export async function updateBoard(
       boardId,
       workspaceId,
       expectedRevision ?? null,
+      input.document?.kind ?? null,
     ]
   );
   if (rows[0]) return { board: rowToBoard(rows[0]) };

@@ -15,6 +15,7 @@ All notable changes to this package are documented here. The format follows
   edits it: its items in order, "Add item" after the one selected, each item's width at full and medium size, its
   height and its place in the order in a layout panel above the widget's, and the layout seen at a wide, medium or
   narrow width. Importing a document of the other kind opens it in that kind's editor.
+- **`emptyViewDocument(kind)`** — a document of either kind with nothing on it yet, what a new board starts as.
 - **`placedIn(doc)`** — every placed widget of a document of either kind, resolved or not: the walk for code that
   looks at every binding. Both kinds place a `Placed` (`{ id, widget }`), which a canvas `Node` extends.
 - **A JSON Schema of the view document**, `@iyulab/u-board/view-document.schema.json` (2020-12) — the rules

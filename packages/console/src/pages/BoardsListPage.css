@@ -88,3 +88,19 @@
   font-size: var(--ub-font-size-sm);
   color: var(--ub-text-muted);
 }
+
+.ub-kind-choice {
+  border: 0;
+  padding: 0;
+  margin: 0 0 var(--ub-space-3);
+  display: grid;
+  gap: var(--ub-space-2);
+}
+
+.ub-kind-choice__option {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ub-space-2);
+  font-size: var(--ub-font-size-md);
+  color: var(--ub-text-normal);
+}

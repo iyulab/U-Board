@@ -39,13 +39,16 @@ export function createBoardsRouter(config: AppConfig): Router {
 
   router.post('/', async (req: AuthedRequest, res) => {
     const workspaceId = pathParam(req, 'workspaceId');
-    const { name } = req.body ?? {};
-    if (typeof name !== 'string' || name.trim() === '') {
+    const { name, kind } = req.body ?? {};
+    if (typeof name !== 'string' || name.trim() === '' || (kind !== undefined && kind !== 'canvas' && kind !== 'grid')) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    const board = await createBoard(db, { workspaceId, name, actorUserId: req.userId! });
-    res.status(201).set('ETag', etagOf(board.revision)).json({ id: board.id, name: board.name, updatedAt: board.updatedAt, revision: board.revision });
+    const board = await createBoard(db, { workspaceId, name, actorUserId: req.userId!, kind });
+    res
+      .status(201)
+      .set('ETag', etagOf(board.revision))
+      .json({ id: board.id, name: board.name, kind: board.document.kind, updatedAt: board.updatedAt, revision: board.revision });
   });
 
   router.get('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {

@@ -67,6 +67,11 @@ export const GRID_COLUMNS_MEDIUM = 6;
 /** The span an item takes when it names none. */
 export const GRID_DEFAULT_SPAN = 4;
 
+/** A document of `kind` with nothing on it yet — what a new board starts as. */
+export function emptyViewDocument(kind: ViewKind): ViewDocument {
+  return kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+}
+
 /** Every widget a document places, in document order — a canvas view's nodes or a grid view's items. The one walk
  *  over a document's widgets, so code that looks at every binding does not depend on which kind it reads. Takes a
  *  resolved document as well. */

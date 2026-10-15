@@ -410,7 +410,8 @@ room it takes (`span` 1–12, absent 4; `spanMedium` 1–6 for a medium-width bo
 `span` rounded up; `height` in pixels, absent the widget's own). `placedIn(doc)` returns every placed
 widget of either kind, resolved or not — the walk to use for anything that looks at every binding.
 `resolveDocument` returns the same kind it is given (`ResolvedCanvasView`, `ResolvedGridView`).
-`ViewerPage` shows either kind and `AuthoringView` edits either (`onSave` receives a `ViewDocument`); importing
+`emptyViewDocument(kind)` is a document of either kind with nothing on it yet. `ViewerPage` shows either kind and
+`AuthoringView` edits either (`onSave` receives a `ViewDocument`); importing
 a document of the other kind in the editor opens it in that kind's editor.
 
 `validateViewDocument` checks either kind, and ids are unique across the whole document. The same

@@ -61,6 +61,9 @@ CREATE INDEX IF NOT EXISTS idx_boards_workspace_id ON boards(workspace_id);
 -- Counts the board's saves, so a save made against an older copy is refused instead of silently
 -- overwriting the one in between (HTTP If-Match), and an open share link knows its document changed.
 ALTER TABLE boards ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 1;
+-- The kind of the board's document (canvas, grid), kept beside it so the board list can say it without reading
+-- every document — a document can hold a background image of megabytes. Every board before grid views was a canvas.
+ALTER TABLE boards ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'canvas';
 
 CREATE TABLE IF NOT EXISTS connectors (
   id TEXT PRIMARY KEY,

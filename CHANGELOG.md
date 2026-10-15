@@ -13,8 +13,10 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
-- A share link shows a grid board — widgets in order, laid out to the width of the page or panel it is shown in —
-  and the board editor edits one. (A new board is still a canvas; a grid board comes from an imported document.)
+- **Grid boards** — widgets in order, laid out to the width of the page or panel they are shown in, for an ordinary
+  dashboard with no drawing behind it. The new-board dialog asks which kind (canvas or grid), the board list says
+  each board's kind, the editor edits both, and a share link shows both. The API's `POST …/boards` takes an optional
+  `kind` (`"canvas"` by default) and the board list carries each board's `kind`.
 
 ### Changed
 

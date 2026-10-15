@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { BoardsListPage } from './BoardsListPage.js';
@@ -23,42 +23,56 @@ function renderPage() {
 
 describe('BoardsListPage', () => {
   it('shows a loading state before the initial list resolves', async () => {
-    let resolveList!: (value: { boards: { id: string; name: string; updatedAt: string }[] }) => void;
+    let resolveList!: (value: { boards: { id: string; name: string; kind: 'canvas' | 'grid'; updatedAt: string }[] }) => void;
     vi.mocked(api.listBoards).mockReturnValue(new Promise(resolve => { resolveList = resolve; }));
 
     renderPage();
     expect(screen.getByText('불러오는 중...')).toBeInTheDocument();
 
-    resolveList({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: 't' }] });
+    resolveList({ boards: [{ id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: 't' }] });
     expect(await screen.findByText('Floor 1')).toBeInTheDocument();
     expect(screen.queryByText('불러오는 중...')).not.toBeInTheDocument();
   });
 
   it('lists boards for the workspace', async () => {
-    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: '2026-08-20T00:00:00.000Z' }] });
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: '2026-08-20T00:00:00.000Z' }] });
     renderPage();
     expect(await screen.findByText('Floor 1')).toBeInTheDocument();
     expect(api.listBoards).toHaveBeenCalledWith('w1');
   });
 
   it('says when each board was last changed, in readable words rather than raw ISO text', async () => {
-    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: '2026-08-20T00:00:00.000Z' }] });
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: '2026-08-20T00:00:00.000Z' }] });
     renderPage();
     const time = await screen.findByText(formatDateTime('2026-08-20T00:00:00.000Z'));
     expect(time).toHaveAttribute('datetime', '2026-08-20T00:00:00.000Z');
     expect(screen.queryByText(/2026-08-20T/)).not.toBeInTheDocument();
   });
 
+  it("creates a grid board when the grid kind is chosen, and says each board's kind in the list", async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Line 3', kind: 'grid', updatedAt: '2026-08-20T00:00:00.000Z' }] });
+    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b2', name: 'OEE', kind: 'grid', updatedAt: 't' });
+    renderPage();
+    expect(await screen.findByText(/^그리드 · 수정/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '새 보드' }));
+    const kinds = screen.getByRole('group', { name: '보드 종류' });
+    expect(within(kinds).getByRole('radio', { name: /^캔버스/ })).toBeChecked();
+    await userEvent.click(within(kinds).getByRole('radio', { name: /^그리드/ }));
+    await userEvent.type(screen.getByLabelText('보드 이름'), 'OEE');
+    await userEvent.click(screen.getByRole('button', { name: '생성' }));
+    await waitFor(() => expect(api.createBoard).toHaveBeenCalledWith('w1', 'OEE', 'grid'));
+  });
+
   it('creates a board via the create-board dialog and navigates to its editor', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
-    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b2', name: 'New Board', updatedAt: 't' });
+    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b2', name: 'New Board', kind: 'canvas', updatedAt: 't' });
 
     renderPage();
     await userEvent.click(await screen.findByRole('button', { name: '새 보드' }));
     await userEvent.type(screen.getByLabelText('보드 이름'), 'New Board');
     await userEvent.click(screen.getByRole('button', { name: '생성' }));
 
-    await waitFor(() => expect(api.createBoard).toHaveBeenCalledWith('w1', 'New Board'));
+    await waitFor(() => expect(api.createBoard).toHaveBeenCalledWith('w1', 'New Board', 'canvas'));
     expect(await screen.findByText('editor page')).toBeInTheDocument();
   });
 
@@ -98,7 +112,7 @@ describe('BoardsListPage', () => {
   });
 
   it('deletes a board after confirmation and removes it from the list', async () => {
-    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: 't' }] });
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: 't' }] });
     vi.mocked(api.deleteBoard).mockResolvedValue(undefined);
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
@@ -116,7 +130,7 @@ describe('BoardsListPage', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('보드 목록을 불러오지 못했습니다');
 
-    vi.mocked(api.listBoards).mockResolvedValueOnce({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: 't' }] });
+    vi.mocked(api.listBoards).mockResolvedValueOnce({ boards: [{ id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: 't' }] });
     await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
 
     expect(await screen.findByText('Floor 1')).toBeInTheDocument();
@@ -147,8 +161,8 @@ describe('BoardsListPage', () => {
   it('filters the board list by name as the search query changes', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({
       boards: [
-        { id: 'b1', name: 'Factory Floor 1', updatedAt: 't' },
-        { id: 'b2', name: 'Warehouse Overview', updatedAt: 't' },
+        { id: 'b1', name: 'Factory Floor 1', kind: 'canvas', updatedAt: 't' },
+        { id: 'b2', name: 'Warehouse Overview', kind: 'canvas', updatedAt: 't' },
       ],
     });
     renderPage();
@@ -161,7 +175,7 @@ describe('BoardsListPage', () => {
   });
 
   it('shows a no-results empty state when the search query matches nothing, without hiding the create action', async () => {
-    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Factory Floor 1', updatedAt: 't' }] });
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Factory Floor 1', kind: 'canvas', updatedAt: 't' }] });
     renderPage();
     await screen.findByText('Factory Floor 1');
 
@@ -175,8 +189,8 @@ describe('BoardsListPage', () => {
   it('gives each board card delete button a distinct accessible name', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({
       boards: [
-        { id: 'b1', name: 'Factory Floor 1', updatedAt: 't' },
-        { id: 'b2', name: 'Warehouse Overview', updatedAt: 't' },
+        { id: 'b1', name: 'Factory Floor 1', kind: 'canvas', updatedAt: 't' },
+        { id: 'b2', name: 'Warehouse Overview', kind: 'canvas', updatedAt: 't' },
       ],
     });
     renderPage();
@@ -187,7 +201,7 @@ describe('BoardsListPage', () => {
   });
 
   it('shows an error when deleting a board fails', async () => {
-    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', updatedAt: 't' }] });
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: 't' }] });
     vi.mocked(api.deleteBoard).mockRejectedValue(new Error('network down'));
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
@@ -202,7 +216,7 @@ describe('BoardsListPage', () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: `new-${input.name}`, type: 'http', updatedAt: 't', ...input, attribution: input.attribution ?? undefined }));
-    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't' });
+    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', kind: 'canvas', updatedAt: 't' });
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't', revision: 2 });
     renderPage();
     await userEvent.click(await screen.findByRole('button', { name: '첫 보드 만들기' }));
@@ -221,7 +235,7 @@ describe('BoardsListPage', () => {
     vi.mocked(api.listConnectors).mockResolvedValue({
       connectors: [{ id: 'mine', name: '내 키', type: 'http', baseUrl: 'http://openapi.seoul.go.kr:8088/{key}', authType: 'path', updatedAt: 't' }],
     });
-    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't' });
+    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: 'x', kind: 'canvas', updatedAt: 't' });
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't', revision: 2 });
     renderPage();
     await userEvent.click(await screen.findByRole('button', { name: '첫 보드 만들기' }));

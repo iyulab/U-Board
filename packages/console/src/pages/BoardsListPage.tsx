@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router';
 import { listBoards, createBoard, deleteBoard, ApiError } from '../api-client.js';
 import { createBoardFromSample, loadSamplePacks, sampleHosts } from '../sample-boards.js';
 import type { SamplePack } from '@iyulab/u-board-samples';
+import type { ViewKind } from '@iyulab/u-board';
 import { Alert } from '../design-system/Alert.js';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
@@ -13,7 +14,14 @@ import './BoardsListPage.css';
 import { Loading } from '../design-system/Loading.js';
 import { Timestamp } from '../format-time.js';
 
-type BoardSummary = { id: string; name: string; updatedAt: string };
+type BoardSummary = { id: string; name: string; kind: ViewKind; updatedAt: string };
+
+/** What each kind of board is called, and what it is for — said where a board is made. */
+const KIND_NAMES: Record<ViewKind, string> = { canvas: '캔버스', grid: '그리드' };
+const KIND_HINTS: Record<ViewKind, string> = {
+  canvas: '도면·지도 같은 배경 위에 위젯을 제자리에 놓습니다',
+  grid: '위젯을 순서대로 칸에 늘어놓고, 화면 폭에 맞춰 줄을 바꿉니다',
+};
 
 export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   const [boards, setBoards] = useState<BoardSummary[]>([]);
@@ -22,6 +30,7 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newBoardName, setNewBoardName] = useState('');
+  const [newBoardKind, setNewBoardKind] = useState<ViewKind>('canvas');
   const [createError, setCreateError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [samples, setSamples] = useState<readonly SamplePack[]>([]);
@@ -47,6 +56,7 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
 
   function openCreateDialog() {
     setNewBoardName('');
+    setNewBoardKind('canvas');
     setCreateError(null);
     setIsCreateOpen(true);
     // Offered once they arrive; the dialog works without them.
@@ -74,7 +84,7 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   async function handleCreateSubmit(e: FormEvent) {
     e.preventDefault();
     try {
-      const created = await createBoard(workspaceId, newBoardName);
+      const created = await createBoard(workspaceId, newBoardName, newBoardKind);
       setIsCreateOpen(false);
       navigate(`/boards/${created.id}/edit`);
     } catch {
@@ -125,7 +135,7 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
             <Card key={b.id}>
               <Link className="ub-board-card__link" to={`/boards/${b.id}/edit`}>{b.name}</Link>
               <span className="ub-board-card__meta">
-                수정 <Timestamp value={b.updatedAt} />
+                {KIND_NAMES[b.kind]} · 수정 <Timestamp value={b.updatedAt} />
               </span>
               <div className="ub-board-card__footer">
                 <Button variant="danger" aria-label={`${b.name} 삭제`} onClick={() => handleDelete(b.id)}>삭제</Button>
@@ -140,6 +150,17 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
           <FormField label="보드 이름">
             <input value={newBoardName} onChange={e => setNewBoardName(e.target.value)} required />
           </FormField>
+          <fieldset className="ub-kind-choice">
+            <legend className="ub-field__label">보드 종류</legend>
+            {(['canvas', 'grid'] as const).map(kind => (
+              <label key={kind} className="ub-kind-choice__option">
+                <input type="radio" name="board-kind" value={kind} checked={newBoardKind === kind} onChange={() => setNewBoardKind(kind)} />
+                <span>
+                  <strong>{KIND_NAMES[kind]}</strong> — {KIND_HINTS[kind]}
+                </span>
+              </label>
+            ))}
+          </fieldset>
           {createError && <Alert>{createError}</Alert>}
           <Button type="submit">생성</Button>{' '}
           <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>
