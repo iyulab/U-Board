@@ -38,12 +38,12 @@ export function findProblems(placed: Array<{ id: string; path: string; attr: str
   return out;
 }
 
-/** How many frames show each connection mark (stale, disconnected…). */
+/** How many parts — nodes, grid items, connectors — show each quality short of live (`stale`, `disconnected`). */
 export function countQualityMarks(): Record<string, number> {
   const counts: Record<string, number> = {};
-  for (const badge of document.querySelectorAll('[data-quality-badge]')) {
-    const word = (badge.textContent ?? '').trim() || 'marked';
-    counts[word] = (counts[word] ?? 0) + 1;
+  for (const part of document.querySelectorAll('[data-quality]')) {
+    const quality = part.getAttribute('data-quality') || 'marked';
+    counts[quality] = (counts[quality] ?? 0) + 1;
   }
   return counts;
 }
@@ -118,8 +118,10 @@ export async function findLowContrast(args: { picture: string; ratio: number; pl
       // SVG text is painted with its fill; HTML text with its colour.
       const owner = node.parentElement;
       // Text inside a definition (a <symbol> drawn where a <use> points, <defs>, a pattern) is not where it is drawn;
-      // hidden text is not drawn at all.
+      // hidden text is not drawn at all, nor is text kept in a box of a pixel for assistive technology alone.
       if (!owner || owner.closest('symbol, defs, pattern, marker, mask, clipPath') || !owner.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) continue;
+      const box = owner.getBoundingClientRect();
+      if (box.width <= 1 && box.height <= 1) continue;
       const ink = owner ? parse(owner instanceof SVGElement ? getComputedStyle(owner).fill : getComputedStyle(owner).color) : undefined;
       if (!ink) continue;
       const range = document.createRange();

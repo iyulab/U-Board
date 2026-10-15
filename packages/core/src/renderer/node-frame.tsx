@@ -97,7 +97,12 @@ export function NodeFrame({ widget, appearance, qualityText = DEFAULT_QUALITY_TE
   const element = elementNameOf(widget.type);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', ...frameStyle }} title={label} {...(nodeId !== undefined && { 'data-node-id': nodeId })}>
+    <div
+      style={{ position: 'relative', width: '100%', height: '100%', ...frameStyle }}
+      title={label}
+      {...(nodeId !== undefined && { 'data-node-id': nodeId })}
+      {...(quality && quality !== 'live' && { 'data-quality': quality })}
+    >
       {element !== undefined ? (
         <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} />
       ) : (

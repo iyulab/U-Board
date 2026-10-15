@@ -5,7 +5,8 @@ import { countQualityMarks, findLowContrast, findProblems } from './look-page.js
 /** What `look` is asked for: a saved board, optionally one part of it, optionally on the other paper. */
 export interface LookRequest {
   board: string;
-  /** A JSON Pointer to a node, grid item or decoration ("/nodes/3", "/items/0", "/decorations/5") — only that part. */
+  /** A JSON Pointer to a node, grid item, connector or decoration ("/nodes/3", "/items/0", "/connectors/2",
+   *  "/decorations/5") — only that part. */
   focus?: string;
   appearance?: 'light' | 'dark';
   width: number;
@@ -25,7 +26,8 @@ export interface LookReport {
   picture: { width: number; height: number };
   /** Parts that did not draw as written: an element's error or notice, a widget's content running past its box. */
   problems: Array<{ path?: string; message: string }>;
-  /** How current the bound values are: how many frames show each connection mark (stale, disconnected…). */
+  /** How current the bound values are: how many parts — nodes, grid items, connectors — show each quality short of
+   *  live (`stale`, `disconnected`). */
   quality: Record<string, number>;
   /** What the page itself complained about (script errors, failed requests), at most a few. */
   console: string[];
@@ -139,17 +141,18 @@ const MAX_CONTRAST_PROBLEMS = 10;
 
 async function focusClip(page: Page, document: ViewDocument, focus: string, scale: Scale | undefined) {
   const part = getByPointer(document, focus) as { id?: string; type?: string; x?: number; y?: number; width?: number; height?: number; text?: string; fontSize?: number } | undefined;
-  if (!part || typeof part !== 'object') throw new Error(`nothing at ${focus} — focus a node ("/nodes/3"), a grid item ("/items/0") or a decoration ("/decorations/5")`);
+  if (!part || typeof part !== 'object') throw new Error(`nothing at ${focus} — focus a node ("/nodes/3"), a grid item ("/items/0"), a connector ("/connectors/2") or a decoration ("/decorations/5")`);
   let box: { x: number; y: number; width: number; height: number } | null = null;
   if (focus.startsWith('/nodes/') && part.id) box = await page.locator(`[data-node-id="${cssString(part.id)}"]`).first().boundingBox();
   else if (focus.startsWith('/items/') && part.id) box = await page.locator(`[data-item-id="${cssString(part.id)}"]`).first().boundingBox();
+  else if (focus.startsWith('/connectors/') && part.id) box = await page.locator(`[data-connector-id="${cssString(part.id)}"]`).first().boundingBox();
   else if (focus.startsWith('/decorations/') && scale && typeof part.x === 'number' && typeof part.y === 'number') {
     const size = part.fontSize ?? 16;
     const width = part.type === 'text' ? [...(part.text ?? '')].length * size * 0.6 : (part.width ?? DEFAULT_NODE_WIDTH);
     const height = part.type === 'text' ? size : (part.height ?? DEFAULT_NODE_HEIGHT);
     box = { x: scale.originX + part.x * scale.factor, y: scale.originY + part.y * scale.factor, width: width * scale.factor, height: height * scale.factor };
   }
-  if (!box) throw new Error(`could not find ${focus} on the drawn board — focus a node, a grid item or a decoration`);
+  if (!box) throw new Error(`could not find ${focus} on the drawn board — focus a node, a grid item, a connector or a decoration`);
   const viewport = page.viewportSize() ?? { width: box.x + box.width, height: box.y + box.height };
   const margin = Math.max(FOCUS_MARGIN, Math.max(box.width, box.height) / 2);
   const x = Math.max(0, box.x - margin);

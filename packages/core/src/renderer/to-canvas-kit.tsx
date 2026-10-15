@@ -20,7 +20,8 @@ import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
 import { onBoard } from './board-appearance.js';
 import { NodeFrame } from './node-frame.js';
-import { captionObjects, connectorObjects } from './connector-drawing.js';
+import { captionObjects, connectorObjects, placeOnCanvas } from './connector-drawing.js';
+import { connectorMark } from './connector-mark.js';
 
 /** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
  * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
@@ -42,8 +43,8 @@ export interface ToCanvasKitOptions {
 
 /**
  * Translates a resolved View Document into canvas-kit primitives: a Scene holding the
- * background and connectors, and an overlay list for the Viewer to position each node's widget
- * in scene coordinates. This is the renderer half of the editor/renderer separation
+ * background and connectors, and an overlay list for the Viewer to position in scene coordinates —
+ * each node's widget, then each connector's display-only mark (`connectorMark`). This is the renderer half of the editor/renderer separation
  * (docs/principles.md) — it depends on canvas-kit and u-widgets so the document format itself
  * doesn't have to.
  */
@@ -78,6 +79,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     // A widget takes its node's box exactly — the box the author drew is the layout.
     content: <NodeFrame widget={node.widget} appearance={doc.appearance} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} />,
   }));
+  for (const placed of placeOnCanvas(doc.nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 
   return { scene, overlays };
 }

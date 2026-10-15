@@ -6,6 +6,22 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `look` can `focus` a connector (`"/connectors/2"`) — its line, heads and label up close.
+- The `canvas` topic teaches a connector's `arrow` (and binding it to a value's sign) and `labelAt`.
+
+### Changed
+
+- `look`'s `quality` counts the parts — nodes, grid items and now connectors — by the quality they show (`stale`,
+  `disconnected`) instead of by the words on a node's mark, so a connector whose bound label or style is not current is
+  counted too.
+
+### Fixed
+
+- `look` no longer reports text kept for a screen reader alone (in a box of a pixel) as reading poorly against the
+  picture.
+
 ## [0.3.0] - 2026-10-16
 
 ### Changed

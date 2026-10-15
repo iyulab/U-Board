@@ -248,6 +248,39 @@ describe('toCanvasKit', () => {
     expect(chip({ label: 'live', 'style.stroke': 'disconnected' })).toMatchObject({ stroke: '#6b7280' });
   });
 
+  it('lays a display-only mark over each connector, carrying its label for a reader and the quality it shows', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const nodes = [
+      { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+      { id: 'b', x: 300, y: 0, width: 100, height: 100, anchored: false, widget },
+    ];
+    const { overlays } = toCanvasKit(
+      doc({
+        nodes,
+        connectors: [
+          { id: 'c1', fromNodeId: 'a', toNodeId: 'b', label: '26 Kbps', style: { arrow: 'end' }, quality: { label: 'stale' } },
+          { id: 'c2', fromNodeId: 'b', toNodeId: 'a' },
+        ],
+      })
+    );
+    expect(overlays.map(o => o.id)).toEqual(['a', 'b', 'c1', 'c2']);
+    const [one, two] = overlays.slice(2);
+    expect(one).toMatchObject({ interactive: false, x: 100 });
+    expect(one.x + one.width).toBe(300); // to the arrow's tip on b
+    expect(one.height).toBeGreaterThan(11); // the label's chip
+    const mark = one.content as ReactElement<Record<string, unknown> & { children?: ReactElement[] }>;
+    expect(mark.props).toMatchObject({ 'data-connector-id': 'c1', 'data-quality': 'stale' });
+    const parts = childrenOf(mark);
+    expect(parts.map(p => p.props.children)).toEqual(['26 Kbps', 'stale — showing last known value']);
+    expect(parts[1].props).toMatchObject({ role: 'status', 'aria-live': 'polite' });
+    expect((two.content as ReactElement<Record<string, unknown>>).props).not.toHaveProperty('data-quality');
+  });
+
+  it('marks a node frame with the quality its headline value shows, not when live', () => {
+    expect(overlayFor({ value: 'stale' }).props).toMatchObject({ 'data-quality': 'stale' });
+    expect(overlayFor({ value: 'live' }).props).not.toHaveProperty('data-quality');
+  });
+
   it('skips a connector referencing a node that does not exist, without throwing', () => {
     expect(() =>
       toCanvasKit(doc({ connectors: [{ id: 'c1', fromNodeId: 'missing', toNodeId: 'also-missing' }] }))

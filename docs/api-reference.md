@@ -655,7 +655,7 @@ nothing, the same as leaving the field out). A CSS variable is refused — a can
 
 ```ts
 validateViewDocument(doc, { strict: true });
-// → [{ path: '/connectors/0/color', message: 'a connector has no "color" — it would be kept but never drawn. A connector has: id, fromNodeId, toNodeId, label, style. …' }]
+// → [{ path: '/connectors/0/color', message: 'a connector has no "color" — it would be kept but never drawn. A connector has: id, fromNodeId, toNodeId, label, labelAt, style, bindings. …' }]
 ```
 
 ### `lintViewDocument(doc)`

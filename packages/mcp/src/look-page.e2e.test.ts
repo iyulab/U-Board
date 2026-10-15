@@ -78,10 +78,10 @@ describe('findProblems', () => {
 });
 
 describe('countQualityMarks', () => {
-  it('counts the marks by their word, a mark without one as "marked"', async () => {
+  it('counts the parts by the quality they show — nodes, grid items and connectors alike', async () => {
     await show(`
-      <span data-quality-badge>stale</span><span data-quality-badge> stale </span>
-      <span data-quality-badge>disconnected</span><span data-quality-badge></span>`);
+      <div data-node-id="a" data-quality="stale"></div><div data-item-id="b" data-quality="stale"></div>
+      <div data-connector-id="c" data-quality="disconnected"></div><div data-connector-id="d"></div><div data-quality=""></div>`);
     expect(await page.evaluate(countQualityMarks)).toEqual({ stale: 2, disconnected: 1, marked: 1 });
   });
 
@@ -115,12 +115,13 @@ describe('findLowContrast', () => {
     expect(await lowContrast([node('a')])).toEqual([]);
   });
 
-  it('skips text that is not drawn where it sits: in definitions, hidden, or transparent', async () => {
+  it('skips text that is not drawn where it sits: in definitions, hidden, transparent, or kept for a screen reader', async () => {
     await show(`
       <div data-node-id="a">
         <svg width="200" height="40"><defs><text id="t" font-size="24" fill="#eee">in defs</text></defs></svg>
         <span style="visibility:hidden;color:#eee;font-size:24px">hidden</span>
         <span style="color:rgba(0,0,0,0);font-size:24px">clear</span>
+        <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);color:#eee">for a screen reader</span>
       </div>`);
     expect(await lowContrast([node('a')])).toEqual([]);
   });

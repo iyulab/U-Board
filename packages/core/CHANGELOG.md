@@ -16,6 +16,13 @@ All notable changes to this package are documented here. The format follows
 - **`Connector.labelAt`** — where along the line its label sits, from 0 (the `fromNodeId` end) to 1 (the `toNodeId`
   end). Left out, the label stays at the middle, side-by-side connectors' labels taking turns along their line.
 - The schema and strict validation know both, with the words `style.arrow` takes in the error.
+- **Each connector has a place on the page.** The viewer lays a display-only mark (the pointer passes through it)
+  over the box a connector's line, heads and label take, marked `data-connector-id`: its label is text for a screen
+  reader and how current its bound values are is announced as a node's is — a canvas draws the line, so neither
+  reached assistive technology before. A page reading the board (a test, a tool taking a picture of one connector)
+  finds it there.
+- A node frame not showing a current headline value carries `data-quality` (`stale` or `disconnected`), as a
+  connector's mark does — one attribute for how current any placed part is.
 
 ## [0.14.0] - 2026-10-16
 
