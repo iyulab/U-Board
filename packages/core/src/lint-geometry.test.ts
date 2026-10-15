@@ -39,7 +39,7 @@ describe('lintGeometry', () => {
     });
     expect(lintGeometry(doc)).toEqual([
       { path: '/decorations/0', message: expect.stringContaining('lies under node "a" (/nodes/0)') },
-      { path: '/decorations/1', message: 'connector "link" runs through this text — place it beside the line' },
+      { path: '/decorations/1', message: 'connector "link" runs through this text — place it beside the line, or use the connector’s label' },
       { path: '/decorations/2', message: 'this text runs into /decorations/3 — the two overlap' },
     ]);
   });
@@ -55,6 +55,34 @@ describe('lintGeometry', () => {
       { path: '/nodes/0/caption', message: expect.stringContaining('lies under node "b" (/nodes/1)') },
       { path: '/decorations/0', message: 'this text runs into /nodes/1/caption — the two overlap' },
     ]);
+  });
+
+  it('counts a connector’s label by its chip: under a node, or running into another label', () => {
+    const doc = canvas({
+      nodes: [node('a', 0, 0, { width: 40, height: 40 }), node('b', 400, 0, { width: 40, height: 40 }), node('m', 200, 10, { width: 40, height: 40 })],
+      connectors: [
+        { id: 'one', fromNodeId: 'a', toNodeId: 'b', label: 'a very long throughput label' },
+        { id: 'two', fromNodeId: 'a', toNodeId: 'b', label: 'another long label here' },
+      ],
+    });
+    // the two labels take turns along the line (1/3, 2/3) — both still under m, and long enough to meet
+    expect(lintGeometry(doc)).toEqual([
+      { path: '/connectors/0/label', message: expect.stringContaining('lies under node "m" (/nodes/2)') },
+      { path: '/connectors/1/label', message: expect.stringContaining('lies under node "m" (/nodes/2)') },
+      { path: '/connectors/0/label', message: 'this text runs into /connectors/1/label — the two overlap' },
+    ]);
+  });
+
+  it('names a frame edge running through a text, unless a filled tag drawn after the frame covers it', () => {
+    const frame = { id: 'zone', type: 'rect' as const, x: 0, y: 100, width: 300, height: 200, stroke: '#888', strokeWidth: 1 };
+    const across = text('title', 10, 92, 'DMZ zone', 12); // y 92–104 crosses the top edge at 100
+    expect(lintGeometry(canvas({ decorations: [frame, across] }))).toEqual([
+      { path: '/decorations/1', message: expect.stringContaining('the edge of /decorations/0 runs through this text') },
+    ]);
+    const tag = { id: 'tag', type: 'rect' as const, x: 6, y: 90, width: 70, height: 16, fill: '#ffffff' };
+    expect(lintGeometry(canvas({ decorations: [frame, tag, across] }))).toEqual([]);
+    const inside = text('inside', 10, 120, 'DMZ zone', 12);
+    expect(lintGeometry(canvas({ decorations: [frame, inside] }))).toEqual([]);
   });
 
   it('estimates a text by its characters and size', () => {

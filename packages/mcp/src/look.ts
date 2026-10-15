@@ -1,6 +1,6 @@
 import type { Browser, Page } from 'playwright-core';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, getByPointer, type ViewDocument } from '@iyulab/u-board/domain';
-import { countQualityMarks, findProblems } from './look-page.js';
+import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
 
 /** What `look` is asked for: a saved board, optionally one part of it, optionally on the other paper. */
 export interface LookRequest {
@@ -75,13 +75,21 @@ export class BrowserLooker implements Looker {
 
       const scale = await sceneScale(page, document);
       const clip = request.focus ? await focusClip(page, document, request.focus, scale) : undefined;
-      const png = await page.screenshot({ type: 'png', ...(clip && { clip }) });
+      // The whole view is taken in any case: the contrast check reads what is drawn behind each text off it.
+      const whole = await page.screenshot({ type: 'png' });
+      const png = clip ? await page.screenshot({ type: 'png', clip }) : whole;
+      const lowContrast = await page.evaluate(findLowContrast, {
+        picture: `data:image/png;base64,${whole.toString('base64')}`,
+        ratio: request.focus ? 2 : 1,
+        placed: placedParts(document),
+        limit: MAX_CONTRAST_PROBLEMS,
+      });
       return {
         image: png.toString('base64'),
         report: {
           ...(scale && { scale: Math.round(scale.factor * 1000) / 1000 }),
           picture: clip ? { width: Math.round(clip.width), height: Math.round(clip.height) } : { width: request.width, height: request.height },
-          problems: await problems(page, document),
+          problems: [...(await problems(page, document)), ...lowContrast],
           quality: await quality(page),
           console: console.slice(0, MAX_CONSOLE_LINES),
         },
@@ -125,7 +133,9 @@ async function sceneScale(page: Page, document: ViewDocument): Promise<Scale | u
   return undefined;
 }
 
-const FOCUS_MARGIN = 24;
+/** Room around a focused part — at least half its size, so what spills past its box shows in the picture. */
+const FOCUS_MARGIN = 48;
+const MAX_CONTRAST_PROBLEMS = 10;
 
 async function focusClip(page: Page, document: ViewDocument, focus: string, scale: Scale | undefined) {
   const part = getByPointer(document, focus) as { id?: string; type?: string; x?: number; y?: number; width?: number; height?: number; text?: string; fontSize?: number } | undefined;
@@ -141,15 +151,22 @@ async function focusClip(page: Page, document: ViewDocument, focus: string, scal
   }
   if (!box) throw new Error(`could not find ${focus} on the drawn board — focus a node, a grid item or a decoration`);
   const viewport = page.viewportSize() ?? { width: box.x + box.width, height: box.y + box.height };
-  const x = Math.max(0, box.x - FOCUS_MARGIN);
-  const y = Math.max(0, box.y - FOCUS_MARGIN);
-  return { x, y, width: Math.min(viewport.width - x, box.width + 2 * FOCUS_MARGIN), height: Math.min(viewport.height - y, box.height + 2 * FOCUS_MARGIN) };
+  const margin = Math.max(FOCUS_MARGIN, Math.max(box.width, box.height) / 2);
+  const x = Math.max(0, box.x - margin);
+  const y = Math.max(0, box.y - margin);
+  return { x, y, width: Math.min(viewport.width - x, box.width + 2 * margin), height: Math.min(viewport.height - y, box.height + 2 * margin) };
 }
 
 /** Elements that failed or were held back, and widgets whose content runs past their box. */
 async function problems(page: Page, doc: ViewDocument): Promise<LookReport['problems']> {
-  const placed = doc.kind === 'canvas' ? doc.nodes.map((n, i) => ({ id: n.id, path: `/nodes/${i}`, attr: 'data-node-id' })) : doc.items.map((n, i) => ({ id: n.id, path: `/items/${i}`, attr: 'data-item-id' }));
-  return page.evaluate(findProblems, placed);
+  return page.evaluate(findProblems, placedParts(doc));
+}
+
+/** Each node or grid item, with where it is in the document and the attribute its frame carries on the page. */
+function placedParts(doc: ViewDocument): Array<{ id: string; path: string; attr: string }> {
+  return doc.kind === 'canvas'
+    ? doc.nodes.map((n, i) => ({ id: n.id, path: `/nodes/${i}`, attr: 'data-node-id' }))
+    : doc.items.map((n, i) => ({ id: n.id, path: `/items/${i}`, attr: 'data-item-id' }));
 }
 
 async function quality(page: Page): Promise<Record<string, number>> {

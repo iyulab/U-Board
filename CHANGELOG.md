@@ -13,6 +13,8 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
+- Saving a canvas board also advises on connector labels that sit under a node or run into a text, and on a frame's
+  edge running through a text.
 - A canvas node can carry a **caption** — its name drawn under its box, so links meet a device's icon however long
   its name.
 

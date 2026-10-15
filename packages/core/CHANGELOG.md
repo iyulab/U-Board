@@ -13,6 +13,13 @@ All notable changes to this package are documented here. The format follows
   its name. The view fits it, `lintViewDocument` counts it as a text (under another node, running into a text), and
   the schema and strict validation know it.
 
+### Changed
+
+- **`lintViewDocument` also counts connector labels** (by their chip — under a node, running into another text) and
+  **a frame's edge running through a text** (a rect decoration's stroke across a text, unless a filled rect drawn
+  after the frame covers the text — a title tag). A text crossed by a connector is judged against the line as drawn,
+  edge to edge and side by side. Connector placement (`placeConnectors`) is one geometry for the renderer and the advice.
+
 ## [0.13.0] - 2026-10-16
 
 ### Added
