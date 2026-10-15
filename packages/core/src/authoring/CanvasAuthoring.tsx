@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { KonvaDesigner } from '@canvas-kit/designer';
+import { KonvaDesigner, type DesignerHandle } from '@canvas-kit/designer';
 import { Viewer } from '@canvas-kit/viewer';
 import { viewToScene } from '@canvas-kit/core';
 import type { Scene, DrawingObject } from '@canvas-kit/core';
@@ -10,6 +10,10 @@ import {
   nextNodePosition,
   addDecoration,
   nextDecorationPosition,
+  addConnector,
+  newConnectorId,
+  removeParts,
+  partOf,
 } from './scene-mapping.js';
 import { resolveDocument } from '../resolve-document.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
@@ -20,12 +24,13 @@ import { ElementsPanel } from './ElementsPanel.js';
 import { seedWidget, widgetTypeName } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
+import { ConnectorPanel } from './ConnectorPanel.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
-import type { BoardAppearance, Node, ReferencePoint, CanvasView, Widget, Shape } from '../view-document.js';
+import type { BoardAppearance, Connector, Node, ReferencePoint, CanvasView, Widget, Shape } from '../view-document.js';
 import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
 import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
@@ -71,11 +76,13 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
       const snapshot = snapshotAnchors(current);
       return snapshot ? { snapshot, byImage } : null;
     });
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [selectedDecorationId, setSelectedDecorationId] = useState<string | null>(null);
-  // How many items the editor has selected. With several (a box selection), they can be moved
-  // together but no single item's panel applies.
-  const [selectionCount, setSelectionCount] = useState(0);
+  // The document parts the editor has selected — nodes, decorations, connectors — in the order they were picked. With
+  // several (a box selection), they can be moved or deleted together, and two nodes joined, but no single part's panel
+  // applies.
+  const [selectedIds, setSelectedIds] = useState<readonly string[]>([]);
+  // A part just added, to be selected once the designer draws it — so its panel opens.
+  const [pendingSelect, setPendingSelect] = useState<string | null>(null);
+  const designerRef = useRef<DesignerHandle>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const view = useFittedView();
   const { fitTo, transform } = view;
@@ -132,14 +139,17 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
   }, [doc, adapters, labels]);
   const attributions = useMemo(() => boardAttributions(doc, adapters), [doc, adapters]);
 
+  // A part that leaves the document (undone, imported over) leaves the selection.
   useEffect(() => {
-    if (selectedNodeId && !doc.nodes.some(n => n.id === selectedNodeId)) {
-      setSelectedNodeId(null);
-    }
-    if (selectedDecorationId && !doc.decorations?.some(d => d.id === selectedDecorationId)) {
-      setSelectedDecorationId(null);
-    }
-  }, [doc, selectedNodeId, selectedDecorationId]);
+    const present = (id: string) => doc.nodes.some(n => n.id === id) || doc.connectors.some(c => c.id === id) || !!doc.decorations?.some(d => d.id === id);
+    setSelectedIds(ids => (ids.every(present) ? ids : ids.filter(present)));
+  }, [doc]);
+
+  useEffect(() => {
+    if (!pendingSelect || !scene.getObjects().some(o => o.id === pendingSelect)) return;
+    designerRef.current?.select([pendingSelect]);
+    setPendingSelect(null);
+  }, [scene, pendingSelect]);
 
   const handleSceneChange = (newScene: Scene) => {
     updateDoc(prev => applySceneToDocument(prev, newScene));
@@ -151,16 +161,44 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
   // with no selection — so the panel lets go of the selected item rather than show one the board does not.
   const handleViewMode = () => {
     onModeChange('view');
-    setSelectionCount(0);
-    setSelectedNodeId(null);
-    setSelectedDecorationId(null);
+    setSelectedIds([]);
   };
 
+  // A connector is drawn in pieces (its line, heads, label chip): any of them selects the connector.
   const handleSelectionChange = (selection: DrawingObject[]) => {
-    setSelectionCount(selection.length);
-    const id = selection.length === 1 ? (selection[0].id ?? null) : null;
-    setSelectedNodeId(id && doc.nodes.some(n => n.id === id) ? id : null);
-    setSelectedDecorationId(id && doc.decorations?.some(d => d.id === id) ? id : null);
+    setSelectedIds([...new Set(selection.flatMap(object => (object.id ? [partOf(object.id)] : [])))]);
+  };
+
+  const single = selectedIds.length === 1 ? selectedIds[0] : null;
+  const selectedNodeId = single && doc.nodes.some(n => n.id === single) ? single : null;
+  const selectedDecorationId = single && doc.decorations?.some(d => d.id === single) ? single : null;
+  // Two nodes picked: they can be joined, first to second.
+  const pair = selectedIds.length === 2 && selectedIds.every(id => doc.nodes.some(n => n.id === id)) ? selectedIds : null;
+
+  const handleConnect = () => {
+    if (!pair) return;
+    const id = newConnectorId();
+    updateDoc(prev => addConnector(prev, pair[0], pair[1], id));
+    setPendingSelect(id);
+    onFileError(null);
+  };
+
+  const handleDelete = () => {
+    if (selectedIds.length === 0) return;
+    const ids = selectedIds;
+    updateDoc(prev => removeParts(prev, ids));
+    designerRef.current?.select([]);
+    setSelectedIds([]);
+  };
+
+  // Delete or Backspace on the editor deletes the selection — not while typing in a field.
+  const handleEditorKey = (e: React.KeyboardEvent) => {
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    const target = e.target as HTMLElement;
+    if (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
+    if (selectedIds.length === 0) return;
+    e.preventDefault();
+    handleDelete();
   };
 
   const handleAddNode = () => {
@@ -247,8 +285,13 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
     }));
   };
 
+  const handleConnectorChange = (connector: Connector) => {
+    updateDoc(prev => ({ ...prev, connectors: prev.connectors.map(c => (c.id === connector.id ? connector : c)) }));
+  };
+
   const selectedNode = doc.nodes.find(n => n.id === selectedNodeId) ?? null;
   const selectedDecoration = doc.decorations?.find(d => d.id === selectedDecorationId) ?? null;
+  const selectedConnector = single ? (doc.connectors.find(c => c.id === single) ?? null) : null;
 
   // Sized panes stay at their size; container-sized ones split the row and fill its height.
   const followsContainer = width === undefined || height === undefined;
@@ -269,6 +312,12 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
           <button type="button" className="ub-action" onClick={() => handleAddDecoration('text')}>
             {labels.addTextDecoration}
           </button>
+          <button type="button" className="ub-action" onClick={handleConnect} disabled={!pair} title={pair ? undefined : labels.connectHint}>
+            {labels.addConnector}
+          </button>
+          <button type="button" className="ub-action" onClick={handleDelete} disabled={selectedIds.length === 0}>
+            {labels.deleteSelected}
+          </button>
         </div>
         {fileActions}
         <ModeSwitch mode={mode} onEdit={() => onModeChange('edit')} onView={handleViewMode} labels={labels} />
@@ -288,8 +337,9 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
       <div className="ub-authoring__panes" style={{ display: 'flex', gap: 'var(--ub-space-4, 16px)', flex: 1, minHeight: 0 }}>
         <div className="ub-authoring__pane" style={paneStyle}>
           {mode === 'edit' ? (
-            <div className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
+            <div className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }} role="presentation" onKeyDown={handleEditorKey}>
               <KonvaDesigner
+                ref={designerRef}
                 width={width}
                 height={height}
                 scene={scene}
@@ -323,8 +373,19 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
         {/* A fixed width: sized by its content, the form's inline fields would widen the panel until the
             editor and preview — which give way (`minWidth: 0`) — were squeezed to a sliver. */}
         <div className="ub-authoring__panel" style={{ flex: '0 0 var(--ub-panel-width, 320px)', minWidth: 0, overflowY: 'auto' }}>
-          {selectionCount > 1 ? (
-            <p className="ub-panel__hint">{labels.multipleSelected.replace('{count}', String(selectionCount))}</p>
+          {selectedIds.length > 1 ? (
+            <p className="ub-panel__hint">{labels.multipleSelected.replace('{count}', String(selectedIds.length))}</p>
+          ) : selectedConnector ? (
+            <ConnectorPanel
+              connector={selectedConnector}
+              nodes={doc.nodes}
+              onChange={handleConnectorChange}
+              onDelete={handleDelete}
+              adapters={adapters}
+              connectorLabels={connectorLabels}
+              labels={labels}
+              clock={clock}
+            />
           ) : selectedDecoration ? (
             <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} labels={labels} />
           ) : selectedNode ? (
@@ -364,7 +425,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
               labels={labels}
             />
           )}
-          {!selectedNode && !selectedDecoration && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
+          {selectedIds.length === 0 && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
         </div>
       </div>
     </>

@@ -34,22 +34,25 @@ export function placeOnCanvas<C extends Connector>(nodes: readonly Node[], conne
 /**
  * What a canvas board's connectors draw — the same for the viewer and the editor, placed by `placeConnectors`: each
  * line edge to edge with its arrowheads in the line's colour, connectors of the same two nodes side by side, and a label
- * on a chip along its line, over every line.
+ * on a chip along its line, over every line. `extra` goes on each line; `locked` (drawn only) or `fixed` (selected,
+ * never moved — an editor's lines) on its heads and chip too, and a label's text is then locked, so a press on it
+ * reaches the chip.
  */
 export function connectorObjects(nodes: readonly Node[], connectors: ReadonlyArray<Connector & { quality?: Record<string, ConnectionQuality> }>, appearance: BoardAppearance = 'light', extra: Partial<Line> = {}): DrawingObject[] {
   const lines: DrawingObject[] = [];
   const labels: DrawingObject[] = [];
+  const held = { ...(extra.locked && { locked: true }), ...(extra.fixed && { fixed: true }) };
   for (const { connector, segment, label, arrows = [] } of placeOnCanvas(nodes, connectors)) {
     const { stroke = CONNECTOR_STROKE, strokeWidth = CONNECTOR_WIDTH, dash = 'solid' } = connector.style ?? {};
     lines.push({ type: 'line', id: connector.id, x: 0, y: 0, points: segment, stroke, strokeWidth, ...(DASHES[dash].length > 0 && { dash: DASHES[dash] }), ...extra });
     // A head is filled, not stroked — a dashed line's head stays whole.
-    arrows.forEach((points, i) => lines.push({ type: 'path', id: `${connector.id}#arrow${i}`, x: 0, y: 0, points, closed: true, fill: stroke, ...(extra.locked && { locked: true }) }));
+    arrows.forEach((points, i) => lines.push({ type: 'path', id: `${connector.id}#arrow${i}`, x: 0, y: 0, points, closed: true, fill: stroke, ...held }));
     if (label) {
       const worst = worstQuality((connector as { quality?: Record<string, ConnectionQuality> }).quality ?? {});
       const rim = worst ? QUALITY_RIM[worst] : undefined;
       labels.push(
-        { type: 'rect', id: `${connector.id}#chip`, ...chipOf(label), fill: LABEL_CHIP[appearance].fill, ...(rim && { stroke: rim, strokeWidth: 1.5 }), ...(extra.locked && { locked: true }) },
-        { type: 'text', id: `${connector.id}#label`, x: label.x, y: label.y, text: connector.label!, fontSize: LABEL_SIZE, fill: LABEL_CHIP[appearance].ink, ...(extra.locked && { locked: true }) }
+        { type: 'rect', id: `${connector.id}#chip`, ...chipOf(label), fill: LABEL_CHIP[appearance].fill, ...(rim && { stroke: rim, strokeWidth: 1.5 }), ...held },
+        { type: 'text', id: `${connector.id}#label`, x: label.x, y: label.y, text: connector.label!, fontSize: LABEL_SIZE, fill: LABEL_CHIP[appearance].ink, ...((extra.locked || extra.fixed) && { locked: true }) }
       );
     }
   }

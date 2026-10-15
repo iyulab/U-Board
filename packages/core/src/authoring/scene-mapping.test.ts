@@ -6,12 +6,55 @@ import {
   nextNodePosition,
   addDecoration,
   nextDecorationPosition,
+  addConnector,
+  removeParts,
+  partOf,
 } from './scene-mapping';
 import type { CanvasView } from '../view-document';
 
 function doc(overrides: Partial<CanvasView> = {}): CanvasView {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [], ...overrides };
 }
+
+describe('partOf', () => {
+  it('names the document part a scene object draws — a piece of a connector names the connector', () => {
+    expect(partOf('node-1')).toBe('node-1');
+    expect(partOf('c1#chip')).toBe('c1');
+    expect(partOf('c1#arrow0')).toBe('c1');
+  });
+});
+
+describe('addConnector', () => {
+  it('joins two nodes with a connector of the given id, drawn the board’s way', () => {
+    const before = doc({ nodes: [{ id: 'a', x: 0, y: 0, anchored: false, widget: { type: 'status' } }, { id: 'b', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] });
+    expect(addConnector(before, 'a', 'b', 'c9').connectors).toEqual([{ id: 'c9', fromNodeId: 'a', toNodeId: 'b' }]);
+  });
+});
+
+describe('removeParts', () => {
+  const node = (id: string) => ({ id, x: 0, y: 0, anchored: false, widget: { type: 'status' } });
+  const board = doc({
+    nodes: [node('a'), node('b'), node('c')],
+    connectors: [
+      { id: 'ab', fromNodeId: 'a', toNodeId: 'b' },
+      { id: 'bc', fromNodeId: 'b', toNodeId: 'c' },
+    ],
+    decorations: [{ id: 'd', type: 'rect', x: 0, y: 0, width: 1, height: 1 }],
+  });
+
+  it('removes nodes, decorations and connectors by id', () => {
+    const after = removeParts(board, ['ab', 'd']);
+    expect(after.connectors.map(c => c.id)).toEqual(['bc']);
+    expect(after.decorations).toEqual([]);
+    expect(after.nodes).toHaveLength(3);
+  });
+
+  it('takes a node’s connectors along with it', () => {
+    const after = removeParts(board, ['b']);
+    expect(after.nodes.map(n => n.id)).toEqual(['a', 'c']);
+    expect(after.connectors).toEqual([]);
+  });
+});
 
 describe('documentToScene', () => {
   it('adds an image DrawingObject for the background when one is set', () => {
@@ -20,7 +63,7 @@ describe('documentToScene', () => {
   });
 
   // An author grabbing the drawing would move only the editor's picture of it, not the document.
-  it('locks the background and the connector lines, and nothing the author edits', () => {
+  it('locks the background, fixes the connectors (selected, never dragged), and locks nothing else the author edits', () => {
     const scene = documentToScene(
       doc({
         background: { image: { src: 'plan.png', width: 800, height: 600 } },
@@ -32,8 +75,8 @@ describe('documentToScene', () => {
         decorations: [{ type: 'rect', id: 'd', x: 0, y: 0, width: 50, height: 50 }],
       })
     );
-    const locked = Object.fromEntries(scene.getObjects().map(o => [o.type === 'image' ? 'background' : o.id, o.locked === true]));
-    expect(locked).toEqual({ background: true, c: true, a: false, b: false, d: false });
+    const held = Object.fromEntries(scene.getObjects().map(o => [o.type === 'image' ? 'background' : o.id, o.locked ? 'locked' : o.fixed ? 'fixed' : 'free']));
+    expect(held).toEqual({ background: 'locked', c: 'fixed', a: 'free', b: 'free', d: 'free' });
   });
 
   it("adds one 'rect' per node, id'd by node id and positioned/sized by it", () => {
@@ -54,19 +97,22 @@ describe('documentToScene', () => {
     expect(unsized.height).toBeGreaterThan(0);
   });
 
-  it('draws a connector line between the current edges of its two nodes, locked', () => {
+  it('draws a connector line between the current edges of its two nodes, fixed — its label chip too, its text passing presses to the chip', () => {
     const scene = documentToScene(
       doc({
         nodes: [
           { id: 'n1', x: 0, y: 0, width: 100, height: 100, anchored: false, widget: { type: 'status' } },
           { id: 'n2', x: 200, y: 0, width: 100, height: 100, anchored: false, widget: { type: 'status' } },
         ],
-        connectors: [{ id: 'c1', fromNodeId: 'n1', toNodeId: 'n2' }],
+        connectors: [{ id: 'c1', fromNodeId: 'n1', toNodeId: 'n2', label: '3 kW', style: { arrow: 'end' } }],
       })
     );
 
-    const line = scene.getObjects().find(o => o.type === 'line');
-    expect(line).toMatchObject({ points: [100, 50, 200, 50], locked: true });
+    const objects = scene.getObjects();
+    expect(objects.find(o => o.type === 'line')).toMatchObject({ points: [100, 50, 196, 50], fixed: true });
+    expect(objects.find(o => o.id === 'c1#arrow0')).toMatchObject({ fixed: true });
+    expect(objects.find(o => o.id === 'c1#chip')).toMatchObject({ fixed: true });
+    expect(objects.find(o => o.id === 'c1#label')).toMatchObject({ locked: true });
   });
 
   it('skips a connector referencing a node that does not exist, without throwing', () => {

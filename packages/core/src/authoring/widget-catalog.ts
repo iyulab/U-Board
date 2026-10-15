@@ -1,5 +1,7 @@
 import { getPrimaryDataField } from '@iyulab/u-widgets';
 import { getWidgetLabel } from '@iyulab/u-widgets/tools';
+// The widget library's names in Korean, for `widgetTypeName` — authoring code only, as in widget-fields.ts.
+import '@iyulab/u-widgets/tools/locales/ko';
 import type { ElementDefinition, Widget } from '../view-document.js';
 import { ELEMENT_TYPE_PREFIX, elementNameOf } from '../elements/element-type.js';
 

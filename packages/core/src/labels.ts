@@ -23,6 +23,11 @@ export interface UBoardLabels {
   layoutNarrow: string;
   addRectDecoration: string;
   addTextDecoration: string;
+  /** Joins the two selected nodes with a line; `connectHint` says how to select them. */
+  addConnector: string;
+  connectHint: string;
+  /** Deletes the selected parts (a node takes its lines with it). */
+  deleteSelected: string;
   /** The save button when the host handles saving (`onSave`). */
   save: string;
   /** The save button when the document is downloaded as a file (no `onSave`). */
@@ -249,6 +254,24 @@ export interface UBoardLabels {
   /** The text a new text decoration starts with. */
   newTextDecoration: string;
 
+  // Connector (line) panel — `{from}`/`{to}` name the nodes it joins
+  connectorHeading: string;
+  connectorEnds: string;
+  reverseConnector: string;
+  connectorLabel: string;
+  connectorLabelAt: string;
+  connectorStroke: string;
+  connectorStrokeWidth: string;
+  connectorDash: string;
+  dashSolid: string;
+  dashDashed: string;
+  dashDotted: string;
+  connectorArrow: string;
+  arrowNone: string;
+  arrowEnd: string;
+  arrowStart: string;
+  arrowBoth: string;
+
   /** Words for connection quality — the node tooltip, screen-reader announcement and binding
    * preview (`describeQuality`). */
   qualityText: QualityText;
@@ -271,6 +294,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   layoutNarrow: 'Narrow',
   addRectDecoration: 'Add rect decoration',
   addTextDecoration: 'Add text decoration',
+  addConnector: 'Connect nodes',
+  connectHint: 'Select two nodes (Shift+click the second) to connect them.',
+  deleteSelected: 'Delete',
   save: 'Save',
   export: 'Export',
   import: 'Import',
@@ -430,6 +456,23 @@ export const DEFAULT_LABELS: UBoardLabels = {
   decorationText: 'Text',
   decorationHint: 'Drag and resize it on the canvas to set its position and size.',
   newTextDecoration: 'Label',
+
+  connectorHeading: 'Line',
+  connectorEnds: '{from} → {to}',
+  reverseConnector: 'Reverse',
+  connectorLabel: 'Label',
+  connectorLabelAt: 'Label position (0 at {from} – 1 at {to})',
+  connectorStroke: 'Colour',
+  connectorStrokeWidth: 'Width',
+  connectorDash: 'Line style',
+  dashSolid: 'Solid',
+  dashDashed: 'Dashed',
+  dashDotted: 'Dotted',
+  connectorArrow: 'Arrowheads',
+  arrowNone: 'None',
+  arrowEnd: 'Toward {to}',
+  arrowStart: 'Toward {from}',
+  arrowBoth: 'Both ways',
 
   qualityText: DEFAULT_QUALITY_TEXT,
 };

@@ -55,7 +55,8 @@ error.
 ## Status
 
 This project is in early development. The rendering pipeline (canvas-kit + u-widgets), the
-authoring UI (set the background image; add/drag/resize nodes and rect/text decorations; a
+authoring UI (set the background image; add/drag/resize nodes and rect/text decorations; join two
+nodes with a line and edit its label, look, arrowheads and bindings; delete what is selected; a
 property panel for editing the selected node's widget type, static props, and data bindings,
 including a path explorer for HTTP-shaped adapter responses and a value map that turns a source's
 words or numbers — by exact value or numeric range — into what the widget takes; a label editor for
@@ -148,11 +149,13 @@ package is ESM-only and needs Node 22.12 or later.
 ## Authoring UI
 
 `AuthoringView` — a canvas-kit designer for setting the background image (a PNG, JPEG, WebP, GIF or
-SVG file of up to 4 MB, kept inside the document) and adding/dragging/resizing nodes and decorations, paired
+SVG file of up to 4 MB, kept inside the document), adding/dragging/resizing nodes and decorations, joining two
+selected nodes with a connector and deleting the selection (a node takes its connectors along), paired
 with a property panel for editing the selected node's widget type, static props, and data bindings
 (including a path explorer that walks an HTTP adapter's response tree and writes a JSON Pointer
 to the picked value — and, for a value inside a list, can name the list item by one of its fields, such
-as an id, instead of its position, since sources reorder their lists), the selected text
+as an id, instead of its position, since sources reorder their lists), the selected connector's direction, label
+and where it sits, colour, width, dash, arrowheads and bindings, the selected text
 decoration's label, or — with nothing selected — the board's own background and tone — is exported from the package's main entry point alongside the read-only
 `ViewerPage`. An adapter that lists its references (`Adapter.references()`) is bound by picking
 one from that list; any other takes an HTTP connector reference. The background and the connector

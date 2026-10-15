@@ -105,7 +105,9 @@ beside the property panel, and its height. The document opens fitted into view t
 node or decoration is placed where the author is looking. The board is shown in one of two modes,
 switched from the toolbar with pan and zoom kept. **Edit**: each node's widget is drawn in place,
 live, over its footprint, its widget type named above it; drag across empty space to select several
-items and drag one of them to move them all; pan with Space + drag or the middle mouse button, or
+items and drag one of them to move them all; select two nodes (Shift + click the second) to join them with
+a connector, which opens selected; click a connector's line or label to edit it (it follows its nodes, so it is
+never dragged); Delete removes the selection, a node with its connectors; pan with Space + drag or the middle mouse button, or
 from the keyboard (arrow keys move the selection, or pan when nothing is selected; Tab steps through
 the items). **View**: the board exactly as a shared link shows it, where a drag pans. The wheel
 zooms in both.
@@ -211,7 +213,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-authoring__pick`, `ub-authoring__layout-width` | On a grid view's editor: the button over each item that selects it (`aria-pressed` when selected); the Wide / Medium / Narrow layout width switch |
 | `ub-authoring__panel` | The column holding the board, property or decoration panel |
 | `ub-authoring__error`, `ub-authoring__status`, `ub-authoring__source` | A file that could not be used; "resolving"; the document source (`showDocumentSource`) |
-| `ub-panel` (`--board`, `--properties`, `--decoration`, `--item`, `--elements`, `--element`) | The board's settings (background, tone — while nothing is selected), a node's or decoration's properties, a grid item's layout (its widths, height and place in the order), the board's elements, or one element's definition |
+| `ub-panel` (`--board`, `--properties`, `--decoration`, `--connector`, `--item`, `--elements`, `--element`) | The board's settings (background, tone — while nothing is selected), a node's, decoration's or connector's properties, a grid item's layout (its widths, height and place in the order), the board's elements, or one element's definition |
 | `ub-panel__heading`, `ub-panel__subheading`, `ub-panel__field`, `ub-panel__hint`, `ub-panel__error` | Its heading, section heading, a labelled field, hint text and an error |
 | `ub-panel__widget-form`, `ub-panel__group` | The widget's own fields, and each group of them (data, display options) |
 | `ub-panel__list` | The board's elements, one row each, in the elements panel |

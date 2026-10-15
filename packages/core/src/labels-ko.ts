@@ -17,6 +17,9 @@ export const KO_LABELS: UBoardLabels = {
   layoutNarrow: '좁게',
   addRectDecoration: '사각형 장식 추가',
   addTextDecoration: '텍스트 장식 추가',
+  addConnector: '연결선 추가',
+  connectHint: '연결할 두 노드를 선택하세요(두 번째는 Shift+클릭).',
+  deleteSelected: '삭제',
   save: '저장',
   export: '내보내기',
   import: '가져오기',
@@ -174,6 +177,23 @@ export const KO_LABELS: UBoardLabels = {
   decorationText: '라벨',
   decorationHint: '캔버스에서 드래그/리사이즈로 위치와 크기를 조정하세요.',
   newTextDecoration: '라벨',
+
+  connectorHeading: '연결선',
+  connectorEnds: '{from} → {to}',
+  reverseConnector: '방향 바꾸기',
+  connectorLabel: '라벨',
+  connectorLabelAt: '라벨 위치 (0 = {from} 쪽, 1 = {to} 쪽)',
+  connectorStroke: '색',
+  connectorStrokeWidth: '굵기',
+  connectorDash: '선 모양',
+  dashSolid: '실선',
+  dashDashed: '파선',
+  dashDotted: '점선',
+  connectorArrow: '화살표',
+  arrowNone: '없음',
+  arrowEnd: '{to} 쪽으로',
+  arrowStart: '{from} 쪽으로',
+  arrowBoth: '양쪽',
 
   qualityText: {
     quality: {

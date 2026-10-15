@@ -18,7 +18,7 @@
     "test": "npm run test --workspaces --if-present",
     "test:watch": "npm run test:watch --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build:lib && npm run build --workspaces --if-present",
     "build:lib": "npm run build:lib --workspaces --if-present",
     "test:tooling": "node --test scripts/*.test.mjs",
     "smoke:library": "node scripts/smoke-library.mjs",

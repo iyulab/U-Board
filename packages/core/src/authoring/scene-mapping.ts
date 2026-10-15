@@ -1,5 +1,5 @@
 import { Scene } from '@canvas-kit/core';
-import type { CanvasView, Node, Shape, Widget } from '../view-document.js';
+import type { CanvasView, Connector, Node, Shape, Widget } from '../view-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
 import { seedWidget } from './widget-catalog.js';
 import { onBoard } from '../renderer/board-appearance.js';
@@ -30,9 +30,10 @@ const DECORATION_PLACEHOLDER_FILL = 'rgba(245, 158, 11, 0.08)';
 
 /**
  * Projects a ViewDocument into a canvas-kit Scene the designer can render and let the author
- * drag: the background image and the connector lines (following current node positions) — both
- * locked, drawn but not editable — and one `rect` per node, id'd by node id, standing in for its
- * widget's footprint.
+ * drag: the background image (locked, drawn but not editable), the connectors (fixed: selected to edit
+ * them, never dragged — they follow their nodes), and one `rect` per node, id'd by node id, standing in
+ * for its widget's footprint. A scene object's id names its document part, after a `#` for a part's
+ * pieces (`partOf`).
  */
 export function documentToScene(doc: CanvasView): Scene {
   const scene = new Scene();
@@ -61,8 +62,8 @@ export function documentToScene(doc: CanvasView): Scene {
     }
   }
 
-  // Follows its two nodes; dragging a line or its label would move nothing in the document.
-  for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance, { locked: true })) scene.add(object);
+  // Follows its two nodes: selected to be edited, never dragged — moving a line or its label would move nothing.
+  for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance, { fixed: true })) scene.add(object);
   for (const object of captionObjects(doc.nodes, doc.appearance, true)) scene.add(object);
 
   for (const node of doc.nodes) {
@@ -142,6 +143,35 @@ export function addNode(doc: CanvasView, position: { x: number; y: number }, wid
     widget,
   };
   return { ...doc, nodes: [...doc.nodes, node] };
+}
+
+/** The document part a scene object draws: its id, or a part's own id before the `#` of one of its pieces (a
+ * connector's `#chip`, `#arrow0`). */
+export function partOf(objectId: string): string {
+  const at = objectId.indexOf('#');
+  return at === -1 ? objectId : objectId.slice(0, at);
+}
+
+/** Joins two nodes with a new connector, `from` to `to`, drawn the board's way until styled. The id is the caller's,
+ * so it can select what it added (`newConnectorId`). */
+export function addConnector(doc: CanvasView, fromNodeId: string, toNodeId: string, id: string): CanvasView {
+  const connector: Connector = { id, fromNodeId, toNodeId };
+  return { ...doc, connectors: [...doc.connectors, connector] };
+}
+
+export function newConnectorId(): string {
+  return `connector-${crypto.randomUUID()}`;
+}
+
+/** The document without these parts — nodes, decorations or connectors by id. A node takes the connectors that join
+ * it along: a line to nothing is not a board. */
+export function removeParts(doc: CanvasView, ids: readonly string[]): CanvasView {
+  const gone = new Set(ids);
+  const nodes = doc.nodes.filter(n => !gone.has(n.id));
+  const kept = new Set(nodes.map(n => n.id));
+  const connectors = doc.connectors.filter(c => !gone.has(c.id) && kept.has(c.fromNodeId) && kept.has(c.toNodeId));
+  const decorations = doc.decorations?.filter(d => !gone.has(d.id));
+  return { ...doc, nodes, connectors, ...(decorations && { decorations }) };
 }
 
 /** Where to place the next decoration the author adds — same cascading-offset reasoning as

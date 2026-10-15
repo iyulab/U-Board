@@ -21,6 +21,13 @@ All notable changes to this package are documented here. The format follows
   reader and how current its bound values are is announced as a node's is — a canvas draws the line, so neither
   reached assistive technology before. A page reading the board (a test, a tool taking a picture of one connector)
   finds it there.
+- **Connectors are authored in the editor.** Select two nodes (Shift + click the second) and "Connect nodes" joins
+  them, the new line selected so its panel opens; click a line, its heads or its label chip to select it. The
+  connector panel reverses its direction and sets its label and `labelAt`, colour, width, dash and arrowheads (named
+  by the node they point at), and binds any of `CONNECTOR_BINDABLE` with the same binding editor a widget uses.
+  Connectors follow their nodes, so they are selected but never dragged (canvas-kit `fixed`).
+- **Delete** — a toolbar button and the Delete or Backspace key remove the selected nodes, decorations and connectors;
+  a node takes the connectors that join it along.
 - A node frame not showing a current headline value carries `data-quality` (`stale` or `disconnected`), as a
   connector's mark does — one attribute for how current any placed part is.
 
