@@ -32,9 +32,11 @@ const NOTICE_STYLE: CSSProperties = {
 /** How long a loaded frame has to say it is ready before its box says it did not start. */
 const FRAME_READY_WAIT_MS = 3000;
 
-/** How often a running frame is asked whether it still answers, and how long it has to answer before it is stopped.
+/** How often a running frame is asked whether it still answers, and how long it has to answer before it is removed.
  *  A frame whose code never yields cannot answer; where the browser runs the frame in a process of its own (Chrome
- *  and Edge with site isolation) this page stays responsive and stops it. Elsewhere the loop holds the page too. */
+ *  and Edge with site isolation) this page stays responsive and removes it. Elsewhere the loop holds the page too.
+ *  Removing the frame does not end the loop: the browser keeps that process — which the board's other element
+ *  frames share — running until it is restarted (measured), so they stop answering too and are removed in turn. */
 export const FRAME_PING_INTERVAL_MS = 2000;
 export const FRAME_STALL_MS = 6000;
 
@@ -175,7 +177,7 @@ function ElementFrame({ name, url, props, appearance }: { name: string; url: str
   if (stalled) {
     return (
       <div style={{ ...NOTICE_STYLE, position: 'absolute', inset: 0 }} data-element-notice="" role="status">
-        {`“${name}” stopped answering and was stopped — its code may never finish`}
+        {`“${name}” stopped answering and was stopped — a script element’s code may never finish`}
       </div>
     );
   }

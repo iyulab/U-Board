@@ -487,9 +487,11 @@ The board's theme is set on the frame's root as the same `--u-widget-*` variable
 or a load its policy blocks, is reported on the element's box as well. The frame loads when the element
 nears the screen. The page asks a running frame every two seconds whether it still answers, and removes one
 that has left a question unanswered for six seconds — code that never yields, such as a loop that never ends —
-with a notice on its box; the element runs again when its definition changes. That needs the browser to run the
-frame in a process of its own, as Chrome and Edge do with site isolation; a browser that runs it with the page
-(Firefox, Safari) is held by such code too, so an element's code must always return. `ViewerPage`'s and `AuthoringView`'s `elementFrames` says where the frames are served —
+with a notice on its box. That keeps the page usable where the browser runs the frame in a process of its own, as
+Chrome and Edge do with site isolation; a browser that runs it with the page (Firefox, Safari) is held by such code
+too. Either way the code keeps running in the browser until it is restarted, and the board's other script elements,
+which share its process, stop answering as well — so an element's code must always return. The console opens a
+board without running its script elements at `…/boards/<id>/edit?scripts=off`, to fix such code. `ViewerPage`'s and `AuthoringView`'s `elementFrames` says where the frames are served —
 `/api/element-frames/<board id>` on a U-Board server, which answers
 `/api/element-frames/<board id>/<element>/<definition hash>` (`elementDefinitionHash`) only while the
 saved board defines that element exactly so. Without `elementFrames`, a script element shows a notice in

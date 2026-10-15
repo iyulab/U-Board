@@ -17,9 +17,11 @@ do when upgrading. Each release's notes carry its section.
   element's props get controls from its definition — text, choices, numbers within their bounds, yes/no — which a
   binding can fill. With nothing selected, the editor lists the board's elements and edits one's definition — its
   code, props schema, origins and size — with a template previewed as it is typed and problems shown at once.
-- A **script element whose code stops answering** — a loop that never ends — is stopped after six seconds, with a
+- A **script element whose code stops answering** — a loop that never ends — is removed after six seconds, with a
   notice on its box, in the editor and on share links alike. In Chrome and Edge the board stays usable meanwhile; in
-  browsers that run the element with the page, such code holds the page too (`docs/api-reference.md`).
+  browsers that run the element with the page, such code holds the page too, and either way it keeps running in the
+  browser until it is restarted (`docs/api-reference.md`). The console opens a board without running its script
+  elements at `/boards/<id>/edit?scripts=off`, to fix such code.
 
 ## [0.3.0] - 2026-10-15
 

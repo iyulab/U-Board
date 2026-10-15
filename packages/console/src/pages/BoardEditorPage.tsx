@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { AuthoringView, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
@@ -22,6 +22,10 @@ const EDITOR_LABELS = {
 
 export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const { boardId } = useParams<{ boardId: string }>();
+  // `?scripts=off` opens the board without running its script elements — the way back to a board whose element code
+  // never finishes, in a browser where such code holds the whole page.
+  const [searchParams] = useSearchParams();
+  const scriptsOff = searchParams.get('scripts') === 'off';
   const [document, setDocument] = useState<ViewDocument | null>(null);
   // The origins this installation lets a board's elements load from, as the server says with the board.
   const [elementOrigins, setElementOrigins] = useState<readonly string[]>([]);
@@ -213,6 +217,15 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       {connectorsError && <Alert>{connectorsError}</Alert>}
       {membersError && <Alert>{membersError}</Alert>}
       {saveError && <Alert>{saveError}</Alert>}
+      {scriptsOff && (
+        <Alert>
+          스크립트 요소를 실행하지 않고 열었습니다 — 멈추는 요소 코드는 «요소» 목록에서 고쳐 저장하세요. 이미 멈춘
+          코드는 브라우저가 계속 돌릴 수 있어, 고친 요소가 그려지지 않으면 브라우저를 다시 시작하세요.{' '}
+          <Link to={`/boards/${encodeURIComponent(boardId!)}/edit`} reloadDocument>
+            스크립트를 켜고 열기
+          </Link>
+        </Alert>
+      )}
       {conflict && (
         <Alert>
           다른 사람이 그사이 이 보드를 저장해, 내 변경은 저장되지 않았습니다.{' '}
@@ -236,8 +249,9 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           labels={EDITOR_LABELS}
           clock={apiClock.now}
           elementOrigins={elementOrigins}
-          // The server serves the frames the board's script elements run in under this address.
-          elementFrames={`/api/element-frames/${encodeURIComponent(boardId!)}`}
+          // The server serves the frames the board's script elements run in under this address — none while opened
+          // with scripts off, so no element code runs.
+          elementFrames={scriptsOff ? undefined : `/api/element-frames/${encodeURIComponent(boardId!)}`}
         />
       </div>
       {isOwner && (

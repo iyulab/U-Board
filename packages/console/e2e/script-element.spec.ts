@@ -73,4 +73,23 @@ test('a script element runs sandboxed, in the editor and from a share link', asy
   await expect(page.locator('[data-element="counter"]')).toContainText('stopped answering', { timeout: 20_000 });
   await expect(page.locator('[data-element="counter"] iframe')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
+
+  // Opened with scripts off, the board runs no element code, and the element is fixed from its definition.
+  await page.goto(`/boards/${boardId}/edit?scripts=off`);
+  await expect(page.getByRole('alert').filter({ hasText: '스크립트 요소를 실행하지 않고 열었습니다' })).toBeVisible();
+  await expect(page.locator('[data-element="counter"] iframe')).toHaveCount(0);
+  await page.getByRole('button', { name: 'counter', exact: true }).click();
+  const script = page.getByRole('textbox', { name: '스크립트', exact: true });
+  await script.fill(COUNTER_SCRIPT);
+  await script.blur();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('저장됨')).toBeVisible();
+  await expect(page.getByRole('link', { name: '스크립트를 켜고 열기' })).toBeVisible();
+  // Opened again in a browser that never ran the looping code — the one this page ran it in keeps it running in the
+  // process its element frames share (measured), as a restarted browser would not.
+  const fresh = await browser.newContext({ storageState: await page.context().storageState() });
+  const freshPage = await fresh.newPage();
+  await freshPage.goto(`/boards/${boardId}/edit`);
+  await expectCounterDrawn(freshPage);
+  await fresh.close();
 });
