@@ -2,15 +2,21 @@
 
 U-Board has no AI in it. It is the engine an assistant draws with: an assistant that speaks the
 [Model Context Protocol](https://modelcontextprotocol.io) reads and changes a workspace's boards and
-data sources through `packages/mcp` (`u-board-mcp`), a small MCP server that talks to a U-Board server
-with a workspace API token.
+data sources through [`@iyulab/u-board-mcp`](../packages/mcp/README.md) on npm, a small MCP server that talks to a
+U-Board server with a workspace API token.
 
 ## Set it up
 
 1. In the console, open the workspace settings and, under **API 토큰**, make a token — `write` to let the
    assistant draw, `read` to let it only look. Copy it: it is shown once.
 2. Give the assistant the MCP server with two settings: `UBOARD_URL`, where your U-Board server is, and
-   `UBOARD_TOKEN`, the token. The package's README shows the configuration for common clients.
+   `UBOARD_TOKEN`, the token — for example, with Claude Code:
+
+   ```sh
+   claude mcp add u-board --env UBOARD_URL=https://board.example.com --env UBOARD_TOKEN=ubt_… -- npx -y @iyulab/u-board-mcp
+   ```
+
+   The package's README shows the configuration for other clients.
 
 The token acts as you, in that one workspace. It never carries a data source's credential: a source that
 needs a key, a token or OAuth is set up by a person in the console, and the assistant uses it by its id.

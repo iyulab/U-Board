@@ -11,13 +11,13 @@ workspace only, and never handles a data source's credentials — you enter thos
 ## Run it
 
 ```sh
-UBOARD_URL=https://board.example.com UBOARD_TOKEN=ubt_… npx u-board-mcp
+UBOARD_URL=https://board.example.com UBOARD_TOKEN=ubt_… npx -y @iyulab/u-board-mcp
 ```
 
 With Claude Code:
 
 ```sh
-claude mcp add u-board --env UBOARD_URL=https://board.example.com --env UBOARD_TOKEN=ubt_… -- npx u-board-mcp
+claude mcp add u-board --env UBOARD_URL=https://board.example.com --env UBOARD_TOKEN=ubt_… -- npx -y @iyulab/u-board-mcp
 ```
 
 In a client's JSON configuration:
@@ -27,7 +27,7 @@ In a client's JSON configuration:
   "mcpServers": {
     "u-board": {
       "command": "npx",
-      "args": ["u-board-mcp"],
+      "args": ["-y", "@iyulab/u-board-mcp"],
       "env": { "UBOARD_URL": "https://board.example.com", "UBOARD_TOKEN": "ubt_…" }
     }
   }

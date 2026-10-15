@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-15
+
 ### Added
 
 - **Elements** — a board can define what no prepared widget draws, once, and place it on any number of nodes or grid
@@ -31,10 +33,11 @@ do when upgrading. Each release's notes carry its section.
   `If-Match` names): a board saved in between answers `412`. A failed operation answers `400 INVALID_PATCH` with its
   index. `PUT` and `PATCH` answers carry `advice` on the saved document (an element placed nowhere, too many script
   elements).
-- **An MCP server for AI assistants** (`packages/mcp`, `u-board-mcp`) — over a workspace API token, an assistant reads
+- **An MCP server for AI assistants**, published on npm as `@iyulab/u-board-mcp` 0.1.0 (`npx -y @iyulab/u-board-mcp`) —
+  over a workspace API token, an assistant reads
   boards by JSON Pointer, changes them with JSON Patch on a revision, checks a document without saving, lists data
   sources, reads what a source's response looks like, and makes a source that needs no credential. It explains the
-  board format to the assistant itself (`describe`). See `docs/mcp.md`. Not yet published as a package.
+  board format to the assistant itself (`describe`). See `docs/mcp.md`.
 - `UBOARD_ELEMENT_ORIGINS` — the origins a board's elements may load from when they list them too (a font, a script
   library). Unset: none, so an installation on a closed network loads nothing from another origin, as before. Board
   answers carry `elementOrigins`.

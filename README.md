@@ -94,6 +94,7 @@ in [`CHANGELOG.md`](CHANGELOG.md); an operator sees the installed version in the
 | Workspace | Package | What it is |
 |---|---|---|
 | `packages/core` | `@iyulab/u-board` (npm) | The library: view document schema, adapter contract, binding resolution, the canvas rendering pipeline, the authoring UI and the read-only viewer. Everything below this section documents it. |
+| `packages/mcp` | `@iyulab/u-board-mcp` (npm) | An MCP server through which an AI assistant reads and draws a workspace's boards and data sources with a workspace API token — see [`docs/mcp.md`](docs/mcp.md). |
 | `packages/server` | private | HTTP API for workspaces, members and invitations, accounts (sign-in, password, deletion), the installation's operators, boards, data connectors, share links, and the activity record. Stores data in Postgres. |
 | `packages/console` | private | Web console for that API: sign-in and account, members and the activity record, board editing (with the authoring UI above), connectors with a connection test, issuing share links, and an installation page for operators. Its sidebar carries the U-Platform affiliation. |
 | `packages/share` | private | Read-only embed viewer that opens a board from a share link, using only the library's `viewer` entry point. |

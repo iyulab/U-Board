@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-15
+
 ### Added
 
 - **Elements in the document format** — a board can define what no prepared widget draws, once, and place it by name:
