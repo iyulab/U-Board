@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-16
+
 ### Changed
 
 - `create_board` makes no board when its first document is refused: the document is checked first, as the server
@@ -21,6 +23,7 @@ All notable changes to this package are documented here. The format follows
 - The `canvas` and `data` topics teach a connector's `bindings` (label and style from live values).
 - The `canvas` topic teaches a node's `caption` — a device's name under its icon, with the box kept icon-sized.
 
+- `@iyulab/u-board` ^0.14.0.
 ## [0.2.0] - 2026-10-16
 
 ### Added
