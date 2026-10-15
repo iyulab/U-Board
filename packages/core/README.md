@@ -110,6 +110,12 @@ from the keyboard (arrow keys move the selection, or pan when nothing is selecte
 the items). **View**: the board exactly as a shared link shows it, where a drag pans. The wheel
 zooms in both.
 
+The board's **elements** are edited in the editor too. While nothing is selected, the panel lists them — how each
+is drawn and where it is placed — and opens one to edit its name (the widgets placing it follow), its template or
+script, its CSS, its props schema, its origins and size, saying what is wrong as it is typed; a template is
+previewed as it is typed, with the props of its first placement. A selected widget can be any of them (the type
+choice lists them), and the props its schema lists get a control each, like a prepared widget's.
+
 ### Elements
 
 Beside the prepared widgets, a board can define its own elements — markup and CSS drawn with the
@@ -205,9 +211,10 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-authoring__pick`, `ub-authoring__layout-width` | On a grid view's editor: the button over each item that selects it (`aria-pressed` when selected); the Wide / Medium / Narrow layout width switch |
 | `ub-authoring__panel` | The column holding the board, property or decoration panel |
 | `ub-authoring__error`, `ub-authoring__status`, `ub-authoring__source` | A file that could not be used; "resolving"; the document source (`showDocumentSource`) |
-| `ub-panel` (`--board`, `--properties`, `--decoration`, `--item`) | The board's settings (background, tone — while nothing is selected), a node's or decoration's properties, or a grid item's layout (its widths, height and place in the order) |
+| `ub-panel` (`--board`, `--properties`, `--decoration`, `--item`, `--elements`, `--element`) | The board's settings (background, tone — while nothing is selected), a node's or decoration's properties, a grid item's layout (its widths, height and place in the order), the board's elements, or one element's definition |
 | `ub-panel__heading`, `ub-panel__subheading`, `ub-panel__field`, `ub-panel__hint`, `ub-panel__error` | Its heading, section heading, a labelled field, hint text and an error |
 | `ub-panel__widget-form`, `ub-panel__group` | The widget's own fields, and each group of them (data, display options) |
+| `ub-panel__list` | The board's elements, one row each, in the elements panel |
 | `ub-panel__field-name`, `ub-panel__field--check` | A field's name (with its key); a checkbox field |
 | `ub-panel__advanced`, `ub-panel__json` | The folded "edit as JSON" section, and its editor |
 | `ub-panel__bindings`, `ub-panel__binding`, `ub-panel__binding-path`, `ub-panel__binding-ref`, `ub-panel__binding-tag` | The list of bindings, one entry, its prop path, what it points at, and its "mapped" tag |

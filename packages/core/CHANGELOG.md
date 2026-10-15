@@ -14,6 +14,11 @@ All notable changes to this package are documented here. The format follows
   yes/no — and lists and objects stay in the JSON editor, and a binding offers those props as what it fills. An
   element is named by its name where the editor names widgets, and the type choice still shows an element the board
   no longer defines.
+- **Editing the board's elements** — while nothing is selected, `AuthoringView` lists the board's elements (how each
+  is drawn, where it is placed, one placed but not defined) and opens one to edit: its name (renaming moves every
+  widget placing it), template or script, CSS, props schema, origins and size, with the document's own checks of the
+  definition shown as it is typed and a template previewed as it is typed. A new element starts from a small template;
+  one still placed cannot be deleted.
 - **A script element whose code stops answering is stopped** — the page asks a running frame every two seconds
   whether it still answers (`ub:ping`/`ub:pong`) and removes one that leaves a question unanswered for six seconds, with
   a notice on its box. Where the browser runs the frame in a process of its own (Chrome and Edge with site isolation)

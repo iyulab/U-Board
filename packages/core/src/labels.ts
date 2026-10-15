@@ -130,6 +130,33 @@ export interface UBoardLabels {
   /** An element's own props, as its definition describes them; the board's elements in the widget-type choice. */
   elementProps: string;
   boardElements: string;
+  /** The board's elements: their list, and the editor of one definition. */
+  elementsHeading: string;
+  elementsHint: string;
+  addElement: string;
+  elementPlacedCount: string;
+  elementUnplaced: string;
+  elementUndefined: string;
+  defineElement: string;
+  backToElements: string;
+  elementName: string;
+  elementNameInvalid: string;
+  elementNameTaken: string;
+  elementRender: string;
+  elementRenderTemplate: string;
+  elementRenderScript: string;
+  elementTemplate: string;
+  elementScript: string;
+  elementStyle: string;
+  elementPropsSchema: string;
+  elementResources: string;
+  elementWidth: string;
+  elementHeight: string;
+  elementPreview: string;
+  elementScriptPreview: string;
+  elementProblems: string;
+  removeElement: string;
+  removeElementPlaced: string;
   boundField: string;
   choiceDefault: string;
   advancedProps: string;
@@ -313,6 +340,32 @@ export const DEFAULT_LABELS: UBoardLabels = {
   widgetOptions: 'Display',
   elementProps: 'Element props',
   boardElements: 'This board’s elements',
+  elementsHeading: 'Elements',
+  elementsHint: 'Widgets this board draws itself — defined once, placed anywhere.',
+  addElement: 'New element',
+  elementPlacedCount: 'placed {count}',
+  elementUnplaced: 'not placed',
+  elementUndefined: 'placed, not defined',
+  defineElement: 'Define it',
+  backToElements: 'All elements',
+  elementName: 'Name',
+  elementNameInvalid: 'Lowercase letters, digits and hyphens, starting with a letter.',
+  elementNameTaken: 'Another element has this name.',
+  elementRender: 'Drawn by',
+  elementRenderTemplate: 'A template (HTML or SVG, no script)',
+  elementRenderScript: 'A script (in a sandboxed frame)',
+  elementTemplate: 'Template',
+  elementScript: 'Script',
+  elementStyle: 'CSS',
+  elementPropsSchema: 'Props (JSON Schema)',
+  elementResources: 'Origins it loads from (https://…, separated by spaces)',
+  elementWidth: 'Width (px)',
+  elementHeight: 'Height (px)',
+  elementPreview: 'Preview',
+  elementScriptPreview: 'A script element is drawn from the saved board — save it to see this one.',
+  elementProblems: 'Problems',
+  removeElement: 'Delete element',
+  removeElementPlaced: 'Placed {count} times — change or remove those widgets first.',
   boundField: 'bound',
   choiceDefault: 'Default',
   advancedProps: 'Advanced: edit as JSON',

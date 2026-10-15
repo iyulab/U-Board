@@ -16,6 +16,7 @@ import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { BoardPanel } from './BoardPanel.js';
+import { ElementsPanel } from './ElementsPanel.js';
 import { seedWidget, widgetTypeName } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
@@ -363,6 +364,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
               labels={labels}
             />
           )}
+          {!selectedNode && !selectedDecoration && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
         </div>
       </div>
     </>

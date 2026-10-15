@@ -7,6 +7,7 @@ import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
 import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { BoardPanel } from './BoardPanel.js';
+import { ElementsPanel } from './ElementsPanel.js';
 import { GridItemPanel } from './GridItemPanel.js';
 import { seedWidget, widgetTypeName } from './widget-catalog.js';
 import { addGridItem, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from './grid-editing.js';
@@ -198,6 +199,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, fileActions,
               labels={labels}
             />
           )}
+          {!selected && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
         </div>
       </div>
     </>
