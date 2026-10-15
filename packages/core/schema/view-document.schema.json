@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/iyulab/U-Board/blob/main/packages/core/schema/view-document.schema.json",
+  "title": "U-Board view document",
+  "description": "A board as U-Board saves and reads it: a canvas view (widgets placed by position over a background) or a grid view (widgets laid out in order). The same rules as validateViewDocument in @iyulab/u-board, except one this schema cannot say: every id — node, connector, decoration, grid item — is unique in the document. Fields it does not name are allowed, so a document written by a newer version still reads.",
+  "oneOf": [{ "$ref": "#/$defs/canvasView" }, { "$ref": "#/$defs/gridView" }],
+  "$defs": {
+    "canvasView": {
+      "type": "object",
+      "required": ["kind", "background", "nodes", "connectors"],
+      "properties": {
+        "kind": { "const": "canvas" },
+        "background": { "$ref": "#/$defs/background" },
+        "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "connectors": { "type": "array", "items": { "$ref": "#/$defs/connector" } },
+        "decorations": { "type": "array", "items": { "$ref": "#/$defs/shape" } },
+        "appearance": { "$ref": "#/$defs/appearance" }
+      }
+    },
+    "gridView": {
+      "type": "object",
+      "required": ["kind", "items"],
+      "properties": {
+        "kind": { "const": "grid" },
+        "items": {
+          "description": "In the order they are shown: left to right, then top to bottom.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/gridItem" }
+        },
+        "columns": { "description": "Columns at full width. Only 12 for now; absent means 12.", "const": 12 },
+        "appearance": { "$ref": "#/$defs/appearance" }
+      }
+    },
+    "appearance": {
+      "description": "The tone the board is drawn in. Absent means light.",
+      "enum": ["light", "dark"]
+    },
+    "background": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "description": "Absent means no background.",
+          "type": "object",
+          "required": ["src", "width", "height"],
+          "properties": {
+            "src": { "type": "string" },
+            "width": { "type": "number" },
+            "height": { "type": "number" },
+            "referencePoints": {
+              "description": "Two points of the image and the coordinates they stand for, apart on both axes in the image and in their coordinates.",
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "$ref": "#/$defs/referencePoint" }
+            }
+          }
+        }
+      }
+    },
+    "referencePoint": {
+      "type": "object",
+      "required": ["x", "y", "coordinate"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "coordinate": {
+          "type": "object",
+          "required": ["x", "y"],
+          "properties": { "x": { "type": "number" }, "y": { "type": "number" } }
+        }
+      }
+    },
+    "node": {
+      "description": "A widget placed on a canvas view.",
+      "type": "object",
+      "required": ["id", "x", "y", "anchored", "widget"],
+      "properties": {
+        "id": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" },
+        "anchored": {
+          "description": "Whether (x, y) is a coordinate meaningful in the background's real space, or a free position.",
+          "type": "boolean"
+        },
+        "widget": { "$ref": "#/$defs/widget" }
+      }
+    },
+    "gridItem": {
+      "description": "A widget in a grid view and the room it takes.",
+      "type": "object",
+      "required": ["id", "widget"],
+      "properties": {
+        "id": { "type": "string" },
+        "span": { "description": "Columns it spans at full width. Absent means 4.", "type": "integer", "minimum": 1, "maximum": 12 },
+        "spanMedium": {
+          "description": "Columns it spans at medium width, where the grid has 6. Absent means half of span, rounded up.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "height": { "description": "Its height in pixels. Absent means the widget's own height.", "type": "number", "exclusiveMinimum": 0 },
+        "widget": { "$ref": "#/$defs/widget" }
+      }
+    },
+    "connector": {
+      "type": "object",
+      "required": ["id", "fromNodeId", "toNodeId"],
+      "properties": {
+        "id": { "type": "string" },
+        "fromNodeId": { "type": "string" },
+        "toNodeId": { "type": "string" }
+      }
+    },
+    "shape": {
+      "description": "A purely visual decoration: a labeled frame or a text, with no widget and no binding.",
+      "type": "object",
+      "required": ["id", "type", "x", "y"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "enum": ["rect", "text"] },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "fill": { "type": "string" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "const": "rect" },
+            "width": { "type": "number" },
+            "height": { "type": "number" },
+            "stroke": { "type": "string" },
+            "strokeWidth": { "type": "number" }
+          },
+          "required": ["width", "height"]
+        },
+        {
+          "properties": { "type": { "const": "text" }, "text": { "type": "string" }, "fontSize": { "type": "number" } },
+          "required": ["text"]
+        }
+      ]
+    },
+    "widget": {
+      "description": "What a node or grid item shows. type and props belong to the widget library; bindings name the props replaced by a live value.",
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" },
+        "props": { "type": "object" },
+        "bindings": { "type": "object", "additionalProperties": { "$ref": "#/$defs/binding" } }
+      }
+    },
+    "binding": {
+      "description": "A reference to a value in an external system, read through an adapter. ref's shape is up to the adapter.",
+      "type": "object",
+      "required": ["adapter", "ref"],
+      "properties": {
+        "adapter": { "type": "string" },
+        "ref": {},
+        "map": { "$ref": "#/$defs/valueMap" }
+      }
+    },
+    "valueMap": {
+      "description": "Source values to the values a prop takes: values by text, then ranges, then otherwise.",
+      "type": "object",
+      "anyOf": [{ "required": ["values"] }, { "required": ["ranges"] }],
+      "properties": {
+        "values": { "type": "object" },
+        "ranges": { "type": "array", "items": { "$ref": "#/$defs/valueRange" } },
+        "otherwise": {}
+      }
+    },
+    "valueRange": {
+      "description": "From min up to but not including max; at least one bound, and min below max when both are given.",
+      "type": "object",
+      "required": ["value"],
+      "anyOf": [{ "required": ["min"] }, { "required": ["max"] }],
+      "properties": {
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "value": {}
+      }
+    }
+  }
+}

@@ -2,11 +2,11 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import type { ReactElement } from 'react';
 import { toCanvasKit } from './to-canvas-kit';
-import type { ResolvedViewDocument } from '../resolve-document';
+import type { ResolvedCanvasView } from '../resolve-document';
 import type { ResolvedWidget } from '../adapter';
 import { KO_LABELS } from '../labels-ko';
 
-function doc(overrides: Partial<ResolvedViewDocument> = {}): ResolvedViewDocument {
+function doc(overrides: Partial<ResolvedCanvasView> = {}): ResolvedCanvasView {
   return {
     kind: 'canvas',
     background: {},

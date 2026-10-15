@@ -7,9 +7,9 @@ import {
   addDecoration,
   nextDecorationPosition,
 } from './scene-mapping';
-import type { ViewDocument } from '../view-document';
+import type { CanvasView } from '../view-document';
 
-function doc(overrides: Partial<ViewDocument> = {}): ViewDocument {
+function doc(overrides: Partial<CanvasView> = {}): CanvasView {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [], ...overrides };
 }
 

@@ -2,9 +2,9 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useResolvedDocument } from './useResolvedDocument';
 import type { Adapter, ResolvedBinding } from '../adapter';
-import type { ViewDocument } from '../view-document';
+import type { CanvasView } from '../view-document';
 
-function docWithBinding(): ViewDocument {
+function docWithBinding(): CanvasView {
   return {
     kind: 'canvas',
     background: {},
@@ -146,7 +146,7 @@ describe('useResolvedDocument', () => {
     adapters.push({ id: 'cmms', resolve: resolveMock });
 
     const { result, rerender } = renderHook(
-      ({ doc }: { doc: ViewDocument }) => useResolvedDocument(doc, adapters),
+      ({ doc }: { doc: CanvasView }) => useResolvedDocument(doc, adapters),
       { initialProps: { doc: docA } }
     );
 
@@ -370,7 +370,7 @@ describe('useResolvedDocument', () => {
       vi.useFakeTimers();
       const adapters = [new SpyAdapter()];
       const { result, rerender } = renderHook(({ doc }) => useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }), {
-        initialProps: { doc: docWithBinding() as ViewDocument | null },
+        initialProps: { doc: docWithBinding() as CanvasView | null },
       });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(0);

@@ -27,14 +27,14 @@ import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
 import type { Adapter } from '../adapter.js';
-import type { BoardAppearance, Node, ReferencePoint, ViewDocument, Widget, Shape } from '../view-document.js';
+import type { BoardAppearance, Node, ReferencePoint, CanvasView, Widget, Shape } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, GROUP_STYLE, ERROR_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
 
 export interface AuthoringViewProps {
-  initialDocument: ViewDocument;
+  initialDocument: CanvasView;
   adapters: readonly Adapter[];
   /** Size (CSS px) of the board, in either mode. Omit either and the board takes the width beside
    * the property panel and fills the height — `AuthoringView` then fills its parent, so give the
@@ -45,7 +45,7 @@ export interface AuthoringViewProps {
    * the raw adapter id when a given adapter has no entry (or this prop is omitted entirely). */
   connectorLabels?: Record<string, string>;
   /** What the Save button does. Omitted, Save downloads the document as a local file (Export). */
-  onSave?: (doc: ViewDocument) => void | Promise<void>;
+  onSave?: (doc: CanvasView) => void | Promise<void>;
   /** Called whenever the editor gains or loses unsaved changes, so the host can show it in its own
    * UI (a status bar, a tab marker). The editor draws no indicator itself; it only asks the
    * browser to confirm leaving the page (`beforeunload`) while changes are unsaved. */
@@ -100,7 +100,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     });
   }, [doc]);
   // The first change since the last answer is what the nodes are measured against, not each keystroke's.
-  const holdAnchors = (current: ViewDocument, byImage: boolean) =>
+  const holdAnchors = (current: CanvasView, byImage: boolean) =>
     setAnchorSnapshot(held => {
       if (held) return byImage ? { ...held, byImage } : held;
       const snapshot = snapshotAnchors(current);
@@ -267,6 +267,8 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
 
     try {
       const imported = parseViewDocument(await file.text());
+      // TODO(grid kind, authoring stage): open a grid view in its own editor. Until then this editor takes canvas views only.
+      if (imported.kind !== 'canvas') throw new Error('not a canvas view');
       setDoc(imported);
       setOpenedDoc(imported);
       setAnchorSnapshot(null);

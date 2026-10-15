@@ -4,7 +4,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { findHttpRefItem, type HttpRef } from '@iyulab/u-board/domain';
+import { findHttpRefItem, placedIn, type HttpRef } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS } from '../src/index.js';
 import { keepPointers } from '../src/prune.js';
 import { isInstallable, type LiveSampleConnector, type SamplePack } from '../src/sample-pack.js';
@@ -19,8 +19,8 @@ function requestUrl(connector: LiveSampleConnector, path: string): URL {
 /** The references each request of `pack` is read with, per connector key. */
 function requests(pack: SamplePack): Map<string, Map<string, HttpRef[]>> {
   const byConnector = new Map<string, Map<string, HttpRef[]>>();
-  for (const node of pack.document.nodes) {
-    for (const binding of Object.values(node.widget.bindings ?? {})) {
+  for (const placed of placedIn(pack.document)) {
+    for (const binding of Object.values(placed.widget.bindings ?? {})) {
       const ref = binding.ref as HttpRef;
       const paths = byConnector.get(binding.adapter) ?? new Map<string, HttpRef[]>();
       byConnector.set(binding.adapter, paths);

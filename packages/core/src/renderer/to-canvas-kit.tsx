@@ -17,7 +17,7 @@ import '@iyulab/u-widgets';
 // drawn before it arrives shows u-widgets' "module not loaded" card for that moment, and the
 // widget re-renders itself once the entry registers — nothing here has to render again.
 void import('@iyulab/u-widgets/charts');
-import type { ResolvedViewDocument } from '../resolve-document.js';
+import type { ResolvedCanvasView } from '../resolve-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
@@ -100,7 +100,7 @@ export interface ToCanvasKitOptions {
  * (docs/principles.md) — it depends on canvas-kit and u-widgets so the document format itself
  * doesn't have to.
  */
-export function toCanvasKit(doc: ResolvedViewDocument, { qualityText = DEFAULT_QUALITY_TEXT, now, locale }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
+export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUALITY_TEXT, now, locale }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
   const scene = new Scene();
 
   if (doc.background.image) {

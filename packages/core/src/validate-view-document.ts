@@ -1,3 +1,5 @@
+import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM } from './view-document.js';
+
 /** One way a value fails to be a `ViewDocument`: where (an RFC 6901 JSON Pointer into the value,
  * `""` for the value itself) and what was expected there. */
 export interface ViewDocumentIssue {
@@ -6,16 +8,18 @@ export interface ViewDocumentIssue {
 }
 
 /**
- * Checks that `value` has every field the `ViewDocument` type promises, at every level — the
- * nodes, each widget and binding in them, connectors, decorations and the background. Returns
- * every problem found (empty when the value is a valid document), so a caller can say exactly what
- * to fix rather than only that something is wrong.
+ * Checks that `value` has every field the `ViewDocument` type promises, at every level — for a
+ * canvas view the nodes, connectors, decorations and the background, for a grid view the items and
+ * the room each takes, and in both every widget and binding. Returns every problem found (empty when
+ * the value is a valid document), so a caller can say exactly what to fix rather than only that
+ * something is wrong.
  *
  * Structure only. It does not interpret what the format leaves opaque — a binding's `ref` belongs
  * to its adapter, a widget's `type` and `props` to its widget library — and it does not judge
  * references between parts of a document (a connector naming a node that is not there is drawn as
- * nothing, not rejected). Fields it does not know are ignored, so a document written by a newer
- * version still reads.
+ * nothing, not rejected). The one rule across parts is identity: every id — node, connector,
+ * decoration, grid item — is unique in the document. Fields it does not know are ignored, so a
+ * document written by a newer version still reads.
  */
 export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
   const issues: ViewDocumentIssue[] = [];
@@ -25,8 +29,19 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
     issues.push({ path: '', message: 'expected a view document object' });
     return issues;
   }
-  if (value.kind !== 'canvas') doc.fail(['kind'], 'expected "canvas"');
 
+  if (value.appearance !== undefined && value.appearance !== 'light' && value.appearance !== 'dark') {
+    doc.fail(['appearance'], 'expected "light" or "dark"');
+  }
+
+  if (value.kind === 'canvas') checkCanvasView(doc, value);
+  else if (value.kind === 'grid') checkGridView(doc, value);
+  else doc.fail(['kind'], 'expected "canvas" or "grid"');
+
+  return issues;
+}
+
+function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
   if (doc.record(value, ['background'])) {
     const background = value.background as Record<string, unknown>;
     if (background.image !== undefined && doc.record(background, ['background', 'image'])) {
@@ -38,10 +53,6 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
     }
   }
 
-  if (value.appearance !== undefined && value.appearance !== 'light' && value.appearance !== 'dark') {
-    doc.fail(['appearance'], 'expected "light" or "dark"');
-  }
-
   if (doc.array(value, ['nodes'])) {
     (value.nodes as unknown[]).forEach((node, i) => checkNode(doc, node, ['nodes', String(i)]));
   }
@@ -49,7 +60,7 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
     (value.connectors as unknown[]).forEach((connector, i) => {
       const at = ['connectors', String(i)];
       if (!doc.isRecordAt(connector, at)) return;
-      doc.string(connector, [...at, 'id']);
+      doc.id(connector, [...at, 'id']);
       doc.string(connector, [...at, 'fromNodeId']);
       doc.string(connector, [...at, 'toNodeId']);
     });
@@ -57,8 +68,22 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
   if (value.decorations !== undefined && doc.array(value, ['decorations'])) {
     (value.decorations as unknown[]).forEach((shape, i) => checkShape(doc, shape, ['decorations', String(i)]));
   }
+}
 
-  return issues;
+function checkGridView(doc: Checker, value: Record<string, unknown>): void {
+  if (value.columns !== undefined && value.columns !== GRID_COLUMNS) doc.fail(['columns'], `expected ${GRID_COLUMNS}`);
+  if (!doc.array(value, ['items'])) return;
+  (value.items as unknown[]).forEach((item, i) => {
+    const at = ['items', String(i)];
+    if (!doc.isRecordAt(item, at)) return;
+    doc.id(item, [...at, 'id']);
+    doc.optionalSpan(item, [...at, 'span'], GRID_COLUMNS);
+    doc.optionalSpan(item, [...at, 'spanMedium'], GRID_COLUMNS_MEDIUM);
+    if (item.height !== undefined && !(Number.isFinite(item.height) && (item.height as number) > 0)) {
+      doc.fail([...at, 'height'], 'expected a number greater than 0');
+    }
+    checkWidget(doc, item, at);
+  });
 }
 
 /** Two points, each a place on the image and its coordinate, apart on both axes in both — a mapping from
@@ -87,15 +112,19 @@ function checkReferencePoints(doc: Checker, value: unknown, at: string[]): void 
 
 function checkNode(doc: Checker, node: unknown, at: string[]): void {
   if (!doc.isRecordAt(node, at)) return;
-  doc.string(node, [...at, 'id']);
+  doc.id(node, [...at, 'id']);
   doc.number(node, [...at, 'x']);
   doc.number(node, [...at, 'y']);
   doc.optionalNumber(node, [...at, 'width']);
   doc.optionalNumber(node, [...at, 'height']);
   if (typeof node.anchored !== 'boolean') doc.fail([...at, 'anchored'], 'expected true or false');
+  checkWidget(doc, node, at);
+}
 
-  if (!doc.record(node, [...at, 'widget'])) return;
-  const widget = node.widget as Record<string, unknown>;
+/** The widget of a node or grid item — `at` is the path of the one that carries it. */
+function checkWidget(doc: Checker, placed: Record<string, unknown>, at: string[]): void {
+  if (!doc.record(placed, [...at, 'widget'])) return;
+  const widget = placed.widget as Record<string, unknown>;
   doc.string(widget, [...at, 'widget', 'type']);
   if (widget.props !== undefined) doc.record(widget, [...at, 'widget', 'props']);
   if (widget.bindings === undefined || !doc.record(widget, [...at, 'widget', 'bindings'])) return;
@@ -138,7 +167,7 @@ function checkValueMap(doc: Checker, map: Record<string, unknown>, at: string[])
 
 function checkShape(doc: Checker, shape: unknown, at: string[]): void {
   if (!doc.isRecordAt(shape, at)) return;
-  doc.string(shape, [...at, 'id']);
+  doc.id(shape, [...at, 'id']);
   if (shape.type !== 'rect' && shape.type !== 'text') {
     doc.fail([...at, 'type'], 'expected "rect" or "text"');
     return;
@@ -160,7 +189,29 @@ function checkShape(doc: Checker, shape: unknown, at: string[]): void {
 /** Field checks that record an issue at a path and report whether the field passed. The last
  * path segment names the field read from the given object. */
 class Checker {
+  /** Where each id was first seen — ids are unique across the whole document. */
+  private readonly ids = new Map<string, string>();
+
   constructor(private readonly issues: ViewDocumentIssue[]) {}
+
+  id(owner: Record<string, unknown>, at: string[]): void {
+    const id = owner[at[at.length - 1]];
+    if (typeof id !== 'string') {
+      this.fail(at, 'expected a string');
+      return;
+    }
+    const first = this.ids.get(id);
+    if (first === undefined) this.ids.set(id, pointer(at.slice(0, -1)));
+    else this.fail(at, `expected an id not used elsewhere in the document — ${first} has it`);
+  }
+
+  /** An optional whole number of columns, from 1 up to `columns`. */
+  optionalSpan(owner: Record<string, unknown>, at: string[], columns: number): void {
+    const value = owner[at[at.length - 1]];
+    if (value !== undefined && !(Number.isInteger(value) && (value as number) >= 1 && (value as number) <= columns)) {
+      this.fail(at, `expected a whole number from 1 to ${columns}`);
+    }
+  }
 
   fail(at: string[], message: string): void {
     this.issues.push({ path: pointer(at), message });

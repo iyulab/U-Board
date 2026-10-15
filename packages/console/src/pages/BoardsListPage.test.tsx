@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { BoardsListPage } from './BoardsListPage.js';
+import { placedIn } from '@iyulab/u-board';
 import * as api from '../api-client.js';
 import { formatDateTime } from '../format-time.js';
 
@@ -211,7 +212,7 @@ describe('BoardsListPage', () => {
     expect(api.createConnector).toHaveBeenCalledWith('w1', expect.objectContaining({ authType: 'path', authValue: 'sample', attribution: expect.objectContaining({ text: expect.stringContaining('공공누리') }) }));
     expect(api.createBoard).toHaveBeenCalledWith('w1', '서울 도심 미세먼지');
     const document = vi.mocked(api.updateBoard).mock.calls[0][2].document!;
-    const adapters = new Set(document.nodes.flatMap(n => Object.values(n.widget.bindings ?? {}).map(b => b.adapter)));
+    const adapters = new Set(placedIn(document).flatMap(n => Object.values(n.widget.bindings ?? {}).map(b => b.adapter)));
     expect([...adapters]).toEqual(['new-서울시 실시간 대기환경']);
   });
 

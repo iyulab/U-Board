@@ -1,4 +1,4 @@
-import type { Binding, Node, Shape, ViewDocument } from '@iyulab/u-board/domain';
+import type { Binding, Node, Shape, CanvasView } from '@iyulab/u-board/domain';
 import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
 import { escapeXml, svgDataUrl } from '../frame.js';
 import { snapshot } from '../snapshots/factory-floor.js';
@@ -197,7 +197,7 @@ ${conveyors}
   return svgDataUrl(svg);
 }
 
-const document: ViewDocument = {
+const document: CanvasView = {
   kind: 'canvas',
   background: { image: { src: drawing(), width: WIDTH, height: HEIGHT } },
   nodes: [...LINES.flatMap(line => line.machines.map((m, i) => machine(line, m, i))), ...LINES.flatMap(lineFigures), ...SIDE],

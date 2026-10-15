@@ -1,4 +1,4 @@
-import type { Binding, Node, Shape, ViewDocument } from '@iyulab/u-board/domain';
+import type { Binding, Node, Shape, CanvasView } from '@iyulab/u-board/domain';
 import type { SampleConnector, SamplePack } from '../sample-pack.js';
 import { svgDataUrl } from '../frame.js';
 import { SEOUL_CITY_DATA, SEOUL_TIME_ZONE } from './gwanghwamun.js';
@@ -149,7 +149,7 @@ ${DISTRICTS.map(({ outline }) => `<polygon points="${outline}" fill="#eef2f0" st
   return svgDataUrl(svg);
 }
 
-const document: ViewDocument = {
+const document: CanvasView = {
   kind: 'canvas',
   background: { image: { src: drawing(), width: WIDTH, height: HEIGHT } },
   nodes: [...DISTRICTS.map(reading), ...PANEL],

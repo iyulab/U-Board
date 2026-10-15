@@ -1,4 +1,4 @@
-import { placeAt, type Background, type Binding, type Node, type Shape, type ViewDocument } from '@iyulab/u-board/domain';
+import { placeAt, type Background, type Binding, type Node, type Shape, type CanvasView } from '@iyulab/u-board/domain';
 import type { SampleConnector, SamplePack } from '../sample-pack.js';
 import { escapeXml, project, referencePoints, svgDataUrl, type AreaFrame } from '../frame.js';
 import { snapshot } from '../snapshots/gwanghwamun.js';
@@ -267,7 +267,7 @@ ${station(37.5758, 126.9735, '경복궁역')}
   return svgDataUrl(svg);
 }
 
-const document: ViewDocument = {
+const document: CanvasView = {
   kind: 'canvas',
   background: { image: { ...BACKGROUND.image!, src: drawing() } },
   nodes: [...BIKE_STATIONS.map(bikeStation), carPark(), ...panel()],

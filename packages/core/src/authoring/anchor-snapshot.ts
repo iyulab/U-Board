@@ -1,5 +1,5 @@
 import { coordinateOf, placeAt, type Coordinate } from '../anchor.js';
-import type { ViewDocument } from '../view-document.js';
+import type { CanvasView } from '../view-document.js';
 
 /** Where the anchored nodes stood, by coordinate, before the background's reference points changed or went
  *  away — so that once the background has points again, the nodes can be put back at the same places. A node's
@@ -12,7 +12,7 @@ export interface AnchorSnapshot {
 
 /** The anchored nodes' coordinates as the document reads them now, or `null` when its background has no
  *  reference points to read them by. */
-export function snapshotAnchors(doc: ViewDocument): AnchorSnapshot | null {
+export function snapshotAnchors(doc: CanvasView): AnchorSnapshot | null {
   if (!doc.background.image?.referencePoints) return null;
   const at: Record<string, Coordinate> = {};
   for (const node of doc.nodes) {
@@ -27,7 +27,7 @@ const near = (a: number, b: number) => Math.abs(a - b) <= 1e-9 * Math.max(1, Mat
 
 /** The ids of the nodes in the snapshot, still anchored, that no longer read as the coordinate they had. Empty
  *  while the background has no reference points — there is nothing to read them by yet. */
-export function movedAnchors(doc: ViewDocument, snapshot: AnchorSnapshot): string[] {
+export function movedAnchors(doc: CanvasView, snapshot: AnchorSnapshot): string[] {
   if (!doc.background.image?.referencePoints) return [];
   return doc.nodes
     .filter(node => node.anchored && snapshot.at[node.id])
@@ -40,7 +40,7 @@ export function movedAnchors(doc: ViewDocument, snapshot: AnchorSnapshot): strin
 }
 
 /** The document with each moved node put back at the coordinate it had (`placeAt`, its box's center). */
-export function relocateAnchors(doc: ViewDocument, snapshot: AnchorSnapshot): ViewDocument {
+export function relocateAnchors(doc: CanvasView, snapshot: AnchorSnapshot): CanvasView {
   const moved = new Set(movedAnchors(doc, snapshot));
   if (moved.size === 0) return doc;
   return {
@@ -55,7 +55,7 @@ export function relocateAnchors(doc: ViewDocument, snapshot: AnchorSnapshot): Vi
 
 /** The snapshot without the nodes the author moved or resized between two versions of the document — where
  *  the author put a node is where it is meant to be, not a place the points' change took it to. */
-export function forgetMoved(snapshot: AnchorSnapshot, before: ViewDocument, after: ViewDocument): AnchorSnapshot {
+export function forgetMoved(snapshot: AnchorSnapshot, before: CanvasView, after: CanvasView): AnchorSnapshot {
   const was = new Map(before.nodes.map(node => [node.id, node]));
   const moved = new Set(
     after.nodes

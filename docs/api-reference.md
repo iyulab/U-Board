@@ -396,12 +396,31 @@ interface Widget {
   objects and arrays along the way — so the same static `props` object safely provides defaults for
   any key that isn't bound, or whose binding is `disconnected`.
 
-### `Node`, `Connector`, `Background`, `Shape`, `ViewDocument`
+### `ViewDocument` — `CanvasView` or `GridView`
+
+`ViewDocument` is a union told apart by `kind`. Narrow it before reading a kind's fields:
+
+```ts
+if (doc.kind === 'canvas') doc.nodes;   // CanvasView: background, nodes, connectors, decorations
+else doc.items;                         // GridView: items in order, each a GridItem
+```
+
+Both kinds place a `Placed` — `{ id, widget }`: a canvas `Node` adds a position, a `GridItem` adds the
+room it takes (`span` 1–12, absent 4; `spanMedium` 1–6 for a medium-width board, absent half of
+`span` rounded up; `height` in pixels, absent the widget's own). `placedIn(doc)` returns every placed
+widget of either kind, resolved or not — the walk to use for anything that looks at every binding.
+`resolveDocument` returns the same kind it is given (`ResolvedCanvasView`, `ResolvedGridView`).
+
+`validateViewDocument` checks either kind, and ids are unique across the whole document. The same
+rules, apart from id uniqueness, are published as a JSON Schema (2020-12):
+`@iyulab/u-board/view-document.schema.json`.
+
+### `Node`, `Connector`, `Background`, `Shape`
 
 These carry no resolution logic — see [`concepts.md`](concepts.md) for what each represents, and
 the exported TypeScript types themselves for the exact fields (`Node.anchored`,
 `Connector.fromNodeId`/`toNodeId`, `Background.image`, `Shape` (`RectShape`/`TextShape`, the
-`decorations` array's element type), `ViewDocument.kind`/`nodes`/`connectors`/`decorations`/`appearance`).
+`decorations` array's element type), `CanvasView.kind`/`nodes`/`connectors`/`decorations`/`appearance`).
 They are included in the walkthrough above for context, not repeated field-by-field here since
 none of them have a resolution-time contract to document.
 

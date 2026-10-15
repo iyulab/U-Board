@@ -2,6 +2,11 @@
 // leave out the type of a field it exports (`./viewer` once had `BackgroundImage` without `ReferencePoint`).
 export type {
   ViewDocument,
+  ViewKind,
+  CanvasView,
+  GridView,
+  GridItem,
+  Placed,
   Background,
   BackgroundImage,
   ReferencePoint,

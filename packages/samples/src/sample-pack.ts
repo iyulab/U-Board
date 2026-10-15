@@ -1,4 +1,4 @@
-import type { Attribution, ViewDocument } from '@iyulab/u-board/domain';
+import type { Attribution, CanvasView } from '@iyulab/u-board/domain';
 
 /** Text in each language the site and the console speak. */
 export interface Localized {
@@ -65,6 +65,7 @@ export interface SamplePack {
   kind: Localized;
   summary: Localized;
   connectors: SampleConnector[];
-  document: ViewDocument;
+  /** A canvas view: every sample so far is drawn over a background (`kind` above names it). */
+  document: CanvasView;
   snapshot: SampleSnapshot;
 }

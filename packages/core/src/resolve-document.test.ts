@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveDocument } from './resolve-document';
 import type { Adapter, ResolvedBinding } from './adapter';
-import type { ViewDocument } from './view-document';
+import { placedIn, type CanvasView, type GridView } from './view-document';
 
 class InMemoryAdapter implements Adapter {
   readonly id: string;
@@ -25,7 +25,7 @@ const cmms = new InMemoryAdapter('cmms', {
 
 describe('resolveDocument', () => {
   it('resolves every node in a multi-node document, mixing bound and unbound widgets', async () => {
-    const doc: ViewDocument = {
+    const doc: CanvasView = {
       kind: 'canvas',
       background: { image: { src: 'plan.png', width: 800, height: 600 } },
       nodes: [
@@ -67,7 +67,7 @@ describe('resolveDocument', () => {
   });
 
   it('passes background and connectors through unchanged', async () => {
-    const doc: ViewDocument = {
+    const doc: CanvasView = {
       kind: 'canvas',
       background: { image: { src: 'plan.png', width: 800, height: 600 } },
       nodes: [],
@@ -82,7 +82,7 @@ describe('resolveDocument', () => {
   });
 
   it('reports a disconnected binding per node without dropping the node', async () => {
-    const doc: ViewDocument = {
+    const doc: CanvasView = {
       kind: 'canvas',
       background: {},
       nodes: [
@@ -109,8 +109,37 @@ describe('resolveDocument', () => {
   });
 
   it('resolves an empty document to an empty node list', async () => {
-    const doc: ViewDocument = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+    const doc: CanvasView = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
     const resolved = await resolveDocument(doc, []);
     expect(resolved.nodes).toEqual([]);
+  });
+
+  it('resolves a grid view item by item, keeping the order and the room each takes', async () => {
+    const doc: GridView = {
+      kind: 'grid',
+      items: [
+        { id: 'a', span: 6, widget: { type: 'status', bindings: { value: { adapter: 'cmms', ref: 'pump-a.state' } } } },
+        { id: 'b', widget: { type: 'markdown', props: { content: 'note' } } },
+      ],
+      appearance: 'dark',
+    };
+    const resolved = await resolveDocument(doc, [cmms]);
+    expect(resolved.kind).toBe('grid');
+    expect(resolved.appearance).toBe('dark');
+    expect(resolved.items.map(item => [item.id, item.span])).toEqual([['a', 6], ['b', undefined]]);
+    expect(resolved.items[0].widget.props.value).toBe('running');
+    expect(resolved.items[0].widget.quality).toEqual({ value: 'live' });
+    expect(resolved.items[1].widget.props).toEqual({ content: 'note' });
+  });
+});
+
+describe('placedIn', () => {
+  const widget = { type: 'gauge' };
+  it("walks a canvas view's nodes and a grid view's items, resolved or not", async () => {
+    const canvas: CanvasView = { kind: 'canvas', background: {}, connectors: [], nodes: [{ id: 'n', x: 0, y: 0, anchored: false, widget }] };
+    const grid: GridView = { kind: 'grid', items: [{ id: 'i', widget }, { id: 'j', widget }] };
+    expect(placedIn(canvas).map(p => p.id)).toEqual(['n']);
+    expect(placedIn(grid).map(p => p.id)).toEqual(['i', 'j']);
+    expect(placedIn(await resolveDocument(grid, [])).map(p => p.widget.quality)).toEqual([{}, {}]);
   });
 });

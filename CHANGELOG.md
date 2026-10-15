@@ -13,6 +13,8 @@ do when upgrading. Each release's notes carry its section.
 
 ### Changed
 
+- Saving a board whose document gives two of its parts — nodes, connectors, decorations — the same id is refused
+  with the place of each (`400 INVALID_DOCUMENT`).
 - Widgets come from `@iyulab/u-widgets` 0.33: a chart can span its value axis over the data (`valueAxisZero: false`),
   and a series' `lineStyle: 'dashed'` draws dashed — before, the keyword was ignored and the line stayed solid.
 

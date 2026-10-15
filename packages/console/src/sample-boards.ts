@@ -1,4 +1,4 @@
-import type { ViewDocument } from '@iyulab/u-board';
+import { placedIn } from '@iyulab/u-board';
 import type { LiveSampleConnector, SamplePack } from '@iyulab/u-board-samples';
 import { createBoard, createConnector, listConnectors, updateBoard, type ConnectorSummary } from './api-client.js';
 
@@ -36,9 +36,9 @@ export async function createBoardFromSample(workspaceId: string, pack: SamplePac
     const { key: _key, ...settings } = sample;
     ids.set(sample.key, (await createConnector(workspaceId, settings)).id);
   }
-  const document: ViewDocument = structuredClone(pack.document);
-  for (const node of document.nodes) {
-    for (const binding of Object.values(node.widget.bindings ?? {})) binding.adapter = ids.get(binding.adapter) ?? binding.adapter;
+  const document = structuredClone(pack.document);
+  for (const placed of placedIn(document)) {
+    for (const binding of Object.values(placed.widget.bindings ?? {})) binding.adapter = ids.get(binding.adapter) ?? binding.adapter;
   }
   const board = await createBoard(workspaceId, name);
   await updateBoard(workspaceId, board.id, { document });

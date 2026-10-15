@@ -1,6 +1,6 @@
 import { getObjectBounds } from '@canvas-kit/core';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
-import type { ViewDocument } from '../view-document.js';
+import type { CanvasView } from '../view-document.js';
 
 /** Fitting a document into view: space (CSS px) kept clear around it, and never magnified past its
  * natural size — a small board stays legible at 1:1 instead of blowing its widgets and a raster
@@ -22,7 +22,7 @@ export interface DocumentRect {
  * decoration (a text decoration by its rendered text box, as the canvas draws it). `null` when the
  * document has nothing to show.
  */
-export function documentExtent(doc: ViewDocument): DocumentRect | null {
+export function documentExtent(doc: CanvasView): DocumentRect | null {
   let minX = Infinity;
   let minY = Infinity;
   let maxX = -Infinity;

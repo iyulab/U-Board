@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { documentExtent } from './document-extent';
 import { DEFAULT_NODE_HEIGHT } from '../layout-defaults';
-import type { ViewDocument } from '../view-document';
+import type { CanvasView } from '../view-document';
 
-function doc(partial: Partial<ViewDocument>): ViewDocument {
+function doc(partial: Partial<CanvasView>): CanvasView {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [], ...partial };
 }
 

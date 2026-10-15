@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AuthoringView } from './authoring/AuthoringView.js';
 import { ViewerPage } from './viewer/ViewerPage.js';
-import type { ViewDocument } from './view-document.js';
+import type { CanvasView } from './view-document.js';
 import { FixtureAdapter } from './fixture-adapter.js';
 import { seedWidget } from './authoring/widget-catalog.js';
 
@@ -14,7 +14,7 @@ const FLOOR_PLAN = `data:image/svg+xml,${encodeURIComponent(`
   </svg>
 `)}`;
 
-const demoDocument: ViewDocument = {
+const demoDocument: CanvasView = {
   kind: 'canvas',
   background: { image: { src: FLOOR_PLAN, width: 900, height: 560 } },
   nodes: [

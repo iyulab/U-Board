@@ -6,8 +6,26 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A second view kind, the grid view** — widgets in order, each taking a span of a 12-column row (`GridView`,
+  `GridItem`: `span`, `spanMedium`, `height`). Its document format, validation and binding resolution come first;
+  the viewer and the editor still draw canvas views.
+- **`placedIn(doc)`** — every placed widget of a document of either kind, resolved or not: the walk for code that
+  looks at every binding. Both kinds place a `Placed` (`{ id, widget }`), which a canvas `Node` extends.
+- **A JSON Schema of the view document**, `@iyulab/u-board/view-document.schema.json` (2020-12) — the rules
+  `validateViewDocument` applies, for a reader that has only the schema.
+
 ### Changed
 
+- **Breaking: `ViewDocument` is `CanvasView | GridView`.** Code that read `doc.nodes`, `doc.connectors`,
+  `doc.background` or `doc.decorations` narrows first — `if (doc.kind === 'canvas')` — or takes a `CanvasView`;
+  code that walks every widget uses `placedIn(doc)`. Likewise `ResolvedViewDocument` is
+  `ResolvedCanvasView | ResolvedGridView`, `resolveDocument` returns the kind it is given, and
+  `useResolvedDocument`'s `resolved` is the resolved form of the document passed. `AuthoringView` and `ViewerPage`
+  take a `CanvasView` for now.
+- **Breaking: ids are unique across a document.** `validateViewDocument` reports an id a node, connector, decoration
+  or grid item shares with another part of the same document.
 - **Widgets come from `@iyulab/u-widgets` 0.33.** Bar, line and area charts take `valueAxisZero: false`, so a value
   axis spans the data instead of always reaching zero (a control chart around its centre line, a temperature near
   180 °C), and `series[].lineStyle` takes the keyword `referenceLines` uses — `'dashed'` now draws a dashed line

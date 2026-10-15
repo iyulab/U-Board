@@ -7,9 +7,9 @@ import { ViewControls } from './ViewControls.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import type { Adapter } from '../adapter.js';
-import type { ViewDocument } from '../view-document.js';
+import type { CanvasView } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
-import type { ResolvedViewDocument } from '../resolve-document.js';
+import type { ResolvedCanvasView } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from './attribution.js';
@@ -23,7 +23,7 @@ export interface ViewerPageProps {
   /** The document to show. A different document given later replaces it — a board saved again while
    * it is open — keeping the user's pan and zoom unless the new one covers a different area. Pass the
    * same object until the document changes: each new one is resolved again. */
-  document: ViewDocument;
+  document: CanvasView;
   /** Re-resolve the bindings every this many milliseconds, so values and connection quality stay
    * current. Omitted, bindings resolve once when the document opens. */
   pollIntervalMs?: number;
@@ -122,7 +122,7 @@ export function ViewerPage({
 
 /** A resolved document with every `live` binding read as `stale` — the values stay, their observation
  * times stay, only the claim that they are current goes. */
-function asLastKnown(doc: ResolvedViewDocument): ResolvedViewDocument {
+function asLastKnown(doc: ResolvedCanvasView): ResolvedCanvasView {
   return {
     ...doc,
     nodes: doc.nodes.map(node => ({

@@ -26,6 +26,7 @@
   "types": "./dist/lib/index.d.ts",
   "files": [
     "dist/lib",
+    "schema",
     "styles.css",
     "LICENSE",
     "README.md",
@@ -44,7 +45,8 @@
       "types": "./dist/lib/domain-entry.d.ts",
       "import": "./dist/lib/domain-entry.js"
     },
-    "./styles.css": "./styles.css"
+    "./styles.css": "./styles.css",
+    "./view-document.schema.json": "./schema/view-document.schema.json"
   },
   "scripts": {
     "dev": "vite",

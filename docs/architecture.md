@@ -15,10 +15,12 @@ format. This is the direct expression of the editor/renderer separation principl
 
 ## View kinds
 
-A view is authored as one specific kind. The first kind is the **canvas view**: a background, a
-set of positioned nodes, optional connectors between them, optional purely-visual decorations, and
-widgets bound to data. Each kind owns its own authoring surface; a kind added later does not
-require changing kinds that already exist.
+A view is authored as one specific kind. The **canvas view** is a background, a set of positioned
+nodes, optional connectors between them, optional purely-visual decorations, and widgets bound to
+data. The **grid view** is widgets in order, each taking a span of a 12-column row — the layout of
+an ordinary dashboard. Both place the same unit (an id and a widget), so binding resolution, data
+quality and attribution walk either kind alike; each kind owns its own layout, renderer and
+authoring surface, and a kind added later does not require changing kinds that already exist.
 
 ## Canvas view composition
 

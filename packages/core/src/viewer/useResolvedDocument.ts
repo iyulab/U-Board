@@ -1,8 +1,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { resolveDocument } from '../resolve-document.js';
-import type { ResolvedViewDocument } from '../resolve-document.js';
+import type { ResolvedOf, ResolvedViewDocument } from '../resolve-document.js';
 import type { Adapter } from '../adapter.js';
-import type { ViewDocument } from '../view-document.js';
+import { placedIn, type ViewDocument } from '../view-document.js';
 
 export interface UseResolvedDocumentOptions {
   /** Re-resolve every N ms while a document is loaded. Omitted — the document is resolved once
@@ -13,8 +13,9 @@ export interface UseResolvedDocumentOptions {
   clock?: () => number;
 }
 
-export interface UseResolvedDocumentResult {
-  resolved: ResolvedViewDocument | null;
+export interface UseResolvedDocumentResult<D extends ViewDocument = ViewDocument> {
+  /** The document resolved — the same kind as the one given. */
+  resolved: ResolvedOf<D> | null;
   /** Re-resolves now, outside of the poll schedule. Host UI decides whether/how to expose this
    * (e.g. a "Refresh" button) — this hook only provides the capability. */
   refresh: () => void;
@@ -35,7 +36,7 @@ const SHOWN_SPREAD_MS = 3000;
 /** Whether any binding in `doc` came back with a value — `live` or `stale` — or there are no bindings
  * at all, in which case there is nothing that could have failed to arrive. */
 function receivedAnyValue(doc: ResolvedViewDocument): boolean {
-  const qualities = doc.nodes.flatMap(node => Object.values(node.widget.quality));
+  const qualities = placedIn(doc).flatMap(placed => Object.values(placed.widget.quality));
   return qualities.length === 0 || qualities.some(quality => quality !== 'disconnected');
 }
 
@@ -46,16 +47,16 @@ function receivedAnyValue(doc: ResolvedViewDocument): boolean {
  * core's — docs/principles.md editor/renderer separation applies equally to "who schedules
  * re-resolution").
  */
-export function useResolvedDocument(
-  doc: ViewDocument | null,
+export function useResolvedDocument<D extends ViewDocument>(
+  doc: D | null,
   /** Keep this array's identity stable across renders a poll should span (e.g. `useMemo`, or a
    * reference held outside the component) — a new array on every render restarts the interval
    * before it completes a cycle. Same applies to `options.pollIntervalMs`'s numeric value, which
    * is fine since primitives compare by value. */
   adapters: readonly Adapter[],
   options?: UseResolvedDocumentOptions
-): UseResolvedDocumentResult {
-  const [resolved, setResolved] = useState<ResolvedViewDocument | null>(null);
+): UseResolvedDocumentResult<D> {
+  const [resolved, setResolved] = useState<ResolvedOf<D> | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [resolvedAt, setResolvedAt] = useState<number | null>(null);
   const [stalled, setStalled] = useState(false);
@@ -91,7 +92,7 @@ export function useResolvedDocument(
       resolveDocument(doc, adapters).then(result => {
         inFlight = false;
         if (cancelled) return;
-        setResolved(result);
+        setResolved(result as ResolvedOf<D>);
         setIsRefreshing(false);
         // A result is shown whatever it holds, but only one in which some value arrived is an update:
         // a viewer that reaches nothing gets every binding back `disconnected` on schedule, and that

@@ -50,7 +50,8 @@ describe('validateViewDocument', () => {
   it('rejects what is not a document at all', () => {
     expect(paths(null)).toEqual(['']);
     expect(paths('canvas')).toEqual(['']);
-    expect(paths({ kind: 'grid', background: {}, nodes: [], connectors: [] })).toEqual(['/kind']);
+    expect(paths({ kind: 'table', items: [] })).toEqual(['/kind']);
+    expect(validateViewDocument({ kind: 'table' })[0].message).toBe('expected "canvas" or "grid"');
   });
 
   it('names the top-level fields that are missing or of the wrong type', () => {
@@ -139,6 +140,57 @@ describe('validateViewDocument', () => {
 
   it('does not judge references between parts of a document — a connector to a missing node is drawn as nothing, not rejected', () => {
     expect(validateViewDocument(broken(d => { d.connectors[0].toNodeId = 'gone'; }))).toEqual([]);
+  });
+
+  it('takes ids unique across the document — a node, connector and decoration may not share one', () => {
+    expect(validateViewDocument(broken(d => { d.connectors[0].id = 'n1'; }))).toEqual([
+      { path: '/connectors/0/id', message: 'expected an id not used elsewhere in the document — /nodes/0 has it' },
+    ]);
+    expect(paths(broken(d => { d.nodes[1].id = 'n1'; d.decorations[1].id = 'n1'; }))).toEqual(['/nodes/1/id', '/decorations/1/id']);
+  });
+
+  describe('a grid view', () => {
+    const grid = {
+      kind: 'grid',
+      items: [
+        { id: 'oee', span: 4, spanMedium: 3, height: 160, widget: { type: 'gauge', bindings: { value: { adapter: 'mes', ref: '/oee' } } } },
+        { id: 'trend', span: 8, widget: { type: 'chart.line' } },
+        { id: 'note', widget: { type: 'markdown' } },
+      ],
+    };
+    const brokenGrid = (mutate: (doc: any) => void): unknown => {
+      const copy = structuredClone(grid) as any;
+      mutate(copy);
+      return copy;
+    };
+
+    it('accepts items with or without the room they take, and the empty grid', () => {
+      expect(validateViewDocument(grid)).toEqual([]);
+      expect(validateViewDocument({ kind: 'grid', items: [], columns: 12, appearance: 'dark' })).toEqual([]);
+    });
+
+    it('needs items, and no canvas fields', () => {
+      expect(paths({ kind: 'grid' })).toEqual(['/items']);
+      expect(paths({ kind: 'grid', nodes: [], connectors: [], background: {} })).toEqual(['/items']);
+    });
+
+    it('takes a span of 1–12 columns, and at medium width 1–6, as whole numbers', () => {
+      expect(paths(brokenGrid(d => { d.items[0].span = 0; d.items[1].span = 13; d.items[2].span = 2.5; }))).toEqual([
+        '/items/0/span', '/items/1/span', '/items/2/span',
+      ]);
+      expect(paths(brokenGrid(d => { d.items[0].spanMedium = 7; }))).toEqual(['/items/0/spanMedium']);
+      expect(validateViewDocument(brokenGrid(d => { d.items[0].span = 12; d.items[0].spanMedium = 6; }))).toEqual([]);
+    });
+
+    it('takes a height above zero, and only 12 columns', () => {
+      expect(paths(brokenGrid(d => { d.items[0].height = 0; d.columns = 6; }))).toEqual(['/columns', '/items/0/height']);
+    });
+
+    it("checks each item's id and widget as it does a node's", () => {
+      expect(paths(brokenGrid(d => { d.items[2].id = 'oee'; delete d.items[1].widget.type; d.items[0].widget.bindings.value = {}; }))).toEqual([
+        '/items/0/widget/bindings/value/adapter', '/items/0/widget/bindings/value/ref', '/items/1/widget/type', '/items/2/id',
+      ]);
+    });
   });
 
   it('answers the example in docs/api-reference.md exactly as documented', () => {

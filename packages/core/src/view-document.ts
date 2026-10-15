@@ -6,11 +6,24 @@
  * document format, it never depends on the authoring tool). It does not reference the canvas
  * engine or widget library's own internal types; those are implementation details a renderer
  * translates this document into at render time.
+ *
+ * A view has a kind (docs/concepts.md — "Kind"), told apart by `kind`: a canvas places widgets on
+ * a background by position, a grid lays them out in order. Both carry widgets the same way — a
+ * `Placed` — and only how they are placed differs. Narrow on `kind` before reading a kind's fields.
  */
-export interface ViewDocument {
-  /** The authoring/rendering mode this view was created as (docs/concepts.md — "Kind"). Only
-   * one kind exists today; this is an extension point, not a fixed union, so a future kind can
-   * be added without widening every consumer's switch statement. */
+export type ViewDocument = CanvasView | GridView;
+
+/** The kinds a view can be — `ViewDocument['kind']`. */
+export type ViewKind = ViewDocument['kind'];
+
+/** A widget with an identity, the unit every kind places. The id is unique in its document. */
+export interface Placed {
+  id: string;
+  widget: Widget;
+}
+
+/** A canvas view: widgets placed by position over a background, optionally joined by connectors. */
+export interface CanvasView {
   kind: 'canvas';
   background: Background;
   nodes: Node[];
@@ -25,6 +38,47 @@ export interface ViewDocument {
    * so their text reads on it. Like `Background`, it says the background's tone, not what it depicts. */
   appearance?: BoardAppearance;
 }
+
+/** A grid view: widgets laid out in order, in rows of `columns` columns — no position, so the same
+ *  document reads at any width (docs/concepts.md — "Grid view"). */
+export interface GridView {
+  kind: 'grid';
+  /** In the order they are shown: left to right, then top to bottom. */
+  items: GridItem[];
+  /** Columns at full width. Only 12 for now; absent means 12. */
+  columns?: 12;
+  /** As a canvas view's — the tone the board is drawn in. */
+  appearance?: BoardAppearance;
+}
+
+/** A widget in a grid view and the room it takes. */
+export interface GridItem extends Placed {
+  /** Columns it spans at full width, 1–12. Absent means 4. */
+  span?: number;
+  /** Columns it spans at medium width, where the grid has 6 — 1–6. Absent means half of `span`, rounded up. */
+  spanMedium?: number;
+  /** Its height in pixels. Absent means the widget's own height. */
+  height?: number;
+}
+
+/** The number of columns a grid view has at full width and at medium width. */
+export const GRID_COLUMNS = 12;
+export const GRID_COLUMNS_MEDIUM = 6;
+/** The span an item takes when it names none. */
+export const GRID_DEFAULT_SPAN = 4;
+
+/** Every widget a document places, in document order — a canvas view's nodes or a grid view's items. The one walk
+ *  over a document's widgets, so code that looks at every binding does not depend on which kind it reads. Takes a
+ *  resolved document as well. */
+export function placedIn<D extends PlacingView>(doc: D): readonly PlacedOf<D>[] {
+  return (doc.kind === 'canvas' ? doc.nodes : doc.items) as readonly PlacedOf<D>[];
+}
+
+/** A view of either kind, resolved or not — what `placedIn` walks. */
+type PlacingView = { kind: 'canvas'; nodes: readonly { id: string }[] } | { kind: 'grid'; items: readonly { id: string }[] };
+
+/** What a view of type `D` places: a canvas view's node type, a grid view's item type. */
+type PlacedOf<D> = D extends { kind: 'canvas'; nodes: readonly (infer N)[] } ? N : D extends { kind: 'grid'; items: readonly (infer I)[] } ? I : never;
 
 export type BoardAppearance = 'light' | 'dark';
 
@@ -85,8 +139,7 @@ export interface ReferencePoint {
 }
 
 /** A positioned point in a canvas view that carries a widget. */
-export interface Node {
-  id: string;
+export interface Node extends Placed {
   x: number;
   y: number;
   /** The widget's footprint in scene units. Absent means the renderer picks a default size —
@@ -97,7 +150,6 @@ export interface Node {
    * or a freely-placed position with no real-space meaning (docs/concepts.md — "Node", "Anchor").
    * Both cases store the same x/y shape; this flag only carries what that position means. */
   anchored: boolean;
-  widget: Widget;
 }
 
 /** A line drawn between two nodes, used when the relationship between them needs to be shown. */

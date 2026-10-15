@@ -4,7 +4,7 @@ import '@testing-library/jest-dom/vitest';
 import { AttributionLine, boardAttributions } from './attribution';
 import { ViewerPage } from './ViewerPage';
 import { DEFAULT_LABELS } from '../labels';
-import type { ViewDocument } from '../view-document';
+import type { CanvasView } from '../view-document';
 import type { Adapter, Attribution } from '../adapter';
 
 vi.mock('@canvas-kit/viewer', () => ({ Viewer: () => <div data-testid="viewer" /> }));
@@ -13,7 +13,7 @@ function adapter(id: string, attribution?: Attribution): Adapter {
   return { id, attribution, resolve: async () => ({ value: 1, quality: 'live' }) };
 }
 
-function board(...adapterIds: string[]): ViewDocument {
+function board(...adapterIds: string[]): CanvasView {
   return {
     kind: 'canvas',
     background: {},

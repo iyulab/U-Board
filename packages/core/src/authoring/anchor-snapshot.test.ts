@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors } from './anchor-snapshot.js';
 import { coordinateOf } from '../anchor.js';
-import type { ReferencePoint, ViewDocument } from '../view-document.js';
+import type { ReferencePoint, CanvasView } from '../view-document.js';
 
 const points = (scale = 1): [ReferencePoint, ReferencePoint] => [
   { x: 100 * scale, y: 100 * scale, coordinate: { x: 126.95, y: 37.6 } },
   { x: 700 * scale, y: 500 * scale, coordinate: { x: 127.05, y: 37.55 } },
 ];
 
-function doc(referencePoints?: [ReferencePoint, ReferencePoint], size = { width: 800, height: 600 }): ViewDocument {
+function doc(referencePoints?: [ReferencePoint, ReferencePoint], size = { width: 800, height: 600 }): CanvasView {
   return {
     kind: 'canvas',
     background: { image: { src: 'data:,', ...size, ...(referencePoints ? { referencePoints } : {}) } },

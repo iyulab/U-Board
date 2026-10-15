@@ -3,7 +3,7 @@ import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { ViewerPage } from './ViewerPage';
-import type { ViewDocument } from '../view-document';
+import type { CanvasView } from '../view-document';
 import type { Adapter, ResolvedBinding } from '../adapter';
 
 const viewerProps = vi.fn();
@@ -22,11 +22,11 @@ afterEach(() => {
 
 const lastViewerProps = () => viewerProps.mock.lastCall![0] as Record<string, any>;
 
-function doc(): ViewDocument {
+function doc(): CanvasView {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [] };
 }
 
-function docWithBinding(): ViewDocument {
+function docWithBinding(): CanvasView {
   return {
     kind: 'canvas',
     background: {},
@@ -104,7 +104,7 @@ describe('ViewerPage', () => {
   });
 
   describe('sizing and fit', () => {
-    function docWithBackground(): ViewDocument {
+    function docWithBackground(): CanvasView {
       return { kind: 'canvas', background: { image: { src: 'bg.png', width: 1200, height: 800 } }, nodes: [], connectors: [] };
     }
 

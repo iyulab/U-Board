@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, act, within } from '@testing-librar
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { AuthoringView } from './AuthoringView';
-import type { ViewDocument } from '../view-document';
+import type { CanvasView } from '../view-document';
 import { KO_LABELS } from '../labels-ko';
 
 // AuthoringView delegates all Konva/canvas rendering to these two packages — they're already
@@ -63,7 +63,7 @@ vi.mock('./background-image', async importOriginal => ({
 
 const lastDesignerProps = () => designerProps.mock.lastCall![0] as Record<string, any>;
 
-function doc(): ViewDocument {
+function doc(): CanvasView {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [] };
 }
 
@@ -111,7 +111,7 @@ describe('AuthoringView new nodes', () => {
     fireEvent.click(screen.getByText('노드 추가'));
     fireEvent.click(screen.getByText('저장'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
-    const saved: ViewDocument = onSave.mock.calls[0][0];
+    const saved: CanvasView = onSave.mock.calls[0][0];
     expect(saved.nodes.at(-1)!.widget.props).toEqual({ data: { label: '새 노드', level: 'neutral', value: '연결 전' } });
   });
 });
@@ -248,7 +248,7 @@ describe('AuthoringView unsaved changes guard', () => {
 });
 
 describe('AuthoringView node selection', () => {
-  function docWithNode(): ViewDocument {
+  function docWithNode(): CanvasView {
     return {
       kind: 'canvas',
       background: {},
@@ -362,7 +362,7 @@ describe('AuthoringView decoration authoring', () => {
     expect(saved.decorations[0]).toMatchObject({ type: 'text' });
   });
 
-  function docWithTextDecoration(): ViewDocument {
+  function docWithTextDecoration(): CanvasView {
     return {
       kind: 'canvas',
       background: {},
@@ -397,7 +397,7 @@ describe('AuthoringView decoration authoring', () => {
   });
 
   it('a node selection still shows the property panel, not the decoration panel (no regression)', () => {
-    const withBoth: ViewDocument = { ...docWithTextDecoration(), nodes: [{ id: 'node-1', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] };
+    const withBoth: CanvasView = { ...docWithTextDecoration(), nodes: [{ id: 'node-1', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] };
     render(<AuthoringView initialDocument={withBoth} adapters={[]} width={400} height={300} />);
 
     fireEvent.click(screen.getByText('select-node-1'));
@@ -408,7 +408,7 @@ describe('AuthoringView decoration authoring', () => {
 });
 
 describe('AuthoringView viewport', () => {
-  function docWithBackground(): ViewDocument {
+  function docWithBackground(): CanvasView {
     return { kind: 'canvas', background: { image: { src: 'plan.png', width: 3000, height: 2000 } }, nodes: [], connectors: [] };
   }
 
@@ -489,7 +489,7 @@ describe('AuthoringView viewport', () => {
 
   it("places each node's widget where the node is now, before its bindings resolve", () => {
     const pending = { id: 'cmms', resolve: () => new Promise<never>(() => {}) };
-    const bound: ViewDocument = {
+    const bound: CanvasView = {
       ...doc(),
       nodes: [{ id: 'n1', x: 10, y: 20, width: 200, height: 120, anchored: false, widget: { type: 'gauge', props: {}, bindings: { 'data.value': { adapter: 'cmms', ref: 'k' } } } }],
     };
@@ -565,7 +565,7 @@ describe('AuthoringView clock', () => {
       id: 'cmms',
       resolve: async () => ({ value: 'running', quality: 'stale' as const, observedAt: '2026-10-07T05:00:00Z' }),
     };
-    const staleDoc: ViewDocument = {
+    const staleDoc: CanvasView = {
       kind: 'canvas',
       background: {},
       nodes: [
@@ -649,7 +649,7 @@ describe('AuthoringView background image', () => {
       { x: 100, y: 100, coordinate: { x: 126.95, y: 37.6 } },
       { x: 700, y: 500, coordinate: { x: 127.05, y: 37.55 } },
     ];
-    const anchoredDoc = (): ViewDocument => ({
+    const anchoredDoc = (): CanvasView => ({
       ...doc(),
       background: { image: { src: 'map.png', width: 800, height: 600, referencePoints: points as never } },
       nodes: [{ id: 'n1', x: 196.4, y: 266, width: 160, height: 100, anchored: true, widget: { type: 'status', props: {} } }],
@@ -663,7 +663,7 @@ describe('AuthoringView background image', () => {
     const saved = async (onSave: ReturnType<typeof vi.fn>) => {
       fireEvent.click(screen.getByText('Save'));
       await waitFor(() => expect(onSave).toHaveBeenCalled());
-      return onSave.mock.calls.at(-1)![0] as ViewDocument;
+      return onSave.mock.calls.at(-1)![0] as CanvasView;
     };
 
     it('keeps the points when the image is replaced by one of the same size — the same drawing redone', async () => {

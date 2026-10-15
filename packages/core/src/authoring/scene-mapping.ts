@@ -1,5 +1,5 @@
 import { Scene } from '@canvas-kit/core';
-import type { ViewDocument, Node, Shape, Widget } from '../view-document.js';
+import type { CanvasView, Node, Shape, Widget } from '../view-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
 import { seedWidget } from './widget-catalog.js';
 import { onBoard } from '../renderer/board-appearance.js';
@@ -33,7 +33,7 @@ const DECORATION_PLACEHOLDER_FILL = 'rgba(245, 158, 11, 0.08)';
  * locked, drawn but not editable — and one `rect` per node, id'd by node id, standing in for its
  * widget's footprint.
  */
-export function documentToScene(doc: ViewDocument): Scene {
+export function documentToScene(doc: CanvasView): Scene {
   const scene = new Scene();
 
   if (doc.background.image) {
@@ -108,7 +108,7 @@ export function documentToScene(doc: ViewDocument): Scene {
  * shape; they're told apart by id membership in `doc.nodes`/`doc.decorations`, not by scanning
  * order, so a decoration id never gets folded onto a node or vice versa.
  */
-export function applySceneToDocument(doc: ViewDocument, scene: Scene): ViewDocument {
+export function applySceneToDocument(doc: CanvasView, scene: Scene): CanvasView {
   const objectsById = new Map(scene.getObjects().filter(obj => !!obj.id).map(obj => [obj.id as string, obj]));
 
   const nodes = doc.nodes.map(node => {
@@ -146,12 +146,12 @@ const NEW_NODE_CASCADE_WRAP = 8; // after this many nodes, the cascade wraps bac
  * point at the top-left of what the author currently sees, so a node added while panned or zoomed
  * into part of a large background lands in view — wrapping so positions stay near it even after
  * many additions. The author can still drag it wherever they want. */
-export function nextNodePosition(doc: ViewDocument, origin: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
+export function nextNodePosition(doc: CanvasView, origin: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
   const offset = (doc.nodes.length % NEW_NODE_CASCADE_WRAP) * NEW_NODE_CASCADE_STEP;
   return { x: origin.x + NEW_NODE_BASE_OFFSET + offset, y: origin.y + NEW_NODE_BASE_OFFSET + offset };
 }
 
-export function addNode(doc: ViewDocument, position: { x: number; y: number }, widget: Widget = seedWidget('status')): ViewDocument {
+export function addNode(doc: CanvasView, position: { x: number; y: number }, widget: Widget = seedWidget('status')): CanvasView {
   const node: Node = {
     id: `node-${crypto.randomUUID()}`,
     x: position.x,
@@ -166,7 +166,7 @@ export function addNode(doc: ViewDocument, position: { x: number; y: number }, w
  * `nextNodePosition`, kept as its own function (rather than sharing a counter with nodes) so
  * adding several decorations in a row doesn't stack them on top of unrelated nodes placed at the
  * same cascade step. */
-export function nextDecorationPosition(doc: ViewDocument, origin: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
+export function nextDecorationPosition(doc: CanvasView, origin: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
   const count = doc.decorations?.length ?? 0;
   const offset = (count % NEW_NODE_CASCADE_WRAP) * NEW_NODE_CASCADE_STEP;
   return { x: origin.x + NEW_NODE_BASE_OFFSET + offset, y: origin.y + NEW_NODE_BASE_OFFSET + offset };
@@ -178,7 +178,7 @@ export function nextDecorationPosition(doc: ViewDocument, origin: { x: number; y
  * establishes for widget nodes (docs/concepts.md — "Decoration"). The `decoration-` id prefix
  * (vs. `node-` for nodes) is cosmetic only — `applySceneToDocument` tells the two apart by
  * membership in `doc.nodes`/`doc.decorations`, not by parsing the id. */
-export function addDecoration(doc: ViewDocument, type: Shape['type'], position: { x: number; y: number }, text = 'Label'): ViewDocument {
+export function addDecoration(doc: CanvasView, type: Shape['type'], position: { x: number; y: number }, text = 'Label'): CanvasView {
   const id = `decoration-${crypto.randomUUID()}`;
   const shape: Shape =
     type === 'rect'

@@ -6,8 +6,17 @@
 **View** — the unit an author creates and a viewer opens. A view has a kind, which determines
 what it can contain and how it's authored.
 
-**Kind** — the authoring/rendering mode a view is created as. The canvas view is the first kind.
-Different kinds have different capabilities; a view does not mix kinds.
+**Kind** — the authoring/rendering mode a view is created as: a **canvas view** places widgets by
+position over a background, a **grid view** lays them out in order. Different kinds have different
+capabilities; a view does not mix kinds. Both carry widgets the same way — an id and a widget — so
+bindings, data quality and the property panel are shared; only how a widget is placed differs. The
+grid view's document format, validation and binding resolution are in place; the viewer and the
+editor draw canvas views for now.
+
+**Grid view** — widgets in order, left to right and then top to bottom, in rows of 12 columns. Each
+**grid item** takes a span of columns (4 when left out), optionally a different span where the
+board is narrower, and optionally a fixed height — otherwise the widget's own. There is no position:
+the same document reads at any width, and where an item goes follows from the ones before it.
 
 **Background** — the media (an image, or none) a canvas view is drawn over. The system does not
 attach domain meaning to a background — what it depicts is left to the author's and viewer's

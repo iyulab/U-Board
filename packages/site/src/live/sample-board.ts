@@ -3,7 +3,7 @@
 // (`@iyulab/u-board/viewer`), so what a visitor sees is what an installation renders — nothing to
 // sign in to, no server to wake.
 
-import type { Adapter, AdapterReference, ResolvedBinding, ViewDocument } from '@iyulab/u-board/viewer';
+import type { Adapter, AdapterReference, CanvasView, ResolvedBinding } from '@iyulab/u-board/viewer';
 
 export interface SampleBoardText {
   plant: string;
@@ -35,7 +35,7 @@ function escapeXml(text: string): string {
   return text.replace(/[<>&"']/g, c => `&#${c.charCodeAt(0)};`);
 }
 
-export function sampleBoard(text: SampleBoardText): ViewDocument {
+export function sampleBoard(text: SampleBoardText): CanvasView {
   const bind = (ref: string) => ({ adapter: SAMPLE_ADAPTER_ID, ref });
   return {
     kind: 'canvas',
