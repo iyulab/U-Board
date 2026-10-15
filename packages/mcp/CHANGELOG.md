@@ -14,6 +14,9 @@ All notable changes to this package are documented here. The format follows
   (new) holds sources and bindings. `widgets` lists one line per widget by category and takes a `query`;
   `widget:<type>` gives its examples as a board places them (`{ type, props }`).
 - An unknown id (404) answers with where to find the ids.
+- `validate`, `create_board` and `patch_board` advise on the prepared widgets they check or write, with the widget
+  library's own check (`checkSpec`): a type it does not have (and a near spelling), a prop no widget reads, an option
+  the widget does not have or of the wrong type. A prop a binding fills is not reported.
 - `validate` checks as the server saves: a field the document format does not have, a decoration colour a canvas
   cannot read and a connector to a missing node are issues, each naming what that place takes.
 

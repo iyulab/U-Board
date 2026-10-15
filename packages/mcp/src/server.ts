@@ -5,6 +5,7 @@ import { applyJsonPatch, getByPointer, JsonPatchError, lintViewDocument, validat
 import { UBoardApiError, type UBoardClient } from './client.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
+import { widgetAdvice } from './widget-advice.js';
 
 const { version } = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -112,7 +113,8 @@ export function createServer(client: UBoardClient): McpServer {
         const created = await client.createBoard(name, kind);
         if (!document) return { id: created.id, revision: created.revision, advice: [] };
         try {
-          return await client.putDocument(created.id, document, created.revision);
+          const saved = await client.putDocument(created.id, document, created.revision);
+          return { ...saved, advice: [...saved.advice, ...widgetAdvice(document)] };
         } catch (error) {
           if (error instanceof UBoardApiError) error.body.message = `board ${created.id} was made empty; its document was refused`;
           throw error;
@@ -126,7 +128,13 @@ export function createServer(client: UBoardClient): McpServer {
       description: "Changes part of a board's document with a JSON Patch, applied entirely or not at all, and saves it. Answers the new revision and advice.",
       inputSchema: z.strictObject({ board: boardId, revision, patch }),
     },
-    async ({ board, revision, patch }) => tool(() => client.patchDocument(board, patch, revision))
+    async ({ board, revision, patch }) =>
+      tool(async () => {
+        const saved = await client.patchDocument(board, patch, revision);
+        // The widgets the patch writes, checked where they land — the server does not read a widget's props.
+        const added = patch.flatMap(op => ('value' in op ? widgetAdvice(op.value, String(op.path)) : []));
+        return { ...saved, advice: [...saved.advice, ...added] };
+      })
   );
 
   server.registerTool(
@@ -143,7 +151,8 @@ export function createServer(client: UBoardClient): McpServer {
           candidate = applyJsonPatch((await client.getBoard(board)).document, patch);
         }
         const issues = validateViewDocument(candidate, { strict: true });
-        return { valid: issues.length === 0, issues, advice: issues.length === 0 ? lintViewDocument(candidate as ViewDocument) : [] };
+        const advice = issues.length === 0 ? [...lintViewDocument(candidate as ViewDocument), ...widgetAdvice(candidate)] : [];
+        return { valid: issues.length === 0, issues, advice };
       })
   );
 
