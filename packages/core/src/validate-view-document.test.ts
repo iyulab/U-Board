@@ -77,6 +77,8 @@ describe('validateViewDocument', () => {
   it('checks every field a node promises', () => {
     expect(paths(broken(d => { d.nodes[0] = { foo: 1 }; }))).toEqual([
       '/nodes/0/id', '/nodes/0/x', '/nodes/0/y', '/nodes/0/anchored', '/nodes/0/widget',
+      // with no id, the node the connector starts from is gone
+      '/connectors/0/fromNodeId',
     ]);
     // The layout of another tool's export: position/size objects instead of x/y/width/height.
     expect(paths(broken(d => {
@@ -138,15 +140,21 @@ describe('validateViewDocument', () => {
     expect(paths(broken(d => { d.appearance = 'dim'; }))).toEqual(['/appearance']);
   });
 
-  it('does not judge references between parts of a document — a connector to a missing node is drawn as nothing, not rejected', () => {
-    expect(validateViewDocument(broken(d => { d.connectors[0].toNodeId = 'gone'; }))).toEqual([]);
+  it('takes a connector to join two nodes the document has', () => {
+    expect(validateViewDocument(broken(d => { d.connectors[0].toNodeId = 'gone'; }))).toEqual([
+      { path: '/connectors/0/toNodeId', message: 'no node has the id "gone" — a connector joins two nodes of /nodes' },
+    ]);
   });
 
   it('takes ids unique across the document — a node, connector and decoration may not share one', () => {
     expect(validateViewDocument(broken(d => { d.connectors[0].id = 'n1'; }))).toEqual([
       { path: '/connectors/0/id', message: 'expected an id not used elsewhere in the document — /nodes/0 has it' },
     ]);
-    expect(paths(broken(d => { d.nodes[1].id = 'n1'; d.decorations[1].id = 'n1'; }))).toEqual(['/nodes/1/id', '/decorations/1/id']);
+    expect(paths(broken(d => { d.nodes[1].id = 'n1'; d.decorations[1].id = 'n1'; }))).toEqual([
+      '/nodes/1/id',
+      '/connectors/0/toNodeId', // n2 is no longer there
+      '/decorations/1/id',
+    ]);
   });
 
   describe('a grid view', () => {
@@ -199,5 +207,61 @@ describe('validateViewDocument', () => {
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', bindings: { value: null } } }],
     })).toEqual([{ path: '/nodes/0/widget/bindings/value', message: 'expected a binding object ({ adapter, ref })' }]);
   });
-});
 
+  describe('strict — a document about to be written', () => {
+    const strict = (value: unknown) => validateViewDocument(value, { strict: true });
+
+    it('takes the valid document as it is', () => {
+      expect(strict(valid)).toEqual([]);
+    });
+
+    it('refuses a field the format does not have, naming the fields that place has and what to do instead', () => {
+      const issues = strict(broken(d => { d.connectors[0].label = 'N/A'; }));
+      expect(issues).toHaveLength(1);
+      expect(issues[0].path).toBe('/connectors/0/label');
+      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId.');
+      expect(issues[0].message).toContain('place a text decoration at its middle');
+    });
+
+    it('finds unknown fields at every level', () => {
+      const issues = strict(
+        broken(d => {
+          d.title = 'Plant';
+          d.nodes[0].label = 'Pump';
+          d.nodes[0].widget.data = {};
+          d.nodes[0].widget.bindings['data.value'].transform = 'x';
+          d.decorations[0].strokeDasharray = '4 2';
+          d.decorations[1].align = 'center';
+          d.background.color = '#fff';
+        })
+      );
+      expect(issues.map(issue => issue.path)).toEqual([
+        '/title',
+        '/background/color',
+        '/nodes/0/label',
+        '/nodes/0/widget/data',
+        '/nodes/0/widget/bindings/data.value/transform',
+        '/decorations/0/strokeDasharray',
+        '/decorations/1/align',
+      ]);
+    });
+
+    it('ignores unknown fields when reading, so a document from a newer version still opens', () => {
+      expect(validateViewDocument(broken(d => { d.connectors[0].label = 'N/A'; d.decorations[0].fill = 'var(--x)'; }))).toEqual([]);
+    });
+
+    it('takes the decoration colours every canvas reads', () => {
+      for (const colour of ['#1f6feb', '#abc', '#1f6feb33', 'rgb(1, 2, 3)', 'rgba(110,170,225,0.16)', 'rgb(1 2 3 / 50%)', 'hsl(210deg 50% 40%)', 'hsla(210, 50%, 40%, .5)', 'SteelBlue', 'transparent', 'none']) {
+        expect(strict(broken(d => { d.decorations[0].fill = colour; })), colour).toEqual([]);
+      }
+    });
+
+    it('refuses a colour a canvas cannot read, and says which forms it takes', () => {
+      for (const colour of ['var(--u-widget-border)', 'dashed', '#12345', 'rgb(1, 2)', 'currentColor', 'oklch(0.7 0.1 200)']) {
+        const issues = strict(broken(d => { d.decorations[0].stroke = colour; }));
+        expect(issues.map(issue => issue.path), colour).toEqual(['/decorations/0/stroke']);
+        expect(issues[0].message).toContain('a hex colour');
+      }
+    });
+  });
+});

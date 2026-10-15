@@ -9,6 +9,8 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - The rules tell an assistant that a script element's code must always return.
+- `validate` checks as the server saves: a field the document format does not have, a decoration colour a canvas
+  cannot read and a connector to a missing node are issues, each naming what that place takes.
 
 - `@iyulab/u-widgets` ^0.33.2.
 

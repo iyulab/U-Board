@@ -138,6 +138,12 @@ describe('u-board-mcp', () => {
     expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
   });
 
+  it('validates as the server saves: a field the format does not have, or a colour a canvas cannot read, is an issue', async () => {
+    const document = { kind: 'canvas', background: {}, nodes: [], connectors: [], decorations: [{ id: 'z', type: 'rect', x: 0, y: 0, width: 9, height: 9, fill: 'var(--zone)', radius: 4 }] };
+    const { value } = await call('validate', { document });
+    expect(value.issues.map((issue: { path: string }) => issue.path)).toEqual(['/decorations/0/radius', '/decorations/0/fill']);
+  });
+
   it('lists the data sources, never a credential', async () => {
     expect((await call('list_sources')).value).toEqual({ sources: [{ id: 's1', name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer' }] });
   });

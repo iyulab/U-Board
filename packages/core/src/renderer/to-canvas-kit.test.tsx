@@ -85,6 +85,24 @@ describe('toCanvasKit', () => {
     expect(objects[1]).toMatchObject({ type: 'text', text: 'Core Banking' });
   });
 
+  it('draws a decoration colour of "none" as nothing — not as the colour drawn before it', () => {
+    const { scene } = toCanvasKit(
+      doc({
+        decorations: [
+          { id: 'zone', type: 'rect', x: 0, y: 0, width: 100, height: 50, fill: 'none', stroke: '#8a8a8a' },
+          { id: 'edge', type: 'rect', x: 0, y: 60, width: 100, height: 50, fill: '#eef', stroke: 'None' },
+          { id: 'ghost', type: 'text', x: 0, y: 0, text: 'hidden', fill: 'none' },
+        ],
+      })
+    );
+    const [zone, edge, ghost] = scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+    expect(zone).not.toHaveProperty('fill');
+    expect(zone.stroke).toBe('#8a8a8a');
+    expect(edge).not.toHaveProperty('stroke');
+    expect(edge.fill).toBe('#eef');
+    expect(ghost.fill).toBe('transparent');
+  });
+
   it('adds no scene objects for a document with no background, decorations, or connectors', () => {
     const { scene, overlays } = toCanvasKit(doc());
     expect(scene.getObjects()).toHaveLength(0);

@@ -4,12 +4,24 @@ import { ELEMENT_NAME, elementNameOf } from './elements/element-type.js';
 import { parseTemplate } from './elements/template.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from './elements/markup-policy.js';
 import { checkPropsSchema, checkPropsValue } from './elements/props-schema.js';
+import { DRAWING_COLOR_FORMS, isDrawingColor } from './css-color.js';
 
 /** One way a value fails to be a `ViewDocument`: where (an RFC 6901 JSON Pointer into the value,
  * `""` for the value itself) and what was expected there. */
 export interface ViewDocumentIssue {
   path: string;
   message: string;
+}
+
+/** How a document is checked. */
+export interface ValidateOptions {
+  /**
+   * For a document about to be written — saved, or checked before saving. Also refuses what this version would keep
+   * but never draw: a field the format does not have (each issue names the fields that place does have) and a
+   * decoration colour outside the forms every canvas reads (`DRAWING_COLOR_FORMS`). Leave it off to read a document,
+   * so one written by a newer version still opens.
+   */
+  strict?: boolean;
 }
 
 /**
@@ -21,17 +33,16 @@ export interface ViewDocumentIssue {
  *
  * Structure, and the elements the document defines. It does not interpret what the format leaves
  * opaque — a binding's `ref` belongs to its adapter, a prepared widget's `type` and `props` to its
- * widget library — and it does not judge most references between parts of a document (a connector
- * naming a node that is not there is drawn as nothing, not rejected). Two rules reach across parts:
- * every id — node, connector, decoration, grid item — is unique in the document, and a widget of
+ * widget library. Three rules reach across parts: every id — node, connector, decoration, grid
+ * item — is unique in the document, a connector joins two nodes the document has, and a widget of
  * type `element:<name>` names an element the document defines, with props its definition accepts.
  * An element's definition is held to the element contract: a template's markup and CSS to the
- * markup policy, its props schema to the keyword subset. Fields it does not know are ignored, so a
- * document written by a newer version still reads.
+ * markup policy, its props schema to the keyword subset. Fields it does not know are ignored unless
+ * `options.strict` — so a document written by a newer version still reads.
  */
-export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
+export function validateViewDocument(value: unknown, options: ValidateOptions = {}): ViewDocumentIssue[] {
   const issues: ViewDocumentIssue[] = [];
-  const doc = new Checker(issues);
+  const doc = new Checker(issues, options.strict === true);
 
   if (!isRecord(value)) {
     issues.push({ path: '', message: 'expected a view document object' });
@@ -43,18 +54,40 @@ export function validateViewDocument(value: unknown): ViewDocumentIssue[] {
   }
   if (value.elements !== undefined && doc.record(value, ['elements'])) checkElements(doc, value.elements as Record<string, unknown>);
 
-  if (value.kind === 'canvas') checkCanvasView(doc, value);
-  else if (value.kind === 'grid') checkGridView(doc, value);
-  else doc.fail(['kind'], 'expected "canvas" or "grid"');
+  if (value.kind === 'canvas') {
+    doc.known(value, [], CANVAS_FIELDS, 'canvas view');
+    checkCanvasView(doc, value);
+  } else if (value.kind === 'grid') {
+    doc.known(value, [], GRID_FIELDS, 'grid view');
+    checkGridView(doc, value);
+  } else doc.fail(['kind'], 'expected "canvas" or "grid"');
 
   return issues;
 }
 
+/** The fields each part of a document has — what `strict` holds a written document to. */
+const CANVAS_FIELDS = ['kind', 'appearance', 'elements', 'background', 'nodes', 'connectors', 'decorations'];
+const GRID_FIELDS = ['kind', 'appearance', 'elements', 'columns', 'items'];
+const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'widget'];
+const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
+const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId'];
+const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth'];
+const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill'];
+const WIDGET_FIELDS = ['type', 'props', 'bindings'];
+const BINDING_FIELDS = ['adapter', 'ref', 'map'];
+const VALUE_MAP_FIELDS = ['values', 'ranges', 'otherwise'];
+const RANGE_FIELDS = ['min', 'max', 'value'];
+const BACKGROUND_FIELDS = ['image'];
+const IMAGE_FIELDS = ['src', 'width', 'height', 'referencePoints'];
+const ELEMENT_FIELDS = ['render', 'props', 'template', 'script', 'style', 'size', 'resources'];
+
 function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
   if (doc.record(value, ['background'])) {
     const background = value.background as Record<string, unknown>;
+    doc.known(background, ['background'], BACKGROUND_FIELDS, 'background');
     if (background.image !== undefined && doc.record(background, ['background', 'image'])) {
       const image = background.image as Record<string, unknown>;
+      doc.known(image, ['background', 'image'], IMAGE_FIELDS, 'background image');
       doc.string(image, ['background', 'image', 'src']);
       doc.number(image, ['background', 'image', 'width']);
       doc.number(image, ['background', 'image', 'height']);
@@ -62,16 +95,23 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
     }
   }
 
+  const nodeIds = new Set<string>();
   if (doc.array(value, ['nodes'])) {
-    (value.nodes as unknown[]).forEach((node, i) => checkNode(doc, node, ['nodes', String(i)]));
+    (value.nodes as unknown[]).forEach((node, i) => {
+      checkNode(doc, node, ['nodes', String(i)]);
+      if (isRecord(node) && typeof node.id === 'string') nodeIds.add(node.id);
+    });
   }
   if (doc.array(value, ['connectors'])) {
     (value.connectors as unknown[]).forEach((connector, i) => {
       const at = ['connectors', String(i)];
       if (!doc.isRecordAt(connector, at)) return;
+      doc.known(connector, at, CONNECTOR_FIELDS, 'connector', CONNECTOR_HINT);
       doc.id(connector, [...at, 'id']);
-      doc.string(connector, [...at, 'fromNodeId']);
-      doc.string(connector, [...at, 'toNodeId']);
+      for (const end of ['fromNodeId', 'toNodeId']) {
+        if (typeof connector[end] !== 'string') doc.fail([...at, end], 'expected a string');
+        else if (!nodeIds.has(connector[end] as string)) doc.fail([...at, end], `no node has the id "${connector[end] as string}" — a connector joins two nodes of /nodes`);
+      }
     });
   }
   if (value.decorations !== undefined && doc.array(value, ['decorations'])) {
@@ -85,6 +125,7 @@ function checkGridView(doc: Checker, value: Record<string, unknown>): void {
   (value.items as unknown[]).forEach((item, i) => {
     const at = ['items', String(i)];
     if (!doc.isRecordAt(item, at)) return;
+    doc.known(item, at, GRID_ITEM_FIELDS, 'grid item');
     doc.id(item, [...at, 'id']);
     doc.optionalSpan(item, [...at, 'span'], GRID_COLUMNS);
     doc.optionalSpan(item, [...at, 'spanMedium'], GRID_COLUMNS_MEDIUM);
@@ -121,6 +162,7 @@ function checkReferencePoints(doc: Checker, value: unknown, at: string[]): void 
 
 function checkNode(doc: Checker, node: unknown, at: string[]): void {
   if (!doc.isRecordAt(node, at)) return;
+  doc.known(node, at, NODE_FIELDS, 'node');
   doc.id(node, [...at, 'id']);
   doc.number(node, [...at, 'x']);
   doc.number(node, [...at, 'y']);
@@ -134,6 +176,7 @@ function checkNode(doc: Checker, node: unknown, at: string[]): void {
 function checkWidget(doc: Checker, placed: Record<string, unknown>, at: string[]): void {
   if (!doc.record(placed, [...at, 'widget'])) return;
   const widget = placed.widget as Record<string, unknown>;
+  doc.known(widget, [...at, 'widget'], WIDGET_FIELDS, 'widget', WIDGET_HINT);
   doc.string(widget, [...at, 'widget', 'type']);
   const propsAreRecord = widget.props === undefined || doc.record(widget, [...at, 'widget', 'props']);
   const bindingsAreRecord = widget.bindings === undefined || doc.record(widget, [...at, 'widget', 'bindings']);
@@ -146,6 +189,7 @@ function checkWidget(doc: Checker, placed: Record<string, unknown>, at: string[]
       doc.fail(bindingAt, 'expected a binding object ({ adapter, ref })');
       continue;
     }
+    doc.known(binding, bindingAt, BINDING_FIELDS, 'binding');
     doc.string(binding, [...bindingAt, 'adapter']);
     if (!('ref' in binding)) doc.fail([...bindingAt, 'ref'], 'expected a ref (its shape is up to the adapter)');
     if (binding.map !== undefined && doc.record(binding, [...bindingAt, 'map'])) {
@@ -166,6 +210,7 @@ function checkElements(doc: Checker, elements: Record<string, unknown>): void {
       continue;
     }
     const before = doc.issueCount;
+    doc.known(definition, at, ELEMENT_FIELDS, 'element definition');
     checkElementDefinition(doc, definition, at);
     doc.elements.set(name, doc.issueCount === before ? (definition as unknown as ElementDefinition) : null);
   }
@@ -231,6 +276,7 @@ function checkElementUse(doc: Checker, widget: Record<string, unknown>, at: stri
 /** A value map's own shape. Its mapped values are the values the prop takes — the widget library's
  * business, like props — so they are not inspected. */
 function checkValueMap(doc: Checker, map: Record<string, unknown>, at: string[]): void {
+  doc.known(map, at, VALUE_MAP_FIELDS, 'value map');
   if (map.values === undefined && map.ranges === undefined) {
     doc.fail(at, 'expected values, ranges or both');
     return;
@@ -240,6 +286,7 @@ function checkValueMap(doc: Checker, map: Record<string, unknown>, at: string[])
   (map.ranges as unknown[]).forEach((range, i) => {
     const rangeAt = [...at, 'ranges', String(i)];
     if (!doc.isRecordAt(range, rangeAt)) return;
+    doc.known(range, rangeAt, RANGE_FIELDS, 'range');
     doc.optionalNumber(range, [...rangeAt, 'min']);
     doc.optionalNumber(range, [...rangeAt, 'max']);
     if (range.min === undefined && range.max === undefined) doc.fail(rangeAt, 'expected min, max or both');
@@ -260,16 +307,23 @@ function checkShape(doc: Checker, shape: unknown, at: string[]): void {
   doc.number(shape, [...at, 'x']);
   doc.number(shape, [...at, 'y']);
   if (shape.type === 'rect') {
+    doc.known(shape, at, RECT_FIELDS, 'rect decoration', SHAPE_HINT);
     doc.number(shape, [...at, 'width']);
     doc.number(shape, [...at, 'height']);
-    doc.optionalString(shape, [...at, 'stroke']);
+    doc.optionalColor(shape, [...at, 'stroke']);
     doc.optionalNumber(shape, [...at, 'strokeWidth']);
   } else {
+    doc.known(shape, at, TEXT_FIELDS, 'text decoration', SHAPE_HINT);
     doc.string(shape, [...at, 'text']);
     doc.optionalNumber(shape, [...at, 'fontSize']);
   }
-  doc.optionalString(shape, [...at, 'fill']);
+  doc.optionalColor(shape, [...at, 'fill']);
 }
+
+/** What to do instead, for the fields a writer most often reaches for where the format has none. */
+const CONNECTOR_HINT = 'A connector is a plain line from one node’s centre to the other’s; to label it, place a text decoration at its middle.';
+const SHAPE_HINT = 'A frame’s title is a text decoration over its top edge.';
+const WIDGET_HINT = 'A prepared widget’s data, mapping and options go inside props.';
 
 /** Field checks that record an issue at a path and report whether the field passed. The last
  * path segment names the field read from the given object. */
@@ -279,7 +333,28 @@ class Checker {
   /** The elements the document defines: the definition when it holds, `null` when it is defined but does not. */
   readonly elements = new Map<string, ElementDefinition | null>();
 
-  constructor(private readonly issues: ViewDocumentIssue[]) {}
+  constructor(
+    private readonly issues: ViewDocumentIssue[],
+    private readonly strict: boolean
+  ) {}
+
+  /** With `strict`: every field of `owner` is one of `fields` — the place at `at`, called `noun`. */
+  known(owner: Record<string, unknown>, at: string[], fields: readonly string[], noun: string, hint?: string): void {
+    if (!this.strict) return;
+    for (const key of Object.keys(owner)) {
+      if (!fields.includes(key)) {
+        this.fail([...at, key], `a ${noun} has no "${key}" — it would be kept but never drawn. A ${noun} has: ${fields.join(', ')}.${hint ? ` ${hint}` : ''}`);
+      }
+    }
+  }
+
+  /** An optional decoration colour — a string, and with `strict` one of the forms every canvas reads. */
+  optionalColor(owner: Record<string, unknown>, at: string[]): void {
+    const value = owner[at[at.length - 1]];
+    if (value === undefined) return;
+    if (typeof value !== 'string') this.fail(at, 'expected a string');
+    else if (this.strict && !isDrawingColor(value)) this.fail(at, `"${value}" is not a colour a canvas reads — use ${DRAWING_COLOR_FORMS}`);
+  }
 
   get issueCount(): number {
     return this.issues.length;

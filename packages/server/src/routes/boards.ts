@@ -87,7 +87,7 @@ export function createBoardsRouter(config: AppConfig): Router {
       // The API is a boundary like file import: a document stored here is later trusted by the
       // console, the share routes and the viewer, so every structural problem is refused now and
       // named (capped — a wholly wrong body would otherwise answer with one issue per field).
-      const issues = validateViewDocument(change.document);
+      const issues = validateViewDocument(change.document, { strict: true });
       if (issues.length > 0) {
         res.status(400).json({ code: 'INVALID_DOCUMENT', issues: issues.slice(0, MAX_REPORTED_ISSUES) });
         return;

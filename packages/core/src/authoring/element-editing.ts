@@ -69,7 +69,7 @@ export function removeElement<D extends ViewDocument>(doc: D, name: string): D {
  *  definition's (`/props/properties/level/maximum`), not the paths of other parts of the document. */
 export function elementIssues(doc: ViewDocument, name: string, definition: ElementDefinition): ViewDocumentIssue[] {
   const prefix = `/elements/${name}`;
-  return validateViewDocument(setElement(doc, name, definition))
+  return validateViewDocument(setElement(doc, name, definition), { strict: true })
     .filter(issue => issue.path === prefix || issue.path.startsWith(`${prefix}/`))
     .map(issue => ({ ...issue, path: issue.path.slice(prefix.length) }));
 }

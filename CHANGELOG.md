@@ -23,6 +23,15 @@ do when upgrading. Each release's notes carry its section.
   browser until it is restarted (`docs/api-reference.md`). The console opens a board without running its script
   elements at `/boards/<id>/edit?scripts=off`, to fix such code.
 
+### Changed
+
+- **Saving a board checks more** — a connector must join two nodes the board has, a field the document format does
+  not have is refused (the answer names the fields that place has), and a decoration colour must be one every canvas
+  reads (hex, `rgb()`/`rgba()`, `hsl()`/`hsla()`, a colour name, `transparent`, `none`). Each was stored before and
+  then drawn as nothing, or in the wrong colour. A board stored with such a field is saved again once it is removed.
+- A decoration colour of `none` paints nothing — it used to come out black, or in the colour of the decoration drawn
+  before it.
+
 ## [0.3.0] - 2026-10-15
 
 ### Added

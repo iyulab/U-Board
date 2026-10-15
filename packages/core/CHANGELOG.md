@@ -27,6 +27,13 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **`validateViewDocument` refuses a connector to a node the document does not have** (it was drawn as nothing).
+- **`validateViewDocument(value, { strict: true })`** — for a document about to be written: it also refuses a field
+  the format does not have, naming the fields that place has, and a decoration colour outside hex, `rgb()`/`rgba()`,
+  `hsl()`/`hsla()`, CSS colour names, `transparent` and `none`. Without it, unknown fields are still ignored, so a
+  document from a newer version opens.
+- A decoration colour of `none` paints nothing, in the viewer and in the editor — it used to come out black, or in
+  the colour of the decoration drawn before it.
 - `UBoardLabels` has two more labels, `elementProps` and `boardElements` (`DEFAULT_LABELS` and `KO_LABELS` carry
   them) — a host that builds a full labels object adds them.
 - `@iyulab/u-widgets` ^0.33.2: a horizontal chart lists its categories in the data's order, a reference line the data

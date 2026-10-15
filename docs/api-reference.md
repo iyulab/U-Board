@@ -605,11 +605,11 @@ A `ViewDocument` that comes from outside your own code — a file the author pic
 body — should be checked before anything renders it. These functions do that, and the hosted
 server applies the same check to every document it stores.
 
-### `validateViewDocument(value)`
+### `validateViewDocument(value, options?)`
 
 ```ts
 interface ViewDocumentIssue { path: string; message: string }
-function validateViewDocument(value: unknown): ViewDocumentIssue[];
+function validateViewDocument(value: unknown, options?: { strict?: boolean }): ViewDocumentIssue[];
 ```
 
 `validateViewDocument` checks every field the `ViewDocument` type promises — nodes, each widget
@@ -619,8 +619,8 @@ located by an RFC 6901 JSON Pointer into the value
 
 It checks structure, and the elements the document defines: a binding's `ref` belongs to its adapter
 and a prepared widget's `type`/`props` (and the values a binding's `map` gives) to its widget library,
-so their contents are not inspected; most references between parts of a document (a connector naming
-a node that is not there) are not judged; fields it does not know are ignored. An element definition
+so their contents are not inspected. A connector joins two nodes the document has. Fields it does not
+know are ignored, so a document written by a newer version still opens. An element definition
 is held to the element contract (markup policy, props schema subset, `resources` origins), and a
 widget of type `element:<name>` must name a defined element and give props its schema accepts —
 each problem with what to do instead where there is something to say:
@@ -635,6 +635,17 @@ validateViewDocument({
   nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', bindings: { value: null } } }],
 });
 // → [{ path: '/nodes/0/widget/bindings/value', message: 'expected a binding object ({ adapter, ref })' }]
+```
+
+**`strict`** is for a document about to be written — the hosted server saves with it, and so does the MCP server's
+`validate`. It also refuses what this version would keep but never draw: a field the format does not have — the
+issue names the fields that place has — and a decoration colour outside the forms every canvas reads: hex
+(`#1f6feb`, `#1f6feb33`), `rgb()`/`rgba()`, `hsl()`/`hsla()`, a CSS colour name, `transparent`, or `none` (paint
+nothing, the same as leaving the field out). A CSS variable is refused — a canvas has no stylesheet to resolve it.
+
+```ts
+validateViewDocument(doc, { strict: true });
+// → [{ path: '/connectors/0/label', message: 'a connector has no "label" — it would be kept but never drawn. A connector has: id, fromNodeId, toNodeId. …' }]
 ```
 
 ### `lintViewDocument(doc)`

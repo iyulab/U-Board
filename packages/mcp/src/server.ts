@@ -140,7 +140,7 @@ export function createServer(client: UBoardClient): McpServer {
           if (!board || !patch) throw new Error('give a document, or a board and a patch');
           candidate = applyJsonPatch((await client.getBoard(board)).document, patch);
         }
-        const issues = validateViewDocument(candidate);
+        const issues = validateViewDocument(candidate, { strict: true });
         return { valid: issues.length === 0, issues, advice: issues.length === 0 ? lintViewDocument(candidate as ViewDocument) : [] };
       })
   );
