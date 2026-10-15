@@ -1,0 +1,52 @@
+import type { ReactNode } from 'react';
+import type { Adapter } from '../adapter.js';
+import type { ViewDocument } from '../view-document.js';
+import type { UBoardLabels } from '../labels.js';
+import { GROUP_STYLE, ERROR_STYLE } from '../ui-style.js';
+
+export type AuthoringMode = 'edit' | 'view';
+
+/** What `AuthoringView` hands the editor of the document's kind: the document and the one way to change it, the
+ *  mode, the toolbar's shared actions, and what the host gave the view. The editor owns everything of its kind —
+ *  its board, its selection, its panel and its own toolbar actions. */
+export interface KindEditorProps<D extends ViewDocument> {
+  doc: D;
+  /** Replaces the document with what `update` makes of the current one. */
+  updateDoc: (update: (current: D) => D) => void;
+  mode: AuthoringMode;
+  onModeChange: (mode: AuthoringMode) => void;
+  /** Save, Export and Import — the same for every kind. */
+  fileActions: ReactNode;
+  /** A file that could not be used, said under the toolbar; an editor reports its own (a background image) too. */
+  fileError: string | null;
+  onFileError: (message: string | null) => void;
+  adapters: readonly Adapter[];
+  width?: number;
+  height?: number;
+  connectorLabels?: Record<string, string>;
+  labels: UBoardLabels;
+  clock: () => number;
+}
+
+/** The Edit / View switch. */
+export function ModeSwitch({ mode, onEdit, onView, labels }: { mode: AuthoringMode; onEdit: () => void; onView: () => void; labels: UBoardLabels }) {
+  return (
+    <div className="ub-authoring__group ub-authoring__mode" style={GROUP_STYLE} role="group" aria-label={labels.mode}>
+      <button type="button" className="ub-action" aria-pressed={mode === 'edit'} onClick={onEdit}>
+        {labels.editMode}
+      </button>
+      <button type="button" className="ub-action" aria-pressed={mode === 'view'} onClick={onView}>
+        {labels.viewMode}
+      </button>
+    </div>
+  );
+}
+
+/** A file the editor could not use — under the toolbar. */
+export function FileError({ message }: { message: string | null }) {
+  return message ? (
+    <p role="alert" className="ub-authoring__error" style={ERROR_STYLE}>
+      {message}
+    </p>
+  ) : null;
+}

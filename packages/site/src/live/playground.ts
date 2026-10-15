@@ -4,7 +4,7 @@
 
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { AuthoringView, KO_LABELS, type CanvasView } from '@iyulab/u-board';
+import { AuthoringView, KO_LABELS, type ViewDocument } from '@iyulab/u-board';
 import '@iyulab/u-board/styles.css';
 import { savedBoard, STORAGE_KEY } from './saved-board';
 import { sampleBoard, SampleAdapter, SAMPLE_ADAPTER_ID, type SampleBoardText } from './sample-board';
@@ -30,7 +30,7 @@ for (const host of document.querySelectorAll<HTMLElement>('[data-playground]')) 
   const reset = document.querySelector<HTMLButtonElement>('[data-playground-reset]');
   const korean = document.documentElement.lang === 'ko';
 
-  const save = (doc: CanvasView) => {
+  const save = (doc: ViewDocument) => {
     try {
       storage()?.setItem(STORAGE_KEY, JSON.stringify(doc));
       if (status) status.textContent = text.saved;

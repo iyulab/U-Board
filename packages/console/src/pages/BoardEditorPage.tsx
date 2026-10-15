@@ -222,10 +222,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         </Alert>
       )}
       {overwriteArmed && <Alert>저장하면 다른 사람이 그사이 저장한 내용을 내 변경으로 덮어씁니다.</Alert>}
-      {/* TODO(grid kind, authoring stage): a grid view opens in its own editor; until then the editor takes canvas views only. */}
-      {document.kind !== 'canvas' ? (
-        <Alert>이 보드는 이 편집기가 아직 열지 못하는 형식입니다.</Alert>
-      ) : (
       <div className="ub-editor-canvas">
         <AuthoringView
           key={`${boardId}:${editorGeneration}`}
@@ -238,7 +234,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           clock={apiClock.now}
         />
       </div>
-      )}
       {isOwner && (
         <ShareDialog
           open={isShareOpen}

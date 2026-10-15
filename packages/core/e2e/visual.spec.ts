@@ -38,7 +38,7 @@ test('a dark board keeps its values readable', async ({ page }) => {
 });
 
 test('a grid view lays its widgets out in cells, in order', async ({ page }) => {
-  await page.getByRole('button', { name: 'Grid' }).click();
+  await page.getByRole('button', { name: 'Grid', exact: true }).click();
   await page.locator('[style*="resize"]').evaluate(box => ((box as HTMLElement).style.width = '1100px'));
   const board = page.locator('.ub-viewer__surface');
   await expect(page.locator('.ub-grid [data-item-id] u-widget').first()).toBeVisible();

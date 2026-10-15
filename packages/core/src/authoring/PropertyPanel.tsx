@@ -1,6 +1,6 @@
 import { useEffect, useEffectEvent, useId, useMemo, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
-import type { Background, Node, Widget, Binding, ValueMap } from '../view-document.js';
+import type { Background, Node, Placed, Widget, Binding, ValueMap } from '../view-document.js';
 import { NodeAnchorFields } from './AnchorFields.js';
 import { findHttpRefItem, isTimeZone, parseSourceTime, type HttpRef, type HttpRefItem } from '../http-ref.js';
 import { deviceTimeZone, knownTimeZones, lacksOffset, timeFieldsIn, type TimeField } from './time-fields.js';
@@ -15,7 +15,9 @@ import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { ERROR_STYLE, GROUP_STYLE, MUTED_STYLE } from '../ui-style.js';
 
 export interface PropertyPanelProps {
-  node: Node | null;
+  /** The selected widget — a canvas node or a grid item (`Placed`); a node's place is edited only with
+   *  `background` and `onNodeChange` below. */
+  node: Placed | null;
   adapters: readonly Adapter[];
   /** Adapter id → human-readable label. Falls back to the raw id when absent. */
   connectorLabels?: Record<string, string>;
@@ -500,7 +502,9 @@ export function PropertyPanel({
           ))}
         </select>
       </label>
-      {background && onNodeChange && <NodeAnchorFields node={node} background={background} onChange={onNodeChange} labels={labels} />}
+      {background && onNodeChange && 'anchored' in node && (
+        <NodeAnchorFields node={node as Node} background={background} onChange={onNodeChange} labels={labels} />
+      )}
       <WidgetPropsForm widget={node.widget} onChange={onChange} labels={labels} />
       {/* Open while it holds an edit that is not valid JSON, so the error is never folded away. */}
       <details className="ub-panel__advanced" open={propsError !== null || undefined}>

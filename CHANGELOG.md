@@ -13,7 +13,8 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
-- A share link shows a grid board — widgets in order, laid out to the width of the page or panel it is shown in.
+- A share link shows a grid board — widgets in order, laid out to the width of the page or panel it is shown in —
+  and the board editor edits one. (A new board is still a canvas; a grid board comes from an imported document.)
 
 ### Changed
 

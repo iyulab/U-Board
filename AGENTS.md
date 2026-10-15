@@ -52,8 +52,9 @@ dependencies, check the tarball with `npm pack --dry-run --workspace=packages/co
 ## Open, not yet decided
 
 - The grid view kind (see `docs/concepts.md`) has its document format, validation, binding
-  resolution, JSON Schema and viewer (`renderer/grid-board.tsx`, sharing `renderer/node-frame.tsx` with the
-  canvas renderer); its editor is next. Code that reads a `ViewDocument`
+  resolution, JSON Schema, viewer (`renderer/grid-board.tsx`, sharing `renderer/node-frame.tsx` with the
+  canvas renderer) and editor (`authoring/GridAuthoring.tsx`; `AuthoringView` holds what both kinds share and
+  hands the document to the editor of its kind). Choosing the kind of a new board in the console is next. Code that reads a `ViewDocument`
   narrows on `kind`, and code that walks every widget uses `placedIn`. No other kind is planned.
 - How the authoring tool is packaged/distributed is not decided. Do not assume a specific
   runtime (browser-only vs. a desktop shell) without checking current guidance.

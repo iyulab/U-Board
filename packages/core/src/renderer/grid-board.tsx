@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { ResolvedGridItem, ResolvedGridView } from '../resolve-document.js';
 import { GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN } from '../view-document.js';
 import type { QualityText } from '../quality-text.js';
@@ -50,6 +50,9 @@ export interface GridBoardProps {
   now: number;
   /** The language the widgets speak (BCP 47). */
   locale?: string;
+  /** What each cell holds, given the item and its frame — the frame by default. The editor wraps it to make the item
+   *  selectable; a viewer has no reason to. */
+  renderCell?: (item: ResolvedGridItem, frame: ReactNode, index: number) => ReactNode;
 }
 
 /**
@@ -57,19 +60,23 @@ export interface GridBoardProps {
  * their tallest item — an item without a height takes its widget's own, and the others in its row stretch
  * to match. No pan or zoom: a grid reads at any width, and scrolls when it is taller than its container.
  */
-export function GridBoard({ doc, ariaLabel, qualityText, now, locale }: GridBoardProps) {
+export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell }: GridBoardProps) {
   return (
     <div className="ub-grid" role="region" aria-label={ariaLabel} data-appearance={doc.appearance ?? 'light'}>
       <style href="u-board-grid" precedence="u-board">
         {GRID_CSS}
       </style>
       <div className="ub-grid__items">
-        {doc.items.map(item => {
+        {doc.items.map((item, index) => {
           const { span, spanMedium } = gridSpans(item);
           const style = { '--_ub-span': span, '--_ub-span-medium': spanMedium, height: item.height } as CSSProperties;
           return (
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
-              <NodeFrame widget={item.widget} appearance={doc.appearance} qualityText={qualityText} now={now} locale={locale} />
+              {(renderCell ?? ((_item, frame) => frame))(
+                item,
+                <NodeFrame widget={item.widget} appearance={doc.appearance} qualityText={qualityText} now={now} locale={locale} />,
+                index
+              )}
             </div>
           );
         })}

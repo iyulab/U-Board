@@ -136,11 +136,11 @@ const demoGrid: GridView = {
 
 export function App() {
   const adapters = useMemo(() => [new FixtureAdapter()], []);
-  const [mode, setMode] = useState<'author' | 'view' | 'grid'>('author');
+  const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author'>('author');
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : mode === 'view' ? 'viewer' : 'grid view'}</h1>
+      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : 'grid authoring'}</h1>
       <div style={{ marginBottom: 12 }}>
         <button onClick={() => setMode('author')} disabled={mode === 'author'}>
           Author
@@ -150,6 +150,9 @@ export function App() {
         </button>{' '}
         <button onClick={() => setMode('grid')} disabled={mode === 'grid'}>
           Grid
+        </button>{' '}
+        <button onClick={() => setMode('grid-author')} disabled={mode === 'grid-author'}>
+          Author grid
         </button>
       </div>
       {mode === 'author' ? (
@@ -168,6 +171,10 @@ export function App() {
             <AuthoringView initialDocument={demoDocument} adapters={adapters} showDocumentSource />
           </div>
         </>
+      ) : mode === 'grid-author' ? (
+        <div style={{ height: 720 }}>
+          <AuthoringView initialDocument={demoGrid} adapters={adapters} showDocumentSource />
+        </div>
       ) : mode === 'grid' ? (
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>

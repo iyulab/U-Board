@@ -13,6 +13,14 @@ export interface UBoardLabels {
 
   // Toolbar
   addNode: string;
+  /** A grid view's "add": the new item goes after the selected one, or at the end. */
+  addItem: string;
+  /** The width a grid view is laid out at while editing it — to see it as a narrow or medium screen will: the
+   *  group's name and its three choices. */
+  layoutWidth: string;
+  layoutWide: string;
+  layoutMedium: string;
+  layoutNarrow: string;
   addRectDecoration: string;
   addTextDecoration: string;
   /** The save button when the host handles saving (`onSave`). */
@@ -92,6 +100,20 @@ export interface UBoardLabels {
   // Node property panel
   /** Under the board's settings while nothing is selected: how to edit a node or a decoration. */
   selectNode: string;
+  /** The same, on a grid view: how to edit an item. */
+  selectItem: string;
+  /** A grid item's room and place: the section heading, the span at full width (`{columns}` is replaced by 12) and
+   *  at medium width (`{columns}`: 6, with a choice to follow the full-width span), the height (blank: the widget's
+   *  own), and the buttons that move it in the order or remove it. */
+  itemLayout: string;
+  itemSpan: string;
+  itemSpanMedium: string;
+  itemSpanMediumAuto: string;
+  itemHeight: string;
+  itemHeightAuto: string;
+  moveEarlier: string;
+  moveLater: string;
+  removeItem: string;
   /** Shown instead of a property panel while several items are selected; `{count}` is replaced by
    * how many. */
   multipleSelected: string;
@@ -212,6 +234,11 @@ export function timeText(locale: string): (epochMs: number) => string {
 export const DEFAULT_LABELS: UBoardLabels = {
   locale: 'en',
   addNode: 'Add node',
+  addItem: 'Add item',
+  layoutWidth: 'Layout width',
+  layoutWide: 'Wide',
+  layoutMedium: 'Medium',
+  layoutNarrow: 'Narrow',
   addRectDecoration: 'Add rect decoration',
   addTextDecoration: 'Add text decoration',
   save: 'Save',
@@ -263,6 +290,16 @@ export const DEFAULT_LABELS: UBoardLabels = {
   debugDocument: 'ViewDocument (debug)',
 
   selectNode: 'Select a node or a decoration to edit it.',
+  selectItem: 'Select an item to edit it.',
+  itemLayout: 'Layout',
+  itemSpan: 'Width (of {columns} columns)',
+  itemSpanMedium: 'Width at medium size (of {columns})',
+  itemSpanMediumAuto: 'Half the full width',
+  itemHeight: 'Height (px)',
+  itemHeightAuto: 'Widget default',
+  moveEarlier: 'Move earlier',
+  moveLater: 'Move later',
+  removeItem: 'Remove item',
   multipleSelected: '{count} items selected — select one to edit it.',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',

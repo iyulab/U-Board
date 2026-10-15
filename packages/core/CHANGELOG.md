@@ -11,8 +11,10 @@ All notable changes to this package are documented here. The format follows
 - **A second view kind, the grid view** — widgets in order, each taking a span of a 12-column row (`GridView`,
   `GridItem`: `span`, `spanMedium`, `height`). `ViewerPage` shows it: items in order on cells, laid out to the width
   of the viewer's own container (one per row below 600px, 6 columns below 1024px, 12 above), rows as tall as their
-  tallest item, each item's data quality marked as a canvas node's is; no pan or zoom, it scrolls. The editor still
-  edits canvas views.
+  tallest item, each item's data quality marked as a canvas node's is; no pan or zoom, it scrolls. `AuthoringView`
+  edits it: its items in order, "Add item" after the one selected, each item's width at full and medium size, its
+  height and its place in the order in a layout panel above the widget's, and the layout seen at a wide, medium or
+  narrow width. Importing a document of the other kind opens it in that kind's editor.
 - **`placedIn(doc)`** — every placed widget of a document of either kind, resolved or not: the walk for code that
   looks at every binding. Both kinds place a `Placed` (`{ id, widget }`), which a canvas `Node` extends.
 - **A JSON Schema of the view document**, `@iyulab/u-board/view-document.schema.json` (2020-12) — the rules
@@ -24,8 +26,8 @@ All notable changes to this package are documented here. The format follows
   `doc.background` or `doc.decorations` narrows first — `if (doc.kind === 'canvas')` — or takes a `CanvasView`;
   code that walks every widget uses `placedIn(doc)`. Likewise `ResolvedViewDocument` is
   `ResolvedCanvasView | ResolvedGridView`, `resolveDocument` returns the kind it is given, and
-  `useResolvedDocument`'s `resolved` is the resolved form of the document passed. `AuthoringView` takes a
-  `CanvasView` for now.
+  `useResolvedDocument`'s `resolved` is the resolved form of the document passed. `AuthoringView`'s
+  `initialDocument` and `onSave` are a `ViewDocument` — an `onSave` written for a canvas view takes the union.
 - **Breaking: ids are unique across a document.** `validateViewDocument` reports an id a node, connector, decoration
   or grid item shares with another part of the same document.
 - **Widgets come from `@iyulab/u-widgets` 0.33.** Bar, line and area charts take `valueAxisZero: false`, so a value

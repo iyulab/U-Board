@@ -5,7 +5,7 @@ import { test, expect, type Page } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1400, height: 900 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'Grid' }).click();
+  await page.getByRole('button', { name: 'Grid', exact: true }).click();
   await expect(page.locator('.ub-grid [data-item-id] u-widget').first()).toBeVisible();
 });
 

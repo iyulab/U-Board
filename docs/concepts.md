@@ -10,7 +10,9 @@ what it can contain and how it's authored.
 position over a background, a **grid view** lays them out in order. Different kinds have different
 capabilities; a view does not mix kinds. Both carry widgets the same way — an id and a widget — so
 bindings, data quality and the property panel are shared; only how a widget is placed differs. The
-viewer shows both kinds; the editor edits canvas views for now.
+viewer shows both kinds and the editor edits both: a canvas by dragging nodes over the background, a
+grid as its items in order — added after the one selected, moved earlier or later, each given its
+widths and height — with the layout seen at a wide, medium or narrow width.
 
 **Grid view** — widgets in order, left to right and then top to bottom, in rows of 12 columns. Each
 **grid item** takes a span of columns (4 when left out), optionally a different span where the

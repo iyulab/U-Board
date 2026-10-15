@@ -187,10 +187,11 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-authoring__mode` | The Edit / View switch in the toolbar (the chosen button has `aria-pressed="true"`) |
 | `ub-authoring__panes`, `ub-authoring__pane` | The row holding the board and the panel; the board's column |
 | `ub-authoring__surface` | The frame the board draws in — the editor, or the board in view mode |
-| `ub-authoring__node`, `ub-authoring__node-tag` | A node's widget drawn in place on the editor; the widget type named above it |
+| `ub-authoring__node`, `ub-authoring__node-tag` | A node's (or grid item's) widget drawn in place on the editor; the widget type named above it |
+| `ub-authoring__pick`, `ub-authoring__layout-width` | On a grid view's editor: the button over each item that selects it (`aria-pressed` when selected); the Wide / Medium / Narrow layout width switch |
 | `ub-authoring__panel` | The column holding the board, property or decoration panel |
 | `ub-authoring__error`, `ub-authoring__status`, `ub-authoring__source` | A file that could not be used; "resolving"; the document source (`showDocumentSource`) |
-| `ub-panel` (`--board`, `--properties`, `--decoration`) | The board's settings (background, tone — while nothing is selected), or a node's or decoration's properties |
+| `ub-panel` (`--board`, `--properties`, `--decoration`, `--item`) | The board's settings (background, tone — while nothing is selected), a node's or decoration's properties, or a grid item's layout (its widths, height and place in the order) |
 | `ub-panel__heading`, `ub-panel__subheading`, `ub-panel__field`, `ub-panel__hint`, `ub-panel__error` | Its heading, section heading, a labelled field, hint text and an error |
 | `ub-panel__widget-form`, `ub-panel__group` | The widget's own fields, and each group of them (data, display options) |
 | `ub-panel__field-name`, `ub-panel__field--check` | A field's name (with its key); a checkbox field |
