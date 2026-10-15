@@ -74,6 +74,9 @@ export interface NodeFrameProps {
   locale?: string;
   /** The elements the board defines — what a widget of type `element:<name>` draws. */
   elements?: Record<string, ElementDefinition>;
+  /** The canvas node this frame draws, marked on it as `data-node-id` — how a page (a test, a tool taking a picture
+   *  of one node) finds a node on screen. */
+  nodeId?: string;
 }
 
 /**
@@ -85,7 +88,7 @@ export interface NodeFrameProps {
  * small, media (a gauge, an image) scales down whole, and content that runs on (a table, a list) scrolls
  * inside. Nothing spills over a neighbour.
  */
-export function NodeFrame({ widget, appearance, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -94,7 +97,7 @@ export function NodeFrame({ widget, appearance, qualityText = DEFAULT_QUALITY_TE
   const element = elementNameOf(widget.type);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', ...frameStyle }} title={label}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', ...frameStyle }} title={label} {...(nodeId !== undefined && { 'data-node-id': nodeId })}>
       {element !== undefined ? (
         <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} />
       ) : (

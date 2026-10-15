@@ -44,6 +44,7 @@ In a client's JSON configuration:
 | `create_board` | A new board of a kind (`grid` or `canvas`), optionally with a first document. |
 | `patch_board` | Changes part of a board with a JSON Patch (RFC 6902) on a revision; answers the new revision and advice. |
 | `validate` | Checks a document, or a board with a patch, without saving. |
+| `look` | A picture of a saved board as its viewers see it, with what went wrong while drawing; `focus` one part, or `appearance` the other paper. Needs Chrome or Edge on this computer, or `UBOARD_BROWSER`. |
 | `list_sources` | The workspace's data sources — never a credential. |
 | `sample_source` | What a source's response looks like: each value's JSON Pointer, type and example, and the fields that tell a list's items apart. |
 | `create_source` | A data source that needs no credential; one that does is made by a person in the console. |

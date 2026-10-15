@@ -36,6 +36,8 @@ All notable changes to this package are documented here. The format follows
   document from a newer version opens.
 - A decoration colour of `none` paints nothing, in the viewer and in the editor — it used to come out black, or in
   the colour of the decoration drawn before it.
+- A canvas node's frame carries `data-node-id` (`NodeFrame`'s new `nodeId`) — how a page or a tool finds one node
+  on screen; a grid cell already carries `data-item-id`.
 - `@iyulab/u-board/domain` exports `DEFAULT_NODE_WIDTH` and `DEFAULT_NODE_HEIGHT` — the size a node without its own
   width/height is drawn at.
 - `UBoardLabels` has two more labels, `elementProps` and `boardElements` (`DEFAULT_LABELS` and `KO_LABELS` carry

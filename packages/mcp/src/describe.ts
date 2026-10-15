@@ -31,6 +31,7 @@ const RULES = `# Writing a U-Board board
 3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Send a whole document only to start one.
 4. Read the answer: the new revision and advice — act on the advice. A 412 means someone saved since — get_board again and redo the patch.
 5. validate({ document } | { board, patch }) checks without saving, exactly as saving does.
+6. look({ board }) after a change — a picture as viewers see it, and what went wrong while drawing. Fix what you see; focus one part to see it up close.
 
 ## JSON Patch
 - \`add\` sets an object member whether or not it exists, and inserts into an array ("/items/-" appends, "/items/0" prepends).

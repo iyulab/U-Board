@@ -6,10 +6,11 @@ import { UBoardApiError, type UBoardClient } from './client.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
 import { widgetAdvice } from './widget-advice.js';
+import type { Looker } from './look.js';
 
 const { version } = createRequire(import.meta.url)('../package.json') as { version: string };
 
-type ToolResult = { content: Array<{ type: 'text'; text: string }>; isError?: boolean };
+type ToolResult = { content: Array<{ type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string }>; isError?: boolean };
 
 /** Every answer is compact JSON (or the rules' text) — whitespace costs the assistant tokens and says nothing. */
 function ok(value: unknown): ToolResult {
@@ -54,7 +55,7 @@ const document = z.record(z.string(), z.unknown()).describe('A whole board docum
  * whole task; reads take a JSON Pointer so only the part needed travels; changes are JSON Patches answered with the
  * new revision and advice — never the document again.
  */
-export function createServer(client: UBoardClient): McpServer {
+export function createServer(client: UBoardClient, looker?: Looker): McpServer {
   const server = new McpServer({ name: 'u-board-mcp', version });
 
   server.registerTool(
@@ -155,6 +156,37 @@ export function createServer(client: UBoardClient): McpServer {
         return { valid: issues.length === 0, issues, advice };
       })
   );
+
+  if (looker) {
+    server.registerTool(
+      'look',
+      {
+        description:
+          'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (an element’s error, a widget whose content runs past its box, values not live). Look after a change, then fix what you see. `focus` a node, grid item or decoration to see it up close.',
+        inputSchema: z.strictObject({
+          board: boardId,
+          focus: z.string().max(200).optional().describe('A JSON Pointer to one part: "/nodes/3", "/items/0", "/decorations/5".'),
+          appearance: z.enum(['light', 'dark']).optional().describe('Draw it on this paper instead of the board’s own — to check the other one.'),
+          width: z.number().int().min(320).max(2560).optional().describe('The screen width, px (1600).'),
+          height: z.number().int().min(240).max(1600).optional().describe('The screen height, px (900).'),
+        }),
+      },
+      async ({ board, focus, appearance, width = 1600, height = 900 }) => {
+        try {
+          const found = await client.getBoard(board);
+          const { image, report } = await looker.look({ board, focus, appearance, width, height }, found.document);
+          return {
+            content: [
+              { type: 'image', data: image, mimeType: 'image/png' },
+              { type: 'text', text: JSON.stringify({ revision: found.revision, ...report }) },
+            ],
+          };
+        } catch (error) {
+          return failed(error);
+        }
+      }
+    );
+  }
 
   server.registerTool(
     'list_sources',

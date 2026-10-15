@@ -25,6 +25,8 @@ do when upgrading. Each release's notes carry its section.
 
 ### Changed
 
+- **The share routes also take a workspace API token** of the board's workspace — so a program that may read the
+  board (an assistant's tool server) sees it as its viewers do, through the share viewer, without a share link.
 - **Saving a board checks more** — a connector must join two nodes the board has, a field the document format does
   not have is refused (the answer names the fields that place has), and a decoration colour must be one every canvas
   reads (hex, `rgb()`/`rgba()`, `hsl()`/`hsla()`, a colour name, `transparent`, `none`). Each was stored before and

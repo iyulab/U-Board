@@ -29,6 +29,7 @@ needs a key, a token or OAuth is set up by a person in the console, and the assi
 | `list_boards`, `get_board` | Reads boards — one part of a document at a time, by JSON Pointer. |
 | `create_board`, `patch_board` | Makes a board and changes it with JSON Patch (RFC 6902) on a revision; each answer carries the new revision and advice. |
 | `validate` | Checks a document, or a board with a patch, without saving. |
+| `look` | Draws a saved board as its viewers see it and answers a picture, with what went wrong while drawing — an element's error, a widget whose content runs past its box, values not live. It can show one part up close, or the board on the other paper. |
 | `list_sources`, `sample_source`, `create_source` | Lists the data sources, answers what a source's response looks like (each value's JSON Pointer and type, and the fields that tell a list's items apart), and makes a source that needs no credential. |
 
 ## How it stays reliable and light
@@ -42,6 +43,10 @@ needs a key, a token or OAuth is set up by a person in the console, and the assi
 - **Draw once, place many times.** What no prepared widget draws is an element the board defines once —
   a template of HTML or SVG and CSS, isolated from the rest of the page, or a script in a sandboxed frame
   with no network ([`concepts.md`](concepts.md) — Element) — and places by name as often as needed.
+- **The assistant sees what it drew.** `look` draws the board in a browser on the assistant's computer (installed
+  Chrome or Edge, or the one `UBOARD_BROWSER` names) through the server's own share viewer, so the picture is what
+  viewers see. The token goes on the server's API requests only — never into the page or its address — and the
+  server needs nothing extra to run.
 - **Data comes through bindings only.** An element or widget never reaches a data source itself: a binding
   names a source and a value in its response, and the server reads it, within the addresses the
   installation allows.

@@ -2,6 +2,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { UBoardClient } from './client.js';
 import { createServer } from './server.js';
+import { BrowserLooker } from './look.js';
 
 // Where the U-Board server is, and the workspace API token to reach it with (console → workspace settings → API 토큰).
 const url = process.env.UBOARD_URL;
@@ -11,4 +12,4 @@ if (!url || !token) {
   process.exit(1);
 }
 
-await createServer(new UBoardClient(url, token)).connect(new StdioServerTransport());
+await createServer(new UBoardClient(url, token), new BrowserLooker(url, token)).connect(new StdioServerTransport());

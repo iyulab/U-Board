@@ -116,6 +116,24 @@ describe('u-board-mcp', () => {
     expect(none.value.hint).toContain('without a query');
   });
 
+  it('looks at a board through a looker — a picture and what went wrong, never the token', async () => {
+    const asked: unknown[] = [];
+    const looker = {
+      look: async (request: unknown, document: unknown) => {
+        asked.push({ request, kind: (document as { kind: string }).kind });
+        return { image: 'iVBORw==', report: { scale: 0.5, picture: { width: 1600, height: 900 }, problems: [{ path: '/items/0', message: 'cut off' }], quality: {}, console: [] } };
+      },
+    };
+    const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), looker);
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const viewer = new Client({ name: 'test', version: '0' });
+    await Promise.all([mcp.connect(b), viewer.connect(a)]);
+    const result = (await viewer.callTool({ name: 'look', arguments: { board: 'b1', focus: '/items/0' } })) as { content: Array<{ type: string; data?: string; text?: string }> };
+    expect(result.content[0]).toEqual({ type: 'image', data: 'iVBORw==', mimeType: 'image/png' });
+    expect(JSON.parse(result.content[1].text!)).toMatchObject({ revision: 4, problems: [{ path: '/items/0', message: 'cut off' }] });
+    expect(asked).toEqual([{ request: { board: 'b1', focus: '/items/0', width: 1600, height: 900 }, kind: 'grid' }]);
+  });
+
   it('answers an unknown id with where to find the ids', async () => {
     const { value, isError } = await call('get_board', { board: 'nope' });
     expect(isError).toBe(true);

@@ -6,6 +6,15 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`look`** — draws a saved board as its viewers see it, in Chrome or Edge on this computer (or the browser
+  `UBOARD_BROWSER` names), through the server's share viewer, and answers a picture with a report: how big it was
+  drawn, an element's error or notice, a widget whose content runs past its box, how many values are not live, and
+  the page's own errors. `focus` takes a JSON Pointer to one node, grid item or decoration; `appearance` draws it on
+  the other paper. The token goes on the server's API requests only. Needs a server that lets a workspace API token
+  read through its share routes (U-Board 0.4.0).
+
 ### Changed
 
 - The rules tell an assistant that a script element's code must always return.
