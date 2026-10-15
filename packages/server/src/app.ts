@@ -81,7 +81,8 @@ export function createApp(config: AppConfig): express.Express {
   const app = express();
   app.disable('x-powered-by');
   // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
-  app.use(express.json({ limit: '10mb' }));
+  // A board changed in part comes as a JSON Patch (RFC 6902), whose media type is its own.
+  app.use(express.json({ limit: '10mb', type: ['application/json', 'application/json-patch+json'] }));
   app.use(cookieParser());
   // Per-process resolve state shared by the member and share-link resolve routes: last-known values
   // (so a failure can degrade to `stale`), OAuth access tokens, recent upstream reads (shared by every

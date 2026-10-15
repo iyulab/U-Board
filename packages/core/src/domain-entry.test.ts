@@ -30,10 +30,11 @@ describe('domain entry', () => {
   // effect — what a 0.x minor release adds or removes is read off this list.
   it('exports exactly these values', () => {
     expect(Object.keys(mod).sort()).toEqual([
-      'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'ageText', 'applyValueMap', 'coordinateOf', 'describeQuality', 'elementDefinitionHash',
-      'elementFrameHtml', 'elementFrameScripts', 'emptyViewDocument',
-      'findHttpRefItem', 'isHttpRef', 'lintViewDocument', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveDocument',
-      'resolveWidget', 'resolvedReading', 'validateViewDocument', 'worstQuality',
+      'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'JsonPatchError', 'ageText', 'applyJsonPatch', 'applyValueMap',
+      'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameScripts',
+      'emptyViewDocument', 'findHttpRefItem', 'getByPointer', 'isHttpRef', 'lintViewDocument', 'parseSourceTime',
+      'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveDocument', 'resolveWidget', 'resolvedReading',
+      'validateViewDocument', 'worstQuality',
     ]);
     expect(Object.keys(viewer).sort()).toEqual([
       'DEFAULT_LABELS', 'DEFAULT_QUALITY_TEXT', 'KO_LABELS', 'ViewerPage', 'ageText', 'serverClock', 'timeText', 'useResolvedDocument',

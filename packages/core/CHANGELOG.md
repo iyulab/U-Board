@@ -30,6 +30,8 @@ All notable changes to this package are documented here. The format follows
 - `lintViewDocument` — advice on a valid document: an element placed nowhere, more than 30 script elements, an
   element heavier than 32 KB.
 - The published JSON Schema describes `elements`, and names the rules it cannot express.
+- `applyJsonPatch`, `getByPointer`, `JsonPatchError` — JSON Patch (RFC 6902) and JSON Pointer (RFC 6901): a document
+  changed by a list of operations, entirely or not at all, with the failing operation named.
 
 ## [0.11.0] - 2026-10-15
 

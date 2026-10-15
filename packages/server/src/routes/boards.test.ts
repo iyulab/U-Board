@@ -234,3 +234,66 @@ describe('boards routes', () => {
     expect(get.body.document).toEqual(originalDoc);
   });
 });
+
+describe('PATCH /boards/:boardId — a JSON Patch', () => {
+  async function gridBoard() {
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'G', kind: 'grid' });
+    await request(app)
+      .put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`)
+      .set('Cookie', memberCookie)
+      .send({ document: { kind: 'grid', items: [{ id: 'a', widget: { type: 'gauge' } }, { id: 'b', widget: { type: 'metric' } }] } });
+    return create.body.id as string;
+  }
+
+  it('changes the parts it names, and answers the new revision with advice', async () => {
+    const boardId = await gridBoard();
+    const res = await request(app)
+      .patch(`/api/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .set('Content-Type', 'application/json-patch+json')
+      .send(JSON.stringify([
+        { op: 'add', path: '/items/1/span', value: 6 }, // `add` sets a member whether or not it is there
+        { op: 'add', path: '/elements', value: { dot: { render: 'template', template: '<b/>' } } },
+      ]));
+    expect(res.status).toBe(200);
+    expect(res.body.revision).toBe(3);
+    expect(res.get('ETag')).toBe('"3"');
+    expect(res.body.advice).toEqual([{ path: '/elements/dot', message: expect.stringContaining('no node or grid item places this element') }]);
+    const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    expect(get.body.document.items[1]).toEqual({ id: 'b', span: 6, widget: { type: 'metric' } });
+  });
+
+  it('applies nothing when an operation fails, and names it', async () => {
+    const boardId = await gridBoard();
+    const res = await request(app)
+      .patch(`/api/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .send([{ op: 'add', path: '/items/0/span', value: 3 }, { op: 'remove', path: '/items/9' }]);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ code: 'INVALID_PATCH', operation: 1, message: 'operation 1: no item at /items/9' });
+    const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    expect(get.body.revision).toBe(2);
+  });
+
+  it('refuses a patch that leaves an invalid document, with the issues', async () => {
+    const boardId = await gridBoard();
+    const res = await request(app)
+      .patch(`/api/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .send([{ op: 'add', path: '/items/-', value: { id: 'a', widget: { type: 'element:pump' } } }]);
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_DOCUMENT');
+    expect(res.body.issues.map((i: { path: string }) => i.path)).toEqual(['/items/2/id', '/items/2/widget/type']);
+  });
+
+  it('refuses a patch made against an older revision', async () => {
+    const boardId = await gridBoard();
+    const res = await request(app)
+      .patch(`/api/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .set('If-Match', '"1"')
+      .send([{ op: 'replace', path: '/items/0/span', value: 3 }]);
+    expect(res.status).toBe(412);
+    expect(res.body).toEqual({ code: 'BOARD_CHANGED', revision: 2 });
+  });
+});

@@ -1,0 +1,131 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { applyJsonPatch, type ViewDocument } from '@iyulab/u-board/domain';
+import { UBoardClient } from './client.js';
+import { createServer } from './server.js';
+
+/** A U-Board server in miniature: one workspace, its boards, and every request it was sent. */
+function fakeServer() {
+  const boards = new Map<string, { name: string; document: ViewDocument; revision: number }>([
+    ['b1', { name: 'Line 1', revision: 4, document: { kind: 'grid', items: [{ id: 'a', widget: { type: 'gauge' } }] } }],
+  ]);
+  const requests: { method: string; path: string; headers: Record<string, string>; body?: unknown }[] = [];
+  const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+  const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const headers = init?.headers as Record<string, string>;
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    const method = init?.method ?? 'GET';
+    requests.push({ method, path: url.pathname, headers, body });
+    if (headers.Authorization !== 'Bearer ubt_test') return json(401, { code: 'UNAUTHENTICATED' });
+    if (url.pathname === '/api/token') return json(200, { workspace: { id: 'w1', name: 'Plant' }, scope: 'write', role: 'owner' });
+    if (url.pathname === '/api/workspaces/w1/boards' && method === 'GET') {
+      return json(200, { boards: [...boards].map(([id, b]) => ({ id, name: b.name, kind: b.document.kind, updatedAt: 't' })) });
+    }
+    if (url.pathname === '/api/workspaces/w1/boards' && method === 'POST') {
+      boards.set('b2', { name: body.name, revision: 1, document: body.kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', background: {}, nodes: [], connectors: [] } });
+      return json(201, { id: 'b2', revision: 1 });
+    }
+    const id = url.pathname.split('/').pop()!;
+    const board = boards.get(id);
+    if (!board) return json(404, { code: 'NOT_FOUND' });
+    const ifMatch = headers['If-Match'];
+    if (ifMatch && ifMatch !== `"${board.revision}"`) return json(412, { code: 'BOARD_CHANGED', revision: board.revision });
+    if (method === 'GET') return json(200, { id, name: board.name, document: board.document, revision: board.revision, updatedAt: 't' });
+    board.document = method === 'PATCH' ? applyJsonPatch(board.document, body) : body.document;
+    board.revision += 1;
+    return json(200, { id, revision: board.revision, advice: [] });
+  }) as typeof fetch;
+
+  return { boards, requests, fetchImpl };
+}
+
+let server: ReturnType<typeof fakeServer>;
+let client: Client;
+
+async function call(name: string, args: Record<string, unknown> = {}) {
+  const result = (await client.callTool({ name, arguments: args })) as { content: { text: string }[]; isError?: boolean };
+  const text = result.content[0].text;
+  let value: unknown = text;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    // the rules are text
+  }
+  return { value: value as any, isError: result.isError ?? false };
+}
+
+beforeEach(async () => {
+  server = fakeServer();
+  const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl));
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  client = new Client({ name: 'test', version: '0' });
+  await Promise.all([mcp.connect(serverTransport), client.connect(clientTransport)]);
+});
+
+describe('u-board-mcp', () => {
+  it('offers few tools, each with a strict input', async () => {
+    const { tools } = await client.listTools();
+    expect(tools.map(t => t.name).sort()).toEqual(['create_board', 'describe', 'get_board', 'list_boards', 'patch_board', 'validate']);
+    for (const tool of tools) expect(tool.inputSchema.additionalProperties, tool.name).toBe(false);
+  });
+
+  it('describes its topics, the rules, a part of the schema and a widget', async () => {
+    expect((await call('describe')).value.topics.rules).toContain('Read this first');
+    expect((await call('describe', { topic: 'rules' })).value).toContain('## JSON Patch');
+    expect((await call('describe', { topic: 'schema', pointer: '/$defs/elementDefinition' })).value.required).toEqual(['render']);
+    expect((await call('describe', { topic: 'widget:gauge' })).value.widget).toBe('gauge');
+    const unknown = await call('describe', { topic: 'widget:nope' });
+    expect(unknown.isError).toBe(true);
+  });
+
+  it('lists the boards of the token’s workspace, reading the workspace from the token once', async () => {
+    const { value } = await call('list_boards');
+    expect(value).toEqual({ workspace: { id: 'w1', name: 'Plant' }, boards: [{ id: 'b1', name: 'Line 1', kind: 'grid', updatedAt: 't' }] });
+    await call('list_boards');
+    expect(server.requests.filter(r => r.path === '/api/token')).toHaveLength(1);
+  });
+
+  it('reads one part of a board by JSON Pointer', async () => {
+    const { value } = await call('get_board', { board: 'b1', pointer: '/items/0/widget' });
+    expect(value).toEqual({ id: 'b1', name: 'Line 1', revision: 4, kind: 'grid', pointer: '/items/0/widget', value: { type: 'gauge' } });
+  });
+
+  it('patches a board on its revision, as a JSON Patch', async () => {
+    const { value } = await call('patch_board', { board: 'b1', revision: 4, patch: [{ op: 'add', path: '/items/0/span', value: 6 }] });
+    expect(value).toEqual({ id: 'b1', revision: 5, advice: [] });
+    const sent = server.requests.find(r => r.method === 'PATCH')!;
+    expect(sent.headers['Content-Type']).toBe('application/json-patch+json');
+    expect(sent.headers['If-Match']).toBe('"4"');
+    expect(server.boards.get('b1')!.document).toEqual({ kind: 'grid', items: [{ id: 'a', span: 6, widget: { type: 'gauge' } }] });
+  });
+
+  it('says what to do when the board was saved since', async () => {
+    const { value, isError } = await call('patch_board', { board: 'b1', revision: 2, patch: [{ op: 'remove', path: '/items/0' }] });
+    expect(isError).toBe(true);
+    expect(value).toMatchObject({ status: 412, code: 'BOARD_CHANGED', revision: 4, hint: expect.stringContaining('get_board again') });
+  });
+
+  it('makes a board with a first document', async () => {
+    const document = { kind: 'grid', items: [{ id: 'x', widget: { type: 'metric' } }] };
+    const { value } = await call('create_board', { name: 'New', kind: 'grid', document });
+    expect(value).toEqual({ id: 'b2', revision: 2, advice: [] });
+    expect(server.boards.get('b2')!.document).toEqual(document);
+  });
+
+  it('validates a document, or a board with a patch, without saving', async () => {
+    const bad = await call('validate', { document: { kind: 'grid', items: [{ id: 'a', widget: { type: 'element:pump' } }] } });
+    expect(bad.value.valid).toBe(false);
+    expect(bad.value.issues[0]).toEqual({ path: '/items/0/widget/type', message: 'no element "pump" is defined — add it under /elements' });
+    const dryRun = await call('validate', { board: 'b1', patch: [{ op: 'add', path: '/elements', value: { dot: { render: 'template', template: '<b/>' } } }] });
+    expect(dryRun.value).toEqual({ valid: true, issues: [], advice: [{ path: '/elements/dot', message: expect.any(String) }] });
+    expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
+  });
+
+  it('refuses arguments it does not take', async () => {
+    const result = (await client.callTool({ name: 'list_boards', arguments: { all: true } })) as { isError?: boolean };
+    expect(result.isError).toBe(true);
+  });
+});

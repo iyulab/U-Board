@@ -22,6 +22,11 @@ do when upgrading. Each release's notes carry its section.
   token made in the workspace settings: it acts as the person who made it, in that workspace only, `read` or `write`,
   and is shown once. It reaches boards and data sources but never a data source's credential, which a person enters
   in the console. `GET /api/token` says what a token is. Making and deleting one is recorded in the activity record.
+- **`PATCH …/boards/:id`** — changes part of a board's document with a JSON Patch (RFC 6902,
+  `application/json-patch+json`), applied to the board as saved now and saved only on that revision (or the one
+  `If-Match` names): a board saved in between answers `412`. A failed operation answers `400 INVALID_PATCH` with its
+  index. `PUT` and `PATCH` answers carry `advice` on the saved document (an element placed nowhere, too many script
+  elements).
 - `UBOARD_ELEMENT_ORIGINS` — the origins a board's elements may load from when they list them too (a font, a script
   library). Unset: none, so an installation on a closed network loads nothing from another origin, as before. Board
   answers carry `elementOrigins`.
