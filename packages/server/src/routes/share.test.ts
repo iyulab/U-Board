@@ -47,6 +47,25 @@ async function createShareToken(): Promise<string> {
 }
 
 describe('public share routes', () => {
+  it('lets a workspace API token read the board as a share link does — a program looking at what viewers see', async () => {
+    const issue = (cookie: string, ws: string) =>
+      request(app).post(`/api/workspaces/${ws}/api-tokens`).set('Cookie', cookie).send({ name: 'tool', scope: 'read' }).then(r => r.body.token as string);
+    const token = await issue(ownerCookie, workspaceId);
+    const read = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
+    expect(read.status).toBe(200);
+    expect(read.body.name).toBe('Board A');
+    const resolve = await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`).send({ bindings: [] });
+    expect(resolve.status).toBe(200);
+
+    // A token of another workspace does not reach this board.
+    const other = await createUser(db, { email: 'other@x.com', passwordHash: 'h', name: 'Other' });
+    const otherWorkspace = await createWorkspace(db, 'W2');
+    await addWorkspaceUser(db, { workspaceId: otherWorkspace.id, userId: other.id, role: 'owner' });
+    const foreign = await issue(cookieFor(other.id, otherWorkspace.id), otherWorkspace.id);
+    expect((await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${foreign}`)).status).toBe(404);
+    expect((await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', 'Bearer ubt_unknown')).status).toBe(404);
+  });
+
   it('returns the board document and connectorIds for a valid token', async () => {
     const connector = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });

@@ -3,8 +3,11 @@ import { placedIn, type ViewDocument } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { findBoard } from '../db/boards.js';
 import { findConnector } from '../db/connectors.js';
-import { findBoardShareTokenByHash, touchBoardShareTokenLastUsed, type BoardShareToken } from '../db/board-share-tokens.js';
+import { findBoardShareTokenByHash, touchBoardShareTokenLastUsed } from '../db/board-share-tokens.js';
 import { hashShareToken } from './board-share-tokens.js';
+import { API_TOKEN_PREFIX, hashApiToken } from '../auth/api-token.js';
+import { findApiTokenByHash, touchApiTokenLastUsed } from '../db/api-tokens.js';
+import { findWorkspaceUser } from '../db/workspaces.js';
 import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from '../resolve-connector.js';
 import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { Connector } from '../db/connectors.js';
@@ -69,16 +72,25 @@ function isDeclaredBinding(doc: ViewDocument, connectorId: string, ref: unknown)
   return false;
 }
 
+/** Whoever a share route answers: the workspace it reads in, and how to record that it was used. */
+interface Reader {
+  workspaceId: string;
+  used: () => Promise<void>;
+}
+
 export function createShareRouter(config: AppConfig, resolveState: ResolveState): Router {
   const { db, secrets } = config;
   const router = Router();
 
-  /** The share link's token for this board, from `Authorization: Bearer <token>` — a header, so it
-   * stays out of URLs and the logs that record them. Answers the request itself when there is no
-   * usable token: 404 for a missing, unknown or revoked one (no hint which), 410 for an expired one. */
-  async function authenticate(req: Request, res: Response): Promise<BoardShareToken | undefined> {
+  /** Who may read this board here, from `Authorization: Bearer <token>` — a header, so it stays out of URLs and the
+   * logs that record them: the board's share link, or a workspace API token of the board's workspace (a program
+   * looking at the board as its viewers see it — an assistant's tool server — which may already read the board and
+   * its sources). Answers the request itself when there is no usable token: 404 for a missing, unknown or revoked
+   * one (no hint which), 410 for an expired share link. */
+  async function authenticate(req: Request, res: Response): Promise<Reader | undefined> {
     const boardId = req.params.boardId;
     const match = /^Bearer (\S+)$/.exec(req.get('Authorization') ?? '');
+    if (match?.[1].startsWith(API_TOKEN_PREFIX)) return apiTokenReader(match[1], res);
     const token = match ? await findBoardShareTokenByHash(db, hashShareToken(match[1])) : undefined;
     if (!token || token.boardId !== boardId) {
       res.status(404).json({ code: 'NOT_FOUND' });
@@ -88,7 +100,18 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(410).json({ code: 'SHARE_LINK_EXPIRED' });
       return undefined;
     }
-    return token;
+    return { workspaceId: token.workspaceId, used: () => touchBoardShareTokenLastUsed(db, token.id) };
+  }
+
+  /** An API token reads as its maker, in its workspace only, while they are still a member of it. */
+  async function apiTokenReader(plain: string, res: Response): Promise<Reader | undefined> {
+    const token = await findApiTokenByHash(db, hashApiToken(plain));
+    const live = token && !(token.expiresAt && Date.parse(token.expiresAt) <= Date.now());
+    if (!token || !live || !(await findWorkspaceUser(db, token.workspaceId, token.userId))) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return undefined;
+    }
+    return { workspaceId: token.workspaceId, used: () => touchApiTokenLastUsed(db, token.id) };
   }
 
   router.get('/boards/:boardId', async (req, res) => {
@@ -100,7 +123,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    await touchBoardShareTokenLastUsed(db, token.id);
+    await token.used();
     // An open viewer whose board has no bindings has no value batch to learn the revision from, so it
     // asks here with the revision it shows (If-None-Match): unchanged, the answer is a bodiless 304.
     res.set('ETag', `"${board.revision}"`);
@@ -142,7 +165,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    await touchBoardShareTokenLastUsed(db, token.id);
+    await token.used();
 
     const connectors = new Map<string, Promise<Connector | undefined>>();
     const connectorOf = (id: string) => {
