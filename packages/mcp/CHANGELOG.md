@@ -11,9 +11,10 @@ All notable changes to this package are documented here. The format follows
 - `create_board` makes no board when its first document is refused: the document is checked first, as the server
   would, and a board the server then refuses is taken away again — failed attempts used to leave empty boards.
 - The tools' inputs declare their shape: a patch operation is `{ op, path, value?, from? }` and a document needs
-  `kind`. An operation or a document nested in its own first key (`{ "op": { "op": … } }`, `{ "kind": { "kind": … } }`)
-  is refused with what to write instead — a model that made this mistake used to see only «expected "path"» and
-  repeat it.
+  `kind`; an operation or a document nested in its own first key is refused with what to write instead.
+- Open objects in the tools' inputs are written `additionalProperties: true`, never the empty schema `{}`: a widely
+  used open-model tool-call parser rewrites the values under an empty schema (arrays came back as objects), so the
+  model was refused for what it never sent. A test keeps `{}` out.
 - `look` reports text that reads under 3:1 against what is actually drawn behind it (measured on the picture, so a
   panel painted under a widget counts) — on either paper. A focused part is taken with room around it (at least half
   its size), so what spills past its box shows.

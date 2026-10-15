@@ -57,9 +57,12 @@ const operation = z.object({
   from: z.string().optional().describe('For move and copy.'),
 });
 const patch = z.array(operation).min(1).describe('A JSON Patch (RFC 6902), applied entirely or not at all.');
+// `additionalProperties: true`, not the `{}` a passthrough object is written as: a widely used open-model tool-call
+// parser (vLLM's, serving Qwen) rewrites the values under an empty schema — arrays came back as objects — and the
+// model was told off for what it never sent.
 const document = z
-  .object({ kind: z.enum(['canvas', 'grid'], { error: WRAPPED('kind', 'the document { "kind": "canvas", … }') }) })
-  .passthrough()
+  .looseObject({ kind: z.enum(['canvas', 'grid'], { error: WRAPPED('kind', 'the document { "kind": "canvas", … }') }) })
+  .meta({ additionalProperties: true })
   .describe('A whole board document: { kind: "canvas", background, nodes, connectors, decorations?, elements? } or { kind: "grid", items } — describe("rules").');
 
 /**

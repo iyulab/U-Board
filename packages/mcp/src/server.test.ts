@@ -85,6 +85,20 @@ describe('u-board-mcp', () => {
     for (const tool of tools) expect(tool.inputSchema.additionalProperties, tool.name).toBe(false);
   });
 
+  it('writes no open object as an empty schema — a widely used tool-call parser rewrites the values under one', async () => {
+    const { tools } = await client.listTools();
+    const empty: string[] = [];
+    const walk = (node: unknown, at: string) => {
+      if (!node || typeof node !== 'object') return;
+      for (const [key, value] of Object.entries(node)) {
+        if (key === 'additionalProperties' && value && typeof value === 'object' && Object.keys(value).length === 0) empty.push(at);
+        walk(value, `${at}.${key}`);
+      }
+    };
+    for (const tool of tools) walk(tool.inputSchema, tool.name);
+    expect(empty).toEqual([]);
+  });
+
   it('describes its topics, the rules, a part of the schema and a widget', async () => {
     expect((await call('describe')).value.topics.rules).toContain('Read this first');
     expect((await call('describe', { topic: 'rules' })).value).toContain('## JSON Patch');
