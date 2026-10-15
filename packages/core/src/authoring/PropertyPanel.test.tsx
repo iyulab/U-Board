@@ -5,7 +5,7 @@ import '@testing-library/jest-dom/vitest';
 import { PropertyPanel } from './PropertyPanel.js';
 import { FixtureAdapter } from '../fixture-adapter.js';
 import type { Adapter, ResolvedBinding } from '../adapter.js';
-import type { Node } from '../view-document.js';
+import type { ElementDefinition, Node } from '../view-document.js';
 import { QUALITY_LABEL, REASON_LABEL } from '../quality-text.js';
 import { KO_LABELS } from '../labels-ko.js';
 
@@ -61,6 +61,50 @@ describe('PropertyPanel', () => {
     fireEvent.change(screen.getByLabelText('Widget type'), { target: { value: 'gauge' } });
 
     expect(onChange).toHaveBeenCalledWith({ type: 'gauge', props: { data: { value: 0 } } });
+  });
+
+  describe('a placed element', () => {
+    const elements: Record<string, ElementDefinition> = {
+      pump: {
+        render: 'template',
+        template: '<p>{{label}}</p>',
+        props: { type: 'object', properties: { label: { type: 'string', default: 'Pump' }, load: { type: 'number', title: 'Load' } } },
+      },
+      tank: { render: 'template', template: '<p>tank</p>' },
+    };
+    const pumpNode = (): Node => ({ ...statusNode(), widget: { type: 'element:pump', props: { label: 'P-101' } } });
+
+    it('shows as the element it is, among the board’s elements, with its props as fields', () => {
+      render(<PropertyPanel node={pumpNode()} adapters={[]} onChange={vi.fn()} elements={elements} />);
+      const type = screen.getByLabelText('Widget type');
+      expect(type).toHaveValue('element:pump');
+      expect(within(type).getByRole('group', { name: 'This board’s elements' })).toBeInTheDocument();
+      expect(within(type).getAllByRole('option').map(o => (o as HTMLOptionElement).value)).toEqual(
+        expect.arrayContaining(['status', 'element:pump', 'element:tank']),
+      );
+      expect(screen.getByRole('group', { name: 'Element props' })).toBeInTheDocument();
+      expect(screen.getByLabelText(/^label/)).toHaveValue('P-101');
+    });
+
+    it('becomes another element, or a prepared widget, from the type choice — starting from its schema’s defaults', () => {
+      const onChange = vi.fn();
+      render(<PropertyPanel node={statusNode()} adapters={[]} onChange={onChange} elements={elements} />);
+      fireEvent.change(screen.getByLabelText('Widget type'), { target: { value: 'element:pump' } });
+      expect(onChange).toHaveBeenLastCalledWith({ type: 'element:pump', props: { label: 'Pump' } });
+    });
+
+    it('still says what it places when the board no longer defines that element', () => {
+      render(<PropertyPanel node={pumpNode()} adapters={[]} onChange={vi.fn()} elements={{ tank: elements.tank }} />);
+      expect(screen.getByLabelText('Widget type')).toHaveValue('element:pump');
+      expect(screen.getByRole('option', { name: 'pump' })).toBeDisabled();
+    });
+
+    it('offers its props, not a widget’s data paths, as what a binding fills', () => {
+      render(<PropertyPanel node={pumpNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} elements={elements} />);
+      const paths = within(screen.getByLabelText('Prop path')).getAllByRole('option').map(o => (o as HTMLOptionElement).value);
+      expect(paths).toEqual(expect.arrayContaining(['label', 'load']));
+      expect(paths.some(p => p.startsWith('data.'))).toBe(false);
+    });
   });
 
   it('applies a valid JSON props edit on blur', () => {

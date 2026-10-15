@@ -1,11 +1,12 @@
 import { useEffect, useEffectEvent, useId, useMemo, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
-import type { Background, Node, Placed, Widget, Binding, ValueMap } from '../view-document.js';
+import type { Background, ElementDefinition, Node, Placed, Widget, Binding, ValueMap } from '../view-document.js';
+import { ELEMENT_TYPE_PREFIX, elementNameOf } from '../elements/element-type.js';
 import { NodeAnchorFields } from './AnchorFields.js';
 import { findHttpRefItem, isTimeZone, parseSourceTime, type HttpRef, type HttpRefItem } from '../http-ref.js';
 import { deviceTimeZone, knownTimeZones, lacksOffset, timeFieldsIn, type TimeField } from './time-fields.js';
 import { getWidgetLabel } from '@iyulab/u-widgets/tools';
-import { WIDGET_TYPES, seedWidget, defaultPropPath, type WidgetType } from './widget-catalog.js';
+import { WIDGET_TYPES, seedElementWidget, seedWidget, defaultPropPath, type WidgetType } from './widget-catalog.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { WidgetPropsForm } from './WidgetPropsForm.js';
 import { widgetFields } from './widget-fields.js';
@@ -26,6 +27,8 @@ export interface PropertyPanelProps {
    *  node itself — its anchor, its place — goes. Without them the panel edits the widget only. */
   background?: Background;
   onNodeChange?: (change: Partial<Pick<Node, 'x' | 'y' | 'anchored'>>) => void;
+  /** The board's elements: offered as types the widget can be, and read for a placed element's props. */
+  elements?: Readonly<Record<string, ElementDefinition>>;
   labels?: UBoardLabels;
   /** The current time in epoch milliseconds, which a stale preview value's age is measured to —
    * `Date.now` by default. */
@@ -265,6 +268,7 @@ export function PropertyPanel({
   onChange,
   background,
   onNodeChange,
+  elements,
   labels = DEFAULT_LABELS,
   clock = Date.now,
 }: PropertyPanelProps) {
@@ -380,6 +384,8 @@ export function PropertyPanel({
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const type = e.target.value;
     if (isWidgetType(type)) onChange(seedWidget(type, { label: labels.newNodeLabel, value: labels.newNodeValue }));
+    const element = elementNameOf(type);
+    if (element !== undefined && elements && Object.hasOwn(elements, element)) onChange(seedElementWidget(element, elements[element]));
   };
 
   const handlePropsBlur = () => {
@@ -403,8 +409,8 @@ export function PropertyPanel({
   };
 
   // The values a binding can replace, as the widget library names them; any other path is typed.
-  const dataFields = widgetFields(node.widget, labels.locale).fields.filter(f => f.section === 'data');
-  const fieldPaths = dataFields.map(f => `data.${f.key}`);
+  const dataFields = widgetFields(node.widget, labels.locale, elements).fields.filter(f => f.section !== 'options');
+  const fieldPaths = dataFields.map(f => f.path.join('.'));
   const typedPath = dataFields.length === 0 || typingPropPath || (draft.propPath !== '' && !fieldPaths.includes(draft.propPath));
 
   const previewMap = mapFromDraft(draft);
@@ -488,6 +494,10 @@ export function PropertyPanel({
   };
 
   const bindingEntries = Object.entries(node.widget.bindings ?? {});
+  // The board's elements, and the one this widget places when the board no longer defines it — so the choice shows
+  // what the widget is.
+  const placedElement = elementNameOf(node.widget.type);
+  const elementTypes = [...new Set([...Object.keys(elements ?? {}), ...(placedElement === undefined ? [] : [placedElement])])].sort();
 
   return (
     <div className="ub-panel ub-panel--properties">
@@ -500,12 +510,21 @@ export function PropertyPanel({
               {getWidgetLabel(t, labels.locale)}
             </option>
           ))}
+          {elementTypes.length > 0 && (
+            <optgroup label={labels.boardElements}>
+              {elementTypes.map(name => (
+                <option key={name} value={`${ELEMENT_TYPE_PREFIX}${name}`} disabled={!elements || !Object.hasOwn(elements, name)}>
+                  {name}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
       </label>
       {background && onNodeChange && 'anchored' in node && (
         <NodeAnchorFields node={node as Node} background={background} onChange={onNodeChange} labels={labels} />
       )}
-      <WidgetPropsForm widget={node.widget} onChange={onChange} labels={labels} />
+      <WidgetPropsForm widget={node.widget} onChange={onChange} labels={labels} elements={elements} />
       {/* Open while it holds an edit that is not valid JSON, so the error is never folded away. */}
       <details className="ub-panel__advanced" open={propsError !== null || undefined}>
         <summary>{labels.advancedProps}</summary>
@@ -576,7 +595,7 @@ export function PropertyPanel({
                   {labels.choosePropPath}
                 </option>
                 {dataFields.map(f => {
-                  const path = `data.${f.key}`;
+                  const path = f.path.join('.');
                   const bound = node.widget.bindings?.[path] !== undefined && path !== editingPropPath;
                   return (
                     <option key={path} value={path}>

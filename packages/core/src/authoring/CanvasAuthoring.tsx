@@ -1,6 +1,5 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { KonvaDesigner } from '@canvas-kit/designer';
-import { getWidgetLabel } from '@iyulab/u-widgets/tools';
 import { Viewer } from '@canvas-kit/viewer';
 import { viewToScene } from '@canvas-kit/core';
 import type { Scene, DrawingObject } from '@canvas-kit/core';
@@ -17,7 +16,7 @@ import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { BoardPanel } from './BoardPanel.js';
-import { seedWidget } from './widget-catalog.js';
+import { seedWidget, widgetTypeName } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
@@ -96,7 +95,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
       y: node.y,
       width: node.width ?? DEFAULT_NODE_WIDTH,
       height: node.height ?? DEFAULT_NODE_HEIGHT,
-      content: <NodeInPlace widget={widgets.get(node.id) ?? null} name={getWidgetLabel(node.widget.type, labels.locale)} />,
+      content: <NodeInPlace widget={widgets.get(node.id) ?? null} name={widgetTypeName(node.widget.type, labels.locale)} />,
     }));
   }, [preview, doc.nodes, labels.locale]);
   useEffect(() => {
@@ -335,6 +334,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
               onChange={handleWidgetChange}
               background={doc.background}
               onNodeChange={handleNodeChange}
+              elements={doc.elements}
               labels={labels}
               clock={clock}
             />

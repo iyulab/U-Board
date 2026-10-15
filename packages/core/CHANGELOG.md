@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **Editing a placed element in the property panel** — `AuthoringView` reads the board's `elements`: the widget-type
+  choice lists them under "This board’s elements" (choosing one starts from its schema's defaults), the props its
+  definition's schema lists get a control each — text, a choice, a number within its bounds (whole for `integer`),
+  yes/no — and lists and objects stay in the JSON editor, and a binding offers those props as what it fills. An
+  element is named by its name where the editor names widgets, and the type choice still shows an element the board
+  no longer defines.
 - **A script element whose code stops answering is stopped** — the page asks a running frame every two seconds
   whether it still answers (`ub:ping`/`ub:pong`) and removes one that leaves a question unanswered for six seconds, with
   a notice on its box. Where the browser runs the frame in a process of its own (Chrome and Edge with site isolation)
@@ -16,6 +22,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- `UBoardLabels` has two more labels, `elementProps` and `boardElements` (`DEFAULT_LABELS` and `KO_LABELS` carry
+  them) — a host that builds a full labels object adds them.
 - `@iyulab/u-widgets` ^0.33.2: a horizontal chart lists its categories in the data's order, a reference line the data
   does not reach is drawn with the value axis reaching it, its label is no longer cut off, and `status` keeps its rows
   together in a taller cell.

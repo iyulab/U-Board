@@ -5,7 +5,7 @@ import '@testing-library/jest-dom/vitest';
 import { widgetFields, withField } from './widget-fields.js';
 import { WidgetPropsForm } from './WidgetPropsForm.js';
 import { seedWidget } from './widget-catalog.js';
-import type { Widget } from '../view-document.js';
+import type { ElementDefinition, Widget } from '../view-document.js';
 
 const summary = (widget: Widget) => widgetFields(widget).fields.map(f => `${f.section}.${f.key}:${f.kind}`);
 
@@ -54,7 +54,7 @@ describe('withField', () => {
   const chart: Widget = { type: 'chart.line', props: { data: [{ t: 1 }], mapping: { x: 't', y: 'v' }, options: { smooth: true } } };
 
   it('sets one value and keeps everything else', () => {
-    expect(withField(chart, { section: 'options', key: 'legend' }, false).props).toEqual({
+    expect(withField(chart, { path: ['options', 'legend'] }, false).props).toEqual({
       data: [{ t: 1 }],
       mapping: { x: 't', y: 'v' },
       options: { smooth: true, legend: false },
@@ -62,7 +62,7 @@ describe('withField', () => {
   });
 
   it('removes a value given undefined, and the options object once it is empty', () => {
-    expect(withField(chart, { section: 'options', key: 'smooth' }, undefined).props).toEqual({ data: [{ t: 1 }], mapping: { x: 't', y: 'v' } });
+    expect(withField(chart, { path: ['options', 'smooth'] }, undefined).props).toEqual({ data: [{ t: 1 }], mapping: { x: 't', y: 'v' } });
   });
 });
 
@@ -111,5 +111,60 @@ describe('WidgetPropsForm', () => {
   it('says how many options only the JSON editor holds', () => {
     render(<WidgetPropsForm widget={gauge} onChange={vi.fn()} />);
     expect(screen.getByText('More options in Advanced: 1')).toBeInTheDocument();
+  });
+});
+
+describe('an element’s fields', () => {
+  const pump: ElementDefinition = {
+    render: 'template',
+    template: '<p>{{label}}</p>',
+    props: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', title: 'Name' },
+        state: { enum: ['run', 'stop'], default: 'stop', description: 'Whether it runs' },
+        load: { type: 'number', minimum: 0, maximum: 100 },
+        blades: { type: 'integer', minimum: 1 },
+        alarm: { type: 'boolean' },
+        history: { type: 'array', items: { type: 'number' } },
+        mode: { enum: [1, 2] },
+      },
+    },
+  };
+  const elements = { pump };
+  const placed: Widget = { type: 'element:pump', props: { label: 'P-101', load: 40 }, bindings: { state: { adapter: 'a', ref: 'r' } } };
+
+  it('come from its schema, in order: text, choice, number with bounds, whole number, yes/no — lists and mixed choices to JSON', () => {
+    const { fields, otherOptions } = widgetFields(placed, undefined, elements);
+    expect(fields.map(f => `${f.path.join('.')}:${f.kind}`)).toEqual(['label:text', 'state:choice', 'load:number', 'blades:number', 'alarm:boolean']);
+    expect(fields[0].label).toBe('Name');
+    expect(fields[1]).toMatchObject({ section: 'element', label: 'state', choices: ['run', 'stop'], defaultValue: 'stop', description: 'Whether it runs' });
+    expect(fields[2]).toMatchObject({ min: 0, max: 100 });
+    expect(fields[2].integer).toBeUndefined();
+    expect(fields[3]).toMatchObject({ min: 1, integer: true });
+    expect(otherOptions).toBe(2);
+  });
+
+  it('are none when the board does not define the element', () => {
+    expect(widgetFields(placed, undefined, {})).toEqual({ fields: [], otherOptions: 0 });
+    expect(widgetFields(placed)).toEqual({ fields: [], otherOptions: 0 });
+  });
+
+  it('are written straight into its props', () => {
+    expect(withField(placed, { path: ['load'] }, 55).props).toEqual({ label: 'P-101', load: 55 });
+    expect(withField(placed, { path: ['load'] }, undefined).props).toEqual({ label: 'P-101' });
+  });
+
+  it('are shown under the element’s props, a bound one marked, and a whole number written whole', () => {
+    const onChange = vi.fn();
+    render(<WidgetPropsForm widget={placed} onChange={onChange} elements={elements} />);
+    expect(screen.getByRole('group', { name: 'Element props' })).toBeInTheDocument();
+    expect(screen.getByText(/state/, { selector: 'span' })).toHaveTextContent('bound');
+    const blades = screen.getByLabelText(/^blades/);
+    expect(blades).toHaveAttribute('step', '1');
+    expect(screen.getByLabelText(/^load/)).toHaveAttribute('max', '100');
+    fireEvent.change(blades, { target: { value: '3.6' } });
+    fireEvent.blur(blades);
+    expect(onChange).toHaveBeenCalledWith({ ...placed, props: { label: 'P-101', load: 40, blades: 4 } });
   });
 });

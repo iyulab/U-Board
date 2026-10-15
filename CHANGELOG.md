@@ -13,6 +13,9 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
+- The editor edits a placed **element** like a widget: the board's elements are in the widget-type choice, and an
+  element's props get controls from its definition — text, choices, numbers within their bounds, yes/no — which a
+  binding can fill.
 - A **script element whose code stops answering** — a loop that never ends — is stopped after six seconds, with a
   notice on its box, in the editor and on share links alike. In Chrome and Edge the board stays usable meanwhile; in
   browsers that run the element with the page, such code holds the page too (`docs/api-reference.md`).

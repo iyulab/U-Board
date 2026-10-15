@@ -1,5 +1,4 @@
 import { useEffect, useEffectEvent, useMemo, useState, type CSSProperties } from 'react';
-import { getWidgetLabel } from '@iyulab/u-widgets/tools';
 import { resolveDocument, type ResolvedGridView } from '../resolve-document.js';
 import type { ResolvedWidget } from '../adapter.js';
 import type { GridView, Widget } from '../view-document.js';
@@ -9,7 +8,7 @@ import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { BoardPanel } from './BoardPanel.js';
 import { GridItemPanel } from './GridItemPanel.js';
-import { seedWidget } from './widget-catalog.js';
+import { seedWidget, widgetTypeName } from './widget-catalog.js';
 import { addGridItem, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from './grid-editing.js';
 import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
 
@@ -134,7 +133,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, fileActions,
                 now={preview?.now ?? 0}
                 locale={labels.locale}
                 renderCell={(item, frame, index) => {
-                  const name = getWidgetLabel(item.widget.type, labels.locale);
+                  const name = widgetTypeName(item.widget.type, labels.locale);
                   const picked = item.id === selectedId;
                   return (
                     <div className="ub-authoring__node" style={CELL_STYLE}>
@@ -181,6 +180,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, fileActions,
                 adapters={adapters}
                 connectorLabels={connectorLabels}
                 onChange={widget => updateDoc(current => updateGridItem(current, selected.id, { widget }))}
+                elements={doc.elements}
                 labels={labels}
                 clock={clock}
               />

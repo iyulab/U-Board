@@ -1,5 +1,7 @@
 import { getPrimaryDataField } from '@iyulab/u-widgets';
-import type { Widget } from '../view-document.js';
+import { getWidgetLabel } from '@iyulab/u-widgets/tools';
+import type { ElementDefinition, Widget } from '../view-document.js';
+import { ELEMENT_TYPE_PREFIX, elementNameOf } from '../elements/element-type.js';
 
 /** The widget types the property panel offers a type-select for (u-widgets' v1 minimal catalog).
  * Each entry seeds a minimal-but-visible starting `props` so switching to a type never leaves a
@@ -35,4 +37,19 @@ export function defaultPropPath(widget: Widget): string {
   if (field === undefined) return '';
   const path = `data.${field}`;
   return widget.bindings?.[path] ? '' : path;
+}
+
+/** A widget placing the board's element `name`, starting from the defaults its definition's schema gives its props. */
+export function seedElementWidget(name: string, definition: ElementDefinition): Widget {
+  const props: Record<string, unknown> = {};
+  for (const [key, schema] of Object.entries(definition.props?.properties ?? {})) {
+    if (schema.default !== undefined) props[key] = schema.default;
+  }
+  return { type: `${ELEMENT_TYPE_PREFIX}${name}`, props };
+}
+
+/** What a widget is called where the editor names it: a prepared widget's name from the widget library, in `locale`,
+ *  or the name of the board's element it places. */
+export function widgetTypeName(type: string, locale?: string): string {
+  return elementNameOf(type) ?? getWidgetLabel(type, locale);
 }

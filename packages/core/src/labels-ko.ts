@@ -83,6 +83,8 @@ export const KO_LABELS: UBoardLabels = {
   staticProps: '정적 props (JSON)',
   widgetData: '데이터',
   widgetOptions: '표시',
+  elementProps: '요소 속성',
+  boardElements: '이 보드의 요소',
   boundField: '바인딩됨',
   choiceDefault: '기본값',
   advancedProps: '고급: JSON으로 편집',

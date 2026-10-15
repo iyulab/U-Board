@@ -127,6 +127,9 @@ export interface UBoardLabels {
    * own default, the JSON editor it folds the rest into, and how many options only that editor holds. */
   widgetData: string;
   widgetOptions: string;
+  /** An element's own props, as its definition describes them; the board's elements in the widget-type choice. */
+  elementProps: string;
+  boardElements: string;
   boundField: string;
   choiceDefault: string;
   advancedProps: string;
@@ -308,6 +311,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   staticProps: 'Static props (JSON)',
   widgetData: 'Data',
   widgetOptions: 'Display',
+  elementProps: 'Element props',
+  boardElements: 'This board’s elements',
   boundField: 'bound',
   choiceDefault: 'Default',
   advancedProps: 'Advanced: edit as JSON',

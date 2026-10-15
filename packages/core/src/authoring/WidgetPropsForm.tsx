@@ -1,48 +1,46 @@
 import { useMemo } from 'react';
-import type { Widget } from '../view-document.js';
+import type { ElementDefinition, Widget } from '../view-document.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
-import { widgetFields, withField, type WidgetField } from './widget-fields.js';
+import { readField, widgetFields, withField, type WidgetField } from './widget-fields.js';
 
 export interface WidgetPropsFormProps {
   widget: Widget;
   onChange: (widget: Widget) => void;
   labels?: UBoardLabels;
+  /** The board's elements, which a placed element's fields are read from. */
+  elements?: Readonly<Record<string, ElementDefinition>>;
 }
 
 const FIELD_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column' };
 const CHECK_STYLE: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 'var(--ub-space-2, 8px)' };
 
-function read(widget: Widget, field: WidgetField): unknown {
-  const section = widget.props?.[field.section];
-  return typeof section === 'object' && section !== null && !Array.isArray(section) ? (section as Record<string, unknown>)[field.key] : undefined;
-}
-
 const text = (value: unknown) => (value === undefined || value === null ? '' : typeof value === 'string' ? value : JSON.stringify(value));
 
 /**
  * A control for each value of the widget the widget library describes — its data fields, and the
- * options whose type is known (`widgetFields`). A typed value is written when the control is left
- * (or a choice is made), not on every keystroke: each change re-resolves the preview's bindings.
+ * options whose type is known — or, for an element, each prop its definition's schema lists
+ * (`widgetFields`). A typed value is written when the control is left (or a choice is made), not on
+ * every keystroke: each change re-resolves the preview's bindings.
  */
-export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: WidgetPropsFormProps) {
-  const { fields, otherOptions } = useMemo(() => widgetFields(widget, labels.locale), [widget, labels.locale]);
+export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS, elements }: WidgetPropsFormProps) {
+  const { fields, otherOptions } = useMemo(() => widgetFields(widget, labels.locale, elements), [widget, labels.locale, elements]);
   if (fields.length === 0 && otherOptions === 0) return null;
 
   const set = (field: WidgetField, value: unknown) => {
-    if (value === read(widget, field)) return;
+    if (value === readField(widget, field)) return;
     onChange(withField(widget, field, value));
   };
 
   const control = (field: WidgetField) => {
-    const value = read(widget, field);
-    const bound = field.section === 'data' && widget.bindings?.[`data.${field.key}`] !== undefined;
+    const value = readField(widget, field);
+    const bound = field.section !== 'options' && widget.bindings?.[field.path.join('.')] !== undefined;
     const name = (
       <span className="ub-panel__field-name" title={field.description}>
         {field.label} <code>{field.key}</code>
         {bound && <span className="ub-panel__binding-tag"> · {labels.boundField}</span>}
       </span>
     );
-    const id = `${field.section}.${field.key}`;
+    const id = field.path.join('.');
     switch (field.kind) {
       case 'boolean':
         return (
@@ -73,13 +71,17 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: W
               // Re-created when the value changes elsewhere (the JSON editor, an import), so it shows it.
               key={`${id}=${text(value)}`}
               type="number"
+              min={field.min}
+              max={field.max}
+              step={field.integer ? 1 : undefined}
               defaultValue={typeof value === 'number' ? value : ''}
               // Left empty, the widget's own default applies — shown so the empty field does not read as nothing.
               placeholder={field.defaultValue === undefined ? undefined : text(field.defaultValue)}
               onBlur={e => {
                 const raw = e.currentTarget.value.trim();
-                // Cleared: the widget's own default applies again.
-                set(field, raw === '' || !Number.isFinite(Number(raw)) ? undefined : Number(raw));
+                // Cleared: the widget's own default applies again. A whole-number field keeps whole numbers.
+                const number = raw === '' || !Number.isFinite(Number(raw)) ? undefined : Number(raw);
+                set(field, number !== undefined && field.integer ? Math.round(number) : number);
               }}
             />
           </label>
@@ -104,8 +106,15 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS }: W
 
   const data = fields.filter(f => f.section === 'data');
   const options = fields.filter(f => f.section === 'options');
+  const element = fields.filter(f => f.section === 'element');
   return (
     <div className="ub-panel__widget-form">
+      {element.length > 0 && (
+        <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>
+          <legend>{labels.elementProps}</legend>
+          {element.map(control)}
+        </fieldset>
+      )}
       {data.length > 0 && (
         <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>
           <legend>{labels.widgetData}</legend>
