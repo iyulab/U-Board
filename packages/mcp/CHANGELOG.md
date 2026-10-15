@@ -8,6 +8,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- `create_board` makes no board when its first document is refused: the document is checked first, as the server
+  would, and a board the server then refuses is taken away again — failed attempts used to leave empty boards.
 - The tools' inputs declare their shape: a patch operation is `{ op, path, value?, from? }` and a document needs
   `kind`. An operation or a document nested in its own first key (`{ "op": { "op": … } }`, `{ "kind": { "kind": … } }`)
   is refused with what to write instead — a model that made this mistake used to see only «expected "path"» and

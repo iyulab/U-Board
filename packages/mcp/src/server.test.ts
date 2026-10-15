@@ -187,6 +187,15 @@ describe('u-board-mcp', () => {
     expect(server.boards.get('b2')!.document).toEqual(document);
   });
 
+  it('makes no board when its first document is refused — a retry leaves no empty boards behind', async () => {
+    const before = server.boards.size;
+    const { value, isError } = await call('create_board', { name: 'New', kind: 'canvas', document: { kind: 'canvas', background: {}, nodes: {}, connectors: [] } });
+    expect(isError).toBe(true);
+    expect(value).toMatchObject({ code: 'INVALID_DOCUMENT', message: expect.stringContaining('no board was made'), issues: [{ path: '/nodes', message: 'expected an array — got an object {}' }] });
+    expect(server.boards.size).toBe(before);
+    expect(server.requests.some(r => r.method === 'POST')).toBe(false);
+  });
+
   it('validates a document, or a board with a patch, without saving', async () => {
     const bad = await call('validate', { document: { kind: 'grid', items: [{ id: 'a', widget: { type: 'element:pump' } }] } });
     expect(bad.value.valid).toBe(false);

@@ -38,6 +38,16 @@ function broken(mutate: (doc: any) => void): unknown {
 const paths = (value: unknown) => validateViewDocument(value).map(issue => issue.path);
 
 describe('validateViewDocument', () => {
+  it('says what it got where a value is of the wrong kind — a writer does not re-read what it sent', () => {
+    const issues = validateViewDocument(broken(d => { d.nodes[0].anchored = { enum: ['false'] }; d.connectors = { id: 'c1' }; d.nodes[1].x = undefined; }));
+    expect(issues).toHaveLength(3);
+    expect(issues).toEqual(expect.arrayContaining([
+      { path: '/nodes/1/x', message: 'expected a finite number — it is missing' },
+      { path: '/nodes/0/anchored', message: 'expected true or false — got an object {"enum":["false"]}' },
+      { path: '/connectors', message: 'expected an array — got an object {"id":"c1"}' },
+    ]));
+  });
+
   it('says when a document is wrapped in its own "kind"', () => {
     expect(validateViewDocument({ kind: { kind: 'canvas', background: {}, nodes: [], connectors: [] } })).toEqual([
       { path: '/kind', message: expect.stringContaining('the document is wrapped one level too deep') },
@@ -57,7 +67,7 @@ describe('validateViewDocument', () => {
     expect(paths(null)).toEqual(['']);
     expect(paths('canvas')).toEqual(['']);
     expect(paths({ kind: 'table', items: [] })).toEqual(['/kind']);
-    expect(validateViewDocument({ kind: 'table' })[0].message).toBe('expected "canvas" or "grid"');
+    expect(validateViewDocument({ kind: 'table' })[0].message).toBe('expected "canvas" or "grid" — got the text "table"');
   });
 
   it('names the top-level fields that are missing or of the wrong type', () => {

@@ -50,7 +50,7 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
   }
 
   if (value.appearance !== undefined && value.appearance !== 'light' && value.appearance !== 'dark') {
-    doc.fail(['appearance'], 'expected "light" or "dark"');
+    doc.expected(['appearance'], 'expected "light" or "dark"', value.appearance);
   }
   if (value.elements !== undefined && doc.record(value, ['elements'])) checkElements(doc, value.elements as Record<string, unknown>);
 
@@ -63,7 +63,7 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
   } else if (isRecord(value.kind) && 'kind' in value.kind) {
     // { "kind": { "kind": "canvas", … } } — the document nested in its own first key.
     doc.fail(['kind'], 'expected "canvas" or "grid" — "kind" holds an object with its own "kind": the document is wrapped one level too deep; send the document itself');
-  } else doc.fail(['kind'], `expected "canvas" or "grid"${isRecord(value.kind) ? ', got an object' : ''}`);
+  } else doc.expected(['kind'], 'expected "canvas" or "grid"', value.kind);
 
   return issues;
 }
@@ -113,7 +113,7 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
       doc.known(connector, at, CONNECTOR_FIELDS, 'connector', CONNECTOR_HINT);
       doc.id(connector, [...at, 'id']);
       for (const end of ['fromNodeId', 'toNodeId']) {
-        if (typeof connector[end] !== 'string') doc.fail([...at, end], 'expected a string');
+        if (typeof connector[end] !== 'string') doc.expected([...at, end], 'expected a string', connector[end]);
         else if (!nodeIds.has(connector[end] as string)) doc.fail([...at, end], `no node has the id "${connector[end] as string}" — a connector joins two nodes of /nodes`);
       }
       doc.optionalString(connector, [...at, 'label']);
@@ -122,7 +122,7 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
         doc.known(style, [...at, 'style'], CONNECTOR_STYLE_FIELDS, 'connector style');
         doc.optionalColor(style, [...at, 'style', 'stroke']);
         if (style.strokeWidth !== undefined && !(Number.isFinite(style.strokeWidth) && (style.strokeWidth as number) > 0)) {
-          doc.fail([...at, 'style', 'strokeWidth'], 'expected a number greater than 0');
+          doc.expected([...at, 'style', 'strokeWidth'], 'expected a number greater than 0', style.strokeWidth);
         }
         if (style.dash !== undefined && style.dash !== 'solid' && style.dash !== 'dashed' && style.dash !== 'dotted') {
           doc.fail([...at, 'style', 'dash'], 'expected "solid", "dashed" or "dotted"');
@@ -155,7 +155,7 @@ function checkGridView(doc: Checker, value: Record<string, unknown>): void {
     doc.optionalSpan(item, [...at, 'span'], GRID_COLUMNS);
     doc.optionalSpan(item, [...at, 'spanMedium'], GRID_COLUMNS_MEDIUM);
     if (item.height !== undefined && !(Number.isFinite(item.height) && (item.height as number) > 0)) {
-      doc.fail([...at, 'height'], 'expected a number greater than 0');
+      doc.expected([...at, 'height'], 'expected a number greater than 0', item.height);
     }
     checkWidget(doc, item, at);
   });
@@ -193,7 +193,7 @@ function checkNode(doc: Checker, node: unknown, at: string[]): void {
   doc.number(node, [...at, 'y']);
   doc.optionalNumber(node, [...at, 'width']);
   doc.optionalNumber(node, [...at, 'height']);
-  if (typeof node.anchored !== 'boolean') doc.fail([...at, 'anchored'], 'expected true or false');
+  if (typeof node.anchored !== 'boolean') doc.expected([...at, 'anchored'], 'expected true or false', node.anchored);
   doc.optionalString(node, [...at, 'caption']);
   checkWidget(doc, node, at);
 }
@@ -279,7 +279,7 @@ function checkElementDefinition(doc: Checker, definition: Record<string, unknown
   if (definition.size !== undefined && doc.record(definition, [...at, 'size'])) {
     const size = definition.size as Record<string, unknown>;
     for (const side of ['width', 'height']) {
-      if (!(Number.isFinite(size[side]) && (size[side] as number) > 0)) doc.fail([...at, 'size', side], 'expected a number greater than 0');
+      if (!(Number.isFinite(size[side]) && (size[side] as number) > 0)) doc.expected([...at, 'size', side], 'expected a number greater than 0', size[side]);
     }
   }
   if (definition.props !== undefined) {
@@ -382,7 +382,7 @@ class Checker {
   optionalColor(owner: Record<string, unknown>, at: string[]): void {
     const value = owner[at[at.length - 1]];
     if (value === undefined) return;
-    if (typeof value !== 'string') this.fail(at, 'expected a string');
+    if (typeof value !== 'string') this.expected(at, 'expected a string', value);
     else if (this.strict && !isDrawingColor(value)) this.fail(at, `"${value}" is not a colour a canvas reads — use ${DRAWING_COLOR_FORMS}`);
   }
 
@@ -393,7 +393,7 @@ class Checker {
   id(owner: Record<string, unknown>, at: string[]): void {
     const id = owner[at[at.length - 1]];
     if (typeof id !== 'string') {
-      this.fail(at, 'expected a string');
+      this.expected(at, 'expected a string', id);
       return;
     }
     const first = this.ids.get(id);
@@ -405,7 +405,7 @@ class Checker {
   optionalSpan(owner: Record<string, unknown>, at: string[], columns: number): void {
     const value = owner[at[at.length - 1]];
     if (value !== undefined && !(Number.isInteger(value) && (value as number) >= 1 && (value as number) <= columns)) {
-      this.fail(at, `expected a whole number from 1 to ${columns}`);
+      this.expected(at, `expected a whole number from 1 to ${columns}`, value);
     }
   }
 
@@ -413,9 +413,15 @@ class Checker {
     this.issues.push({ path: pointer(at), message });
   }
 
+  /** A value of the wrong kind: what was expected, and what came — a writer (a model above all) does not re-read what
+   *  it sent, so "expected true or false" alone reads as a mystery when it sent `{"enum":["false"]}`. */
+  expected(at: string[], expectation: string, value: unknown): void {
+    this.fail(at, `${expectation} — ${received(value)}`);
+  }
+
   isRecordAt(value: unknown, at: string[]): value is Record<string, unknown> {
     if (isRecord(value)) return true;
-    this.fail(at, 'expected an object');
+    this.expected(at, 'expected an object', value);
     return false;
   }
 
@@ -425,12 +431,12 @@ class Checker {
 
   array(owner: Record<string, unknown>, at: string[]): boolean {
     if (Array.isArray(owner[at[at.length - 1]])) return true;
-    this.fail(at, 'expected an array');
+    this.expected(at, 'expected an array', owner[at[at.length - 1]]);
     return false;
   }
 
   string(owner: Record<string, unknown>, at: string[]): void {
-    if (typeof owner[at[at.length - 1]] !== 'string') this.fail(at, 'expected a string');
+    if (typeof owner[at[at.length - 1]] !== 'string') this.expected(at, 'expected a string', owner[at[at.length - 1]]);
   }
 
   optionalString(owner: Record<string, unknown>, at: string[]): void {
@@ -438,12 +444,22 @@ class Checker {
   }
 
   number(owner: Record<string, unknown>, at: string[]): void {
-    if (!Number.isFinite(owner[at[at.length - 1]])) this.fail(at, 'expected a finite number');
+    if (!Number.isFinite(owner[at[at.length - 1]])) this.expected(at, 'expected a finite number', owner[at[at.length - 1]]);
   }
 
   optionalNumber(owner: Record<string, unknown>, at: string[]): void {
     if (owner[at[at.length - 1]] !== undefined) this.number(owner, at);
   }
+}
+
+/** A short account of a value, for an error: what kind it is and the start of it. */
+function received(value: unknown): string {
+  if (value === undefined) return 'it is missing';
+  const text = (json: string) => (json.length > 60 ? `${json.slice(0, 57)}…` : json);
+  if (Array.isArray(value)) return `got a list of ${value.length}${value.length ? `: ${text(JSON.stringify(value))}` : ''}`;
+  if (typeof value === 'object' && value !== null) return `got an object ${text(JSON.stringify(value))}`;
+  if (typeof value === 'string') return `got the text ${text(JSON.stringify(value))}`;
+  return `got ${String(value)}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -91,7 +91,7 @@ describe('validateViewDocument — elements', () => {
   });
 
   it('reports elements that are not an object', () => {
-    expect(validateViewDocument({ kind: 'grid', items: [], elements: [] })).toEqual([{ path: '/elements', message: 'expected an object' }]);
+    expect(validateViewDocument({ kind: 'grid', items: [], elements: [] })).toEqual([{ path: '/elements', message: 'expected an object — got a list of 0' }]);
   });
 
   it('leaves a prepared widget type alone', () => {

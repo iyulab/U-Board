@@ -15,6 +15,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- `validateViewDocument` says what it got where a value is of the wrong kind — «expected true or false — got an object
+  {"enum":["false"]}», «expected an array — got an object {…}», «… — it is missing».
 - `applyJsonPatch` says when an operation is wrapped in `"op"`, and which fields an operation without a `path` has;
   `validateViewDocument` says when a document is wrapped in its own `"kind"`.
 - **A connector's label and style can be bound** — `Connector.bindings` on `label`, `style.stroke`,

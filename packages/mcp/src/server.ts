@@ -123,13 +123,21 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
     },
     async ({ name, kind, document }) =>
       tool(async () => {
+        // A refused first document makes no board: checked here first, as the server would — and should the server
+        // still refuse it, the board just made is taken away again, so a retry never leaves empty boards behind.
+        if (document) {
+          const issues = validateViewDocument(document, { strict: true });
+          if (document.kind !== kind) issues.unshift({ path: '/kind', message: `expected "${kind}", the kind asked for — got "${String(document.kind)}"` });
+          if (issues.length > 0) throw new UBoardApiError(400, { code: 'INVALID_DOCUMENT', issues: issues.slice(0, 50), message: 'no board was made — fix the document and call create_board again' });
+        }
         const created = await client.createBoard(name, kind);
         if (!document) return { id: created.id, revision: created.revision, advice: [] };
         try {
           const saved = await client.putDocument(created.id, document, created.revision);
           return { ...saved, advice: [...saved.advice, ...widgetAdvice(document)] };
         } catch (error) {
-          if (error instanceof UBoardApiError) error.body.message = `board ${created.id} was made empty; its document was refused`;
+          await client.deleteBoard(created.id).catch(() => {});
+          if (error instanceof UBoardApiError) error.body.message = 'no board was made — the server refused the document';
           throw error;
         }
       })

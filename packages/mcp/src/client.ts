@@ -88,6 +88,10 @@ export class UBoardClient {
     return this.request('POST', await this.workspacePath('/boards'), { body: { name, kind } });
   }
 
+  async deleteBoard(boardId: string): Promise<void> {
+    await this.request('DELETE', await this.workspacePath(`/boards/${encodeURIComponent(boardId)}`));
+  }
+
   /** Replaces a board's document — on `revision` when given (412 when the board has been saved since). */
   async putDocument(boardId: string, document: unknown, revision?: number): Promise<Saved> {
     return this.request('PUT', await this.workspacePath(`/boards/${encodeURIComponent(boardId)}`), { body: { document }, revision });
