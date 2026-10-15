@@ -121,6 +121,8 @@ const NODES: Node[] = [
           xFormat: { type: 'time' },
           valueAxisZero: false,
           series: [{ label: '수요 전력', symbol: 'none', color: '#4a555b' }],
+          // The contract the demand is held under — above today's data, so the axis reaches up to show it.
+          referenceLines: [{ axis: 'y', value: 1500, label: '계약 전력 1,500 kW', style: 'dashed', color: '#5b666c' }],
         },
       },
       bindings: { data: bind('/ems/demand', '/value') },

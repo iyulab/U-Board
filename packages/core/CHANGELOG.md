@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `@iyulab/u-widgets` ^0.33.2: a horizontal chart lists its categories in the data's order, a reference line the data
+  does not reach is drawn with the value axis reaching it, its label is no longer cut off, and `status` keeps its rows
+  together in a taller cell.
+
 ## [0.12.0] - 2026-10-15
 
 ### Added

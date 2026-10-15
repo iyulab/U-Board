@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@iyulab/u-board": "^0.12.0",
-    "@iyulab/u-widgets": "^0.33.1",
+    "@iyulab/u-widgets": "^0.33.2",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "zod": "^4.6.7"
   },
