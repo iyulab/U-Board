@@ -20,7 +20,6 @@ All notable changes to this package are documented here. The format follows
   element heavier than 32 KB.
 - The published JSON Schema describes `elements`, and names the rules it cannot express.
 
-
 ## [0.11.0] - 2026-10-15
 
 ### Added
