@@ -9,6 +9,11 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - The rules tell an assistant that a script element's code must always return.
+- `describe` answers in smaller topics: `rules` is the workflow, JSON Patch, the kinds and how a widget's props are
+  written; `canvas` (new) gives coordinates, default sizes, connectors, decorations, colours and drawing order; `data`
+  (new) holds sources and bindings. `widgets` lists one line per widget by category and takes a `query`;
+  `widget:<type>` gives its examples as a board places them (`{ type, props }`).
+- An unknown id (404) answers with where to find the ids.
 - `validate` checks as the server saves: a field the document format does not have, a decoration colour a canvas
   cannot read and a connector to a missing node are issues, each naming what that place takes.
 

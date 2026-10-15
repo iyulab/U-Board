@@ -38,7 +38,7 @@ In a client's JSON configuration:
 
 | Tool | What it does |
 |---|---|
-| `describe` | What a board can hold and how to write one: `rules` (read first), `elements`, `schema` (with a JSON Pointer for one part), `widgets`, `widget:<type>`. |
+| `describe` | What a board can hold and how to write one: `rules` (read first), `canvas`, `data`, `elements`, `widgets` (with a `query` for only the matching ones), `widget:<type>` (examples as `{ type, props }`), `schema` (with a JSON Pointer for one part). |
 | `list_boards` | The workspace's boards. |
 | `get_board` | A board, or one part of its document by JSON Pointer, with its revision. |
 | `create_board` | A new board of a kind (`grid` or `canvas`), optionally with a first document. |

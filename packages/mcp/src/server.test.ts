@@ -88,11 +88,38 @@ describe('u-board-mcp', () => {
   it('describes its topics, the rules, a part of the schema and a widget', async () => {
     expect((await call('describe')).value.topics.rules).toContain('Read this first');
     expect((await call('describe', { topic: 'rules' })).value).toContain('## JSON Patch');
-    expect((await call('describe', { topic: 'rules' })).value).toContain('graphic contrast of 3:1');
+    expect((await call('describe', { topic: 'elements' })).value).toContain('graphic contrast of 3:1');
+    expect((await call('describe', { topic: 'canvas' })).value).toContain('top-left of its box');
     expect((await call('describe', { topic: 'schema', pointer: '/$defs/elementDefinition' })).value.required).toEqual(['render']);
-    expect((await call('describe', { topic: 'widget:gauge' })).value.widget).toBe('gauge');
+    expect((await call('describe', { topic: 'widget:gauge' })).value.type).toBe('gauge');
     const unknown = await call('describe', { topic: 'widget:nope' });
     expect(unknown.isError).toBe(true);
+  });
+
+  it('keeps every topic within its budget — the answer an assistant reads before it can write', async () => {
+    const { value: topics } = await call('describe');
+    expect(JSON.stringify(topics).length).toBeLessThan(1200);
+    for (const topic of ['rules', 'canvas', 'data', 'elements']) {
+      expect((await call('describe', { topic })).value.length, topic).toBeLessThan(4000);
+    }
+    expect(JSON.stringify((await call('describe', { topic: 'widgets' })).value).length).toBeLessThan(4000);
+  });
+
+  it('finds widgets by what they should show, and gives examples a board places as they are', async () => {
+    const { value: found } = await call('describe', { topic: 'widgets', query: 'list of messages' });
+    expect(Object.values(found.matches).flat().some(line => String(line).startsWith('list —'))).toBe(true);
+    const { value: list } = await call('describe', { topic: 'widget:list' });
+    expect(list.examples[0].widget.type).toBe('list');
+    expect(list.examples[0].widget.props).toHaveProperty('data');
+    expect(list.examples[0].widget.props).not.toHaveProperty('widget');
+    const none = await call('describe', { topic: 'widgets', query: 'zzzz' });
+    expect(none.value.hint).toContain('without a query');
+  });
+
+  it('answers an unknown id with where to find the ids', async () => {
+    const { value, isError } = await call('get_board', { board: 'nope' });
+    expect(isError).toBe(true);
+    expect(value).toMatchObject({ status: 404, code: 'NOT_FOUND', hint: expect.stringContaining('list_boards') });
   });
 
   it('lists the boards of the token’s workspace, reading the workspace from the token once', async () => {

@@ -23,7 +23,8 @@ function failed(error: unknown): ToolResult {
       error.status === 401 ? 'The API token is not valid — ask for a new one (console → workspace settings → API 토큰).' :
       error.status === 403 && error.body.code === 'READ_ONLY_TOKEN' ? 'This token may only read — ask for a write token.' :
       error.status === 403 && error.body.code === 'CREDENTIALS_IN_CONSOLE' ? 'Credentials are entered by a person in the console, never here.' :
-      error.body.code === 'INVALID_DOCUMENT' ? 'Fix each issue at its path; describe("rules") or describe("schema") says what goes there.' :
+      error.status === 404 ? 'Nothing in this workspace has that id — list_boards and list_sources give the ids.' :
+      error.body.code === 'INVALID_DOCUMENT' ? 'Fix each issue at its path; describe("rules") or describe("canvas") says what goes there.' :
       undefined;
     return { content: [{ type: 'text', text: JSON.stringify({ status: error.status, ...error.body, ...(hint && { hint }) }) }], isError: true };
   }
@@ -58,13 +59,14 @@ export function createServer(client: UBoardClient): McpServer {
   server.registerTool(
     'describe',
     {
-      description: 'What a U-Board board can hold and how to write one. No topic: the list of topics. Start with "rules".',
+      description: 'What a U-Board board can hold and how to write one. No topic: the list of topics. Start with "rules"; read "canvas" before drawing a canvas board.',
       inputSchema: z.strictObject({
         topic: z.string().max(100).optional().describe(`One of: ${Object.keys(TOPICS).join(', ')}.`),
         pointer: z.string().max(200).optional().describe('With topic "schema": the JSON Pointer of one part, e.g. "/$defs/elementDefinition".'),
+        query: z.string().max(200).optional().describe('With topic "widgets": words for what it should show, e.g. "list of messages" — only the widgets that match.'),
       }),
     },
-    async ({ topic, pointer }) => tool(() => describeTopic(topic, pointer))
+    async ({ topic, pointer, query }) => tool(() => describeTopic(topic, pointer, query))
   );
 
   server.registerTool(
