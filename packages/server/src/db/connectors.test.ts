@@ -116,11 +116,11 @@ describe('sealed connector secrets', () => {
     const none = await createConnector(db, { actorUserId: 'a', workspaceId, name: 'Open', baseUrl: 'https://open.example.com', authType: 'none' });
     expect(await storedValue(legacy.id)).toBe('old-token');
 
-    expect(await sealStoredConnectorSecrets(db, box)).toBe(1);
+    expect(await sealStoredConnectorSecrets(db, box)).toEqual({ sealed: 1, resealed: 0 });
     expect(isSealed((await storedValue(legacy.id))!)).toBe(true);
     expect(await storedValue(none.id)).toBeNull();
     expect((await findConnector(db, workspaceId, legacy.id, box))?.authValue).toBe('old-token');
-    expect(await sealStoredConnectorSecrets(db, box)).toBe(0);
+    expect(await sealStoredConnectorSecrets(db, box)).toEqual({ sealed: 0, resealed: 0 });
   });
 
   it('refuses a key the stored secrets were not sealed with, changing nothing', async () => {
@@ -128,5 +128,31 @@ describe('sealed connector secrets', () => {
     const before = await storedValue(created.id);
     await expect(sealStoredConnectorSecrets(db, secretBox('another-key-of-at-least-32-characters!'))).rejects.toThrow(SecretUnreadableError);
     expect(await storedValue(created.id)).toBe(before);
+  });
+
+  it('seals secrets again under a new key when started with the key being replaced', async () => {
+    const created = await create();
+    const legacy = await createConnector(db, { actorUserId: 'a', workspaceId, name: 'Old', baseUrl: 'https://old.example.com', authType: 'bearer', authValue: 'old-token' });
+    const next = secretBox('the-new-secrets-key-of-at-least-32-characters');
+
+    expect(await sealStoredConnectorSecrets(db, next, box)).toEqual({ sealed: 1, resealed: 1 });
+    expect((await findConnector(db, workspaceId, created.id, next))?.authValue).toBe('secret-token');
+    expect((await findConnector(db, workspaceId, legacy.id, next))?.authValue).toBe('old-token');
+    const resealed = (await storedValue(created.id))!;
+    expect(() => box.open(resealed)).toThrow(SecretUnreadableError);
+    // Once replaced, the new key alone starts the server.
+    expect(await sealStoredConnectorSecrets(db, next)).toEqual({ sealed: 0, resealed: 0 });
+  });
+
+  it('changes nothing when a secret opens with neither the new key nor the one being replaced', async () => {
+    const first = await create();
+    const sealedFirst = await storedValue(first.id);
+    const next = secretBox('the-new-secrets-key-of-at-least-32-characters');
+    const stranger = await createConnector(db, { actorUserId: 'a', workspaceId, name: 'Other', baseUrl: 'https://other.example.com', authType: 'bearer', authValue: 'x' }, secretBox('a-third-key-nobody-has-of-32-characters'));
+    const sealedStranger = await storedValue(stranger.id);
+
+    await expect(sealStoredConnectorSecrets(db, next, box)).rejects.toThrow(SecretUnreadableError);
+    expect(await storedValue(first.id)).toBe(sealedFirst);
+    expect(await storedValue(stranger.id)).toBe(sealedStranger);
   });
 });

@@ -30,6 +30,13 @@ if (!secretsKey) {
   throw new Error('UBOARD_SECRETS_KEY must be set (at least 32 characters, e.g. `openssl rand -base64 32`)');
 }
 const secrets = secretBox(secretsKey);
+// The key being replaced, set for one start: credentials sealed under it are sealed again under
+// `UBOARD_SECRETS_KEY`, after which it is removed.
+const previousSecretsKey = process.env.UBOARD_SECRETS_KEY_PREVIOUS || undefined;
+if (previousSecretsKey === secretsKey) {
+  throw new Error('UBOARD_SECRETS_KEY_PREVIOUS is the same as UBOARD_SECRETS_KEY — set it to the key being replaced, or remove it');
+}
+const previousSecrets = previousSecretsKey === undefined ? undefined : secretBox(previousSecretsKey);
 
 // Without Sendway settings, `createApp` falls back to its dev-mode log-the-token default.
 const sendwayConfig = sendwayConfigFromEnv(process.env);
@@ -85,12 +92,19 @@ const webApps =
 
 const db = await createDb(databaseUrl);
 try {
-  const sealed = await sealStoredConnectorSecrets(db, secrets);
+  const { sealed, resealed } = await sealStoredConnectorSecrets(db, secrets, previousSecrets);
   if (sealed > 0) console.log(`[server] sealed ${sealed} connector credential(s) stored before sealing existed`);
+  if (resealed > 0) console.log(`[server] sealed ${resealed} connector credential(s) again under the new UBOARD_SECRETS_KEY`);
+  if (previousSecrets) {
+    console.log('[server] every connector credential is sealed under UBOARD_SECRETS_KEY — remove UBOARD_SECRETS_KEY_PREVIOUS');
+  }
 } catch (err) {
   if (!(err instanceof SecretUnreadableError)) throw err;
   throw new Error(
-    'UBOARD_SECRETS_KEY is not the key the stored connector credentials were sealed with — start with that key, ' +
+    (previousSecrets
+      ? 'A stored connector credential opens with neither UBOARD_SECRETS_KEY nor UBOARD_SECRETS_KEY_PREVIOUS — '
+      : 'UBOARD_SECRETS_KEY is not the key the stored connector credentials were sealed with — ') +
+      'start with that key (to replace it, set it as UBOARD_SECRETS_KEY_PREVIOUS next to the new one), ' +
       'or (if it is lost) clear the credentials so owners can enter them again: UPDATE connectors SET auth_value = NULL'
   );
 }

@@ -3,7 +3,7 @@ import type { Attribution } from '@iyulab/u-board/domain';
 import { randomUUID } from 'node:crypto';
 import type { ClientAuthMethod } from '../oauth-client-credentials.js';
 import { recordAuditEvent } from './audit.js';
-import { UNSEALED, isSealed, type SecretBox } from '../secret-box.js';
+import { UNSEALED, SecretUnreadableError, isSealed, type SecretBox } from '../secret-box.js';
 
 /** How a connector sends its secret: as `Authorization: Bearer`, as a named header, as a named query
  * parameter (`query`), in place of `{key}` in its base URL (`path`), or as OAuth2 client credentials.
@@ -203,25 +203,44 @@ export async function findConnector(db: DbClient, workspaceId: string, connector
   return rows[0] ? rowToConnector(rows[0], secrets) : undefined;
 }
 
+/** What `sealStoredConnectorSecrets` changed: values stored as given that it sealed, and values sealed
+ *  under the previous key that it sealed again under the current one. */
+export interface SealedSecretsCount {
+  sealed: number;
+  resealed: number;
+}
+
 /** Seals every connector secret still stored as given — run when the server starts, so values from
  *  before sealing existed are sealed too — and checks that each sealed one opens with this key.
- *  Throws `SecretUnreadableError` when one does not: the installation was started with another key
- *  than its credentials were sealed under, which would otherwise surface later as failing reads. */
-export async function sealStoredConnectorSecrets(db: DbClient, secrets: SecretBox): Promise<number> {
+ *
+ *  With `previous` (the key being replaced), a value that does not open with `secrets` but opens with
+ *  `previous` is sealed again under `secrets`, so a key is replaced by starting once with both. All or
+ *  nothing: throws `SecretUnreadableError`, changing no value, when one opens with neither key — the
+ *  installation was started with another key than its credentials were sealed under, which would
+ *  otherwise surface later as failing reads. */
+export async function sealStoredConnectorSecrets(db: DbClient, secrets: SecretBox, previous?: SecretBox): Promise<SealedSecretsCount> {
   return db.withTransaction(async tx => {
     const { rows } = await tx.query<{ id: string; auth_value: string }>(
       `SELECT id, auth_value FROM connectors WHERE auth_value IS NOT NULL FOR UPDATE`
     );
-    let sealed = 0;
+    const count: SealedSecretsCount = { sealed: 0, resealed: 0 };
     for (const row of rows) {
-      if (isSealed(row.auth_value)) {
-        secrets.open(row.auth_value);
+      if (!isSealed(row.auth_value)) {
+        await tx.query(`UPDATE connectors SET auth_value = $1 WHERE id = $2`, [secrets.seal(row.auth_value), row.id]);
+        count.sealed++;
         continue;
       }
-      await tx.query(`UPDATE connectors SET auth_value = $1 WHERE id = $2`, [secrets.seal(row.auth_value), row.id]);
-      sealed++;
+      try {
+        secrets.open(row.auth_value);
+        continue;
+      } catch (err) {
+        if (!(err instanceof SecretUnreadableError) || !previous) throw err;
+      }
+      const plain = previous.open(row.auth_value);
+      await tx.query(`UPDATE connectors SET auth_value = $1 WHERE id = $2`, [secrets.seal(plain), row.id]);
+      count.resealed++;
     }
-    return sealed;
+    return count;
   });
 }
 

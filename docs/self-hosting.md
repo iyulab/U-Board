@@ -73,7 +73,8 @@ address. Records older than `UBOARD_AUDIT_RETENTION_DAYS` are deleted.
 |---|---|---|
 | `UBOARD_DATABASE_URL` | yes | A `postgres://` or `postgresql://` URL for a PostgreSQL database the server owns — it creates and upgrades its tables on start. Say `sslmode=verify-full` explicitly for a TLS connection that checks the certificate. Anything else is a directory path for an embedded PostgreSQL (PGlite) — enough for a trial or a small single-machine installation; put it on a volume (`-v u-board-data:/data -e UBOARD_DATABASE_URL=/data/u-board`). |
 | `UBOARD_SESSION_SECRET` | yes | Signs session cookies; at least 16 characters. Changing it signs everyone out. |
-| `UBOARD_SECRETS_KEY` | yes | Seals connector credentials in the database (AES-256-GCM), so a copy of the database does not hand them out; at least 32 characters (`openssl rand -base64 32`). Keep it apart from the session secret and from backups. The server seals credentials stored before it was set when it starts, and refuses to start with a key other than the one they were sealed with. A lost key leaves the credentials unreadable: clear them (`UPDATE connectors SET auth_value = NULL`) and have owners enter them again. |
+| `UBOARD_SECRETS_KEY` | yes | Seals connector credentials in the database (AES-256-GCM), so a copy of the database does not hand them out; at least 32 characters (`openssl rand -base64 32`). Keep it apart from the session secret and from backups. The server seals credentials stored before it was set when it starts, and refuses to start with a key other than the one they were sealed with — to replace it, see [Replacing the secrets key](#replacing-the-secrets-key). A lost key leaves the credentials unreadable: clear them (`UPDATE connectors SET auth_value = NULL`) and have owners enter them again. |
+| `UBOARD_SECRETS_KEY_PREVIOUS` | no | The secrets key being replaced, set for one start next to the new `UBOARD_SECRETS_KEY`: credentials sealed under it are sealed again under the new key. Remove it once the server has started. |
 | `PORT` | no | Port to listen on (default `4000`). |
 | `UBOARD_STALE_MAX_AGE_SECONDS` | no | How long after it was last read a connector's value may still be shown as stale when the data source stops answering — counted from the read, not from the time the source says it observed the value. Past it, the binding shows as disconnected. Unset: no limit — the value is shown however old, with its age. |
 | `UBOARD_SHARE_FRAME_ANCESTORS` | no | Which pages may embed a share link in a frame, as a CSP `frame-ancestors` source list. Default `https:` (any page served over HTTPS). An intranet page served over plain HTTP needs to be named, e.g. `http://hmi.example.com https:`. |
@@ -234,6 +235,22 @@ To restore, unpack the archive into an empty volume and start the server on it:
 ```sh
 docker run --rm -v u-board-restored:/data -v "$PWD":/backup --entrypoint tar ghcr.io/iyulab/u-board:<version> xzf /backup/u-board-data.tgz -C /data
 ```
+
+### Replacing the secrets key
+
+Replace `UBOARD_SECRETS_KEY` when it may have been seen by someone it was not meant for, or when a policy
+asks for it on a schedule. Owners do not have to enter any credential again:
+
+1. Make a new key (`openssl rand -base64 32`).
+2. Start the server with the new key as `UBOARD_SECRETS_KEY` and the old one as `UBOARD_SECRETS_KEY_PREVIOUS`.
+   It seals every credential again under the new key in one transaction — if any opens with neither key, it
+   changes nothing and does not start — and logs that the old key can go.
+3. Remove `UBOARD_SECRETS_KEY_PREVIOUS` and start again. Keep the old key only with the backups made before
+   the change: they are restored with it.
+
+Run one server through step 2. A second one still running with only the old key cannot read the
+credentials once they are sealed again, so its boards show their data sources as failing until it is
+restarted with the new key.
 
 ## Upgrading
 

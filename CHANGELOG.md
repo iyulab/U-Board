@@ -22,6 +22,10 @@ do when upgrading. Each release's notes carry its section.
   token made in the workspace settings: it acts as the person who made it, in that workspace only, `read` or `write`,
   and is shown once. It reaches boards and data sources but never a data source's credential, which a person enters
   in the console. `GET /api/token` says what a token is. Making and deleting one is recorded in the activity record.
+- **Replacing `UBOARD_SECRETS_KEY`** — start once with the new key as `UBOARD_SECRETS_KEY` and the old one as
+  `UBOARD_SECRETS_KEY_PREVIOUS`: the server opens each connector credential with whichever key it was sealed under
+  and seals it again under the new one, all or nothing, then says to remove the old key. Before, a key that had
+  leaked could only be replaced by clearing every credential and having owners enter them again.
 - **`PATCH …/boards/:id`** — changes part of a board's document with a JSON Patch (RFC 6902,
   `application/json-patch+json`), applied to the board as saved now and saved only on that revision (or the one
   `If-Match` names): a board saved in between answers `412`. A failed operation answers `400 INVALID_PATCH` with its
