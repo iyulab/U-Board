@@ -91,6 +91,9 @@ describe('u-board-mcp', () => {
     expect((await call('describe', { topic: 'elements' })).value).toContain('graphic contrast of 3:1');
     expect((await call('describe', { topic: 'canvas' })).value).toContain('top-left of its box');
     expect((await call('describe', { topic: 'schema', pointer: '/$defs/elementDefinition' })).value.required).toEqual(['render']);
+    const lost = await call('describe', { topic: 'schema', pointer: '/properties' });
+    expect(lost.isError).toBe(true);
+    expect(lost.value.error).toContain('/$defs/canvasView');
     expect((await call('describe', { topic: 'widget:gauge' })).value.type).toBe('gauge');
     const unknown = await call('describe', { topic: 'widget:nope' });
     expect(unknown.isError).toBe(true);

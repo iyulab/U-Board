@@ -49,10 +49,11 @@ describe('lintGeometry', () => {
   });
 
   it('keeps to its limit and says how many more there are', () => {
-    const nodes = Array.from({ length: 6 }, (_, i) => node(`n${i}`, i * 10, 0));
-    const advice = lintGeometry(canvas({ nodes }));
+    const nodes = Array.from({ length: 9 }, (_, i) => node(`n${i}`, i * 10, 0)); // 36 overlapping pairs
+    const decorations = [text('a', 0, 400, 'one'), text('b', 5, 400, 'two')];
+    const advice = lintGeometry(canvas({ nodes, decorations }));
     expect(advice).toHaveLength(GEOMETRY_ADVICE_LIMIT + 1);
-    expect(advice.at(-1)).toEqual({ path: '', message: '5 more places like these — fix the ones above, then check again' });
+    expect(advice.at(-1)).toEqual({ path: '', message: '7 more: 6 overlapping nodes, 1 texts running together — fix the ones above, then check again' });
   });
 
   it('is part of lintViewDocument for a canvas board, before the element advice', () => {

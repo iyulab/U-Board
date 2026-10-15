@@ -6,8 +6,9 @@ import type { ViewDocumentAdvice } from './lint-view-document.js';
 const DEFAULT_TEXT_SIZE = 16;
 /** Average glyph width as a share of the font size — what the canvas engine assumes where it cannot measure. */
 const GLYPH_WIDTH = 0.6;
-/** How many layout findings a document gets at most — advice an assistant reads is context too. */
-export const GEOMETRY_ADVICE_LIMIT = 10;
+/** How many layout findings a document gets one by one — advice an assistant reads is context too, but a writer
+ *  sent only a few fixes the board in many rounds, resending it each time. The rest are counted by kind. */
+export const GEOMETRY_ADVICE_LIMIT = 30;
 
 interface Box {
   x: number;
@@ -32,40 +33,41 @@ export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
   const nodes = doc.nodes.map((node, i) => ({ id: node.id, at: `/nodes/${i}`, box: nodeBox(node) }));
   const texts = (doc.decorations ?? []).flatMap((shape, i) => (shape.type === 'text' && shape.text.trim() !== '' ? [{ at: `/decorations/${i}`, box: textBox(shape) }] : []));
   const byId = new Map(nodes.map(node => [node.id, node]));
-  const found: ViewDocumentAdvice[] = [];
+  const found: Array<ViewDocumentAdvice & { kind: string }> = [];
 
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       if (overlaps(nodes[i].box, nodes[j].box)) {
-        found.push({ path: nodes[i].at, message: `its box overlaps node "${nodes[j].id}" (${nodes[j].at}) — one widget draws over the other; move or resize one` });
+        found.push({ kind: 'overlapping nodes', path: nodes[i].at, message: `its box overlaps node "${nodes[j].id}" (${nodes[j].at}) — one widget draws over the other; move or resize one` });
       }
     }
   }
   for (const text of texts) {
     const under = nodes.find(node => overlaps(text.box, node.box));
-    if (under) found.push({ path: text.at, message: `this text lies under node "${under.id}" (${under.at}), which draws over it — move it clear of ${describe(under.box)}` });
+    if (under) found.push({ kind: 'texts under a node', path: text.at, message: `this text lies under node "${under.id}" (${under.at}), which draws over it — move it clear of ${describe(under.box)}` });
   }
   for (const text of texts) {
     for (const connector of doc.connectors) {
       const from = byId.get(connector.fromNodeId);
       const to = byId.get(connector.toNodeId);
       if (from && to && crosses(centre(from.box), centre(to.box), inset(text.box, 1))) {
-        found.push({ path: text.at, message: `connector "${connector.id}" runs through this text — place it beside the line` });
+        found.push({ kind: 'texts on a connector', path: text.at, message: `connector "${connector.id}" runs through this text — place it beside the line` });
         break;
       }
     }
   }
   for (let i = 0; i < texts.length; i++) {
     for (let j = i + 1; j < texts.length; j++) {
-      if (overlaps(texts[i].box, texts[j].box)) found.push({ path: texts[i].at, message: `this text runs into ${texts[j].at} — the two overlap` });
+      if (overlaps(texts[i].box, texts[j].box)) found.push({ kind: 'texts running together', path: texts[i].at, message: `this text runs into ${texts[j].at} — the two overlap` });
     }
   }
 
-  if (found.length <= GEOMETRY_ADVICE_LIMIT) return found;
-  return [
-    ...found.slice(0, GEOMETRY_ADVICE_LIMIT),
-    { path: '', message: `${found.length - GEOMETRY_ADVICE_LIMIT} more places like these — fix the ones above, then check again` },
-  ];
+  const shown = found.slice(0, GEOMETRY_ADVICE_LIMIT).map(({ path, message }) => ({ path, message }));
+  if (found.length <= GEOMETRY_ADVICE_LIMIT) return shown;
+  const rest = new Map<string, number>();
+  for (const { kind } of found.slice(GEOMETRY_ADVICE_LIMIT)) rest.set(kind, (rest.get(kind) ?? 0) + 1);
+  const counted = [...rest].map(([kind, n]) => `${n} ${kind}`).join(', ');
+  return [...shown, { path: '', message: `${found.length - GEOMETRY_ADVICE_LIMIT} more: ${counted} — fix the ones above, then check again` }];
 }
 
 function nodeBox(node: CanvasView['nodes'][number]): Box {

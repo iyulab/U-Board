@@ -28,7 +28,8 @@ const RULES = `# Writing a U-Board board
 ## Workflow
 1. list_boards → pick a board, or create_board({ name, kind }). For live values: describe("data").
 2. get_board({ board, pointer }) — read only the part you need ("/items", "/nodes/3"); note its revision.
-3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Send a whole document only to start one.
+3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Start a board small (its frame, a few parts), then add and fix in patches: validate({ board, patch }) sends only the patch, a whole document is sent again each time.
+   Each save is a new revision; a new board is revision 1, and create_board with a document saves it as revision 2.
 4. Read the answer: the new revision and advice — act on the advice. A 412 means someone saved since — get_board again and redo the patch.
 5. validate({ document } | { board, patch }) checks without saving, exactly as saving does.
 6. look({ board }) after a change — a picture as viewers see it, and what went wrong while drawing. Fix what you see; focus one part to see it up close.
@@ -56,7 +57,7 @@ const CANVAS = `# Canvas boards
 - Scene units = CSS px at 100%, x to the right, y down. The viewer fits the whole drawing into view (never above 100%), so absolute position does not matter — relative layout does.
 - A node's x, y is the top-left of its box; width × height default to ${DEFAULT_NODE_WIDTH} × ${DEFAULT_NODE_HEIGHT}. Its widget is clipped to the box — make the box fit its content (a 12 px label needs about 7 px per character).
 - anchored: true when x, y is a real place on the background (a plan's metres, a map's longitude/latitude via background.image.referencePoints), false when placed freely.
-- background: {} for none, or { image: { src, width, height } } — the drawing is placed at 0, 0 at its own size.
+- background: {} for none, or { image: { src, width, height } } — the drawing is placed at 0, 0 at its own size. src is a URL or a data: URL (an SVG drawn for the board: "data:image/svg+xml,…").
 
 ## Connectors
 - { id, fromNodeId, toNodeId } — a straight 2 px grey line between the centres of two nodes' boxes. Both ends must be nodes of /nodes.
@@ -65,7 +66,7 @@ const CANVAS = `# Canvas boards
 ## Decorations (drawn under connectors and nodes, first one lowest)
 - rect: { id, type: "rect", x, y, width, height, fill?, stroke?, strokeWidth? } — no fill: transparent; stroke needs strokeWidth.
 - text: { id, type: "text", x, y, text, fontSize?: 16, fill? } — one line; x, y is the top-left of the text; about 0.6 × fontSize px per character.
-- A labelled frame: a rect, then a text over its top edge with a small rect behind it in the paper's colour.
+- A labelled frame: a rect, then a text just above its top edge or inside its top-left corner. A tag on the edge itself needs a small rect behind the text filled with the frame's own colour (and a light text on it) — the paper's colour is the host page's, not the board's.
 - Colours: "#1f6feb", "#1f6feb33" (with alpha), rgb()/rgba(), hsl()/hsla(), a CSS name, "transparent", "none". Not var(--…): decorations draw on a canvas, which has no stylesheet.
 
 ## Order and appearance
@@ -101,7 +102,7 @@ placement  = { type: "element:<name>", props: { … }, bindings?: { … } } — 
 - Markup: HTML text/structure tags, img, and SVG (shapes, text, gradients, patterns, symbol/use, markers, filters).
 - Not allowed: script, style, iframe, a, form, foreignObject, event handler attributes (on*), srcset, @import.
 - URLs (href, src, CSS url()): only "#id", "data:image/…", or an origin listed in resources.
-- Values: {{name}} / {{a.b}} (escaped), {{#list}}…{{/list}} (each item; {{.}} is the item; a truthy value shows once), {{^flag}}…{{/flag}} (empty or false), {{! comment}}. No unescaped output, no partials.
+- Values: {{name}} / {{a.b}} (escaped), {{#list}}…{{/list}} (each item of a list; {{.}} is the item; any other value shows it once), {{^flag}}…{{/flag}} (shown when empty), {{! comment}}. Empty = absent, null, false, "" or []; 0 is not empty. No unescaped output, no partials.
 - The markup draws in an isolated root: its CSS reaches only itself, and :host is the element's box. A grid item without a height takes size.height.
 - Example:
   { "render": "template",
@@ -116,6 +117,16 @@ placement  = { type: "element:<name>", props: { … }, bindings?: { … } } — 
 - Code must always return: no loop that waits for a condition, no long synchronous work. A frame that stops answering is removed; in some browsers it freezes the whole board first.
 - A library is loaded from an origin in resources (e.g. a <script src> it adds, or import()), and only where the installation allows that origin.
 - The frame is drawn from the saved board — save before checking it.`;
+
+/** One part of the schema — and when there is nothing there, the pointers that do lead somewhere. */
+function schemaPart(pointer: string): unknown {
+  try {
+    return getByPointer(documentSchema(), pointer);
+  } catch {
+    const defs = Object.keys((documentSchema() as { $defs?: Record<string, unknown> }).$defs ?? {});
+    throw new Error(`nothing at ${pointer} in the schema — its parts are under /$defs: ${defs.map(name => `/$defs/${name}`).join(', ')}`);
+  }
+}
 
 /** One line per prepared widget, by category — the catalog an assistant scans to pick one. */
 function widgetCatalog(query: string | undefined): unknown {
@@ -148,7 +159,7 @@ export function describeTopic(topic: string | undefined, pointer: string | undef
   if (topic === 'canvas') return CANVAS;
   if (topic === 'data') return DATA;
   if (topic === 'elements') return ELEMENTS;
-  if (topic === 'schema') return pointer ? getByPointer(documentSchema(), pointer) : documentSchema();
+  if (topic === 'schema') return pointer ? schemaPart(pointer) : documentSchema();
   if (topic === 'widgets') return widgetCatalog(query);
   if (topic.startsWith('widget:')) return widgetDetail(topic.slice('widget:'.length));
   throw new Error(`no topic "${topic}" — one of ${Object.keys(TOPICS).join(', ')}`);
