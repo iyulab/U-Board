@@ -41,6 +41,11 @@ describe('applyJsonPatch — RFC 6902 Appendix A', () => {
     expect(() => applyJsonPatch(document, patch)).toThrow(message);
   });
 
+  it('says when an operation is wrapped in "op", and which fields an operation without a path has', () => {
+    expect(() => applyJsonPatch({}, [{ op: { op: 'add', path: '/a', value: 1 } }])).toThrow('operation 0: the operation is wrapped in "op"');
+    expect(() => applyJsonPatch({}, [{ op: 'add', value: 1 }])).toThrow('this operation has "op", "value"');
+  });
+
   it('applies all or nothing, and names the operation that failed', () => {
     const document = { a: 1 };
     let error: unknown;

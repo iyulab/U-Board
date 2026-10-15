@@ -38,6 +38,12 @@ function broken(mutate: (doc: any) => void): unknown {
 const paths = (value: unknown) => validateViewDocument(value).map(issue => issue.path);
 
 describe('validateViewDocument', () => {
+  it('says when a document is wrapped in its own "kind"', () => {
+    expect(validateViewDocument({ kind: { kind: 'canvas', background: {}, nodes: [], connectors: [] } })).toEqual([
+      { path: '/kind', message: expect.stringContaining('the document is wrapped one level too deep') },
+    ]);
+  });
+
   it('accepts a complete document, and the minimal empty one', () => {
     expect(validateViewDocument(valid)).toEqual([]);
     expect(validateViewDocument({ kind: 'canvas', background: {}, nodes: [], connectors: [] })).toEqual([]);

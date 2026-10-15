@@ -44,11 +44,23 @@ async function tool(run: () => Promise<unknown> | unknown): Promise<ToolResult> 
 
 const boardId = z.string().min(1).max(100).describe('The board id, from list_boards.');
 const revision = z.number().int().positive().optional().describe('The revision the change was made against (from get_board). A board saved since answers 412.');
-const patch = z
-  .array(z.record(z.string(), z.unknown()))
-  .min(1)
-  .describe('A JSON Patch (RFC 6902): [{ "op": "add" | "remove" | "replace" | "move" | "copy" | "test", "path": "/json/pointer", "value"?, "from"? }].');
-const document = z.record(z.string(), z.unknown()).describe('A whole board document — describe("rules") and describe("schema").');
+/** Said when a writer nests an object in its own first key — the commonest shape mistake, and one the plain schema
+ *  error ("expected one of …") does not explain. */
+const WRAPPED = (key: string, shape: string) => (issue: { input?: unknown }) =>
+  typeof issue.input === 'object' && issue.input !== null && key in issue.input
+    ? `this is wrapped in "${key}" — write ${shape} itself, not { "${key}": { … } }`
+    : undefined;
+const operation = z.object({
+  op: z.enum(['add', 'remove', 'replace', 'move', 'copy', 'test'], { error: WRAPPED('op', '{ "op": "add", "path": "/…", "value": … }') }),
+  path: z.string().describe('A JSON Pointer: "/nodes/-" appends to nodes, "/nodes/3/x" is a field.'),
+  value: z.unknown().optional().describe('For add, replace and test.'),
+  from: z.string().optional().describe('For move and copy.'),
+});
+const patch = z.array(operation).min(1).describe('A JSON Patch (RFC 6902), applied entirely or not at all.');
+const document = z
+  .object({ kind: z.enum(['canvas', 'grid'], { error: WRAPPED('kind', 'the document { "kind": "canvas", … }') }) })
+  .passthrough()
+  .describe('A whole board document: { kind: "canvas", background, nodes, connectors, decorations?, elements? } or { kind: "grid", items } — describe("rules").');
 
 /**
  * The U-Board MCP server: an AI assistant reads and draws a workspace's boards through `client`. Few tools, each a

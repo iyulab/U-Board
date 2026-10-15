@@ -15,6 +15,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- `applyJsonPatch` says when an operation is wrapped in `"op"`, and which fields an operation without a `path` has;
+  `validateViewDocument` says when a document is wrapped in its own `"kind"`.
 - **A connector's label and style can be bound** — `Connector.bindings` on `label`, `style.stroke`,
   `style.strokeWidth` and `style.dash` (`CONNECTOR_BINDABLE`), the same shape as a widget's bindings, maps included.
   `resolveDocument` reads them (`resolveConnector`; a value is taken only in the form its path draws, else the static

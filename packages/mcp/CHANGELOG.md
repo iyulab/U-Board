@@ -8,6 +8,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- The tools' inputs declare their shape: a patch operation is `{ op, path, value?, from? }` and a document needs
+  `kind`. An operation or a document nested in its own first key (`{ "op": { "op": … } }`, `{ "kind": { "kind": … } }`)
+  is refused with what to write instead — a model that made this mistake used to see only «expected "path"» and
+  repeat it.
 - `look` reports text that reads under 3:1 against what is actually drawn behind it (measured on the picture, so a
   panel painted under a widget counts) — on either paper. A focused part is taken with room around it (at least half
   its size), so what spills past its box shows.

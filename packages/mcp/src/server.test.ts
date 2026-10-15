@@ -137,6 +137,16 @@ describe('u-board-mcp', () => {
     expect(asked).toEqual([{ request: { board: 'b1', focus: '/items/0', width: 1600, height: 900 }, kind: 'grid' }]);
   });
 
+  it('says when an operation or a document is wrapped in its own first key — the commonest shape mistake', async () => {
+    const wrappedOp = (await client.callTool({ name: 'patch_board', arguments: { board: 'b1', patch: [{ op: { op: 'add', path: '/x', value: 1 } }] } })) as { content: { text: string }[]; isError?: boolean };
+    expect(wrappedOp.isError).toBe(true);
+    expect(wrappedOp.content[0].text).toContain('wrapped in "op"');
+    const wrappedDoc = (await client.callTool({ name: 'validate', arguments: { document: { kind: { kind: 'canvas', background: {}, nodes: [], connectors: [] } } } })) as { content: { text: string }[]; isError?: boolean };
+    expect(wrappedDoc.isError).toBe(true);
+    expect(wrappedDoc.content[0].text).toContain('wrapped in "kind"');
+    expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
+  });
+
   it('answers an unknown id with where to find the ids', async () => {
     const { value, isError } = await call('get_board', { board: 'nope' });
     expect(isError).toBe(true);

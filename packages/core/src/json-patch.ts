@@ -40,7 +40,14 @@ function applyOperation(root: unknown, operation: unknown): unknown {
   const { op, path, from } = operation as Record<string, unknown>;
   const has = (key: string) => Object.hasOwn(operation, key);
   const value = (operation as Record<string, unknown>).value;
-  if (typeof path !== 'string') throw new Error('expected "path", a JSON Pointer');
+  // A writer that nests the operation in its own first key — { "op": { "op": "add", … } } — sees only "path is
+  // missing" and tries again the same way; say what it sent.
+  if (typeof op === 'object' && op !== null && 'op' in op) {
+    throw new Error('the operation is wrapped in "op" — write { "op": "add", "path": "/…", "value": … } itself, not { "op": { … } }');
+  }
+  if (typeof path !== 'string') {
+    throw new Error(`expected "path", a JSON Pointer — this operation has ${Object.keys(operation).map(key => `"${key}"`).join(', ') || 'no fields'}; an operation is { "op", "path", "value" }`);
+  }
   switch (op) {
     case 'add':
       if (!has('value')) throw new Error('"add" needs a "value"');

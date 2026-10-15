@@ -60,7 +60,10 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
   } else if (value.kind === 'grid') {
     doc.known(value, [], GRID_FIELDS, 'grid view');
     checkGridView(doc, value);
-  } else doc.fail(['kind'], 'expected "canvas" or "grid"');
+  } else if (isRecord(value.kind) && 'kind' in value.kind) {
+    // { "kind": { "kind": "canvas", … } } — the document nested in its own first key.
+    doc.fail(['kind'], 'expected "canvas" or "grid" — "kind" holds an object with its own "kind": the document is wrapped one level too deep; send the document itself');
+  } else doc.fail(['kind'], `expected "canvas" or "grid"${isRecord(value.kind) ? ', got an object' : ''}`);
 
   return issues;
 }
