@@ -12,6 +12,7 @@ import { publicUrlFromEnv } from './public-url.js';
 import { workspaceCreationFromEnv } from './workspace-creation.js';
 import { auditRetentionDaysFromEnv, scheduleAuditPurge } from './audit-retention.js';
 import { connectorAddressesFromEnv, createConnectorFetch } from './connector-network.js';
+import { elementOriginsFromEnv } from './element-frame.js';
 import { exitOnStopSignal } from './shutdown.js';
 import { secretBox, SecretUnreadableError } from './secret-box.js';
 import { sealStoredConnectorSecrets } from './db/connectors.js';
@@ -65,6 +66,9 @@ const workspaceCreation = workspaceCreationFromEnv(process.env.UBOARD_WORKSPACE_
 // server's own loopback or link-local addresses.
 const connectorFetch = createConnectorFetch(connectorAddressesFromEnv(process.env.UBOARD_CONNECTOR_ADDRESSES));
 
+// The origins a board's elements may load from (when they list them too): none unless the operator opens some.
+const elementOrigins = elementOriginsFromEnv(process.env.UBOARD_ELEMENT_ORIGINS);
+
 // Days membership, role and invitation records are kept.
 const auditRetentionDays = auditRetentionDaysFromEnv(process.env.UBOARD_AUDIT_RETENTION_DAYS);
 
@@ -103,6 +107,7 @@ const app = createApp({
   connectorFetch,
   secrets,
   webApps,
+  elementOrigins,
 });
 
 const port = Number(process.env.PORT ?? 4000);

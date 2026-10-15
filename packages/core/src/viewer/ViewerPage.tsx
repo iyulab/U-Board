@@ -14,7 +14,7 @@ import type { ResolvedGridView, ResolvedViewDocument } from '../resolve-document
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from './attribution.js';
-import { ElementOriginsContext } from '../renderer/element-view.js';
+import { ElementHost } from '../renderer/element-view.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -46,9 +46,10 @@ export interface ViewerPageProps {
   /** The origins an element of the board may load from — a font, an image, a script library — when it also lists them
    * in its `resources`. Default none: a board loads nothing from another origin unless its host allows it here. */
   elementOrigins?: readonly string[];
+  /** Where the board's script elements run: the address its server serves their frames under —
+   * `/api/element-frames/<board id>` on a U-Board server. Omitted, a script element shows a notice in its box. */
+  elementFrames?: string;
 }
-
-const NO_ORIGINS: readonly string[] = [];
 
 /** What is on screen: a canvas view as canvas-kit draws it, or a grid view as it lays out — with the time its
  *  values' ages are measured to. */
@@ -73,7 +74,8 @@ export function ViewerPage({
   labels: labelsProp,
   clock = Date.now,
   attribution = true,
-  elementOrigins = NO_ORIGINS,
+  elementOrigins,
+  elementFrames,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
   const [drawn, setDrawn] = useState<Drawn | null>(null);
@@ -111,7 +113,7 @@ export function ViewerPage({
   }, [resolved, labels]);
 
   return (
-    <ElementOriginsContext value={elementOrigins}>
+    <ElementHost origins={elementOrigins} frames={elementFrames}>
       <div className="ub-viewer" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         {drawn && (drawn.kind === 'canvas' || pollIntervalMs !== undefined) && (
           <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
@@ -147,7 +149,7 @@ export function ViewerPage({
         )}
         {drawn && <AttributionLine attributions={attributions} labels={labels} />}
       </div>
-    </ElementOriginsContext>
+    </ElementHost>
   );
 }
 

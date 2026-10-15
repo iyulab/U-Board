@@ -12,6 +12,7 @@ import { createBoardShareTokensRouter } from './routes/board-share-tokens.js';
 import { createConnectorsRouter } from './routes/connectors.js';
 import { createShareRouter } from './routes/share.js';
 import { createInstanceRouter } from './routes/instance.js';
+import { createElementFramesRouter } from './routes/element-frames.js';
 import { ClientCredentialsTokens } from './oauth-client-credentials.js';
 import { DEFAULT_UPSTREAM_REUSE_MS, type ResolveState } from './resolve-connector.js';
 import { serveWebApps, type WebApps } from './web-apps.js';
@@ -56,6 +57,8 @@ export interface AppConfig {
   /** The built console and share viewer to serve next to the API, from one origin: the share
    *  viewer under `/share/`, the console at every other path. Omit to serve the API alone (tests). */
   webApps?: WebApps;
+  /** The origins a board's elements may load from when they also list them (`UBOARD_ELEMENT_ORIGINS`). Unset: none. */
+  elementOrigins?: string[];
 }
 
 /** `req.ip` collapses to the single ingress IP behind Cloudflare -> the hosting platform unless the
@@ -152,6 +155,7 @@ export function createApp(config: AppConfig): express.Express {
   api.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveState));
   api.use('/share', createShareRouter(config, resolveState));
   api.use('/instance', createInstanceRouter(config));
+  api.use('/element-frames', createElementFramesRouter(config));
   // An unknown API path answers as the API does — never with the console's HTML.
   api.use((_req, res) => {
     res.status(404).json({ code: 'NOT_FOUND' });

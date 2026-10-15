@@ -11,6 +11,17 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- **Elements** — a board can define what no prepared widget draws, once, and place it on any number of nodes or grid
+  items: a template of HTML or SVG with its own CSS, isolated from the page and running no script, or a script that
+  runs in a sandboxed frame with no network, its data arriving through the board's bindings. The editor and share
+  links draw both. The server serves a script element's frame at `/api/element-frames/<board>/<element>/<hash>`,
+  named by the saved definition, with a policy that sandboxes it, allows only its own code and closes the network.
+- `UBOARD_ELEMENT_ORIGINS` — the origins a board's elements may load from when they list them too (a font, a script
+  library). Unset: none, so an installation on a closed network loads nothing from another origin, as before. Board
+  answers carry `elementOrigins`.
+
 ## [0.2.0] - 2026-10-15
 
 ### Added

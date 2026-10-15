@@ -78,6 +78,7 @@ address. Records older than `UBOARD_AUDIT_RETENTION_DAYS` are deleted.
 | `UBOARD_STALE_MAX_AGE_SECONDS` | no | How long after it was last read a connector's value may still be shown as stale when the data source stops answering — counted from the read, not from the time the source says it observed the value. Past it, the binding shows as disconnected. Unset: no limit — the value is shown however old, with its age. |
 | `UBOARD_SHARE_FRAME_ANCESTORS` | no | Which pages may embed a share link in a frame, as a CSP `frame-ancestors` source list. Default `https:` (any page served over HTTPS). An intranet page served over plain HTTP needs to be named, e.g. `http://hmi.example.com https:`. |
 | `UBOARD_WORKSPACE_CREATION` | no | Who may create workspaces: `operator` (default — the installation's operator only) or `anyone` (every signed-in account). Any other value stops the server from starting. |
+| `UBOARD_ELEMENT_ORIGINS` | no | The origins a board's elements may load from — a font, an image, a script library — when an element also lists them in its `resources`: `https://` origins separated by commas or spaces, with nothing after the host and port. Unset: none, and boards load nothing from another origin. |
 | `UBOARD_CONNECTOR_ADDRESSES` | no | Which addresses connectors may reach — the data sources they read and their OAuth token endpoints. `private` (default): public addresses and private networks (10/8, 172.16/12, 192.168/16, 100.64/10, 198.18/15, IPv6 unique local), where an installation's own systems usually are. `public`: public addresses only — set it when workspace owners are not trusted with the network the server runs in, as on an installation run for others. `any`: no restriction. Under every setting but `any`, the server's own loopback and link-local addresses and the cloud host services a server can reach (instance metadata services, Azure's host endpoint) are refused, checked on the address a connection is actually made to. |
 | `UBOARD_AUDIT_RETENTION_DAYS` | no | Days the record of membership, role and invitation changes is kept (default `180`); older records are deleted daily and when the server starts. Any value other than a whole number from 1 stops the server from starting. |
 | `UBOARD_PUBLIC_URL` | no | The address people open the console at, as an origin (`https://board.example.com`). Links in invitation emails point here; it is set rather than taken from the request so that whoever sends an invitation cannot choose where its link leads. Unset: invitations are not emailed. |
@@ -164,9 +165,9 @@ its responses, so a display's own clock does not need to be set exactly.
 The server reaches out only to what an installation sets up: the data sources its connectors read
 and their OAuth token endpoints, and Sendway when `SENDWAY_*` is set. The console and the share
 viewer load nothing from other origins — no fonts, scripts or stylesheets from a CDN — so an
-installation runs on a closed network. The one exception is a board's background image, which a
-page shows from the address its author gave; on a closed network, give it one that is reachable
-there. The sample boards the console offers to start from read public open-data sources: picking one
+installation runs on a closed network. The exceptions are a board's background image, which a
+page shows from the address its author gave (on a closed network, give it one that is reachable
+there), and the origins `UBOARD_ELEMENT_ORIGINS` opens to a board's elements — none unless it is set. The sample boards the console offers to start from read public open-data sources: picking one
 creates data sources for those addresses, and on a closed network their values read as disconnected.
 
 Getting the image is the one step that needs a connection, and a release covers it: each one

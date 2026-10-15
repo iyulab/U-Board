@@ -1,0 +1,122 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { createHash } from 'node:crypto';
+import request from 'supertest';
+import type express from 'express';
+import type { DbClient } from '../db.js';
+import { createTestDb } from '../test-support/test-db.js';
+import { createApp } from '../app.js';
+import { createWorkspace } from '../db/workspaces.js';
+import { createUser } from '../db/users.js';
+import { createBoard, updateBoard } from '../db/boards.js';
+import { elementDefinitionHash, elementFrameScripts, type ElementDefinition, type ViewDocument } from '@iyulab/u-board/domain';
+import { elementOriginsFromEnv } from '../element-frame.js';
+
+const chart: ElementDefinition = {
+  render: 'script',
+  script: 'ub.onProps(p => { document.body.textContent = p.value; }); // </script> stays inside',
+  style: 'body { color: var(--u-widget-text) }',
+  resources: ['https://cdn.example.com', 'https://fonts.example.com'],
+};
+const dot: ElementDefinition = { render: 'template', template: '<b/>' };
+
+let db: DbClient;
+let app: express.Express;
+let boardId: string;
+
+async function boardWith(elements: Record<string, ElementDefinition>): Promise<string> {
+  const workspace = await createWorkspace(db, 'W');
+  const user = await createUser(db, { email: `${workspace.id}@x.com`, passwordHash: 'h', name: 'U' });
+  const board = await createBoard(db, { workspaceId: workspace.id, name: 'B', actorUserId: user.id, kind: 'grid' });
+  const document: ViewDocument = { kind: 'grid', items: [], elements };
+  await updateBoard(db, workspace.id, board.id, { document });
+  return board.id;
+}
+
+const sha = (text: string) => `'sha256-${createHash('sha256').update(text, 'utf8').digest('base64')}'`;
+
+beforeEach(async () => {
+  db = await createTestDb();
+  app = createApp({ db, sessionSecret: 'test-secret-at-least-16-chars', elementOrigins: ['https://cdn.example.com'] });
+  boardId = await boardWith({ chart, dot });
+});
+
+describe('GET /api/element-frames/:boardId/:name/:hash', () => {
+  it('serves a saved script element, named by its definition, with no credentials', async () => {
+    const res = await request(app).get(`/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`);
+    expect(res.status).toBe(200);
+    expect(res.type).toBe('text/html');
+    expect(res.text).toContain('window.ub');
+    expect(res.text).toContain('// <\\/script> stays inside');
+  });
+
+  it('answers with a policy that sandboxes it, allows its scripts by hash, and closes the network', async () => {
+    const res = await request(app).get(`/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`);
+    const csp = res.get('Content-Security-Policy') ?? '';
+    const directives = Object.fromEntries(csp.split('; ').map(d => [d.split(' ')[0], d]));
+    expect(directives.sandbox).toBe('sandbox allow-scripts');
+    expect(directives['default-src']).toBe("default-src 'none'");
+    const [runtime, element] = elementFrameScripts(chart);
+    expect(directives['script-src']).toBe(`script-src ${sha(runtime)} ${sha(element)} https://cdn.example.com`);
+    // Declared and allowed: cdn. Declared but not allowed by the installation: fonts — left out everywhere.
+    expect(csp).not.toContain('fonts.example.com');
+    expect(directives['connect-src']).toBe("connect-src 'none'");
+    expect(directives['frame-ancestors']).toBe("frame-ancestors 'self' https:");
+    expect(res.get('Referrer-Policy')).toBe('no-referrer');
+    expect(res.get('X-Content-Type-Options')).toBe('nosniff');
+  });
+
+  it('revalidates by entity tag', async () => {
+    const path = `/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`;
+    const first = await request(app).get(path);
+    const again = await request(app).get(path).set('If-None-Match', first.get('ETag')!);
+    expect(again.status).toBe(304);
+  });
+
+  it('answers 404 for a definition the board does not hold as named — an edit not saved, a template, an unknown board', async () => {
+    const edited = await elementDefinitionHash({ ...chart, script: 'other()' });
+    for (const path of [
+      `/api/element-frames/${boardId}/chart/${edited}`,
+      `/api/element-frames/${boardId}/dot/${await elementDefinitionHash(dot)}`,
+      `/api/element-frames/${boardId}/missing/${await elementDefinitionHash(chart)}`,
+      `/api/element-frames/${boardId}/constructor/${await elementDefinitionHash(chart)}`,
+      `/api/element-frames/00000000-0000-0000-0000-000000000000/chart/${await elementDefinitionHash(chart)}`,
+    ]) {
+      expect((await request(app).get(path)).status, path).toBe(404);
+    }
+  });
+
+  it('names a definition the same whatever order its keys were stored in', async () => {
+    const reordered = { resources: chart.resources, style: chart.style, script: chart.script, render: chart.render } as ElementDefinition;
+    expect(await elementDefinitionHash(reordered)).toBe(await elementDefinitionHash(chart));
+  });
+});
+
+describe('elementOrigins in board answers', () => {
+  it('tells a viewer which origins elements may load from', async () => {
+    const workspace = await createWorkspace(db, 'W2');
+    const user = await createUser(db, { email: 'o@x.com', passwordHash: 'h', name: 'O' });
+    await (await import('../db/workspaces.js')).addWorkspaceUser(db, { workspaceId: workspace.id, userId: user.id, role: 'member' });
+    const board = await createBoard(db, { workspaceId: workspace.id, name: 'B', actorUserId: user.id });
+    const { signSession } = await import('../auth/session.js');
+    const { SESSION_COOKIE_NAME } = await import('../middleware/require-auth.js');
+    const cookie = `${SESSION_COOKIE_NAME}=${signSession({ userId: user.id, activeWorkspaceId: workspace.id, issuedAt: Date.now() }, 'test-secret-at-least-16-chars')}`;
+    const res = await request(app).get(`/api/workspaces/${workspace.id}/boards/${board.id}`).set('Cookie', cookie);
+    expect(res.body.elementOrigins).toEqual(['https://cdn.example.com']);
+  });
+});
+
+describe('elementOriginsFromEnv', () => {
+  it('reads origins separated by commas or spaces, none when unset', () => {
+    expect(elementOriginsFromEnv(undefined)).toEqual([]);
+    expect(elementOriginsFromEnv('')).toEqual([]);
+    expect(elementOriginsFromEnv('https://a.example.com, https://b.example.com:8443  https://c.example.com')).toEqual([
+      'https://a.example.com',
+      'https://b.example.com:8443',
+      'https://c.example.com',
+    ]);
+  });
+
+  it.each(['http://a.example.com', 'https://a.example.com/', 'https://a.example.com/lib', 'a.example.com', 'https://a.example.com:443'])('refuses %s', origin => {
+    expect(() => elementOriginsFromEnv(origin)).toThrow(/UBOARD_ELEMENT_ORIGINS/);
+  });
+});

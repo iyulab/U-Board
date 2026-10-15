@@ -80,6 +80,13 @@ export async function findBoard(db: DbClient, workspaceId: string, boardId: stri
   return rows[0] ? rowToBoard(rows[0]) : undefined;
 }
 
+/** A board by its id alone, whatever workspace holds it — for an address that names a board and a definition of it
+ *  (`routes/element-frames.ts`), which grants nothing beyond what naming them takes. */
+export async function findBoardById(db: DbClient, boardId: string): Promise<Board | undefined> {
+  const { rows } = await db.query<BoardRow>(`SELECT * FROM boards WHERE id = $1`, [boardId]);
+  return rows[0] ? rowToBoard(rows[0]) : undefined;
+}
+
 /** What a save came to: the board as saved, no such board, or — when the save named the revision it was
  *  made against and the board has been saved since — the revision it is at now. */
 export type UpdateBoardResult = { board: Board } | { notFound: true } | { conflict: { revision: number } };

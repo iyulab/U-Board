@@ -62,7 +62,14 @@ export function createBoardsRouter(config: AppConfig): Router {
     res
       .status(200)
       .set('ETag', etagOf(board.revision))
-      .json({ id: board.id, name: board.name, document: board.document, updatedAt: board.updatedAt, revision: board.revision });
+      .json({
+        id: board.id,
+        name: board.name,
+        document: board.document,
+        updatedAt: board.updatedAt,
+        revision: board.revision,
+        elementOrigins: config.elementOrigins ?? [],
+      });
   });
 
   router.put('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {

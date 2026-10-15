@@ -8,6 +8,7 @@ import { GROUP_STYLE } from '../ui-style.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
+import { ElementHost } from '../renderer/element-view.js';
 
 export interface AuthoringViewProps {
   /** The document to edit, of either kind — a canvas view or a grid view. */
@@ -34,6 +35,11 @@ export interface AuthoringViewProps {
   /** The current time in epoch milliseconds — what "N minutes ago" in the preview and the binding
    * form is measured by. `Date.now` by default; see `ViewerPage`'s `clock`. */
   clock?: () => number;
+  /** As `ViewerPage`'s — the origins the board's elements may load from (none by default). */
+  elementOrigins?: readonly string[];
+  /** As `ViewerPage`'s — where the board's script elements run. A frame serves a definition as last saved, so an
+   * element edited since is drawn again once the board is saved. */
+  elementFrames?: string;
 }
 
 /**
@@ -47,7 +53,7 @@ export interface AuthoringViewProps {
  * What does not depend on the kind lives here: the document, whether it has unsaved changes, Save, Export,
  * Import, the mode. Importing a document of the other kind opens it in that kind's editor.
  */
-export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now }: AuthoringViewProps) {
+export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now, elementOrigins, elementFrames }: AuthoringViewProps) {
   const labels = useLabels(labelsProp);
   const [doc, setDoc] = useState(initialDocument);
   // One board, in one of two modes: edited, or viewed exactly as a shared board shows it.
@@ -155,28 +161,30 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   };
 
   return (
-    <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {doc.kind === 'canvas' ? (
-        <CanvasAuthoring
-          key={opened}
-          doc={doc}
-          updateDoc={update => setDoc(current => (current.kind === 'canvas' ? update(current) : current))}
-          {...shared}
-        />
-      ) : (
-        <GridAuthoring
-          key={opened}
-          doc={doc}
-          updateDoc={update => setDoc(current => (current.kind === 'grid' ? update(current) : current))}
-          {...shared}
-        />
-      )}
-      {showDocumentSource && (
-        <details className="ub-authoring__source">
-          <summary>{labels.debugDocument}</summary>
-          <pre>{JSON.stringify(doc, null, 2)}</pre>
-        </details>
-      )}
-    </div>
+    <ElementHost origins={elementOrigins} frames={elementFrames}>
+      <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {doc.kind === 'canvas' ? (
+          <CanvasAuthoring
+            key={opened}
+            doc={doc}
+            updateDoc={update => setDoc(current => (current.kind === 'canvas' ? update(current) : current))}
+            {...shared}
+          />
+        ) : (
+          <GridAuthoring
+            key={opened}
+            doc={doc}
+            updateDoc={update => setDoc(current => (current.kind === 'grid' ? update(current) : current))}
+            {...shared}
+          />
+        )}
+        {showDocumentSource && (
+          <details className="ub-authoring__source">
+            <summary>{labels.debugDocument}</summary>
+            <pre>{JSON.stringify(doc, null, 2)}</pre>
+          </details>
+        )}
+      </div>
+    </ElementHost>
   );
 }

@@ -23,6 +23,8 @@ const EDITOR_LABELS = {
 export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; userId: string }) {
   const { boardId } = useParams<{ boardId: string }>();
   const [document, setDocument] = useState<ViewDocument | null>(null);
+  // The origins this installation lets a board's elements load from, as the server says with the board.
+  const [elementOrigins, setElementOrigins] = useState<readonly string[]>([]);
   const [boardName, setBoardName] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
@@ -59,6 +61,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       .then(board => {
         if (cancelled) return;
         setDocument(board.document);
+        setElementOrigins(board.elementOrigins ?? []);
         revision.current = board.revision;
         setBoardName(board.name);
       })
@@ -232,6 +235,9 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           onSave={handleSave}
           labels={EDITOR_LABELS}
           clock={apiClock.now}
+          elementOrigins={elementOrigins}
+          // The server serves the frames the board's script elements run in under this address.
+          elementFrames={`/api/element-frames/${encodeURIComponent(boardId!)}`}
         />
       </div>
       {isOwner && (

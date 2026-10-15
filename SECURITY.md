@@ -26,7 +26,10 @@ Things that are in scope and worth reporting:
   restricted; a way around that restriction is a vulnerability.
 - `packages/share` — the unauthenticated embed viewer, and anything it can reach that a share
   token should not grant.
-- Stored view documents being able to execute script in a viewer's browser.
+- Stored view documents being able to execute script in a viewer's browser on the console's or the
+  share viewer's origin. A board's script elements run by design, in a sandboxed frame of their own
+  origin with no network; script that escapes that frame — reaching the page, the viewer's session,
+  storage or the network — or a template element whose markup runs script, is a vulnerability.
 
 Out of scope: findings against a deployment's own configuration rather than this code, missing
 hardening headers with no demonstrated impact, and automated-scanner output without a reproducible

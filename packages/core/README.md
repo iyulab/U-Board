@@ -121,6 +121,9 @@ loads nothing from another origin unless it lists the origin in its `resources` 
 <ViewerPage document={doc} adapters={adapters} elementOrigins={['https://cdn.example.com']} />
 ```
 
+A script element runs in a sandboxed frame its server builds; on a U-Board server, pass where they are
+served — `elementFrames={`/api/element-frames/${boardId}`}`. Without it, a script element shows a notice.
+
 ### Text in another language
 
 The components show English text by default. Pass `labels` — any subset of `UBoardLabels`, the

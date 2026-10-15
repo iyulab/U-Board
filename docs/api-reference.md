@@ -469,8 +469,27 @@ elements: {
 - **Size** — in a grid, an item placing the element takes `size.height` when it gives none. On a
   canvas the node's box is the layout, and the element fills it.
 - **Origins** — an element reaches an origin only when it lists it in `resources` and the host
-  allows it: `ViewerPage`'s `elementOrigins` (none by default).
-- **Script elements** are validated and placed today; they are drawn in a later release.
+  allows it: `ViewerPage`'s `elementOrigins` (none by default). A U-Board server sends the origins its
+  installation allows with every board (`elementOrigins` in the board's answer, from
+  `UBOARD_ELEMENT_ORIGINS`).
+
+**Script elements** run in a frame of their own: `<iframe sandbox="allow-scripts">`, whose document the
+board's server builds from the saved definition. The frame has an origin of its own — it cannot reach
+the page, its storage or the viewer's session — and no network (`connect-src 'none'`): its data arrives
+as its props, through the board's bindings like any widget's. Its code reads them through `ub`:
+
+```js
+ub.onProps((props, appearance) => draw(props));   // now, if props have arrived, and on every change
+ub.reportError(error);                             // shown on the element's box
+```
+
+The board's theme is set on the frame's root as the same `--u-widget-*` variables; an uncaught error,
+or a load its policy blocks, is reported on the element's box as well. The frame loads when the element
+nears the screen. `ViewerPage`'s and `AuthoringView`'s `elementFrames` says where the frames are served —
+`/api/element-frames/<board id>` on a U-Board server, which answers
+`/api/element-frames/<board id>/<element>/<definition hash>` (`elementDefinitionHash`) only while the
+saved board defines that element exactly so. Without `elementFrames`, a script element shows a notice in
+its box; an element edited in the editor is drawn again once the board is saved.
 
 ### `Node`, `Connector`, `Background`, `Shape`
 

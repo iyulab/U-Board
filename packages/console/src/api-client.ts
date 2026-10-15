@@ -196,7 +196,7 @@ export function createBoard(workspaceId: string, name: string, kind?: ViewKind) 
 }
 
 export function getBoard(workspaceId: string, boardId: string) {
-  return request<{ id: string; name: string; document: ViewDocument; updatedAt: string; revision: number }>(
+  return request<{ id: string; name: string; document: ViewDocument; updatedAt: string; revision: number; elementOrigins?: string[] }>(
     `/workspaces/${workspaceId}/boards/${boardId}`
   );
 }

@@ -16,9 +16,14 @@ All notable changes to this package are documented here. The format follows
 - **Template elements are drawn** — `ViewerPage` and the editor draw each into an isolated root of its own: its CSS
   reaches only its markup, the page's does not reach in, and the board's theme arrives as `--u-widget-*` CSS variables
   (the colours of the prepared widgets). The markup policy is applied again after the values are filled, so a value
-  cannot bring in a URL or CSS its template did not. Script elements are validated and placed, and drawn as a notice
-  until a later release.
-- `ViewerPage` `elementOrigins` — the origins an element may load from when it also lists them; none by default.
+  cannot bring in a URL or CSS its template did not.
+- **Script elements are drawn** — each in `<iframe sandbox="allow-scripts">` from a document its server builds, an origin
+  of its own with no network, its props and the board's theme sent by message (`ub.onProps`), errors shown on its box,
+  loaded as it nears the screen. `ViewerPage` and `AuthoringView` take `elementFrames`, where the frames are served;
+  `elementDefinitionHash` names a definition for that address, and `elementFrameHtml`/`elementFrameScripts` build the
+  frame for a server that serves one.
+- `ViewerPage` and `AuthoringView` `elementOrigins` — the origins an element may load from when it also lists them;
+  none by default.
 - `validateViewDocument` holds definitions to the element contract and placed elements to their definitions — a
   template’s markup and CSS to the markup policy (no script, no event handler, a URL only to a fragment, an inline
   image or a declared origin), a props schema to its keyword subset, props to the schema — each problem with its path.

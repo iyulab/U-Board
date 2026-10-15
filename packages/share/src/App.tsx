@@ -4,12 +4,14 @@ import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-ad
 import { API_BASE, fetchWithRetry, apiClock } from './api-base.js';
 import './App.css';
 
-type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[]; revision?: number };
+type LoadedState = { name: string; document: ViewDocument; adapters: readonly Adapter[]; revision?: number; elementOrigins: readonly string[]; elementFrames: string };
 
 type BoardBody = {
   name: string;
   document: ViewDocument;
   revision?: number;
+  /** The origins this installation lets the board's elements load from. */
+  elementOrigins?: string[];
   connectorIds: string[];
   attributions?: Record<string, Attribution>;
 };
@@ -106,7 +108,7 @@ export function App() {
       });
       const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id, body.attributions?.[id]));
       shown.current.revision = body.revision;
-      setState({ name: body.name, document: body.document, adapters, revision: body.revision });
+      setState({ name: body.name, document: body.document, adapters, revision: body.revision, elementOrigins: body.elementOrigins ?? [], elementFrames: `${API_BASE}/element-frames/${encodeURIComponent(boardId)}` });
     };
     read()
       .then(async res => {
@@ -150,6 +152,8 @@ export function App() {
       ariaLabel={state.name}
       labels={KO_LABELS}
       clock={apiClock.now}
+      elementOrigins={state.elementOrigins}
+      elementFrames={state.elementFrames}
     />
   );
 }

@@ -1,7 +1,8 @@
-import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
-import { fillTemplate, renderTemplateElement } from './element-template';
-import { ElementOriginsContext, ElementView } from './element-view';
+import { describe, it, expect, vi } from 'vitest';
+import { act, render, waitFor } from '@testing-library/react';
+import { ELEMENT_THEME, fillTemplate, renderTemplateElement } from './element-template';
+import { ElementHost, ElementOriginsContext, ElementView } from './element-view';
+import { elementDefinitionHash } from '../elements/definition-hash';
 import { parseTemplate } from '../elements/template';
 import type { ElementDefinition } from '../view-document';
 
@@ -102,5 +103,67 @@ describe('ElementView', () => {
   it('says so in its box when it cannot draw the element', () => {
     expect(render(<ElementView definition={undefined} name="valve" props={{}} />).container.textContent).toContain('No element “valve”');
     expect(render(<ElementView definition={{ render: 'script', script: 'x' }} name="chart" props={{}} />).container.textContent).toContain('runs a script');
+  });
+});
+
+describe('ElementView — script element', () => {
+  const chart: ElementDefinition = { render: 'script', script: 'ub.onProps(draw)' };
+
+  async function mounted(props: unknown = { value: 3 }) {
+    const view = render(
+      <ElementHost frames="/api/element-frames/b1">
+        <ElementView definition={chart} name="chart" props={props} appearance="dark" />
+      </ElementHost>,
+    );
+    const frame = await waitFor(() => {
+      const found = view.container.querySelector('iframe');
+      if (!found) throw new Error('no frame yet');
+      return found;
+    });
+    // The frame appeared in a render its address's hash started; let that render's effects (the message listener) run.
+    await act(async () => {});
+    return { view, frame };
+  }
+
+  it('runs in a sandboxed frame addressed by its definition, hidden until it is ready', async () => {
+    const { frame } = await mounted();
+    expect(frame.getAttribute('src')).toBe(`/api/element-frames/b1/chart/${await elementDefinitionHash(chart)}`);
+    expect(frame.getAttribute('sandbox')).toBe('allow-scripts');
+    expect(frame.getAttribute('loading')).toBe('lazy');
+    expect(frame.style.visibility).toBe('hidden');
+  });
+
+  it('sends its props and theme once the frame is ready, and again when they change, to that frame only', async () => {
+    const { view, frame } = await mounted();
+    const posted = vi.spyOn(frame.contentWindow!, 'postMessage');
+    act(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'ub:ready' }, source: window })));
+    expect(posted).not.toHaveBeenCalled(); // not from this frame
+    act(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'ub:ready' }, source: frame.contentWindow })));
+    expect(posted).toHaveBeenLastCalledWith({ type: 'ub:props', props: { value: 3 }, appearance: 'dark', theme: ELEMENT_THEME.dark }, '*');
+    expect(frame.style.visibility).toBe('visible');
+    view.rerender(
+      <ElementHost frames="/api/element-frames/b1">
+        <ElementView definition={chart} name="chart" props={{ value: 4 }} appearance="dark" />
+      </ElementHost>,
+    );
+    expect(posted).toHaveBeenLastCalledWith(expect.objectContaining({ props: { value: 4 } }), '*');
+  });
+
+  it('shows what the element reports going wrong', async () => {
+    const { view, frame } = await mounted();
+    act(() => window.dispatchEvent(new MessageEvent('message', { data: { type: 'ub:error', message: 'draw is not defined' }, source: frame.contentWindow })));
+    expect(view.container.querySelector('[data-element-error]')!.textContent).toBe('draw is not defined');
+  });
+
+  it('says the element did not start when its frame loads but never reports ready', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { view, frame } = await mounted();
+      act(() => frame.dispatchEvent(new Event('load')));
+      act(() => vi.advanceTimersByTime(3000));
+      expect(view.container.textContent).toContain('did not start');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

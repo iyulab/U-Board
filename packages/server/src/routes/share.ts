@@ -113,6 +113,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       name: board.name,
       document: board.document,
       revision: board.revision,
+      elementOrigins: config.elementOrigins ?? [],
       ...(await connectorsForViewer(db, token.workspaceId, board.document)),
     });
   });
