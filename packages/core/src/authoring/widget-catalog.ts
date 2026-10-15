@@ -29,14 +29,11 @@ export function seedWidget(type: WidgetType, text: SeedText = DEFAULT_SEED_TEXT)
   }
 }
 
-/** The prop path a new binding of `widget` starts on: the widget's headline value (`data.value` for
- * `status` and `gauge`) when it is not bound yet. Empty for a widget with no headline field
- * (`chart.*`), or once that field is bound — the author names the prop then. */
-export function defaultPropPath(widget: Widget): string {
-  const field = getPrimaryDataField(widget.type);
-  if (field === undefined) return '';
-  const path = `data.${field}`;
-  return widget.bindings?.[path] ? '' : path;
+/** The prop path of a widget type's headline value (`data.value` for `status` and `gauge`) — where a new binding
+ * starts while nothing binds it. `undefined` for a type with no headline field (`chart.*`). */
+export function headlinePropPath(type: string): string | undefined {
+  const field = getPrimaryDataField(type);
+  return field === undefined ? undefined : `data.${field}`;
 }
 
 /** A widget placing the board's element `name`, starting from the defaults its definition's schema gives its props. */

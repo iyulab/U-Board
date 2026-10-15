@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { seedWidget, defaultPropPath, WIDGET_TYPES } from './widget-catalog.js';
+import { seedWidget, headlinePropPath, WIDGET_TYPES } from './widget-catalog.js';
 
 describe('seedWidget', () => {
   it('seeds a status widget with a visible placeholder value and no bindings', () => {
@@ -31,14 +31,10 @@ describe('seedWidget', () => {
   });
 });
 
-describe('defaultPropPath', () => {
-  it("starts on the widget's headline value while it is unbound", () => {
-    expect(defaultPropPath(seedWidget('status'))).toBe('data.value');
-    expect(defaultPropPath(seedWidget('gauge'))).toBe('data.value');
-  });
-
-  it('starts empty once the headline value is bound, or for a widget without one', () => {
-    expect(defaultPropPath({ ...seedWidget('status'), bindings: { 'data.value': { adapter: 'a', ref: 'r' } } })).toBe('');
-    expect(defaultPropPath(seedWidget('chart.line'))).toBe('');
+describe('headlinePropPath', () => {
+  it("names a widget type's headline value, and none for a type without one", () => {
+    expect(headlinePropPath('status')).toBe('data.value');
+    expect(headlinePropPath('gauge')).toBe('data.value');
+    expect(headlinePropPath('chart.line')).toBeUndefined();
   });
 });
