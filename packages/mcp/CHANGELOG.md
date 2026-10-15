@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-16
+
 ### Added
 
 - **`look`** — draws a saved board as its viewers see it, in Chrome or Edge on this computer (or the browser
@@ -30,8 +32,7 @@ All notable changes to this package are documented here. The format follows
   the widget does not have or of the wrong type. A prop a binding fills is not reported.
 - `validate` checks as the server saves: a field the document format does not have, a decoration colour a canvas
   cannot read and a connector to a missing node are issues, each naming what that place takes.
-
-- `@iyulab/u-widgets` ^0.33.2.
+- `@iyulab/u-board` ^0.13.0, `@iyulab/u-widgets` ^0.34.0 (its `checkSpec`), `playwright-core` ^1.64.1 (for `look`).
 
 ## [0.1.0] - 2026-10-15
 

@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-16
+
 ### Added
 
 - **Editing a placed element in the property panel** — `AuthoringView` reads the board's `elements`: the widget-type
@@ -49,7 +51,8 @@ All notable changes to this package are documented here. The format follows
   them) — a host that builds a full labels object adds them.
 - `@iyulab/u-widgets` ^0.33.2: a horizontal chart lists its categories in the data's order, a reference line the data
   does not reach is drawn with the value axis reaching it, its label is no longer cut off, and `status` keeps its rows
-  together in a taller cell.
+  together in a taller cell; ^0.34.0 since.
+- `@canvas-kit/core` ^0.6.0, `@canvas-kit/viewer` ^0.5.2, `@canvas-kit/designer` ^0.8.0.
 
 ## [0.12.0] - 2026-10-15
 

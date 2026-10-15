@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-16
+
 ### Added
 
 - The editor edits a placed **element** like a widget: the board's elements are in the widget-type choice, and an

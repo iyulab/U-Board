@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/u-board",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "description": "Spatial dashboard authoring middleware",
   "type": "module",
   "license": "AGPL-3.0-or-later",
@@ -63,10 +63,10 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
-    "@canvas-kit/core": "^0.5.0",
-    "@canvas-kit/designer": "^0.7.0",
-    "@canvas-kit/viewer": "^0.5.1",
-    "@iyulab/u-widgets": "^0.33.2",
+    "@canvas-kit/core": "^0.6.0",
+    "@canvas-kit/designer": "^0.8.0",
+    "@canvas-kit/viewer": "^0.5.2",
+    "@iyulab/u-widgets": "^0.34.0",
     "@lit/react": "^1.0.8",
     "echarts": "^6.1.0"
   },
