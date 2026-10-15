@@ -93,9 +93,8 @@ function station(i: number): Node[] {
           options: {
             xFormat: { type: 'time' },
             series: [{ label: '평균' }, { label: 'UCL', lineStyle: 'dashed', symbol: 'none' }, { label: 'LCL', lineStyle: 'dashed', symbol: 'none' }],
-            // A control chart reads around its centre line: the axis spans the limits, not zero. The widget has
-            // no option for an axis's range yet, so this goes to the chart engine directly.
-            echarts: { yAxis: { scale: true } },
+            // A control chart reads around its centre line: the axis spans the limits, not zero.
+            valueAxisZero: false,
           },
         },
         bindings: { data: bindPath(`/qc/subgroups/${id}`, '/value') },

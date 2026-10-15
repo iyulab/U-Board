@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Widgets come from `@iyulab/u-widgets` 0.33.** Bar, line and area charts take `valueAxisZero: false`, so a value
+  axis spans the data instead of always reaching zero (a control chart around its centre line, a temperature near
+  180 °C), and `series[].lineStyle` takes the keyword `referenceLines` uses — `'dashed'` now draws a dashed line
+  where it was ignored.
+
 ## [0.10.0] - 2026-10-15
 
 ### Changed

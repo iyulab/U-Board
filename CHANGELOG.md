@@ -11,6 +11,11 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- Widgets come from `@iyulab/u-widgets` 0.33: a chart can span its value axis over the data (`valueAxisZero: false`),
+  and a series' `lineStyle: 'dashed'` draws dashed — before, the keyword was ignored and the line stayed solid.
+
 ## [0.1.8] - 2026-10-15
 
 ### Changed
