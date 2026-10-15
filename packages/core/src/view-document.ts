@@ -37,6 +37,8 @@ export interface CanvasView {
    * it) for a light drawing or none; `dark` for a dark one, where the widgets take their dark palette
    * so their text reads on it. Like `Background`, it says the background's tone, not what it depicts. */
   appearance?: BoardAppearance;
+  /** The elements this board defines, by name — see `ElementDefinition`. */
+  elements?: Record<string, ElementDefinition>;
 }
 
 /** A grid view: widgets laid out in order, in rows of `columns` columns — no position, so the same
@@ -49,6 +51,8 @@ export interface GridView {
   columns?: 12;
   /** As a canvas view's — the tone the board is drawn in. */
   appearance?: BoardAppearance;
+  /** As a canvas view's — the elements this board defines. */
+  elements?: Record<string, ElementDefinition>;
 }
 
 /** A widget in a grid view and the room it takes. */
@@ -164,19 +168,67 @@ export interface Connector {
   toNodeId: string;
 }
 
-/** The visual content a node displays. Rendering is delegated to an external widget library
- * (docs/architecture.md) — `type` and `props` describe what that library should render and are
- * opaque to U-Board beyond that. `bindings` is U-Board's own layer on top: which `props` keys
- * should be replaced with a live resolved value before the widget is handed to the renderer. */
+/** The visual content a node displays. A prepared widget's rendering is delegated to an external
+ * widget library (docs/architecture.md) — `type` and `props` describe what that library should render
+ * and are opaque to U-Board beyond that. A `type` of `element:<name>` instead names an element the
+ * document defines (`elements`), which U-Board renders itself and whose `props` its definition
+ * describes. `bindings` is U-Board's own layer on top: which `props` keys should be replaced with a
+ * live resolved value before the widget is handed to the renderer. */
 export interface Widget {
-  /** Identifies which widget kind to render (e.g. a specific `u-widgets` element). Opaque to
-   * U-Board — it does not interpret this string beyond passing it through. */
+  /** Identifies which widget kind to render: a prepared widget (e.g. a specific `u-widgets` element),
+   * passed through as it is, or `element:<name>` for an element of this document. */
   type: string;
   /** Static configuration for the widget, in whatever shape that widget's library expects.
    * Opaque to U-Board (docs/principles.md — backgrounds and widget content are not U-Board's to
    * interpret). Keys listed in `bindings` are overwritten with a resolved value at render time. */
   props?: Record<string, unknown>;
   bindings?: Record<string, Binding>;
+}
+
+/** What a board defines once and places by reference: `{ type: "element:<name>", props }` on any number
+ * of nodes or grid items draws it with those props (docs/concepts.md — "Element"). Beyond the prepared
+ * widgets, an element is how a board draws what no widget does — a plant symbol, a custom gauge.
+ *
+ * A `template` element is markup — HTML or SVG — with `{{prop}}` values filled in, drawn in an isolated
+ * part of the page: its `style` reaches only its own markup, and nothing outside reaches in. It runs no
+ * script. A `script` element runs its `script` in a sandboxed frame that cannot reach the page, its
+ * viewer's session or the network; its data arrives as its props, through bindings like any widget's. */
+export interface ElementDefinition {
+  render: ElementRender;
+  /** The props it takes, as a JSON Schema object schema — the subset `PROPS_SCHEMA_KEYWORDS` names. A
+   * placed element's static props are checked against it; bound props are filled at render time. */
+  props?: PropsSchema;
+  /** For `render: "template"`: HTML or SVG markup with `{{name}}` values, `{{#list}}…{{/list}}` sections
+   * and `{{^flag}}…{{/flag}}` inverted sections, every value escaped. No script, no event handler. */
+  template?: string;
+  /** For `render: "script"`: the code run in its frame. It receives its props through `ub.onProps`. */
+  script?: string;
+  /** CSS for its own markup only. */
+  style?: string;
+  /** The size it is drawn at where a node or grid item gives none. */
+  size?: { width: number; height: number };
+  /** The `https://` origins it loads anything from — a font, an image, a script library. Nothing else
+   * is reachable, and an instance reaches only the origins its operator allows as well. */
+  resources?: string[];
+}
+
+export type ElementRender = 'template' | 'script';
+
+/** A JSON Schema, in the subset an element's props are described with (`PROPS_SCHEMA_KEYWORDS`). */
+export interface PropsSchema {
+  type?: 'string' | 'number' | 'integer' | 'boolean' | 'object' | 'array' | 'null';
+  enum?: unknown[];
+  const?: unknown;
+  properties?: Record<string, PropsSchema>;
+  required?: string[];
+  items?: PropsSchema;
+  minimum?: number;
+  maximum?: number;
+  minLength?: number;
+  maxLength?: number;
+  title?: string;
+  description?: string;
+  default?: unknown;
 }
 
 /** A reference from a widget to a value in an external system. U-Board reads through a binding;

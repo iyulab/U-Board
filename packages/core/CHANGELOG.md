@@ -6,6 +6,21 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Elements in the document format** — a board can define what no prepared widget draws, once, and place it by name:
+  `elements: { <name>: ElementDefinition }` with `{ type: "element:<name>", props }` on any node or grid item. A
+  definition is a `template` (HTML or SVG with `{{prop}}` values, `{{#list}}` and `{{^flag}}` sections, every value
+  escaped, no script) or a `script` (code for a sandboxed frame), with a props schema (a JSON Schema subset), CSS for
+  its own markup, a natural size and the `https` origins it loads from. Drawing them comes in a later release.
+- `validateViewDocument` holds definitions to the element contract and placed elements to their definitions — a
+  template’s markup and CSS to the markup policy (no script, no event handler, a URL only to a fragment, an inline
+  image or a declared origin), a props schema to its keyword subset, props to the schema — each problem with its path.
+- `lintViewDocument` — advice on a valid document: an element placed nowhere, more than 30 script elements, an
+  element heavier than 32 KB.
+- The published JSON Schema describes `elements`, and names the rules it cannot express.
+
+
 ## [0.11.0] - 2026-10-15
 
 ### Added

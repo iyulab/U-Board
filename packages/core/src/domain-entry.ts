@@ -14,6 +14,8 @@ export { resolveDocument } from './resolve-document.js';
 export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
 export { validateViewDocument } from './validate-view-document.js';
 export type { ViewDocumentIssue } from './validate-view-document.js';
+export { lintViewDocument } from './lint-view-document.js';
+export type { ViewDocumentAdvice } from './lint-view-document.js';
 export { DEFAULT_QUALITY_TEXT, ageText, worstQuality, describeQuality } from './quality-text.js';
 export type { QualityText, QualitySummary, DescribeQualityOptions } from './quality-text.js';
 export { coordinateOf, placeAt } from './anchor.js';

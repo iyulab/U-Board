@@ -1,13 +1,68 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import Ajv2020 from 'ajv/dist/2020.js';
 import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM } from './view-document';
+import { validateViewDocument } from './validate-view-document';
 
 // The published JSON Schema says the same rules as `validateViewDocument` for readers that only have the schema — an AI
-// writing a board, another language's validator. These checks hold the two to the same constants and the same openness.
-// TODO(schema conformance): judge one set of documents with both and require the same verdict — needs a JSON Schema
-// evaluator, a new development dependency.
+// writing a board, another language's validator. These checks hold the two to the same constants and the same openness,
+// and judge one set of documents with both.
 const schema = JSON.parse(readFileSync(resolve(process.cwd(), 'schema/view-document.schema.json'), 'utf8'));
+const schemaAccepts = new Ajv2020({ allErrors: true }).compile(schema);
+
+const node = (id: string, widget: unknown = { type: 'gauge' }) => ({ id, x: 0, y: 0, anchored: false, widget });
+const canvas = (extra: Record<string, unknown> = {}) => ({ kind: 'canvas', background: {}, nodes: [node('a')], connectors: [], ...extra });
+const grid = (extra: Record<string, unknown> = {}) => ({ kind: 'grid', items: [{ id: 'a', widget: { type: 'gauge' } }], ...extra });
+const dot = { render: 'template', props: { type: 'object', properties: { on: { type: 'boolean' } } }, template: '<b class="{{on}}"/>' };
+
+/** Documents both judge the same way. */
+const AGREED: [string, unknown, boolean][] = [
+  ['a canvas view', canvas(), true],
+  ['a grid view', grid(), true],
+  ['a canvas view with every optional part', canvas({
+    background: { image: { src: 'plan.svg', width: 100, height: 50, referencePoints: [{ x: 0, y: 0, coordinate: { x: 0, y: 0 } }, { x: 1, y: 1, coordinate: { x: 2, y: 2 } }] } },
+    connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'a' }],
+    decorations: [{ id: 'r', type: 'rect', x: 0, y: 0, width: 1, height: 1 }, { id: 't', type: 'text', x: 0, y: 0, text: 'x' }],
+    appearance: 'dark',
+  }), true],
+  ['a grid item with its room', grid({ items: [{ id: 'a', span: 6, spanMedium: 3, height: 120, widget: { type: 'gauge' } }] }), true],
+  ['a binding with a value map', canvas({ nodes: [node('a', { type: 'gauge', bindings: { value: { adapter: 'http', ref: {}, map: { values: { on: 1 }, ranges: [{ min: 0, max: 1, value: 'low' }] } } } })] }), true],
+  ['elements of both renders, placed', canvas({ elements: { dot, chart: { render: 'script', script: 'x', resources: ['https://cdn.example.com'], size: { width: 2, height: 1 } } }, nodes: [node('a', { type: 'element:dot', props: { on: true } }), node('b', { type: 'element:chart' })] }), true],
+  ['no kind', { nodes: [] }, false],
+  ['an unknown kind', { kind: 'map' }, false],
+  ['a canvas view without connectors', { kind: 'canvas', background: {}, nodes: [] }, false],
+  ['a node without anchored', canvas({ nodes: [{ id: 'a', x: 0, y: 0, widget: { type: 'gauge' } }] }), false],
+  ['a widget without a type', canvas({ nodes: [node('a', {})] }), false],
+  ['a span past the columns', grid({ items: [{ id: 'a', span: 13, widget: { type: 'gauge' } }] }), false],
+  ['a grid with 10 columns', grid({ columns: 10 }), false],
+  ['an appearance not light or dark', grid({ appearance: 'sepia' }), false],
+  ['a binding without a ref', canvas({ nodes: [node('a', { type: 'gauge', bindings: { value: { adapter: 'http' } } })] }), false],
+  ['a value map with neither part', canvas({ nodes: [node('a', { type: 'gauge', bindings: { value: { adapter: 'http', ref: 1, map: {} } } })] }), false],
+  ['a decoration of an unknown type', canvas({ decorations: [{ id: 'd', type: 'ellipse', x: 0, y: 0 }] }), false],
+  ['an element with no render', grid({ elements: { dot: { template: '<b/>' } } }), false],
+  ['an element name with capitals', grid({ elements: { Dot: dot } }), false],
+  ['a template element without its template', grid({ elements: { dot: { render: 'template' } } }), false],
+  ['a template element with a script', grid({ elements: { dot: { ...dot, script: 'x' } } }), false],
+  ['a script element with a template', grid({ elements: { chart: { render: 'script', script: 'x', template: '<b/>' } } }), false],
+  ['a resource with a path', grid({ elements: { chart: { render: 'script', script: 'x', resources: ['https://cdn.example.com/lib.js'] } } }), false],
+  ['a resource over http', grid({ elements: { chart: { render: 'script', script: 'x', resources: ['http://cdn.example.com'] } } }), false],
+  ['an element size of zero', grid({ elements: { dot: { ...dot, size: { width: 0, height: 1 } } } }), false],
+  ['a props schema that is not an object schema', grid({ elements: { dot: { ...dot, props: { type: 'string' } } } }), false],
+];
+
+/** Documents the validator refuses for a rule the schema says it cannot express — named in its description. */
+const VALIDATOR_ONLY: [string, unknown][] = [
+  ['an id used twice', canvas({ nodes: [node('a'), node('a')] })],
+  ['reference points on one axis', canvas({ background: { image: { src: 'p', width: 1, height: 1, referencePoints: [{ x: 0, y: 0, coordinate: { x: 0, y: 0 } }, { x: 0, y: 1, coordinate: { x: 1, y: 1 } }] } } })],
+  ['a value range with min above max', canvas({ nodes: [node('a', { type: 'gauge', bindings: { v: { adapter: 'http', ref: 1, map: { ranges: [{ min: 2, max: 1, value: 'x' }] } } } })] })],
+  ['a placed element not defined', canvas({ nodes: [node('a', { type: 'element:dot' })] })],
+  ['props the definition refuses', canvas({ elements: { dot }, nodes: [node('a', { type: 'element:dot', props: { on: 'yes' } })] })],
+  ['a template with a script tag', grid({ elements: { dot: { ...dot, template: '<script>x</script>' } } })],
+  ['a template with an unclosed section', grid({ elements: { dot: { ...dot, template: '{{#on}}' } } })],
+  ['a URL off the declared origins', grid({ elements: { dot: { ...dot, template: '<img src="https://x.example.com/a.png">' } } })],
+  ['a props schema keyword outside the subset', grid({ elements: { dot: { ...dot, props: { type: 'object', pattern: 'x' } } } })],
+];
 
 function* walk(value: unknown, at = ''): Generator<[string, Record<string, unknown>]> {
   if (typeof value !== 'object' || value === null) return;
@@ -33,6 +88,16 @@ describe('view-document.schema.json', () => {
   it('allows fields it does not name anywhere, as the validator ignores them', () => {
     const closed = [...walk(schema)].filter(([, node]) => node.additionalProperties === false || node.unevaluatedProperties === false);
     expect(closed.map(([at]) => at)).toEqual([]);
+  });
+
+  it.each(AGREED)('judges %s as the validator does', (_, doc, valid) => {
+    expect(schemaAccepts(doc), JSON.stringify(schemaAccepts.errors)).toBe(valid);
+    expect(validateViewDocument(doc).length === 0).toBe(valid);
+  });
+
+  it.each(VALIDATOR_ONLY)('accepts %s, which only the validator refuses', (_, doc) => {
+    expect(schemaAccepts(doc), JSON.stringify(schemaAccepts.errors)).toBe(true);
+    expect(validateViewDocument(doc)).not.toEqual([]);
   });
 
   it('refers only to definitions it has', () => {

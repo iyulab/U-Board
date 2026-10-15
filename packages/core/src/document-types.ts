@@ -20,5 +20,8 @@ export type {
   RectShape,
   TextShape,
   BoardAppearance,
+  ElementDefinition,
+  ElementRender,
+  PropsSchema,
 } from './view-document.js';
 export type { Adapter, AdapterReference, Attribution, ConnectionQuality, QualityReason, ResolvedBinding, ResolvedWidget } from './adapter.js';

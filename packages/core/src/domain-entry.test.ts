@@ -31,7 +31,7 @@ describe('domain entry', () => {
   it('exports exactly these values', () => {
     expect(Object.keys(mod).sort()).toEqual([
       'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'ageText', 'applyValueMap', 'coordinateOf', 'describeQuality', 'emptyViewDocument',
-      'findHttpRefItem', 'isHttpRef', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveDocument',
+      'findHttpRefItem', 'isHttpRef', 'lintViewDocument', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveDocument',
       'resolveWidget', 'resolvedReading', 'validateViewDocument', 'worstQuality',
     ]);
     expect(Object.keys(viewer).sort()).toEqual([

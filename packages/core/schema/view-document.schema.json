@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/iyulab/U-Board/blob/main/packages/core/schema/view-document.schema.json",
   "title": "U-Board view document",
-  "description": "A board as U-Board saves and reads it: a canvas view (widgets placed by position over a background) or a grid view (widgets laid out in order). The same rules as validateViewDocument in @iyulab/u-board, except one this schema cannot say: every id — node, connector, decoration, grid item — is unique in the document. Fields it does not name are allowed, so a document written by a newer version still reads.",
+  "description": "A board as U-Board saves and reads it: a canvas view (widgets placed by position over a background) or a grid view (widgets laid out in order), with the elements it defines. The same rules as validateViewDocument in @iyulab/u-board, except those this schema cannot say: every id — node, connector, decoration, grid item — is unique in the document; a widget of type element:<name> names an element the document defines, with props its definition's props schema accepts; a template element's {{values}} are well formed and its markup and CSS keep to the markup policy (no script, no event handlers, URLs only to a fragment, an inline image or a declared resource origin); an element's props schema uses only the keywords it lists; two reference points lie apart on both axes; a value range's min is below its max. Fields it does not name are allowed, so a document written by a newer version still reads.",
   "oneOf": [{ "$ref": "#/$defs/canvasView" }, { "$ref": "#/$defs/gridView" }],
   "$defs": {
     "canvasView": {
@@ -14,7 +14,8 @@
         "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } },
         "connectors": { "type": "array", "items": { "$ref": "#/$defs/connector" } },
         "decorations": { "type": "array", "items": { "$ref": "#/$defs/shape" } },
-        "appearance": { "$ref": "#/$defs/appearance" }
+        "appearance": { "$ref": "#/$defs/appearance" },
+        "elements": { "$ref": "#/$defs/elements" }
       }
     },
     "gridView": {
@@ -28,12 +29,57 @@
           "items": { "$ref": "#/$defs/gridItem" }
         },
         "columns": { "description": "Columns at full width. Only 12 for now; absent means 12.", "const": 12 },
-        "appearance": { "$ref": "#/$defs/appearance" }
+        "appearance": { "$ref": "#/$defs/appearance" },
+        "elements": { "$ref": "#/$defs/elements" }
       }
     },
     "appearance": {
       "description": "The tone the board is drawn in. Absent means light.",
       "enum": ["light", "dark"]
+    },
+    "elements": {
+      "description": "The elements this board defines, by name. A widget of type element:<name> places one.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{0,39}$" },
+      "additionalProperties": { "$ref": "#/$defs/elementDefinition" }
+    },
+    "elementDefinition": {
+      "description": "Drawn once for each widget that places it. A template element is markup with {{prop}} values, isolated from the rest of the page and running no script; a script element runs its script in a sandboxed frame with no network, its data arriving as props.",
+      "type": "object",
+      "required": ["render"],
+      "properties": {
+        "render": { "enum": ["template", "script"] },
+        "props": {
+          "description": "The props it takes: a JSON Schema object schema using only type, enum, const, properties, required, items, minimum, maximum, minLength, maxLength, title, description and default.",
+          "type": "object",
+          "required": ["type"],
+          "properties": { "type": { "const": "object" } }
+        },
+        "template": { "description": "HTML or SVG markup with {{name}}, {{#list}}…{{/list}} and {{^flag}}…{{/flag}}; every value is escaped.", "type": "string" },
+        "script": { "description": "The code a script element runs. It receives its props through ub.onProps.", "type": "string" },
+        "style": { "description": "CSS for its own markup only.", "type": "string" },
+        "size": {
+          "description": "The size it is drawn at where a node or grid item gives none.",
+          "type": "object",
+          "required": ["width", "height"],
+          "properties": { "width": { "type": "number", "exclusiveMinimum": 0 }, "height": { "type": "number", "exclusiveMinimum": 0 } }
+        },
+        "resources": {
+          "description": "The https origins it loads anything from — host and port, nothing after.",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^https://[^/?#\\s]+$" }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "render": { "const": "template" } }, "required": ["render"] },
+          "then": { "required": ["template"], "not": { "required": ["script"] } }
+        },
+        {
+          "if": { "properties": { "render": { "const": "script" } }, "required": ["render"] },
+          "then": { "required": ["script"], "not": { "required": ["template"] } }
+        }
+      ]
     },
     "background": {
       "type": "object",
@@ -142,7 +188,7 @@
       ]
     },
     "widget": {
-      "description": "What a node or grid item shows. type and props belong to the widget library; bindings name the props replaced by a live value.",
+      "description": "What a node or grid item shows. A prepared widget's type and props belong to the widget library; a type of element:<name> places an element this document defines. bindings name the props replaced by a live value.",
       "type": "object",
       "required": ["type"],
       "properties": {
