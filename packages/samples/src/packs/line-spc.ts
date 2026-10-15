@@ -42,7 +42,7 @@ const CPK_LEVEL = { ranges: [{ max: 1, value: 'error' }, { min: 1, max: 1.33, va
 
 /** The line's process boxes, left to right; the ones with an inspection point carry its characteristic. */
 const STEPS: { id: string; name: string; characteristic?: string }[] = [
-  { id: 'IQC', name: '수입 검사', characteristic: '소재 경도 HRC 28–34' },
+  { id: 'IQC', name: '수입 검사', characteristic: '경도 HRC 28–34' },
   { id: 'OP10', name: 'OP10 선반', characteristic: '외경 Ø25 ±0.02' },
   { id: 'OP20', name: 'OP20 밀링', characteristic: '홈 깊이 3.00 ±0.05' },
   { id: 'OP30', name: 'OP30 연삭', characteristic: '거칠기 Ra ≤ 0.8' },

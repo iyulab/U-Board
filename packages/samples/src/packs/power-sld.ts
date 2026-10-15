@@ -1,4 +1,4 @@
-import type { Binding, CanvasView, Node, Shape } from '@iyulab/u-board/domain';
+import type { Binding, CanvasView, ElementDefinition, Node, Shape } from '@iyulab/u-board/domain';
 import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
 import { escapeXml, svgDataUrl } from '../frame.js';
 import { snapshot } from '../snapshots/power-sld.js';
@@ -35,7 +35,38 @@ const bindFeeder = (id: string, field: string, map?: Binding['map']): Binding =>
 
 /** A breaker's state in words: closed and opened on purpose are normal (grey), a trip is not. */
 const BREAKER_TEXT = { values: { closed: '투입', open: '개방', tripped: '트립' }, otherwise: '알 수 없음' };
-const BREAKER_LEVEL = { values: { closed: 'neutral', open: 'neutral', tripped: 'error' }, otherwise: 'warning' };
+/** A source state the symbol does not know is drawn as unknown — a dashed outline — rather than as a closed breaker. */
+const BREAKER_STATE = { values: { closed: 'closed', open: 'open', tripped: 'tripped' }, otherwise: 'unknown' };
+
+/** The breaker symbol the drawing leaves to the board, so its state shows on it: closed filled, open hollow, tripped
+ *  hollow and crossed in the alarm colour, unknown dashed — told apart by shape first, colour only for the trip
+ *  (ISA-101), as in the rest of the drawing. */
+const breakerSymbol: ElementDefinition = {
+  render: 'template',
+  props: {
+    type: 'object',
+    properties: {
+      name: { type: 'string' },
+      state: { enum: ['closed', 'open', 'tripped', 'unknown'], default: 'unknown' },
+      text: { type: 'string', description: 'The state in words.' },
+    },
+  },
+  template: `<div class="breaker {{state}}" role="img" aria-label="{{name}} 차단기 {{text}}">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect class="box" x="2" y="2" width="20" height="20"/><path class="cross" d="M6 6 L18 18 M18 6 L6 18"/></svg>
+  <span><b>{{name}}</b> {{text}}</span>
+</div>`,
+  style: `.breaker{display:flex;align-items:center;gap:8px;height:100%;font:12px var(--u-widget-font-family);color:var(--u-widget-text-secondary)}
+svg{width:22px;height:22px;flex:none}
+.box{fill:var(--u-widget-surface);stroke:#5f6a70;stroke-width:2}
+.cross{display:none;stroke:var(--u-widget-negative);stroke-width:2.5}
+b{color:var(--u-widget-text);font-weight:600}
+.closed .box{fill:#4a555b}
+.unknown .box{stroke-dasharray:3 2}
+.tripped .box{stroke:var(--u-widget-negative)}
+.tripped .cross{display:inline}
+.tripped span{color:var(--u-widget-negative);font-weight:600}`,
+  size: { width: 150, height: 26 },
+};
 
 const BUS_Y = 360;
 const FEEDER_XS = [160, 340, 520, 700, 880, 1060];
@@ -52,15 +83,17 @@ const TILE = { width: 160, height: 64 };
 
 const feederNodes = ({ id }: (typeof FEEDERS)[number], i: number): Node[] => [
   {
+    // The symbol sits on the feeder line where the drawing leaves room for it.
     id: `breaker-${id}`,
-    x: FEEDER_XS[i] - TILE.width / 2,
-    y: 432,
-    ...TILE,
+    x: FEEDER_XS[i] - 12,
+    y: 391,
+    width: 150,
+    height: 26,
     anchored: true,
     widget: {
-      type: 'status',
-      props: { data: { label: `${id} 차단기`, value: '', level: 'neutral' } },
-      bindings: { 'data.value': bindFeeder(id, 'breaker', BREAKER_TEXT), 'data.level': bindFeeder(id, 'breaker', BREAKER_LEVEL) },
+      type: 'element:breaker',
+      props: { name: id, state: 'unknown', text: '' },
+      bindings: { state: bindFeeder(id, 'breaker', BREAKER_STATE), text: bindFeeder(id, 'breaker', BREAKER_TEXT) },
     },
   },
   {
@@ -146,7 +179,8 @@ function drawing(): string {
     `<text x="${x}" y="${y}" font-size="${size}" fill="#4a555b" text-anchor="${anchor}" font-family="sans-serif">${escapeXml(t)}</text>`;
   const breaker = (x: number, y: number, name: string) =>
     `<rect x="${x - 11}" y="${y - 11}" width="22" height="22" fill="#f1f3f4" stroke="${stroke}" stroke-width="2"/>${text(x + 18, y + 5, name, 'start', 11)}`;
-  const feeders = FEEDER_XS.map((x, i) => `${line(`M ${x} ${BUS_Y} V 418`)}${breaker(x, 404, '')}${line(`M ${x} 576 V 600`)}
+  // Each feeder's breaker is the board's own symbol (the breaker element), drawn over the line with its state.
+  const feeders = FEEDER_XS.map((x, i) => `${line(`M ${x} ${BUS_Y} V 498`)}${line(`M ${x} 576 V 600`)}
 <path d="M ${x - 8} 596 L ${x} 610 L ${x + 8} 596" fill="none" stroke="${stroke}" stroke-width="2"/>${text(x, 626, FEEDERS[i].load)}`).join('\n');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
 <rect width="${WIDTH}" height="${HEIGHT}" fill="#e6e9eb"/>
@@ -175,6 +209,7 @@ const document: CanvasView = {
   nodes: NODES,
   connectors: [],
   decorations: DECORATIONS,
+  elements: { breaker: breakerSymbol },
 };
 
 export const powerSld: SamplePack = {
