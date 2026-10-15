@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
-import { getByPointer } from '@iyulab/u-board/domain';
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, getByPointer } from '@iyulab/u-board/domain';
 import { help } from '@iyulab/u-widgets/tools';
 
 const require = createRequire(import.meta.url);
@@ -53,7 +53,7 @@ const CANVAS = `# Canvas boards
 
 ## Coordinates and sizes
 - Scene units = CSS px at 100%, x to the right, y down. The viewer fits the whole drawing into view (never above 100%), so absolute position does not matter — relative layout does.
-- A node's x, y is the top-left of its box; width × height default to 160 × 100. Its widget is clipped to the box — make the box fit its content (a 12 px label needs about 7 px per character).
+- A node's x, y is the top-left of its box; width × height default to ${DEFAULT_NODE_WIDTH} × ${DEFAULT_NODE_HEIGHT}. Its widget is clipped to the box — make the box fit its content (a 12 px label needs about 7 px per character).
 - anchored: true when x, y is a real place on the background (a plan's metres, a map's longitude/latitude via background.image.referencePoints), false when placed freely.
 - background: {} for none, or { image: { src, width, height } } — the drawing is placed at 0, 0 at its own size.
 

@@ -30,7 +30,7 @@ describe('domain entry', () => {
   // effect — what a 0.x minor release adds or removes is read off this list.
   it('exports exactly these values', () => {
     expect(Object.keys(mod).sort()).toEqual([
-      'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'JsonPatchError', 'ageText', 'applyJsonPatch', 'applyValueMap',
+      'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'JsonPatchError', 'ageText', 'applyJsonPatch', 'applyValueMap',
       'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameScripts',
       'emptyViewDocument', 'findHttpRefItem', 'getByPointer', 'isHttpRef', 'lintViewDocument', 'parseSourceTime',
       'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveDocument', 'resolveWidget', 'resolvedReading',
