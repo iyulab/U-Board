@@ -59,7 +59,7 @@
         "script": { "description": "The code a script element runs. It receives its props through ub.onProps.", "type": "string" },
         "style": { "description": "CSS for its own markup only.", "type": "string" },
         "size": {
-          "description": "The size it is drawn at where a node or grid item gives none.",
+          "description": "Its own size: the height a grid item placing it takes when it gives none, and the box an author starts from on a canvas.",
           "type": "object",
           "required": ["width", "height"],
           "properties": { "width": { "type": "number", "exclusiveMinimum": 0 }, "height": { "type": "number", "exclusiveMinimum": 0 } }

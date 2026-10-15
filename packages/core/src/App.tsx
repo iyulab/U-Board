@@ -4,6 +4,7 @@ import { ViewerPage } from './viewer/ViewerPage.js';
 import type { CanvasView, GridView } from './view-document.js';
 import { FixtureAdapter } from './fixture-adapter.js';
 import { seedWidget } from './authoring/widget-catalog.js';
+import { elementsDemo } from './examples/elements.js';
 
 const FLOOR_PLAN = `data:image/svg+xml,${encodeURIComponent(`
   <svg xmlns="http://www.w3.org/2000/svg" width="900" height="560">
@@ -136,11 +137,11 @@ const demoGrid: GridView = {
 
 export function App() {
   const adapters = useMemo(() => [new FixtureAdapter()], []);
-  const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author'>('author');
+  const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author' | 'elements'>('author');
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : 'grid authoring'}</h1>
+      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : 'grid authoring'}</h1>
       <div style={{ marginBottom: 12 }}>
         <button onClick={() => setMode('author')} disabled={mode === 'author'}>
           Author
@@ -153,6 +154,9 @@ export function App() {
         </button>{' '}
         <button onClick={() => setMode('grid-author')} disabled={mode === 'grid-author'}>
           Author grid
+        </button>{' '}
+        <button onClick={() => setMode('elements')} disabled={mode === 'elements'}>
+          Elements
         </button>
       </div>
       {mode === 'author' ? (
@@ -175,6 +179,16 @@ export function App() {
         <div style={{ height: 720 }}>
           <AuthoringView initialDocument={demoGrid} adapters={adapters} showDocumentSource />
         </div>
+      ) : mode === 'elements' ? (
+        <>
+          <p style={{ color: '#64748b', maxWidth: 640 }}>
+            Elements the board defines itself — a pump symbol, a tank level, a ring — drawn by templates of SVG and CSS
+            with no script, each in an isolated root that takes the board's theme. Defined once, placed by name.
+          </p>
+          <div style={{ height: 520, maxWidth: 1000, resize: 'horizontal', overflow: 'auto' }}>
+            <ViewerPage document={elementsDemo} adapters={adapters} />
+          </div>
+        </>
       ) : mode === 'grid' ? (
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>

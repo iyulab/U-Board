@@ -110,6 +110,17 @@ from the keyboard (arrow keys move the selection, or pan when nothing is selecte
 the items). **View**: the board exactly as a shared link shows it, where a drag pans. The wheel
 zooms in both.
 
+### Elements
+
+Beside the prepared widgets, a board can define its own elements — markup and CSS drawn with the
+board's props, in an isolated root that takes the board's theme — and place them by name
+([API reference — Elements](https://github.com/iyulab/U-Board/blob/main/docs/api-reference.md#elements--elementdefinition)). An element
+loads nothing from another origin unless it lists the origin in its `resources` and the host allows it:
+
+```tsx
+<ViewerPage document={doc} adapters={adapters} elementOrigins={['https://cdn.example.com']} />
+```
+
 ### Text in another language
 
 The components show English text by default. Pass `labels` — any subset of `UBoardLabels`, the

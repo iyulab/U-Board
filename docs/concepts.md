@@ -48,8 +48,19 @@ carries no widget and no binding; like a background, the system does not interpr
 depicts.
 
 **Widget** — the visual content a node displays (a chart, a status indicator, a numeric value,
-and so on). Widget rendering is provided by an external library the view consumes, not by the
-canvas layer itself.
+and so on). A prepared widget is rendered by an external library the view consumes, not by the
+canvas layer itself; an element is one the board defines itself.
+
+**Element** — what a board draws when no prepared widget does: a plant symbol, a custom gauge, a
+tank's level. The board defines it once, by name, and places it on any number of nodes or grid
+items as a widget of type `element:<name>`, each with its own props — bound like any widget's. A
+**template element** is HTML or SVG markup with `{{prop}}` values and its own CSS, drawn in an
+isolated part of the page: its CSS reaches only its own markup, the page's does not reach in, and
+only the board's theme passes through (`--u-widget-*` CSS variables — the colours the prepared widgets use).
+It runs no script. A **script element** runs code in a sandboxed frame that cannot reach the page,
+the viewer's session or the network. An element loads nothing from another origin unless it
+declares the origin and the host allows it. Its definition describes its props as a JSON Schema,
+so a tool — or an AI — writing a board knows what it takes.
 
 **Binding** — a reference from a widget to a value in an external system. U-Board reads through a
 binding; it does not store the value it resolves to. A resolved binding carries a connection

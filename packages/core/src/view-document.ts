@@ -205,7 +205,8 @@ export interface ElementDefinition {
   script?: string;
   /** CSS for its own markup only. */
   style?: string;
-  /** The size it is drawn at where a node or grid item gives none. */
+  /** Its own size: a grid item placing it takes this height when it gives none, and an author placing it on a canvas
+   * starts from this box. A canvas node's box is still the layout — the element fills it. */
   size?: { width: number; height: number };
   /** The `https://` origins it loads anything from — a font, an image, a script library. Nothing else
    * is reachable, and an instance reaches only the origins its operator allows as well. */

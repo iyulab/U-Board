@@ -3,6 +3,7 @@ import type { ResolvedGridItem, ResolvedGridView } from '../resolve-document.js'
 import { GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN } from '../view-document.js';
 import type { QualityText } from '../quality-text.js';
 import { NodeFrame } from './node-frame.js';
+import { elementNameOf } from '../elements/element-type.js';
 
 /** Where a grid's width changes how it lays out — the width of the board's own container, not of the window:
  *  a board embedded in a narrow panel of a wide page lays out as a narrow one. */
@@ -60,6 +61,13 @@ export interface GridBoardProps {
  * their tallest item — an item without a height takes its widget's own, and the others in its row stretch
  * to match. No pan or zoom: a grid reads at any width, and scrolls when it is taller than its container.
  */
+/** The height an item placing an element takes when it gives none: the element's own. A prepared widget has its own
+ *  height already; an element's isolated root has none to offer the row, so its definition says it. */
+function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | undefined {
+  const name = elementNameOf(item.widget.type);
+  return name === undefined ? undefined : doc.elements?.[name]?.size?.height;
+}
+
 export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell }: GridBoardProps) {
   return (
     <div className="ub-grid" role="region" aria-label={ariaLabel} data-appearance={doc.appearance ?? 'light'}>
@@ -69,12 +77,12 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell
       <div className="ub-grid__items">
         {doc.items.map((item, index) => {
           const { span, spanMedium } = gridSpans(item);
-          const style = { '--_ub-span': span, '--_ub-span-medium': spanMedium, height: item.height } as CSSProperties;
+          const style = { '--_ub-span': span, '--_ub-span-medium': spanMedium, height: item.height ?? elementHeight(doc, item) } as CSSProperties;
           return (
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                <NodeFrame widget={item.widget} appearance={doc.appearance} qualityText={qualityText} now={now} locale={locale} />,
+                <NodeFrame widget={item.widget} appearance={doc.appearance} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} />,
                 index
               )}
             </div>

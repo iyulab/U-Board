@@ -14,6 +14,7 @@ import type { ResolvedGridView, ResolvedViewDocument } from '../resolve-document
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from './attribution.js';
+import { ElementOriginsContext } from '../renderer/element-view.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -42,7 +43,12 @@ export interface ViewerPageProps {
   /** Name where the board's data comes from — each bound adapter's `attribution` — under the board.
    * Default `true`. Turn it off only to show it yourself: a source's license often requires it. */
   attribution?: boolean;
+  /** The origins an element of the board may load from — a font, an image, a script library — when it also lists them
+   * in its `resources`. Default none: a board loads nothing from another origin unless its host allows it here. */
+  elementOrigins?: readonly string[];
 }
+
+const NO_ORIGINS: readonly string[] = [];
 
 /** What is on screen: a canvas view as canvas-kit draws it, or a grid view as it lays out — with the time its
  *  values' ages are measured to. */
@@ -67,6 +73,7 @@ export function ViewerPage({
   labels: labelsProp,
   clock = Date.now,
   attribution = true,
+  elementOrigins = NO_ORIGINS,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
   const [drawn, setDrawn] = useState<Drawn | null>(null);
@@ -104,41 +111,43 @@ export function ViewerPage({
   }, [resolved, labels]);
 
   return (
-    <div className="ub-viewer" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {drawn && (drawn.kind === 'canvas' || pollIntervalMs !== undefined) && (
-        <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
-          {drawn.kind === 'canvas' && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
-          {pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
-        </div>
-      )}
-      {drawn ? (
-        <div className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0, ...(drawn.kind === 'grid' && { width, height }) }}>
-          {drawn.kind === 'canvas' ? (
-            <Viewer
-              width={width}
-              height={height}
-              scene={drawn.preview.scene}
-              overlays={drawn.preview.overlays}
-              transform={view.transform}
-              onTransformChange={view.onUserTransform}
-              onViewportResize={view.onViewportResize}
-              ariaLabel={ariaLabel ?? labels.boardRegion}
-            />
-          ) : (
-            <GridBoard
-              doc={drawn.doc}
-              ariaLabel={ariaLabel ?? labels.boardRegion}
-              qualityText={labels.qualityText}
-              now={drawn.now}
-              locale={labels.locale}
-            />
-          )}
-        </div>
-      ) : (
-        <p className="ub-viewer__status">{labels.resolving}</p>
-      )}
-      {drawn && <AttributionLine attributions={attributions} labels={labels} />}
-    </div>
+    <ElementOriginsContext value={elementOrigins}>
+      <div className="ub-viewer" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {drawn && (drawn.kind === 'canvas' || pollIntervalMs !== undefined) && (
+          <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
+            {drawn.kind === 'canvas' && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
+            {pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
+          </div>
+        )}
+        {drawn ? (
+          <div className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0, ...(drawn.kind === 'grid' && { width, height }) }}>
+            {drawn.kind === 'canvas' ? (
+              <Viewer
+                width={width}
+                height={height}
+                scene={drawn.preview.scene}
+                overlays={drawn.preview.overlays}
+                transform={view.transform}
+                onTransformChange={view.onUserTransform}
+                onViewportResize={view.onViewportResize}
+                ariaLabel={ariaLabel ?? labels.boardRegion}
+              />
+            ) : (
+              <GridBoard
+                doc={drawn.doc}
+                ariaLabel={ariaLabel ?? labels.boardRegion}
+                qualityText={labels.qualityText}
+                now={drawn.now}
+                locale={labels.locale}
+              />
+            )}
+          </div>
+        ) : (
+          <p className="ub-viewer__status">{labels.resolving}</p>
+        )}
+        {drawn && <AttributionLine attributions={attributions} labels={labels} />}
+      </div>
+    </ElementOriginsContext>
   );
 }
 

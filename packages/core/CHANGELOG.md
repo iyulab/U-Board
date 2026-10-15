@@ -12,7 +12,13 @@ All notable changes to this package are documented here. The format follows
   `elements: { <name>: ElementDefinition }` with `{ type: "element:<name>", props }` on any node or grid item. A
   definition is a `template` (HTML or SVG with `{{prop}}` values, `{{#list}}` and `{{^flag}}` sections, every value
   escaped, no script) or a `script` (code for a sandboxed frame), with a props schema (a JSON Schema subset), CSS for
-  its own markup, a natural size and the `https` origins it loads from. Drawing them comes in a later release.
+  its own markup, its own size and the `https` origins it loads from.
+- **Template elements are drawn** — `ViewerPage` and the editor draw each into an isolated root of its own: its CSS
+  reaches only its markup, the page's does not reach in, and the board's theme arrives as `--u-widget-*` CSS variables
+  (the colours of the prepared widgets). The markup policy is applied again after the values are filled, so a value
+  cannot bring in a URL or CSS its template did not. Script elements are validated and placed, and drawn as a notice
+  until a later release.
+- `ViewerPage` `elementOrigins` — the origins an element may load from when it also lists them; none by default.
 - `validateViewDocument` holds definitions to the element contract and placed elements to their definitions — a
   template’s markup and CSS to the markup policy (no script, no event handler, a URL only to a fragment, an inline
   image or a declared origin), a props schema to its keyword subset, props to the schema — each problem with its path.

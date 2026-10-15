@@ -160,27 +160,27 @@ function readAttributes(markup: string, from: number): { attributes: Attribute[]
 }
 
 function checkAttribute(tag: string, { name, value }: Attribute, resources: readonly string[], issues: MarkupIssue[]): void {
-  const attribute = name.toLowerCase();
-  if (attribute.includes(VALUE_MARK)) {
+  if (name.includes(VALUE_MARK)) {
     issues.push({ message: `<${tag}>: an attribute name cannot come from a value` });
     return;
   }
-  if (attribute.startsWith('on')) {
-    issues.push({ message: `<${tag} ${attribute}>: event handlers are not allowed — a template runs no script` });
-    return;
-  }
-  if (REFUSED_ATTRIBUTES.has(attribute)) {
-    issues.push({ message: `<${tag} ${attribute}> is not allowed in a template` });
-    return;
-  }
-  if (value === null) return;
+  const problem = attributeProblem(tag, name, value ?? '', resources);
+  if (problem) issues.push({ message: problem });
+}
+
+/** Why the policy refuses attribute `name="value"` on `tag`, or `undefined` when it allows it. A value still holding a
+ *  `{{…}}` mark is checked once filled; the renderer calls this with the filled value. */
+export function attributeProblem(tag: string, name: string, value: string, resources: readonly string[]): string | undefined {
+  const attribute = name.toLowerCase();
+  if (attribute.startsWith('on')) return `<${tag} ${attribute}>: event handlers are not allowed — a template runs no script`;
+  if (REFUSED_ATTRIBUTES.has(attribute)) return `<${tag} ${attribute}> is not allowed in a template`;
   if (URL_ATTRIBUTES.has(attribute)) {
-    if (!value.includes(VALUE_MARK) && !isAllowedUrl(value, resources)) {
-      issues.push({ message: `<${tag} ${attribute}="${value}">: ${URL_RULE}` });
-    }
+    if (!value.includes(VALUE_MARK) && !isAllowedUrl(value, resources)) return `<${tag} ${attribute}="${value}">: ${URL_RULE}`;
   } else if (attribute === 'style') {
-    for (const issue of checkStyle(value, resources)) issues.push({ message: `<${tag} style>: ${issue.message}` });
+    const issues = checkStyle(value, resources);
+    if (issues.length) return issues.map(issue => `<${tag} style>: ${issue.message}`).join('; ');
   }
+  return undefined;
 }
 
 const URL_RULE = 'a URL must be a fragment ("#id"), an inline image ("data:image/…") or on an origin listed in resources';

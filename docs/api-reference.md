@@ -390,6 +390,8 @@ interface Widget {
   passes `{ widget: type, ...props }` to u-widgets — the
   [package README](../packages/core/README.md#widgets) lists the widgets the authoring UI offers and
   their props.
+- A `type` of `element:<name>` places an element the document defines under `elements` (below):
+  U-Board draws it itself, and `props` are what its definition's props schema describes.
 - `bindings` — a map from a dotted path into `props` (e.g. `'data.value'`, or a nested path like
   `'data.status'`, or an array element like `'items.1.value'`) to a `Binding`. At resolution time,
   each entry's resolved value is written into `props` at that path — copying, never mutating, the
@@ -415,8 +417,60 @@ widget of either kind, resolved or not — the walk to use for anything that loo
 a document of the other kind in the editor opens it in that kind's editor.
 
 `validateViewDocument` checks either kind, and ids are unique across the whole document. The same
-rules, apart from id uniqueness, are published as a JSON Schema (2020-12):
-`@iyulab/u-board/view-document.schema.json`.
+rules, apart from those its description names (id uniqueness, element references and props, the
+markup policy), are published as a JSON Schema (2020-12): `@iyulab/u-board/view-document.schema.json`.
+
+### Elements — `ElementDefinition`
+
+```ts
+interface ElementDefinition {
+  render: 'template' | 'script';
+  props?: PropsSchema;        // a JSON Schema object schema, in the subset below
+  template?: string;          // render: 'template' — HTML or SVG with {{values}}
+  script?: string;            // render: 'script'
+  style?: string;             // CSS for its own markup only
+  size?: { width: number; height: number };
+  resources?: string[];       // https origins it loads from, e.g. 'https://cdn.example.com'
+}
+```
+
+Either kind of view may carry `elements: Record<string, ElementDefinition>` — names of lowercase
+letters, digits and hyphens. A widget `{ type: 'element:pump', props: { state: 'run' } }` places one.
+
+```ts
+elements: {
+  pump: {
+    render: 'template',
+    props: { type: 'object', required: ['state'], properties: { state: { enum: ['run', 'stop', 'fault'] }, rpm: { type: 'number' } } },
+    template: '<svg viewBox="0 0 64 64"><circle class="{{state}}" cx="32" cy="32" r="26"/></svg><p>{{rpm}} rpm</p>',
+    style: '.run { fill: var(--u-widget-positive) } .fault { fill: var(--u-widget-negative) }',
+    size: { width: 140, height: 160 },
+  },
+}
+```
+
+- **Template values** — logic-less: `{{name}}` (a dotted path into the props, every value escaped),
+  `{{#list}}…{{/list}}` (repeated for each item, or shown once for any other truthy value; inside it
+  a name is looked up in the item first and `{{.}}` is the item itself), `{{^flag}}…{{/flag}}` (shown
+  when empty or false), `{{! comment}}`. There is no unescaped output and no partial. Numbers become
+  a drawing through CSS: `style="--level: {{level}}"` and `height: calc(var(--level) * 1%)`.
+- **Markup policy** — HTML text and structure tags, `img`, and SVG shapes, text, gradients, patterns,
+  symbols and filters. No `script`, `style`, `iframe`, `a`, form or `foreignObject`; no event handler
+  attribute; a URL (`href`, `src`, CSS `url()`) only to a fragment of the markup (`#id`), an inline
+  image (`data:image/…`) or an origin in `resources`; no `@import`. The renderer applies the same
+  policy again after filling the values, so a value cannot add what the template did not.
+- **Theme** — the board's tone reaches the markup as CSS variables: `--u-widget-bg`, `--u-widget-surface`,
+  `--u-widget-text`, `--u-widget-text-secondary`, `--u-widget-border`, `--u-widget-primary`, `--u-widget-positive`,
+  `--u-widget-negative`, `--u-widget-warning`, `--u-widget-font-family`, `--u-widget-font-mono`.
+- **Props schema** — the keywords `type`, `enum`, `const`, `properties`, `required`, `items`,
+  `minimum`, `maximum`, `minLength`, `maxLength`, `title`, `description` and `default`; any other is
+  an error. A placed element's static props are checked against it; a prop a binding fills is
+  taken as given.
+- **Size** — in a grid, an item placing the element takes `size.height` when it gives none. On a
+  canvas the node's box is the layout, and the element fills it.
+- **Origins** — an element reaches an origin only when it lists it in `resources` and the host
+  allows it: `ViewerPage`'s `elementOrigins` (none by default).
+- **Script elements** are validated and placed today; they are drawn in a later release.
 
 ### `Node`, `Connector`, `Background`, `Shape`
 
@@ -538,10 +592,17 @@ and binding, connectors, decorations, the background — and returns every probl
 located by an RFC 6901 JSON Pointer into the value
 (`""` is the value itself). An empty array means the value is a valid document.
 
-It checks structure only: a binding's `ref` belongs to its adapter and a widget's `type`/`props`
-(and the values a binding's `map` gives) to its widget library, so their contents are not inspected; references between parts of a
-document (a connector naming a node that is not there) are not judged; fields it does not know
-are ignored.
+It checks structure, and the elements the document defines: a binding's `ref` belongs to its adapter
+and a prepared widget's `type`/`props` (and the values a binding's `map` gives) to its widget library,
+so their contents are not inspected; most references between parts of a document (a connector naming
+a node that is not there) are not judged; fields it does not know are ignored. An element definition
+is held to the element contract (markup policy, props schema subset, `resources` origins), and a
+widget of type `element:<name>` must name a defined element and give props its schema accepts —
+each problem with what to do instead where there is something to say:
+
+```ts
+// → [{ path: '/elements/pump/template', message: '<script> is not allowed in a template — a template runs no script — use render: "script" for code' }]
+```
 
 ```ts
 validateViewDocument({
@@ -550,6 +611,17 @@ validateViewDocument({
 });
 // → [{ path: '/nodes/0/widget/bindings/value', message: 'expected a binding object ({ adapter, ref })' }]
 ```
+
+### `lintViewDocument(doc)`
+
+```ts
+interface ViewDocumentAdvice { path: string; message: string }
+function lintViewDocument(doc: ViewDocument): ViewDocumentAdvice[];
+```
+
+Advice on a valid document — none of it stops it being saved or drawn: an element defined but placed
+nowhere, more than 30 script elements on one board (each runs in a frame of its own), an element whose
+markup, script and CSS together pass 32 KB.
 
 ### `parseViewDocument(text)` / `InvalidViewDocumentError`
 

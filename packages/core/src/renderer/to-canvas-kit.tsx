@@ -93,7 +93,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     width: node.width ?? DEFAULT_NODE_WIDTH,
     height: node.height ?? DEFAULT_NODE_HEIGHT,
     // A widget takes its node's box exactly — the box the author drew is the layout.
-    content: <NodeFrame widget={node.widget} appearance={doc.appearance} qualityText={qualityText} now={at} locale={locale} />,
+    content: <NodeFrame widget={node.widget} appearance={doc.appearance} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} />,
   }));
 
   return { scene, overlays };
