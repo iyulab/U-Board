@@ -1,13 +1,12 @@
 import { measureTextWidth, type DrawingObject } from '@canvas-kit/core';
 import { CAPTION_SIZE, captionBox } from '../caption-geometry.js';
-import { LABEL_SIZE, chipOf, placeConnectors } from '../connector-geometry.js';
+import { CONNECTOR_WIDTH, LABEL_SIZE, chipOf, placeConnectors } from '../connector-geometry.js';
 import type { BoardAppearance, Connector, ConnectorDash, Node } from '../view-document.js';
 import type { ConnectionQuality } from '../adapter.js';
 import { worstQuality } from '../quality-text.js';
 
 /** A connector's look when its style leaves it out. */
 export const CONNECTOR_STROKE = '#94a3b8';
-export const CONNECTOR_WIDTH = 2;
 type Line = Extract<DrawingObject, { type: 'line' }>;
 
 const DASHES: Record<ConnectorDash, number[]> = { solid: [], dashed: [6, 4], dotted: [2, 3] };
@@ -29,15 +28,17 @@ const measure = (text: string, size: number) => measureTextWidth({ type: 'text',
 
 /**
  * What a canvas board's connectors draw — the same for the viewer and the editor, placed by `placeConnectors`: each
- * line edge to edge, connectors of the same two nodes side by side, and a label on a chip at its line's middle, over
- * every line.
+ * line edge to edge with its arrowheads in the line's colour, connectors of the same two nodes side by side, and a label
+ * on a chip along its line, over every line.
  */
 export function connectorObjects(nodes: readonly Node[], connectors: ReadonlyArray<Connector & { quality?: Record<string, ConnectionQuality> }>, appearance: BoardAppearance = 'light', extra: Partial<Line> = {}): DrawingObject[] {
   const lines: DrawingObject[] = [];
   const labels: DrawingObject[] = [];
-  for (const { connector, segment, label } of placeConnectors(nodes, connectors, measure)) {
+  for (const { connector, segment, label, arrows = [] } of placeConnectors(nodes, connectors, measure)) {
     const { stroke = CONNECTOR_STROKE, strokeWidth = CONNECTOR_WIDTH, dash = 'solid' } = connector.style ?? {};
     lines.push({ type: 'line', id: connector.id, x: 0, y: 0, points: segment, stroke, strokeWidth, ...(DASHES[dash].length > 0 && { dash: DASHES[dash] }), ...extra });
+    // A head is filled, not stroked — a dashed line's head stays whole.
+    arrows.forEach((points, i) => lines.push({ type: 'path', id: `${connector.id}#arrow${i}`, x: 0, y: 0, points, closed: true, fill: stroke, ...(extra.locked && { locked: true }) }));
     if (label) {
       const worst = worstQuality((connector as { quality?: Record<string, ConnectionQuality> }).quality ?? {});
       const rim = worst ? QUALITY_RIM[worst] : undefined;

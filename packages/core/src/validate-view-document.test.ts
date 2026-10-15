@@ -235,15 +235,16 @@ describe('validateViewDocument', () => {
       const issues = strict(broken(d => { d.connectors[0].color = 'blue'; }));
       expect(issues).toHaveLength(1);
       expect(issues[0].path).toBe('/connectors/0/color');
-      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId, label, style, bindings.');
-      expect(issues[0].message).toContain('style: { stroke, strokeWidth, dash }');
+      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId, label, labelAt, style, bindings.');
+      expect(issues[0].message).toContain('style: { stroke, strokeWidth, dash, arrow }');
     });
 
-    it('checks a connector’s label and style', () => {
-      expect(strict(broken(d => { d.connectors[0].label = '26 Kbps'; d.connectors[0].style = { stroke: '#2563eb', strokeWidth: 2, dash: 'dotted' }; }))).toEqual([]);
-      expect(strict(broken(d => { d.connectors[0].label = 3; d.connectors[0].style = { stroke: 'var(--x)', strokeWidth: 0, dash: 'dash', arrow: true }; })).map(i => i.path)).toEqual([
-        '/connectors/0/label', '/connectors/0/style/arrow', '/connectors/0/style/stroke', '/connectors/0/style/strokeWidth', '/connectors/0/style/dash',
+    it('checks a connector’s label, where it sits, and its style', () => {
+      expect(strict(broken(d => { d.connectors[0].label = '26 Kbps'; d.connectors[0].labelAt = 0.25; d.connectors[0].style = { stroke: '#2563eb', strokeWidth: 2, dash: 'dotted', arrow: 'both' }; }))).toEqual([]);
+      expect(strict(broken(d => { d.connectors[0].label = 3; d.connectors[0].labelAt = 1.5; d.connectors[0].style = { stroke: 'var(--x)', strokeWidth: 0, dash: 'dash', arrow: 'forward' }; })).map(i => i.path)).toEqual([
+        '/connectors/0/label', '/connectors/0/labelAt', '/connectors/0/style/stroke', '/connectors/0/style/strokeWidth', '/connectors/0/style/dash', '/connectors/0/style/arrow',
       ]);
+      expect(strict(broken(d => { d.connectors[0].style = { arrow: 'forward' }; }))[0].message).toBe('expected "none", "end" (pointing at toNodeId), "start" (pointing at fromNodeId) or "both"');
     });
 
     it('finds unknown fields at every level', () => {

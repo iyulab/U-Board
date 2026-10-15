@@ -6,6 +6,17 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Connector arrowheads** — `style.arrow`: `none` (the default), `end` (pointing at `toNodeId`), `start` (pointing at
+  `fromNodeId`) or `both`. A head is filled in the line's colour, grows with its width, and its tip touches the box it
+  points at; the line stops inside it. `style.arrow` is bindable, so a flow that changes sign turns its arrow through a
+  value map (`ranges: [{ max: 0, value: 'start' }, { min: 0, value: 'end' }]`). `CONNECTOR_ARROWS` and
+  `CONNECTOR_DASHES` list the words each takes.
+- **`Connector.labelAt`** — where along the line its label sits, from 0 (the `fromNodeId` end) to 1 (the `toNodeId`
+  end). Left out, the label stays at the middle, side-by-side connectors' labels taking turns along their line.
+- The schema and strict validation know both, with the words `style.arrow` takes in the error.
+
 ## [0.14.0] - 2026-10-16
 
 ### Added

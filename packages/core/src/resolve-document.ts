@@ -1,4 +1,5 @@
-import type { ViewDocument, CanvasView, GridView, Placed, Node, GridItem, Connector, ConnectorDash } from './view-document.js';
+import type { ViewDocument, CanvasView, GridView, Placed, Node, GridItem, Connector, ConnectorArrow, ConnectorDash } from './view-document.js';
+import { CONNECTOR_ARROWS, CONNECTOR_DASHES } from './view-document.js';
 import type { Adapter, ConnectionQuality, ResolvedWidget } from './adapter.js';
 import { resolveBindings, resolveWidget } from './adapter.js';
 
@@ -50,12 +51,10 @@ export async function resolveDocument(doc: ViewDocument, adapters: readonly Adap
     : { ...doc, items: await resolve(doc.items) };
 }
 
-const DASHES: readonly ConnectorDash[] = ['solid', 'dashed', 'dotted'];
-
 /**
  * A connector's bindings read into its label and style. A value is taken only in the form its path draws — a label
- * as text (a number shown as it reads), a width as a positive number, a dash as one of its three words, a colour as
- * text (an unreadable colour paints the default) — otherwise the static value stays, as for a disconnected binding.
+ * as text (a number shown as it reads), a width as a positive number, a dash or an arrow as one of its words, a colour
+ * as text (an unreadable colour paints the default) — otherwise the static value stays, as for a disconnected binding.
  */
 export async function resolveConnector(connector: Connector, adapters: readonly Adapter[]): Promise<ResolvedConnector> {
   if (!connector.bindings || Object.keys(connector.bindings).length === 0) return { ...connector, quality: {} };
@@ -66,7 +65,8 @@ export async function resolveConnector(connector: Connector, adapters: readonly 
     (path, value) => {
       if (path === 'label') return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
       if (path === 'style.strokeWidth') return typeof value === 'number' && value > 0 ? value : undefined;
-      if (path === 'style.dash') return DASHES.includes(value as ConnectorDash) ? value : undefined;
+      if (path === 'style.dash') return CONNECTOR_DASHES.includes(value as ConnectorDash) ? value : undefined;
+      if (path === 'style.arrow') return CONNECTOR_ARROWS.includes(value as ConnectorArrow) ? value : undefined;
       if (path === 'style.stroke') return typeof value === 'string' ? value : undefined;
       return undefined;
     }

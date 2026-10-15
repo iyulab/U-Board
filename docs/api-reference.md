@@ -554,9 +554,10 @@ Resolves every widget's bindings — and on a canvas board every connector's (`r
 concern (see [`architecture.md`](architecture.md)).
 
 A connector binds its `label` and `style` (`CONNECTOR_BINDABLE`: `label`, `style.stroke`, `style.strokeWidth`,
-`style.dash`) with the same binding shape as a widget's. A value is taken only in the form its path draws — a label
-as text (a number as it reads), a width as a positive number, a dash as `solid`, `dashed` or `dotted`, a colour as
-text — otherwise the static value stays, as for a disconnected binding. A resolved connector carries `quality` per
+`style.dash`, `style.arrow`) with the same binding shape as a widget's. A value is taken only in the form its path
+draws — a label as text (a number as it reads), a width as a positive number, a dash as one of `CONNECTOR_DASHES`, an
+arrow as one of `CONNECTOR_ARROWS`, a colour as text — otherwise the static value stays, as for a disconnected
+binding. A resolved connector carries `quality` per
 bound path.
 
 `bindingsIn(doc)` yields every binding a document declares, widgets' and connectors', with the JSON Pointer of what

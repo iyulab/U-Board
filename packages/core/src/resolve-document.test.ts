@@ -107,6 +107,17 @@ describe('resolveDocument', () => {
     expect(resolved.quality).toEqual({ label: 'live', 'style.strokeWidth': 'live', 'style.dash': 'live', 'style.stroke': 'disconnected' });
   });
 
+  it('turns a connector’s arrow by a value’s sign — a value map from ranges to arrows — and keeps the static one for a word it does not know', async () => {
+    const flows: Record<string, ResolvedBinding> = { '/in': { value: 12.5, quality: 'live' }, '/out': { value: -3, quality: 'live' }, '/odd': { value: 'up', quality: 'live' } };
+    const ems: Adapter = { id: 'ems', resolve: async ref => flows[ref as string] };
+    const bySign = { ranges: [{ max: 0, value: 'start' }, { min: 0, value: 'end' }] };
+    const connector = (ref: string, map?: typeof bySign): CanvasView['connectors'][number] => ({
+      id: ref, fromNodeId: 'grid', toNodeId: 'ess', style: { arrow: 'none' }, bindings: { 'style.arrow': { adapter: 'ems', ref, ...(map && { map }) } },
+    });
+    const doc: CanvasView = { kind: 'canvas', background: {}, nodes: [], connectors: [connector('/in', bySign), connector('/out', bySign), connector('/odd')] };
+    expect((await resolveDocument(doc, [ems])).connectors.map(c => c.style?.arrow)).toEqual(['end', 'start', 'none']);
+  });
+
   it('reports a disconnected binding per node without dropping the node', async () => {
     const doc: CanvasView = {
       kind: 'canvas',

@@ -61,9 +61,10 @@ const CANVAS = `# Canvas boards
 - background: {} for none, or { image: { src, width, height } } — the drawing is placed at 0, 0 at its own size. src is a URL or a data: URL (an SVG drawn for the board: "data:image/svg+xml,…").
 
 ## Connectors
-- { id, fromNodeId, toNodeId, label?, style?: { stroke?, strokeWidth?, dash?: "solid" | "dashed" | "dotted" } } — a straight line from the edge of one node's box to the edge of the other's (2 px grey unless styled). Both ends must be nodes of /nodes.
-- label: text at the line's middle on a chip of the paper (a link's "26.78Kbps"). Connectors joining the same two nodes are drawn side by side — one per link, no need to merge them.
-- bindings: live values for "label", "style.stroke", "style.strokeWidth", "style.dash" — the same binding shape as a widget's (describe("data")); a map turns a source's numbers or words into a width or a colour. A label not showing a current value is rimmed (amber stale, grey disconnected).
+- { id, fromNodeId, toNodeId, label?, labelAt?, style?: { stroke?, strokeWidth?, dash?: "solid" | "dashed" | "dotted", arrow?: "none" | "end" | "start" | "both" } } — a straight line from the edge of one node's box to the edge of the other's (2 px grey, no arrowheads unless styled). Both ends must be nodes of /nodes.
+- label: text on a chip of the paper (a link's "26.78Kbps"), at the line's middle or at labelAt: 0 (the fromNodeId end) to 1 (the toNodeId end). Connectors joining the same two nodes are drawn side by side — one per link, no need to merge them.
+- arrow: "end" points at toNodeId, "start" at fromNodeId — a flow's direction. The head's tip touches the box.
+- bindings: live values for "label", "style.stroke", "style.strokeWidth", "style.dash", "style.arrow" — the same binding shape as a widget's (describe("data")); a map turns a source's numbers or words into a width, a colour or a direction (a flow that changes sign: "style.arrow" with map { ranges: [{ max: 0, value: "start" }, { min: 0, value: "end" }] }). A label not showing a current value is rimmed (amber stale, grey disconnected).
 - A line stops at the edge of the box: with the name in caption, it meets the icon itself.
 
 ## Decorations (drawn under connectors and nodes, first one lowest)

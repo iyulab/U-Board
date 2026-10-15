@@ -177,6 +177,44 @@ describe('toCanvasKit', () => {
     expect(apart).toBe(true);
   });
 
+  it('draws arrowheads in the line’s colour with their tips on the boxes, the line stopping inside them', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const nodes = [
+      { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+      { id: 'b', x: 300, y: 0, width: 100, height: 100, anchored: false, widget },
+    ];
+    const objects = (arrow: 'none' | 'end' | 'start' | 'both', strokeWidth?: number) =>
+      toCanvasKit(doc({ nodes, connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', style: { stroke: '#16a34a', arrow, ...(strokeWidth && { strokeWidth }) } }] })).scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+    const heads = (list: readonly Record<string, unknown>[]) => list.filter(o => String(o.id).startsWith('c#arrow'));
+
+    expect(heads(objects('none'))).toEqual([]);
+    expect((objects('none').find(o => o.id === 'c') as { points: number[] }).points).toEqual([100, 50, 300, 50]);
+
+    const end = objects('end');
+    expect(heads(end)).toEqual([expect.objectContaining({ type: 'path', closed: true, fill: '#16a34a', points: [300, 50, 292, 53, 292, 47] })]);
+    expect((end.find(o => o.id === 'c') as { points: number[] }).points).toEqual([100, 50, 296, 50]);
+
+    const start = heads(objects('start'))[0] as { points: number[] };
+    expect(start.points.slice(0, 2)).toEqual([100, 50]); // the tip on the `from` box
+
+    expect(heads(objects('both'))).toHaveLength(2);
+    // a wider line, a bigger head
+    expect((heads(objects('end', 5))[0] as { points: number[] }).points.slice(2, 4)).toEqual([280, 57.5]);
+  });
+
+  it('places a label where its labelAt says along the line, from the fromNodeId end', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const nodes = [
+      { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+      { id: 'b', x: 500, y: 0, width: 100, height: 100, anchored: false, widget },
+    ];
+    const left = (connector: { fromNodeId: string; toNodeId: string; labelAt?: number }) =>
+      (toCanvasKit(doc({ nodes, connectors: [{ id: 'c', label: 'x', ...connector }] })).scene.getObjects() as readonly object[] as readonly Record<string, unknown>[]).find(o => o.id === 'c#label')!.x as number;
+    // the line runs 100 → 500
+    expect(left({ fromNodeId: 'a', toNodeId: 'b', labelAt: 0.25 })).toBeLessThan(left({ fromNodeId: 'a', toNodeId: 'b' }));
+    expect(left({ fromNodeId: 'b', toNodeId: 'a', labelAt: 0.25 })).toBeGreaterThan(left({ fromNodeId: 'a', toNodeId: 'b' }));
+  });
+
   it('draws a node’s caption centred under its box on a chip, over the connectors', () => {
     const widget = { type: 'metric', props: {}, quality: {} };
     const { scene } = toCanvasKit(

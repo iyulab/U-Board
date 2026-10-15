@@ -1,6 +1,6 @@
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from './layout-defaults.js';
 import { estimateTextWidth } from './caption-geometry.js';
-import type { Connector, Node } from './view-document.js';
+import type { Connector, ConnectorArrow, Node } from './view-document.js';
 
 /** A connector label's font size, and the chip of paper around it. */
 export const LABEL_SIZE = 11;
@@ -8,6 +8,11 @@ export const LABEL_PAD_X = 4;
 export const LABEL_PAD_Y = 2;
 /** How far apart connectors joining the same two nodes are drawn, so each shows. */
 const PARALLEL_GAP = 8;
+/** A connector's width when its style leaves it out. */
+export const CONNECTOR_WIDTH = 2;
+/** An arrowhead's length grows with the line's width, never shorter than this; its base is three quarters of it. */
+const ARROW_MIN_LENGTH = 8;
+const ARROW_PER_WIDTH = 4;
 
 export interface Box {
   x: number;
@@ -21,17 +26,21 @@ export interface ConnectorPlacement {
   connector: Connector;
   /** Its index in the document's `connectors`. */
   index: number;
-  /** `[x1, y1, x2, y2]` — from the edge of one node's box to the edge of the other's. */
+  /** `[x1, y1, x2, y2]` — from the edge of the `fromNodeId` node's box to the edge of the `toNodeId` node's, drawn
+   *  short of an end that carries an arrowhead so the line stops inside the head instead of poking past its tip. */
   segment: number[];
   label?: Box;
+  /** Its arrowheads, each a triangle `[tipX, tipY, x2, y2, x3, y3]` whose tip touches the box it points at. */
+  arrows?: number[][];
 }
 
 /**
  * Where a canvas board's connectors are drawn — one geometry for the renderer and the layout advice, so the advice
  * talks about what is on screen. A line runs along the line between the two boxes' centres, from where it leaves one
- * box to where it enters the other; connectors joining the same two nodes are shifted side by side; a label sits at
- * the line's middle, side-by-side labels taking turns along it. `measure` gives a text's width (the canvas's own
- * where there is one). A connector naming a node the document does not have is not placed.
+ * box to where it enters the other; connectors joining the same two nodes are shifted side by side; a label sits where
+ * its `labelAt` says, else at the line's middle, side-by-side labels taking turns along it; an arrowhead's tip touches
+ * the box it points at. `measure` gives a text's width (the canvas's own where there is one). A connector naming a node
+ * the document does not have is not placed.
  */
 export function placeConnectors(nodes: readonly Node[], connectors: readonly Connector[], measure: (text: string, size: number) => number = estimateTextWidth): ConnectorPlacement[] {
   const boxes = new Map(nodes.map(node => [node.id, boxOf(node)]));
@@ -50,8 +59,9 @@ export function placeConnectors(nodes: readonly Node[], connectors: readonly Con
       const segment = edgeToEdge(from, to, (i - (group.length - 1) / 2) * PARALLEL_GAP, connector.fromNodeId < connector.toNodeId);
       if (!segment) return;
       // Side-by-side lines are closer than a label is tall: their labels take turns along the line instead.
-      const label = connector.label ? labelBox(connector.label, segment, (i + 1) / (group.length + 1), measure) : undefined;
-      placed.push({ connector, index, segment, ...(label && { label }) });
+      const label = connector.label ? labelBox(connector.label, segment, connector.labelAt ?? (i + 1) / (group.length + 1), measure) : undefined;
+      const heads = arrowheads(segment, connector.style?.arrow, connector.style?.strokeWidth ?? CONNECTOR_WIDTH);
+      placed.push({ connector, index, segment: heads?.segment ?? segment, ...(label && { label }), ...(heads && { arrows: heads.arrows }) });
     });
   }
   return placed;
@@ -71,6 +81,31 @@ function labelBox(text: string, [x1, y1, x2, y2]: number[], along: number, measu
   const cx = x1 + (x2 - x1) * along;
   const cy = y1 + (y2 - y1) * along;
   return { x: cx - width / 2, y: cy - LABEL_SIZE / 2, width, height: LABEL_SIZE };
+}
+
+/**
+ * The heads an `arrow` asks for on a segment, and the segment drawn short under them (to the middle of each head, so
+ * the line meets it whatever its cap). A segment too short for its heads gets heads that share it.
+ */
+function arrowheads([x1, y1, x2, y2]: number[], arrow: ConnectorArrow | undefined, width: number): { segment: number[]; arrows: number[][] } | undefined {
+  const ends = arrow === 'both' ? (['start', 'end'] as const) : arrow === 'start' || arrow === 'end' ? [arrow] : [];
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  if (ends.length === 0 || length === 0) return undefined;
+  const head = Math.min(Math.max(ARROW_MIN_LENGTH, width * ARROW_PER_WIDTH), length / ends.length);
+  const ux = (x2 - x1) / length;
+  const uy = (y2 - y1) / length;
+  const segment = [x1, y1, x2, y2];
+  const arrows = ends.map(end => {
+    // The tip, and the way the head points: toward the box at its end.
+    const [tx, ty, dx, dy] = end === 'end' ? [x2, y2, ux, uy] : [x1, y1, -ux, -uy];
+    const bx = tx - dx * head;
+    const by = ty - dy * head;
+    const half = (head * 0.75) / 2;
+    if (end === 'end') [segment[2], segment[3]] = [tx - (dx * head) / 2, ty - (dy * head) / 2];
+    else [segment[0], segment[1]] = [tx - (dx * head) / 2, ty - (dy * head) / 2];
+    return [tx, ty, bx - dy * half, by + dx * half, bx + dy * half, by - dx * half];
+  });
+  return { segment, arrows };
 }
 
 /** The part of the line between the two boxes' centres (shifted sideways by `offset`) that lies outside both boxes. */

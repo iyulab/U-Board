@@ -170,18 +170,21 @@ export interface Connector {
   id: string;
   fromNodeId: string;
   toNodeId: string;
-  /** Text at the line's middle, on a chip of the board's paper — a link's throughput, a pipe's flow. */
+  /** Text on the line, on a chip of the board's paper — a link's throughput, a pipe's flow. */
   label?: string;
+  /** Where along the line the label sits, from 0 (the `fromNodeId` end) to 1 (the `toNodeId` end). Left out, it sits at
+   *  the middle — connectors joining the same two nodes take turns along their line, so their labels do not stack. */
+  labelAt?: number;
   /** How the line is drawn; each part left out takes the board's connector look. */
   style?: ConnectorStyle;
-  /** Live values for `label`, `style.stroke`, `style.strokeWidth` or `style.dash` (`CONNECTOR_BINDABLE`) — a link's
-   * throughput as its label, its load as its width. Same shape as a widget's bindings; a binding that cannot be read
-   * leaves the static value in place. */
+  /** Live values for `label`, `style.stroke`, `style.strokeWidth`, `style.dash` or `style.arrow` (`CONNECTOR_BINDABLE`) —
+   * a link's throughput as its label, its load as its width, which way power flows by its sign (a value map from ranges
+   * to arrows). Same shape as a widget's bindings; a binding that cannot be read leaves the static value in place. */
   bindings?: Record<string, Binding>;
 }
 
 /** The parts of a connector a binding may fill. */
-export const CONNECTOR_BINDABLE = ['label', 'style.stroke', 'style.strokeWidth', 'style.dash'] as const;
+export const CONNECTOR_BINDABLE = ['label', 'style.stroke', 'style.strokeWidth', 'style.dash', 'style.arrow'] as const;
 
 export interface ConnectorStyle {
   /** A colour in the forms a decoration takes. */
@@ -189,9 +192,15 @@ export interface ConnectorStyle {
   /** Line width in scene units. */
   strokeWidth?: number;
   dash?: ConnectorDash;
+  /** Which ends carry an arrowhead: `end` points at the `toNodeId` node, `start` at the `fromNodeId` node. `none` when
+   *  left out. */
+  arrow?: ConnectorArrow;
 }
 
 export type ConnectorDash = 'solid' | 'dashed' | 'dotted';
+export type ConnectorArrow = 'none' | 'end' | 'start' | 'both';
+export const CONNECTOR_DASHES: readonly ConnectorDash[] = ['solid', 'dashed', 'dotted'];
+export const CONNECTOR_ARROWS: readonly ConnectorArrow[] = ['none', 'end', 'start', 'both'];
 
 /** The visual content a node displays. A prepared widget's rendering is delegated to an external
  * widget library (docs/architecture.md) — `type` and `props` describe what that library should render

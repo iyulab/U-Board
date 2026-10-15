@@ -1,4 +1,4 @@
-import { CONNECTOR_BINDABLE, GRID_COLUMNS, GRID_COLUMNS_MEDIUM } from './view-document.js';
+import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, CONNECTOR_DASHES, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, type ConnectorArrow, type ConnectorDash } from './view-document.js';
 import type { ElementDefinition } from './view-document.js';
 import { ELEMENT_NAME, elementNameOf } from './elements/element-type.js';
 import { parseTemplate } from './elements/template.js';
@@ -73,8 +73,8 @@ const CANVAS_FIELDS = ['kind', 'appearance', 'elements', 'background', 'nodes', 
 const GRID_FIELDS = ['kind', 'appearance', 'elements', 'columns', 'items'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
-const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'style', 'bindings'];
-const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash'];
+const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
+const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash', 'arrow'];
 const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth'];
 const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill'];
 const WIDGET_FIELDS = ['type', 'props', 'bindings'];
@@ -117,6 +117,9 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
         else if (!nodeIds.has(connector[end] as string)) doc.fail([...at, end], `no node has the id "${connector[end] as string}" — a connector joins two nodes of /nodes`);
       }
       doc.optionalString(connector, [...at, 'label']);
+      if (connector.labelAt !== undefined && !(typeof connector.labelAt === 'number' && connector.labelAt >= 0 && connector.labelAt <= 1)) {
+        doc.expected([...at, 'labelAt'], 'expected a number from 0 (the fromNodeId end) to 1 (the toNodeId end)', connector.labelAt);
+      }
       if (connector.style !== undefined && doc.record(connector, [...at, 'style'])) {
         const style = connector.style as Record<string, unknown>;
         doc.known(style, [...at, 'style'], CONNECTOR_STYLE_FIELDS, 'connector style');
@@ -124,8 +127,11 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
         if (style.strokeWidth !== undefined && !(Number.isFinite(style.strokeWidth) && (style.strokeWidth as number) > 0)) {
           doc.expected([...at, 'style', 'strokeWidth'], 'expected a number greater than 0', style.strokeWidth);
         }
-        if (style.dash !== undefined && style.dash !== 'solid' && style.dash !== 'dashed' && style.dash !== 'dotted') {
+        if (style.dash !== undefined && !CONNECTOR_DASHES.includes(style.dash as ConnectorDash)) {
           doc.fail([...at, 'style', 'dash'], 'expected "solid", "dashed" or "dotted"');
+        }
+        if (style.arrow !== undefined && !CONNECTOR_ARROWS.includes(style.arrow as ConnectorArrow)) {
+          doc.fail([...at, 'style', 'arrow'], 'expected "none", "end" (pointing at toNodeId), "start" (pointing at fromNodeId) or "both"');
         }
       }
       if (connector.bindings !== undefined && doc.record(connector, [...at, 'bindings'])) {
@@ -351,7 +357,7 @@ function checkShape(doc: Checker, shape: unknown, at: string[]): void {
 }
 
 /** What to do instead, for the fields a writer most often reaches for where the format has none. */
-const CONNECTOR_HINT = 'Its text goes in label, its colour, width and dash in style: { stroke, strokeWidth, dash }.';
+const CONNECTOR_HINT = 'Its text goes in label (labelAt places it along the line), its colour, width, dash and arrowheads in style: { stroke, strokeWidth, dash, arrow }.';
 const SHAPE_HINT = 'A frame’s title is a text decoration over its top edge.';
 const WIDGET_HINT = 'A prepared widget’s data, mapping and options go inside props.';
 

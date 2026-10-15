@@ -14,6 +14,7 @@ export type {
   Connector,
   ConnectorStyle,
   ConnectorDash,
+  ConnectorArrow,
   Widget,
   Binding,
   ValueMap,
