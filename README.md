@@ -174,6 +174,7 @@ lighter `@iyulab/u-board/viewer` entry point, for a host that only needs to rend
 | Core concepts and terms | [`docs/concepts.md`](docs/concepts.md) |
 | Domain layer API reference | [`docs/api-reference.md`](docs/api-reference.md) |
 | Running the server, console and share viewer | [`docs/self-hosting.md`](docs/self-hosting.md) |
+| Shaping an API a board reads | [`docs/data-sources.md`](docs/data-sources.md) |
 
 ## Contributing
 
