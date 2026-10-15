@@ -410,6 +410,7 @@ room it takes (`span` 1–12, absent 4; `spanMedium` 1–6 for a medium-width bo
 `span` rounded up; `height` in pixels, absent the widget's own). `placedIn(doc)` returns every placed
 widget of either kind, resolved or not — the walk to use for anything that looks at every binding.
 `resolveDocument` returns the same kind it is given (`ResolvedCanvasView`, `ResolvedGridView`).
+`ViewerPage` shows either kind; `AuthoringView` edits a `CanvasView`.
 
 `validateViewDocument` checks either kind, and ids are unique across the whole document. The same
 rules, apart from id uniqueness, are published as a JSON Schema (2020-12):

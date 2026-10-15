@@ -141,14 +141,6 @@ export function App() {
   }, [waiting, retryNow]);
 
   if ('kind' in state) return <Message state={state} onRetry={retryNow} />;
-  // TODO(grid kind, viewer stage): ViewerPage draws grid views too; until then this viewer shows canvas views only.
-  if (state.document.kind !== 'canvas') {
-    return (
-      <p className="share-message" role="alert">
-        이 보드는 이 뷰어가 아직 보여 주지 못하는 형식입니다.
-      </p>
-    );
-  }
 
   return (
     <ViewerPage

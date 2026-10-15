@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AuthoringView } from './authoring/AuthoringView.js';
 import { ViewerPage } from './viewer/ViewerPage.js';
-import type { CanvasView } from './view-document.js';
+import type { CanvasView, GridView } from './view-document.js';
 import { FixtureAdapter } from './fixture-adapter.js';
 import { seedWidget } from './authoring/widget-catalog.js';
 
@@ -128,19 +128,28 @@ const demoDocument: CanvasView = {
   connectors: [{ id: 'a-to-b', fromNodeId: 'pump-a', toNodeId: 'pump-b' }],
 };
 
+/** The same widgets laid out as a grid view: in order, by span — what an ordinary dashboard looks like. */
+const demoGrid: GridView = {
+  kind: 'grid',
+  items: demoDocument.nodes.map((node, i) => ({ id: node.id, span: i < 2 ? 6 : 4, widget: node.widget })),
+};
+
 export function App() {
   const adapters = useMemo(() => [new FixtureAdapter()], []);
-  const [mode, setMode] = useState<'author' | 'view'>('author');
+  const [mode, setMode] = useState<'author' | 'view' | 'grid'>('author');
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : 'viewer'}</h1>
+      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : mode === 'view' ? 'viewer' : 'grid view'}</h1>
       <div style={{ marginBottom: 12 }}>
         <button onClick={() => setMode('author')} disabled={mode === 'author'}>
           Author
         </button>{' '}
         <button onClick={() => setMode('view')} disabled={mode === 'view'}>
           View
+        </button>{' '}
+        <button onClick={() => setMode('grid')} disabled={mode === 'grid'}>
+          Grid
         </button>
       </div>
       {mode === 'author' ? (
@@ -157,6 +166,16 @@ export function App() {
           </p>
           <div style={{ height: 620 }}>
             <AuthoringView initialDocument={demoDocument} adapters={adapters} showDocumentSource />
+          </div>
+        </>
+      ) : mode === 'grid' ? (
+        <>
+          <p style={{ color: '#64748b', maxWidth: 640 }}>
+            The same widgets as a grid view — in order, each spanning columns of a 12-column row, laid out to
+            the width of the view (one column when narrow, six at medium width).
+          </p>
+          <div style={{ height: 720, maxWidth: 1200, resize: 'horizontal', overflow: 'auto' }}>
+            <ViewerPage document={demoGrid} adapters={adapters} />
           </div>
         </>
       ) : (

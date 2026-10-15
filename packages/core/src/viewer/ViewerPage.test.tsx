@@ -3,8 +3,9 @@ import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { ViewerPage } from './ViewerPage';
-import type { CanvasView } from '../view-document';
+import type { CanvasView, GridView } from '../view-document';
 import type { Adapter, ResolvedBinding } from '../adapter';
+import { NodeFrame, type NodeFrameProps } from '../renderer/node-frame';
 
 const viewerProps = vi.fn();
 
@@ -21,6 +22,12 @@ afterEach(() => {
 });
 
 const lastViewerProps = () => viewerProps.mock.lastCall![0] as Record<string, any>;
+
+/** The title a node's frame carries — its quality in words — read off the `NodeFrame` an overlay draws. */
+function frameTitle(content: React.ReactNode): string | undefined {
+  const element = content as React.ReactElement<NodeFrameProps>;
+  return (NodeFrame(element.props) as React.ReactElement<{ title?: string }>).props.title;
+}
 
 function doc(): CanvasView {
   return { kind: 'canvas', background: {}, nodes: [], connectors: [] };
@@ -241,8 +248,7 @@ describe('ViewerPage labels', () => {
     expect(screen.getByRole('button', { name: '축소' })).toBeInTheDocument();
     expect(lastViewerProps().ariaLabel).toBe('보드');
     await vi.waitFor(() => {
-      const content = lastViewerProps().overlays[0].content as React.ReactElement<{ title?: string }>;
-      expect(content.props.title).toBe('연결 끊김 (자격 거부)');
+      expect(frameTitle(lastViewerProps().overlays[0].content)).toBe('연결 끊김 (자격 거부)');
     });
   });
 
@@ -298,7 +304,7 @@ describe('ViewerPage liveness', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    const contentTitle = () => (lastViewerProps().overlays[0].content as React.ReactElement<{ title?: string }>).props.title;
+    const contentTitle = () => frameTitle(lastViewerProps().overlays[0].content);
     expect(contentTitle()).toBeUndefined(); // live: not announced
     // The live region is there before it has anything to say — one inserted with its text already
     // in it is not announced by many screen readers.
@@ -348,8 +354,7 @@ describe('ViewerPage clock', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    const content = lastViewerProps().overlays[0].content as React.ReactElement<{ title?: string }>;
-    expect(content.props.title).toMatch(/2 minutes ago\)$/);
+    expect(frameTitle(lastViewerProps().overlays[0].content)).toMatch(/2 minutes ago\)$/);
   });
 
   it('tells the time of the last update by the clock it is given', async () => {
@@ -360,5 +365,47 @@ describe('ViewerPage clock', () => {
     });
     const time = new Intl.DateTimeFormat('en', { timeStyle: 'medium' }).format(clock());
     expect(screen.getByText(`Updated ${time}`)).toBeInTheDocument();
+  });
+});
+
+describe('ViewerPage with a grid view', () => {
+  function grid(): GridView {
+    return {
+      kind: 'grid',
+      appearance: 'dark',
+      items: [
+        { id: 'pump', span: 6, widget: { type: 'uw-status', bindings: { value: { adapter: 'cmms', ref: 'k' } } } },
+        { id: 'note', span: 3, spanMedium: 6, height: 120, widget: { type: 'markdown', props: { content: 'x' } } },
+        { id: 'plain', widget: { type: 'gauge' } },
+      ],
+    };
+  }
+
+  it('lays the items out in order in a named region, without the canvas or its pan and zoom', async () => {
+    render(<ViewerPage document={grid()} adapters={[new SpyAdapter()]} ariaLabel="Line 3" />);
+    const region = await screen.findByRole('region', { name: 'Line 3' });
+    const items = [...region.querySelectorAll<HTMLElement>('[data-item-id]')];
+    expect(items.map(item => item.dataset.itemId)).toEqual(['pump', 'note', 'plain']);
+    expect(viewerProps).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Fit to view' })).not.toBeInTheDocument();
+    expect(region.closest('.ub-viewer__surface')).toHaveAttribute('data-appearance', 'dark');
+  });
+
+  it('gives each item its spans at full and medium width — the default span 4, medium half of it rounded up', async () => {
+    render(<ViewerPage document={grid()} adapters={[new SpyAdapter()]} />);
+    const region = await screen.findByRole('region');
+    const style = (id: string) => region.querySelector<HTMLElement>(`[data-item-id="${id}"]`)!.style;
+    expect([style('pump').getPropertyValue('--_ub-span'), style('pump').getPropertyValue('--_ub-span-medium')]).toEqual(['6', '3']);
+    expect([style('note').getPropertyValue('--_ub-span'), style('note').getPropertyValue('--_ub-span-medium'), style('note').height]).toEqual(['3', '6', '120px']);
+    expect([style('plain').getPropertyValue('--_ub-span'), style('plain').getPropertyValue('--_ub-span-medium'), style('plain').height]).toEqual(['4', '2', '']);
+  });
+
+  it('shows each item with its quality, as a canvas node does, and keeps updating it', async () => {
+    const adapter = new SpyAdapter();
+    adapter.resolve.mockResolvedValue({ value: undefined, quality: 'disconnected' });
+    render(<ViewerPage document={grid()} adapters={[adapter]} pollIntervalMs={60_000} />);
+    const region = await screen.findByRole('region');
+    await waitFor(() => expect(region.querySelector('[data-item-id="pump"] [title]')).toHaveAttribute('title', expect.stringMatching(/^disconnected/)));
+    expect(region.ownerDocument.querySelector('.ub-freshness')).toBeInTheDocument();
   });
 });

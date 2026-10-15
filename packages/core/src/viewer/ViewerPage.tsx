@@ -6,10 +6,11 @@ import { useFittedView } from './use-fitted-view.js';
 import { ViewControls } from './ViewControls.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
-import type { Adapter } from '../adapter.js';
-import type { CanvasView } from '../view-document.js';
+import { GridBoard } from '../renderer/grid-board.js';
+import type { Adapter, ResolvedWidget } from '../adapter.js';
+import type { ViewDocument } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
-import type { ResolvedCanvasView } from '../resolve-document.js';
+import type { ResolvedGridView, ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from './attribution.js';
@@ -22,8 +23,9 @@ export interface ViewerPageProps {
   height?: number;
   /** The document to show. A different document given later replaces it — a board saved again while
    * it is open — keeping the user's pan and zoom unless the new one covers a different area. Pass the
-   * same object until the document changes: each new one is resolved again. */
-  document: CanvasView;
+   * same object until the document changes: each new one is resolved again. A canvas view opens fitted
+   * and pans and zooms; a grid view lays out to the view's width and scrolls. */
+  document: ViewDocument;
   /** Re-resolve the bindings every this many milliseconds, so values and connection quality stay
    * current. Omitted, bindings resolve once when the document opens. */
   pollIntervalMs?: number;
@@ -42,8 +44,12 @@ export interface ViewerPageProps {
   attribution?: boolean;
 }
 
+/** What is on screen: a canvas view as canvas-kit draws it, or a grid view as it lays out — with the time its
+ *  values' ages are measured to. */
+type Drawn = { kind: 'canvas'; preview: CanvasKitRenderOutput; now: number } | { kind: 'grid'; doc: ResolvedGridView; now: number };
+
 /**
- * A read-only view of a ViewDocument — no `KonvaDesigner`, no editing controls. It opens
+ * A read-only view of a ViewDocument — no `KonvaDesigner`, no editing controls. A canvas view opens
  * with the whole document fitted into view (shrunk to fit, never magnified) and keeps it fitted as
  * the view resizes until the user pans or zooms; "Fit to view" brings that back. Refreshed binding
  * values (polling) leave the user's pan/zoom alone. This
@@ -63,7 +69,7 @@ export function ViewerPage({
   attribution = true,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
-  const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
+  const [drawn, setDrawn] = useState<Drawn | null>(null);
 
   // Read when a result is drawn, not watched: a new function on every render must not redraw the view.
   const readClock = useEffectEvent(() => clock());
@@ -71,8 +77,9 @@ export function ViewerPage({
   // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
 
-  // Kept while the area stays the same, so a document replaced in place leaves the view where it is.
-  const extentKey = JSON.stringify(documentExtent(document));
+  // Kept while the area stays the same, so a document replaced in place leaves the view where it is. A grid
+  // view has no area to fit: it lays out to the view's width.
+  const extentKey = JSON.stringify(document.kind === 'canvas' ? documentExtent(document) : null);
   const extent = useMemo(() => JSON.parse(extentKey) as ReturnType<typeof documentExtent>, [extentKey]);
   const attributions = useMemo(() => (attribution ? boardAttributions(document, adapters) : []), [document, adapters, attribution]);
   const view = useFittedView();
@@ -85,56 +92,69 @@ export function ViewerPage({
 
   useEffect(() => {
     if (!resolved) {
-      setPreview(null);
+      setDrawn(null);
       return;
     }
-    setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
+    const now = readClock();
+    setDrawn(
+      resolved.kind === 'canvas'
+        ? { kind: 'canvas', preview: toCanvasKit(resolved, { qualityText: labels.qualityText, now, locale: labels.locale }), now }
+        : { kind: 'grid', doc: resolved, now }
+    );
   }, [resolved, labels]);
 
   return (
     <div className="ub-viewer" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {preview && (
+      {drawn && (drawn.kind === 'canvas' || pollIntervalMs !== undefined) && (
         <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
-          <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />
+          {drawn.kind === 'canvas' && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
           {pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
         </div>
       )}
-      {preview ? (
-        <div className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0 }}>
-          <Viewer
-            width={width}
-            height={height}
-            scene={preview.scene}
-            overlays={preview.overlays}
-            transform={view.transform}
-            onTransformChange={view.onUserTransform}
-            onViewportResize={view.onViewportResize}
-            ariaLabel={ariaLabel ?? labels.boardRegion}
-          />
+      {drawn ? (
+        <div className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0, ...(drawn.kind === 'grid' && { width, height }) }}>
+          {drawn.kind === 'canvas' ? (
+            <Viewer
+              width={width}
+              height={height}
+              scene={drawn.preview.scene}
+              overlays={drawn.preview.overlays}
+              transform={view.transform}
+              onTransformChange={view.onUserTransform}
+              onViewportResize={view.onViewportResize}
+              ariaLabel={ariaLabel ?? labels.boardRegion}
+            />
+          ) : (
+            <GridBoard
+              doc={drawn.doc}
+              ariaLabel={ariaLabel ?? labels.boardRegion}
+              qualityText={labels.qualityText}
+              now={drawn.now}
+              locale={labels.locale}
+            />
+          )}
         </div>
       ) : (
         <p className="ub-viewer__status">{labels.resolving}</p>
       )}
-      {preview && <AttributionLine attributions={attributions} labels={labels} />}
+      {drawn && <AttributionLine attributions={attributions} labels={labels} />}
     </div>
   );
 }
 
 /** A resolved document with every `live` binding read as `stale` — the values stay, their observation
  * times stay, only the claim that they are current goes. */
-function asLastKnown(doc: ResolvedCanvasView): ResolvedCanvasView {
-  return {
-    ...doc,
-    nodes: doc.nodes.map(node => ({
-      ...node,
-      widget: {
-        ...node.widget,
-        quality: Object.fromEntries(
-          Object.entries(node.widget.quality).map(([path, quality]) => [path, quality === 'live' ? 'stale' : quality])
-        ),
-      },
-    })),
-  };
+function asLastKnown(doc: ResolvedViewDocument): ResolvedViewDocument {
+  const lastKnown = <T extends { widget: ResolvedWidget }>(placed: T): T => ({
+    ...placed,
+    widget: {
+      ...placed.widget,
+      quality: Object.fromEntries(
+        Object.entries(placed.widget.quality).map(([path, quality]) => [path, quality === 'live' ? 'stale' : quality])
+      ),
+    },
+  });
+  return doc.kind === 'canvas' ? { ...doc, nodes: doc.nodes.map(lastKnown) } : { ...doc, items: doc.items.map(lastKnown) };
 }
 
 /** When the values on screen were last updated, and — distinctly, announced — when they have stopped

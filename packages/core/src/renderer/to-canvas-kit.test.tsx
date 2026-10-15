@@ -2,9 +2,17 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import type { ReactElement } from 'react';
 import { toCanvasKit } from './to-canvas-kit';
+import { NodeFrame, type NodeFrameProps } from './node-frame';
 import type { ResolvedCanvasView } from '../resolve-document';
 import type { ResolvedWidget } from '../adapter';
 import { KO_LABELS } from '../labels-ko';
+
+/** What a node's overlay draws: its `NodeFrame`, expanded one level so the frame's own elements can be read. */
+function frameOf(content: React.ReactNode): ReactElement {
+  const element = content as ReactElement<NodeFrameProps>;
+  expect(element.type).toBe(NodeFrame);
+  return NodeFrame(element.props);
+}
 
 function doc(overrides: Partial<ResolvedCanvasView> = {}): ResolvedCanvasView {
   return {
@@ -24,7 +32,7 @@ function overlayFor(quality: Record<string, 'live' | 'stale' | 'disconnected'>, 
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: widgetType, props: {}, quality } }],
     })
   );
-  return overlays[0].content as ReactElement<{
+  return frameOf(overlays[0].content) as ReactElement<{
     style?: Record<string, unknown>;
     title?: string;
     children?: ReactElement[];
@@ -46,7 +54,7 @@ function badgeFor(widget: Partial<ResolvedWidget> & Pick<ResolvedWidget, 'qualit
     doc({ nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, ...widget } }] }),
     options
   );
-  const badge = childrenOf(overlays[0].content as ReactElement<{ children?: ReactElement[] }>).find(child => 'data-quality-badge' in child.props);
+  const badge = childrenOf(frameOf(overlays[0].content) as ReactElement<{ children?: ReactElement[] }>).find(child => 'data-quality-badge' in child.props);
   return badge as ReactElement<{ 'aria-hidden'?: string; style?: Record<string, unknown>; children?: string }> | undefined;
 }
 
@@ -135,7 +143,7 @@ describe('toCanvasKit', () => {
       })
     );
 
-    const frame = overlays[0].content as ReactElement<{
+    const frame = frameOf(overlays[0].content) as ReactElement<{
       children: [ReactElement<{ spec: Record<string, unknown> }>, ReactElement];
     }>;
     const [widget] = frame.props.children;
@@ -170,7 +178,7 @@ describe('toCanvasKit', () => {
       const { overlays } = toCanvasKit(
         doc({ appearance: 'dark', nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, quality: {} } }] })
       );
-      const children = React.Children.toArray((overlays[0].content as ReactElement<{ children?: ReactElement[] }>).props.children) as React.ReactElement<{ theme?: string }>[];
+      const children = React.Children.toArray((frameOf(overlays[0].content) as ReactElement<{ children?: ReactElement[] }>).props.children) as React.ReactElement<{ theme?: string }>[];
       expect(children.find(child => child.props.theme !== undefined)?.props.theme).toBe('dark');
     });
 
@@ -179,7 +187,7 @@ describe('toCanvasKit', () => {
         doc({ nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, quality: {} } }] }),
         { locale: 'ko-KR' }
       );
-      const children = React.Children.toArray((overlays[0].content as ReactElement<{ children?: ReactElement[] }>).props.children) as React.ReactElement<{ locale?: string }>[];
+      const children = React.Children.toArray((frameOf(overlays[0].content) as ReactElement<{ children?: ReactElement[] }>).props.children) as React.ReactElement<{ locale?: string }>[];
       expect(children.find(child => child.props.locale !== undefined)?.props.locale).toBe('ko-KR');
     });
 
@@ -234,7 +242,7 @@ describe('toCanvasKit', () => {
           }],
         })
       );
-      const frame = overlays[0].content as ReactElement<{ title?: string; children?: ReactElement<{ children?: string }>[] }>;
+      const frame = frameOf(overlays[0].content) as ReactElement<{ title?: string; children?: ReactElement<{ children?: string }>[] }>;
       expect(frame.props.title).toBe('stale — showing last known value (data source unreachable, 5 minutes ago)');
       expect(childrenOf(frame).find(child => child.props.role === 'status')?.props.children).toBe(frame.props.title);
     });
@@ -329,7 +337,7 @@ describe('toCanvasKit', () => {
       const { overlays } = toCanvasKit(
         doc({ nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', props: {}, quality: { 'data.value': 'live', 'data.threshold': 'disconnected' } } }] })
       );
-      const children = childrenOf(overlays[0].content as ReactElement<{ children?: ReactElement[] }>);
+      const children = childrenOf(frameOf(overlays[0].content) as ReactElement<{ children?: ReactElement[] }>);
       expect(children.some(child => 'data-quality-badge' in child.props)).toBe(false);
     });
 

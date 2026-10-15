@@ -36,3 +36,14 @@ test('a dark board keeps its values readable', async ({ page }) => {
   await expect(page.locator('[data-testid^="overlay-"] u-widget').first()).toBeVisible();
   await expect(board).toHaveScreenshot('dark-board.png', { animations: 'disabled', maxDiffPixelRatio: 0.02 });
 });
+
+test('a grid view lays its widgets out in cells, in order', async ({ page }) => {
+  await page.getByRole('button', { name: 'Grid' }).click();
+  await page.locator('[style*="resize"]').evaluate(box => ((box as HTMLElement).style.width = '1100px'));
+  const board = page.locator('.ub-viewer__surface');
+  await expect(page.locator('.ub-grid [data-item-id] u-widget').first()).toBeVisible();
+  // A chart draws its line in over a second on its canvas, which `animations: 'disabled'` (CSS only) does not stop;
+  // the cells are laid out at a new width just now, so the charts in them have just started drawing again.
+  await page.waitForTimeout(1500);
+  await expect(board).toHaveScreenshot('grid.png', { animations: 'disabled', maxDiffPixelRatio: 0.02 });
+});

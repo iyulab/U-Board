@@ -10,13 +10,16 @@ what it can contain and how it's authored.
 position over a background, a **grid view** lays them out in order. Different kinds have different
 capabilities; a view does not mix kinds. Both carry widgets the same way — an id and a widget — so
 bindings, data quality and the property panel are shared; only how a widget is placed differs. The
-grid view's document format, validation and binding resolution are in place; the viewer and the
-editor draw canvas views for now.
+viewer shows both kinds; the editor edits canvas views for now.
 
 **Grid view** — widgets in order, left to right and then top to bottom, in rows of 12 columns. Each
 **grid item** takes a span of columns (4 when left out), optionally a different span where the
 board is narrower, and optionally a fixed height — otherwise the widget's own. There is no position:
 the same document reads at any width, and where an item goes follows from the ones before it.
+The width that counts is the board's own — the container it is shown in, not the window: one item
+per row below 600 pixels, 6 columns (each item's medium span) below 1024, 12 above. A row is as
+tall as its tallest item, and each item sits on a cell of its own with its data quality marked as
+a canvas node's is. A grid has no pan or zoom; it scrolls when it is taller than its container.
 
 **Background** — the media (an image, or none) a canvas view is drawn over. The system does not
 attach domain meaning to a background — what it depicts is left to the author's and viewer's

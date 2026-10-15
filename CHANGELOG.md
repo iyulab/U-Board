@@ -11,6 +11,10 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A share link shows a grid board — widgets in order, laid out to the width of the page or panel it is shown in.
+
 ### Changed
 
 - Saving a board whose document gives two of its parts — nodes, connectors, decorations — the same id is refused

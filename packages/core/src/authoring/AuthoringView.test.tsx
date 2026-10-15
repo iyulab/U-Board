@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act, within } from '@testing-librar
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { AuthoringView } from './AuthoringView';
+import { NodeFrame, type NodeFrameProps } from '../renderer/node-frame';
 import type { CanvasView } from '../view-document';
 import { KO_LABELS } from '../labels-ko';
 
@@ -584,8 +585,8 @@ describe('AuthoringView clock', () => {
       fireEvent.click(screen.getByRole('button', { name: 'View' }));
       await waitFor(() => {
         const props = viewerProps.mock.lastCall?.[0] as Record<string, any> | undefined;
-        const content = props?.overlays?.[0]?.content as React.ReactElement<{ title?: string }> | undefined;
-        expect(content?.props.title).toMatch(/2 minutes ago\)$/);
+        const content = props?.overlays?.[0]?.content as React.ReactElement<NodeFrameProps> | undefined;
+        expect(content && (NodeFrame(content.props) as React.ReactElement<{ title?: string }>).props.title).toMatch(/2 minutes ago\)$/);
       });
     } finally {
       vi.useRealTimers();
