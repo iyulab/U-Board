@@ -30,10 +30,10 @@ describe('domain entry', () => {
   // effect — what a 0.x minor release adds or removes is read off this list.
   it('exports exactly these values', () => {
     expect(Object.keys(mod).sort()).toEqual([
-      'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'JsonPatchError', 'ageText', 'applyJsonPatch', 'applyValueMap',
+      'CONNECTOR_BINDABLE', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'JsonPatchError', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn',
       'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameScripts',
       'emptyViewDocument', 'findHttpRefItem', 'getByPointer', 'isHttpRef', 'lintViewDocument', 'parseSourceTime',
-      'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveDocument', 'resolveWidget', 'resolvedReading',
+      'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading',
       'validateViewDocument', 'worstQuality',
     ]);
     expect(Object.keys(viewer).sort()).toEqual([

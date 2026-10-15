@@ -168,6 +168,12 @@
             "strokeWidth": { "type": "number", "exclusiveMinimum": 0 },
             "dash": { "enum": ["solid", "dashed", "dotted"] }
           }
+        },
+        "bindings": {
+          "description": "Live values for the label and the style, by path — the same shape as a widget's bindings.",
+          "type": "object",
+          "propertyNames": { "enum": ["label", "style.stroke", "style.strokeWidth", "style.dash"] },
+          "additionalProperties": { "$ref": "#/$defs/binding" }
         }
       }
     },

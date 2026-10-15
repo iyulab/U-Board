@@ -9,9 +9,10 @@ export type {
   ResolvedViewDocument,
   ResolvedOf,
 } from './resolve-document.js';
-export { emptyViewDocument, placedIn } from './view-document.js';
+export { emptyViewDocument, placedIn, CONNECTOR_BINDABLE } from './view-document.js';
+export { bindingsIn } from './document-bindings.js';
 export { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from './layout-defaults.js';
-export { resolveDocument } from './resolve-document.js';
+export { resolveDocument, resolveConnector } from './resolve-document.js';
 export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
 export { validateViewDocument } from './validate-view-document.js';
 export type { ViewDocumentIssue } from './validate-view-document.js';

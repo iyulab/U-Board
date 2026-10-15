@@ -15,6 +15,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **A connector's label and style can be bound** — `Connector.bindings` on `label`, `style.stroke`,
+  `style.strokeWidth` and `style.dash` (`CONNECTOR_BINDABLE`), the same shape as a widget's bindings, maps included.
+  `resolveDocument` reads them (`resolveConnector`; a value is taken only in the form its path draws, else the static
+  value stays) and a resolved connector carries `quality` per path; a bound label not showing a current value is
+  rimmed amber or grey. `bindingsIn(doc)` walks every binding of a document — widgets' and connectors' — for whatever
+  needs to know what a board reads (the share routes, the attribution line). The schema and validation know them.
 - **`lintViewDocument` also counts connector labels** (by their chip — under a node, running into another text) and
   **a frame's edge running through a text** (a rect decoration's stroke across a text, unless a filled rect drawn
   after the frame covers the text — a title tag). A text crossed by a connector is judged against the line as drawn,

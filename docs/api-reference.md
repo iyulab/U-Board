@@ -549,9 +549,18 @@ function resolveDocument(
 ```
 
 The single entry point a renderer calls to go from a saved `ViewDocument` to something paintable.
-Resolves every node's widget bindings against the given `adapters` and returns a
-`ResolvedViewDocument` — it has no opinion on canvas-kit, u-widgets, or any other rendering
+Resolves every widget's bindings — and on a canvas board every connector's (`resolveConnector`) — against the given
+`adapters` and returns a `ResolvedViewDocument` — it has no opinion on canvas-kit, u-widgets, or any other rendering
 concern (see [`architecture.md`](architecture.md)).
+
+A connector binds its `label` and `style` (`CONNECTOR_BINDABLE`: `label`, `style.stroke`, `style.strokeWidth`,
+`style.dash`) with the same binding shape as a widget's. A value is taken only in the form its path draws — a label
+as text (a number as it reads), a width as a positive number, a dash as `solid`, `dashed` or `dotted`, a colour as
+text — otherwise the static value stays, as for a disconnected binding. A resolved connector carries `quality` per
+bound path.
+
+`bindingsIn(doc)` yields every binding a document declares, widgets' and connectors', with the JSON Pointer of what
+it fills — the one walk for whatever needs to know what a board reads.
 
 ### `ResolvedViewDocument` / `ResolvedNode` / `ResolvedWidget`
 

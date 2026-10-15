@@ -42,7 +42,10 @@ board shows; a widget never spills over a neighbouring node.
 **Connector** — a line drawn between two nodes, used when the relationship between them needs to
 be shown (for example, a network link). It runs from the edge of one node's box to the edge of the other's;
 it may carry a `label` (shown at its middle — a link's throughput) and a `style` (`stroke`, `strokeWidth`,
-`dash`: `solid`, `dashed` or `dotted`). Connectors joining the same two nodes are drawn side by side.
+`dash`: `solid`, `dashed` or `dotted`). Connectors joining the same two nodes are drawn side by side. Its label and
+style can be **bound** like a widget's props (`bindings` on `label`, `style.stroke`, `style.strokeWidth`,
+`style.dash`) — a link's throughput as its label, its load as its width; a label not showing a current value is
+rimmed amber (stale) or grey (disconnected).
 
 **Decoration** — a purely visual shape (a rectangle or a text label) placed on a canvas view to
 express structure — grouping related nodes inside a labeled frame, for example. A decoration

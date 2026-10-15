@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { Adapter, Attribution } from '../adapter.js';
-import { placedIn, type ViewDocument } from '../view-document.js';
+import type { ViewDocument } from '../view-document.js';
+import { bindingsIn } from '../document-bindings.js';
 import type { UBoardLabels } from '../labels.js';
 
 /**
@@ -12,15 +13,13 @@ export function boardAttributions(doc: ViewDocument, adapters: readonly Adapter[
   const byId = new Map(adapters.map(adapter => [adapter.id, adapter]));
   const seen = new Set<string>();
   const result: Attribution[] = [];
-  for (const placed of placedIn(doc)) {
-    for (const binding of Object.values(placed.widget?.bindings ?? {})) {
-      const attribution = byId.get(binding.adapter)?.attribution;
-      if (!attribution || attribution.text.trim() === '') continue;
-      const key = `${attribution.text}\u0000${attribution.url ?? ''}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      result.push(attribution);
-    }
+  for (const { binding } of bindingsIn(doc)) {
+    const attribution = byId.get(binding.adapter)?.attribution;
+    if (!attribution || attribution.text.trim() === '') continue;
+    const key = `${attribution.text}\u0000${attribution.url ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(attribution);
   }
   return result;
 }

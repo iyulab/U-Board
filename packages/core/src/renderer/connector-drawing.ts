@@ -2,6 +2,8 @@ import { measureTextWidth, type DrawingObject } from '@canvas-kit/core';
 import { CAPTION_SIZE, captionBox } from '../caption-geometry.js';
 import { LABEL_SIZE, chipOf, placeConnectors } from '../connector-geometry.js';
 import type { BoardAppearance, Connector, ConnectorDash, Node } from '../view-document.js';
+import type { ConnectionQuality } from '../adapter.js';
+import { worstQuality } from '../quality-text.js';
 
 /** A connector's look when its style leaves it out. */
 export const CONNECTOR_STROKE = '#94a3b8';
@@ -16,6 +18,9 @@ const LABEL_CHIP: Record<BoardAppearance, { fill: string; ink: string }> = {
   dark: { fill: '#1e293b', ink: '#cbd5e1' },
 };
 
+/** A bound label not showing a current value is rimmed like a widget's frame in that state (`QUALITY_FRAME_STYLE`). */
+const QUALITY_RIM: Partial<Record<ConnectionQuality, string>> = { stale: '#f59e0b', disconnected: '#6b7280' };
+
 /** A node's name reads stronger than a link's label. */
 const CAPTION_INK: Record<BoardAppearance, string> = { light: '#1e293b', dark: '#e5e7eb' };
 
@@ -27,15 +32,17 @@ const measure = (text: string, size: number) => measureTextWidth({ type: 'text',
  * line edge to edge, connectors of the same two nodes side by side, and a label on a chip at its line's middle, over
  * every line.
  */
-export function connectorObjects(nodes: readonly Node[], connectors: readonly Connector[], appearance: BoardAppearance = 'light', extra: Partial<Line> = {}): DrawingObject[] {
+export function connectorObjects(nodes: readonly Node[], connectors: ReadonlyArray<Connector & { quality?: Record<string, ConnectionQuality> }>, appearance: BoardAppearance = 'light', extra: Partial<Line> = {}): DrawingObject[] {
   const lines: DrawingObject[] = [];
   const labels: DrawingObject[] = [];
   for (const { connector, segment, label } of placeConnectors(nodes, connectors, measure)) {
     const { stroke = CONNECTOR_STROKE, strokeWidth = CONNECTOR_WIDTH, dash = 'solid' } = connector.style ?? {};
     lines.push({ type: 'line', id: connector.id, x: 0, y: 0, points: segment, stroke, strokeWidth, ...(DASHES[dash].length > 0 && { dash: DASHES[dash] }), ...extra });
     if (label) {
+      const worst = worstQuality((connector as { quality?: Record<string, ConnectionQuality> }).quality ?? {});
+      const rim = worst ? QUALITY_RIM[worst] : undefined;
       labels.push(
-        { type: 'rect', id: `${connector.id}#chip`, ...chipOf(label), fill: LABEL_CHIP[appearance].fill, ...(extra.locked && { locked: true }) },
+        { type: 'rect', id: `${connector.id}#chip`, ...chipOf(label), fill: LABEL_CHIP[appearance].fill, ...(rim && { stroke: rim, strokeWidth: 1.5 }), ...(extra.locked && { locked: true }) },
         { type: 'text', id: `${connector.id}#label`, x: label.x, y: label.y, text: connector.label!, fontSize: LABEL_SIZE, fill: LABEL_CHIP[appearance].ink, ...(extra.locked && { locked: true }) }
       );
     }

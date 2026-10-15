@@ -36,7 +36,10 @@ const SHOWN_SPREAD_MS = 3000;
 /** Whether any binding in `doc` came back with a value — `live` or `stale` — or there are no bindings
  * at all, in which case there is nothing that could have failed to arrive. */
 function receivedAnyValue(doc: ResolvedViewDocument): boolean {
-  const qualities = placedIn(doc).flatMap(placed => Object.values(placed.widget.quality));
+  const qualities = [
+    ...placedIn(doc).flatMap(placed => Object.values(placed.widget.quality)),
+    ...(doc.kind === 'canvas' ? doc.connectors.flatMap(connector => Object.values(connector.quality)) : []),
+  ];
   return qualities.length === 0 || qualities.some(quality => quality !== 'disconnected');
 }
 

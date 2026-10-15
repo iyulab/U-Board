@@ -1,4 +1,4 @@
-import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM } from './view-document.js';
+import { CONNECTOR_BINDABLE, GRID_COLUMNS, GRID_COLUMNS_MEDIUM } from './view-document.js';
 import type { ElementDefinition } from './view-document.js';
 import { ELEMENT_NAME, elementNameOf } from './elements/element-type.js';
 import { parseTemplate } from './elements/template.js';
@@ -70,7 +70,7 @@ const CANVAS_FIELDS = ['kind', 'appearance', 'elements', 'background', 'nodes', 
 const GRID_FIELDS = ['kind', 'appearance', 'elements', 'columns', 'items'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
-const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'style'];
+const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'style', 'bindings'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash'];
 const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth'];
 const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill'];
@@ -124,6 +124,15 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
         if (style.dash !== undefined && style.dash !== 'solid' && style.dash !== 'dashed' && style.dash !== 'dotted') {
           doc.fail([...at, 'style', 'dash'], 'expected "solid", "dashed" or "dotted"');
         }
+      }
+      if (connector.bindings !== undefined && doc.record(connector, [...at, 'bindings'])) {
+        const bindings = connector.bindings as Record<string, unknown>;
+        for (const key of Object.keys(bindings)) {
+          if (!(CONNECTOR_BINDABLE as readonly string[]).includes(key)) {
+            doc.fail([...at, 'bindings', key], `a connector binds only ${CONNECTOR_BINDABLE.join(', ')}`);
+          }
+        }
+        checkBindings(doc, bindings, [...at, 'bindings']);
       }
     });
   }
@@ -196,9 +205,13 @@ function checkWidget(doc: Checker, placed: Record<string, unknown>, at: string[]
   const bindingsAreRecord = widget.bindings === undefined || doc.record(widget, [...at, 'widget', 'bindings']);
   if (typeof widget.type === 'string' && propsAreRecord && bindingsAreRecord) checkElementUse(doc, widget, at);
   if (widget.bindings === undefined || !bindingsAreRecord) return;
+  checkBindings(doc, widget.bindings as Record<string, unknown>, [...at, 'widget', 'bindings']);
+}
 
-  for (const [key, binding] of Object.entries(widget.bindings as Record<string, unknown>)) {
-    const bindingAt = [...at, 'widget', 'bindings', key];
+/** Each binding's own shape — a widget's or a connector's, `at` the path of the bindings object. */
+function checkBindings(doc: Checker, bindings: Record<string, unknown>, at: string[]): void {
+  for (const [key, binding] of Object.entries(bindings)) {
+    const bindingAt = [...at, key];
     if (!isRecord(binding)) {
       doc.fail(bindingAt, 'expected a binding object ({ adapter, ref })');
       continue;

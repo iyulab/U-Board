@@ -220,6 +220,27 @@ describe('public share routes', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('resolves a connector’s binding as a declared read, and lists its source for the viewer', async () => {
+    const nms = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'NMS', baseUrl: 'https://nms.example.com', authType: 'none' });
+    const node = (id: string) => ({ id, x: 0, y: 0, anchored: false, widget: { type: 'status' } });
+    const ref = { path: '/links/core-edge', valuePath: 'bps' };
+    const doc = {
+      kind: 'canvas' as const, background: {}, nodes: [node('a'), node('b')],
+      connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: 'N/A', bindings: { label: { adapter: nms.id, ref } } }],
+    };
+    await updateBoard(db, workspaceId, boardId, { document: doc });
+    const token = await createShareToken();
+    (fetch as any).mockImplementation(async () => jsonResponse({ bps: '26.78Kbps' }));
+
+    const board = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
+    expect(board.body.connectorIds).toEqual([nms.id]);
+    const res = await request(app)
+      .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
+      .send({ bindings: [{ connectorId: nms.id, ref }] });
+    expect(res.body.results).toEqual([{ value: '26.78Kbps', quality: 'live', observedAt: expect.any(String) }]);
+  });
+
   it('answers disconnected for a batch entry the document does not declare, without calling its upstream', async () => {
     const connector = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });

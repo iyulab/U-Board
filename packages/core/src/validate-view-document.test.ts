@@ -219,7 +219,7 @@ describe('validateViewDocument', () => {
       const issues = strict(broken(d => { d.connectors[0].color = 'blue'; }));
       expect(issues).toHaveLength(1);
       expect(issues[0].path).toBe('/connectors/0/color');
-      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId, label, style.');
+      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId, label, style, bindings.');
       expect(issues[0].message).toContain('style: { stroke, strokeWidth, dash }');
     });
 
@@ -255,6 +255,14 @@ describe('validateViewDocument', () => {
 
     it('ignores unknown fields when reading, so a document from a newer version still opens', () => {
       expect(validateViewDocument(broken(d => { d.connectors[0].color = 'blue'; d.decorations[0].fill = 'var(--x)'; }))).toEqual([]);
+    });
+
+    it('takes a connector’s bindings on its label and style only, each a binding', () => {
+      const bound = { label: { adapter: 's', ref: { path: '/bps' } }, 'style.strokeWidth': { adapter: 's', ref: '/load', map: { ranges: [{ min: 50, value: 5 }] } } };
+      expect(strict(broken(d => { d.connectors[0].bindings = bound; }))).toEqual([]);
+      expect(strict(broken(d => { d.connectors[0].bindings = { fromNodeId: { adapter: 's', ref: 1 }, label: { ref: 1 } }; })).map(i => i.path)).toEqual([
+        '/connectors/0/bindings/fromNodeId', '/connectors/0/bindings/label/adapter',
+      ]);
     });
 
     it('takes a node’s caption, as text', () => {

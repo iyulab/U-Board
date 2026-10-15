@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { placedIn, type ViewDocument } from '@iyulab/u-board/domain';
+import { bindingsIn, type ViewDocument } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { findBoard } from '../db/boards.js';
 import { findConnector } from '../db/connectors.js';
@@ -18,16 +18,10 @@ const MAX_BATCH_BINDINGS = 500;
 
 const DISCONNECTED: ResolvedBinding = { value: undefined, quality: 'disconnected' };
 
-/** Every `(connectorId, ref)` pair a document's widgets declare via their bindings — the single
- * traversal `referencedConnectors` and `isDeclaredBinding` below both build on, so the
- * widgets → bindings walk exists in exactly one place (`placedIn` covers every kind: a canvas view's nodes, a grid
- * view's items). */
+/** Every `(connectorId, ref)` pair a document declares via its bindings — widgets' and connectors' (`bindingsIn`) —
+ * the single traversal `referencedConnectors` and `isDeclaredBinding` below both build on. */
 function* declaredBindings(doc: ViewDocument): Generator<{ connectorId: string; ref: unknown }> {
-  for (const placed of placedIn(doc)) {
-    for (const binding of Object.values(placed.widget?.bindings ?? {})) {
-      yield { connectorId: binding.adapter, ref: binding.ref };
-    }
-  }
+  for (const { binding } of bindingsIn(doc)) yield { connectorId: binding.adapter, ref: binding.ref };
 }
 
 /** Every adapter id a document's widgets reference, intersected with the connectors that actually

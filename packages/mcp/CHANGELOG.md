@@ -11,6 +11,7 @@ All notable changes to this package are documented here. The format follows
 - `look` reports text that reads under 3:1 against what is actually drawn behind it (measured on the picture, so a
   panel painted under a widget counts) — on either paper. A focused part is taken with room around it (at least half
   its size), so what spills past its box shows.
+- The `canvas` and `data` topics teach a connector's `bindings` (label and style from live values).
 - The `canvas` topic teaches a node's `caption` — a device's name under its icon, with the box kept icon-sized.
 
 ## [0.2.0] - 2026-10-16

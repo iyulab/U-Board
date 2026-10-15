@@ -63,6 +63,7 @@ const CANVAS = `# Canvas boards
 ## Connectors
 - { id, fromNodeId, toNodeId, label?, style?: { stroke?, strokeWidth?, dash?: "solid" | "dashed" | "dotted" } } — a straight line from the edge of one node's box to the edge of the other's (2 px grey unless styled). Both ends must be nodes of /nodes.
 - label: text at the line's middle on a chip of the paper (a link's "26.78Kbps"). Connectors joining the same two nodes are drawn side by side — one per link, no need to merge them.
+- bindings: live values for "label", "style.stroke", "style.strokeWidth", "style.dash" — the same binding shape as a widget's (describe("data")); a map turns a source's numbers or words into a width or a colour. A label not showing a current value is rimmed (amber stale, grey disconnected).
 - A line stops at the edge of the box: with the name in caption, it meets the icon itself.
 
 ## Decorations (drawn under connectors and nodes, first one lowest)
@@ -79,6 +80,7 @@ const CANVAS = `# Canvas boards
 const DATA = `# Data sources and bindings
 
 - list_sources gives each source's id — a binding's adapter. sample_source({ source, path }) reads one request and answers the shape of the response: each value's JSON Pointer, its type and an example, and the fields that tell a list's items apart.
+- A connector binds its label and style the same way (describe("canvas")).
 - A binding replaces one prop with a live value: widget.bindings = { "<dotted path into props>": { adapter: "<source id>", ref: { path: "/request?query", valuePath: "/json/pointer" } } } — e.g. "data.value".
 - An item of a list, by its fields rather than its place (lists reorder): ref: { path, item: { list: "/items", where: { "id": "P-101" } }, valuePath: "/temp" } — valuePath is then inside the item. Use a field sample_source lists among the list's keys.
 - Without valuePath a binding takes the whole response (or the whole item) — give it to a widget that takes rows (a table, a chart's data).

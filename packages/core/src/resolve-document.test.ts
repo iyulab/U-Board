@@ -66,7 +66,7 @@ describe('resolveDocument', () => {
     });
   });
 
-  it('passes background and connectors through unchanged', async () => {
+  it('passes the background through, and an unbound connector as it is', async () => {
     const doc: CanvasView = {
       kind: 'canvas',
       background: { image: { src: 'plan.png', width: 800, height: 600 } },
@@ -77,8 +77,34 @@ describe('resolveDocument', () => {
     const resolved = await resolveDocument(doc, []);
 
     expect(resolved.background).toEqual(doc.background);
-    expect(resolved.connectors).toEqual(doc.connectors);
+    expect(resolved.connectors).toEqual([{ ...doc.connectors[0], quality: {} }]);
     expect(resolved.kind).toBe('canvas');
+  });
+
+  it('reads a connector’s bound label and style, in the form each draws, keeping the static value otherwise', async () => {
+    const readings: Record<string, ResolvedBinding> = {
+      '/bps': { value: 26.78, quality: 'live' },
+      '/load': { value: 85, quality: 'live' },
+      '/state': { value: 'blinking', quality: 'live' },
+      '/gone': { value: undefined, quality: 'disconnected' },
+    };
+    const link: Adapter = { id: 'nms', resolve: async ref => readings[ref as string] };
+    const doc: CanvasView = {
+      kind: 'canvas', background: {}, nodes: [],
+      connectors: [{
+        id: 'c', fromNodeId: 'a', toNodeId: 'b', label: 'N/A', style: { stroke: '#94a3b8', dash: 'solid' },
+        bindings: {
+          label: { adapter: 'nms', ref: '/bps' },
+          'style.strokeWidth': { adapter: 'nms', ref: '/load', map: { ranges: [{ max: 50, value: 2 }, { min: 50, value: 5 }] } },
+          'style.dash': { adapter: 'nms', ref: '/state' }, // not one of the three words: static stays
+          'style.stroke': { adapter: 'nms', ref: '/gone' },
+        },
+      }],
+    };
+    const [resolved] = (await resolveDocument(doc, [link])).connectors;
+    expect(resolved.label).toBe('26.78');
+    expect(resolved.style).toEqual({ stroke: '#94a3b8', dash: 'solid', strokeWidth: 5 });
+    expect(resolved.quality).toEqual({ label: 'live', 'style.strokeWidth': 'live', 'style.dash': 'live', 'style.stroke': 'disconnected' });
   });
 
   it('reports a disconnected binding per node without dropping the node', async () => {

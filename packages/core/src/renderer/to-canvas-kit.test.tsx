@@ -3,8 +3,9 @@ import { describe, it, expect } from 'vitest';
 import type { ReactElement } from 'react';
 import { toCanvasKit } from './to-canvas-kit';
 import { NodeFrame, type NodeFrameProps } from './node-frame';
-import type { ResolvedCanvasView } from '../resolve-document';
+import type { ResolvedCanvasView, ResolvedConnector } from '../resolve-document';
 import type { ResolvedWidget } from '../adapter';
+import type { Connector } from '../view-document';
 import { KO_LABELS } from '../labels-ko';
 
 /** What a node's overlay draws: its `NodeFrame`, expanded one level so the frame's own elements can be read. */
@@ -14,13 +15,16 @@ function frameOf(content: React.ReactNode): ReactElement {
   return NodeFrame(element.props);
 }
 
-function doc(overrides: Partial<ResolvedCanvasView> = {}): ResolvedCanvasView {
+/** A resolved canvas view; a connector given without `quality` is taken as unbound. */
+function doc(
+  overrides: Omit<Partial<ResolvedCanvasView>, 'connectors'> & { connectors?: Array<Connector & Partial<Pick<ResolvedConnector, 'quality'>>> } = {}
+): ResolvedCanvasView {
   return {
     kind: 'canvas',
     background: {},
     nodes: [],
-    connectors: [],
     ...overrides,
+    connectors: (overrides.connectors ?? []).map(connector => ({ quality: {}, ...connector })),
   };
 }
 
@@ -191,6 +195,19 @@ describe('toCanvasKit', () => {
     expect(caption.x).toBeLessThan(0); // wider than the box: centred, so it starts left of it
     expect(objects.some(o => o.id === 'b#caption')).toBe(false);
     expect(objects.findIndex(o => o.id === 'a#caption-chip')).toBeGreaterThan(objects.findIndex(o => o.id === 'c'));
+  });
+
+  it('rims a bound label that is not showing a current value, as a widget frame is', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const nodes = [
+      { id: 'a', x: 0, y: 0, width: 40, height: 40, anchored: false, widget },
+      { id: 'b', x: 300, y: 0, width: 40, height: 40, anchored: false, widget },
+    ];
+    const chip = (quality: Record<string, 'live' | 'stale' | 'disconnected'>) =>
+      (toCanvasKit(doc({ nodes, connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: '26 Kbps', quality }] })).scene.getObjects() as readonly object[] as readonly Record<string, unknown>[]).find(o => o.id === 'c#chip');
+    expect(chip({ label: 'live' })).not.toHaveProperty('stroke');
+    expect(chip({ label: 'stale' })).toMatchObject({ stroke: '#f59e0b' });
+    expect(chip({ label: 'live', 'style.stroke': 'disconnected' })).toMatchObject({ stroke: '#6b7280' });
   });
 
   it('skips a connector referencing a node that does not exist, without throwing', () => {

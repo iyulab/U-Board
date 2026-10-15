@@ -1,4 +1,4 @@
-import type { Widget, ValueMap } from './view-document.js';
+import type { Binding, Widget, ValueMap } from './view-document.js';
 
 /**
  * A pluggable resolver for one specific external system's values (docs/concepts.md — "Adapter").
@@ -109,12 +109,39 @@ export async function resolveWidget(
   widget: Widget,
   adapters: readonly Adapter[]
 ): Promise<ResolvedWidget> {
-  const props = { ...widget.props };
+  const { values: props, quality, reasons, observedAt } = await resolveBindings({ ...widget.props }, widget.bindings, adapters);
+  const result: ResolvedWidget = { type: widget.type, props, quality };
+  if (Object.keys(reasons).length > 0) result.reasons = reasons;
+  if (Object.keys(observedAt).length > 0) result.observedAt = observedAt;
+  return result;
+}
+
+/** What `resolveBindings` gives back: `values` with every readable binding written in, and per path how it read. */
+export interface ResolvedBindings {
+  values: Record<string, unknown>;
+  quality: Record<string, ConnectionQuality>;
+  reasons: Record<string, QualityReason>;
+  observedAt: Record<string, string>;
+}
+
+/**
+ * The one binding resolution, for whatever carries bindings — a widget's props, a connector's label and style: each
+ * binding read through its adapter and, when the reading has a value (`live` or `stale`), written at its dotted path
+ * into `values` (after `map`); `accept` may refuse a value for a path, which then keeps its static value. Failures are
+ * qualities, never exceptions — see `resolveWidget`.
+ */
+export async function resolveBindings(
+  values: Record<string, unknown>,
+  bindings: Record<string, Binding> | undefined,
+  adapters: readonly Adapter[],
+  accept: (path: string, value: unknown) => unknown = (_path, value) => value
+): Promise<ResolvedBindings> {
   const quality: Record<string, ConnectionQuality> = {};
   const reasons: Record<string, QualityReason> = {};
   const observedAt: Record<string, string> = {};
+  const props = values;
 
-  const bindingEntries = Object.entries(widget.bindings ?? {});
+  const bindingEntries = Object.entries(bindings ?? {});
   await Promise.all(
     bindingEntries.map(async ([propPath, binding]) => {
       const adapter = adapters.find(a => a.id === binding.adapter);
@@ -128,7 +155,8 @@ export async function resolveWidget(
         // `stale` is the last-known value by definition. A `disconnected` reading has none — any
         // `value` it carries is meaningless — so the author's placeholder stays.
         if (resolved.quality !== 'disconnected') {
-          setPath(props, propPath, binding.map ? applyValueMap(binding.map, resolved.value) : resolved.value);
+          const value = accept(propPath, binding.map ? applyValueMap(binding.map, resolved.value) : resolved.value);
+          if (value !== undefined) setPath(props, propPath, value);
         }
         quality[propPath] = resolved.quality;
         if (resolved.reason && resolved.quality !== 'live') reasons[propPath] = resolved.reason;
@@ -138,11 +166,7 @@ export async function resolveWidget(
       }
     })
   );
-
-  const result: ResolvedWidget = { type: widget.type, props, quality };
-  if (Object.keys(reasons).length > 0) result.reasons = reasons;
-  if (Object.keys(observedAt).length > 0) result.observedAt = observedAt;
-  return result;
+  return { values: props, quality, reasons, observedAt };
 }
 
 /** The value `map` gives `value` (`Binding.map`): the entry for the value's text when it is a
