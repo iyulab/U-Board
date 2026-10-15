@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`Node.caption`** — a name drawn centred under a node's box, outside it, on a chip of the board's paper and over
+  the connectors (viewer and editor alike). Connectors end at the box, so a device's lines meet its icon however long
+  its name. The view fits it, `lintViewDocument` counts it as a text (under another node, running into a text), and
+  the schema and strict validation know it.
+
 ## [0.13.0] - 2026-10-16
 
 ### Added

@@ -257,6 +257,11 @@ describe('validateViewDocument', () => {
       expect(validateViewDocument(broken(d => { d.connectors[0].color = 'blue'; d.decorations[0].fill = 'var(--x)'; }))).toEqual([]);
     });
 
+    it('takes a node’s caption, as text', () => {
+      expect(strict(broken(d => { d.nodes[0].caption = 'Pump A'; }))).toEqual([]);
+      expect(strict(broken(d => { d.nodes[0].caption = 3; })).map(i => i.path)).toEqual(['/nodes/0/caption']);
+    });
+
     it('takes the decoration colours every canvas reads', () => {
       for (const colour of ['#1f6feb', '#abc', '#1f6feb33', 'rgb(1, 2, 3)', 'rgba(110,170,225,0.16)', 'rgb(1 2 3 / 50%)', 'hsl(210deg 50% 40%)', 'hsla(210, 50%, 40%, .5)', 'SteelBlue', 'transparent', 'none']) {
         expect(strict(broken(d => { d.decorations[0].fill = colour; })), colour).toEqual([]);

@@ -44,6 +44,19 @@ describe('lintGeometry', () => {
     ]);
   });
 
+  it('counts a node’s caption as a text under its box: under another node, or running into a text', () => {
+    const doc = canvas({
+      nodes: [node('a', 0, 0, { width: 40, height: 40 }), node('b', 0, 50, { width: 40, height: 40 })],
+      decorations: [text('t', 0, 100, 'storage#1', 12)],
+    });
+    doc.nodes[0].caption = 'auth_srv#1'; // drawn at y 44–56, under b (y 50–90)
+    doc.nodes[1].caption = 'storage#1'; // drawn at y 94–106, into the text at y 100
+    expect(lintGeometry(doc)).toEqual([
+      { path: '/nodes/0/caption', message: expect.stringContaining('lies under node "b" (/nodes/1)') },
+      { path: '/decorations/0', message: 'this text runs into /nodes/1/caption — the two overlap' },
+    ]);
+  });
+
   it('estimates a text by its characters and size', () => {
     expect(textBox({ id: 't', type: 'text', x: 5, y: 6, text: 'abcd', fontSize: 10 })).toEqual({ x: 5, y: 6, width: 24, height: 10 });
   });

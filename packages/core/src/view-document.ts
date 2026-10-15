@@ -159,6 +159,9 @@ export interface Node extends Placed {
    * or a freely-placed position with no real-space meaning (docs/concepts.md — "Node", "Anchor").
    * Both cases store the same x/y shape; this flag only carries what that position means. */
   anchored: boolean;
+  /** A name drawn under the node's box, outside it — a device's name under its icon. Connectors end at the box, so
+   * the box can stay the size of what the widget draws while its name is as long as it needs to be. */
+  caption?: string;
 }
 
 /** A line drawn between two nodes, used when the relationship between them needs to be shown — from the edge of one

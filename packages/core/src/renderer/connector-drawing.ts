@@ -1,5 +1,6 @@
 import { measureTextWidth, type DrawingObject } from '@canvas-kit/core';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
+import { CAPTION_SIZE, captionBox } from '../caption-geometry.js';
 import type { BoardAppearance, Connector, ConnectorDash, Node } from '../view-document.js';
 
 /** A connector's look when its style leaves it out. */
@@ -21,6 +22,9 @@ const LABEL_CHIP: Record<BoardAppearance, { fill: string; ink: string }> = {
   light: { fill: '#ffffff', ink: '#475569' },
   dark: { fill: '#1e293b', ink: '#cbd5e1' },
 };
+
+/** A node's name reads stronger than a link's label. */
+const CAPTION_INK: Record<BoardAppearance, string> = { light: '#1e293b', dark: '#e5e7eb' };
 
 interface Box {
   x: number;
@@ -62,6 +66,22 @@ export function connectorObjects(nodes: readonly Node[], connectors: readonly Co
   }
   // Labels over every line, so a line drawn later never crosses another's label.
   return [...lines, ...labels];
+}
+
+/**
+ * What nodes' captions draw: each name centred under its node's box on a chip of the paper — over every connector,
+ * so a line passing under a name never runs through it.
+ */
+export function captionObjects(nodes: readonly Node[], appearance: BoardAppearance = 'light', locked?: boolean): DrawingObject[] {
+  const objects: DrawingObject[] = [];
+  const measure = (text: string, size: number) => measureTextWidth({ type: 'text', x: 0, y: 0, text, fontSize: size });
+  for (const node of nodes) {
+    if (!node.caption) continue;
+    const at = captionBox(node, measure);
+    objects.push({ type: 'rect', id: `${node.id}#caption-chip`, x: at.x - LABEL_PAD_X, y: at.y - LABEL_PAD_Y, width: at.width + 2 * LABEL_PAD_X, height: at.height + 2 * LABEL_PAD_Y, fill: LABEL_CHIP[appearance].fill, ...(locked && { locked }) });
+    objects.push({ type: 'text', id: `${node.id}#caption`, x: at.x, y: at.y, text: node.caption, fontSize: CAPTION_SIZE, fill: CAPTION_INK[appearance], ...(locked && { locked }) });
+  }
+  return objects;
 }
 
 function boxOf(node: Node): Box {

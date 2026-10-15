@@ -130,6 +130,7 @@
           "description": "Whether (x, y) is a coordinate meaningful in the background's real space, or a free position.",
           "type": "boolean"
         },
+        "caption": { "type": "string", "description": "A name drawn under the node's box, outside it — a device's name under its icon." },
         "widget": { "$ref": "#/$defs/widget" }
       }
     },

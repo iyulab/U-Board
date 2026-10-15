@@ -34,7 +34,7 @@ nothing about what the board depicts, and it does not follow the viewer's theme:
 the same to everyone who opens it.
 
 **Node** — a positioned point in a canvas view that carries a widget. A node can be anchored to a
-fixed coordinate or placed without an anchor. It has a box (`width` × `height`; left out, 160 × 100 — `DEFAULT_NODE_WIDTH` × `DEFAULT_NODE_HEIGHT` in `@iyulab/u-board/domain`), and its widget is
+fixed coordinate or placed without an anchor. It has a box (`width` × `height`; left out, 160 × 100 — `DEFAULT_NODE_WIDTH` × `DEFAULT_NODE_HEIGHT` in `@iyulab/u-board/domain`) and may have a `caption` — a name drawn under the box, outside it, so the box can stay the size of an icon while its name is as long as it needs; its widget is
 drawn inside that box, fitted to it: a chart fills it — compactly when the box is small — a gauge or
 an image scales down, and a table or a list scrolls within it. The box the author drew is what the
 board shows; a widget never spills over a neighbouring node.

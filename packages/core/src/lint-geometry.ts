@@ -1,11 +1,10 @@
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from './layout-defaults.js';
+import { captionBox, estimateTextWidth } from './caption-geometry.js';
 import type { CanvasView, TextShape } from './view-document.js';
 import type { ViewDocumentAdvice } from './lint-view-document.js';
 
 /** A text decoration's font size when it gives none — the canvas's default. */
 const DEFAULT_TEXT_SIZE = 16;
-/** Average glyph width as a share of the font size — what the canvas engine assumes where it cannot measure. */
-const GLYPH_WIDTH = 0.6;
 /** How many layout findings a document gets one by one — advice an assistant reads is context too, but a writer
  *  sent only a few fixes the board in many rounds, resending it each time. The rest are counted by kind. */
 export const GEOMETRY_ADVICE_LIMIT = 30;
@@ -20,7 +19,7 @@ interface Box {
 /** The box a text decoration takes, estimated as a reader without a canvas can: one line, x/y its top-left. */
 export function textBox(text: TextShape): Box {
   const size = text.fontSize ?? DEFAULT_TEXT_SIZE;
-  return { x: text.x, y: text.y, width: [...text.text].length * size * GLYPH_WIDTH, height: size };
+  return { x: text.x, y: text.y, width: estimateTextWidth(text.text, size), height: size };
 }
 
 /**
@@ -31,7 +30,11 @@ export function textBox(text: TextShape): Box {
  */
 export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
   const nodes = doc.nodes.map((node, i) => ({ id: node.id, at: `/nodes/${i}`, box: nodeBox(node) }));
-  const texts = (doc.decorations ?? []).flatMap((shape, i) => (shape.type === 'text' && shape.text.trim() !== '' ? [{ at: `/decorations/${i}`, box: textBox(shape) }] : []));
+  const decorationTexts = (doc.decorations ?? []).flatMap((shape, i) => (shape.type === 'text' && shape.text.trim() !== '' ? [{ at: `/decorations/${i}`, box: textBox(shape) }] : []));
+  // A caption sits on a chip over the lines, so a line under it is hidden, not crossed — but it can still lie under a
+  // node or run into another text.
+  const captions = doc.nodes.flatMap((node, i) => (node.caption?.trim() ? [{ at: `/nodes/${i}/caption`, box: captionBox(node) }] : []));
+  const texts = [...decorationTexts, ...captions];
   const byId = new Map(nodes.map(node => [node.id, node]));
   const found: Array<ViewDocumentAdvice & { kind: string }> = [];
 
@@ -46,7 +49,7 @@ export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
     const under = nodes.find(node => overlaps(text.box, node.box));
     if (under) found.push({ kind: 'texts under a node', path: text.at, message: `this text lies under node "${under.id}" (${under.at}), which draws over it — move it clear of ${describe(under.box)}` });
   }
-  for (const text of texts) {
+  for (const text of decorationTexts) {
     for (const connector of doc.connectors) {
       const from = byId.get(connector.fromNodeId);
       const to = byId.get(connector.toNodeId);

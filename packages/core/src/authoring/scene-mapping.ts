@@ -3,7 +3,7 @@ import type { CanvasView, Node, Shape, Widget } from '../view-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
 import { seedWidget } from './widget-catalog.js';
 import { onBoard } from '../renderer/board-appearance.js';
-import { connectorObjects } from '../renderer/connector-drawing.js';
+import { captionObjects, connectorObjects } from '../renderer/connector-drawing.js';
 
 /** A newly-added rect decoration's default border — distinct from a node placeholder's blue
  * (`NODE_PLACEHOLDER_STROKE` below) so an author can tell a structural frame apart from a widget
@@ -63,6 +63,7 @@ export function documentToScene(doc: CanvasView): Scene {
 
   // Follows its two nodes; dragging a line or its label would move nothing in the document.
   for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance, { locked: true })) scene.add(object);
+  for (const object of captionObjects(doc.nodes, doc.appearance, true)) scene.add(object);
 
   for (const node of doc.nodes) {
     scene.add({

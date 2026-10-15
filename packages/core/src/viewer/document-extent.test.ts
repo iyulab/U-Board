@@ -29,6 +29,13 @@ describe('documentExtent', () => {
     expect(documentExtent(d)).toEqual({ x: 10, y: 20, width: 340, height: 440 });
   });
 
+  it('takes in a node’s caption under its box', () => {
+    const d = doc({ nodes: [{ ...node('n1', 0, 0, { width: 40, height: 40 }), caption: 'a long device name' }] });
+    const extent = documentExtent(d)!;
+    expect(extent.y + extent.height).toBe(56); // 40 box + 4 gap + 12 caption
+    expect(extent.x).toBeLessThan(0); // the name is wider than the box, centred on it
+  });
+
   it('grows past the background to include content placed outside it', () => {
     const d = doc({
       background: { image: { src: 'bg.png', width: 400, height: 300 } },

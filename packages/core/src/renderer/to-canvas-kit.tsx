@@ -20,7 +20,7 @@ import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
 import { onBoard } from './board-appearance.js';
 import { NodeFrame } from './node-frame.js';
-import { connectorObjects } from './connector-drawing.js';
+import { captionObjects, connectorObjects } from './connector-drawing.js';
 
 /** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
  * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
@@ -66,6 +66,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
   }
 
   for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance)) scene.add(object);
+  for (const object of captionObjects(doc.nodes, doc.appearance)) scene.add(object);
 
   const at = now ?? Date.now();
   const overlays: ViewerOverlayItem[] = doc.nodes.map(node => ({

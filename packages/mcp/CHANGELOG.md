@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The `canvas` topic teaches a node's `caption` — a device's name under its icon, with the box kept icon-sized.
+
 ## [0.2.0] - 2026-10-16
 
 ### Added

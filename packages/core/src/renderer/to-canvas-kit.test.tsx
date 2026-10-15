@@ -173,6 +173,26 @@ describe('toCanvasKit', () => {
     expect(apart).toBe(true);
   });
 
+  it('draws a node’s caption centred under its box on a chip, over the connectors', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const { scene } = toCanvasKit(
+      doc({
+        nodes: [
+          { id: 'a', x: 0, y: 0, width: 40, height: 40, anchored: false, caption: 'Catalyst9300.nmslab.local', widget },
+          { id: 'b', x: 200, y: 0, width: 40, height: 40, anchored: false, widget },
+        ],
+        connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b' }],
+      })
+    );
+    const objects = scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+    const caption = objects.find(o => o.id === 'a#caption') as Record<string, number> & { text: string };
+    expect(caption.text).toBe('Catalyst9300.nmslab.local');
+    expect(caption.y).toBe(44); // 4 under the box
+    expect(caption.x).toBeLessThan(0); // wider than the box: centred, so it starts left of it
+    expect(objects.some(o => o.id === 'b#caption')).toBe(false);
+    expect(objects.findIndex(o => o.id === 'a#caption-chip')).toBeGreaterThan(objects.findIndex(o => o.id === 'c'));
+  });
+
   it('skips a connector referencing a node that does not exist, without throwing', () => {
     expect(() =>
       toCanvasKit(doc({ connectors: [{ id: 'c1', fromNodeId: 'missing', toNodeId: 'also-missing' }] }))

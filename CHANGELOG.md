@@ -11,6 +11,11 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A canvas node can carry a **caption** — its name drawn under its box, so links meet a device's icon however long
+  its name.
+
 ## [0.4.0] - 2026-10-16
 
 ### Added

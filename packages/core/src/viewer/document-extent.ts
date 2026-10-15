@@ -1,4 +1,5 @@
-import { getObjectBounds } from '@canvas-kit/core';
+import { getObjectBounds, measureTextWidth } from '@canvas-kit/core';
+import { captionBox } from '../caption-geometry.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import type { CanvasView } from '../view-document.js';
 
@@ -38,6 +39,10 @@ export function documentExtent(doc: CanvasView): DocumentRect | null {
   if (image) include(0, 0, image.width, image.height);
   for (const node of doc.nodes) {
     include(node.x, node.y, node.width ?? DEFAULT_NODE_WIDTH, node.height ?? DEFAULT_NODE_HEIGHT);
+    if (node.caption) {
+      const caption = captionBox(node, (text, size) => measureTextWidth({ type: 'text', x: 0, y: 0, text, fontSize: size }));
+      include(caption.x, caption.y, caption.width, caption.height);
+    }
   }
   for (const shape of doc.decorations ?? []) {
     const box = getObjectBounds(shape);

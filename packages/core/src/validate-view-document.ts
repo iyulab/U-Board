@@ -68,7 +68,7 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
 /** The fields each part of a document has — what `strict` holds a written document to. */
 const CANVAS_FIELDS = ['kind', 'appearance', 'elements', 'background', 'nodes', 'connectors', 'decorations'];
 const GRID_FIELDS = ['kind', 'appearance', 'elements', 'columns', 'items'];
-const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'widget'];
+const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'style'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash'];
@@ -182,6 +182,7 @@ function checkNode(doc: Checker, node: unknown, at: string[]): void {
   doc.optionalNumber(node, [...at, 'width']);
   doc.optionalNumber(node, [...at, 'height']);
   if (typeof node.anchored !== 'boolean') doc.fail([...at, 'anchored'], 'expected true or false');
+  doc.optionalString(node, [...at, 'caption']);
   checkWidget(doc, node, at);
 }
 

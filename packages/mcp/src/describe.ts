@@ -56,13 +56,14 @@ const CANVAS = `# Canvas boards
 ## Coordinates and sizes
 - Scene units = CSS px at 100%, x to the right, y down. The viewer fits the whole drawing into view (never above 100%), so absolute position does not matter — relative layout does.
 - A node's x, y is the top-left of its box; width × height default to ${DEFAULT_NODE_WIDTH} × ${DEFAULT_NODE_HEIGHT}. Its widget is clipped to the box — make the box fit its content (a 12 px label needs about 7 px per character).
+- caption: a node's name drawn centred under its box, outside it (12 px, on a chip, over the lines) — a device's name under its icon. Keep the box the size of the icon and put the name in caption, not in the element.
 - anchored: true when x, y is a real place on the background (a plan's metres, a map's longitude/latitude via background.image.referencePoints), false when placed freely.
 - background: {} for none, or { image: { src, width, height } } — the drawing is placed at 0, 0 at its own size. src is a URL or a data: URL (an SVG drawn for the board: "data:image/svg+xml,…").
 
 ## Connectors
 - { id, fromNodeId, toNodeId, label?, style?: { stroke?, strokeWidth?, dash?: "solid" | "dashed" | "dotted" } } — a straight line from the edge of one node's box to the edge of the other's (2 px grey unless styled). Both ends must be nodes of /nodes.
 - label: text at the line's middle on a chip of the paper (a link's "26.78Kbps"). Connectors joining the same two nodes are drawn side by side — one per link, no need to merge them.
-- A line aims at the box's centre: centre the icon in its box (label below it is fine) so the line meets the icon.
+- A line stops at the edge of the box: with the name in caption, it meets the icon itself.
 
 ## Decorations (drawn under connectors and nodes, first one lowest)
 - rect: { id, type: "rect", x, y, width, height, fill?, stroke?, strokeWidth? } — no fill: transparent; stroke needs strokeWidth.
