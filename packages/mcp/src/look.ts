@@ -100,7 +100,7 @@ export class BrowserLooker implements Looker {
   }
 }
 
-async function launch(): Promise<Browser> {
+export async function launch(): Promise<Browser> {
   const { chromium } = await import('playwright-core');
   const executablePath = process.env.UBOARD_BROWSER;
   if (executablePath) return chromium.launch({ executablePath });
