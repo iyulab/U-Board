@@ -24,7 +24,7 @@ export const TOPICS: Record<string, string> = {
 const RULES = `# Writing a U-Board board
 
 ## Workflow
-1. list_boards → pick a board, or create_board({ name, kind }).
+1. list_boards → pick a board, or create_board({ name, kind }). For live values: list_sources, then sample_source to see a response.
 2. get_board({ board, pointer }) — read only the part you need ("/items", "/elements/pump"); note its revision.
 3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Send the whole document only to start one.
 4. Read the answer: the new revision and advice. A 412 means someone saved since — get_board again and redo the patch.
@@ -54,7 +54,13 @@ const RULES = `# Writing a U-Board board
 - resources lists the https origins an element loads from; they work only where the installation allows them. describe("elements") has the full contract.
 
 ## Data sources
-- A binding's adapter is a data source id in this workspace. Credentials are never yours to set — a person enters them in the console.`;
+- list_sources gives each source's id — a binding's adapter. sample_source({ source, path }) reads one request and answers the shape of the response: each value's JSON Pointer, its type and an example, and the fields that tell a list's items apart.
+- A binding reads one value: { adapter: "<source id>", ref: { path: "/request?query", valuePath: "/json/pointer" } }.
+- An item of a list, by its fields rather than its place (lists reorder): ref: { path, item: { list: "/items", where: { "id": "P-101" } }, valuePath: "/temp" } — valuePath is then inside the item. Use a field sample_source lists among the list's keys.
+- Without valuePath a binding takes the whole response (or the whole item) — give it to a widget that takes rows (a table, a chart's data).
+- A value in the source's own words maps to a prop with map: { values: { "Fault": "error" }, ranges: [{ min: 80, value: "warning" }], otherwise: "ok" }.
+- A source that publishes on a schedule says how old its value may be: maxAgeSeconds (an hourly feed: 5400); its time: observedAtPath.
+- create_source makes a source that needs no credential. One that needs a key, token or OAuth is made by a person in the console — ask them for its id. Credentials never pass through you.`;
 
 const ELEMENTS = `# Elements
 

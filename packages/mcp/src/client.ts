@@ -32,6 +32,25 @@ export interface Board {
   updatedAt: string;
 }
 
+/** A data source as the workspace lists it — never its credential. */
+export interface SourceSummary {
+  id: string;
+  name: string;
+  baseUrl: string;
+  authType: string;
+  attribution?: { text: string; url?: string };
+}
+
+/** What reading a data source came to: its value (the whole response, when no `valuePath` narrows it) and how
+ *  current it is, or why it could not be read. */
+export interface Resolved {
+  value?: unknown;
+  quality: 'live' | 'stale' | 'disconnected';
+  reason?: string;
+  message?: string;
+  observedAt?: string;
+}
+
 export interface Saved {
   id: string;
   revision: number;
@@ -81,6 +100,20 @@ export class UBoardClient {
       revision,
       contentType: 'application/json-patch+json',
     });
+  }
+
+  async listSources(): Promise<SourceSummary[]> {
+    return (await this.request<{ connectors: SourceSummary[] }>('GET', await this.workspacePath('/connectors'))).connectors;
+  }
+
+  /** Makes a data source that needs no credential. One that does is made by a person in the console. */
+  async createSource(input: { name: string; baseUrl: string; attribution?: { text: string; url?: string } }): Promise<SourceSummary> {
+    return this.request('POST', await this.workspacePath('/connectors'), { body: { ...input, authType: 'none' } });
+  }
+
+  /** Reads `ref` from data source `sourceId` the way a binding does. */
+  async resolve(sourceId: string, ref: { path: string; valuePath?: string }): Promise<Resolved> {
+    return this.request('POST', await this.workspacePath(`/connectors/${encodeURIComponent(sourceId)}/resolve`), { body: { ref } });
   }
 
   private async workspacePath(path: string): Promise<string> {

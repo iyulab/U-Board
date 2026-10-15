@@ -30,10 +30,14 @@ Within a canvas view, three concerns are kept separate:
 - **Layout** — where nodes sit. A node can be anchored to a fixed position (typical when the
   background represents real space) or placed freely with no anchor (typical for a diagram with
   no real-space background). Connectors between nodes are part of layout.
-- **Widget content** — what a node displays. Widget rendering is not implemented by U-Board
-  itself; it is delegated to [`@iyulab/u-widgets`](https://github.com/iyulab/u-widgets), a
+- **Widget content** — what a node displays. A prepared widget's rendering is not implemented by
+  U-Board itself; it is delegated to [`@iyulab/u-widgets`](https://github.com/iyulab/u-widgets), a
   declarative, data-driven widget library. U-Board's own scope is the spatial layer around those
   widgets — positioning, background, and connectors — not the widgets' internal rendering.
+  What no prepared widget draws, a board defines as an **element** — markup and CSS, or a script —
+  and the renderer hosts it under the element contract: a template in an isolated root of the page,
+  a script in a sandboxed frame its server builds, with no network. U-Board hosts elements; it does
+  not grow a catalog of widgets of its own ([`concepts.md`](concepts.md) — Element).
 
 ## Data binding and adapters
 

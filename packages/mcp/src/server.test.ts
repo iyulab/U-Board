@@ -24,6 +24,17 @@ function fakeServer() {
     if (url.pathname === '/api/workspaces/w1/boards' && method === 'GET') {
       return json(200, { boards: [...boards].map(([id, b]) => ({ id, name: b.name, kind: b.document.kind, updatedAt: 't' })) });
     }
+    if (url.pathname === '/api/workspaces/w1/connectors' && method === 'GET') {
+      return json(200, { connectors: [{ id: 's1', name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer' }] });
+    }
+    if (url.pathname === '/api/workspaces/w1/connectors' && method === 'POST') {
+      return json(201, { id: 's2', name: body.name, baseUrl: body.baseUrl, authType: body.authType });
+    }
+    if (url.pathname === '/api/workspaces/w1/connectors/s1/resolve') {
+      return body.ref.path === '/down'
+        ? json(200, { quality: 'disconnected', reason: 'unreachable', message: 'connect ECONNREFUSED' })
+        : json(200, { quality: 'live', value: { items: [{ id: 'P-101', temp: 61.5 }, { id: 'P-102', temp: 58 }] } });
+    }
     if (url.pathname === '/api/workspaces/w1/boards' && method === 'POST') {
       boards.set('b2', { name: body.name, revision: 1, document: body.kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', background: {}, nodes: [], connectors: [] } });
       return json(201, { id: 'b2', revision: 1 });
@@ -68,7 +79,9 @@ beforeEach(async () => {
 describe('u-board-mcp', () => {
   it('offers few tools, each with a strict input', async () => {
     const { tools } = await client.listTools();
-    expect(tools.map(t => t.name).sort()).toEqual(['create_board', 'describe', 'get_board', 'list_boards', 'patch_board', 'validate']);
+    expect(tools.map(t => t.name).sort()).toEqual([
+      'create_board', 'create_source', 'describe', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'sample_source', 'validate',
+    ]);
     for (const tool of tools) expect(tool.inputSchema.additionalProperties, tool.name).toBe(false);
   });
 
@@ -122,6 +135,28 @@ describe('u-board-mcp', () => {
     const dryRun = await call('validate', { board: 'b1', patch: [{ op: 'add', path: '/elements', value: { dot: { render: 'template', template: '<b/>' } } }] });
     expect(dryRun.value).toEqual({ valid: true, issues: [], advice: [{ path: '/elements/dot', message: expect.any(String) }] });
     expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
+  });
+
+  it('lists the data sources, never a credential', async () => {
+    expect((await call('list_sources')).value).toEqual({ sources: [{ id: 's1', name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer' }] });
+  });
+
+  it('answers what a source’s response looks like, not the response', async () => {
+    const { value } = await call('sample_source', { source: 's1', path: '/readings' });
+    expect(value).toEqual({
+      read: true,
+      quality: 'live',
+      shape: { values: ['/items: array(2)', '/items/0/id: string "P-101"', '/items/0/temp: number 61.5'], lists: [{ list: '/items', items: 2, keys: ['id', 'temp'] }] },
+    });
+    expect(server.requests.find(r => r.path.endsWith('/resolve'))!.body).toEqual({ ref: { path: '/readings' } });
+    expect((await call('sample_source', { source: 's1', path: '/down' })).value).toEqual({ read: false, reason: 'unreachable', message: 'connect ECONNREFUSED' });
+  });
+
+  it('makes a source that needs no credential, and cannot be given one', async () => {
+    const { value } = await call('create_source', { name: 'Open data', baseUrl: 'https://open.example.com' });
+    expect(value).toEqual({ source: { id: 's2', name: 'Open data', baseUrl: 'https://open.example.com', authType: 'none' } });
+    const withKey = (await client.callTool({ name: 'create_source', arguments: { name: 'x', baseUrl: 'https://x.example.com', authValue: 'k' } })) as { isError?: boolean };
+    expect(withKey.isError).toBe(true);
   });
 
   it('refuses arguments it does not take', async () => {

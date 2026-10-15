@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { applyJsonPatch, getByPointer, JsonPatchError, lintViewDocument, validateViewDocument, type ViewDocument } from '@iyulab/u-board/domain';
 import { UBoardApiError, type UBoardClient } from './client.js';
 import { describeTopic, TOPICS } from './describe.js';
+import { shapeOf } from './shape.js';
 
 const { version } = createRequire(import.meta.url)('../package.json') as { version: string };
 
@@ -142,6 +143,47 @@ export function createServer(client: UBoardClient): McpServer {
         const issues = validateViewDocument(candidate);
         return { valid: issues.length === 0, issues, advice: issues.length === 0 ? lintViewDocument(candidate as ViewDocument) : [] };
       })
+  );
+
+  server.registerTool(
+    'list_sources',
+    {
+      description: "The workspace's data sources: id (a binding's adapter), name, base URL, how it authenticates. Never a credential.",
+      inputSchema: z.strictObject({}),
+    },
+    async () => tool(async () => ({ sources: await client.listSources() }))
+  );
+
+  server.registerTool(
+    'sample_source',
+    {
+      description:
+        "Reads a request from a data source and answers what the response looks like — each value's JSON Pointer, type and an example, and for each list of objects the fields that tell its items apart — not the response itself. Use it to choose a binding's ref.",
+      inputSchema: z.strictObject({
+        source: z.string().min(1).max(100).describe('The data source id, from list_sources.'),
+        path: z.string().min(1).max(2000).describe('The request, relative to the source’s base URL: "/api/readings?line=1".'),
+      }),
+    },
+    async ({ source, path }) =>
+      tool(async () => {
+        const read = await client.resolve(source, { path });
+        if (read.quality === 'disconnected') return { read: false, reason: read.reason, message: read.message };
+        return { read: true, quality: read.quality, shape: shapeOf(read.value) };
+      })
+  );
+
+  server.registerTool(
+    'create_source',
+    {
+      description:
+        'Makes a data source that needs no credential (a public or internal API with no key). A source that needs a key, token or OAuth is made by a person in the console — ask them, then use its id.',
+      inputSchema: z.strictObject({
+        name: z.string().min(1).max(200),
+        baseUrl: z.string().url().max(2000).describe('Where the requests go, e.g. "https://api.example.com".'),
+        attribution: z.strictObject({ text: z.string().min(1).max(200), url: z.string().url().optional() }).optional().describe('How the source asks to be credited, shown under a board that uses it.'),
+      }),
+    },
+    async ({ name, baseUrl, attribution }) => tool(async () => ({ source: await client.createSource({ name, baseUrl, attribution }) }))
   );
 
   return server;

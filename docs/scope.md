@@ -9,8 +9,15 @@
 - An author-first editing experience
 - Architectural separation between the authoring tool and the rendering runtime
 - An extensible view-kind structure, so new kinds of view can be added without redesigning
-  existing ones — next, a grid kind for ordinary dashboards: widgets laid out by order, span and
-  screen width, sharing widgets and bindings with the canvas kind (planned, not yet built)
+  existing ones — the canvas kind, and a grid kind for ordinary dashboards (widgets laid out by
+  order, span and screen width), sharing widgets and bindings
+- Elements a board defines itself, beyond the prepared widgets: templates of HTML or SVG and CSS
+  drawn in isolation, and scripts run in a sandboxed frame with no network — hosted by the renderer
+  under one contract, so a board can draw what no widget does without U-Board growing a widget
+  catalog of its own
+- An engine programs can drive: workspace API tokens, partial changes to a board (JSON Patch on a
+  revision), a published document schema, and an MCP server through which an AI assistant reads and
+  draws boards
 - Binding to external data sources without owning or storing the underlying data
 
 ## Out
@@ -19,6 +26,8 @@
   dedicated component, not the core canvas
 - Reimplementing the functionality of a business system (ERP, MES, CMMS, QMS, or similar) — a
   view built with U-Board displays and interacts with such systems, it does not replace them
+- AI inside U-Board — it runs no model and holds no assistant; an assistant draws with it from the
+  outside, through its MCP server, as the person whose token it uses
 - Owning or storing domain data — a view's layout is U-Board's, the values shown in it belong to
   whatever system they came from
 - Chrome that stays fixed to the viewport rather than the canvas (an alert banner, a KPI list, a
