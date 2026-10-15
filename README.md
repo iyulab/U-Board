@@ -63,6 +63,14 @@ the selected text decoration; reference points that make an anchored node's plac
 Save, when it has one), and a read-only viewer mode are implemented and browser-verified. The editor and
 the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
 or keyboard.
+Besides the canvas view there is a grid view — widgets in order on a 12-column grid, laid out to the
+viewer's width — edited, saved and shared the same way. A board can define its own **elements** for what no
+prepared widget draws: markup and CSS drawn in an isolated root, or a script run in a sandboxed frame with no
+network, which is stopped when it stops answering. They are placed like widgets, their props get controls from
+their schema in the property panel, and their definitions are listed and edited in the editor with a template
+previewed as it is typed. An AI assistant reads and draws a workspace's boards from outside, through the MCP
+server [`@iyulab/u-board-mcp`](packages/mcp/README.md) and a workspace API token: JSON Patch on a board's
+revision, a data source's response summarized by its shape, and compact answers ([`docs/mcp.md`](docs/mcp.md)).
 Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
 adapter (with SSRF-safe origin pinning, and either a static credential — a bearer token, a header, or a key in the address (a query parameter or a
 path segment, put in only when the request is sent) — or OAuth 2.0
