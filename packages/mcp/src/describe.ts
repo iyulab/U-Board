@@ -48,6 +48,7 @@ const RULES = `# Writing a U-Board board
 - Define once under /elements/<name>, place with widget.type "element:<name>" on as many items as needed — never repeat markup per item.
 - Prefer render "template": HTML/SVG + CSS, no script, every {{value}} escaped. Numbers become drawing through CSS: style="--level: {{level}}", height: calc(var(--level) * 1%).
 - Use the theme variables, never fixed colours: --u-widget-bg, -surface, -text, -text-secondary, -border, -primary, -positive, -negative, -warning, -font-family, -font-mono.
+- Tell states apart by shape as well as colour (filled running, outlined stopped), with a graphic contrast of 3:1 against its background (WCAG 1.4.11) — never mark a state with the faintest token (--u-widget-border). Colour only what needs attention.
 - Draw repeated shapes once (<symbol>/<use>, a {{#list}} section). Keep an element under 32 KB.
 - render "script" only when a template cannot: it runs in a sandboxed frame with no network; read props with ub.onProps((props, appearance) => …). More than 30 placed script elements is too many.
 - A props schema (type, enum, const, properties, required, items, minimum, maximum, minLength, maxLength, title, description, default) says what an element takes; placed props are checked against it.

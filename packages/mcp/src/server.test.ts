@@ -88,6 +88,7 @@ describe('u-board-mcp', () => {
   it('describes its topics, the rules, a part of the schema and a widget', async () => {
     expect((await call('describe')).value.topics.rules).toContain('Read this first');
     expect((await call('describe', { topic: 'rules' })).value).toContain('## JSON Patch');
+    expect((await call('describe', { topic: 'rules' })).value).toContain('graphic contrast of 3:1');
     expect((await call('describe', { topic: 'schema', pointer: '/$defs/elementDefinition' })).value.required).toEqual(['render']);
     expect((await call('describe', { topic: 'widget:gauge' })).value.widget).toBe('gauge');
     const unknown = await call('describe', { topic: 'widget:nope' });
