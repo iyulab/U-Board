@@ -1,4 +1,4 @@
-import type { Attribution, CanvasView } from '@iyulab/u-board/domain';
+import type { Attribution, ViewDocument } from '@iyulab/u-board/domain';
 
 /** Text in each language the site and the console speak. */
 export interface Localized {
@@ -61,11 +61,11 @@ export interface SamplePack {
   title: Localized;
   /** What area of life the data is about — the gallery's rows. */
   field: Localized;
-  /** What the background is: a site plan, a district map, a line diagram — the gallery's columns. */
+  /** What the board is drawn on: a site plan, a district map, a line diagram — or none, for a grid laid out in
+   *  order. The gallery's columns. */
   kind: Localized;
   summary: Localized;
   connectors: SampleConnector[];
-  /** A canvas view: every sample so far is drawn over a background (`kind` above names it). */
-  document: CanvasView;
+  document: ViewDocument;
   snapshot: SampleSnapshot;
 }

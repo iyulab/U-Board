@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coordinateOf, resolveDocument, validateViewDocument, type Node } from '@iyulab/u-board/domain';
+import { coordinateOf, placedIn, resolveDocument, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
 import { BIKE_STATIONS } from './packs/gwanghwamun.js';
 import { keepPointers } from './prune.js';
@@ -14,7 +14,7 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
 
   it('binds only to its own connectors, each crediting its source', () => {
     const keys = new Set(pack.connectors.map(c => c.key));
-    for (const node of pack.document.nodes) {
+    for (const node of placedIn(pack.document)) {
       for (const binding of Object.values(node.widget.bindings ?? {})) expect(keys, `${node.id} → ${binding.adapter}`).toContain(binding.adapter);
     }
     for (const connector of pack.connectors) {
@@ -27,12 +27,12 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
   it('reads every binding live from its recording', async () => {
     expect(Date.parse(pack.snapshot.capturedAt)).toBeGreaterThan(Date.parse('2026-01-01'));
     const resolved = await resolveDocument(pack.document, snapshotAdapters(pack));
-    for (const node of resolved.nodes) {
+    for (const node of placedIn(resolved)) {
       for (const [prop, quality] of Object.entries(node.widget.quality)) expect(quality, `${node.id} ${prop}`).toBe('live');
     }
     // A blank reading is how a source says "no value here" — an entry that reports nothing, picked by mistake.
     const adapters = new Map(snapshotAdapters(pack).map(a => [a.id, a]));
-    for (const node of pack.document.nodes) {
+    for (const node of placedIn(pack.document)) {
       for (const [prop, binding] of Object.entries(node.widget.bindings ?? {})) {
         const { value } = await adapters.get(binding.adapter)!.resolve(binding.ref);
         expect(value === '' || value === null, `${node.id} ${prop} reads "${String(value)}"`).toBe(false);
@@ -43,7 +43,7 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
   it('says when the source observed each value it gives a time for — before the recording, within the hour or two a source lags', async () => {
     const adapters = new Map(snapshotAdapters(pack).map(a => [a.id, a]));
     const capturedAt = Date.parse(pack.snapshot.capturedAt);
-    for (const node of pack.document.nodes) {
+    for (const node of placedIn(pack.document)) {
       for (const [prop, binding] of Object.entries(node.widget.bindings ?? {})) {
         if ((binding.ref as { observedAtPath?: string }).observedAtPath === undefined) continue;
         const observedAt = Date.parse((await adapters.get(binding.adapter)!.resolve(binding.ref)).observedAt!);
@@ -53,9 +53,10 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     }
   });
 
-  it('places every node on its background, none over another', () => {
-    const { width, height } = pack.document.background.image!;
-    const nodes = pack.document.nodes;
+  it.runIf(pack.document.kind === 'canvas')('places every node on its background, none over another', () => {
+    const document = pack.document as CanvasView;
+    const { width, height } = document.background.image!;
+    const nodes = document.nodes;
     for (const node of nodes) {
       expect(node.x, node.id).toBeGreaterThanOrEqual(0);
       expect(node.y, node.id).toBeGreaterThanOrEqual(0);
@@ -76,7 +77,7 @@ describe('a list item bound by its fields', () => {
       city.SBIKE_STTS.reverse();
     }
     const after = await resolveDocument(pack.document, snapshotAdapters({ ...pack, snapshot: reordered }));
-    expect(after.nodes.map(n => n.widget.props)).toEqual(before.nodes.map(n => n.widget.props));
+    expect(placedIn(after).map(n => n.widget.props)).toEqual(placedIn(before).map(n => n.widget.props));
   });
 });
 
@@ -84,9 +85,10 @@ describe('a map whose anchors are coordinates', () => {
   it('reads each bike station back at its longitude and latitude, within the rounding of its place on the drawing', () => {
     const pack = SAMPLE_PACKS.find(p => p.id === 'gwanghwamun')!;
     for (const { id, lat, lng } of BIKE_STATIONS) {
-      const node = pack.document.nodes.find(n => n.id === `bike-${id}`)!;
+      const document = pack.document as CanvasView;
+      const node = document.nodes.find(n => n.id === `bike-${id}`)!;
       expect(node.anchored, id).toBe(true);
-      const coordinate = coordinateOf(pack.document.background, node)!;
+      const coordinate = coordinateOf(document.background, node)!;
       // Half a scene unit on this drawing is about a metre either way.
       expect(Math.abs(coordinate.x - lng), id).toBeLessThan(0.00002);
       expect(Math.abs(coordinate.y - lat), id).toBeLessThan(0.00002);

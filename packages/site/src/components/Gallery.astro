@@ -17,10 +17,11 @@ const time = (iso: string) =>
   new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-GB', {
     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Seoul', timeZoneName: 'short',
   }).format(new Date(iso));
+// A board drawn over a background keeps its drawing's proportions; a grid has none, and is as tall as its items.
 const cards = SAMPLE_PACKS.map(pack => {
-  const { width, height } = pack.document.background.image ?? { width: 4, height: 3 };
+  const image = pack.document.kind === 'canvas' ? (pack.document.background.image ?? { width: 4, height: 3 }) : undefined;
   const recorded = isInstallable(pack) ? g.recorded.replace('{time}', time(pack.snapshot.capturedAt)) : g.example;
-  return { pack, aspect: `${width} / ${height}`, recorded };
+  return { pack, aspect: image ? `aspect-ratio: ${image.width} / ${image.height}` : undefined, recorded };
 });
 ---
 
@@ -47,7 +48,7 @@ const cards = SAMPLE_PACKS.map(pack => {
             </dl>
             <p class="sample-summary">{pack.summary[locale]}</p>
           </header>
-          <div class="sample-board" style={`aspect-ratio: ${aspect}`} data-sample-board={pack.id} data-label={pack.title[locale]}>
+          <div class:list={['sample-board', { 'sample-board--grid': !aspect }]} style={aspect} data-sample-board={pack.id} data-label={pack.title[locale]}>
             <noscript>{pack.summary[locale]}</noscript>
           </div>
           <p class="sample-recorded">{recorded}</p>
@@ -115,6 +116,10 @@ const cards = SAMPLE_PACKS.map(pack => {
   .sample-board.live {
     aspect-ratio: auto !important;
     height: min(80vh, 760px);
+  }
+  /* A grid has no drawing to fit: it is as tall as its items, at the width it is given. */
+  .sample-board--grid.live {
+    height: auto;
   }
   .sample-recorded {
     margin: 0.5rem 0 0;
