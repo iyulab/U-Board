@@ -47,6 +47,12 @@ needs a key, a token or OAuth is set up by a person in the console, and the assi
   Chrome or Edge, or the one `UBOARD_BROWSER` names) through the server's own share viewer, so the picture is what
   viewers see. The token goes on the server's API requests only — never into the page or its address — and the
   server needs nothing extra to run.
+- **It tells the assistant what it sent.** Saving answers advice where parts would be drawn over one another, and
+  an error names what came where something else was expected («expected an array — got an object …») — an
+  assistant does not re-read its own output. A refused first document makes no board.
+- **It works with open models, not only hosted ones.** The tools' inputs declare their shape and never use the
+  empty schema for an open object, which some open-model tool-call parsers rewrite values under; the same board
+  has been drawn through it by a 27B open model served with an OpenAI-compatible API.
 - **Data comes through bindings only.** An element or widget never reaches a data source itself: a binding
   names a source and a value in its response, and the server reads it, within the addresses the
   installation allows.
