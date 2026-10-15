@@ -54,7 +54,7 @@ describe('documentToScene', () => {
     expect(unsized.height).toBeGreaterThan(0);
   });
 
-  it('draws a connector line between the current center of its two nodes', () => {
+  it('draws a connector line between the current edges of its two nodes, locked', () => {
     const scene = documentToScene(
       doc({
         nodes: [
@@ -66,7 +66,7 @@ describe('documentToScene', () => {
     );
 
     const line = scene.getObjects().find(o => o.type === 'line');
-    expect(line).toMatchObject({ points: [50, 50, 250, 50] });
+    expect(line).toMatchObject({ points: [100, 50, 200, 50], locked: true });
   });
 
   it('skips a connector referencing a node that does not exist, without throwing', () => {

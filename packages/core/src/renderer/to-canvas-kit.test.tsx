@@ -109,7 +109,7 @@ describe('toCanvasKit', () => {
     expect(overlays).toHaveLength(0);
   });
 
-  it('draws a line connecting the center of two nodes', () => {
+  it('draws a line between two nodes, from the edge of one box to the edge of the other', () => {
     const { scene } = toCanvasKit(
       doc({
         nodes: [
@@ -121,7 +121,56 @@ describe('toCanvasKit', () => {
     );
 
     const line = scene.getObjects().find(o => o.type === 'line');
-    expect(line).toMatchObject({ points: [50, 50, 250, 50] });
+    expect(line).toMatchObject({ points: [100, 50, 200, 50], stroke: '#94a3b8', strokeWidth: 2 });
+  });
+
+  it('draws a connector’s label on a chip at its middle, its style, and connectors of one pair side by side', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const { scene } = toCanvasKit(
+      doc({
+        nodes: [
+          { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+          { id: 'b', x: 300, y: 0, width: 100, height: 100, anchored: false, widget },
+        ],
+        connectors: [
+          { id: 'c1', fromNodeId: 'a', toNodeId: 'b', label: '26.78Kbps', style: { stroke: '#2563eb', strokeWidth: 3, dash: 'dashed' } },
+          { id: 'c2', fromNodeId: 'b', toNodeId: 'a' },
+        ],
+      })
+    );
+    const objects = scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+    const [first, second] = objects.filter(o => o.type === 'line');
+    expect(first).toMatchObject({ id: 'c1', stroke: '#2563eb', strokeWidth: 3, dash: [6, 4] });
+    expect(second).not.toHaveProperty('dash');
+    // side by side: the two lines run 8 apart, both along y
+    const ys = [first, second].map(line => (line.points as number[])[1]);
+    expect(Math.abs(ys[0] - ys[1])).toBeCloseTo(8);
+    const text = objects.find(o => o.id === 'c1#label');
+    const chip = objects.find(o => o.id === 'c1#chip');
+    expect(text).toMatchObject({ type: 'text', text: '26.78Kbps' });
+    expect(chip).toMatchObject({ type: 'rect', fill: '#ffffff' });
+        // labels come after every line, so no line crosses a label
+    expect(objects.indexOf(chip!)).toBeGreaterThan(objects.indexOf(second));
+  });
+
+  it('places the labels of side-by-side connectors at different points along the line, so they do not stack', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const { scene } = toCanvasKit(
+      doc({
+        nodes: [
+          { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+          { id: 'b', x: 400, y: 0, width: 100, height: 100, anchored: false, widget },
+        ],
+        connectors: [
+          { id: 'c1', fromNodeId: 'a', toNodeId: 'b', label: '26.78Kbps' },
+          { id: 'c2', fromNodeId: 'a', toNodeId: 'b', label: 'N/A' },
+        ],
+      })
+    );
+    const chips = (scene.getObjects() as readonly object[] as readonly Record<string, number>[]).filter(o => String(o.id).endsWith('#chip'));
+    const [one, two] = chips;
+    const apart = one.x + one.width <= two.x || two.x + two.width <= one.x;
+    expect(apart).toBe(true);
   });
 
   it('skips a connector referencing a node that does not exist, without throwing', () => {

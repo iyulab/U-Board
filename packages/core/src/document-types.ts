@@ -12,6 +12,8 @@ export type {
   ReferencePoint,
   Node,
   Connector,
+  ConnectorStyle,
+  ConnectorDash,
   Widget,
   Binding,
   ValueMap,

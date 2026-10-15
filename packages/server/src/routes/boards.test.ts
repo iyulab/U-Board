@@ -119,10 +119,10 @@ describe('boards routes', () => {
   it('refuses a field the document format does not have — it would be stored but never drawn', async () => {
     const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
     const node = (id: string) => ({ id, x: 0, y: 0, anchored: false, widget: { type: 'gauge' } });
-    const document = { kind: 'canvas', background: {}, nodes: [node('a'), node('b')], connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: '26 Kbps' }] };
+    const document = { kind: 'canvas', background: {}, nodes: [node('a'), node('b')], connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', color: 'blue' }] };
     const res = await request(app).put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie).send({ document });
     expect(res.status).toBe(400);
-    expect(res.body.issues).toEqual([{ path: '/connectors/0/label', message: expect.stringContaining('A connector has: id, fromNodeId, toNodeId.') }]);
+    expect(res.body.issues).toEqual([{ path: '/connectors/0/color', message: expect.stringContaining('A connector has: id, fromNodeId, toNodeId, label, style.') }]);
   });
 
   it('returns 404 for a board id that belongs to a different workspace', async () => {

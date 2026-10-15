@@ -151,12 +151,23 @@
       }
     },
     "connector": {
+      "description": "A line between two nodes, from the edge of one node's box to the edge of the other's. Connectors joining the same two nodes are drawn side by side.",
       "type": "object",
       "required": ["id", "fromNodeId", "toNodeId"],
       "properties": {
         "id": { "type": "string" },
         "fromNodeId": { "type": "string" },
-        "toNodeId": { "type": "string" }
+        "toNodeId": { "type": "string" },
+        "label": { "type": "string", "description": "Text at the line's middle, on a chip of the board's paper." },
+        "style": {
+          "description": "How the line is drawn; each part left out takes the board's connector look.",
+          "type": "object",
+          "properties": {
+            "stroke": { "type": "string", "description": "A colour in the forms a decoration takes." },
+            "strokeWidth": { "type": "number", "exclusiveMinimum": 0 },
+            "dash": { "enum": ["solid", "dashed", "dotted"] }
+          }
+        }
       }
     },
     "shape": {

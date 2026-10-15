@@ -40,7 +40,9 @@ an image scales down, and a table or a list scrolls within it. The box the autho
 board shows; a widget never spills over a neighbouring node.
 
 **Connector** — a line drawn between two nodes, used when the relationship between them needs to
-be shown (for example, a network link).
+be shown (for example, a network link). It runs from the edge of one node's box to the edge of the other's;
+it may carry a `label` (shown at its middle — a link's throughput) and a `style` (`stroke`, `strokeWidth`,
+`dash`: `solid`, `dashed` or `dotted`). Connectors joining the same two nodes are drawn side by side.
 
 **Decoration** — a purely visual shape (a rectangle or a text label) placed on a canvas view to
 express structure — grouping related nodes inside a labeled frame, for example. A decoration

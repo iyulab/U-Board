@@ -161,12 +161,27 @@ export interface Node extends Placed {
   anchored: boolean;
 }
 
-/** A line drawn between two nodes, used when the relationship between them needs to be shown. */
+/** A line drawn between two nodes, used when the relationship between them needs to be shown — from the edge of one
+ * node's box to the edge of the other's. Connectors joining the same two nodes are drawn side by side. */
 export interface Connector {
   id: string;
   fromNodeId: string;
   toNodeId: string;
+  /** Text at the line's middle, on a chip of the board's paper — a link's throughput, a pipe's flow. */
+  label?: string;
+  /** How the line is drawn; each part left out takes the board's connector look. */
+  style?: ConnectorStyle;
 }
+
+export interface ConnectorStyle {
+  /** A colour in the forms a decoration takes. */
+  stroke?: string;
+  /** Line width in scene units. */
+  strokeWidth?: number;
+  dash?: ConnectorDash;
+}
+
+export type ConnectorDash = 'solid' | 'dashed' | 'dotted';
 
 /** The visual content a node displays. A prepared widget's rendering is delegated to an external
  * widget library (docs/architecture.md) — `type` and `props` describe what that library should render

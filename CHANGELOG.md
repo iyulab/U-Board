@@ -25,6 +25,8 @@ do when upgrading. Each release's notes carry its section.
 
 ### Changed
 
+- **Connectors carry a label and a style** — a link's throughput at its middle, its colour, width and dash — and
+  run from edge to edge of their nodes' boxes; links between the same two nodes are drawn side by side.
 - **The share routes also take a workspace API token** of the board's workspace — so a program that may read the
   board (an assistant's tool server) sees it as its viewers do, through the share viewer, without a share link.
 - **Saving a board checks more** — a connector must join two nodes the board has, a field the document format does

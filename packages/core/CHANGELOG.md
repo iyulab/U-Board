@@ -27,6 +27,11 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **A connector can carry a `label` and a `style`** (`stroke`, `strokeWidth`, `dash`: `solid` | `dashed` | `dotted`),
+  and is drawn from the edge of one node's box to the edge of the other's — it used to run between their centres,
+  under both widgets. A label sits on a chip of the board's paper at the line's middle, over every line; connectors
+  joining the same two nodes are drawn side by side. The viewer and the editor draw connectors with one function.
+  (`ConnectorStyle`, `ConnectorDash` are exported types; the schema has both fields.)
 - **`lintViewDocument` says where a canvas board's parts would be drawn over one another** — overlapping node boxes,
   a text decoration under a node, a connector through a text, texts running together; at most ten, then how many more.
 - **`validateViewDocument` refuses a connector to a node the document does not have** (it was drawn as nothing).

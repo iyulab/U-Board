@@ -216,11 +216,18 @@ describe('validateViewDocument', () => {
     });
 
     it('refuses a field the format does not have, naming the fields that place has and what to do instead', () => {
-      const issues = strict(broken(d => { d.connectors[0].label = 'N/A'; }));
+      const issues = strict(broken(d => { d.connectors[0].color = 'blue'; }));
       expect(issues).toHaveLength(1);
-      expect(issues[0].path).toBe('/connectors/0/label');
-      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId.');
-      expect(issues[0].message).toContain('place a text decoration at its middle');
+      expect(issues[0].path).toBe('/connectors/0/color');
+      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId, label, style.');
+      expect(issues[0].message).toContain('style: { stroke, strokeWidth, dash }');
+    });
+
+    it('checks a connector’s label and style', () => {
+      expect(strict(broken(d => { d.connectors[0].label = '26 Kbps'; d.connectors[0].style = { stroke: '#2563eb', strokeWidth: 2, dash: 'dotted' }; }))).toEqual([]);
+      expect(strict(broken(d => { d.connectors[0].label = 3; d.connectors[0].style = { stroke: 'var(--x)', strokeWidth: 0, dash: 'dash', arrow: true }; })).map(i => i.path)).toEqual([
+        '/connectors/0/label', '/connectors/0/style/arrow', '/connectors/0/style/stroke', '/connectors/0/style/strokeWidth', '/connectors/0/style/dash',
+      ]);
     });
 
     it('finds unknown fields at every level', () => {
@@ -247,7 +254,7 @@ describe('validateViewDocument', () => {
     });
 
     it('ignores unknown fields when reading, so a document from a newer version still opens', () => {
-      expect(validateViewDocument(broken(d => { d.connectors[0].label = 'N/A'; d.decorations[0].fill = 'var(--x)'; }))).toEqual([]);
+      expect(validateViewDocument(broken(d => { d.connectors[0].color = 'blue'; d.decorations[0].fill = 'var(--x)'; }))).toEqual([]);
     });
 
     it('takes the decoration colours every canvas reads', () => {

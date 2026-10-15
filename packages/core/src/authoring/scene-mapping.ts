@@ -3,6 +3,7 @@ import type { CanvasView, Node, Shape, Widget } from '../view-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
 import { seedWidget } from './widget-catalog.js';
 import { onBoard } from '../renderer/board-appearance.js';
+import { connectorObjects } from '../renderer/connector-drawing.js';
 
 /** A newly-added rect decoration's default border — distinct from a node placeholder's blue
  * (`NODE_PLACEHOLDER_STROKE` below) so an author can tell a structural frame apart from a widget
@@ -60,28 +61,8 @@ export function documentToScene(doc: CanvasView): Scene {
     }
   }
 
-  const nodesById = new Map(doc.nodes.map(node => [node.id, node]));
-  for (const connector of doc.connectors) {
-    const from = nodesById.get(connector.fromNodeId);
-    const to = nodesById.get(connector.toNodeId);
-    if (!from || !to) continue; // a dangling reference is a malformed document, not a crash
-    scene.add({
-      type: 'line',
-      id: connector.id,
-      x: 0,
-      y: 0,
-      points: [
-        from.x + (from.width ?? DEFAULT_NODE_WIDTH) / 2,
-        from.y + (from.height ?? DEFAULT_NODE_HEIGHT) / 2,
-        to.x + (to.width ?? DEFAULT_NODE_WIDTH) / 2,
-        to.y + (to.height ?? DEFAULT_NODE_HEIGHT) / 2,
-      ],
-      stroke: '#94a3b8',
-      strokeWidth: 2,
-      // Follows its two nodes; dragging the line itself would move nothing in the document.
-      locked: true,
-    });
-  }
+  // Follows its two nodes; dragging a line or its label would move nothing in the document.
+  for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance, { locked: true })) scene.add(object);
 
   for (const node of doc.nodes) {
     scene.add({

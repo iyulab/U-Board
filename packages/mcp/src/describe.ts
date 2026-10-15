@@ -60,8 +60,9 @@ const CANVAS = `# Canvas boards
 - background: {} for none, or { image: { src, width, height } } — the drawing is placed at 0, 0 at its own size. src is a URL or a data: URL (an SVG drawn for the board: "data:image/svg+xml,…").
 
 ## Connectors
-- { id, fromNodeId, toNodeId } — a straight 2 px grey line between the centres of two nodes' boxes. Both ends must be nodes of /nodes.
-- A connector has no label, colour or route. To label a link, place a text decoration beside its middle (offset so it does not sit on the line).
+- { id, fromNodeId, toNodeId, label?, style?: { stroke?, strokeWidth?, dash?: "solid" | "dashed" | "dotted" } } — a straight line from the edge of one node's box to the edge of the other's (2 px grey unless styled). Both ends must be nodes of /nodes.
+- label: text at the line's middle on a chip of the paper (a link's "26.78Kbps"). Connectors joining the same two nodes are drawn side by side — one per link, no need to merge them.
+- A line aims at the box's centre: centre the icon in its box (label below it is fine) so the line meets the icon.
 
 ## Decorations (drawn under connectors and nodes, first one lowest)
 - rect: { id, type: "rect", x, y, width, height, fill?, stroke?, strokeWidth? } — no fill: transparent; stroke needs strokeWidth.

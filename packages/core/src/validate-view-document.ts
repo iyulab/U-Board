@@ -70,7 +70,8 @@ const CANVAS_FIELDS = ['kind', 'appearance', 'elements', 'background', 'nodes', 
 const GRID_FIELDS = ['kind', 'appearance', 'elements', 'columns', 'items'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'widget'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
-const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId'];
+const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'style'];
+const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash'];
 const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth'];
 const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill'];
 const WIDGET_FIELDS = ['type', 'props', 'bindings'];
@@ -111,6 +112,18 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
       for (const end of ['fromNodeId', 'toNodeId']) {
         if (typeof connector[end] !== 'string') doc.fail([...at, end], 'expected a string');
         else if (!nodeIds.has(connector[end] as string)) doc.fail([...at, end], `no node has the id "${connector[end] as string}" — a connector joins two nodes of /nodes`);
+      }
+      doc.optionalString(connector, [...at, 'label']);
+      if (connector.style !== undefined && doc.record(connector, [...at, 'style'])) {
+        const style = connector.style as Record<string, unknown>;
+        doc.known(style, [...at, 'style'], CONNECTOR_STYLE_FIELDS, 'connector style');
+        doc.optionalColor(style, [...at, 'style', 'stroke']);
+        if (style.strokeWidth !== undefined && !(Number.isFinite(style.strokeWidth) && (style.strokeWidth as number) > 0)) {
+          doc.fail([...at, 'style', 'strokeWidth'], 'expected a number greater than 0');
+        }
+        if (style.dash !== undefined && style.dash !== 'solid' && style.dash !== 'dashed' && style.dash !== 'dotted') {
+          doc.fail([...at, 'style', 'dash'], 'expected "solid", "dashed" or "dotted"');
+        }
       }
     });
   }
@@ -321,7 +334,7 @@ function checkShape(doc: Checker, shape: unknown, at: string[]): void {
 }
 
 /** What to do instead, for the fields a writer most often reaches for where the format has none. */
-const CONNECTOR_HINT = 'A connector is a plain line from one node’s centre to the other’s; to label it, place a text decoration at its middle.';
+const CONNECTOR_HINT = 'Its text goes in label, its colour, width and dash in style: { stroke, strokeWidth, dash }.';
 const SHAPE_HINT = 'A frame’s title is a text decoration over its top edge.';
 const WIDGET_HINT = 'A prepared widget’s data, mapping and options go inside props.';
 

@@ -23,6 +23,8 @@ All notable changes to this package are documented here. The format follows
   (new) holds sources and bindings. `widgets` lists one line per widget by category and takes a `query`;
   `widget:<type>` gives its examples as a board places them (`{ type, props }`).
 - An unknown id (404) answers with where to find the ids.
+- The `canvas` topic teaches a connector's `label` and `style`, and that links between the same nodes are drawn
+  side by side.
 - `validate`, `create_board` and `patch_board` advise on the prepared widgets they check or write, with the widget
   library's own check (`checkSpec`): a type it does not have (and a near spelling), a prop no widget reads, an option
   the widget does not have or of the wrong type. A prop a binding fills is not reported.

@@ -20,6 +20,7 @@ import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
 import { onBoard } from './board-appearance.js';
 import { NodeFrame } from './node-frame.js';
+import { connectorObjects } from './connector-drawing.js';
 
 /** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
  * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
@@ -64,26 +65,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     scene.add(onBoard(shape, doc.appearance));
   }
 
-  const nodesById = new Map(doc.nodes.map(node => [node.id, node]));
-  for (const connector of doc.connectors) {
-    const from = nodesById.get(connector.fromNodeId);
-    const to = nodesById.get(connector.toNodeId);
-    if (!from || !to) continue; // a dangling reference is a malformed document, not a crash
-    scene.add({
-      type: 'line',
-      id: connector.id,
-      x: 0,
-      y: 0,
-      points: [
-        from.x + (from.width ?? DEFAULT_NODE_WIDTH) / 2,
-        from.y + (from.height ?? DEFAULT_NODE_HEIGHT) / 2,
-        to.x + (to.width ?? DEFAULT_NODE_WIDTH) / 2,
-        to.y + (to.height ?? DEFAULT_NODE_HEIGHT) / 2,
-      ],
-      stroke: '#94a3b8',
-      strokeWidth: 2,
-    });
-  }
+  for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance)) scene.add(object);
 
   const at = now ?? Date.now();
   const overlays: ViewerOverlayItem[] = doc.nodes.map(node => ({
