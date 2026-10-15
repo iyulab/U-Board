@@ -22,9 +22,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/iyulab/U-Board",
+    "url": "git+https://github.com/iyulab/U-Board.git",
     "directory": "packages/mcp"
   },
+  "bugs": {
+    "url": "https://github.com/iyulab/U-Board/issues"
+  },
+  "homepage": "https://github.com/iyulab/U-Board/tree/main/packages/mcp#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "dashboard",
+    "ai",
+    "u-board"
+  ],
   "engines": {
     "node": ">=22.22.0"
   },
