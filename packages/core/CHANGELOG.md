@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-15
+
 ### Added
 
 - **A second view kind, the grid view** — widgets in order, each taking a span of a 12-column row (`GridView`,

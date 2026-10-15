@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-15
+
 ### Added
 
 - **Grid boards** — widgets in order, laid out to the width of the page or panel they are shown in, for an ordinary
