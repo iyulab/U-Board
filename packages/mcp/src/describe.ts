@@ -63,12 +63,13 @@ const CANVAS = `# Canvas boards
 
 ## Decorations (drawn under connectors and nodes, first one lowest)
 - rect: { id, type: "rect", x, y, width, height, fill?, stroke?, strokeWidth? } — no fill: transparent; stroke needs strokeWidth.
-- text: { id, type: "text", x, y, text, fontSize?: 16, fill? } — one line; x, y is the top-left of the text; about 0.55 × fontSize px per character.
+- text: { id, type: "text", x, y, text, fontSize?: 16, fill? } — one line; x, y is the top-left of the text; about 0.6 × fontSize px per character.
 - A labelled frame: a rect, then a text over its top edge with a small rect behind it in the paper's colour.
 - Colours: "#1f6feb", "#1f6feb33" (with alpha), rgb()/rgba(), hsl()/hsla(), a CSS name, "transparent", "none". Not var(--…): decorations draw on a canvas, which has no stylesheet.
 
 ## Order and appearance
 - Drawn from the bottom: background image, decorations (in order), connectors, nodes. Nodes are always on top.
+- Saving answers advice where parts would be drawn over one another (overlapping nodes, a text under a node or on a line) — fix it.
 - appearance "dark": dark paper; a text decoration with no fill takes a light ink. Pick decoration colours that read on that paper.`;
 
 const DATA = `# Data sources and bindings

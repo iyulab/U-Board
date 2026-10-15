@@ -29,6 +29,8 @@ do when upgrading. Each release's notes carry its section.
   not have is refused (the answer names the fields that place has), and a decoration colour must be one every canvas
   reads (hex, `rgb()`/`rgba()`, `hsl()`/`hsla()`, a colour name, `transparent`, `none`). Each was stored before and
   then drawn as nothing, or in the wrong colour. A board stored with such a field is saved again once it is removed.
+- Saving a canvas board answers, with its advice, where parts would be drawn over one another — overlapping nodes, a
+  text under a node or crossed by a connector, texts running together.
 - A decoration colour of `none` paints nothing — it used to come out black, or in the colour of the decoration drawn
   before it.
 

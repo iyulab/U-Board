@@ -27,6 +27,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **`lintViewDocument` says where a canvas board's parts would be drawn over one another** — overlapping node boxes,
+  a text decoration under a node, a connector through a text, texts running together; at most ten, then how many more.
 - **`validateViewDocument` refuses a connector to a node the document does not have** (it was drawn as nothing).
 - **`validateViewDocument(value, { strict: true })`** — for a document about to be written: it also refuses a field
   the format does not have, naming the fields that place has, and a decoration colour outside hex, `rgb()`/`rgba()`,

@@ -655,7 +655,11 @@ interface ViewDocumentAdvice { path: string; message: string }
 function lintViewDocument(doc: ViewDocument): ViewDocumentAdvice[];
 ```
 
-Advice on a valid document — none of it stops it being saved or drawn: an element defined but placed
+Advice on a valid document — none of it stops it being saved or drawn. On a canvas board, first where parts would
+be drawn over one another: two nodes whose boxes overlap (a node without a size counts at 160 × 100), a text
+decoration under a node (nodes draw over decorations), a connector running through a text, two texts running into
+each other — a text's box estimated as one line, 0.6 × its font size per character. At most ten of these, then one
+line saying how many more. Then an element defined but placed
 nowhere, more than 30 script elements on one board (each runs in a frame of its own), an element whose
 markup, script and CSS together pass 32 KB.
 
