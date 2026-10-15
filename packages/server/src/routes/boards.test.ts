@@ -122,7 +122,7 @@ describe('boards routes', () => {
     const document = { kind: 'canvas', background: {}, nodes: [node('a'), node('b')], connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', color: 'blue' }] };
     const res = await request(app).put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie).send({ document });
     expect(res.status).toBe(400);
-    expect(res.body.issues).toEqual([{ path: '/connectors/0/color', message: expect.stringContaining('A connector has: id, fromNodeId, toNodeId, label, style, bindings.') }]);
+    expect(res.body.issues).toEqual([{ path: '/connectors/0/color', message: expect.stringContaining('A connector has: id, fromNodeId, toNodeId, label, labelAt, style, bindings.') }]);
   });
 
   it('returns 404 for a board id that belongs to a different workspace', async () => {
