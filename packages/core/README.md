@@ -96,7 +96,8 @@ A board’s triggers (`triggers` — a part clicked, an element’s event, a sta
 `ViewerPage`. What they ask of the page is the host’s: `onTrigger` receives an `emit`’s event (its name, the part and
 state it came from, never a value), `onNavigate` a request to show another board — nothing happens without it — and
 `linkOrigins` narrows where a trigger’s link may go. `boardId` is what `{{board}}` in a link becomes. `AuthoringView`
-takes the same props and runs triggers in View only.
+takes the same props and runs triggers in View only; its property panel edits a part’s states and triggers, and its
+board panel the triggers that run when the board opens.
 
 How long ago a value was obtained is measured against `clock` (default `Date.now`). Its
 `observedAt` comes from the source's side, so on a screen whose own clock may drift, pass a clock

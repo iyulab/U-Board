@@ -709,7 +709,8 @@ triggers: [
 - A trigger naming a part the board does not place does nothing; validation names its path.
 - Each trigger fires at most once a second.
 
-`ViewerPage` runs a board’s triggers; `AuthoringView` runs them in View only. Both take the host’s side:
+`ViewerPage` runs a board’s triggers; `AuthoringView` runs them in View only, and edits them — on the selected part in its
+property panel, the board’s own (`open`) in its board panel — as it edits a part’s states. Both take the host’s side:
 
 | Prop | |
 |---|---|

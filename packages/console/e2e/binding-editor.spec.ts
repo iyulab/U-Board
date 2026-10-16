@@ -58,7 +58,7 @@ test('binds a node to a live value via the property panel and its path explorer'
 
     await page.getByText('바인딩 저장', { exact: true }).click();
     // 바인딩 목록의 <code>data.value</code> 항목만 exact로 고른다. 목록은 무엇에 묶였는지도 보여 준다.
-    await expect(page.getByText('data.value', { exact: true })).toBeVisible();
+    await expect(page.getByRole('code').filter({ hasText: /^data\.value$/ })).toBeVisible();
     await expect(page.getByText('· /status /status', { exact: true })).toBeVisible();
 
     // 같은 필드를 한 번 더 — 이번엔 값 매핑으로 위젯의 수준(level)에. 원천의 "running"이 "success"로 보여야 한다.
@@ -73,7 +73,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     await page.getByText('미리보기', { exact: true }).click();
     await expect(page.getByText('값: running → success', { exact: true })).toBeVisible();
     await page.getByText('바인딩 저장', { exact: true }).click();
-    await expect(page.getByText('data.level', { exact: true })).toBeVisible();
+    await expect(page.getByRole('code').filter({ hasText: /^data\.level$/ })).toBeVisible();
     await expect(page.getByText('· 매핑됨')).toBeVisible();
     // 편집기에 제자리로 그려진 위젯이 매핑된 수준으로 그려진다.
     await expect(page.locator('[data-level="success"]').first()).toBeVisible();
@@ -87,7 +87,7 @@ test('binds a node to a live value via the property panel and its path explorer'
     // 다시 열린 보드는 내용에 맞춰 fit된 상태로 열린다 — 노드의 화면 위치가 처음과 다르다.
     await clickFirstNode(page);
     await expect(page.getByLabel('위젯 타입')).toHaveValue('status');
-    await expect(page.getByText('data.value', { exact: true })).toBeVisible();
+    await expect(page.getByRole('code').filter({ hasText: /^data\.value$/ })).toBeVisible();
     await expect(page.getByText('· 매핑됨')).toBeVisible(); // 저장된 문서에 매핑이 남았다
   } finally {
     mockServer.close();

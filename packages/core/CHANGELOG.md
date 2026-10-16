@@ -6,6 +6,15 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `AuthoringView` edits states and triggers: a **States** section in the property panel (which binding, the value →
+  state rows of the value-map form, each state’s ring colour, blink and hide; renaming a state carries its look;
+  removing the binding the states are read from takes them away in the same edit) and a **Triggers** section (the
+  selected part’s triggers, and in the board panel the ones that run when the board opens). A trigger is written once
+  it is complete and valid. Style contract: `ub-panel__section`, `ub-panel__state-looks`, `ub-panel__state-look`,
+  `ub-panel__trigger`, `ub-panel__trigger-action`.
+
 ### Fixed
 
 - Deleting a part in `AuthoringView` (`removeParts`, `removeGridItem`) also removes the triggers on it, those waiting on
