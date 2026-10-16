@@ -29,11 +29,17 @@ describe('applyJsonPatch — RFC 6902 Appendix A', () => {
 
   it.each([
     ['A.9 test a value: error', { baz: 'qux' }, [{ op: 'test', path: '/baz', value: 'bar' }], 'test failed at /baz'],
-    ['A.12 add to a nonexistent target', { foo: 'bar' }, [{ op: 'add', path: '/baz/bat', value: 'qux' }], 'nothing at /baz — "add" makes only the last part of its path: add that first'],
+    ['A.12 add to a nonexistent target', { foo: 'bar' }, [{ op: 'add', path: '/baz/bat', value: 'qux' }], 'nothing at /baz — the document has foo — "add" makes only the last part of its path: add that first'],
     ['"/" taken for the whole document', { a: 1 }, [{ op: 'replace', path: '/', value: {} }], 'nothing at / — the whole document is the path "", not "/"'],
     ['A.15 compare strings and numbers', { '/': 9, '~1': 10 }, [{ op: 'test', path: '/~01', value: '10' }], 'test failed'],
     ['remove what is not there', { a: 1 }, [{ op: 'remove', path: '/b' }], 'nothing at /b'],
-    ['replace a member that is not there', { a: {} }, [{ op: 'replace', path: '/a/b', value: 1 }], 'nothing at /a/b — "replace" changes a value that is there; to set one that is not, use "add"'],
+    ['replace a member that is not there', { a: {} }, [{ op: 'replace', path: '/a/b', value: 1 }], 'nothing at /a/b — /a is empty — "replace" changes a value that is there; to set one that is not, use "add"'],
+    [
+      'a member guessed one level too high',
+      { nodes: [{ id: 'g', x: 0, widget: { type: 'chart.gantt', props: { data: [] } } }] },
+      [{ op: 'replace', path: '/nodes/0/props/data', value: [1] }],
+      'nothing at /nodes/0/props — /nodes/0 has id, x, widget; "props" is at /nodes/0/widget/props',
+    ],
     ['an index past the end', { a: [1] }, [{ op: 'replace', path: '/a/5', value: 2 }], 'no item at /a/5 — the list has 1 item (0–0)'],
     ['an index into an empty list', { a: [] }, [{ op: 'remove', path: '/a/0' }], 'no item at /a/0 — the list is empty'],
     ['a leading zero index', { a: [1, 2] }, [{ op: 'remove', path: '/a/01' }], 'no item at /a/01'],

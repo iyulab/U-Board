@@ -102,13 +102,25 @@ function get(root: unknown, tokens: string[]): unknown {
       at = at[index];
     } else if (isObject(at)) {
       // "/" names a member whose key is empty — not the whole document, which is "".
-      if (!Object.hasOwn(at, token)) throw new Error(`nothing at ${where()}${where() === '/' ? ' — the whole document is the path "", not "/"' : ''}`);
+      if (!Object.hasOwn(at, token)) throw new Error(`nothing at ${where()} — ${where() === '/' ? 'the whole document is the path "", not "/"' : membersOf(at, tokens.slice(0, i), token)}`);
       at = at[token];
     } else {
       throw new Error(`nothing at ${where()} — its parent is not an object or array`);
     }
   }
   return at;
+}
+
+/** What an object a pointer went into does have — a writer that guessed a member's place (a node's `props`, which are
+ *  its widget's) sees where it is instead of only that it is not there. */
+function membersOf(object: Record<string, unknown>, at: string[], missing: string): string {
+  const keys = Object.keys(object);
+  const here = at.length === 0 ? 'the document' : pointerOf(at);
+  if (keys.length === 0) return `${here} is empty`;
+  const MAX = 12;
+  const listed = keys.slice(0, MAX).join(', ') + (keys.length > MAX ? `, … (${keys.length} in all)` : '');
+  const inside = keys.find(key => isObject(object[key]) && !Array.isArray(object[key]) && Object.hasOwn(object[key] as object, missing));
+  return `${here} has ${listed}${inside === undefined ? '' : `; "${missing}" is at ${pointerOf([...at, inside, missing])}`}`;
 }
 
 /** Throws unless there is a value to replace at `tokens` — saying, when only its last part is missing from an object,
