@@ -57,6 +57,8 @@ export interface GridBoardProps {
   /** The items a click does something on (`Triggers.activatable`), and what it does. */
   activatable?: ReadonlySet<string>;
   onItemActivate?: (item: string) => void;
+  /** An event an item's element raised. */
+  onElementEvent?: (item: string, name: string) => void;
 }
 
 /**
@@ -71,7 +73,7 @@ function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | 
   return name === undefined ? undefined : doc.elements?.[name]?.size?.height;
 }
 
-export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell, activatable, onItemActivate }: GridBoardProps) {
+export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell, activatable, onItemActivate, onElementEvent }: GridBoardProps) {
   return (
     <div className="ub-grid" role="region" aria-label={ariaLabel} data-appearance={doc.appearance ?? 'light'}>
       <style href="u-board-grid" precedence="u-board">
@@ -85,7 +87,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} />,
+                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} />,
                 index
               )}
             </div>

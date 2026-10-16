@@ -25,7 +25,16 @@ export type ElementFrameMessage =
   | { type: 'ub:props'; props: unknown; appearance: 'light' | 'dark'; theme: Record<string, string> }
   | { type: 'ub:error'; message: string }
   | { type: 'ub:ping' }
-  | { type: 'ub:pong' };
+  | { type: 'ub:pong' }
+  | { type: 'ub:event'; name: string };
+
+/** The name of an element event a frame sent (`ub.emit(name)` → `{ type: 'ub:event', name }`): text of 1 to 64
+ *  characters, or `undefined` for anything else — a frame's message is the element's code speaking, not to be trusted. */
+export function elementEventName(message: unknown): string | undefined {
+  if (typeof message !== 'object' || message === null) return undefined;
+  const { type, name } = message as { type?: unknown; name?: unknown };
+  return type === 'ub:event' && typeof name === 'string' && name.length >= 1 && name.length <= 64 ? name : undefined;
+}
 
 /** How long a loop in a script element's code may run without finishing before it is stopped. */
 export const ELEMENT_LOOP_LIMIT_MS = 1000;
@@ -43,7 +52,8 @@ export const ELEMENT_FRAME_RUNTIME = `(function () {
   function call(handler) { try { handler(last.props, last.appearance); } catch (error) { report(error); } }
   window.ub = {
     onProps: function (handler) { handlers.push(handler); if (last) call(handler); },
-    reportError: report
+    reportError: report,
+    emit: function (name) { send({ type: 'ub:event', name: String(name) }); }
   };
   addEventListener('message', function (event) {
     var message = event.data;

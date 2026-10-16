@@ -88,6 +88,8 @@ export interface NodeFrameProps {
   looks?: Record<string, StateLook>;
   /** What a click on the part does (a board’s `click` trigger) — the frame then is a button, Enter and Space included. */
   onActivate?: () => void;
+  /** An event the part's element raised (`ElementView`'s `onEvent`). */
+  onElementEvent?: (name: string) => void;
 }
 
 /**
@@ -102,7 +104,7 @@ export interface NodeFrameProps {
  * When it has states, the one it is in is named on it and drawn by its look around the frame — never in place of the
  * quality’s border.
  */
-export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, onActivate }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, onActivate, onElementEvent }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -137,7 +139,7 @@ export function NodeFrame({ widget, appearance, accent, symbols, qualityText = D
       {...(state !== undefined && { 'data-state': state })}
     >
       {element !== undefined ? (
-        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} symbols={symbols} />
+        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} symbols={symbols} onEvent={onElementEvent} />
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.

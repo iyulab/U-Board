@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
-import type { ElementFrameMessage } from '../elements/frame.js';
+import { elementEventName, type ElementFrameMessage } from '../elements/frame.js';
 import { elementDefinitionHash, elementFrameLabel } from '../elements/definition-hash.js';
 import { boardTheme, renderTemplateElement } from './element-template.js';
 
@@ -68,6 +68,9 @@ export interface ElementViewProps {
   accent?: string;
   /** The board's symbols, for a template element's `<use>`s. */
   symbols?: Record<string, SymbolDefinition>;
+  /** An event the element raised: `ub.emit(name)` in a script element, or a click on a part of a template element's
+   *  markup marked `data-ub-event="name"`. */
+  onEvent?: (name: string) => void;
 }
 
 /**
@@ -76,20 +79,42 @@ export interface ElementViewProps {
  * element runs in a sandboxed frame its server builds — a frame of its own origin, with no network — and receives
  * its props by message. An element it cannot draw says so in its box rather than leaving it blank.
  */
-export function ElementView({ definition, name, props, appearance = 'light', accent, symbols }: ElementViewProps) {
+export function ElementView({ definition, name, props, appearance = 'light', accent, symbols, onEvent }: ElementViewProps) {
   const frames = useContext(ElementFrameContext);
   const theme = useMemo(() => boardTheme(appearance, accent), [appearance, accent]);
   if (!definition) return <div style={NOTICE_STYLE} data-element-notice="">{`No element “${name}”`}</div>;
   if (definition.render === 'script') {
     if (!frames) return <div style={NOTICE_STYLE} data-element-notice="">{`“${name}” runs a script — shown where the board is served`}</div>;
-    return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} theme={theme} />;
+    return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} theme={theme} onEvent={onEvent} />;
   }
-  return <TemplateElement definition={definition} name={name} props={props} theme={theme} symbols={symbols} />;
+  return <TemplateElement definition={definition} name={name} props={props} theme={theme} symbols={symbols} onEvent={onEvent} />;
 }
 
-function TemplateElement({ definition, name, props, theme, symbols }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string>; symbols?: Record<string, SymbolDefinition> }) {
+function TemplateElement({ definition, name, props, theme, symbols, onEvent }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string>; symbols?: Record<string, SymbolDefinition>; onEvent?: (name: string) => void }) {
   const host = useRef<HTMLDivElement>(null);
   const origins = useContext(ElementOriginsContext);
+  const latest = useRef(onEvent);
+  useLayoutEffect(() => {
+    latest.current = onEvent;
+  });
+  // A click inside the markup reaches the host retargeted; its path still names the part clicked. The nearest part
+  // marked `data-ub-event` names the event.
+  useLayoutEffect(() => {
+    const element = host.current;
+    if (!element) return;
+    const onClick = (event: Event) => {
+      for (const target of event.composedPath()) {
+        if (target === element) return;
+        const named = target instanceof Element ? target.getAttribute('data-ub-event') : null;
+        if (named) {
+          if (named.length <= 64) latest.current?.(named);
+          return;
+        }
+      }
+    };
+    element.addEventListener('click', onClick);
+    return () => element.removeEventListener('click', onClick);
+  }, []);
   useLayoutEffect(() => {
     const element = host.current;
     if (!element) return;
@@ -101,7 +126,7 @@ function TemplateElement({ definition, name, props, theme, symbols }: { definiti
 
 /** A script element's frame. `sandbox="allow-scripts"` without `allow-same-origin` gives it an origin of its own: it
  *  cannot reach this page, its storage or the viewer's session. A frame off screen is not loaded until it nears it. */
-function ScriptElement({ name, definition, frames, props, appearance, theme }: { name: string; definition: ElementDefinition; frames: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string> }) {
+function ScriptElement({ name, definition, frames, props, appearance, theme, onEvent }: { name: string; definition: ElementDefinition; frames: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string>; onEvent?: (name: string) => void }) {
   const [url, setUrl] = useState<string>();
 
   useEffect(() => {
@@ -117,13 +142,17 @@ function ScriptElement({ name, definition, frames, props, appearance, theme }: {
   // A frame of its own for each address: what one frame said (ready, an error) does not carry over to the next.
   return (
     <div style={{ ...FILL, position: 'relative' }} data-element={name}>
-      {url && <ElementFrame key={url} name={name} url={url} props={props} appearance={appearance} theme={theme} />}
+      {url && <ElementFrame key={url} name={name} url={url} props={props} appearance={appearance} theme={theme} onEvent={onEvent} />}
     </div>
   );
 }
 
-function ElementFrame({ name, url, props, appearance, theme }: { name: string; url: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string> }) {
+function ElementFrame({ name, url, props, appearance, theme, onEvent }: { name: string; url: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string>; onEvent?: (name: string) => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
+  const latest = useRef(onEvent);
+  useLayoutEffect(() => {
+    latest.current = onEvent;
+  });
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [silent, setSilent] = useState(false);
@@ -142,6 +171,10 @@ function ElementFrame({ name, url, props, appearance, theme }: { name: string; u
         setHeartbeat(message.heartbeat === true);
       } else if (message?.type === 'ub:pong') unanswered.current = undefined;
       else if (message?.type === 'ub:error') setError(String(message.message).slice(0, 300));
+      else {
+        const named = elementEventName(message);
+        if (named !== undefined) latest.current?.(named);
+      }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);

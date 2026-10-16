@@ -160,13 +160,25 @@ describe('ElementView', () => {
   });
 });
 
+describe('ElementView — events of a template element', () => {
+  it('names the event of the marked part a click lands in, and nothing for a click elsewhere', () => {
+    const onEvent = vi.fn();
+    const valve: ElementDefinition = { render: 'template', template: '<svg viewBox="0 0 10 10"><g data-ub-event="open-valve"><rect width="5" height="5"/></g><circle r="2"/></svg>' };
+    const { container } = render(<ElementView definition={valve} name="valve" props={{}} onEvent={onEvent} />);
+    const root = container.querySelector('[data-element]')!.shadowRoot!;
+    act(() => root.querySelector('rect')!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true })));
+    act(() => root.querySelector('circle')!.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true })));
+    expect(onEvent.mock.calls).toEqual([['open-valve']]);
+  });
+});
+
 describe('ElementView — script element', () => {
   const chart: ElementDefinition = { render: 'script', script: 'ub.onProps(draw)' };
 
-  async function mounted(props: unknown = { value: 3 }) {
+  async function mounted(props: unknown = { value: 3 }, onEvent?: (name: string) => void) {
     const view = render(
       <ElementHost frames="/api/element-frames/b1">
-        <ElementView definition={chart} name="chart" props={props} appearance="dark" />
+        <ElementView definition={chart} name="chart" props={props} appearance="dark" onEvent={onEvent} />
       </ElementHost>,
     );
     const frame = await waitFor(() => {
@@ -212,6 +224,16 @@ describe('ElementView — script element', () => {
       </ElementHost>,
     );
     expect(posted).toHaveBeenLastCalledWith(expect.objectContaining({ props: { value: 4 } }), '*');
+  });
+
+  it('hands on the events its own frame raises, and only those', async () => {
+    const onEvent = vi.fn();
+    const { frame } = await mounted({ value: 3 }, onEvent);
+    const send = (data: unknown, source: MessageEventSource | null) => act(() => window.dispatchEvent(new MessageEvent('message', { data, source })));
+    send({ type: 'ub:event', name: 'reset' }, frame.contentWindow);
+    send({ type: 'ub:event', name: 'reset' }, window); // not from this frame
+    send({ type: 'ub:event', name: 'x'.repeat(65) }, frame.contentWindow);
+    expect(onEvent.mock.calls).toEqual([['reset']]);
   });
 
   it('shows what the element reports going wrong', async () => {

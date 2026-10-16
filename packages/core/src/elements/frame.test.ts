@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ELEMENT_FRAME_RUNTIME, elementFrameHtml, elementFrameScripts } from './frame';
+import { ELEMENT_FRAME_RUNTIME, elementEventName, elementFrameHtml, elementFrameScripts } from './frame';
 import { canonicalJson, elementDefinitionHash, elementFrameLabel } from './definition-hash';
 
 describe('elementFrameHtml', () => {
@@ -46,5 +46,18 @@ describe('elementDefinitionHash', () => {
 
   it('writes nested keys in order and leaves out what is undefined', () => {
     expect(canonicalJson({ b: { d: 1, c: [2, { f: 3, e: undefined }] }, a: 'x' })).toBe('{"a":"x","b":{"c":[2,{"f":3}],"d":1}}');
+  });
+});
+
+describe('element events', () => {
+  it('gives the runtime an emit that sends the event by name', () => {
+    expect(ELEMENT_FRAME_RUNTIME).toContain("emit: function (name) { send({ type: 'ub:event', name: String(name) }); }");
+  });
+
+  it('takes an event name of 1 to 64 characters of text, and nothing else', () => {
+    expect(elementEventName({ type: 'ub:event', name: 'reset' })).toBe('reset');
+    for (const message of [{ type: 'ub:event', name: '' }, { type: 'ub:event', name: 'x'.repeat(65) }, { type: 'ub:event', name: 3 }, { type: 'ub:error', name: 'x' }, null, 'ub:event']) {
+      expect(elementEventName(message), JSON.stringify(message)).toBeUndefined();
+    }
   });
 });

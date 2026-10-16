@@ -133,7 +133,7 @@ export function ViewerPage({
     [resolved, focusOn]
   );
   const triggers = useTriggers(document, resolved, { boardId, onTrigger, onNavigate, linkOrigins, focus });
-  const { activatable, activate } = triggers;
+  const { activatable, activate, elementEvent } = triggers;
   // Fit whenever a document covering a new area is shown — not on a preview refresh, which is only
   // new values for the same document, nor on a document replaced within the same area.
   useEffect(() => {
@@ -148,11 +148,11 @@ export function ViewerPage({
     const now = readClock();
     setDrawn(
       resolved.kind === 'canvas'
-        ? { kind: 'canvas', preview: toCanvasKit(resolved, { qualityText: labels.qualityText, now, locale: labels.locale, activatable, onNodeActivate: activate }), now }
+        ? { kind: 'canvas', preview: toCanvasKit(resolved, { qualityText: labels.qualityText, now, locale: labels.locale, activatable, onNodeActivate: activate, onElementEvent: elementEvent }), now }
         : { kind: 'grid', doc: resolved, now }
     );
     reportState(boardStateOf(resolved, { now }));
-  }, [resolved, labels, activatable, activate]);
+  }, [resolved, labels, activatable, activate, elementEvent]);
 
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>
@@ -185,6 +185,7 @@ export function ViewerPage({
                 locale={labels.locale}
                 activatable={activatable}
                 onItemActivate={activate}
+                onElementEvent={elementEvent}
               />
             )}
           </div>
