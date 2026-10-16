@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest';
+import '../../test-support/react-key-warnings';
 
 // jsdom doesn't implement <dialog>'s showModal()/close() (same class of gap as
 // HTMLAnchorElement.prototype.click in packages/core's AuthoringView.test.tsx) — real modal

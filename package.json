@@ -14,7 +14,7 @@
   "scripts": {
     "postinstall": "npm run build:lib --workspace=packages/core",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "oxlint packages scripts",
+    "lint": "oxlint packages scripts test-support",
     "test": "npm run test --workspaces --if-present",
     "test:watch": "npm run test:watch --workspaces --if-present",
     "test:e2e": "npm run test:e2e --workspaces --if-present",

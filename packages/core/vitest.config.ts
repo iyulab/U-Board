@@ -21,5 +21,6 @@ export default defineConfig({
     // @playwright/test's own `test`/`expect`, which vitest can't run (see playwright.config.ts;
     // upstream/u-widgets' vitest config scopes the same way for the same reason).
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    setupFiles: ['./vitest.setup.ts'],
   },
 });
