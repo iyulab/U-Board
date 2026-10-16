@@ -155,6 +155,29 @@ describe('u-board-mcp', () => {
     expect(asked).toEqual([{ request: { board: 'b1', focus: '/items/0', width: 1600, height: 900 }, kind: 'grid' }]);
   });
 
+  it('answers with the picture what saving advised, so a clean picture never reads as a board without faults', async () => {
+    const overlapping = { x: 0, y: 0, anchored: false, widget: { type: 'gauge' } };
+    server.boards.set('b3', {
+      name: 'Crowded',
+      revision: 2,
+      document: { kind: 'canvas', background: {}, connectors: [], nodes: [{ id: 'n1', ...overlapping }, { id: 'n2', ...overlapping }, { id: 'n3', ...overlapping, x: 900 }] },
+    });
+    const looker = { look: async () => ({ image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems: [], quality: {}, console: [] } }) };
+    const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), looker);
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const viewer = new Client({ name: 'test', version: '0' });
+    await Promise.all([mcp.connect(b), viewer.connect(a)]);
+    const look = async (args: Record<string, unknown>) =>
+      JSON.parse(((await viewer.callTool({ name: 'look', arguments: { board: 'b3', ...args } })) as { content: Array<{ text?: string }> }).content[1].text!);
+
+    const whole = await look({});
+    expect(whole.problems).toEqual([]);
+    expect(whole.advice).toEqual([expect.objectContaining({ path: '/nodes/0', message: expect.stringContaining('overlaps node "n2" (/nodes/1)') })]);
+    // Up close, only what concerns that part — named either way.
+    expect((await look({ focus: '/nodes/1' })).advice).toHaveLength(1);
+    expect((await look({ focus: '/nodes/2' })).advice).toEqual([]);
+  });
+
   it('says when an operation or a document is wrapped in its own first key — the commonest shape mistake', async () => {
     const wrappedOp = (await client.callTool({ name: 'patch_board', arguments: { board: 'b1', patch: [{ op: { op: 'add', path: '/x', value: 1 } }] } })) as { content: { text: string }[]; isError?: boolean };
     expect(wrappedOp.isError).toBe(true);

@@ -34,6 +34,11 @@ function failed(error: unknown): ToolResult {
   return { content: [{ type: 'text', text: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }) }], isError: true };
 }
 
+/** Whether advice is about the part at `focus`: at it or inside it, or naming it ("overlaps node … (/nodes/3)"). */
+function concerns(advice: { path?: string; message: string }, focus: string): boolean {
+  return advice.path === focus || !!advice.path?.startsWith(`${focus}/`) || advice.message.includes(`(${focus})`);
+}
+
 async function tool(run: () => Promise<unknown> | unknown): Promise<ToolResult> {
   try {
     return ok(await run());
@@ -200,7 +205,7 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
       'look',
       {
         description:
-          'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (an element’s error, a widget whose content runs past its box, values not live). Look after a change, then fix what you see. `focus` a node, grid item, connector or decoration to see it up close.',
+          'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box, values not live) and the advice the board’s saving gave (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a node, grid item, connector or decoration to see it up close — and only its advice.',
         inputSchema: z.strictObject({
           board: boardId,
           focus: z.string().max(200).optional().describe('A JSON Pointer to one part: "/nodes/3", "/items/0", "/connectors/2", "/decorations/5".'),
@@ -213,10 +218,12 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
         try {
           const found = await client.getBoard(board);
           const { image, report } = await looker.look({ board, focus, appearance, width, height }, found.document);
+          // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
+          const advice = [...lintViewDocument(found.document), ...widgetAdvice(found.document)].filter(a => !focus || concerns(a, focus));
           return {
             content: [
               { type: 'image', data: image, mimeType: 'image/png' },
-              { type: 'text', text: JSON.stringify({ revision: found.revision, ...report }) },
+              { type: 'text', text: JSON.stringify({ revision: found.revision, ...report, advice }) },
             ],
           };
         } catch (error) {

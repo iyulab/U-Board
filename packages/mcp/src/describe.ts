@@ -32,7 +32,7 @@ const RULES = `# Writing a U-Board board
    Each save is a new revision; a new board is revision 1, and create_board with a document saves it as revision 2.
 4. Read the answer: the new revision and advice — act on the advice. A 412 means someone saved since — get_board again and redo the patch.
 5. validate({ document } | { board, patch }) checks without saving, exactly as saving does.
-6. look({ board }) after a change — a picture as viewers see it, and what went wrong while drawing. Fix what you see; focus one part to see it up close.
+6. look({ board }) after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands. Fix what you see and what it advises — the board is done when both are empty; focus one part to see it up close.
 
 ## JSON Patch
 - \`add\` sets an object member whether or not it exists, and inserts into an array ("/items/-" appends, "/items/0" prepends).

@@ -10,6 +10,12 @@ All notable changes to this package are documented here. The format follows
 
 - The `canvas` topic teaches a frame name's own colour, `labelFill`.
 
+### Fixed
+
+- `look` answers the advice that still stands with its picture — parts drawn over one another, as saving reported
+  them. A picture with no drawing problems no longer reads as a board without faults; with `focus`, only that part's
+  advice.
+
 ## [0.4.0] - 2026-10-16
 
 ### Added
