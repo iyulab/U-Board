@@ -22,6 +22,7 @@ import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { ResolvedCanvasView } from '../resolve-document.js';
 import { focusPart, useTriggers } from '../viewer/use-triggers.js';
 import { PropertyPanel, withPartChange, type PartChange } from './PropertyPanel.js';
+import { triggerEditing } from './TriggersEditor.js';
 import { BoardPanel } from './BoardPanel.js';
 import { ElementsPanel } from './ElementsPanel.js';
 import { SymbolsPanel } from './SymbolsPanel.js';
@@ -429,6 +430,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               connectorLabels={connectorLabels}
               onChange={handleWidgetChange}
               onPartChange={handlePartChange}
+              triggers={triggerEditing(doc, updateDoc)}
               background={doc.background}
               onNodeChange={handleNodeChange}
               elements={doc.elements}
@@ -444,6 +446,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               onAppearanceChange={handleAppearanceChange}
               accent={doc.accent}
               onAccentChange={handleAccentChange}
+              triggers={triggerEditing(doc, updateDoc)}
               referencePoints={doc.background.image?.referencePoints}
               onReferencePointsChange={handleReferencePointsChange}
               anchors={

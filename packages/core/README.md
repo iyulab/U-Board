@@ -231,6 +231,9 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-panel__advanced`, `ub-panel__json` | The folded "edit as JSON" section, and its editor |
 | `ub-panel__bindings`, `ub-panel__binding`, `ub-panel__binding-path`, `ub-panel__binding-ref`, `ub-panel__binding-tag` | The list of bindings, one entry, its prop path, what it points at, and its "mapped" tag |
 | `ub-panel__binding-form`, `ub-panel__value-map`, `ub-panel__map-row`, `ub-panel__actions` | The binding form, its value map, a row of the map, and its buttons |
+| `ub-panel__section` | A section of a panel under its own subheading — a part’s states, its triggers |
+| `ub-panel__state-looks`, `ub-panel__state-look` | How each state is shown, and one state’s row |
+| `ub-panel__trigger`, `ub-panel__trigger-action` | One trigger, and one of its actions |
 | `ub-panel__preview`, `ub-panel__quality` | A binding's previewed value, and its connection quality |
 | `ub-json-tree`, `ub-json-tree__leaf` | The response explorer, and a value in it to pick |
 | `ub-viewer`, `ub-viewer__toolbar`, `ub-viewer__surface` | The viewer, its toolbar and the frame the board draws in |

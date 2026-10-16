@@ -7,6 +7,7 @@ import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
 import { focusPart, useTriggers } from '../viewer/use-triggers.js';
 import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { PropertyPanel } from './PropertyPanel.js';
+import { triggerEditing } from './TriggersEditor.js';
 import { BoardPanel } from './BoardPanel.js';
 import { ElementsPanel } from './ElementsPanel.js';
 import { SymbolsPanel } from './SymbolsPanel.js';
@@ -232,6 +233,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 connectorLabels={connectorLabels}
                 onChange={widget => updateDoc(current => updateGridItem(current, selected.id, { widget }))}
                 onPartChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
+                triggers={triggerEditing(doc, updateDoc)}
                 elements={doc.elements}
                 labels={labels}
                 clock={clock}
@@ -254,6 +256,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 })
               }
               hint={labels.selectItem}
+              triggers={triggerEditing(doc, updateDoc)}
               labels={labels}
             />
           )}

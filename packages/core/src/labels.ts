@@ -273,6 +273,35 @@ export interface UBoardLabels {
   stateBlink: string;
   stateHidden: string;
   removeStates: string;
+  /** The triggers sections — a part's, and the board's own (when it opens). `{n}` numbers a trigger or an action. */
+  triggersHeading: string;
+  triggersOnOpenHeading: string;
+  triggerHeading: string;
+  triggerEvent: string;
+  triggerOnClick: string;
+  triggerOnElement: string;
+  triggerOnEnter: string;
+  triggerOnLeave: string;
+  triggerEventName: string;
+  triggerState: string;
+  triggerOnlyWhen: string;
+  triggerWhenPart: string;
+  triggerWhenState: string;
+  triggerAction: string;
+  triggerOpenLink: string;
+  triggerFocus: string;
+  triggerEmit: string;
+  triggerGoToBoard: string;
+  triggerFocusPart: string;
+  triggerLinkUrl: string;
+  triggerEmitName: string;
+  triggerBoardId: string;
+  removeTriggerAction: string;
+  addTriggerAction: string;
+  removeTrigger: string;
+  addTrigger: string;
+  triggerIncomplete: string;
+  triggerLinkRefused: string;
   /** Marks a listed binding that has a value map. */
   mapped: string;
   previewValue: string;
@@ -526,6 +555,34 @@ export const DEFAULT_LABELS: UBoardLabels = {
   stateBlink: 'Blink — {state}',
   stateHidden: 'Hide — {state}',
   removeStates: 'Remove states',
+  triggersHeading: 'Triggers',
+  triggersOnOpenHeading: 'When the board opens',
+  triggerHeading: 'Trigger {n}',
+  triggerEvent: 'When',
+  triggerOnClick: 'It is clicked',
+  triggerOnElement: 'Its element raises an event',
+  triggerOnEnter: 'It enters a state',
+  triggerOnLeave: 'It leaves a state',
+  triggerEventName: 'Event name',
+  triggerState: 'State',
+  triggerOnlyWhen: 'Only while a part is in a state',
+  triggerWhenPart: 'Part',
+  triggerWhenState: 'State (several: comma-separated)',
+  triggerAction: 'Action {n}',
+  triggerOpenLink: 'Open a link',
+  triggerFocus: 'Bring a part into view',
+  triggerEmit: 'Tell the page',
+  triggerGoToBoard: 'Show another board',
+  triggerFocusPart: 'Part to show {n}',
+  triggerLinkUrl: 'Link {n}',
+  triggerEmitName: 'Event name {n}',
+  triggerBoardId: 'Board id {n}',
+  removeTriggerAction: 'Remove action {n}',
+  addTriggerAction: 'Add action',
+  removeTrigger: 'Remove trigger {n}',
+  addTrigger: 'Add trigger',
+  triggerIncomplete: 'Fill in every field — the trigger is saved once it is complete.',
+  triggerLinkRefused: 'A link must be an https:// address or a path on this installation (/…).',
   mapped: 'mapped',
   previewValue: 'Value',
   previewLive: 'live',

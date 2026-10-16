@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Adapter } from '../adapter.js';
 import type { Background, ElementDefinition, Node, Placed, StateRule, Widget } from '../view-document.js';
 import { StatesEditor } from './StatesEditor.js';
+import { TriggersEditor, type TriggerEditing } from './TriggersEditor.js';
 import { ELEMENT_TYPE_PREFIX, elementNameOf } from '../elements/element-type.js';
 import { NodeAnchorFields } from './AnchorFields.js';
 import { nodeSize } from '../node-size.js';
@@ -24,6 +25,8 @@ export interface PropertyPanelProps {
   /** Where a change to the part beyond its widget goes — its states, or its widget and states together (a binding
    *  removed that its states were read from). Without it the panel offers no states. */
   onPartChange?: (change: PartChange) => void;
+  /** The board's triggers, to edit the ones on this part. Without it the panel offers no triggers. */
+  triggers?: TriggerEditing;
   /** The board's background, which an anchored node's coordinate is read by, and where a change to the
    *  node itself — its anchor, its place — goes. Without them the panel edits the widget only. */
   background?: Background;
@@ -56,6 +59,7 @@ export function PropertyPanel({
   connectorLabels,
   onChange,
   onPartChange,
+  triggers,
   background,
   onNodeChange,
   elements,
@@ -169,7 +173,8 @@ export function PropertyPanel({
         labels={labels}
         clock={clock}
       />
-      {onPartChange && <StatesEditor key={node.id} widget={node.widget} states={node.states} onChange={states => onPartChange({ states })} labels={labels} />}
+      {onPartChange && <StatesEditor key={`states:${node.id}`} widget={node.widget} states={node.states} onChange={states => onPartChange({ states })} labels={labels} />}
+      {triggers && <TriggersEditor key={`triggers:${node.id}`} node={node.id} {...triggers} labels={labels} />}
     </div>
   );
 }

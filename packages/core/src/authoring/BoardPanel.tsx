@@ -2,6 +2,7 @@ import type { BoardAppearance, ReferencePoint } from '../view-document.js';
 import { ReferencePointsFields } from './AnchorFields.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
+import { TriggersEditor, type TriggerEditing } from './TriggersEditor.js';
 
 // The button row is spaced like the property panel's, and apart from the tone picker below it.
 const ACTIONS_STYLE = { ...GROUP_STYLE, marginBottom: 'var(--ub-space-3, 12px)' };
@@ -27,6 +28,8 @@ export interface BoardPanelProps {
   anchors?: { awaitingPoints: boolean; moved: number; onRelocate: () => void; onKeep: () => void };
   /** What to select to edit something — `labels.selectNode` by default. */
   hint?: string;
+  /** The board's triggers, to edit those that run when it opens. */
+  triggers?: TriggerEditing;
   labels?: UBoardLabels;
 }
 
@@ -48,6 +51,7 @@ export function BoardPanel({
   onReferencePointsChange,
   anchors,
   hint,
+  triggers,
   labels = DEFAULT_LABELS,
 }: BoardPanelProps) {
   return (
@@ -106,6 +110,7 @@ export function BoardPanel({
           />
         </label>
       )}
+      {triggers && <TriggersEditor {...triggers} labels={labels} />}
       <p className="ub-panel__hint">{hint ?? labels.selectNode}</p>
     </div>
   );
