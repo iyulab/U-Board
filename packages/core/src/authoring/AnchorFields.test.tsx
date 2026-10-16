@@ -5,6 +5,7 @@ import '@testing-library/jest-dom/vitest';
 import { NodeAnchorFields, ReferencePointsFields } from './AnchorFields.js';
 import { DEFAULT_LABELS as labels } from '../labels.js';
 import type { Background, Node, ReferencePoint } from '../view-document.js';
+import type { SizedNode } from '../node-size.js';
 
 // A plan whose image is 1000 × 500 units and stands for 0–100 m across and 50–0 m from top to bottom.
 const points: [ReferencePoint, ReferencePoint] = [
@@ -12,7 +13,7 @@ const points: [ReferencePoint, ReferencePoint] = [
   { x: 1000, y: 500, coordinate: { x: 100, y: 0 } },
 ];
 const plan: Background = { image: { src: 'plan.png', width: 1000, height: 500, referencePoints: points } };
-const node = (change: Partial<Node> = {}): Node => ({ id: 'n1', x: 420, y: 230, width: 160, height: 40, anchored: true, widget: { type: 'status' }, ...change });
+const node = (change: Partial<Node> = {}): SizedNode => ({ id: 'n1', x: 420, y: 230, width: 160, height: 40, anchored: true, widget: { type: 'status' }, ...change });
 
 describe('NodeAnchorFields', () => {
   it('anchors and frees a node', () => {

@@ -1,5 +1,6 @@
 import { coordinateOf, placeAt, type Coordinate } from '../anchor.js';
 import type { CanvasView } from '../view-document.js';
+import { nodeSize, sizedNodes } from '../node-size.js';
 
 /** Where the anchored nodes stood, by coordinate, before the background's reference points changed or went
  *  away — so that once the background has points again, the nodes can be put back at the same places. A node's
@@ -15,7 +16,7 @@ export interface AnchorSnapshot {
 export function snapshotAnchors(doc: CanvasView): AnchorSnapshot | null {
   if (!doc.background.image?.referencePoints) return null;
   const at: Record<string, Coordinate> = {};
-  for (const node of doc.nodes) {
+  for (const node of sizedNodes(doc)) {
     if (!node.anchored) continue;
     const coordinate = coordinateOf(doc.background, node);
     if (coordinate) at[node.id] = coordinate;
@@ -29,7 +30,7 @@ const near = (a: number, b: number) => Math.abs(a - b) <= 1e-9 * Math.max(1, Mat
  *  while the background has no reference points — there is nothing to read them by yet. */
 export function movedAnchors(doc: CanvasView, snapshot: AnchorSnapshot): string[] {
   if (!doc.background.image?.referencePoints) return [];
-  return doc.nodes
+  return sizedNodes(doc)
     .filter(node => node.anchored && snapshot.at[node.id])
     .filter(node => {
       const was = snapshot.at[node.id];
@@ -47,7 +48,7 @@ export function relocateAnchors(doc: CanvasView, snapshot: AnchorSnapshot): Canv
     ...doc,
     nodes: doc.nodes.map(node => {
       if (!moved.has(node.id)) return node;
-      const at = placeAt(doc.background, node, snapshot.at[node.id]);
+      const at = placeAt(doc.background, nodeSize(node, doc.elements), snapshot.at[node.id]);
       return at ? { ...node, ...at } : node;
     }),
   };

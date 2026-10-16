@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { coordinateOf, placeAt } from '../anchor.js';
 import type { Background, Node, ReferencePoint } from '../view-document.js';
+import type { SizedNode } from '../node-size.js';
 import type { UBoardLabels } from '../labels.js';
 import { ERROR_STYLE } from '../ui-style.js';
 
@@ -28,7 +29,8 @@ export function NodeAnchorFields({
   onChange,
   labels,
 }: {
-  node: Node;
+  /** Its box's size settled (`sizedNodes`) — the anchor is the box's center. */
+  node: SizedNode;
   background: Background;
   onChange: (change: Partial<Pick<Node, 'x' | 'y' | 'anchored'>>) => void;
   labels: UBoardLabels;

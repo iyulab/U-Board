@@ -17,9 +17,8 @@ const map: Background = {
 };
 
 describe('anchors', () => {
-  it('anchors a node at its box center, sized by default when it has no size', () => {
+  it('anchors a node at its box center', () => {
     expect(anchorPoint({ x: 10, y: 20, width: 100, height: 40 })).toEqual({ x: 60, y: 40 });
-    expect(anchorPoint({ x: 0, y: 0 })).toEqual({ x: 80, y: 50 });
   });
 
   it('reads a point of the image as the coordinate it stands for, either way along each axis', () => {
@@ -41,7 +40,7 @@ describe('anchors', () => {
   });
 
   it('has no coordinate for a background that declares no reference points', () => {
-    expect(coordinateOf({}, { x: 0, y: 0 })).toBeNull();
-    expect(placeAt({ image: { src: 'a.png', width: 10, height: 10 } }, {}, { x: 1, y: 1 })).toBeNull();
+    expect(coordinateOf({}, { x: 0, y: 0, width: 10, height: 10 })).toBeNull();
+    expect(placeAt({ image: { src: 'a.png', width: 10, height: 10 } }, { width: 10, height: 10 }, { x: 1, y: 1 })).toBeNull();
   });
 });

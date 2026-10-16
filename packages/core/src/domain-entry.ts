@@ -12,6 +12,8 @@ export type {
 export { emptyViewDocument, placedIn, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, PLACEMENTS } from './view-document.js';
 export { bindingsIn } from './document-bindings.js';
 export { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from './layout-defaults.js';
+export { nodeSize, sizedNodes } from './node-size.js';
+export type { BoxSize, SizedNode } from './node-size.js';
 export { resolveDocument, resolveConnector } from './resolve-document.js';
 export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
 export { validateViewDocument } from './validate-view-document.js';

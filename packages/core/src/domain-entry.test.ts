@@ -32,9 +32,9 @@ describe('domain entry', () => {
     expect(Object.keys(mod).sort()).toEqual([
       'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn',
       'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameScripts',
-      'emptyViewDocument', 'findHttpRefItem', 'getByPointer', 'isHttpRef', 'lintViewDocument', 'parseSourceTime',
+      'emptyViewDocument', 'findHttpRefItem', 'getByPointer', 'isHttpRef', 'lintViewDocument', 'nodeSize', 'parseSourceTime',
       'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading',
-      'validateViewDocument', 'worstQuality',
+      'sizedNodes', 'validateViewDocument', 'worstQuality',
     ]);
     expect(Object.keys(viewer).sort()).toEqual([
       'DEFAULT_LABELS', 'DEFAULT_QUALITY_TEXT', 'KO_LABELS', 'ViewerPage', 'ageText', 'serverClock', 'timeText', 'useResolvedDocument',

@@ -55,7 +55,7 @@ const CANVAS = `# Canvas boards
 
 ## Coordinates and sizes
 - Scene units = CSS px at 100%, x to the right, y down. The viewer fits the whole drawing into view (never above 100%), so absolute position does not matter — relative layout does.
-- A node's x, y is the top-left of its box; width × height default to ${DEFAULT_NODE_WIDTH} × ${DEFAULT_NODE_HEIGHT}. Its widget is clipped to the box — make the box fit its content (a 12 px label needs about 7 px per character).
+- A node's x, y is the top-left of its box. width × height left out: the size of the element it places (its definition's size), else ${DEFAULT_NODE_WIDTH} × ${DEFAULT_NODE_HEIGHT}. Its widget is clipped to the box — make the box fit its content (a 12 px label needs about 7 px per character).
 - caption: a node's name drawn centred under its box, outside it (12 px, on a chip, over the lines) — a device's name under its icon. Keep the box the size of the icon and put the name in caption, not in the element.
 - anchored: true when x, y is a real place on the background (a plan's metres, a map's longitude/latitude via background.image.referencePoints), false when placed freely.
 - background: {} for none, or { image: { src, width, height } } — the drawing is placed at 0, 0 at its own size. src is a URL or a data: URL (an SVG drawn for the board: "data:image/svg+xml,…").

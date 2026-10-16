@@ -181,8 +181,8 @@ export interface ReferencePoint {
 export interface Node extends Placed {
   x: number;
   y: number;
-  /** The widget's footprint in scene units. Absent means the renderer picks a default size —
-   * a node doesn't have to specify one until an author actually resizes it. */
+  /** The widget's footprint in scene units. Left out, the box takes the `size` of the element it places, else
+   * 160 × 100 (`nodeSize`) — a node doesn't have to give one until an author resizes it. */
   width?: number;
   height?: number;
   /** Whether (x, y) is an anchor — a coordinate meaningful in the background's real space —
@@ -269,8 +269,8 @@ export interface ElementDefinition {
   script?: string;
   /** CSS for its own markup only. */
   style?: string;
-  /** Its own size: a grid item placing it takes this height when it gives none, and an author placing it on a canvas
-   * starts from this box. A canvas node's box is still the layout — the element fills it. */
+  /** Its own size: a canvas node placing it without a box of its own takes this box, and a grid item placing it takes
+   * this height when it gives none. A node's box is still the layout — the element fills the box it is given. */
   size?: { width: number; height: number };
   /** The `https://` origins it loads anything from — a font, an image, a script library. Nothing else
    * is reachable, and an instance reaches only the origins its operator allows as well. */

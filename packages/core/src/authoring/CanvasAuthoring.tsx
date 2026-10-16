@@ -30,7 +30,7 @@ import { DecorationPanel } from './DecorationPanel.js';
 import { ConnectorPanel } from './ConnectorPanel.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
-import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
+import { sizedNodes } from '../node-size.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
 import type { BoardAppearance, Connector, Node, ReferencePoint, CanvasView, Widget, Shape } from '../view-document.js';
@@ -100,15 +100,15 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
   // moved or resized node does not leave its widget behind while a slow source answers.
   const editorOverlays = useMemo(() => {
     const widgets = new Map((preview?.overlays ?? []).map(overlay => [overlay.id, overlay.content]));
-    return doc.nodes.map(node => ({
+    return sizedNodes(doc).map(node => ({
       id: node.id,
       x: node.x,
       y: node.y,
-      width: node.width ?? DEFAULT_NODE_WIDTH,
-      height: node.height ?? DEFAULT_NODE_HEIGHT,
+      width: node.width,
+      height: node.height,
       content: <NodeInPlace widget={widgets.get(node.id) ?? null} name={widgetTypeName(node.widget.type, labels.locale)} />,
     }));
-  }, [preview, doc.nodes, labels.locale]);
+  }, [preview, doc, labels.locale]);
   useEffect(() => {
     fitTo(documentExtent(openedDoc));
   }, [fitTo, openedDoc]);

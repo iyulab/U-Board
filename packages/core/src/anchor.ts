@@ -1,5 +1,5 @@
 import type { Background, Node } from './view-document.js';
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from './layout-defaults.js';
+import type { BoxSize } from './node-size.js';
 
 /** A coordinate in the space a background depicts (`BackgroundImage.referencePoints`). */
 export interface Coordinate {
@@ -7,10 +7,10 @@ export interface Coordinate {
   y: number;
 }
 
-/** The point of a node its anchor is at: the center of its box, sized by default when it has no size of its
- *  own — a marker's place, wherever the box grows to around it. */
-export function anchorPoint(node: Pick<Node, 'x' | 'y' | 'width' | 'height'>): { x: number; y: number } {
-  return { x: node.x + (node.width ?? DEFAULT_NODE_WIDTH) / 2, y: node.y + (node.height ?? DEFAULT_NODE_HEIGHT) / 2 };
+/** The point of a node its anchor is at: the center of its box (its size settled — `sizedNodes`) — a marker's place,
+ *  wherever the box grows to around it. */
+export function anchorPoint(node: Pick<Node, 'x' | 'y'> & BoxSize): { x: number; y: number } {
+  return { x: node.x + node.width / 2, y: node.y + node.height / 2 };
 }
 
 /** The coordinate a point of the background stands for, or `null` when the background declares none. */
@@ -31,16 +31,16 @@ export function pointAt(background: Background, coordinate: Coordinate): { x: nu
 
 /** The coordinate a node is anchored at — its box's center, read through the background's reference points —
  *  or `null` when the background declares none. Meaningful for an anchored node (`Node.anchored`). */
-export function coordinateOf(background: Background, node: Pick<Node, 'x' | 'y' | 'width' | 'height'>): Coordinate | null {
+export function coordinateOf(background: Background, node: Pick<Node, 'x' | 'y'> & BoxSize): Coordinate | null {
   return coordinateAt(background, anchorPoint(node));
 }
 
 /** Where a node goes (`x`/`y`, its box's top-left) for its anchor to be at `coordinate`, or `null` when the
  *  background declares no reference points. */
-export function placeAt(background: Background, node: Pick<Node, 'width' | 'height'>, coordinate: Coordinate): { x: number; y: number } | null {
+export function placeAt(background: Background, node: BoxSize, coordinate: Coordinate): { x: number; y: number } | null {
   const point = pointAt(background, coordinate);
   if (!point) return null;
-  return { x: point.x - (node.width ?? DEFAULT_NODE_WIDTH) / 2, y: point.y - (node.height ?? DEFAULT_NODE_HEIGHT) / 2 };
+  return { x: point.x - node.width / 2, y: point.y - node.height / 2 };
 }
 
 /** `value` on the axis from `from0`–`from1` mapped linearly onto `to0`–`to1`. */

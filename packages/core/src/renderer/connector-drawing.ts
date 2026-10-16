@@ -1,7 +1,8 @@
 import { measureTextWidth, type DrawingObject } from '@canvas-kit/core';
 import { CAPTION_SIZE, captionBox } from '../caption-geometry.js';
 import { CONNECTOR_WIDTH, LABEL_SIZE, chipOf, placeConnectors, type ConnectorPlacement } from '../connector-geometry.js';
-import type { BoardAppearance, Connector, Node } from '../view-document.js';
+import type { BoardAppearance, Connector } from '../view-document.js';
+import type { SizedNode } from '../node-size.js';
 import type { ConnectionQuality } from '../adapter.js';
 import { worstQuality } from '../quality-text.js';
 import { DASH_PATTERNS } from './decoration-drawing.js';
@@ -26,7 +27,7 @@ const CAPTION_INK: Record<BoardAppearance, string> = { light: '#1e293b', dark: '
 const measure = (text: string, size: number) => measureTextWidth({ type: 'text', x: 0, y: 0, text, fontSize: size });
 
 /** Where connectors are drawn on this canvas — `placeConnectors` measuring text as the canvas draws it. */
-export function placeOnCanvas<C extends Connector>(nodes: readonly Node[], connectors: readonly C[]): Array<ConnectorPlacement & { connector: C }> {
+export function placeOnCanvas<C extends Connector>(nodes: readonly SizedNode[], connectors: readonly C[]): Array<ConnectorPlacement & { connector: C }> {
   return placeConnectors(nodes, connectors, measure) as Array<ConnectorPlacement & { connector: C }>;
 }
 
@@ -37,7 +38,7 @@ export function placeOnCanvas<C extends Connector>(nodes: readonly Node[], conne
  * never moved — an editor's lines) on its heads and chip too, and a label's text is then locked, so a press on it
  * reaches the chip.
  */
-export function connectorObjects(nodes: readonly Node[], connectors: ReadonlyArray<Connector & { quality?: Record<string, ConnectionQuality> }>, appearance: BoardAppearance = 'light', extra: Partial<Line> = {}): DrawingObject[] {
+export function connectorObjects(nodes: readonly SizedNode[], connectors: ReadonlyArray<Connector & { quality?: Record<string, ConnectionQuality> }>, appearance: BoardAppearance = 'light', extra: Partial<Line> = {}): DrawingObject[] {
   const lines: DrawingObject[] = [];
   const labels: DrawingObject[] = [];
   const held = { ...(extra.locked && { locked: true }), ...(extra.fixed && { fixed: true }) };
@@ -62,7 +63,7 @@ export function connectorObjects(nodes: readonly Node[], connectors: ReadonlyArr
  * What nodes' captions draw: each name centred under its node's box on a chip of the paper — over every connector,
  * so a line passing under a name never runs through it.
  */
-export function captionObjects(nodes: readonly Node[], appearance: BoardAppearance = 'light', locked?: boolean): DrawingObject[] {
+export function captionObjects(nodes: readonly SizedNode[], appearance: BoardAppearance = 'light', locked?: boolean): DrawingObject[] {
   const objects: DrawingObject[] = [];
   for (const node of nodes) {
     if (!node.caption) continue;

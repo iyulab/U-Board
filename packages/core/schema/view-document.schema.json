@@ -80,7 +80,7 @@
         "script": { "description": "The code a script element runs. It receives its props through ub.onProps.", "type": "string" },
         "style": { "description": "CSS for its own markup only.", "type": "string" },
         "size": {
-          "description": "Its own size: the height a grid item placing it takes when it gives none, and the box an author starts from on a canvas.",
+          "description": "Its own size: the box a canvas node placing it takes when it gives none, and the height a grid item placing it takes when it gives none.",
           "type": "object",
           "required": ["width", "height"],
           "properties": { "width": { "type": "number", "exclusiveMinimum": 0 }, "height": { "type": "number", "exclusiveMinimum": 0 } }
@@ -145,8 +145,8 @@
         "id": { "type": "string" },
         "x": { "type": "number" },
         "y": { "type": "number" },
-        "width": { "type": "number" },
-        "height": { "type": "number" },
+        "width": { "type": "number", "description": "The box's width. Left out: the width of the element it places (its size), else 160." },
+        "height": { "type": "number", "description": "The box's height. Left out: the height of the element it places (its size), else 100." },
         "anchored": {
           "description": "Whether (x, y) is a coordinate meaningful in the background's real space, or a free position.",
           "type": "boolean"

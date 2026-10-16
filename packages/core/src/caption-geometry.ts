@@ -1,5 +1,5 @@
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from './layout-defaults.js';
 import type { Node } from './view-document.js';
+import type { BoxSize } from './node-size.js';
 
 /** A node caption's font size, and its distance under the node's box. */
 export const CAPTION_SIZE = 12;
@@ -17,9 +17,7 @@ export function estimateTextWidth(text: string, size: number): number {
  * Where a node's caption is drawn: one line centred under its box, a little below it. `measure` gives a text's width —
  * the canvas's own where there is one, an estimate where there is not — so the renderer and the layout advice agree.
  */
-export function captionBox(node: Node, measure: (text: string, size: number) => number = estimateTextWidth): { x: number; y: number; width: number; height: number } {
+export function captionBox(node: Pick<Node, 'x' | 'y' | 'caption'> & BoxSize, measure: (text: string, size: number) => number = estimateTextWidth): { x: number; y: number; width: number; height: number } {
   const width = measure(node.caption ?? '', CAPTION_SIZE);
-  const boxWidth = node.width ?? DEFAULT_NODE_WIDTH;
-  const boxHeight = node.height ?? DEFAULT_NODE_HEIGHT;
-  return { x: node.x + boxWidth / 2 - width / 2, y: node.y + boxHeight + CAPTION_GAP, width, height: CAPTION_SIZE };
+  return { x: node.x + node.width / 2 - width / 2, y: node.y + node.height + CAPTION_GAP, width, height: CAPTION_SIZE };
 }

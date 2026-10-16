@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors } from './anchor-snapshot.js';
 import { coordinateOf } from '../anchor.js';
+import { sizedNodes } from '../node-size.js';
 import type { ReferencePoint, CanvasView } from '../view-document.js';
 
 const points = (scale = 1): [ReferencePoint, ReferencePoint] => [
@@ -62,7 +63,7 @@ describe('anchor snapshot', () => {
     const snapshot = snapshotAnchors(doc(points()))!;
     const after = doc(points(2), { width: 1600, height: 1200 });
     const relocated = relocateAnchors(after, snapshot);
-    const node = relocated.nodes.find(n => n.id === 'anchored')!;
+    const node = sizedNodes(relocated).find(n => n.id === 'anchored')!;
     const coordinate = coordinateOf(relocated.background, node)!;
     expect(coordinate.x).toBeCloseTo(126.9794, 6);
     expect(coordinate.y).toBeCloseTo(37.573, 6);

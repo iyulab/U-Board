@@ -10,6 +10,10 @@ All notable changes to this package are documented here. The format follows
 
 - The `canvas` topic teaches a frame name's own colour, `labelFill`.
 
+### Changed
+
+- The `canvas` topic says a node without a box takes its element's size; `look` measures the board the same way.
+
 ### Fixed
 
 - `look` answers the advice that still stands with its picture — parts drawn over one another, as saving reported

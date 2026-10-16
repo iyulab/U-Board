@@ -1,5 +1,5 @@
 import type { Browser, Page } from 'playwright-core';
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, getByPointer, type ViewDocument } from '@iyulab/u-board/domain';
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, getByPointer, nodeSize, type ViewDocument } from '@iyulab/u-board/domain';
 import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
 
 /** What `look` is asked for: a saved board, optionally one part of it, optionally on the other paper. */
@@ -129,7 +129,7 @@ async function sceneScale(page: Page, document: ViewDocument): Promise<Scale | u
   for (const node of document.nodes) {
     const box = await page.locator(`[data-node-id="${cssString(node.id)}"]`).first().boundingBox().catch(() => null);
     if (!box) continue;
-    const factor = box.width / (node.width ?? DEFAULT_NODE_WIDTH);
+    const factor = box.width / nodeSize(node, document.elements).width;
     return { factor, originX: box.x - node.x * factor, originY: box.y - node.y * factor };
   }
   return undefined;

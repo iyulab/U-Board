@@ -1,6 +1,6 @@
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from './layout-defaults.js';
 import { estimateTextWidth } from './caption-geometry.js';
 import type { Connector, ConnectorArrow, Node } from './view-document.js';
+import type { BoxSize } from './node-size.js';
 
 /** A connector label's font size, and the chip of paper around it. */
 export const LABEL_SIZE = 11;
@@ -42,7 +42,7 @@ export interface ConnectorPlacement {
  * the box it points at. `measure` gives a text's width (the canvas's own where there is one). A connector naming a node
  * the document does not have is not placed.
  */
-export function placeConnectors(nodes: readonly Node[], connectors: readonly Connector[], measure: (text: string, size: number) => number = estimateTextWidth): ConnectorPlacement[] {
+export function placeConnectors(nodes: ReadonlyArray<Pick<Node, 'id' | 'x' | 'y'> & BoxSize>, connectors: readonly Connector[], measure: (text: string, size: number) => number = estimateTextWidth): ConnectorPlacement[] {
   const boxes = new Map(nodes.map(node => [node.id, boxOf(node)]));
   const siblings = new Map<string, Array<{ connector: Connector; index: number }>>();
   connectors.forEach((connector, index) => {
@@ -72,8 +72,8 @@ export function chipOf(text: Box): Box {
   return { x: text.x - LABEL_PAD_X, y: text.y - LABEL_PAD_Y, width: text.width + 2 * LABEL_PAD_X, height: text.height + 2 * LABEL_PAD_Y };
 }
 
-export function boxOf(node: Node): Box {
-  return { x: node.x, y: node.y, width: node.width ?? DEFAULT_NODE_WIDTH, height: node.height ?? DEFAULT_NODE_HEIGHT };
+export function boxOf(node: Pick<Node, 'x' | 'y'> & BoxSize): Box {
+  return { x: node.x, y: node.y, width: node.width, height: node.height };
 }
 
 function labelBox(text: string, [x1, y1, x2, y2]: number[], along: number, measure: (text: string, size: number) => number): Box {

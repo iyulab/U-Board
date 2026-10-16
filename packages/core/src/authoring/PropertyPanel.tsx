@@ -3,6 +3,7 @@ import type { Adapter } from '../adapter.js';
 import type { Background, ElementDefinition, Node, Placed, Widget } from '../view-document.js';
 import { ELEMENT_TYPE_PREFIX, elementNameOf } from '../elements/element-type.js';
 import { NodeAnchorFields } from './AnchorFields.js';
+import { nodeSize } from '../node-size.js';
 import { getWidgetLabel } from '@iyulab/u-widgets/tools';
 import { WIDGET_TYPES, seedElementWidget, seedWidget, headlinePropPath, type WidgetType } from './widget-catalog.js';
 import { WidgetPropsForm } from './WidgetPropsForm.js';
@@ -112,7 +113,7 @@ export function PropertyPanel({
         </select>
       </label>
       {background && onNodeChange && 'anchored' in node && (
-        <NodeAnchorFields node={node as Node} background={background} onChange={onNodeChange} labels={labels} />
+        <NodeAnchorFields node={{ ...(node as Node), ...nodeSize(node as Node, elements) }} background={background} onChange={onNodeChange} labels={labels} />
       )}
       <WidgetPropsForm widget={node.widget} onChange={onChange} labels={labels} elements={elements} />
       {/* Open while it holds an edit that is not valid JSON, so the error is never folded away. */}

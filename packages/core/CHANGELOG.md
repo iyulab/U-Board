@@ -20,6 +20,11 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **A node that gives no box takes the size of the element it places** (`ElementDefinition.size`), as an image without
+  a size takes its own; a node placing a prepared widget, or an element without a size, is still 160 × 100. Every
+  place that draws or measures a node — the renderer, the editor, the layout advice, anchors, the board's extent —
+  asks one function, `nodeSize` (or `sizedNodes` for a board's nodes), exported from `@iyulab/u-board/domain`.
+  `anchorPoint`, `coordinateOf` and `placeAt` now take a node whose size is settled.
 - The editor selects a node or decoration it adds, as it already did a connector, so the panel to edit it opens at
   once.
 

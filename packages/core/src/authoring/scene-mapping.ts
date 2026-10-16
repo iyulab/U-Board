@@ -1,6 +1,7 @@
 import { Scene } from '@canvas-kit/core';
 import type { CanvasView, Connector, Node, Shape, Widget } from '../view-document.js';
-import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
+import { DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
+import { sizedNodes } from '../node-size.js';
 import { seedWidget } from './widget-catalog.js';
 import { decorationObjects } from '../renderer/decoration-drawing.js';
 import { captionObjects, connectorObjects } from '../renderer/connector-drawing.js';
@@ -66,17 +67,18 @@ export function documentToScene(doc: CanvasView): Scene {
   }
 
   // Follows its two nodes: selected to be edited, never dragged — moving a line or its label would move nothing.
-  for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance, { fixed: true })) scene.add(object);
-  for (const object of captionObjects(doc.nodes, doc.appearance, true)) scene.add(object);
+  const nodes = sizedNodes(doc);
+  for (const object of connectorObjects(nodes, doc.connectors, doc.appearance, { fixed: true })) scene.add(object);
+  for (const object of captionObjects(nodes, doc.appearance, true)) scene.add(object);
 
-  for (const node of doc.nodes) {
+  for (const node of nodes) {
     scene.add({
       type: 'rect',
       id: node.id,
       x: node.x,
       y: node.y,
-      width: node.width ?? DEFAULT_NODE_WIDTH,
-      height: node.height ?? DEFAULT_NODE_HEIGHT,
+      width: node.width,
+      height: node.height,
       fill: NODE_PLACEHOLDER_FILL,
       stroke: NODE_PLACEHOLDER_STROKE,
       strokeWidth: 1,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coordinateOf, placedIn, resolveDocument, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
+import { coordinateOf, placedIn, resolveDocument, sizedNodes, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
 import { BIKE_STATIONS } from './packs/gwanghwamun.js';
 import { keepPointers } from './prune.js';
@@ -86,7 +86,7 @@ describe('a map whose anchors are coordinates', () => {
     const pack = SAMPLE_PACKS.find(p => p.id === 'gwanghwamun')!;
     for (const { id, lat, lng } of BIKE_STATIONS) {
       const document = pack.document as CanvasView;
-      const node = document.nodes.find(n => n.id === `bike-${id}`)!;
+      const node = sizedNodes(document).find(n => n.id === `bike-${id}`)!;
       expect(node.anchored, id).toBe(true);
       const coordinate = coordinateOf(document.background, node)!;
       // Half a scene unit on this drawing is about a metre either way.

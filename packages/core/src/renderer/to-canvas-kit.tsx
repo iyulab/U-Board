@@ -16,7 +16,7 @@ import '@iyulab/u-widgets';
 // widget re-renders itself once the entry registers — nothing here has to render again.
 void import('@iyulab/u-widgets/charts');
 import type { ResolvedCanvasView } from '../resolve-document.js';
-import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
+import { sizedNodes } from '../node-size.js';
 import { DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
 import { decorationObjects } from './decoration-drawing.js';
 import { NodeFrame } from './node-frame.js';
@@ -50,6 +50,7 @@ export interface ToCanvasKitOptions {
  */
 export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUALITY_TEXT, now, locale }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
   const scene = new Scene();
+  const nodes = sizedNodes(doc);
 
   if (doc.background.image) {
     scene.add({
@@ -66,20 +67,20 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     for (const object of decorationObjects(shape, doc.appearance)) scene.add(object);
   }
 
-  for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance)) scene.add(object);
-  for (const object of captionObjects(doc.nodes, doc.appearance)) scene.add(object);
+  for (const object of connectorObjects(nodes, doc.connectors, doc.appearance)) scene.add(object);
+  for (const object of captionObjects(nodes, doc.appearance)) scene.add(object);
 
   const at = now ?? Date.now();
-  const overlays: ViewerOverlayItem[] = doc.nodes.map(node => ({
+  const overlays: ViewerOverlayItem[] = nodes.map(node => ({
     id: node.id,
     x: node.x,
     y: node.y,
-    width: node.width ?? DEFAULT_NODE_WIDTH,
-    height: node.height ?? DEFAULT_NODE_HEIGHT,
+    width: node.width,
+    height: node.height,
     // A widget takes its node's box exactly — the box the author drew is the layout.
     content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} />,
   }));
-  for (const placed of placeOnCanvas(doc.nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
+  for (const placed of placeOnCanvas(nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 
   return { scene, overlays };
 }

@@ -1,6 +1,6 @@
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from './layout-defaults.js';
+import { sizedNodes } from './node-size.js';
 import { captionBox, estimateTextWidth } from './caption-geometry.js';
-import { chipOf, placeConnectors } from './connector-geometry.js';
+import { boxOf, chipOf, placeConnectors } from './connector-geometry.js';
 import type { CanvasView, TextShape } from './view-document.js';
 import { DEFAULT_TEXT_SIZE, frameLabelBox, textDecorationBox } from './decoration-geometry.js';
 import type { ViewDocumentAdvice } from './lint-view-document.js';
@@ -30,7 +30,8 @@ export function textBox(text: TextShape): Box {
  * them (`placeConnectors`). The most damaging first, at most {@link GEOMETRY_ADVICE_LIMIT}, then the rest counted.
  */
 export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
-  const nodes = doc.nodes.map((node, i) => ({ id: node.id, at: `/nodes/${i}`, box: nodeBox(node) }));
+  const sized = sizedNodes(doc);
+  const nodes = sized.map((node, i) => ({ id: node.id, at: `/nodes/${i}`, box: boxOf(node) }));
   // A text decoration, or a frame's name — drawn in the decoration's place in the order, so a later one's background
   // (or a frame's name inside it) is over an earlier frame's edge.
   const decorationTexts = (doc.decorations ?? []).flatMap((shape, i): DecorationText[] => {
@@ -40,8 +41,8 @@ export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
   });
   // A caption sits on a chip over the lines, so a line under it is hidden, not crossed — but it can still lie under a
   // node or run into another text.
-  const captions = doc.nodes.flatMap((node, i) => (node.caption?.trim() ? [{ at: `/nodes/${i}/caption`, box: captionBox(node) }] : []));
-  const placements = placeConnectors(doc.nodes, doc.connectors);
+  const captions = sized.flatMap((node, i) => (node.caption?.trim() ? [{ at: `/nodes/${i}/caption`, box: captionBox(node) }] : []));
+  const placements = placeConnectors(sized, doc.connectors);
   // A label sits on its chip, which covers the lines under it — so, like a caption, it is judged by its chip.
   const labels = placements.flatMap(({ label, index }) => (label ? [{ at: `/connectors/${index}/label`, box: chipOf(label) }] : []));
   const texts = [...decorationTexts, ...captions, ...labels];
@@ -77,10 +78,6 @@ export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
   for (const { kind } of found.slice(GEOMETRY_ADVICE_LIMIT)) rest.set(kind, (rest.get(kind) ?? 0) + 1);
   const counted = [...rest].map(([kind, n]) => `${n} ${kind}`).join(', ');
   return [...shown, { path: '', message: `${found.length - GEOMETRY_ADVICE_LIMIT} more: ${counted} — fix the ones above, then check again` }];
-}
-
-function nodeBox(node: CanvasView['nodes'][number]): Box {
-  return { x: node.x, y: node.y, width: node.width ?? DEFAULT_NODE_WIDTH, height: node.height ?? DEFAULT_NODE_HEIGHT };
 }
 
 /** Whether two boxes share some area — touching edges do not count. */
