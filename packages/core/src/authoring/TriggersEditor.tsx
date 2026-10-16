@@ -1,5 +1,7 @@
 import { useId, useState } from 'react';
 import { isTriggerLink, placedIn, type Trigger, type TriggerAction, type TriggerEvent, type ViewDocument } from '../view-document.js';
+import { expandComponents } from '../components.js';
+import { partNamer } from './part-names.js';
 import { stateNames } from './StatesEditor.js';
 import { removeTrigger, replaceTrigger, withTrigger } from './trigger-editing.js';
 import type { UBoardLabels } from '../labels.js';
@@ -14,6 +16,8 @@ export interface TriggersEditorProps {
   parts: readonly string[];
   /** The state names a part's states give — offered for «enters», «leaves» and «only when». */
   stateNamesOf: (part: string) => readonly string[];
+  /** How a part is named to the author; its id when left out. */
+  nameOf?: (part: string) => string;
   onAdd: (trigger: Trigger) => void;
   onReplace: (index: number, trigger: Trigger) => void;
   onRemove: (index: number) => void;
@@ -84,7 +88,7 @@ function triggerOf(draft: Draft, node: string | undefined): { problem: 'incomple
  * entered or left — or, without a part, when the board opens. Each trigger is written as soon as it is complete and
  * one a board may hold; until then the form says what is missing, and the document keeps what it had.
  */
-export function TriggersEditor({ node, triggers, parts, stateNamesOf, onAdd, onReplace, onRemove, labels }: TriggersEditorProps) {
+export function TriggersEditor({ node, triggers, parts, stateNamesOf, nameOf, onAdd, onReplace, onRemove, labels }: TriggersEditorProps) {
   const shown = (triggers ?? []).flatMap((trigger, index) =>
     node === undefined ? (trigger.on.event === 'open' ? [{ trigger, index }] : []) : 'node' in trigger.on && trigger.on.node === node ? [{ trigger, index }] : []
   );
@@ -101,7 +105,7 @@ export function TriggersEditor({ node, triggers, parts, stateNamesOf, onAdd, onR
           n={n + 1}
           current={trigger}
           fresh={fresh}
-          {...{ node, parts, stateNamesOf, labels }}
+          {...{ node, parts, stateNamesOf, nameOf, labels }}
           onWrite={next => onReplace(index, next)}
           onRemove={() => onRemove(index)}
         />
@@ -112,7 +116,7 @@ export function TriggersEditor({ node, triggers, parts, stateNamesOf, onAdd, onR
           n={shown.length + 1}
           current={undefined}
           fresh={fresh}
-          {...{ node, parts, stateNamesOf, labels }}
+          {...{ node, parts, stateNamesOf, nameOf, labels }}
           onWrite={next => {
             onAdd(next);
             setAdding(false);
@@ -136,6 +140,7 @@ function TriggerRow({
   node,
   parts,
   stateNamesOf,
+  nameOf,
   labels,
   onWrite,
   onRemove,
@@ -148,6 +153,7 @@ function TriggerRow({
   node?: string;
   parts: readonly string[];
   stateNamesOf: (part: string) => readonly string[];
+  nameOf?: (part: string) => string;
   labels: UBoardLabels;
   onWrite: (trigger: Trigger) => void;
   onRemove: () => void;
@@ -219,7 +225,7 @@ function TriggerRow({
             <select value={draft.when.node} onChange={e => change({ ...draft, when: { ...draft.when!, node: e.target.value } })}>
               {parts.map(p => (
                 <option key={p} value={p}>
-                  {p}
+                  {optionName(p, nameOf)}
                 </option>
               ))}
             </select>
@@ -258,7 +264,7 @@ function TriggerRow({
                   <option value="">—</option>
                   {parts.map(p => (
                     <option key={p} value={p}>
-                      {p}
+                      {optionName(p, nameOf)}
                     </option>
                   ))}
                 </select>
@@ -299,12 +305,20 @@ function TriggerRow({
 /** What a panel needs to edit `doc`'s triggers — its list, its parts and their states, and edits through `updateDoc`. */
 export type TriggerEditing = Omit<TriggersEditorProps, 'node' | 'labels'>;
 
-export function triggerEditing<D extends ViewDocument>(doc: D, updateDoc: (update: (current: D) => D) => void): TriggerEditing {
-  const placed = placedIn(doc);
+/** A part as a choice reads: its name and, when that is not its id, the id a trigger keeps. */
+function optionName(part: string, nameOf: ((part: string) => string) | undefined): string {
+  const name = nameOf?.(part) ?? part;
+  return name === part ? part : `${name} (${part})`;
+}
+
+/** The parts a trigger may name are the board's as drawn — the parts its component instances draw among them. */
+export function triggerEditing<D extends ViewDocument>(doc: D, updateDoc: (update: (current: D) => D) => void, locale?: string): TriggerEditing {
+  const placed = placedIn(expandComponents(doc));
   return {
     triggers: doc.triggers,
     parts: placed.map(part => part.id),
     stateNamesOf: id => stateNames(placed.find(part => part.id === id)?.states?.map),
+    ...(doc.kind === 'canvas' && { nameOf: partNamer(doc, locale) }),
     onAdd: trigger => updateDoc(current => withTrigger(current, trigger)),
     onReplace: (index, trigger) => updateDoc(current => replaceTrigger(current, index, trigger)),
     onRemove: index => updateDoc(current => removeTrigger(current, index)),

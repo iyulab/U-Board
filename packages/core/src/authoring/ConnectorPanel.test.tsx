@@ -26,6 +26,11 @@ describe('ConnectorPanel', () => {
     expect(onChange).toHaveBeenCalledWith({ id: 'c', fromNodeId: 'ess', toNodeId: 'pv' });
   });
 
+  it('names its ends as it is told — a part a component instance draws', () => {
+    render(<ConnectorPanel connector={{ id: 'c', fromNodeId: 'pv', toNodeId: 'p1/temp' }} nodes={nodes} nameOf={id => (id === 'pv' ? 'PV' : 'p1 › Temp')} onChange={vi.fn()} onDelete={vi.fn()} adapters={[]} />);
+    expect(screen.getByText('PV → p1 › Temp')).toBeInTheDocument();
+  });
+
   it('writes its label and where it sits when a field is left, and drops a part cleared', () => {
     const onChange = panel({ id: 'c', fromNodeId: 'pv', toNodeId: 'ess', label: 'old', labelAt: 0.2 });
     const label = screen.getByLabelText('Label');

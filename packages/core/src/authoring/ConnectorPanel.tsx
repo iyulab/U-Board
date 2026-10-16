@@ -10,6 +10,8 @@ export interface ConnectorPanelProps {
   connector: Connector;
   /** The board's nodes — what the connector's ends are named by. */
   nodes: readonly Node[];
+  /** How an end is named — when given, in place of the name `nodes` gives (a part a component instance draws). */
+  nameOf?: (id: string) => string;
   onChange: (connector: Connector) => void;
   onDelete: () => void;
   adapters: readonly Adapter[];
@@ -24,9 +26,10 @@ export interface ConnectorPanelProps {
  * the label sits, how it is drawn (colour, width, dash, arrowheads), and the bindings that fill any of those from live
  * values. Where it runs is its two nodes' business: it follows them as they move.
  */
-export function ConnectorPanel({ connector, nodes, onChange, onDelete, adapters, connectorLabels, labels = DEFAULT_LABELS, clock }: ConnectorPanelProps) {
+export function ConnectorPanel({ connector, nodes, nameOf, onChange, onDelete, adapters, connectorLabels, labels = DEFAULT_LABELS, clock }: ConnectorPanelProps) {
   // A node is named by its caption, else as the editor tags it — its widget's type — with its place among the nodes.
   const name = (id: string) => {
+    if (nameOf) return nameOf(id);
     const at = nodes.findIndex(n => n.id === id);
     if (at === -1) return id;
     return nodes[at].caption || `${widgetTypeName(nodes[at].widget.type, labels.locale)} ${at + 1}`;

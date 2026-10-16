@@ -6,6 +6,16 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The editor names a part a component instance draws by the instance and the part — a line's end ("Status 1 →
+  press-2 › Temp"), and the choices of a trigger, which can now name such a part, its states offered too.
+
+### Fixed
+
+- In the editor, a line of the board's own that runs over a component instance is picked there too — the instance's
+  box lay over it.
+
 ## [0.22.0] - 2026-10-17
 
 ### Added

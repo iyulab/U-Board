@@ -58,6 +58,9 @@ describe('a board with component instances, in the designer', () => {
     // Its node at 300, 40 (160 × 100) and its frame from 290, 30 (180 × 120).
     expect(box).toMatchObject({ type: 'rect', x: 290, y: 30, width: 180, height: 120 });
     expect(box.locked).toBeFalsy();
+    // Under the board's lines: a line to one of its parts is still picked where it runs over the instance.
+    const order = scene.getObjects().map(o => o.id && partOf(o.id));
+    expect(order.indexOf('p1')).toBeLessThan(order.indexOf('feed'));
     // Dragged 50 right and 20 down: the instance moves by as much.
     const moved = scene.getObjects().map(o => (o.id === 'p1' ? { ...o, x: 340, y: 50 } : o));
     const folded = applySceneToDocument(board, { getObjects: () => moved } as unknown as ReturnType<typeof documentToScene>);

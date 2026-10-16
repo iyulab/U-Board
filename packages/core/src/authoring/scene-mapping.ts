@@ -78,6 +78,14 @@ export function documentToScene(saved: CanvasView): Scene {
     }
   }
 
+  // Each instance, as one: a box over what it draws (its parts are locked, so a press there is the box's), named by the
+  // instance's id, selected and dragged as a part — under the lines, so a line of the board's own to one of its parts is
+  // still picked where it runs over the instance.
+  for (const instance of saved.instances ?? []) {
+    const box = instanceBox(saved, instance);
+    if (box) scene.add({ type: 'rect', id: instance.id, ...box, fill: INSTANCE_PLACEHOLDER_FILL, stroke: INSTANCE_PLACEHOLDER_STROKE, strokeWidth: 1 });
+  }
+
   // Follows its two nodes: selected to be edited, never dragged — moving a line or its label would move nothing.
   const nodes = sizedNodes(doc);
   for (const object of connectorObjects(nodes, doc.connectors, doc.appearance, { fixed: true })) add(object);
@@ -97,11 +105,6 @@ export function documentToScene(saved: CanvasView): Scene {
     });
   }
 
-  // Each instance, as one: a box over what it draws, named by the instance's id, selected and dragged as a part.
-  for (const instance of saved.instances ?? []) {
-    const box = instanceBox(saved, instance);
-    if (box) scene.add({ type: 'rect', id: instance.id, ...box, fill: INSTANCE_PLACEHOLDER_FILL, stroke: INSTANCE_PLACEHOLDER_STROKE, strokeWidth: 1 });
-  }
 
   return scene;
 }

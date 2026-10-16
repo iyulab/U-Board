@@ -33,6 +33,7 @@ import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_
 import { DecorationPanel } from './DecorationPanel.js';
 import { ConnectorPanel } from './ConnectorPanel.js';
 import { InstancePanel } from './InstancePanel.js';
+import { partNamer } from './part-names.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { sizedNodes } from '../node-size.js';
@@ -419,6 +420,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
             <ConnectorPanel
               connector={selectedConnector}
               nodes={doc.nodes}
+              nameOf={partNamer(doc, labels.locale)}
               onChange={handleConnectorChange}
               onDelete={handleDelete}
               adapters={adapters}
@@ -442,7 +444,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               connectorLabels={connectorLabels}
               onChange={handleWidgetChange}
               onPartChange={handlePartChange}
-              triggers={triggerEditing(doc, updateDoc)}
+              triggers={triggerEditing(doc, updateDoc, labels.locale)}
               background={doc.background}
               onNodeChange={handleNodeChange}
               elements={doc.elements}
@@ -458,7 +460,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               onAppearanceChange={handleAppearanceChange}
               accent={doc.accent}
               onAccentChange={handleAccentChange}
-              triggers={triggerEditing(doc, updateDoc)}
+              triggers={triggerEditing(doc, updateDoc, labels.locale)}
               referencePoints={doc.background.image?.referencePoints}
               onReferencePointsChange={handleReferencePointsChange}
               anchors={
