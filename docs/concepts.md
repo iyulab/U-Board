@@ -80,6 +80,17 @@ the viewer's session or the network. An element loads nothing from another origi
 declares the origin and the host allows it. Its definition describes its props as a JSON Schema,
 so a tool — or an AI — writing a board knows what it takes.
 
+**Component** — a group of parts a canvas board draws more than once: a machine card of a frame, three widgets and
+the line between two of them, drawn for each of twenty machines. The board defines it once, by name (`components`) —
+its nodes, connectors between them and decorations, placed from its own origin — and an **instance** (`instances`)
+draws it at a point with a value for each **parameter** it declares. In any text of its parts, `{{name}}` stands for
+a parameter’s value — inside a binding’s `ref` as much as in a label — so the twenty cards read twenty machines. The
+board keeps the component, not copies: a change to the definition reaches every instance. Each part an instance draws
+has the id `<instance id>/<part id>`, by which a connector of the board, a trigger or the board state names it. The
+values come only from the instances the board lists, so a share link reads what the definition names and nothing a
+viewer chooses. An element is drawn inside its node; a component’s parts take part in the layout and the lines like
+the board’s own.
+
 **Binding** — a reference from a widget to a value in an external system. U-Board reads through a
 binding; it does not store the value it resolves to. A resolved binding carries a connection
 quality alongside its value — `live` (the adapter reached the source just now), `stale` (the

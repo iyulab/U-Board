@@ -6,6 +6,17 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Components: a canvas board defines a group of parts once (`components` — nodes, connectors between them and
+  decorations, from its own origin, with declared `params`) and draws it any number of times (`instances` — a point,
+  `anchored`, a value per parameter). `{{name}}` in any text of its parts, a binding's `ref` included, takes the
+  instance's value. `expandComponents` gives the board as drawn — each part with the id `<instance id>/<part id>`
+  (`instancePartId`), which a board connector, a trigger and the board state use — and `resolveDocument` and
+  `bindingsIn` expand first, so a share link reads only what the instances name. `validateViewDocument`, the JSON
+  Schema and the advice on elements and states know components (the layout advice does not look inside instances yet); the editor draws an instance's parts locked, and renaming an element
+  renames it inside components too. The component's own editor comes later.
+
 ## [0.21.0] - 2026-10-17
 
 ### Added

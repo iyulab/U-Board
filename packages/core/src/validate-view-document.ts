@@ -1,11 +1,13 @@
 import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, CONNECTOR_ROUTES, PLACEMENTS, STROKE_DASHES, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, TRIGGER_ACTIONS, TRIGGER_EVENTS, isTriggerLink, type ConnectorArrow, type ConnectorRoute, type Placement, type StrokeDash } from './view-document.js';
-import type { ElementDefinition } from './view-document.js';
+import type { ElementDefinition, PropsSchema } from './view-document.js';
 import { ELEMENT_NAME, elementNameOf } from './elements/element-type.js';
 import { parseTemplate } from './elements/template.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from './elements/markup-policy.js';
 import { checkPropsSchema, checkPropsValue } from './elements/props-schema.js';
 import { VIEW_BOX, symbolReferences } from './elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor } from './css-color.js';
+import { instanceParts, parameterValues, placeholdersIn } from './components.js';
+import type { ComponentDefinition, ComponentInstance } from './view-document.js';
 
 /** One way a value fails to be a `ViewDocument`: where (an RFC 6901 JSON Pointer into the value,
  * `""` for the value itself) and what was expected there. */
@@ -70,14 +72,14 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
   } else doc.expected(['kind'], 'expected "canvas" or "grid"', value.kind);
 
   if ((value.kind === 'canvas' || value.kind === 'grid') && value.triggers !== undefined && doc.array(value, ['triggers'])) {
-    checkTriggers(doc, value.triggers as unknown[], value.kind, partIds(value[value.kind === 'canvas' ? 'nodes' : 'items']));
+    checkTriggers(doc, value.triggers as unknown[], value.kind, [...partIds(value[value.kind === 'canvas' ? 'nodes' : 'items']), ...doc.instanceNodeIds]);
   }
 
   return issues;
 }
 
 /** The fields each part of a document has — what `strict` holds a written document to. */
-const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'background', 'nodes', 'connectors', 'decorations', 'triggers'];
+const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'background', 'nodes', 'connectors', 'decorations', 'triggers', 'components', 'instances'];
 const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'columns', 'items', 'triggers'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget', 'states'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget', 'states'];
@@ -96,6 +98,10 @@ const STATES_HINT = 'A state is named from one binding of this widget: { from: "
 const BACKGROUND_FIELDS = ['image'];
 const IMAGE_FIELDS = ['src', 'width', 'height', 'referencePoints'];
 const ELEMENT_FIELDS = ['render', 'props', 'template', 'script', 'style', 'size', 'resources'];
+const COMPONENT_FIELDS = ['params', 'nodes', 'connectors', 'decorations'];
+const COMPONENT_NODE_FIELDS = NODE_FIELDS.filter(field => field !== 'anchored');
+const INSTANCE_FIELDS = ['id', 'component', 'x', 'y', 'anchored', 'params'];
+const COMPONENT_HINT = 'A component is { params, nodes, connectors, decorations } — its parts placed from its own origin; an instance { id, component, x, y, anchored, params } draws it.';
 
 function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
   if (doc.record(value, ['background'])) {
@@ -118,50 +124,57 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
       if (isRecord(node) && typeof node.id === 'string') nodeIds.add(node.id);
     });
   }
+  if (value.components !== undefined && doc.record(value, ['components'])) checkComponents(doc, value.components as Record<string, unknown>);
+  if (value.instances !== undefined && doc.array(value, ['instances'])) {
+    (value.instances as unknown[]).forEach((instance, i) => checkInstance(doc, instance, ['instances', String(i)]));
+  }
+  for (const id of doc.instanceNodeIds) nodeIds.add(id);
   if (doc.array(value, ['connectors'])) {
-    (value.connectors as unknown[]).forEach((connector, i) => {
-      const at = ['connectors', String(i)];
-      if (!doc.isRecordAt(connector, at)) return;
-      doc.known(connector, at, CONNECTOR_FIELDS, 'connector', CONNECTOR_HINT);
-      doc.id(connector, [...at, 'id']);
-      for (const end of ['fromNodeId', 'toNodeId']) {
-        if (typeof connector[end] !== 'string') doc.expected([...at, end], 'expected a string', connector[end]);
-        else if (!nodeIds.has(connector[end] as string)) doc.fail([...at, end], `no node has the id "${connector[end] as string}" — a connector joins two nodes of /nodes`);
-      }
-      doc.optionalString(connector, [...at, 'label']);
-      if (connector.labelAt !== undefined && !(typeof connector.labelAt === 'number' && connector.labelAt >= 0 && connector.labelAt <= 1)) {
-        doc.expected([...at, 'labelAt'], 'expected a number from 0 (the fromNodeId end) to 1 (the toNodeId end)', connector.labelAt);
-      }
-      if (connector.style !== undefined && doc.record(connector, [...at, 'style'])) {
-        const style = connector.style as Record<string, unknown>;
-        doc.known(style, [...at, 'style'], CONNECTOR_STYLE_FIELDS, 'connector style');
-        doc.optionalColor(style, [...at, 'style', 'stroke']);
-        if (style.strokeWidth !== undefined && !(Number.isFinite(style.strokeWidth) && (style.strokeWidth as number) > 0)) {
-          doc.expected([...at, 'style', 'strokeWidth'], 'expected a number greater than 0', style.strokeWidth);
-        }
-        if (style.dash !== undefined && !STROKE_DASHES.includes(style.dash as StrokeDash)) {
-          doc.fail([...at, 'style', 'dash'], 'expected "solid", "dashed" or "dotted"');
-        }
-        if (style.arrow !== undefined && !CONNECTOR_ARROWS.includes(style.arrow as ConnectorArrow)) {
-          doc.fail([...at, 'style', 'arrow'], 'expected "none", "end" (pointing at toNodeId), "start" (pointing at fromNodeId) or "both"');
-        }
-        if (style.route !== undefined && !CONNECTOR_ROUTES.includes(style.route as ConnectorRoute)) {
-          doc.fail([...at, 'style', 'route'], 'expected "straight" or "orthogonal" (out of the facing side, one turn, into the other)');
-        }
-      }
-      if (connector.bindings !== undefined && doc.record(connector, [...at, 'bindings'])) {
-        const bindings = connector.bindings as Record<string, unknown>;
-        for (const key of Object.keys(bindings)) {
-          if (!(CONNECTOR_BINDABLE as readonly string[]).includes(key)) {
-            doc.fail([...at, 'bindings', key], `a connector binds only ${CONNECTOR_BINDABLE.join(', ')}`);
-          }
-        }
-        checkBindings(doc, bindings, [...at, 'bindings']);
-      }
-    });
+    (value.connectors as unknown[]).forEach((connector, i) => checkConnector(doc, connector, ['connectors', String(i)], nodeIds, '/nodes'));
   }
   if (value.decorations !== undefined && doc.array(value, ['decorations'])) {
     (value.decorations as unknown[]).forEach((shape, i) => checkShape(doc, shape, ['decorations', String(i)]));
+  }
+}
+
+/** A connector — of the board, or of a component (`nodeIds` the nodes it may join, `nodesWhere` where they are). */
+function checkConnector(doc: Checker, connector: unknown, at: string[], nodeIds: ReadonlySet<string>, nodesWhere: string): void {
+  if (!doc.isRecordAt(connector, at)) return;
+  doc.known(connector, at, CONNECTOR_FIELDS, 'connector', CONNECTOR_HINT);
+  doc.id(connector, [...at, 'id']);
+  for (const end of ['fromNodeId', 'toNodeId']) {
+    if (typeof connector[end] !== 'string') doc.expected([...at, end], 'expected a string', connector[end]);
+    else if (!nodeIds.has(connector[end] as string)) doc.fail([...at, end], `no node has the id "${connector[end] as string}" — a connector joins two nodes of ${nodesWhere}`);
+  }
+  doc.optionalString(connector, [...at, 'label']);
+  if (connector.labelAt !== undefined && !(typeof connector.labelAt === 'number' && connector.labelAt >= 0 && connector.labelAt <= 1)) {
+    doc.expected([...at, 'labelAt'], 'expected a number from 0 (the fromNodeId end) to 1 (the toNodeId end)', connector.labelAt);
+  }
+  if (connector.style !== undefined && doc.record(connector, [...at, 'style'])) {
+    const style = connector.style as Record<string, unknown>;
+    doc.known(style, [...at, 'style'], CONNECTOR_STYLE_FIELDS, 'connector style');
+    doc.optionalColor(style, [...at, 'style', 'stroke']);
+    if (style.strokeWidth !== undefined && !(Number.isFinite(style.strokeWidth) && (style.strokeWidth as number) > 0)) {
+      doc.expected([...at, 'style', 'strokeWidth'], 'expected a number greater than 0', style.strokeWidth);
+    }
+    if (style.dash !== undefined && !STROKE_DASHES.includes(style.dash as StrokeDash)) {
+      doc.fail([...at, 'style', 'dash'], 'expected "solid", "dashed" or "dotted"');
+    }
+    if (style.arrow !== undefined && !CONNECTOR_ARROWS.includes(style.arrow as ConnectorArrow)) {
+      doc.fail([...at, 'style', 'arrow'], 'expected "none", "end" (pointing at toNodeId), "start" (pointing at fromNodeId) or "both"');
+    }
+    if (style.route !== undefined && !CONNECTOR_ROUTES.includes(style.route as ConnectorRoute)) {
+      doc.fail([...at, 'style', 'route'], 'expected "straight" or "orthogonal" (out of the facing side, one turn, into the other)');
+    }
+  }
+  if (connector.bindings !== undefined && doc.record(connector, [...at, 'bindings'])) {
+    const bindings = connector.bindings as Record<string, unknown>;
+    for (const key of Object.keys(bindings)) {
+      if (!(CONNECTOR_BINDABLE as readonly string[]).includes(key)) {
+        doc.fail([...at, 'bindings', key], `a connector binds only ${CONNECTOR_BINDABLE.join(', ')}`);
+      }
+    }
+    checkBindings(doc, bindings, [...at, 'bindings']);
   }
 }
 
@@ -221,15 +234,16 @@ function checkNode(doc: Checker, node: unknown, at: string[]): void {
   if (node.states !== undefined && doc.record(node, [...at, 'states'])) checkStates(doc, node.states as Record<string, unknown>, node.widget, [...at, 'states']);
 }
 
-/** The widget of a node or grid item — `at` is the path of the one that carries it. */
-function checkWidget(doc: Checker, placed: Record<string, unknown>, at: string[]): void {
+/** The widget of a node or grid item — `at` is the path of the one that carries it. In a component its element props
+ *  are not checked here (`elementProps: false`): a parameter fills them, so each instance checks them filled in. */
+function checkWidget(doc: Checker, placed: Record<string, unknown>, at: string[], { elementProps = true } = {}): void {
   if (!doc.record(placed, [...at, 'widget'])) return;
   const widget = placed.widget as Record<string, unknown>;
   doc.known(widget, [...at, 'widget'], WIDGET_FIELDS, 'widget', WIDGET_HINT);
   doc.string(widget, [...at, 'widget', 'type']);
   const propsAreRecord = widget.props === undefined || doc.record(widget, [...at, 'widget', 'props']);
   const bindingsAreRecord = widget.bindings === undefined || doc.record(widget, [...at, 'widget', 'bindings']);
-  if (typeof widget.type === 'string' && propsAreRecord && bindingsAreRecord) checkElementUse(doc, widget, at);
+  if (typeof widget.type === 'string' && propsAreRecord && bindingsAreRecord) checkElementUse(doc, widget, at, { props: elementProps });
   if (widget.bindings === undefined || !bindingsAreRecord) return;
   checkBindings(doc, widget.bindings as Record<string, unknown>, [...at, 'widget', 'bindings']);
 }
@@ -339,19 +353,171 @@ function checkElementDefinition(doc: Checker, definition: Record<string, unknown
 }
 
 /** A widget that places an element: the element is defined, and its props are ones the definition accepts. A prop a
- *  binding fills is taken as given — its value arrives at render time. */
-function checkElementUse(doc: Checker, widget: Record<string, unknown>, at: string[]): void {
+ *  binding fills is taken as given — its value arrives at render time. `props: false` checks only that the element is
+ *  defined; `defined: false` only its props, each issue followed by `context`. */
+function checkElementUse(doc: Checker, widget: Record<string, unknown>, at: string[], { props = true, defined = true, context = '' } = {}): void {
   const name = elementNameOf(widget.type as string);
   if (name === undefined) return;
   const typeAt = [...at, 'widget', 'type'];
   if (!doc.elements.has(name)) {
-    doc.fail(typeAt, ELEMENT_NAME.test(name) ? `no element "${name}" is defined — add it under /elements` : 'expected "element:" followed by an element name');
+    if (defined) doc.fail(typeAt, ELEMENT_NAME.test(name) ? `no element "${name}" is defined — add it under /elements` : 'expected "element:" followed by an element name');
     return;
   }
   const definition = doc.elements.get(name);
-  if (!definition?.props) return;
+  if (!props || !definition?.props) return;
   const filled = new Set(Object.keys((widget.bindings as Record<string, unknown> | undefined) ?? {}).map(key => key.split('.')[0]));
-  for (const issue of checkPropsValue(definition.props, widget.props ?? {}, filled)) doc.fail([...at, 'widget', 'props', ...issue.at], issue.message);
+  for (const issue of checkPropsValue(definition.props, widget.props ?? {}, filled)) doc.fail([...at, 'widget', 'props', ...issue.at], issue.message + context);
+}
+
+/** Where a component keeps each kind of part. */
+const COMPONENT_PARTS = ['nodes', 'connectors', 'decorations'] as const;
+/** A parameter's name — the `{{name}}` its parts use. */
+const PARAM_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
+/** The fields that name a part, which a parameter never fills. */
+const PART_NAMING_FIELDS = ['id', 'fromNodeId', 'toNodeId'];
+
+/** The components a board defines: each a small canvas of its own — its parts' ids unique among them, its connectors
+ *  joining its own nodes — whose texts use only the parameters it declares. A definition that holds is kept for checking
+ *  its instances; one that does not is still known by name. */
+function checkComponents(doc: Checker, components: Record<string, unknown>): void {
+  for (const [name, definition] of Object.entries(components)) {
+    const at = ['components', name];
+    if (!ELEMENT_NAME.test(name)) doc.fail(at, 'expected a name of lowercase letters, digits and hyphens, starting with a letter (at most 40)');
+    if (!doc.isRecordAt(definition, at)) {
+      doc.components.set(name, null);
+      continue;
+    }
+    const before = doc.issueCount;
+    doc.known(definition, at, COMPONENT_FIELDS, 'component', COMPONENT_HINT);
+    const params = componentParams(doc, definition.params, [...at, 'params']);
+    const parts = doc.scoped();
+    const nodeIds = new Set<string>();
+    if (doc.array(definition, [...at, 'nodes'])) {
+      (definition.nodes as unknown[]).forEach((node, i) => {
+        checkComponentNode(parts, node, [...at, 'nodes', String(i)]);
+        if (isRecord(node) && typeof node.id === 'string') nodeIds.add(node.id);
+      });
+    }
+    if (definition.connectors !== undefined && doc.array(definition, [...at, 'connectors'])) {
+      (definition.connectors as unknown[]).forEach((connector, i) => checkConnector(parts, connector, [...at, 'connectors', String(i)], nodeIds, pointer([...at, 'nodes'])));
+    }
+    if (definition.decorations !== undefined && doc.array(definition, [...at, 'decorations'])) {
+      (definition.decorations as unknown[]).forEach((shape, i) => checkShape(parts, shape, [...at, 'decorations', String(i)]));
+    }
+    for (const list of COMPONENT_PARTS) {
+      const items = definition[list];
+      if (!Array.isArray(items)) continue;
+      items.forEach((part, i) => {
+        if (!isRecord(part)) return;
+        const partAt = [...at, list, String(i)];
+        if (typeof part.id === 'string' && (part.id.includes('/') || part.id.includes('{{'))) {
+          doc.fail([...partAt, 'id'], 'expected an id without "/" or {{…}} — each instance names its parts <instance id>/<part id>');
+        }
+        for (const use of placeholdersIn(part, partAt)) {
+          if (PART_NAMING_FIELDS.includes(use.at[use.at.length - 1])) continue;
+          if (!params.has(use.name)) {
+            doc.fail(use.at, `{{${use.name}}}: the component declares no parameter "${use.name}" — ${params.size > 0 ? `it has: ${[...params].join(', ')}` : 'declare it in params'}`);
+          }
+        }
+      });
+    }
+    doc.components.set(name, doc.issueCount === before ? (definition as unknown as ComponentDefinition) : null);
+  }
+}
+
+/** The names a component's `params` declares, checked to be an object schema of the props-schema subset. */
+function componentParams(doc: Checker, schema: unknown, at: string[]): Set<string> {
+  const names = new Set<string>();
+  if (schema === undefined) return names;
+  const issues = checkPropsSchema(schema);
+  for (const issue of issues) doc.fail([...at, ...issue.at], issue.message);
+  if (issues.length > 0) return names;
+  const { type, properties } = schema as PropsSchema;
+  if (type !== 'object') doc.fail([...at, 'type'], 'expected "object" — params is { type: "object", properties: { "<name>": { type, default } }, required }');
+  for (const name of Object.keys(properties ?? {})) {
+    if (!PARAM_NAME.test(name)) doc.fail([...at, 'properties', name], 'expected a name of letters, digits and underscores, starting with a letter — it is the {{name}} its parts use');
+    names.add(name);
+  }
+  return names;
+}
+
+/** A node of a component — a node without `anchored`, which its instance gives. */
+function checkComponentNode(doc: Checker, node: unknown, at: string[]): void {
+  if (!doc.isRecordAt(node, at)) return;
+  doc.known(node, at, COMPONENT_NODE_FIELDS, 'component node', 'Its instance says whether it is anchored.');
+  doc.id(node, [...at, 'id']);
+  doc.number(node, [...at, 'x']);
+  doc.number(node, [...at, 'y']);
+  doc.optionalNumber(node, [...at, 'width']);
+  doc.optionalNumber(node, [...at, 'height']);
+  doc.optionalString(node, [...at, 'caption']);
+  checkWidget(doc, node, at, { elementProps: false });
+  if (node.states !== undefined && doc.record(node, [...at, 'states'])) checkStates(doc, node.states as Record<string, unknown>, node.widget, [...at, 'states']);
+}
+
+/** A component instance: a component the board defines, a value for what its parts use — only parameters it declares,
+ *  in the types it declares — and parts whose ids (`<instance id>/<part id>`) no other part of the board has. The
+ *  element props its nodes give are checked filled in, at the component's path, naming the instance. */
+function checkInstance(doc: Checker, instance: unknown, at: string[]): void {
+  if (!doc.isRecordAt(instance, at)) return;
+  doc.known(instance, at, INSTANCE_FIELDS, 'instance', COMPONENT_HINT);
+  doc.id(instance, [...at, 'id']);
+  if (typeof instance.id === 'string' && instance.id.includes('/')) doc.fail([...at, 'id'], 'expected an id without "/" — its parts are named <instance id>/<part id>');
+  doc.number(instance, [...at, 'x']);
+  doc.number(instance, [...at, 'y']);
+  if (typeof instance.anchored !== 'boolean') doc.expected([...at, 'anchored'], 'expected true or false', instance.anchored);
+  const paramsAreRecord = instance.params === undefined || doc.record(instance, [...at, 'params']);
+  const name = instance.component;
+  if (typeof name !== 'string') {
+    doc.expected([...at, 'component'], 'expected the name of a component of /components', name);
+    return;
+  }
+  if (!doc.components.has(name)) {
+    const names = [...doc.components.keys()];
+    doc.fail([...at, 'component'], `no component "${name}" is defined — ${names.length > 0 ? `the board has: ${names.join(', ')}` : 'define it under /components'}`);
+    return;
+  }
+  const definition = doc.components.get(name);
+  if (!definition || !paramsAreRecord || typeof instance.id !== 'string' || !Number.isFinite(instance.x) || !Number.isFinite(instance.y)) return;
+
+  const given = (instance.params ?? {}) as Record<string, unknown>;
+  const declared = definition.params?.properties ?? {};
+  for (const key of Object.keys(given)) {
+    if (!(key in declared)) {
+      const names = Object.keys(declared);
+      doc.fail([...at, 'params', key], `the component "${name}" has no parameter "${key}" — ${names.length > 0 ? `it has: ${names.join(', ')}` : 'it takes none'}`);
+    }
+  }
+  const values = parameterValues(definition, { params: given });
+  if (definition.params) {
+    for (const issue of checkPropsValue(definition.params, values)) doc.fail([...at, 'params', ...issue.at], issue.message.replace('the element requires it', 'the component requires it'));
+  }
+  const required = new Set(definition.params?.required ?? []);
+  const reported = new Set<string>();
+  for (const list of COMPONENT_PARTS) {
+    ((definition[list] ?? []) as unknown[]).forEach((part, i) => {
+      for (const use of placeholdersIn(part, ['components', name, list, String(i)])) {
+        if (reported.has(use.name) || PART_NAMING_FIELDS.includes(use.at[use.at.length - 1])) continue;
+        const value = values[use.name];
+        if (value === undefined && !required.has(use.name)) {
+          doc.fail([...at, 'params', use.name], `expected a value — the component "${name}" uses {{${use.name}}} and gives it no default`);
+          reported.add(use.name);
+        } else if (!use.whole && typeof value === 'object' && value !== null) {
+          doc.fail([...at, 'params', use.name], `expected text, a number or true/false — {{${use.name}}} sits inside a text at ${pointer(use.at)}`);
+          reported.add(use.name);
+        }
+      }
+    });
+  }
+
+  const parts = instanceParts(definition, instance as unknown as ComponentInstance);
+  for (const part of [...parts.nodes, ...parts.connectors, ...parts.decorations]) doc.claim(part.id, [...at, 'id']);
+  for (const node of parts.nodes) doc.instanceNodeIds.push(node.id);
+  parts.nodes.forEach((node, j) => {
+    if (isRecord(node.widget) && typeof node.widget.type === 'string') {
+      checkElementUse(doc, node.widget as unknown as Record<string, unknown>, ['components', name, 'nodes', String(j)], { defined: false, context: ` — for the instance "${instance.id as string}" (${pointer(at)})` });
+    }
+  });
 }
 
 /** A value map's own shape. Its mapped values are the values the prop takes — the widget library's
@@ -553,14 +719,35 @@ class Checker {
   /** Where each id was first seen — ids are unique across the whole document. */
   private readonly ids = new Map<string, string>();
   /** The elements the document defines: the definition when it holds, `null` when it is defined but does not. */
-  readonly elements = new Map<string, ElementDefinition | null>();
+  readonly elements: Map<string, ElementDefinition | null>;
   /** The symbols the document defines. */
-  readonly symbols = new Set<string>();
+  readonly symbols: Set<string>;
+  /** The components the document defines: the definition when it holds, `null` when it is defined but does not. */
+  readonly components: Map<string, ComponentDefinition | null>;
+  /** The ids the nodes of component instances are drawn with — nodes a connector or a trigger may name. */
+  readonly instanceNodeIds: string[] = [];
 
   constructor(
     private readonly issues: ViewDocumentIssue[],
-    private readonly strict: boolean
-  ) {}
+    private readonly strict: boolean,
+    shared?: Checker
+  ) {
+    this.elements = shared?.elements ?? new Map();
+    this.symbols = shared?.symbols ?? new Set();
+    this.components = shared?.components ?? new Map();
+  }
+
+  /** A checker for a component's parts: the same issues, elements and symbols, ids of its own. */
+  scoped(): Checker {
+    return new Checker(this.issues, this.strict, this);
+  }
+
+  /** An instance's part takes `id` — reported at `at` when another part of the document has it. */
+  claim(id: string, at: string[]): void {
+    const first = this.ids.get(id);
+    if (first === undefined) this.ids.set(id, pointer(at.slice(0, -1)));
+    else this.fail(at, `one of its parts takes the id "${id}", which ${first} has — give the instance or the part another id`);
+  }
 
   /** With `strict`: every field of `owner` is one of `fields` — the place at `at`, called `noun`. */
   known(owner: Record<string, unknown>, at: string[], fields: readonly string[], noun: string, hint?: string): void {

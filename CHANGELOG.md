@@ -11,6 +11,13 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- **Components** (`@iyulab/u-board`, unreleased): a board saved with components — a group of parts defined once and
+  drawn by each instance with its own parameter values — is accepted, drawn in the share viewer and the console, and
+  published in the board state part by part (`<instance id>/<part id>`). A share link reads only the bindings the
+  board's instances name. The console draws an instance's parts locked; editing a component comes later.
+
 ## [0.11.0] - 2026-10-17
 
 ### Added

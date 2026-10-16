@@ -18,6 +18,7 @@ import {
   partOf,
 } from './scene-mapping.js';
 import { resolveDocument } from '../resolve-document.js';
+import { expandComponents } from '../components.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { ResolvedCanvasView } from '../resolve-document.js';
 import { focusPart, useTriggers } from '../viewer/use-triggers.js';
@@ -118,7 +119,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
   // moved or resized node does not leave its widget behind while a slow source answers.
   const editorOverlays = useMemo(() => {
     const widgets = new Map((preview?.overlays ?? []).map(overlay => [overlay.id, overlay.content]));
-    return sizedNodes(doc).map(node => ({
+    return sizedNodes(expandComponents(doc)).map(node => ({
       id: node.id,
       x: node.x,
       y: node.y,

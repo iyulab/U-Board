@@ -598,7 +598,43 @@ binding. A resolved connector carries `quality` per
 bound path.
 
 `bindingsIn(doc)` yields every binding a document declares, widgets' and connectors', with the JSON Pointer of what
-it fills — the one walk for whatever needs to know what a board reads.
+it fills — the one walk for whatever needs to know what a board reads. A component instance's bindings come as it
+reads them, its parameters filled in, with the pointer of the binding in the component and the instance's id
+(`instance`).
+
+### Components — `expandComponents(doc)`
+
+```ts
+interface ComponentDefinition {
+  params?: PropsSchema;          // the parameters it takes, as an element's props are described
+  nodes: ComponentNode[];        // a node without `anchored`, placed from the component's origin
+  connectors?: Connector[];      // between its own nodes
+  decorations?: Shape[];         // placed from its origin
+}
+
+interface ComponentInstance {
+  id: string;
+  component: string;             // a key of `components`
+  x: number;
+  y: number;
+  anchored: boolean;             // its nodes take it
+  params?: Record<string, unknown>;
+}
+```
+
+`expandComponents(doc)` is the board as it is drawn: each instance replaced by its component's parts, moved to the
+instance's origin, each with the id `instancePartId(instance, part)` — `<instance id>/<part id>` — and every
+`{{name}}` in their text filled with the instance's value, or the parameter's `default`. A text that is only
+`{{name}}` takes the value itself (a number stays a number); inside a longer text the value is written as text. The
+parts follow the board's own, in instance order, and the result has no components left, so expanding it again changes
+nothing. `resolveDocument` and `bindingsIn` expand first, so a renderer, the board state and a share link see the
+parts; an editor edits the component, not the parts an instance draws.
+
+`validateViewDocument` checks a component as a small canvas of its own — its parts' ids unique among them, its
+connectors joining its own nodes, its texts naming only parameters it declares, no `/` in a part's id — and each
+instance against it: a component the board defines, only declared parameters in their declared types, a value for each
+one its parts use, part ids no other part of the board has. An element prop a parameter fills is checked once filled
+in, at the component's path, naming the instance.
 
 ### `ResolvedViewDocument` / `ResolvedNode` / `ResolvedWidget`
 

@@ -279,6 +279,44 @@ describe('public share routes', () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('reads what a component’s instances name, filled in — and nothing a parameter value no instance gives would name', async () => {
+    const plant = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const doc = {
+      kind: 'canvas' as const, background: {}, nodes: [], connectors: [],
+      components: {
+        card: {
+          params: { type: 'object' as const, properties: { machine: { type: 'string' as const } }, required: ['machine'] },
+          nodes: [{ id: 'temp', x: 0, y: 0, widget: { type: 'gauge', bindings: { value: { adapter: plant.id, ref: { path: '/machines/{{machine}}', valuePath: 'temp' } } } } }],
+        },
+      },
+      instances: [{ id: 'p1', component: 'card', x: 0, y: 0, anchored: false, params: { machine: 'P1' } }],
+    };
+    await updateBoard(db, workspaceId, boardId, { document: doc });
+    const token = await createShareToken();
+    (fetch as any).mockImplementation(async () => jsonResponse({ temp: 71 }));
+
+    const board = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
+    expect(board.body.connectorIds).toEqual([plant.id]);
+    const res = await request(app)
+      .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
+      .send({ bindings: [
+        { connectorId: plant.id, ref: { path: '/machines/P1', valuePath: 'temp' } },
+        // The component's ref as written, and filled with a machine no instance names.
+        { connectorId: plant.id, ref: { path: '/machines/{{machine}}', valuePath: 'temp' } },
+        { connectorId: plant.id, ref: { path: '/machines/P9', valuePath: 'temp' } },
+      ] });
+    expect(res.body.results).toEqual([
+      { value: 71, quality: 'live', observedAt: expect.any(String) },
+      { quality: 'disconnected' },
+      { quality: 'disconnected' },
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    const state = await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', `Bearer ${token}`);
+    expect(state.body.parts).toEqual({ 'p1/temp': { quality: 'live', observedAt: expect.any(String) } });
+  });
+
   it('rejects a batch request without a valid token, a bindings array, or within the size cap', async () => {
     const token = await createShareToken();
     expect((await request(app).post(`/api/share/boards/${boardId}/resolve`).send({ bindings: [] })).status).toBe(404);

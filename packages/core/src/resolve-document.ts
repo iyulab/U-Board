@@ -3,6 +3,7 @@ import { CONNECTOR_ARROWS, STROKE_DASHES } from './view-document.js';
 import type { Adapter, ConnectionQuality, ResolvedWidget } from './adapter.js';
 import { resolveBindings, resolveWidgetReadings } from './adapter.js';
 import { stateOf } from './states.js';
+import { expandComponents } from './components.js';
 
 /** A placed widget resolved against a set of adapters — everything a renderer needs to paint it without
  *  itself knowing how bindings are resolved — and, when it has states, the one it is in now (`stateOf`). */
@@ -18,9 +19,9 @@ export type ResolvedGridItem = Resolved<GridItem>;
  *  each binding read, per path. A connector without bindings has an empty `quality`. */
 export type ResolvedConnector = Connector & { quality: Record<string, ConnectionQuality> };
 
-/** A canvas view with every node's widget and every connector's bindings resolved. The background passes through
- * unchanged — it carries no bindings. */
-export interface ResolvedCanvasView extends Omit<CanvasView, 'nodes' | 'connectors'> {
+/** A canvas view with its components drawn as their parts (`expandComponents`) and every node's widget and every
+ * connector's bindings resolved. The background passes through unchanged — it carries no bindings. */
+export interface ResolvedCanvasView extends Omit<CanvasView, 'nodes' | 'connectors' | 'components' | 'instances'> {
   nodes: ResolvedNode[];
   connectors: ResolvedConnector[];
 }
@@ -37,14 +38,15 @@ export type ResolvedViewDocument = ResolvedCanvasView | ResolvedGridView;
 export type ResolvedOf<D extends ViewDocument> = D extends CanvasView ? ResolvedCanvasView : D extends GridView ? ResolvedGridView : ResolvedViewDocument;
 
 /**
- * Resolves every widget's bindings in a ViewDocument against the given adapters. This is
- * the single entry point a renderer calls to go from a saved document to something paintable —
- * it has no opinion on canvas-kit, u-widgets, or any other rendering concern.
+ * Resolves every widget's bindings in a ViewDocument against the given adapters, its components drawn as their parts
+ * first (`expandComponents`). This is the single entry point a renderer calls to go from a saved document to something
+ * paintable — it has no opinion on canvas-kit, u-widgets, or any other rendering concern.
  */
 export async function resolveDocument(doc: CanvasView, adapters: readonly Adapter[]): Promise<ResolvedCanvasView>;
 export async function resolveDocument(doc: GridView, adapters: readonly Adapter[]): Promise<ResolvedGridView>;
 export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument>;
-export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument> {
+export async function resolveDocument(saved: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument> {
+  const doc = expandComponents(saved);
   const resolve = <T extends Placed>(placed: readonly T[]) =>
     Promise.all(
       placed.map(async (p): Promise<Resolved<T>> => {

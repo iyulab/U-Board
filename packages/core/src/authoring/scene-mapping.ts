@@ -6,6 +6,7 @@ import { seedWidget } from './widget-catalog.js';
 import { decorationObjects } from '../renderer/decoration-drawing.js';
 import { captionObjects, connectorObjects } from '../renderer/connector-drawing.js';
 import { triggersWithout, withTriggers } from './trigger-editing.js';
+import { expandComponents } from '../components.js';
 
 /** A newly-added rect decoration's default border — distinct from a node placeholder's blue
  * (`NODE_PLACEHOLDER_STROKE` below) so an author can tell a structural frame apart from a widget
@@ -35,13 +36,18 @@ const DECORATION_PLACEHOLDER_FILL = 'rgba(245, 158, 11, 0.08)';
  * drag: the background image (locked, drawn but not editable), the connectors (fixed: selected to edit
  * them, never dragged — they follow their nodes), and one `rect` per node, id'd by node id, standing in
  * for its widget's footprint. A scene object's id names its document part, after a `#` for a part's
- * pieces (`partOf`).
+ * pieces (`partOf`). A component instance's parts are drawn where they land, locked: they are edited in the
+ * component, not where an instance draws them.
  */
-export function documentToScene(doc: CanvasView): Scene {
+export function documentToScene(saved: CanvasView): Scene {
   const scene = new Scene();
+  const doc = expandComponents(saved);
+  const own = new Set([...saved.nodes, ...saved.connectors, ...(saved.decorations ?? [])].map(part => part.id));
+  // A part an instance draws, and every piece of it: drawn, never selected or moved.
+  const add = (object: Parameters<Scene['add']>[0]) => scene.add(object.id && !own.has(partOf(object.id)) ? { ...object, locked: true } : object);
 
   if (doc.background.image) {
-    scene.add({
+    add({
       type: 'image',
       x: 0,
       y: 0,
@@ -59,21 +65,21 @@ export function documentToScene(doc: CanvasView): Scene {
       // Konva's Text hit-tests its full bounding box regardless of fill, so a text decoration is
       // added as drawn below; a rect decoration needs the designer-only placeholder fill above to
       // stay clickable across its interior, not just its stroke.
-      scene.add({ ...drawn, fill: DECORATION_PLACEHOLDER_FILL, stroke: drawn.stroke ?? DECORATION_STROKE });
+      add({ ...drawn, fill: DECORATION_PLACEHOLDER_FILL, stroke: drawn.stroke ?? DECORATION_STROKE });
       // Its name follows the frame — drawn again where the frame lands — and a press on it reaches the frame.
-      for (const object of name) scene.add({ ...object, locked: true });
+      for (const object of name) add({ ...object, locked: true });
     } else {
-      scene.add(drawn);
+      add(drawn);
     }
   }
 
   // Follows its two nodes: selected to be edited, never dragged — moving a line or its label would move nothing.
   const nodes = sizedNodes(doc);
-  for (const object of connectorObjects(nodes, doc.connectors, doc.appearance, { fixed: true })) scene.add(object);
-  for (const object of captionObjects(nodes, doc.appearance, true)) scene.add(object);
+  for (const object of connectorObjects(nodes, doc.connectors, doc.appearance, { fixed: true })) add(object);
+  for (const object of captionObjects(nodes, doc.appearance, true)) add(object);
 
   for (const node of nodes) {
-    scene.add({
+    add({
       type: 'rect',
       id: node.id,
       x: node.x,

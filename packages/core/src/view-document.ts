@@ -50,6 +50,54 @@ export interface CanvasView {
   symbols?: Record<string, SymbolDefinition>;
   /** What the board does when something happens on it — see `Trigger`. Absent means nothing. */
   triggers?: Trigger[];
+  /** The parts this board draws more than once, by name — see `ComponentDefinition`. */
+  components?: Record<string, ComponentDefinition>;
+  /** Where each component is drawn and with which values — see `ComponentInstance`. */
+  instances?: ComponentInstance[];
+}
+
+/**
+ * A group of parts a canvas board defines once and places any number of times — a machine card of a frame, three
+ * widgets and the line between two of them, drawn for each of twenty machines (docs/concepts.md — "Component"). Its
+ * parts are a small canvas of their own: nodes, connectors between them and decorations, placed relative to the
+ * component's origin.
+ *
+ * A component takes only the values it declares (`params`). In any text of its parts — a prop, a binding's `ref`, a
+ * label — `{{name}}` stands for the value of the parameter `name`; a text that is nothing but `{{name}}` takes the
+ * value itself, a number stays a number. Each value comes from the instance that places the component, so a board
+ * reads only what its own definition names: a viewer never chooses a parameter.
+ *
+ * A board keeps the component, not copies of it — a change to the definition reaches every instance. Its parts are
+ * drawn as if the board had them (`expandComponents`); each takes the id `<instance id>/<part id>`, by which a
+ * connector, a trigger or the board state names it.
+ */
+export interface ComponentDefinition {
+  /** The parameters it takes, as a JSON Schema object schema — the subset an element's props are described with.
+   *  A parameter's `default` stands for an instance that gives none. */
+  params?: PropsSchema;
+  /** Its nodes, placed from the component's origin. They take `anchored` from the instance. */
+  nodes: ComponentNode[];
+  /** Lines between its own nodes. */
+  connectors?: Connector[];
+  /** Its frames and texts, placed from the component's origin. */
+  decorations?: Shape[];
+}
+
+/** A node of a component — a canvas node without `anchored`, which its instance gives. */
+export type ComponentNode = Omit<Node, 'anchored'>;
+
+/** A component drawn on a board: where its origin is, and the values of its parameters. */
+export interface ComponentInstance {
+  /** Unique in the document, like a node's — and the first half of the id each of its parts takes. */
+  id: string;
+  /** The name of a component of this board (`components`). */
+  component: string;
+  x: number;
+  y: number;
+  /** As a node's: whether (x, y) is a coordinate in the background's real space. Its nodes take it. */
+  anchored: boolean;
+  /** A value for each parameter of the component, by name — checked against its `params`. */
+  params?: Record<string, unknown>;
 }
 
 /** A grid view: widgets laid out in order, in rows of `columns` columns — no position, so the same

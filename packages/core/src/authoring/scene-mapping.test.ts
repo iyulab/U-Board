@@ -27,6 +27,38 @@ describe('partOf', () => {
   });
 });
 
+describe('a board with component instances, in the designer', () => {
+  const board = doc({
+    nodes: [{ id: 'hall', x: 0, y: 0, anchored: false, widget: { type: 'status' } }],
+    connectors: [{ id: 'feed', fromNodeId: 'hall', toNodeId: 'p1/temp' }],
+    components: {
+      card: {
+        nodes: [{ id: 'temp', x: 0, y: 0, widget: { type: 'gauge' } }],
+        decorations: [{ id: 'frame', type: 'rect', x: -10, y: -10, width: 180, height: 120 }],
+      },
+    },
+    instances: [{ id: 'p1', component: 'card', x: 300, y: 40, anchored: false }],
+  });
+
+  it('draws an instance’s parts where they land, locked, and the board’s own parts as ever', () => {
+    const objects = documentToScene(board).getObjects();
+    const byPart = (part: string) => objects.filter(o => o.id && partOf(o.id) === part);
+    expect(byPart('p1/temp').map(o => [o.x, o.y, o.locked])).toEqual([[300, 40, true]]);
+    expect(byPart('p1/frame').every(o => o.locked)).toBe(true);
+    expect(byPart('hall').every(o => !o.locked)).toBe(true);
+    // The board's own line to an instance's part is drawn, and selected to be edited as any other.
+    expect(byPart('feed').length).toBeGreaterThan(0);
+    expect(byPart('feed').every(o => !o.locked && o.fixed)).toBe(true);
+  });
+
+  it('keeps the components and instances when the scene is folded back', () => {
+    const folded = applySceneToDocument(board, documentToScene(board));
+    expect(folded.components).toEqual(board.components);
+    expect(folded.instances).toEqual(board.instances);
+    expect(folded.nodes.map(n => [n.id, n.x, n.y])).toEqual([['hall', 0, 0]]);
+  });
+});
+
 describe('addConnector', () => {
   it('joins two nodes with a connector of the given id, drawn the board’s way', () => {
     const before = doc({ nodes: [{ id: 'a', x: 0, y: 0, anchored: false, widget: { type: 'status' } }, { id: 'b', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] });

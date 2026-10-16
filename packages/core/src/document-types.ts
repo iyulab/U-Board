@@ -33,5 +33,8 @@ export type {
   ElementDefinition,
   ElementRender,
   PropsSchema,
+  ComponentDefinition,
+  ComponentNode,
+  ComponentInstance,
 } from './view-document.js';
 export type { Adapter, AdapterReference, Attribution, ConnectionQuality, QualityReason, ResolvedBinding, ResolvedWidget } from './adapter.js';

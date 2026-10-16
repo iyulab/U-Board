@@ -1,6 +1,7 @@
 import { placedIn, type ElementDefinition, type ViewDocument, type Widget } from '../view-document.js';
 import { ELEMENT_NAME, ELEMENT_TYPE_PREFIX, elementNameOf } from '../elements/element-type.js';
 import { validateViewDocument, type ViewDocumentIssue } from '../validate-view-document.js';
+import { componentWidgets } from '../components.js';
 
 /** What a new element starts as: a template with one text prop, drawn in the board's theme. */
 export const NEW_ELEMENT: ElementDefinition = {
@@ -11,11 +12,11 @@ export const NEW_ELEMENT: ElementDefinition = {
 };
 
 /** How many of the document's widgets place each element it defines (0 for one placed nowhere), and the elements it
- *  places that it does not define. */
+ *  places that it does not define. A component's node counts once, however many instances draw it. */
 export function elementUses(doc: ViewDocument): Map<string, number> {
   const uses = new Map<string, number>(Object.keys(doc.elements ?? {}).map(name => [name, 0]));
-  for (const placed of placedIn(doc)) {
-    const name = elementNameOf(placed.widget.type);
+  for (const widget of [...placedIn(doc).map(placed => placed.widget), ...componentWidgets(doc)]) {
+    const name = elementNameOf(widget.type);
     if (name !== undefined) uses.set(name, (uses.get(name) ?? 0) + 1);
   }
   return uses;
@@ -40,10 +41,16 @@ export function elementNameProblem(doc: ViewDocument, name: string, current?: st
   return undefined;
 }
 
-/** Every placed widget of `doc`, changed by `change` — a canvas view's nodes or a grid view's items. */
+/** Every placed widget of `doc`, changed by `change` — a canvas view's nodes, and its components' nodes, or a grid
+ *  view's items. */
 function mapWidgets<D extends ViewDocument>(doc: D, change: (widget: Widget) => Widget): D {
-  if (doc.kind === 'canvas') return { ...doc, nodes: doc.nodes.map(node => ({ ...node, widget: change(node.widget) })) };
-  return { ...doc, items: doc.items.map(item => ({ ...item, widget: change(item.widget) })) };
+  if (doc.kind === 'grid') return { ...doc, items: doc.items.map(item => ({ ...item, widget: change(item.widget) })) };
+  const nodes = doc.nodes.map(node => ({ ...node, widget: change(node.widget) }));
+  if (!doc.components) return { ...doc, nodes };
+  const components = Object.fromEntries(
+    Object.entries(doc.components).map(([name, component]) => [name, { ...component, nodes: component.nodes.map(node => ({ ...node, widget: change(node.widget) })) }])
+  );
+  return { ...doc, nodes, components };
 }
 
 /** `doc` with element `from` called `to`, and every widget that places it placing it by the new name. Unchanged when

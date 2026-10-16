@@ -15,6 +15,12 @@ const node = (id: string, widget: unknown = { type: 'gauge' }) => ({ id, x: 0, y
 const canvas = (extra: Record<string, unknown> = {}) => ({ kind: 'canvas', background: {}, nodes: [node('a')], connectors: [], ...extra });
 const grid = (extra: Record<string, unknown> = {}) => ({ kind: 'grid', items: [{ id: 'a', widget: { type: 'gauge' } }], ...extra });
 const dot = { render: 'template', props: { type: 'object', properties: { on: { type: 'boolean' } } }, template: '<b class="{{on}}"/>' };
+const card = {
+  params: { type: 'object', properties: { machine: { type: 'string' } }, required: ['machine'] },
+  nodes: [{ id: 'temp', x: 0, y: 0, widget: { type: 'gauge', bindings: { value: { adapter: 'p', ref: '/machines/{{machine}}/temp' } } } }],
+  decorations: [{ id: 'frame', type: 'rect', x: -10, y: -10, width: 200, height: 140, label: '{{machine}}' }],
+};
+const instance = (id: string, extra: Record<string, unknown> = {}) => ({ id, component: 'card', x: 100, y: 50, anchored: false, params: { machine: id }, ...extra });
 
 /** Documents both judge the same way. */
 const AGREED: [string, unknown, boolean][] = [
@@ -76,6 +82,12 @@ const AGREED: [string, unknown, boolean][] = [
   ['a resource over http', grid({ elements: { chart: { render: 'script', script: 'x', resources: ['http://cdn.example.com'] } } }), false],
   ['an element size of zero', grid({ elements: { dot: { ...dot, size: { width: 0, height: 1 } } } }), false],
   ['a props schema that is not an object schema', grid({ elements: { dot: { ...dot, props: { type: 'string' } } } }), false],
+  ['a component placed twice, a connector to one of its parts', canvas({ components: { card }, instances: [instance('press-1'), instance('press-2')], connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'press-2/temp' }] }), true],
+  ['a component without nodes', canvas({ components: { card: { params: card.params } } }), false],
+  ['a component node with an id that has a slash', canvas({ components: { card: { nodes: [{ id: 'a/b', x: 0, y: 0, widget: { type: 'gauge' } }] } } }), false],
+  ['an instance without anchored', canvas({ components: { card }, instances: [{ id: 'p', component: 'card', x: 0, y: 0, params: { machine: 'p' } }] }), false],
+  ['an instance id with a slash', canvas({ components: { card }, instances: [instance('line/1')] }), false],
+  ['params that are not an object schema', canvas({ components: { card: { ...card, params: { type: 'string' } } } }), false],
 ];
 
 /** Documents the validator refuses for a rule the schema says it cannot express — named in its description. */
@@ -89,6 +101,11 @@ const VALIDATOR_ONLY: [string, unknown][] = [
   ['a template with an unclosed section', grid({ elements: { dot: { ...dot, template: '{{#on}}' } } })],
   ['a URL off the declared origins', grid({ elements: { dot: { ...dot, template: '<img src="https://x.example.com/a.png">' } } })],
   ['a props schema keyword outside the subset', grid({ elements: { dot: { ...dot, props: { type: 'object', pattern: 'x' } } } })],
+  ['an instance of a component not defined', canvas({ instances: [instance('p')] })],
+  ['an instance missing a required parameter', canvas({ components: { card }, instances: [instance('p', { params: {} })] })],
+  ['an instance giving a parameter the component does not declare', canvas({ components: { card }, instances: [instance('p', { params: { machine: 'p', line: 2 } })] })],
+  ['a component text using an undeclared parameter', canvas({ components: { card: { ...card, decorations: [{ id: 'f', type: 'text', x: 0, y: 0, text: '{{line}}' }] } } })],
+  ['an instance part taking the id of a board node', canvas({ nodes: [node('p/temp')], components: { card }, instances: [instance('p')] })],
 ];
 
 function* walk(value: unknown, at = ''): Generator<[string, Record<string, unknown>]> {
