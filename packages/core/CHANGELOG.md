@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `applyJsonPatch`: an index that is not in a list says how long the list is (“the list has 44 items (0–43)”).
+
 ## [0.17.0] - 2026-10-16
 
 ### Added

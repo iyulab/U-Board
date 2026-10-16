@@ -98,7 +98,7 @@ function get(root: unknown, tokens: string[]): unknown {
     const where = () => `/${tokens.slice(0, i + 1).join('/')}`;
     if (Array.isArray(at)) {
       const index = arrayIndex(token, at.length - 1);
-      if (index === undefined) throw new Error(`no item at ${where()}`);
+      if (index === undefined) throw new Error(`no item at ${where()}${listSize(at)}`);
       at = at[index];
     } else if (isObject(at)) {
       // "/" names a member whose key is empty — not the whole document, which is "".
@@ -159,7 +159,7 @@ function remove(root: unknown, tokens: string[]): { root: unknown; value: unknow
   const key = tokens[tokens.length - 1];
   if (Array.isArray(parent)) {
     const index = arrayIndex(key, parent.length - 1);
-    if (index === undefined) throw new Error(`no item at ${pointerOf(tokens)}`);
+    if (index === undefined) throw new Error(`no item at ${pointerOf(tokens)}${listSize(parent)}`);
     return { root, value: parent.splice(index, 1)[0] };
   }
   if (isObject(parent) && Object.hasOwn(parent, key)) {
@@ -171,6 +171,11 @@ function remove(root: unknown, tokens: string[]): { root: unknown; value: unknow
 }
 
 /** An array index token — digits, no leading zero — at most `max`. */
+/** What a writer that named a missing index needs to see: how long the list is. */
+function listSize(list: readonly unknown[]): string {
+  return list.length === 0 ? ' — the list is empty' : ` — the list has ${list.length} item${list.length === 1 ? '' : 's'} (0–${list.length - 1})`;
+}
+
 function arrayIndex(token: string, max: number): number | undefined {
   if (!/^(0|[1-9][0-9]*)$/.test(token)) return undefined;
   const index = Number(token);

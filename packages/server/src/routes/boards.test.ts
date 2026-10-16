@@ -288,7 +288,7 @@ describe('PATCH /boards/:boardId — a JSON Patch', () => {
       .set('Cookie', memberCookie)
       .send([{ op: 'add', path: '/items/0/span', value: 3 }, { op: 'remove', path: '/items/9' }]);
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ code: 'INVALID_PATCH', operation: 1, message: 'operation 1: no item at /items/9' });
+    expect(res.body).toEqual({ code: 'INVALID_PATCH', operation: 1, message: 'operation 1: no item at /items/9 — the list has 2 items (0–1)' });
     const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(get.body.revision).toBe(2);
   });
