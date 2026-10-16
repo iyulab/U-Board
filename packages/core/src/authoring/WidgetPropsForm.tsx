@@ -31,78 +31,16 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS, ele
     onChange(withField(widget, field, value));
   };
 
-  const control = (field: WidgetField) => {
-    const value = readField(widget, field);
-    const bound = field.section !== 'options' && widget.bindings?.[field.path.join('.')] !== undefined;
-    const name = (
-      <span className="ub-panel__field-name" title={field.description}>
-        {field.label} <code>{field.key}</code>
-        {bound && <span className="ub-panel__binding-tag"> · {labels.boundField}</span>}
-      </span>
-    );
-    const id = field.path.join('.');
-    switch (field.kind) {
-      case 'boolean':
-        return (
-          <label key={id} className="ub-panel__field ub-panel__field--check" style={CHECK_STYLE}>
-            <input type="checkbox" checked={value === undefined ? field.defaultValue === true : value === true} onChange={e => set(field, e.target.checked)} />
-            {name}
-          </label>
-        );
-      case 'choice':
-        return (
-          <label key={id} className="ub-panel__field" style={FIELD_STYLE}>
-            {name}
-            <select value={typeof value === 'string' ? value : ''} onChange={e => set(field, e.target.value === '' ? undefined : e.target.value)}>
-              <option value="">{field.defaultValue === undefined ? labels.choiceDefault : `${labels.choiceDefault} (${text(field.defaultValue)})`}</option>
-              {field.choices!.map(choice => (
-                <option key={choice} value={choice}>
-                  {choice}
-                </option>
-              ))}
-            </select>
-          </label>
-        );
-      case 'number':
-        return (
-          <label key={id} className="ub-panel__field" style={FIELD_STYLE}>
-            {name}
-            <input
-              // Re-created when the value changes elsewhere (the JSON editor, an import), so it shows it.
-              key={`${id}=${text(value)}`}
-              type="number"
-              min={field.min}
-              max={field.max}
-              step={field.integer ? 1 : undefined}
-              defaultValue={typeof value === 'number' ? value : ''}
-              // Left empty, the widget's own default applies — shown so the empty field does not read as nothing.
-              placeholder={field.defaultValue === undefined ? undefined : text(field.defaultValue)}
-              onBlur={e => {
-                const raw = e.currentTarget.value.trim();
-                // Cleared: the widget's own default applies again. A whole-number field keeps whole numbers.
-                const number = raw === '' || !Number.isFinite(Number(raw)) ? undefined : Number(raw);
-                set(field, number !== undefined && field.integer ? Math.round(number) : number);
-              }}
-            />
-          </label>
-        );
-      case 'text':
-        return (
-          <label key={id} className="ub-panel__field" style={FIELD_STYLE}>
-            {name}
-            <input
-              key={`${id}=${text(value)}`}
-              defaultValue={text(value)}
-              placeholder={field.defaultValue === undefined ? undefined : text(field.defaultValue)}
-              onBlur={e => {
-                // Left as shown: nothing to write (an absent value stays absent).
-                if (e.currentTarget.value !== text(value)) set(field, e.currentTarget.value);
-              }}
-            />
-          </label>
-        );
-    }
-  };
+  const control = (field: WidgetField) => (
+    <FieldControl
+      key={field.path.join('.')}
+      field={field}
+      value={readField(widget, field)}
+      write={value => set(field, value)}
+      bound={field.section !== 'options' && widget.bindings?.[field.path.join('.')] !== undefined}
+      labels={labels}
+    />
+  );
 
   const data = fields.filter(f => f.section === 'data');
   const options = fields.filter(f => f.section === 'options');
@@ -129,5 +67,91 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS, ele
       )}
       {otherOptions > 0 && <p className="ub-panel__hint">{labels.moreInAdvanced.replace('{count}', String(otherOptions))}</p>}
     </div>
+  );
+}
+
+/** The control for one field: `value` is its value now, `write` sets it (`undefined` takes it out), `bound` marks a value
+ *  a binding fills. A typed value is written when the control is left (or a choice is made), not on every keystroke. */
+function FieldControl({ field, value, write, bound = false, labels }: { field: WidgetField; value: unknown; write: (value: unknown) => void; bound?: boolean; labels: UBoardLabels }) {
+  const name = (
+    <span className="ub-panel__field-name" title={field.description}>
+      {field.label} <code>{field.key}</code>
+      {bound && <span className="ub-panel__binding-tag"> · {labels.boundField}</span>}
+    </span>
+  );
+  const id = field.path.join('.');
+  switch (field.kind) {
+    case 'boolean':
+      return (
+        <label key={id} className="ub-panel__field ub-panel__field--check" style={CHECK_STYLE}>
+          <input type="checkbox" checked={value === undefined ? field.defaultValue === true : value === true} onChange={e => write(e.target.checked)} />
+          {name}
+        </label>
+      );
+    case 'choice':
+      return (
+        <label key={id} className="ub-panel__field" style={FIELD_STYLE}>
+          {name}
+          <select value={typeof value === 'string' ? value : ''} onChange={e => write(e.target.value === '' ? undefined : e.target.value)}>
+            <option value="">{field.defaultValue === undefined ? labels.choiceDefault : `${labels.choiceDefault} (${text(field.defaultValue)})`}</option>
+            {field.choices!.map(choice => (
+              <option key={choice} value={choice}>
+                {choice}
+              </option>
+            ))}
+          </select>
+        </label>
+      );
+    case 'number':
+      return (
+        <label key={id} className="ub-panel__field" style={FIELD_STYLE}>
+          {name}
+          <input
+            // Re-created when the value changes elsewhere (the JSON editor, an import), so it shows it.
+            key={`${id}=${text(value)}`}
+            type="number"
+            min={field.min}
+            max={field.max}
+            step={field.integer ? 1 : undefined}
+            defaultValue={typeof value === 'number' ? value : ''}
+            // Left empty, the widget's own default applies — shown so the empty field does not read as nothing.
+            placeholder={field.defaultValue === undefined ? undefined : text(field.defaultValue)}
+            onBlur={e => {
+              const raw = e.currentTarget.value.trim();
+              // Cleared: the widget's own default applies again. A whole-number field keeps whole numbers.
+              const number = raw === '' || !Number.isFinite(Number(raw)) ? undefined : Number(raw);
+              write(number !== undefined && field.integer ? Math.round(number) : number);
+            }}
+          />
+        </label>
+      );
+    case 'text':
+      return (
+        <label key={id} className="ub-panel__field" style={FIELD_STYLE}>
+          {name}
+          <input
+            key={`${id}=${text(value)}`}
+            defaultValue={text(value)}
+            placeholder={field.defaultValue === undefined ? undefined : text(field.defaultValue)}
+            onBlur={e => {
+              // Left as shown: nothing to write (an absent value stays absent).
+              if (e.currentTarget.value !== text(value)) write(e.currentTarget.value);
+            }}
+          />
+        </label>
+      );
+  }
+}
+
+/** A group of fields under `legend`, each read with `read` and written with `write` — what a component instance's
+ *  parameter values are edited with, as an element's props are. */
+export function SchemaFieldset({ legend, fields, read, write, labels = DEFAULT_LABELS }: { legend: string; fields: readonly WidgetField[]; read: (field: WidgetField) => unknown; write: (field: WidgetField, value: unknown) => void; labels?: UBoardLabels }) {
+  return (
+    <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>
+      <legend>{legend}</legend>
+      {fields.map(field => (
+        <FieldControl key={field.path.join('.')} field={field} value={read(field)} write={value => value !== read(field) && write(field, value)} labels={labels} />
+      ))}
+    </fieldset>
   );
 }

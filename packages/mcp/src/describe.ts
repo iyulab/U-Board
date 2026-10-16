@@ -139,7 +139,9 @@ symbols    = { "<name>": { viewBox?, markup } } — top level: SVG drawings any 
 const COMPONENTS = `# Components (canvas)
 
 Use one when the same group of parts — a frame, its widgets, the lines between them — is drawn twice or more (a card per
-machine). A group drawn once: draw its parts directly.
+machine). A group drawn once: draw its parts directly. A card that is one picture filled with values is an element placed
+per card (describe("elements")); a component is for a group whose parts are nodes of their own — each its own widget,
+binding or states, or a line's end.
 
 components = { "<name>": { params?, nodes, connectors?, decorations? } } — top level.
   params:      { type: "object", properties: { "<param>": { type, default? } }, required?: [...] } — as an element's props.
@@ -164,7 +166,7 @@ function schemaPart(pointer: string): unknown {
     return getByPointer(documentSchema(), pointer);
   } catch {
     const defs = Object.keys((documentSchema() as { $defs?: Record<string, unknown> }).$defs ?? {});
-    throw new Error(`nothing at ${pointer} in the schema — its parts are under /$defs: ${defs.map(name => `/$defs/${name}`).join(', ')}`);
+    throw new Error(`nothing at ${pointer} in the schema — leave pointer out for the whole schema; its parts are under /$defs: ${defs.map(name => `/$defs/${name}`).join(', ')}`);
   }
 }
 

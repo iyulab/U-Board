@@ -6,6 +6,17 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- `@iyulab/u-widgets` `^0.35.3`: a quote in a markdown widget's link can no longer add an attribute (an event handler)
+  to the link, and a heatmap's tooltip escapes its row and column names. A board's widget specs are often written by a
+  language model — take this.
+
+### Changed
+
+- `validateViewDocument`: a field of an element definition written beside the elements (`/elements/template`) says it
+  belongs inside one, `/elements/<name>/template`.
+
 ### Added
 
 - Components: a canvas board defines a group of parts once (`components` — nodes, connectors between them and
@@ -15,8 +26,9 @@ All notable changes to this package are documented here. The format follows
   (`instancePartId`), which a board connector, a trigger and the board state use — and `resolveDocument` and
   `bindingsIn` expand first, so a share link reads only what the instances name. `validateViewDocument`, the JSON
   Schema and the advice know components — the layout advice judges the board as drawn, saying what lies within one
-  instance at the component and what involves an instance at the instance; the editor draws an instance's parts locked, and renaming an element
-  renames it inside components too. The component's own editor comes later.
+  instance at the component and what involves an instance at the instance. In the editor an instance is selected, dragged and deleted as one (its parts drawn
+  locked under it, the board's lines and triggers to its parts going with it), its parameter values edited in its own
+  panel; renaming an element renames it inside components too. Editing a component itself comes later.
 
 ## [0.21.0] - 2026-10-17
 

@@ -249,6 +249,13 @@ export const KO_LABELS: UBoardLabels = {
   placeBottomEnd: '오른쪽 아래',
   newTextDecoration: '라벨',
 
+  instanceHeading: '컴포넌트',
+  instanceOf: '컴포넌트 "{component}"를 그립니다.',
+  instanceOfMissing: '이 보드에 정의되지 않은 "{component}"를 가리켜 아무것도 그리지 않습니다.',
+  instanceParams: '값',
+  instanceOtherParams: '여기 입력란이 없는 값: {count}개 — 문서 소스에서 고치세요.',
+  instanceEditHint: '끌어서 옮깁니다. 그리는 내용은 컴포넌트의 것이라, 거기서 고치면 모든 인스턴스에 반영됩니다.',
+
   connectorHeading: '연결선',
   connectorEnds: '{from} → {to}',
   reverseConnector: '방향 바꾸기',

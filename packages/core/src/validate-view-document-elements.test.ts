@@ -25,6 +25,15 @@ describe('validateViewDocument — elements', () => {
     expect(validateViewDocument({ kind: 'grid', items: [{ id: 'a', widget: { type: 'element:pump', props: { state: 'stop' } } }], elements: { pump } })).toEqual([]);
   });
 
+  it('says a definition field written beside the elements belongs inside one', () => {
+    const { template, style, ...rest } = pump;
+    expect(validateViewDocument(canvas({ pump: rest, template, style }, []))).toEqual([
+      { path: '/elements/pump/template', message: 'expected the markup a template element draws' },
+      { path: '/elements/template', message: expect.stringContaining('"template" is a field of one: put it inside its element, /elements/<name>/template') },
+      { path: '/elements/style', message: expect.stringContaining('"style" is a field of one') },
+    ]);
+  });
+
   it('takes a required prop a binding fills', () => {
     const widget = { type: 'element:pump', bindings: { state: { adapter: 'http', ref: { path: '/s' } } } };
     expect(validateViewDocument(canvas({ pump }, [widget]))).toEqual([]);

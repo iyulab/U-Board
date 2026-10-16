@@ -11,12 +11,19 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Security
+
+- Widgets from `@iyulab/u-widgets` 0.35.3: a quote in a markdown widget's link could add an event handler attribute to
+  the link, and a heatmap's tooltip put its row and column names in as markup — on any board a viewer opens, the share
+  viewer included. Upgrade.
+
 ### Added
 
 - **Components** (`@iyulab/u-board`, unreleased): a board saved with components — a group of parts defined once and
   drawn by each instance with its own parameter values — is accepted, drawn in the share viewer and the console, and
   published in the board state part by part (`<instance id>/<part id>`). A share link reads only the bindings the
-  board's instances name. The console draws an instance's parts locked; editing a component comes later.
+  board's instances name. In the console an instance is selected, moved and deleted as one, and its parameter values are edited in its panel;
+  editing a component itself comes later.
 
 ## [0.11.0] - 2026-10-17
 

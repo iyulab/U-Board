@@ -12,6 +12,7 @@ import {
   newConnectorId,
   removeParts,
   partOf,
+  setInstanceParam,
 } from './scene-mapping';
 import type { CanvasView } from '../view-document';
 
@@ -49,6 +50,35 @@ describe('a board with component instances, in the designer', () => {
     // The board's own line to an instance's part is drawn, and selected to be edited as any other.
     expect(byPart('feed').length).toBeGreaterThan(0);
     expect(byPart('feed').every(o => !o.locked && o.fixed)).toBe(true);
+  });
+
+  it('gives each instance a box over what it draws, selected and dragged as one part', () => {
+    const scene = documentToScene(board);
+    const box = scene.getObjects().find(o => o.id === 'p1')!;
+    // Its node at 300, 40 (160 × 100) and its frame from 290, 30 (180 × 120).
+    expect(box).toMatchObject({ type: 'rect', x: 290, y: 30, width: 180, height: 120 });
+    expect(box.locked).toBeFalsy();
+    // Dragged 50 right and 20 down: the instance moves by as much.
+    const moved = scene.getObjects().map(o => (o.id === 'p1' ? { ...o, x: 340, y: 50 } : o));
+    const folded = applySceneToDocument(board, { getObjects: () => moved } as unknown as ReturnType<typeof documentToScene>);
+    expect(folded.instances).toEqual([{ ...board.instances![0], x: 350, y: 60 }]);
+  });
+
+  it('removes an instance with the board’s lines and triggers that name its parts', () => {
+    const withTrigger = { ...board, triggers: [{ on: { event: 'click' as const, node: 'p1/temp' }, do: [{ action: 'emit' as const, name: 'x' }] }] };
+    const removed = removeParts(withTrigger, ['p1']);
+    expect(removed.instances).toEqual([]);
+    expect(removed.connectors).toEqual([]);
+    expect(removed.triggers).toBeUndefined();
+    expect(removed.components).toEqual(board.components);
+    // Another part removed leaves the instance's lines alone.
+    expect(removeParts(board, ['nothing']).connectors).toEqual(board.connectors);
+  });
+
+  it('sets an instance’s parameter value, and takes it out so the default applies', () => {
+    const set = setInstanceParam(board, 'p1', 'machine', 'P1');
+    expect(set.instances![0].params).toEqual({ machine: 'P1' });
+    expect(setInstanceParam(set, 'p1', 'machine', undefined).instances![0]).not.toHaveProperty('params');
   });
 
   it('keeps the components and instances when the scene is folded back', () => {

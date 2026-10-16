@@ -15,6 +15,7 @@ import {
   addConnector,
   newConnectorId,
   removeParts,
+  setInstanceParam,
   partOf,
 } from './scene-mapping.js';
 import { resolveDocument } from '../resolve-document.js';
@@ -31,6 +32,7 @@ import { seedWidget, widgetTypeName } from './widget-catalog.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 import { DecorationPanel } from './DecorationPanel.js';
 import { ConnectorPanel } from './ConnectorPanel.js';
+import { InstancePanel } from './InstancePanel.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { sizedNodes } from '../node-size.js';
@@ -162,7 +164,8 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
 
   // A part that leaves the document (undone, imported over) leaves the selection.
   useEffect(() => {
-    const present = (id: string) => doc.nodes.some(n => n.id === id) || doc.connectors.some(c => c.id === id) || !!doc.decorations?.some(d => d.id === id);
+    const present = (id: string) =>
+      doc.nodes.some(n => n.id === id) || doc.connectors.some(c => c.id === id) || !!doc.decorations?.some(d => d.id === id) || !!doc.instances?.some(i => i.id === id);
     setSelectedIds(ids => (ids.every(present) ? ids : ids.filter(present)));
   }, [doc]);
 
@@ -328,6 +331,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
   const selectedNode = doc.nodes.find(n => n.id === selectedNodeId) ?? null;
   const selectedDecoration = doc.decorations?.find(d => d.id === selectedDecorationId) ?? null;
   const selectedConnector = single ? (doc.connectors.find(c => c.id === single) ?? null) : null;
+  const selectedInstance = single ? (doc.instances?.find(i => i.id === single) ?? null) : null;
 
   // Sized panes stay at their size; container-sized ones split the row and fill its height.
   const followsContainer = width === undefined || height === undefined;
@@ -424,6 +428,13 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
             />
           ) : selectedDecoration ? (
             <DecorationPanel decoration={selectedDecoration} onChange={handleDecorationChange} labels={labels} />
+          ) : selectedInstance ? (
+            <InstancePanel
+              instance={selectedInstance}
+              component={doc.components?.[selectedInstance.component]}
+              onParamChange={(name, value) => updateDoc(prev => setInstanceParam(prev, selectedInstance.id, name, value))}
+              labels={labels}
+            />
           ) : selectedNode ? (
             <PropertyPanel
               node={selectedNode}

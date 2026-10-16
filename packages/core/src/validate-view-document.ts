@@ -273,6 +273,11 @@ function checkElements(doc: Checker, elements: Record<string, unknown>): void {
   for (const [name, definition] of Object.entries(elements)) {
     const at = ['elements', name];
     if (!ELEMENT_NAME.test(name)) doc.fail(at, 'expected a name of lowercase letters, digits and hyphens, starting with a letter (at most 40)');
+    if (!isRecord(definition) && ELEMENT_FIELDS.includes(name)) {
+      // `{ "pump": { … }, "template": "<…>" }` — a field of a definition written one level too high.
+      doc.expected(at, `expected an element definition — "${name}" is a field of one: put it inside its element, /elements/<name>/${name}`, definition);
+      continue;
+    }
     if (!doc.isRecordAt(definition, at)) {
       doc.elements.set(name, null);
       continue;

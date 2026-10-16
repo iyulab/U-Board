@@ -6,12 +6,23 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Security
+
+- `@iyulab/u-widgets` `^0.35.3`: the widget advice and rules come from the release that escapes markdown link quotes and
+  heatmap tooltip names.
+
 ### Added
 
 - `describe("components")` teaches components — a group of canvas parts defined once and drawn per instance with its own
   parameter values: when to use one, `{{param}}`, the `<instance id>/<part id>` names, where an issue is reported.
 - `look` checks the parts component instances draw, reporting a problem at the part's node in the component and naming
   the instance; `focus: "/instances/1"` shows one instance, with what is said of its component.
+
+### Changed
+
+- `describe("components")` tells a component from an element: a card that is one picture filled with values is an
+  element placed per card; a component is for a group whose parts are nodes of their own. A schema pointer with nothing
+  there says to leave it out for the whole schema.
 
 ### Fixed
 

@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@iyulab/u-board": "^0.21.0",
-    "@iyulab/u-widgets": "^0.35.2",
+    "@iyulab/u-widgets": "^0.35.3",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "playwright-core": "^1.64.1",
     "zod": "^4.6.7"

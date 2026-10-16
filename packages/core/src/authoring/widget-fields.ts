@@ -7,8 +7,9 @@ import { elementNameOf } from '../elements/element-type.js';
 
 /** A value of a widget's props the property panel offers its own control for. */
 export interface WidgetField {
-  /** Which group it is shown in: a prepared widget's `props.data` or `props.options`, or an element's own props. */
-  section: 'data' | 'options' | 'element';
+  /** Which group it is shown in: a prepared widget's `props.data` or `props.options`, an element's own props, or a
+   *  component instance's parameter values. */
+  section: 'data' | 'options' | 'element' | 'params';
   /** Where it lives in the widget's props — also the path a binding that fills it names (`data.value`, `level`). */
   path: readonly string[];
   key: string;
@@ -69,27 +70,33 @@ function schemaKind(schema: PropsSchema): Pick<WidgetField, 'kind' | 'choices' |
   }
 }
 
-/** The fields of a placed element: one per prop its definition's schema lists, in the schema's order. */
-function elementFields(definition: ElementDefinition | undefined): WidgetFields {
+/** The fields of an object schema — an element's props, a component's parameters: one per property it lists, in the
+ *  schema's order; a property no control edits (a list, an object) is counted in `otherOptions`. */
+export function schemaFields(schema: PropsSchema | undefined, section: WidgetField['section']): WidgetFields {
   const fields: WidgetField[] = [];
   let otherOptions = 0;
-  for (const [key, schema] of Object.entries(definition?.props?.properties ?? {})) {
-    const kind = schemaKind(schema);
+  for (const [key, property] of Object.entries(schema?.properties ?? {})) {
+    const kind = schemaKind(property);
     if (!kind) {
       otherOptions++;
       continue;
     }
     fields.push({
-      section: 'element',
+      section,
       path: [key],
       key,
-      label: schema.title ?? key,
+      label: property.title ?? key,
       ...kind,
-      ...(schema.default !== undefined && { defaultValue: schema.default }),
-      ...(schema.description !== undefined && { description: schema.description }),
+      ...(property.default !== undefined && { defaultValue: property.default }),
+      ...(property.description !== undefined && { description: property.description }),
     });
   }
   return { fields, otherOptions };
+}
+
+/** The fields of a placed element: one per prop its definition's schema lists, in the schema's order. */
+function elementFields(definition: ElementDefinition | undefined): WidgetFields {
+  return schemaFields(definition?.props, 'element');
 }
 
 /**

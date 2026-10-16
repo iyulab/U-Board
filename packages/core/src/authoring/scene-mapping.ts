@@ -1,12 +1,12 @@
-import { Scene } from '@canvas-kit/core';
-import type { CanvasView, Connector, Node, Shape, Widget } from '../view-document.js';
+import { Scene, getObjectBounds } from '@canvas-kit/core';
+import type { CanvasView, ComponentInstance, Connector, Node, Shape, Widget } from '../view-document.js';
 import { DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
 import { sizedNodes } from '../node-size.js';
 import { seedWidget } from './widget-catalog.js';
 import { decorationObjects } from '../renderer/decoration-drawing.js';
 import { captionObjects, connectorObjects } from '../renderer/connector-drawing.js';
 import { triggersWithout, withTriggers } from './trigger-editing.js';
-import { expandComponents } from '../components.js';
+import { expandComponents, instancePartId } from '../components.js';
 
 /** A newly-added rect decoration's default border — distinct from a node placeholder's blue
  * (`NODE_PLACEHOLDER_STROKE` below) so an author can tell a structural frame apart from a widget
@@ -30,6 +30,11 @@ const NODE_PLACEHOLDER_STROKE = '#3b82f6';
  * decoration's own authored `fill` (or none), same as `NODE_PLACEHOLDER_FILL` never leaks into a
  * node's actual widget appearance. */
 const DECORATION_PLACEHOLDER_FILL = 'rgba(245, 158, 11, 0.08)';
+
+/** The box an instance is selected and moved by in the designer — over the parts it draws, which are locked: a press
+ *  anywhere on them is a press on the instance. Filled so its whole area takes the press. */
+const INSTANCE_PLACEHOLDER_FILL = 'rgba(124, 58, 237, 0.06)';
+const INSTANCE_PLACEHOLDER_STROKE = '#7c3aed';
 
 /**
  * Projects a ViewDocument into a canvas-kit Scene the designer can render and let the author
@@ -92,7 +97,28 @@ export function documentToScene(saved: CanvasView): Scene {
     });
   }
 
+  // Each instance, as one: a box over what it draws, named by the instance's id, selected and dragged as a part.
+  for (const instance of saved.instances ?? []) {
+    const box = instanceBox(saved, instance);
+    if (box) scene.add({ type: 'rect', id: instance.id, ...box, fill: INSTANCE_PLACEHOLDER_FILL, stroke: INSTANCE_PLACEHOLDER_STROKE, strokeWidth: 1 });
+  }
+
   return scene;
+}
+
+/** The box around what `instance` draws on the board — its nodes and decorations where they land — or `null` when it
+ *  draws nothing (a component the board does not define, or one without parts). */
+export function instanceBox(doc: CanvasView, instance: ComponentInstance): { x: number; y: number; width: number; height: number } | null {
+  const alone: CanvasView = { kind: 'canvas', background: {}, nodes: [], connectors: [], components: doc.components, instances: [instance] };
+  const drawn = expandComponents(alone);
+  const boxes = [
+    ...sizedNodes(drawn).map(node => ({ x: node.x, y: node.y, width: node.width, height: node.height })),
+    ...(drawn.decorations ?? []).flatMap(shape => decorationObjects(shape, doc.appearance).map(getObjectBounds)),
+  ];
+  if (boxes.length === 0) return null;
+  const x = Math.min(...boxes.map(b => b.x));
+  const y = Math.min(...boxes.map(b => b.y));
+  return { x, y, width: Math.max(...boxes.map(b => b.x + b.width)) - x, height: Math.max(...boxes.map(b => b.y + b.height)) - y };
 }
 
 /**
@@ -124,7 +150,15 @@ export function applySceneToDocument(doc: CanvasView, scene: Scene): CanvasView 
     return shape;
   });
 
-  return { ...doc, nodes, ...(decorations ? { decorations } : {}) };
+  // An instance moves by its box: where the box landed, less where the box sits from the instance's origin.
+  const instances = doc.instances?.map(instance => {
+    const obj = objectsById.get(instance.id);
+    const box = obj && obj.type === 'rect' ? instanceBox(doc, instance) : null;
+    if (!obj || !box || (obj.x === box.x && obj.y === box.y)) return instance;
+    return { ...instance, x: instance.x + obj.x - box.x, y: instance.y + obj.y - box.y };
+  });
+
+  return { ...doc, nodes, ...(decorations ? { decorations } : {}), ...(instances ? { instances } : {}) };
 }
 
 /** Appends a new node at `position` with a placeholder widget. Bindings are deliberately absent
@@ -185,11 +219,17 @@ export function newConnectorId(): string {
  * it along: a line to nothing is not a board. */
 export function removeParts(doc: CanvasView, ids: readonly string[]): CanvasView {
   const gone = new Set(ids);
+  // An instance takes the parts it draws with it, and so the lines and triggers that name them.
+  const goneInstances = (doc.instances ?? []).filter(instance => gone.has(instance.id));
+  for (const instance of goneInstances) {
+    for (const node of doc.components?.[instance.component]?.nodes ?? []) gone.add(instancePartId(instance.id, node.id));
+  }
   const nodes = doc.nodes.filter(n => !gone.has(n.id));
-  const kept = new Set(nodes.map(n => n.id));
+  const kept = new Set([...nodes.map(n => n.id), ...expandComponents(doc).nodes.map(n => n.id).filter(id => !gone.has(id))]);
   const connectors = doc.connectors.filter(c => !gone.has(c.id) && kept.has(c.fromNodeId) && kept.has(c.toNodeId));
   const decorations = doc.decorations?.filter(d => !gone.has(d.id));
-  return withTriggers({ ...doc, nodes, connectors, ...(decorations && { decorations }) }, triggersWithout(doc.triggers, gone));
+  const instances = doc.instances?.filter(instance => !gone.has(instance.id));
+  return withTriggers({ ...doc, nodes, connectors, ...(decorations && { decorations }), ...(instances && { instances }) }, triggersWithout(doc.triggers, gone));
 }
 
 /** Where to place the next decoration the author adds — same cascading-offset reasoning as
@@ -218,4 +258,17 @@ export function addDecoration(doc: CanvasView, id: string, type: Shape['type'], 
 
 export function newDecorationId(): string {
   return `decoration-${crypto.randomUUID()}`;
+}
+
+/** `doc` with instance `id`'s parameter `name` set to `value` — or taken out, when `value` is `undefined`, so the
+ *  parameter's default applies. */
+export function setInstanceParam(doc: CanvasView, id: string, name: string, value: unknown): CanvasView {
+  const instances = doc.instances?.map(instance => {
+    if (instance.id !== id) return instance;
+    const { [name]: _old, ...rest } = instance.params ?? {};
+    const params = value === undefined ? rest : { ...rest, [name]: value };
+    const { params: _params, ...bare } = instance;
+    return Object.keys(params).length > 0 ? { ...bare, params } : bare;
+  });
+  return instances ? { ...doc, instances } : doc;
 }

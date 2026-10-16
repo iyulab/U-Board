@@ -333,6 +333,14 @@ export interface UBoardLabels {
   /** The text a new text decoration starts with. */
   newTextDecoration: string;
 
+  // Component instance panel — `{component}` names the component it draws, `{count}` a number of parameters
+  instanceHeading: string;
+  instanceOf: string;
+  instanceOfMissing: string;
+  instanceParams: string;
+  instanceOtherParams: string;
+  instanceEditHint: string;
+
   // Connector (line) panel — `{from}`/`{to}` name the nodes it joins
   connectorHeading: string;
   connectorEnds: string;
@@ -609,6 +617,13 @@ export const DEFAULT_LABELS: UBoardLabels = {
   placeBottom: 'Bottom',
   placeBottomEnd: 'Bottom right',
   newTextDecoration: 'Label',
+
+  instanceHeading: 'Component',
+  instanceOf: 'Draws the component "{component}".',
+  instanceOfMissing: 'Draws "{component}", which this board does not define — it draws nothing.',
+  instanceParams: 'Values',
+  instanceOtherParams: 'Values without a field here: {count} — edit them in the document source.',
+  instanceEditHint: 'Drag it to move it. What it draws is the component’s — a change there reaches every instance.',
 
   connectorHeading: 'Line',
   connectorEnds: '{from} → {to}',
