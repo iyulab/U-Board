@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Deleting a part in `AuthoringView` (`removeParts`, `removeGridItem`) also removes the triggers on it, those waiting on
+  its state and actions bringing it into view — a trigger naming a part the board does not place is refused on save,
+  so the board could not be saved.
+
 ## [0.18.0] - 2026-10-16
 
 ### Added

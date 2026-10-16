@@ -11,6 +11,10 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Fixed
+
+- Deleting a part that a trigger names in the console’s editor no longer leaves a board that cannot be saved.
+
 ## [0.9.0] - 2026-10-16
 
 ### Added
