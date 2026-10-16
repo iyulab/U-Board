@@ -14,8 +14,8 @@ export interface ViewDocumentAdvice {
  * document being saved or drawn. First, on a canvas board, where parts would be drawn over one another
  * (`lintGeometry`: overlapping nodes, a text under a node or crossed by a connector, texts running together);
  * then an element defined but placed nowhere, more `script` elements than a board draws lightly, an element
- * heavier than one should be, a look for a state its map never names. For whoever writes the document — an author, a
- * tool, an AI — to act on.
+ * heavier than one should be, a look for a state its map never names, a trigger waiting for a state a part never
+ * enters. For whoever writes the document — an author, a tool, an AI — to act on.
  */
 export function lintViewDocument(doc: ViewDocument): ViewDocumentAdvice[] {
   const advice: ViewDocumentAdvice[] = doc.kind === 'canvas' ? lintGeometry(doc) : [];
@@ -42,18 +42,40 @@ export function lintViewDocument(doc: ViewDocument): ViewDocumentAdvice[] {
   }
 
   const parts = doc.kind === 'canvas' ? 'nodes' : 'items';
+  const statesOf = new Map<string, Set<string>>();
   placedIn(doc).forEach((placed, i) => {
     const rule = placed.states;
-    if (!rule?.looks) return;
-    const named = new Set<string>([
-      ...Object.values(rule.map.values ?? {}),
-      ...(rule.map.ranges ?? []).map(range => range.value),
-      ...(rule.map.otherwise !== undefined ? [rule.map.otherwise] : []),
-    ]);
-    for (const name of Object.keys(rule.looks)) {
+    const named = new Set<string>(
+      rule
+        ? [
+            ...Object.values(rule.map.values ?? {}),
+            ...(rule.map.ranges ?? []).map(range => range.value),
+            ...(rule.map.otherwise !== undefined ? [rule.map.otherwise] : []),
+          ]
+        : []
+    );
+    statesOf.set(placed.id, named);
+    for (const name of Object.keys(rule?.looks ?? {})) {
       if (!named.has(name)) {
         advice.push({ path: `/${parts}/${i}/states/looks/${name}`, message: `its map never names "${name}" — it names: ${[...named].join(', ')}; rename the look or add the state to the map` });
       }
+    }
+  });
+
+  // A trigger waiting for a state its part is never in never fires.
+  const never = (node: string, state: string, path: string) => {
+    const named = statesOf.get(node);
+    if (!named || named.has(state)) return;
+    advice.push({
+      path,
+      message: named.size > 0 ? `"${node}" is never in "${state}" — its map names: ${[...named].join(', ')}` : `"${node}" has no states — give it a states rule, or this never fires`,
+    });
+  };
+  (doc.triggers ?? []).forEach((trigger, i) => {
+    if (trigger.on.event === 'enter' || trigger.on.event === 'leave') never(trigger.on.node, trigger.on.state, `/triggers/${i}/on/state`);
+    if (trigger.when) {
+      const states = Array.isArray(trigger.when.state) ? trigger.when.state : [trigger.when.state];
+      states.forEach((state, j) => never(trigger.when!.node, state, Array.isArray(trigger.when!.state) ? `/triggers/${i}/when/state/${j}` : `/triggers/${i}/when/state`));
     }
   });
   return advice;

@@ -48,6 +48,8 @@ export interface CanvasView {
   elements?: Record<string, ElementDefinition>;
   /** Drawings its template elements share, by name — see `SymbolDefinition`. */
   symbols?: Record<string, SymbolDefinition>;
+  /** What the board does when something happens on it — see `Trigger`. Absent means nothing. */
+  triggers?: Trigger[];
 }
 
 /** A grid view: widgets laid out in order, in rows of `columns` columns — no position, so the same
@@ -66,6 +68,8 @@ export interface GridView {
   elements?: Record<string, ElementDefinition>;
   /** As a canvas view's — the drawings its template elements share. */
   symbols?: Record<string, SymbolDefinition>;
+  /** As a canvas view's — what the board does when something happens on it. */
+  triggers?: Trigger[];
 }
 
 /** A widget in a grid view and the room it takes. */
@@ -373,4 +377,52 @@ export interface StateLook {
   blink?: boolean;
   /** The part is not drawn while in this state. Connectors to it still are. */
   hidden?: boolean;
+}
+
+/** What a trigger reacts to (`Trigger.on`). */
+export const TRIGGER_EVENTS = ['click', 'element', 'enter', 'leave', 'open'] as const;
+
+/** What a trigger does (`Trigger.do`). */
+export const TRIGGER_ACTIONS = ['open-link', 'focus', 'emit', 'go-to-board'] as const;
+
+/** Something that happens on a board: a part clicked (or activated from the keyboard), an event an element raises, a
+ *  part entering or leaving one of its states, the board opened in a viewer. `node` names a canvas node or a grid item. */
+export type TriggerEvent =
+  | { event: 'click'; node: string }
+  | { event: 'element'; node: string; name: string }
+  | { event: 'enter' | 'leave'; node: string; state: string }
+  | { event: 'open' };
+
+/** What a trigger does. `open-link` opens `url` in a new tab — an `https://` address, or a path on the installation
+ *  the board is served from; `{{node}}`, `{{state}}` and `{{board}}` in it are filled in. `focus` brings a part into
+ *  view. `emit` hands the host page an event of that name. `go-to-board` asks the host to show another board of the
+ *  same workspace. */
+export type TriggerAction =
+  | { action: 'open-link'; url: string }
+  | { action: 'focus'; node: string }
+  | { action: 'emit'; name: string }
+  | { action: 'go-to-board'; board: string };
+
+/**
+ * What a board does when something happens on it: `on` an event, only `when` a part is in one of the given states (if
+ * given), `do` the actions in order. A viewer runs triggers; an editor does not. Triggers only show, move and tell —
+ * nothing a trigger does writes to the systems the board reads.
+ */
+export interface Trigger {
+  on: TriggerEvent;
+  when?: { node: string; state: string | string[] };
+  do: TriggerAction[];
+}
+
+/** Whether `url` is a link a trigger may open: an `https://` address, or a path on this installation (`/…` — not
+ *  `//…` or `/\…`, which a browser reads as another host). */
+export function isTriggerLink(url: unknown): url is string {
+  if (typeof url !== 'string') return false;
+  if (url.startsWith('/')) return url[1] !== '/' && url[1] !== '\\';
+  if (!url.startsWith('https://')) return false;
+  try {
+    return new URL(url).protocol === 'https:';
+  } catch {
+    return false;
+  }
 }

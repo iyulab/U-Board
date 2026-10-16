@@ -359,3 +359,59 @@ describe('naming a field a part does not have', () => {
     ]);
   });
 });
+
+describe('triggers', () => {
+  const nodes = [
+    { id: 'pump', x: 0, y: 0, anchored: false, widget: { type: 'status' } },
+    { id: 'valve', x: 200, y: 0, anchored: false, widget: { type: 'status' } },
+  ];
+  const canvas = (triggers: unknown) => ({ kind: 'canvas', background: {}, nodes, connectors: [], triggers });
+
+  it('accepts each event and action, on both kinds', () => {
+    const triggers = [
+      { on: { event: 'click', node: 'pump' }, do: [{ action: 'open-link', url: 'https://cmms.example.com/assets/{{node}}' }] },
+      { on: { event: 'element', node: 'valve', name: 'open' }, do: [{ action: 'emit', name: 'valve-open' }] },
+      { on: { event: 'enter', node: 'pump', state: 'fault' }, when: { node: 'valve', state: ['open', 'stuck'] }, do: [{ action: 'focus', node: 'pump' }] },
+      { on: { event: 'leave', node: 'pump', state: 'fault' }, do: [{ action: 'go-to-board', board: 'b2' }] },
+      { on: { event: 'open' }, do: [{ action: 'open-link', url: '/share/?board=b2' }] },
+    ];
+    expect(validateViewDocument(canvas(triggers), { strict: true })).toEqual([]);
+    const grid = { kind: 'grid', items: [{ id: 'pump', widget: { type: 'status' } }], triggers: [{ on: { event: 'click', node: 'pump' }, do: [{ action: 'emit', name: 'x' }] }] };
+    expect(validateViewDocument(grid, { strict: true })).toEqual([]);
+  });
+
+  it('names the parts the board has when a trigger names one it does not', () => {
+    expect(validateViewDocument(canvas([{ on: { event: 'click', node: 'pump9' }, do: [{ action: 'emit', name: 'x' }] }]))).toEqual([
+      { path: '/triggers/0/on/node', message: '"pump9" names no node — the board has: pump, valve' },
+    ]);
+    const grid = { kind: 'grid', items: [{ id: 'a', widget: { type: 'gauge' } }], triggers: [{ on: { event: 'open' }, do: [{ action: 'focus', node: 'b' }] }] };
+    expect(validateViewDocument(grid)).toEqual([{ path: '/triggers/0/do/0/node', message: '"b" names no item — the board has: a' }]);
+  });
+
+  it('lists the events and actions it knows', () => {
+    const issues = validateViewDocument(canvas([{ on: { event: 'hover', node: 'pump' }, do: [{ action: 'write', value: 1 }] }]));
+    expect(issues.map(i => i.path)).toEqual(['/triggers/0/on/event', '/triggers/0/do/0/action']);
+    expect(issues[0].message).toMatch(/^expected one of "click", "element", "enter", "leave", "open"/);
+    expect(issues[1].message).toMatch(/^expected one of "open-link", "focus", "emit", "go-to-board"/);
+  });
+
+  it('wants at least one action', () => {
+    expect(validateViewDocument(canvas([{ on: { event: 'open' }, do: [] }]))).toEqual([{ path: '/triggers/0/do', message: 'expected at least one action' }]);
+  });
+
+  it('opens only an https address or a path on this installation', () => {
+    const link = (url: string) => validateViewDocument(canvas([{ on: { event: 'open' }, do: [{ action: 'open-link', url }] }]));
+    for (const url of ['javascript:alert(1)', 'http://plant.example.com', '//evil.example', '/\\evil.example', 'data:text/html,x']) {
+      expect(link(url)[0], url).toMatchObject({ path: '/triggers/0/do/0/url', message: expect.stringMatching(/^expected an https:\/\/ address or a path on this installation/) });
+    }
+    expect(link('https://plant.example.com/a?b=1')).toEqual([]);
+  });
+
+  it('wants names of 1 to 64 characters, and a state for enter and leave', () => {
+    const issues = validateViewDocument(canvas([
+      { on: { event: 'element', node: 'pump', name: '' }, do: [{ action: 'emit', name: 'x'.repeat(65) }] },
+      { on: { event: 'enter', node: 'pump' }, when: { node: 'pump', state: [] }, do: [{ action: 'emit', name: 'y' }] },
+    ]));
+    expect(issues.map(i => i.path)).toEqual(['/triggers/0/on/name', '/triggers/0/do/0/name', '/triggers/1/on/state', '/triggers/1/when/state']);
+  });
+});

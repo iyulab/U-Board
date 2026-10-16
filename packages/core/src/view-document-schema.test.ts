@@ -18,6 +18,11 @@ const dot = { render: 'template', props: { type: 'object', properties: { on: { t
 
 /** Documents both judge the same way. */
 const AGREED: [string, unknown, boolean][] = [
+  ['a click trigger opening a link', canvas({ triggers: [{ on: { event: 'click', node: 'a' }, do: [{ action: 'open-link', url: 'https://plant.example.com/{{node}}' }] }] }), true],
+  ['an open trigger on a grid, with a condition', grid({ triggers: [{ on: { event: 'open' }, when: { node: 'a', state: ['x', 'y'] }, do: [{ action: 'emit', name: 'opened' }, { action: 'focus', node: 'a' }] }] }), true],
+  ['a trigger with no action', canvas({ triggers: [{ on: { event: 'open' }, do: [] }] }), false],
+  ['a trigger action it does not know', canvas({ triggers: [{ on: { event: 'open' }, do: [{ action: 'write' }] }] }), false],
+  ['a link that is not https', canvas({ triggers: [{ on: { event: 'open' }, do: [{ action: 'open-link', url: 'http://plant.example.com' }] }] }), false],
   ['a node with states and looks', canvas({ nodes: [{ ...node('a', { type: 'status', bindings: { v: { adapter: 'p', ref: '/v' } } }), states: { from: 'v', map: { values: { Fault: 'fault' }, ranges: [{ min: 80, value: 'hot' }], otherwise: 'ok' }, looks: { fault: { outline: '#dc2626', blink: true }, ok: { hidden: true } } } }] }), true],
   ['a grid item with states', grid({ items: [{ id: 'a', widget: { type: 'gauge', bindings: { v: { adapter: 'p', ref: '/v' } } }, states: { from: 'v', map: { values: { a: 'b' } } } }] }), true],
   ['states without a map', canvas({ nodes: [{ ...node('a'), states: { from: 'v' } }] }), false],

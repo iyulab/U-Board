@@ -1,4 +1,4 @@
-import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, PLACEMENTS, STROKE_DASHES, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, type ConnectorArrow, type Placement, type StrokeDash } from './view-document.js';
+import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, PLACEMENTS, STROKE_DASHES, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, TRIGGER_ACTIONS, TRIGGER_EVENTS, isTriggerLink, type ConnectorArrow, type Placement, type StrokeDash } from './view-document.js';
 import type { ElementDefinition } from './view-document.js';
 import { ELEMENT_NAME, elementNameOf } from './elements/element-type.js';
 import { parseTemplate } from './elements/template.js';
@@ -69,12 +69,16 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
     doc.fail(['kind'], 'expected "canvas" or "grid" — "kind" holds an object with its own "kind": the document is wrapped one level too deep; send the document itself');
   } else doc.expected(['kind'], 'expected "canvas" or "grid"', value.kind);
 
+  if ((value.kind === 'canvas' || value.kind === 'grid') && value.triggers !== undefined && doc.array(value, ['triggers'])) {
+    checkTriggers(doc, value.triggers as unknown[], value.kind, partIds(value[value.kind === 'canvas' ? 'nodes' : 'items']));
+  }
+
   return issues;
 }
 
 /** The fields each part of a document has — what `strict` holds a written document to. */
-const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'background', 'nodes', 'connectors', 'decorations'];
-const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'columns', 'items'];
+const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'background', 'nodes', 'connectors', 'decorations', 'triggers'];
+const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'columns', 'items', 'triggers'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget', 'states'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget', 'states'];
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
@@ -370,6 +374,90 @@ function checkValueMap(doc: Checker, map: Record<string, unknown>, at: string[])
     if (!('value' in range)) doc.fail([...rangeAt, 'value'], 'expected the value this range is shown as');
   });
 }
+
+const TRIGGER_FIELDS = ['on', 'when', 'do'];
+const TRIGGER_EVENT_FIELDS: Record<string, string[]> = {
+  click: ['event', 'node'],
+  element: ['event', 'node', 'name'],
+  enter: ['event', 'node', 'state'],
+  leave: ['event', 'node', 'state'],
+  open: ['event'],
+};
+const TRIGGER_ACTION_FIELDS: Record<string, string[]> = {
+  'open-link': ['action', 'url'],
+  focus: ['action', 'node'],
+  emit: ['action', 'name'],
+  'go-to-board': ['action', 'board'],
+};
+const TRIGGER_HINT = 'A trigger is { on: { event, node? }, when?: { node, state }, do: [{ action, … }] }.';
+
+/** The ids of the parts a document places — those that are text. */
+function partIds(parts: unknown): string[] {
+  return Array.isArray(parts) ? parts.flatMap(part => (isRecord(part) && typeof part.id === 'string' ? [part.id] : [])) : [];
+}
+
+/** A board’s triggers: each event and action of a kind it knows, naming parts the board places. */
+function checkTriggers(doc: Checker, triggers: unknown[], kind: 'canvas' | 'grid', parts: string[]): void {
+  const noun = kind === 'canvas' ? 'node' : 'item';
+  const part = (owner: Record<string, unknown>, at: string[]) => {
+    const id = owner[at[at.length - 1]];
+    if (typeof id !== 'string') doc.expected(at, `expected the id of a ${noun}`, id);
+    else if (!parts.includes(id)) doc.fail(at, `"${id}" names no ${noun} — the board has: ${parts.length > 0 ? parts.slice(0, 20).join(', ') : 'none'}`);
+  };
+  const name = (owner: Record<string, unknown>, at: string[]) => {
+    const value = owner[at[at.length - 1]];
+    if (typeof value !== 'string' || value.length < 1 || value.length > 64) doc.expected(at, 'expected a name, 1 to 64 characters', value);
+  };
+  triggers.forEach((trigger, i) => {
+    const at = ['triggers', String(i)];
+    if (!doc.isRecordAt(trigger, at)) return;
+    doc.known(trigger, at, TRIGGER_FIELDS, 'trigger', TRIGGER_HINT);
+    if (doc.record(trigger, [...at, 'on'])) {
+      const on = trigger.on as Record<string, unknown>;
+      const onAt = [...at, 'on'];
+      const fields = typeof on.event === 'string' ? TRIGGER_EVENT_FIELDS[on.event] : undefined;
+      if (!fields) doc.expected([...onAt, 'event'], `expected one of ${TRIGGER_EVENTS_TEXT}`, on.event);
+      else {
+        doc.known(on, onAt, fields, `${on.event} event`);
+        if (fields.includes('node')) part(on, [...onAt, 'node']);
+        if (fields.includes('name')) name(on, [...onAt, 'name']);
+        if (fields.includes('state') && (typeof on.state !== 'string' || on.state === '')) doc.expected([...onAt, 'state'], 'expected a state name', on.state);
+      }
+    }
+    if (trigger.when !== undefined && doc.record(trigger, [...at, 'when'])) {
+      const when = trigger.when as Record<string, unknown>;
+      doc.known(when, [...at, 'when'], ['node', 'state'], 'trigger condition');
+      part(when, [...at, 'when', 'node']);
+      const states = Array.isArray(when.state) ? when.state : [when.state];
+      if (states.length === 0 || !states.every(state => typeof state === 'string' && state !== '')) {
+        doc.expected([...at, 'when', 'state'], 'expected a state name, or a list of them', when.state);
+      }
+    }
+    if (!doc.array(trigger, [...at, 'do'])) return;
+    const actions = trigger.do as unknown[];
+    if (actions.length === 0) doc.fail([...at, 'do'], 'expected at least one action');
+    actions.forEach((action, j) => {
+      const actionAt = [...at, 'do', String(j)];
+      if (!doc.isRecordAt(action, actionAt)) return;
+      const fields = typeof action.action === 'string' ? TRIGGER_ACTION_FIELDS[action.action] : undefined;
+      if (!fields) {
+        doc.expected([...actionAt, 'action'], `expected one of ${TRIGGER_ACTIONS.map(a => `"${a}"`).join(', ')}`, action.action);
+        return;
+      }
+      doc.known(action, actionAt, fields, `${action.action} action`);
+      if (action.action === 'open-link' && !isTriggerLink(action.url)) {
+        doc.expected([...actionAt, 'url'], 'expected an https:// address or a path on this installation (/…)', action.url);
+      }
+      if (action.action === 'focus') part(action, [...actionAt, 'node']);
+      if (action.action === 'emit') name(action, [...actionAt, 'name']);
+      if (action.action === 'go-to-board' && (typeof action.board !== 'string' || action.board === '' || action.board.length > 100)) {
+        doc.expected([...actionAt, 'board'], 'expected the id of a board of this workspace', action.board);
+      }
+    });
+  });
+}
+
+const TRIGGER_EVENTS_TEXT = TRIGGER_EVENTS.map(e => `"${e}"`).join(', ');
 
 /** A part’s state rule: `from` names one of its widget’s bindings, its map gives state names, each look its fields. */
 function checkStates(doc: Checker, rule: Record<string, unknown>, widget: unknown, at: string[]): void {

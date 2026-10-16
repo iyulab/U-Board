@@ -31,6 +31,24 @@ describe('lintViewDocument', () => {
     expect(lintViewDocument(grid({ heavy }, ['element:heavy']))[0]).toMatchObject({ path: '/elements/heavy' });
   });
 
+  it('points at a trigger waiting for a state its part is never in', () => {
+    const doc: GridView = {
+      kind: 'grid',
+      items: [
+        { id: 'a', widget: { type: 'gauge', bindings: { v: { adapter: 'p', ref: '/v' } } }, states: { from: 'v', map: { values: { F: 'fault' } } } },
+        { id: 'b', widget: { type: 'gauge' } },
+      ],
+      triggers: [
+        { on: { event: 'enter', node: 'a', state: 'alarm' }, do: [{ action: 'emit', name: 'x' }] },
+        { on: { event: 'enter', node: 'a', state: 'fault' }, when: { node: 'b', state: ['on'] }, do: [{ action: 'emit', name: 'y' }] },
+      ],
+    };
+    expect(lintViewDocument(doc)).toEqual([
+      { path: '/triggers/0/on/state', message: '"a" is never in "alarm" — its map names: fault' },
+      { path: '/triggers/1/when/state/0', message: '"b" has no states — give it a states rule, or this never fires' },
+    ]);
+  });
+
   it('points at a look for a state its map never names', () => {
     const doc: GridView = {
       kind: 'grid',
