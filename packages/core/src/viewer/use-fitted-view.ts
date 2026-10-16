@@ -16,6 +16,8 @@ export interface FittedView {
   /** Fits `rect` into view and keeps it fitted as the viewport resizes, until the user moves the
    * view. `null` (nothing to show) leaves the view as it is. */
   fitTo(rect: DocumentRect | null): void;
+  /** Brings `rect` into view, magnified up to twice — a part a board points at. Ends following, like a user move. */
+  focusOn(rect: DocumentRect): void;
   /** Wire to the canvas's `onViewportResize`. */
   onViewportResize(size: Size): void;
   /** Wire to the canvas's `onTransformChange` — a pan or zoom by the user, which ends following. */
@@ -51,6 +53,13 @@ export function useFittedView(): FittedView {
     applyFit();
   }, [applyFit]);
 
+  const focusOn = useCallback((rect: DocumentRect) => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    targetRef.current = null;
+    setTransform(fitTransform(viewport, rect, { padding: 48, maxScale: 2, minScale: MIN_SCALE }));
+  }, []);
+
   const onViewportResize = useCallback((size: Size) => {
     viewportRef.current = size;
     applyFit();
@@ -75,6 +84,7 @@ export function useFittedView(): FittedView {
   return {
     transform,
     fitTo,
+    focusOn,
     onViewportResize,
     onUserTransform,
     zoomIn,

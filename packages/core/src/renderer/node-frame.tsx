@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, KeyboardEvent } from 'react';
 import { UWidget } from '@iyulab/u-widgets/react';
 import '@iyulab/u-widgets';
 import type { ResolvedWidget } from '../adapter.js';
@@ -86,6 +86,8 @@ export interface NodeFrameProps {
   state?: string;
   /** How each state is shown, by name — the part’s `states.looks`. */
   looks?: Record<string, StateLook>;
+  /** What a click on the part does (a board’s `click` trigger) — the frame then is a button, Enter and Space included. */
+  onActivate?: () => void;
 }
 
 /**
@@ -100,7 +102,7 @@ export interface NodeFrameProps {
  * When it has states, the one it is in is named on it and drawn by its look around the frame — never in place of the
  * quality’s border.
  */
-export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, onActivate }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -117,7 +119,18 @@ export function NodeFrame({ widget, appearance, accent, symbols, qualityText = D
         position: 'relative', width: '100%', height: '100%', ...frameStyle,
         ...(look?.outline && { boxShadow: `0 0 0 3px ${look.outline}` }),
         ...(look?.hidden && { visibility: 'hidden' as const }),
+        ...(onActivate && { cursor: 'pointer' }),
       }}
+      {...(onActivate && {
+        role: 'button',
+        tabIndex: 0,
+        onClick: onActivate,
+        onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+          if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
+          event.preventDefault();
+          onActivate();
+        },
+      })}
       title={label}
       {...(nodeId !== undefined && { 'data-node-id': nodeId })}
       {...(quality && quality !== 'live' && { 'data-quality': quality })}

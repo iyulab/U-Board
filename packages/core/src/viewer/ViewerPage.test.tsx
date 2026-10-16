@@ -445,3 +445,20 @@ describe('onBoardState', () => {
     expect(onBoardState.mock.lastCall![0].parts.pump).toEqual({ state: 'fault', quality: 'stale' });
   });
 });
+
+describe('triggers', () => {
+  it('makes a node with a click trigger a button, and hands the host the event it emits', async () => {
+    const onTrigger = vi.fn();
+    const board: CanvasView = {
+      kind: 'canvas', background: {}, connectors: [],
+      nodes: [{ id: 'pump', x: 0, y: 0, width: 100, height: 60, anchored: false, widget: { type: 'text' } }, { id: 'note', x: 200, y: 0, anchored: false, widget: { type: 'text' } }],
+      triggers: [{ on: { event: 'click', node: 'pump' }, do: [{ action: 'emit', name: 'pump-details' }] }],
+    };
+    render(<ViewerPage adapters={[]} document={board} boardId="b1" onTrigger={onTrigger} />);
+    await screen.findByTestId('viewer');
+    const [pump, note] = lastViewerProps().overlays.map((o: { content: React.ReactNode }) => o.content as React.ReactElement<NodeFrameProps>);
+    expect(note.props.onActivate).toBeUndefined();
+    act(() => pump.props.onActivate!());
+    expect(onTrigger).toHaveBeenCalledWith({ name: 'pump-details', node: 'pump', board: 'b1' });
+  });
+});

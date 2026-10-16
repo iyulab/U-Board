@@ -39,6 +39,9 @@ export interface ToCanvasKitOptions {
   now?: number;
   /** The language the widgets speak (BCP 47) — the labels' `locale`. Left out, a widget follows the page's. */
   locale?: string;
+  /** The nodes a click does something on (`Triggers.activatable`), and what it does. */
+  activatable?: ReadonlySet<string>;
+  onNodeActivate?: (node: string) => void;
 }
 
 /**
@@ -48,7 +51,7 @@ export interface ToCanvasKitOptions {
  * (docs/principles.md) — it depends on canvas-kit and u-widgets so the document format itself
  * doesn't have to.
  */
-export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUALITY_TEXT, now, locale }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
+export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUALITY_TEXT, now, locale, activatable, onNodeActivate }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
   const scene = new Scene();
   const nodes = sizedNodes(doc);
 
@@ -78,7 +81,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     width: node.width,
     height: node.height,
     // A widget takes its node's box exactly — the box the author drew is the layout.
-    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} />,
+    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} />,
   }));
   for (const placed of placeOnCanvas(nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 

@@ -54,6 +54,9 @@ export interface GridBoardProps {
   /** What each cell holds, given the item and its frame — the frame by default. The editor wraps it to make the item
    *  selectable; a viewer has no reason to. */
   renderCell?: (item: ResolvedGridItem, frame: ReactNode, index: number) => ReactNode;
+  /** The items a click does something on (`Triggers.activatable`), and what it does. */
+  activatable?: ReadonlySet<string>;
+  onItemActivate?: (item: string) => void;
 }
 
 /**
@@ -68,7 +71,7 @@ function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | 
   return name === undefined ? undefined : doc.elements?.[name]?.size?.height;
 }
 
-export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell }: GridBoardProps) {
+export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell, activatable, onItemActivate }: GridBoardProps) {
   return (
     <div className="ub-grid" role="region" aria-label={ariaLabel} data-appearance={doc.appearance ?? 'light'}>
       <style href="u-board-grid" precedence="u-board">
@@ -82,7 +85,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} />,
+                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} />,
                 index
               )}
             </div>

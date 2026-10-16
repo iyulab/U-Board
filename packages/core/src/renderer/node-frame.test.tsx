@@ -1,5 +1,5 @@
 import React, { type ReactElement } from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { NodeFrame, type NodeFrameProps } from './node-frame';
 import type { ResolvedWidget } from '../adapter';
 
@@ -39,5 +39,28 @@ describe('NodeFrame states', () => {
     const el = frame({ looks: { fault: { outline: 'red' } } });
     expect(el.props['data-state']).toBeUndefined();
     expect(el.props.style.boxShadow).toBeUndefined();
+  });
+});
+
+describe('NodeFrame as a button', () => {
+  it('is a button a click, Enter and Space activate, when the part has something to do', () => {
+    const onActivate = vi.fn();
+    const el = frame({ onActivate });
+    expect(el.props.role).toBe('button');
+    expect(el.props.tabIndex).toBe(0);
+    el.props.onClick();
+    const key = (k: string) => ({ key: k, target: 'frame', currentTarget: 'frame', preventDefault: vi.fn() });
+    el.props.onKeyDown(key('Enter'));
+    el.props.onKeyDown(key(' '));
+    el.props.onKeyDown(key('a'));
+    // A key pressed inside the widget (a table it scrolls) is the widget's.
+    el.props.onKeyDown({ ...key('Enter'), target: 'cell' });
+    expect(onActivate).toHaveBeenCalledTimes(3);
+  });
+
+  it('is no button otherwise', () => {
+    const el = frame({});
+    expect(el.props.role).toBeUndefined();
+    expect(el.props.tabIndex).toBeUndefined();
   });
 });

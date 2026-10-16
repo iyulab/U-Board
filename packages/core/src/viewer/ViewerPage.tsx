@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Viewer } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
 import { documentExtent } from './document-extent.js';
@@ -16,6 +16,8 @@ import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from './attribution.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { boardStateOf, type BoardState } from '../board-state.js';
+import { useTriggers, type BoardEvent } from './use-triggers.js';
+import { sizedNodes } from '../node-size.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -56,6 +58,17 @@ export interface ViewerPageProps {
    *  quality and why, how old its data is (`BoardState`, no values). A board that has stopped updating reports its
    *  parts `stale`. For a host that acts on what the board shows — a count of faults in its own header, a sound. */
   onBoardState?: (state: BoardState) => void;
+  /** The board's id — what `{{board}}` in a trigger's link becomes, and what the events it hands the host name. */
+  boardId?: string;
+  /** Called when one of the board's triggers emits an event (`emit`): its name, and the part and state it came from —
+   *  never a value. A host page acts on it: opens its own panel, plays a sound, logs it. */
+  onTrigger?: (event: BoardEvent) => void;
+  /** Called when a trigger asks to show another board of the same workspace (`go-to-board`). Without it, nothing
+   *  happens — the viewer does not go anywhere on its own. */
+  onNavigate?: (target: { board: string }) => void;
+  /** The origins a trigger's link may open (`open-link`), besides paths on this installation. Left out: any `https`
+   *  address. */
+  linkOrigins?: readonly string[];
 }
 
 /** What is on screen: a canvas view as canvas-kit draws it, or a grid view as it lays out — with the time its
@@ -84,6 +97,10 @@ export function ViewerPage({
   elementOrigins,
   elementFrames,
   onBoardState,
+  boardId,
+  onTrigger,
+  onNavigate,
+  linkOrigins,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
   const [drawn, setDrawn] = useState<Drawn | null>(null);
@@ -101,7 +118,22 @@ export function ViewerPage({
   const extent = useMemo(() => JSON.parse(extentKey) as ReturnType<typeof documentExtent>, [extentKey]);
   const attributions = useMemo(() => (attribution ? boardAttributions(document, adapters) : []), [document, adapters, attribution]);
   const view = useFittedView();
-  const { fitTo } = view;
+  const { fitTo, focusOn } = view;
+  const surface = useRef<HTMLDivElement>(null);
+  // A part a trigger points at: on a canvas, its box brought into view; in a grid, its cell scrolled into view.
+  const focus = useCallback(
+    (node: string) => {
+      if (resolved?.kind === 'canvas') {
+        const box = sizedNodes(resolved).find(n => n.id === node);
+        if (box) focusOn({ x: box.x, y: box.y, width: box.width, height: box.height });
+      } else {
+        surface.current?.querySelector(`[data-item-id="${CSS.escape(node)}"]`)?.scrollIntoView({ block: 'nearest' });
+      }
+    },
+    [resolved, focusOn]
+  );
+  const triggers = useTriggers(document, resolved, { boardId, onTrigger, onNavigate, linkOrigins, focus });
+  const { activatable, activate } = triggers;
   // Fit whenever a document covering a new area is shown — not on a preview refresh, which is only
   // new values for the same document, nor on a document replaced within the same area.
   useEffect(() => {
@@ -116,11 +148,11 @@ export function ViewerPage({
     const now = readClock();
     setDrawn(
       resolved.kind === 'canvas'
-        ? { kind: 'canvas', preview: toCanvasKit(resolved, { qualityText: labels.qualityText, now, locale: labels.locale }), now }
+        ? { kind: 'canvas', preview: toCanvasKit(resolved, { qualityText: labels.qualityText, now, locale: labels.locale, activatable, onNodeActivate: activate }), now }
         : { kind: 'grid', doc: resolved, now }
     );
     reportState(boardStateOf(resolved, { now }));
-  }, [resolved, labels]);
+  }, [resolved, labels, activatable, activate]);
 
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>
@@ -132,7 +164,7 @@ export function ViewerPage({
           </div>
         )}
         {drawn ? (
-          <div className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0, ...(drawn.kind === 'grid' && { width, height }) }}>
+          <div ref={surface} className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0, ...(drawn.kind === 'grid' && { width, height }) }}>
             {drawn.kind === 'canvas' ? (
               <Viewer
                 width={width}
@@ -151,6 +183,8 @@ export function ViewerPage({
                 qualityText={labels.qualityText}
                 now={drawn.now}
                 locale={labels.locale}
+                activatable={activatable}
+                onItemActivate={activate}
               />
             )}
           </div>
