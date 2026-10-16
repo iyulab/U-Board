@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-17
+
 ### Added
 
 - Connector `style.route`: `straight` (the default) or `orthogonal` — out of the side facing the other node, one
@@ -19,6 +21,8 @@ All notable changes to this package are documented here. The format follows
 - `applyJsonPatch` (and `getByPointer`): a pointer naming a member an object does not have says what that object does
   have, and where the member is when one of its members holds it — `nothing at /nodes/0/props — /nodes/0 has id, x,
   widget; "props" is at /nodes/0/widget/props`.
+- `@iyulab/u-widgets` `^0.35.2`: a Gantt's `color` and `label` and a histogram's `value` are described as theirs in the
+  widget help (they read as another widget's).
 
 ## [0.20.0] - 2026-10-17
 

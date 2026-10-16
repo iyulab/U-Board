@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-17
+
 ### Added
 
 - The rules teach a connector's `style.route: "orthogonal"` — pipes and wiring with right-angle turns.
@@ -15,6 +17,11 @@ All notable changes to this package are documented here. The format follows
 - `look` no longer reports bold text on a gradient as reading at 1:1: the colour behind a text is the commonest one
   in its box other than its own ink — the glyph's pixels could outnumber each step of the gradient. Text drawn on its
   own colour is still reported.
+
+### Changed
+
+- `@iyulab/u-board` `^0.21.0` — a patch naming a member an object does not have says what the object has and where
+  the member is; `@iyulab/u-widgets` `^0.35.2` — `describe("widget:chart.gantt")` says `color` groups its bars.
 
 ## [0.8.0] - 2026-10-17
 

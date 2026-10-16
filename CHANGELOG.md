@@ -11,6 +11,20 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-17
+
+### Added
+
+- **Connectors at right angles** (`@iyulab/u-board` 0.21.0): a connector's route can be orthogonal — out of the side
+  facing the other node, one turn at the middle of the gap, into the other's facing side, as pipes and wiring are
+  drawn. Chosen in the console editor's connector panel (**Route**), drawn the same in the share viewer.
+
+### Changed
+
+- The advice a saved board answers with counts the layout findings it folds: the line that sums up the rest carries
+  `count`. A patch naming a member an object does not have says what the object has and where the member is.
+- Widgets from `@iyulab/u-widgets` 0.35.2.
+
 ## [0.10.0] - 2026-10-16
 
 ### Added
