@@ -79,7 +79,7 @@ const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', '
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash', 'arrow'];
-const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'radius', 'dash', 'label', 'labelAt', 'labelSize'];
+const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'radius', 'dash', 'label', 'labelAt', 'labelSize', 'labelFill'];
 const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill', 'anchor', 'background'];
 const SYMBOL_FIELDS = ['viewBox', 'markup'];
 const WIDGET_FIELDS = ['type', 'props', 'bindings'];
@@ -392,6 +392,7 @@ function checkShape(doc: Checker, shape: unknown, at: string[]): void {
     if (shape.labelSize !== undefined && !(Number.isFinite(shape.labelSize) && (shape.labelSize as number) > 0)) {
       doc.expected([...at, 'labelSize'], 'expected a number greater than 0', shape.labelSize);
     }
+    doc.optionalColor(shape, [...at, 'labelFill']);
   } else {
     doc.known(shape, at, TEXT_FIELDS, 'text decoration', SHAPE_HINT);
     doc.string(shape, [...at, 'text']);

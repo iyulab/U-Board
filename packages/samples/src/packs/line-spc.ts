@@ -166,8 +166,7 @@ const DECORATIONS: Shape[] = [
     fontSize: 13,
     fill: '#5b6b70',
   },
-  { id: 'machining', type: 'rect', x: columnX(1) - 8, y: 88, width: columnX(3) + COLUMN.width - columnX(1) + 16, height: 432, stroke: '#5f7a8c', strokeWidth: 1.5 },
-  { id: 'machining-name', type: 'text', x: columnX(1), y: 92, text: '가공 구역', fontSize: 12, fill: '#5f7a8c' },
+  { id: 'machining', type: 'rect', x: columnX(1) - 8, y: 88, width: columnX(3) + COLUMN.width - columnX(1) + 16, height: 432, stroke: '#5f7a8c', strokeWidth: 1.5, label: '가공 구역', labelSize: 12 },
   { id: 'bottom-title', type: 'text', x: 46, y: BOTTOM_Y + 8, text: '라인 부적합', fontSize: 15, fill: '#22313b' },
 ];
 

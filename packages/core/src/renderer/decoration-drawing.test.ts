@@ -48,6 +48,11 @@ describe('decorationObjects', () => {
     expect(decorationObjects({ ...frame, label: '  ' })).toHaveLength(1);
   });
 
+  it('gives a frame’s name its own colour where labelFill says one', () => {
+    const frame = { id: 'f', type: 'rect' as const, x: 0, y: 0, width: 300, height: 100, stroke: '#5f7a8c', label: 'Bay', labelFill: '#22313b' };
+    expect(decorationObjects(frame)[1]).toMatchObject({ fill: '#22313b' });
+  });
+
   it('gives a frame’s name with no stroke colour the board’s ink', () => {
     const frame = { id: 'f', type: 'rect' as const, x: 0, y: 0, width: 300, height: 100, stroke: 'none', label: 'Zone' };
     expect(decorationObjects(frame, 'light')[1]).not.toHaveProperty('fill');

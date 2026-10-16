@@ -161,8 +161,7 @@ const SIDE: Node[] = [
 ];
 
 const frame = (line: Line): Shape[] => [
-  { id: `bay-${line.id}`, type: 'rect', x: BAY.x, y: line.y, width: BAY.width, height: BAY.height, stroke: '#5f7a8c', strokeWidth: 1.5 },
-  { id: `bay-${line.id}-name`, type: 'text', x: BAY.x + 12, y: line.y + 12, text: line.name, fontSize: 15, fill: '#22313b' },
+  { id: `bay-${line.id}`, type: 'rect', x: BAY.x, y: line.y, width: BAY.width, height: BAY.height, stroke: '#5f7a8c', strokeWidth: 1.5, label: line.name, labelSize: 15, labelFill: '#22313b' },
 ];
 
 const DECORATIONS: Shape[] = [

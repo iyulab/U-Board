@@ -95,6 +95,18 @@ function RectFields({ rect, set, placements, dashLabel, labels }: { rect: RectSh
         {placements(rect.labelAt, value => set(rect, 'labelAt', value))}
       </label>
       <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.decorationLabelFill}
+        <input
+          key={`${rect.id}=${rect.labelFill ?? ''}`}
+          defaultValue={rect.labelFill ?? ''}
+          placeholder={rect.stroke ?? ''}
+          onBlur={e => {
+            const typed = e.currentTarget.value.trim();
+            if (typed !== (rect.labelFill ?? '')) set(rect, 'labelFill', typed === '' ? undefined : typed);
+          }}
+        />
+      </label>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
         {labels.decorationRadius}
         <input
           type="number"

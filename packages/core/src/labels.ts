@@ -256,6 +256,7 @@ export interface UBoardLabels {
   /** A frame's name, and where inside the frame it sits. */
   decorationLabel: string;
   decorationLabelAt: string;
+  decorationLabelFill: string;
   decorationRadius: string;
   decorationDash: string;
   /** Which point of a text's box its position is. */
@@ -478,6 +479,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   decorationText: 'Text',
   decorationLabel: 'Name',
   decorationLabelAt: 'Name position',
+  decorationLabelFill: 'Name colour',
   decorationRadius: 'Corner radius',
   decorationDash: 'Line style',
   decorationAnchor: 'Anchored at',

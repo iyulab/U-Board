@@ -127,11 +127,13 @@ export interface RectShape {
   radius?: number;
   /** The stroke's line style, as a connector's. */
   dash?: StrokeDash;
-  /** The frame's name, drawn inside it at `labelAt` (`top-start` when left out), in the stroke's colour. */
+  /** The frame's name, drawn inside it at `labelAt` (`top-start` when left out). */
   label?: string;
   labelAt?: Placement;
   /** The name's font size. Default 13. */
   labelSize?: number;
+  /** The name's colour — the stroke's when left out (a light frame line under a darker name sets it). */
+  labelFill?: string;
 }
 
 export interface TextShape {

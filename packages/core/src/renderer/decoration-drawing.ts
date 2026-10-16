@@ -18,7 +18,7 @@ const ALIGN: Record<Column, 'left' | 'center' | 'right'> = { start: 'left', cent
  * A colour of `none` paints nothing — the same as leaving it out — so it is left out here (a canvas would otherwise
  * ignore the word and paint in whatever colour it last used). A text the author gave no colour is drawn in the
  * canvas's default dark ink, which disappears on a dark board, so there it takes a light one. A colour the author
- * chose is theirs, on either board. A frame's name takes the frame's stroke colour.
+ * chose is theirs, on either board. A frame's name takes its `labelFill`, else the frame's stroke colour.
  */
 export function decorationObjects(shape: Shape, appearance: BoardAppearance = 'light'): DrawingObject[] {
   if (shape.type === 'text') return [textObject(shape, appearance)];
@@ -37,7 +37,8 @@ export function decorationObjects(shape: Shape, appearance: BoardAppearance = 'l
   };
   if (!shape.label?.trim()) return [rect];
   const at = frameLabelPoint(shape);
-  const label = textObject({ id: `${id}#label`, type: 'text', x: at.x, y: at.y, text: shape.label, fontSize: at.size, ...(stroke !== undefined && { fill: stroke }) }, appearance, at.row, at.column);
+  const ink = shape.labelFill ?? stroke;
+  const label = textObject({ id: `${id}#label`, type: 'text', x: at.x, y: at.y, text: shape.label, fontSize: at.size, ...(ink !== undefined && { fill: ink }) }, appearance, at.row, at.column);
   return [rect, label];
 }
 

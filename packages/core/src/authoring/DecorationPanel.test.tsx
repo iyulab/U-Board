@@ -23,6 +23,10 @@ describe('DecorationPanel', () => {
     expect(onChange).toHaveBeenLastCalledWith({ ...frame, label: 'Bay 1' });
     fireEvent.change(screen.getByLabelText('Name position'), { target: { value: 'bottom-end' } });
     expect(onChange).toHaveBeenLastCalledWith({ ...frame, labelAt: 'bottom-end' });
+    const ink = screen.getByLabelText('Name colour');
+    fireEvent.change(ink, { target: { value: '#22313b' } });
+    fireEvent.blur(ink);
+    expect(onChange).toHaveBeenLastCalledWith({ ...frame, labelFill: '#22313b' });
   });
 
   it('rounds and dashes a frame, and drops a part set back to its default', () => {

@@ -179,6 +179,7 @@ export const KO_LABELS: UBoardLabels = {
   decorationText: '라벨',
   decorationLabel: '이름',
   decorationLabelAt: '이름 위치',
+  decorationLabelFill: '이름 색',
   decorationRadius: '모서리 둥글기',
   decorationDash: '선 모양',
   decorationAnchor: '기준점',

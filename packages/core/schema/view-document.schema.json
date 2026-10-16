@@ -227,7 +227,8 @@
             "dash": { "enum": ["solid", "dashed", "dotted"] },
             "label": { "type": "string", "description": "The frame's name, drawn inside it at labelAt, in the stroke's colour." },
             "labelAt": { "$ref": "#/$defs/placement", "description": "Where inside the frame its name sits; top-start when left out." },
-            "labelSize": { "type": "number", "exclusiveMinimum": 0, "description": "The name's font size; 13 when left out." }
+            "labelSize": { "type": "number", "exclusiveMinimum": 0, "description": "The name's font size; 13 when left out." },
+            "labelFill": { "type": "string", "description": "The name's colour; the stroke's when left out." }
           },
           "required": ["width", "height"]
         },

@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `RectShape.labelFill` — a frame's name in a colour of its own (a light frame line under a darker name), the stroke's
+  when left out. The decoration panel sets it.
+
 ## [0.15.0] - 2026-10-16
 
 ### Added
