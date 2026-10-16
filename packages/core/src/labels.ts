@@ -260,6 +260,19 @@ export interface UBoardLabels {
   /** The value shown for a source value with no mapping; left empty, such a value shows as it comes. */
   mapOtherwise: string;
   mapOtherwisePlaceholder: string;
+  /** The states section of a part's panel, and its fields. `{state}` is a state's name. */
+  statesHeading: string;
+  statesNeedBinding: string;
+  statesFrom: string;
+  statesNone: string;
+  statesMapHeading: string;
+  stateForValue: string;
+  stateForRange: string;
+  statesLooks: string;
+  stateOutline: string;
+  stateBlink: string;
+  stateHidden: string;
+  removeStates: string;
   /** Marks a listed binding that has a value map. */
   mapped: string;
   previewValue: string;
@@ -501,6 +514,18 @@ export const DEFAULT_LABELS: UBoardLabels = {
   rangeInvalid: 'Range {n}: give a lower end, an upper end, or both — the upper above the lower.',
   mapOtherwise: 'Anything else',
   mapOtherwisePlaceholder: 'as it comes',
+  statesHeading: 'States',
+  statesNeedBinding: 'Bind a value first — a part’s state is read from one of its widget’s bindings.',
+  statesFrom: 'Read from',
+  statesNone: 'No states',
+  statesMapHeading: 'Value → state',
+  stateForValue: 'State for value {n}',
+  stateForRange: 'State for range {n}',
+  statesLooks: 'How each state is shown',
+  stateOutline: 'Ring colour — {state}',
+  stateBlink: 'Blink — {state}',
+  stateHidden: 'Hide — {state}',
+  removeStates: 'Remove states',
   mapped: 'mapped',
   previewValue: 'Value',
   previewLive: 'live',

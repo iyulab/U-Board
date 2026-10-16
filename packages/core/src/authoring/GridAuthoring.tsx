@@ -231,6 +231,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 adapters={adapters}
                 connectorLabels={connectorLabels}
                 onChange={widget => updateDoc(current => updateGridItem(current, selected.id, { widget }))}
+                onPartChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
                 elements={doc.elements}
                 labels={labels}
                 clock={clock}

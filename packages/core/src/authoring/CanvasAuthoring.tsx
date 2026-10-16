@@ -21,7 +21,7 @@ import { resolveDocument } from '../resolve-document.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { ResolvedCanvasView } from '../resolve-document.js';
 import { focusPart, useTriggers } from '../viewer/use-triggers.js';
-import { PropertyPanel } from './PropertyPanel.js';
+import { PropertyPanel, withPartChange, type PartChange } from './PropertyPanel.js';
 import { BoardPanel } from './BoardPanel.js';
 import { ElementsPanel } from './ElementsPanel.js';
 import { SymbolsPanel } from './SymbolsPanel.js';
@@ -308,6 +308,10 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
     }));
   };
 
+  const handlePartChange = (change: PartChange) => {
+    updateDoc(prev => ({ ...prev, nodes: prev.nodes.map(n => (n.id === selectedNodeId ? withPartChange(n, change) : n)) }));
+  };
+
   const handleDecorationChange = (decoration: Shape) => {
     updateDoc(prev => ({
       ...prev,
@@ -424,6 +428,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               adapters={adapters}
               connectorLabels={connectorLabels}
               onChange={handleWidgetChange}
+              onPartChange={handlePartChange}
               background={doc.background}
               onNodeChange={handleNodeChange}
               elements={doc.elements}

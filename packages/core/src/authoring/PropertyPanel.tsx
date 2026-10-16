@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Adapter } from '../adapter.js';
-import type { Background, ElementDefinition, Node, Placed, Widget } from '../view-document.js';
+import type { Background, ElementDefinition, Node, Placed, StateRule, Widget } from '../view-document.js';
+import { StatesEditor } from './StatesEditor.js';
 import { ELEMENT_TYPE_PREFIX, elementNameOf } from '../elements/element-type.js';
 import { NodeAnchorFields } from './AnchorFields.js';
 import { nodeSize } from '../node-size.js';
@@ -20,6 +21,9 @@ export interface PropertyPanelProps {
   /** Adapter id → human-readable label. Falls back to the raw id when absent. */
   connectorLabels?: Record<string, string>;
   onChange: (widget: Widget) => void;
+  /** Where a change to the part beyond its widget goes — its states, or its widget and states together (a binding
+   *  removed that its states were read from). Without it the panel offers no states. */
+  onPartChange?: (change: PartChange) => void;
   /** The board's background, which an anchored node's coordinate is read by, and where a change to the
    *  node itself — its anchor, its place — goes. Without them the panel edits the widget only. */
   background?: Background;
@@ -32,6 +36,16 @@ export interface PropertyPanelProps {
   clock?: () => number;
 }
 
+/** A change to a placed part: its widget, its states (`states: undefined` takes them away), or both at once. */
+export type PartChange = { widget?: Widget; states?: StateRule };
+
+/** `part` with `change` applied — a `states` given as `undefined` is removed. */
+export function withPartChange<P extends Placed>(part: P, change: PartChange): P {
+  const next: P = { ...part, ...change };
+  if ('states' in change && change.states === undefined) delete next.states;
+  return next;
+}
+
 function isWidgetType(value: string): value is WidgetType {
   return (WIDGET_TYPES as readonly string[]).includes(value);
 }
@@ -41,6 +55,7 @@ export function PropertyPanel({
   adapters,
   connectorLabels,
   onChange,
+  onPartChange,
   background,
   onNodeChange,
   elements,
@@ -139,7 +154,12 @@ export function PropertyPanel({
 
       <BindingEditor
         bindings={node.widget.bindings}
-        onChange={bindings => onChange({ ...node.widget, bindings })}
+        onChange={bindings => {
+          const widget = { ...node.widget, bindings };
+          // States read from a binding that is gone would be refused on save: they go with it, in the same edit.
+          if (node.states && onPartChange && !bindings?.[node.states.from]) onPartChange({ widget, states: undefined });
+          else onChange(widget);
+        }}
         fields={dataFields.map(f => ({ path: f.path.join('.'), label: f.label }))}
         allowOtherPath
         headlinePath={headlinePropPath(node.widget.type)}
@@ -149,6 +169,7 @@ export function PropertyPanel({
         labels={labels}
         clock={clock}
       />
+      {onPartChange && <StatesEditor key={node.id} widget={node.widget} states={node.states} onChange={states => onPartChange({ states })} labels={labels} />}
     </div>
   );
 }
