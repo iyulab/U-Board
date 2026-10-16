@@ -15,6 +15,7 @@
         "connectors": { "type": "array", "items": { "$ref": "#/$defs/connector" } },
         "decorations": { "type": "array", "items": { "$ref": "#/$defs/shape" } },
         "appearance": { "$ref": "#/$defs/appearance" },
+        "accent": { "$ref": "#/$defs/accent" },
         "elements": { "$ref": "#/$defs/elements" }
       }
     },
@@ -30,8 +31,13 @@
         },
         "columns": { "description": "Columns at full width. Only 12 for now; absent means 12.", "const": 12 },
         "appearance": { "$ref": "#/$defs/appearance" },
+        "accent": { "$ref": "#/$defs/accent" },
         "elements": { "$ref": "#/$defs/elements" }
       }
+    },
+    "accent": {
+      "description": "The board's accent: the colour its widgets and elements fill and highlight with, in place of the theme's primary colour. Absent means the theme's.",
+      "type": "string"
     },
     "appearance": {
       "description": "The tone the board is drawn in. Absent means light.",

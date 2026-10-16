@@ -12,6 +12,9 @@ All notable changes to this package are documented here. The format follows
 - The `canvas` topic teaches a connector's `arrow` (and binding it to a value's sign) and `labelAt`.
 - The `canvas` topic teaches a frame's own name (`label`, `labelAt`), `radius` and `dash`, and a text's `anchor` and
   `background` — a frame no longer needs a separate text for its name, nor a tag a rect behind it.
+- `delete_board` — deletes a board for good, marked destructive so a client can ask first. A data source is still
+  removed by a person in the console.
+- The rules teach a board's `accent` — the colour to set instead of fixing one in a widget or an element.
 
 ### Changed
 

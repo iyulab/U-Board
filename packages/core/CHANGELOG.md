@@ -38,6 +38,11 @@ All notable changes to this package are documented here. The format follows
   validation and the layout advice know them (a frame's name counts as a text a node can cover; a text's own
   background covers a frame edge under it).
 
+- **A board's accent** — `accent` (a canvas or a grid view) is the colour its widgets and elements fill and highlight
+  with, in place of the theme's primary colour: it sets `--u-widget-primary`, the first series colour and the ink on a
+  primary fill (light, or dark on a light accent) for every widget and element on the board. Set in the editor's
+  board panel; the schema and strict validation know it.
+
 ### Changed
 
 - `ConnectorDash` is now `StrokeDash` — the same line styles serve a connector and a frame.

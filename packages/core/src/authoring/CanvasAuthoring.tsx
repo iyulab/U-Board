@@ -259,6 +259,12 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
       return appearance === 'dark' ? { ...rest, appearance } : rest;
     });
   };
+  const handleAccentChange = (accent: string | undefined) => {
+    updateDoc(prev => {
+      const { accent: _accent, ...rest } = prev;
+      return accent === undefined ? rest : { ...rest, accent };
+    });
+  };
 
   const handleNodeChange = (change: Partial<Pick<Node, 'x' | 'y' | 'anchored'>>) => {
     updateDoc(prev => ({ ...prev, nodes: prev.nodes.map(n => (n.id === selectedNodeId ? { ...n, ...change } : n)) }));
@@ -407,6 +413,8 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
               onChooseBackground={() => backgroundInputRef.current?.click()}
               onRemoveBackground={handleRemoveBackground}
               onAppearanceChange={handleAppearanceChange}
+              accent={doc.accent}
+              onAccentChange={handleAccentChange}
               referencePoints={doc.background.image?.referencePoints}
               onReferencePointsChange={handleReferencePointsChange}
               anchors={

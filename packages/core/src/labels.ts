@@ -67,6 +67,9 @@ export interface UBoardLabels {
   appearance: string;
   appearanceLight: string;
   appearanceDark: string;
+  /** The board's accent colour, and what an empty field means. */
+  accent: string;
+  accentPlaceholder: string;
   /** Said when a chosen background is refused: not an image type browsers draw, over the size
    *  limit (`{max}` is replaced by it), or unreadable. */
   backgroundType: string;
@@ -341,6 +344,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   appearance: 'Tone',
   appearanceLight: 'Light',
   appearanceDark: 'Dark',
+  accent: 'Accent colour',
+  accentPlaceholder: 'The theme’s',
   backgroundType: 'Choose a PNG, JPEG, WebP, GIF or SVG image.',
   backgroundTooLarge: 'The image is larger than {max}.',
   backgroundUnreadable: 'The image could not be read.',

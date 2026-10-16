@@ -5,6 +5,7 @@ import type { ResolvedWidget } from '../adapter.js';
 import type { BoardAppearance, ElementDefinition } from '../view-document.js';
 import { elementNameOf } from '../elements/element-type.js';
 import { ElementView } from './element-view.js';
+import { accentTokens } from './element-template.js';
 import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
 
@@ -65,6 +66,8 @@ export interface NodeFrameProps {
   widget: ResolvedWidget;
   /** The board's tone — the widget takes its palette (light by default). */
   appearance?: BoardAppearance;
+  /** The board's accent, in place of the palette's primary colour. */
+  accent?: string;
   /** Words for the connection-quality tooltip, mark and announcement (English by default). */
   qualityText?: QualityText;
   /** The time a stale value's age is measured to, in epoch milliseconds — read by the caller when it draws, so a
@@ -88,7 +91,7 @@ export interface NodeFrameProps {
  * small, media (a gauge, an image) scales down whole, and content that runs on (a table, a list) scrolls
  * inside. Nothing spills over a neighbour.
  */
-export function NodeFrame({ widget, appearance, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -104,11 +107,11 @@ export function NodeFrame({ widget, appearance, qualityText = DEFAULT_QUALITY_TE
       {...(quality && quality !== 'live' && { 'data-quality': quality })}
     >
       {element !== undefined ? (
-        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} />
+        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} />
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.
-        <UWidget spec={{ widget: widget.type, ...widget.props }} style={WIDGET_FILL_STYLE} theme={appearance ?? 'light'} locale={locale} />
+        <UWidget spec={{ widget: widget.type, ...widget.props }} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent) }} theme={appearance ?? 'light'} locale={locale} />
       )}
       {badge && quality && (
         <span aria-hidden="true" data-quality-badge="" style={{ ...BADGE_STYLE, ...QUALITY_BADGE_STYLE[quality] }}>

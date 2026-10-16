@@ -43,6 +43,7 @@ In a client's JSON configuration:
 | `get_board` | A board, or one part of its document by JSON Pointer, with its revision. |
 | `create_board` | A new board of a kind (`grid` or `canvas`), optionally with a first document. |
 | `patch_board` | Changes part of a board with a JSON Patch (RFC 6902) on a revision; answers the new revision and advice. |
+| `delete_board` | Deletes a board for good (marked destructive, so a client can ask first). A data source is removed in the console. |
 | `validate` | Checks a document, or a board with a patch, without saving. |
 | `look` | A picture of a saved board as its viewers see it, with what went wrong while drawing; `focus` one part, or `appearance` the other paper. Needs Chrome or Edge on this computer, or `UBOARD_BROWSER`. |
 | `list_sources` | The workspace's data sources — never a credential. |

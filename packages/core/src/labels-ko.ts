@@ -46,6 +46,8 @@ export const KO_LABELS: UBoardLabels = {
   appearance: '바탕',
   appearanceLight: '밝게',
   appearanceDark: '어둡게',
+  accent: '강조색',
+  accentPlaceholder: '테마 기본',
   backgroundType: 'PNG, JPEG, WebP, GIF, SVG 이미지를 고르세요.',
   backgroundTooLarge: '이미지가 {max}보다 큽니다.',
   backgroundUnreadable: '이미지를 읽지 못했습니다.',

@@ -47,6 +47,8 @@ const AGREED: [string, unknown, boolean][] = [
     { id: 'r', type: 'rect', x: 0, y: 0, width: 100, height: 60, stroke: '#5f7a8c', strokeWidth: 1, radius: 6, dash: 'dashed', label: 'Line 1', labelAt: 'top-end', labelSize: 12 },
     { id: 't', type: 'text', x: 50, y: 30, text: 'Zone A', anchor: 'center', background: '#ffffffcc' },
   ] }), true],
+  ['a board with an accent colour', canvas({ accent: '#1a7fe8' }), true],
+  ['an accent that is not text', grid({ accent: 7 }), false],
   ['a text anchor not one of its words', canvas({ decorations: [{ id: 't', type: 'text', x: 0, y: 0, text: 'x', anchor: 'middle' }] }), false],
   ['a frame name placed by a word it does not take', canvas({ decorations: [{ id: 'r', type: 'rect', x: 0, y: 0, width: 1, height: 1, labelAt: 'left' }] }), false],
   ['a negative corner radius', canvas({ decorations: [{ id: 'r', type: 'rect', x: 0, y: 0, width: 1, height: 1, radius: -2 }] }), false],

@@ -15,6 +15,9 @@ export interface BoardPanelProps {
   onChooseBackground?: () => void;
   onRemoveBackground?: () => void;
   onAppearanceChange: (appearance: BoardAppearance) => void;
+  /** The board's accent colour (absent: the theme's), and where a change to it goes. */
+  accent?: string;
+  onAccentChange?: (accent: string | undefined) => void;
   /** The background image's reference points, and where a change to them goes — offered while there is a
    *  background. */
   referencePoints?: [ReferencePoint, ReferencePoint];
@@ -28,7 +31,7 @@ export interface BoardPanelProps {
 }
 
 /**
- * The panel shown while nothing is selected: the board's own settings — its background and its tone.
+ * The panel shown while nothing is selected: the board's own settings — its background, its tone and its accent.
  * They describe the whole document rather than an action on it, so they sit where a selection's
  * properties do, as editors conventionally show the document's properties when nothing is selected,
  * and leave the toolbar to adding, saving, the mode and the view.
@@ -39,6 +42,8 @@ export function BoardPanel({
   onChooseBackground,
   onRemoveBackground,
   onAppearanceChange,
+  accent,
+  onAccentChange,
   referencePoints,
   onReferencePointsChange,
   anchors,
@@ -86,6 +91,21 @@ export function BoardPanel({
           <option value="dark">{labels.appearanceDark}</option>
         </select>
       </label>
+      {onAccentChange && (
+        <label className="ub-panel__field">
+          {labels.accent}
+          <input
+            key={accent ?? ''}
+            defaultValue={accent ?? ''}
+            placeholder={labels.accentPlaceholder}
+            // Written when left, as the other fields are; cleared, the board takes the theme's again.
+            onBlur={e => {
+              const typed = e.currentTarget.value.trim();
+              if (typed !== (accent ?? '')) onAccentChange(typed === '' ? undefined : typed);
+            }}
+          />
+        </label>
+      )}
       <p className="ub-panel__hint">{hint ?? labels.selectNode}</p>
     </div>
   );

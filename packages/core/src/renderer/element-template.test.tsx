@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, render, waitFor } from '@testing-library/react';
-import { ELEMENT_THEME, fillTemplate, renderTemplateElement } from './element-template';
+import { ELEMENT_THEME, accentTokens, boardTheme, fillTemplate, renderTemplateElement } from './element-template';
 import { ElementHost, ElementOriginsContext, ElementView, FRAME_PING_INTERVAL_MS, FRAME_STALL_MS } from './element-view';
 import { elementDefinitionHash } from '../elements/definition-hash';
 import { parseTemplate } from '../elements/template';
@@ -20,6 +20,29 @@ function drawn(definition: Partial<ElementDefinition>, props: unknown = {}, orig
   box.querySelector('style')?.remove();
   return box.innerHTML;
 }
+
+describe('accentTokens', () => {
+  it('puts the accent in place of the primary colour and the first series colour, with an ink that reads on it', () => {
+    expect(accentTokens('#1d4ed8')).toEqual({ '--u-widget-primary': '#1d4ed8', '--u-widget-chart-color-1': '#1d4ed8', '--u-widget-on-primary': '#ffffff' });
+    expect(accentTokens('#1a7fe8')['--u-widget-on-primary']).toBe('#1a1a2e'); // a mid blue: the dark ink contrasts a little more
+    expect(accentTokens('#fde047')['--u-widget-on-primary']).toBe('#1a1a2e'); // a light yellow takes the dark ink
+    expect(accentTokens('rgb(250, 250, 210)')['--u-widget-on-primary']).toBe('#1a1a2e');
+    expect(accentTokens('#0b3')['--u-widget-on-primary']).toBe('#1a1a2e');
+    expect(accentTokens('teal')['--u-widget-on-primary']).toBe('#ffffff'); // a name is not read: the light ink
+  });
+
+  it('replaces nothing when the board keeps the theme’s', () => {
+    expect(accentTokens(undefined)).toEqual({});
+    expect(accentTokens(' none ')).toEqual({});
+    expect(boardTheme('dark')).toEqual(ELEMENT_THEME.dark);
+    expect(boardTheme('dark', '#ff6600')['--u-widget-primary']).toBe('#ff6600');
+  });
+
+  it('reaches a template element’s root and a script element’s frame', async () => {
+    const { container } = render(<ElementView definition={{ render: 'template', template: '<b/>' }} name="dot" props={{}} accent="#ff6600" />);
+    expect((container.firstChild as HTMLElement).style.getPropertyValue('--u-widget-primary')).toBe('#ff6600');
+  });
+});
 
 describe('fillTemplate', () => {
   it('escapes every value, in text and in attributes', () => {

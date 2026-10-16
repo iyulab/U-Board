@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { BoardAppearance, ElementDefinition } from '../view-document.js';
 import type { ElementFrameMessage } from '../elements/frame.js';
 import { elementDefinitionHash } from '../elements/definition-hash.js';
-import { ELEMENT_THEME, renderTemplateElement } from './element-template.js';
+import { boardTheme, renderTemplateElement } from './element-template.js';
 
 /** The origins this host lets an element load from — an element reaches an origin only when it declares it in
  *  `resources` and the host lists it here. Empty unless the host provides it: a board loads nothing from another
@@ -63,6 +63,8 @@ export interface ElementViewProps {
   /** Its resolved props — bound ones filled. */
   props: unknown;
   appearance?: BoardAppearance;
+  /** The board's accent, in place of the theme's primary colour. */
+  accent?: string;
 }
 
 /**
@@ -71,17 +73,18 @@ export interface ElementViewProps {
  * element runs in a sandboxed frame its server builds — a frame of its own origin, with no network — and receives
  * its props by message. An element it cannot draw says so in its box rather than leaving it blank.
  */
-export function ElementView({ definition, name, props, appearance = 'light' }: ElementViewProps) {
+export function ElementView({ definition, name, props, appearance = 'light', accent }: ElementViewProps) {
   const frames = useContext(ElementFrameContext);
+  const theme = useMemo(() => boardTheme(appearance, accent), [appearance, accent]);
   if (!definition) return <div style={NOTICE_STYLE} data-element-notice="">{`No element “${name}”`}</div>;
   if (definition.render === 'script') {
     if (!frames) return <div style={NOTICE_STYLE} data-element-notice="">{`“${name}” runs a script — shown where the board is served`}</div>;
-    return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} />;
+    return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} theme={theme} />;
   }
-  return <TemplateElement definition={definition} name={name} props={props} appearance={appearance} />;
+  return <TemplateElement definition={definition} name={name} props={props} theme={theme} />;
 }
 
-function TemplateElement({ definition, name, props, appearance }: Required<Omit<ElementViewProps, 'definition'>> & { definition: ElementDefinition }) {
+function TemplateElement({ definition, name, props, theme }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string> }) {
   const host = useRef<HTMLDivElement>(null);
   const origins = useContext(ElementOriginsContext);
   useLayoutEffect(() => {
@@ -90,12 +93,12 @@ function TemplateElement({ definition, name, props, appearance }: Required<Omit<
     const root = element.shadowRoot ?? element.attachShadow({ mode: 'open' });
     root.replaceChildren(renderTemplateElement(definition, props, element.ownerDocument, origins));
   }, [definition, props, origins]);
-  return <div ref={host} style={{ ...FILL, ...(ELEMENT_THEME[appearance] as CSSProperties) }} data-element={name} />;
+  return <div ref={host} style={{ ...FILL, ...(theme as CSSProperties) }} data-element={name} />;
 }
 
 /** A script element's frame. `sandbox="allow-scripts"` without `allow-same-origin` gives it an origin of its own: it
  *  cannot reach this page, its storage or the viewer's session. A frame off screen is not loaded until it nears it. */
-function ScriptElement({ name, definition, frames, props, appearance }: { name: string; definition: ElementDefinition; frames: string; props: unknown; appearance: BoardAppearance }) {
+function ScriptElement({ name, definition, frames, props, appearance, theme }: { name: string; definition: ElementDefinition; frames: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string> }) {
   const [url, setUrl] = useState<string>();
 
   useEffect(() => {
@@ -111,12 +114,12 @@ function ScriptElement({ name, definition, frames, props, appearance }: { name: 
   // A frame of its own for each address: what one frame said (ready, an error) does not carry over to the next.
   return (
     <div style={{ ...FILL, position: 'relative' }} data-element={name}>
-      {url && <ElementFrame key={url} name={name} url={url} props={props} appearance={appearance} />}
+      {url && <ElementFrame key={url} name={name} url={url} props={props} appearance={appearance} theme={theme} />}
     </div>
   );
 }
 
-function ElementFrame({ name, url, props, appearance }: { name: string; url: string; props: unknown; appearance: BoardAppearance }) {
+function ElementFrame({ name, url, props, appearance, theme }: { name: string; url: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string> }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -143,10 +146,10 @@ function ElementFrame({ name, url, props, appearance }: { name: string; url: str
 
   useEffect(() => {
     if (!ready) return;
-    const message: ElementFrameMessage = { type: 'ub:props', props, appearance, theme: ELEMENT_THEME[appearance] };
+    const message: ElementFrameMessage = { type: 'ub:props', props, appearance, theme };
     // The frame's origin is its own, which no name can be given for: '*' — the props are what the board shows anyway.
     frame.current?.contentWindow?.postMessage(message, '*');
-  }, [ready, props, appearance]);
+  }, [ready, props, appearance, theme]);
 
   // A frame that loaded but never said it was ready is not one this element drew: its definition was edited since
   // the board was saved (the server holds no such frame), or its server is not a U-Board server. Until the frame says

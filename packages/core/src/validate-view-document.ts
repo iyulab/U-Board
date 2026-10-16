@@ -52,6 +52,7 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
   if (value.appearance !== undefined && value.appearance !== 'light' && value.appearance !== 'dark') {
     doc.expected(['appearance'], 'expected "light" or "dark"', value.appearance);
   }
+  doc.optionalColor(value, ['accent']);
   if (value.elements !== undefined && doc.record(value, ['elements'])) checkElements(doc, value.elements as Record<string, unknown>);
 
   if (value.kind === 'canvas') {
@@ -69,8 +70,8 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
 }
 
 /** The fields each part of a document has — what `strict` holds a written document to. */
-const CANVAS_FIELDS = ['kind', 'appearance', 'elements', 'background', 'nodes', 'connectors', 'decorations'];
-const GRID_FIELDS = ['kind', 'appearance', 'elements', 'columns', 'items'];
+const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'background', 'nodes', 'connectors', 'decorations'];
+const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'columns', 'items'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];

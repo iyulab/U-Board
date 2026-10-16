@@ -42,7 +42,7 @@ const RULES = `# Writing a U-Board board
 ## Kinds
 - grid: { kind: "grid", items: [{ id, span?: 1-12 (4), spanMedium?: 1-6, height?: px, widget }] } — an ordinary dashboard, laid out in order to the screen's width.
 - canvas: { kind: "canvas", background: { image? }, nodes: [{ id, x, y, width?, height?, anchored, widget }], connectors: [], decorations? } — placed by coordinates, over a drawing or plan. describe("canvas") before drawing one.
-- Every id is unique in the document. appearance: "light" (default) | "dark".
+- Every id is unique in the document. appearance: "light" (default) | "dark". accent: a colour — the board's primary colour (a gauge's arc, the first series, a tank's fill, --u-widget-primary in an element) in place of the theme's; set it to match the reference instead of fixing colours in widgets or elements.
 - The format is closed: a field it does not have is refused, and the issue lists the fields that place takes.
 
 ## Widgets
@@ -97,7 +97,7 @@ placement  = { type: "element:<name>", props: { … }, bindings?: { … } } — 
 
 ## Drawing well
 - Prefer render "template": HTML/SVG + CSS, no script. Numbers become drawing through CSS: style="--level: {{level}}", height: calc(var(--level) * 1%).
-- Use the theme variables, never fixed colours: --u-widget-bg, -surface, -text, -text-secondary, -border, -primary, -positive, -negative, -warning, -font-family, -font-mono.
+- Use the theme variables, never fixed colours: --u-widget-bg, -surface, -text, -text-secondary, -border, -primary, -positive, -negative, -warning, -font-family, -font-mono. The board's accent sets -primary (and -on-primary, the ink on it): to match a brand colour, set the document's accent rather than a fixed colour.
 - Tell states apart by shape as well as colour (filled running, outlined stopped), with a graphic contrast of 3:1 against its background (WCAG 1.4.11) — never mark a state with the faintest token (--u-widget-border). Colour only what needs attention.
 - Choose by a value with an attribute and CSS: data-state="{{state}}" + [data-state="fault"] { … }, or <use href="#icon-{{kind}}"> for a symbol per kind. Sections test only empty/non-empty.
 - Draw repeated shapes once (<symbol>/<use>, a {{#list}} section). Keep an element under 32 KB.

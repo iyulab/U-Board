@@ -195,6 +195,13 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, fileActions,
                   return appearance === 'dark' ? { ...rest, appearance } : rest;
                 })
               }
+              accent={doc.accent}
+              onAccentChange={accent =>
+                updateDoc(current => {
+                  const { accent: _accent, ...rest } = current;
+                  return accent === undefined ? rest : { ...rest, accent };
+                })
+              }
               hint={labels.selectItem}
               labels={labels}
             />

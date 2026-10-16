@@ -279,7 +279,7 @@ function ElementEditor({ doc, name, definition, placed, onChange, onRename, onRe
         <legend>{labels.elementPreview}</legend>
         {draft.render === 'template' ? (
           <div style={{ ...PREVIEW_STYLE, width: draft.size?.width ?? '100%', height: draft.size?.height ?? 120 }} data-element-preview="">
-            <ElementView definition={draft} name={name} props={previewProps(doc, name, draft)} appearance={appearance} />
+            <ElementView definition={draft} name={name} props={previewProps(doc, name, draft)} appearance={appearance} accent={doc.accent} />
           </div>
         ) : (
           <p className="ub-panel__hint" style={MUTED_STYLE}>

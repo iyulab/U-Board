@@ -45,6 +45,10 @@ function fakeServer() {
     const ifMatch = headers['If-Match'];
     if (ifMatch && ifMatch !== `"${board.revision}"`) return json(412, { code: 'BOARD_CHANGED', revision: board.revision });
     if (method === 'GET') return json(200, { id, name: board.name, document: board.document, revision: board.revision, updatedAt: 't' });
+    if (method === 'DELETE') {
+      boards.delete(id);
+      return new Response(null, { status: 204 });
+    }
     board.document = method === 'PATCH' ? applyJsonPatch(board.document, body) : body.document;
     board.revision += 1;
     return json(200, { id, revision: board.revision, advice: [] });
@@ -80,7 +84,7 @@ describe('u-board-mcp', () => {
   it('offers few tools, each with a strict input', async () => {
     const { tools } = await client.listTools();
     expect(tools.map(t => t.name).sort()).toEqual([
-      'create_board', 'create_source', 'describe', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'sample_source', 'validate',
+      'create_board', 'create_source', 'delete_board', 'describe', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'sample_source', 'validate',
     ]);
     for (const tool of tools) expect(tool.inputSchema.additionalProperties, tool.name).toBe(false);
   });
@@ -208,6 +212,16 @@ describe('u-board-mcp', () => {
     expect(value).toMatchObject({ code: 'INVALID_DOCUMENT', message: expect.stringContaining('no board was made'), issues: [{ path: '/nodes', message: 'expected an array — got an object {}' }] });
     expect(server.boards.size).toBe(before);
     expect(server.requests.some(r => r.method === 'POST')).toBe(false);
+  });
+
+  it('deletes a board, says so as a destructive tool, and answers not found for one already gone', async () => {
+    const { tools } = await client.listTools();
+    expect(tools.find(t => t.name === 'delete_board')!.annotations).toMatchObject({ destructiveHint: true });
+    expect((await call('delete_board', { board: 'b1' })).value).toEqual({ deleted: 'b1' });
+    expect(server.boards.has('b1')).toBe(false);
+    const again = await call('delete_board', { board: 'b1' });
+    expect(again.isError).toBe(true);
+    expect(again.value).toMatchObject({ code: 'NOT_FOUND' });
   });
 
   it('validates a document, or a board with a patch, without saving', async () => {

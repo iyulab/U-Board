@@ -147,6 +147,21 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
   );
 
   server.registerTool(
+    'delete_board',
+    {
+      description:
+        'Deletes a board for good — one you made and no longer need, or one the user asked you to remove. A data source is removed by a person in the console.',
+      inputSchema: z.strictObject({ board: boardId }),
+      annotations: { destructiveHint: true, idempotentHint: true },
+    },
+    async ({ board }) =>
+      tool(async () => {
+        await client.deleteBoard(board);
+        return { deleted: board };
+      })
+  );
+
+  server.registerTool(
     'patch_board',
     {
       description: "Changes part of a board's document with a JSON Patch, applied entirely or not at all, and saves it. Answers the new revision and advice.",

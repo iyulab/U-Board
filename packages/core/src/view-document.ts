@@ -37,6 +37,10 @@ export interface CanvasView {
    * it) for a light drawing or none; `dark` for a dark one, where the widgets take their dark palette
    * so their text reads on it. Like `Background`, it says the background's tone, not what it depicts. */
   appearance?: BoardAppearance;
+  /** The board's accent — the colour its widgets and elements fill and highlight with (a gauge's arc, a series, a
+   * tank's level: the theme's primary colour), in place of the theme's own. A colour in the forms a decoration takes.
+   * Absent means the theme's. */
+  accent?: string;
   /** The elements this board defines, by name — see `ElementDefinition`. */
   elements?: Record<string, ElementDefinition>;
 }
@@ -51,6 +55,8 @@ export interface GridView {
   columns?: 12;
   /** As a canvas view's — the tone the board is drawn in. */
   appearance?: BoardAppearance;
+  /** As a canvas view's — the board's accent colour. */
+  accent?: string;
   /** As a canvas view's — the elements this board defines. */
   elements?: Record<string, ElementDefinition>;
 }

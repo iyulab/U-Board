@@ -56,6 +56,10 @@ its own name (`label`, placed inside it by `labelAt`), rounded corners (`radius`
 `background`. A decoration carries no widget and no binding; like a background, the system does
 not interpret what it depicts.
 
+**Accent** — a board's own primary colour (`accent`), which its widgets and elements fill and
+highlight with in place of the theme's: a brand colour set once for the board rather than in each
+widget.
+
 **Widget** — the visual content a node displays (a chart, a status indicator, a numeric value,
 and so on). A prepared widget is rendered by an external library the view consumes, not by the
 canvas layer itself; an element is one the board defines itself.

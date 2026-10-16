@@ -36,6 +36,49 @@ export const ELEMENT_THEME: Record<BoardAppearance, Record<string, string>> = {
   },
 };
 
+/** Ink on an accent fill: the light one, or the dark one where the accent is light. */
+const ON_ACCENT = { light: '#ffffff', dark: '#1a1a2e' };
+
+/**
+ * The theme tokens a board's `accent` replaces — the primary colour a widget fills and highlights with, the first
+ * series colour, and the ink on a primary fill (light, or dark on a light accent) — for a widget's host or an
+ * element's root. None when the board keeps the theme's (no accent, or `none`).
+ */
+export function accentTokens(accent: string | undefined): Record<string, string> {
+  const colour = accent?.trim();
+  if (!colour || colour.toLowerCase() === 'none') return {};
+  return { '--u-widget-primary': colour, '--u-widget-chart-color-1': colour, '--u-widget-on-primary': inkOn(colour) };
+}
+
+/** The board's whole theme for an element: its tone's tokens, with its accent in place of the primary colour. */
+export function boardTheme(appearance: BoardAppearance, accent?: string): Record<string, string> {
+  return { ...ELEMENT_THEME[appearance], ...accentTokens(accent) };
+}
+
+/** The ink that reads on a fill of `colour` — by its luminance where it is a hex or rgb() colour; the light ink
+ *  otherwise (a name or hsl() is not read here). */
+function inkOn(colour: string): string {
+  const rgb = parseRgb(colour);
+  if (!rgb) return ON_ACCENT.light;
+  const [r, g, b] = rgb.map(c => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  // Contrast with white is (1.05)/(L+0.05); with the dark ink (L ≈ 0.012) it is (L+0.05)/0.062 — the larger wins.
+  return 1.05 / (luminance + 0.05) >= (luminance + 0.05) / 0.062 ? ON_ACCENT.light : ON_ACCENT.dark;
+}
+
+function parseRgb(colour: string): [number, number, number] | undefined {
+  const hex = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(colour);
+  if (hex) {
+    const digits = hex[1].length <= 4 ? [...hex[1]].map(d => d + d).join('') : hex[1];
+    return [0, 2, 4].map(i => parseInt(digits.slice(i, i + 2), 16)) as [number, number, number];
+  }
+  const rgb = /^rgba?\(\s*(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)[\s,]+(\d+(?:\.\d+)?)/i.exec(colour);
+  return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : undefined;
+}
+
 /** What every element's root starts from: it fills its box, in the board's ink and type, and nothing spills out. */
 const BASE_CSS = ':host{display:block;width:100%;height:100%;overflow:hidden;color:var(--u-widget-text);font-family:var(--u-widget-font-family)}';
 
