@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The `board_state` tool — what a saved board shows now, part by part (state, connection quality and why, how old its
+  data is), without values. The rules name it as the cheap check before `look`; `describe("data")` teaches `states`.
+
 ## [0.5.0] - 2026-10-16
 
 ### Added

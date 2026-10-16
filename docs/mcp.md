@@ -29,6 +29,7 @@ needs a key, a token or OAuth is set up by a person in the console, and the assi
 | `list_boards`, `get_board` | Reads boards — one part of a document at a time, by JSON Pointer. |
 | `create_board`, `patch_board`, `delete_board` | Makes a board, changes it with JSON Patch (RFC 6902) on a revision — each answer carries the new revision and advice — and deletes one for good. |
 | `validate` | Checks a document, or a board with a patch, without saving. |
+| `board_state` | What a saved board shows now — each part’s state, its connection quality and why, how old its data is — without values or a picture. |
 | `look` | Draws a saved board as its viewers see it and answers a picture, with what went wrong while drawing — an element's error, a widget whose content runs past its box, values not live — and the advice saving gave that still stands, such as parts drawn over one another. It can show one part up close (with only that part's advice), or the board on the other paper. |
 | `list_sources`, `sample_source`, `create_source` | Lists the data sources, answers what a source's response looks like (each value's JSON Pointer and type, and the fields that tell a list's items apart), and makes a source that needs no credential. |
 

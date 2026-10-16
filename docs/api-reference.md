@@ -322,6 +322,38 @@ alarms from 80:
 }
 ```
 
+### States — `StateRule`
+
+A node or a grid item can name the state it is in, read from one of its widget’s bindings, and say how each state is
+shown:
+
+```ts
+interface StateRule {
+  from: string; // a key of widget.bindings
+  map: ValueMap<string>; // values, ranges, otherwise — each gives a state's name
+  looks?: Record<string, StateLook>;
+}
+interface StateLook {
+  outline?: string; // a ring of this colour around the part
+  blink?: boolean; // the ring (or the part, without one) blinks — not under prefers-reduced-motion
+  hidden?: boolean; // the part is not drawn; connectors to it are
+}
+
+// on a node or a grid item, beside its widget:
+states: {
+  from: 'data.value',
+  map: { values: { Fault: 'fault', Running: 'running' }, ranges: [{ min: 80, value: 'hot' }] },
+  looks: { fault: { outline: '#dc2626', blink: true } },
+}
+```
+
+- The map reads the source’s value — before the binding’s own `map` — as a prop’s value map does: `values` by text, then
+  `ranges`, then `otherwise`.
+- A reading the map names nothing for is no state, never the reading itself; so is a binding that read no value
+  (`disconnected`).
+- A look draws around the part’s frame; the frame’s border keeps showing connection quality. A state without a look is
+  still named: the frame carries `data-state`, and its title and announcement say the state first.
+
 ### `HttpRef`
 
 ```ts
@@ -603,6 +635,40 @@ a `ResolvedWidget`. `background` and `connectors` pass through unchanged — the
   reported one on a non-`live` reading. Absent when none did.
 - `ResolvedWidget.observedAt` — when each `live` or `stale` value was obtained from its source,
   per bound prop path, for bindings whose adapter reported it. Absent when none did.
+
+### `boardStateOf(doc, { now, revision? })`
+
+```ts
+function boardStateOf(doc: ResolvedViewDocument, options: { now: number; revision?: number }): BoardState;
+
+interface BoardState {
+  evaluatedAt: string; // ISO 8601
+  revision?: number; // of the definition, when the caller knows it
+  parts: Record<string, PartState>; // by node or grid item id
+}
+interface PartState {
+  state?: string;
+  quality?: ConnectionQuality; // the worst among its bindings
+  reason?: QualityReason; // why it is not live, when known
+  observedAt?: string; // the oldest observation of its data
+}
+```
+
+What a resolved board shows, part by part — no values. For example:
+
+```json
+{
+  "evaluatedAt": "2026-10-16T09:00:00.000Z",
+  "revision": 7,
+  "parts": {
+    "pump": { "state": "fault", "quality": "stale", "reason": "transport", "observedAt": "2026-10-16T08:40:00Z" },
+    "title": {}
+  }
+}
+```
+
+`ViewerPage` hands it to its host through `onBoardState` each time it draws new values (a view that has stopped updating
+reports its parts `stale`); a U-Board server answers it at `GET /api/share/boards/:id/state`.
 
 ### `resolveWidget(widget, adapters)`
 

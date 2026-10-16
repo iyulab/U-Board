@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- `GET /api/share/boards/:id/state` — a board’s state on request, for a share link or a workspace API token: each
+  part’s state, connection quality and why, how old its data is, no values. Computed from the board’s declared
+  bindings with the same reuse of upstream reads as the batch resolve; nothing is kept between requests.
+
 ## [0.7.0] - 2026-10-16
 
 ### Fixed

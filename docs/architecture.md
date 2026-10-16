@@ -50,6 +50,17 @@ one specific external system. The core binding surface is generic; adapters for 
 are separate, pluggable packages, not part of the core. This keeps U-Board usable standalone
 against any data source, with no host platform assumed by the core.
 
+A binding only reads. Nothing a board does writes to the system a binding points at through that binding.
+
+## Definition, data and state
+
+What a viewer draws comes from three things kept apart. The **definition** — the view document — is what its authors
+wrote: layout, widgets, the bindings’ references, and the states a part can be in. The **data** stays in the systems it
+belongs to; U-Board reads it through bindings and keeps none of it. The **board state** is what the board makes of the
+data now — each part’s state and connection quality — computed from the other two by one function (`boardStateOf`),
+the same in a viewer and on a server, and published beside the definition, never written into it. A view is drawn from
+all three; what one person does in their own view (selecting, zooming) belongs to that view alone.
+
 ## Connection-quality visualization
 
 A node can carry several bindings at once. The shipped renderer frames the node by the worst

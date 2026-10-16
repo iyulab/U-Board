@@ -6,6 +6,27 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **States** — `states` on a node or a grid item (`StateRule`: `from` one of its widget’s bindings, a `map` to state
+  names, `looks` per state — `outline`, `blink`, `hidden`). Resolved parts carry `state`; the frame is marked
+  `data-state`, says the state first in its title and announcement, and draws the look around itself — the quality
+  border is unchanged. Blinking needs the default stylesheet (`.ub-state-blink`, with `--ring` when the look has a ring)
+  and stops under `prefers-reduced-motion`. Authoring is through the document for now (the source view or a tool).
+- **Board state** — `boardStateOf(resolved, { now, revision? })` and the `BoardState`/`PartState` types: each part’s
+  state, worst connection quality and its cause, oldest observation — no values. `ViewerPage`’s `onBoardState` hands it
+  to the host each time new values are drawn (`stale` once the view stops updating).
+- `ValueMap` and `ValueRange` take the type of the value they give (`ValueMap<string>` for state names); existing uses
+  are unchanged.
+- `lintViewDocument` points at a look for a state its map never names.
+
+### Changed
+
+- `lintViewDocument` says two overlapping nodes once: their captions lying under each other or running together are
+  no longer reported as well — moving the nodes apart fixes them.
+- `applyJsonPatch`: a `replace` of an object member that is not there says that `add` sets one.
+- `validateViewDocument` with `strict`: a field a part does not have reads “an element definition has no …”.
+
 ## [0.16.0] - 2026-10-16
 
 ### Added

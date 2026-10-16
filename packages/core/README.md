@@ -88,6 +88,10 @@ value arrived) has come for two intervals it says so prominently (an announced s
 every value as last known (`stale`) rather than current. `useResolvedDocument` reports the same
 through `resolvedAt` and `stalled` for a host that renders its own view.
 
+`onBoardState` hands the host what the board shows each time new values are drawn — each part’s state, its connection
+quality and why, how old its data is, no values (`BoardState`) — for a host that acts on it: a count of faults in its
+own header, a sound.
+
 How long ago a value was obtained is measured against `clock` (default `Date.now`). Its
 `observedAt` comes from the source's side, so on a screen whose own clock may drift, pass a clock
 set by the server's: `serverClock()` follows the `Date` of the responses you hand it.

@@ -93,6 +93,17 @@ This is deliberately narrower than a full alarm
 model (priority, acknowledgement, shelving) — that belongs to the system a binding points at, not
 to the binding surface itself.
 
+**State** — a name a part (a node or a grid item) is in, read from one of its widget’s bindings: the source’s value
+looked up in the part’s `states` map (`"Fault"` → `fault`, 80 or more → `hot`). Each state may have a look — a ring of
+colour around the part, blinking, or the part hidden — drawn around it, so the frame’s connection-quality border stays
+readable. A state comes from the current reading alone: it remembers nothing, so a delay (“over the limit for five
+minutes”) or a latch is not a state.
+
+**Board state** — what a board shows now, part by part: each part’s state, the worst connection quality of its bindings
+and why, and how old its data is — no values. It is published beside the board’s definition and never written into it:
+a viewer hands it to its host (`onBoardState`), a U-Board server answers it on request, and an assistant reads it with
+`board_state`. It says when it was computed; a state nobody has computed lately says nothing about now.
+
 **Adapter** — a pluggable package that resolves bindings against one specific external system. The
 core binding surface is generic; system-specific knowledge lives in an adapter, not in the core.
 
