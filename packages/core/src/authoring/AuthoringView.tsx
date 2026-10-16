@@ -127,9 +127,11 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   };
 
   // An edit typed into a field counts with the rest of what is typed there (document-history.ts) — until focus moves:
-  // the same field, refilled for another part, is another step.
+  // the same field, refilled for another part, is another step. The field is the one whose input the edit answers, not
+  // whichever has focus: a button that does not take focus when pressed (Safari) is not typing.
+  const typing = useRef<HTMLElement | null>(null);
   const edit = (update: (current: ViewDocument) => ViewDocument) => {
-    const typingIn = textEntry(document.activeElement);
+    const typingIn = typing.current;
     setHistory(h => recordEdit(h, update(h.present), typingIn));
   };
   // A view shows the board as it is: the edits are walked back and forth only while editing.
@@ -154,11 +156,27 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     if (!root) return;
     const keyDown = (e: KeyboardEvent) => handleKey(e);
     const focusMoved = () => setHistory(endTyping);
+    // A field's input is caught on its way down, before the editor's handlers answer it, and let go once it has risen
+    // past them all (to the window).
+    const typed = (e: Event) => {
+      typing.current = textEntry(e.target as Element);
+    };
+    const answered = () => {
+      typing.current = null;
+    };
     root.addEventListener('keydown', keyDown);
     root.addEventListener('focusin', focusMoved);
+    for (const type of ['input', 'change']) {
+      root.addEventListener(type, typed, true);
+      window.addEventListener(type, answered);
+    }
     return () => {
       root.removeEventListener('keydown', keyDown);
       root.removeEventListener('focusin', focusMoved);
+      for (const type of ['input', 'change']) {
+        root.removeEventListener(type, typed, true);
+        window.removeEventListener(type, answered);
+      }
     };
   }, []);
 

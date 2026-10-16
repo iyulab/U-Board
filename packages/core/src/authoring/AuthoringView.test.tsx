@@ -159,6 +159,14 @@ describe('AuthoringView undo and redo', () => {
     fireEvent.keyDown(field, { key: 'z', ctrlKey: true });
     expect(field).toHaveValue('Zone Bxy');
 
+    // A button that leaves focus in the field (as Safari's do) is a step of its own, not more typing.
+    fireEvent.click(screen.getByText('Add node'));
+    expect(field).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    const afterAdd = await savedAfter(onSave);
+    expect(afterAdd.nodes).toHaveLength(0);
+    expect((afterAdd.decorations![0] as { text: string }).text).toBe('Zone Bxy');
+
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
     expect(((await savedAfter(onSave)).decorations![0] as { text: string }).text).toBe('Zone A');
   });
