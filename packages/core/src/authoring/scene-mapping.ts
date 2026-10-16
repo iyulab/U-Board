@@ -2,7 +2,7 @@ import { Scene } from '@canvas-kit/core';
 import type { CanvasView, Connector, Node, Shape, Widget } from '../view-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT, DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
 import { seedWidget } from './widget-catalog.js';
-import { onBoard } from '../renderer/board-appearance.js';
+import { decorationObjects } from '../renderer/decoration-drawing.js';
 import { captionObjects, connectorObjects } from '../renderer/connector-drawing.js';
 
 /** A newly-added rect decoration's default border — distinct from a node placeholder's blue
@@ -52,13 +52,16 @@ export function documentToScene(doc: CanvasView): Scene {
   }
 
   for (const shape of doc.decorations ?? []) {
-    if (shape.type === 'rect') {
+    const [drawn, ...name] = decorationObjects(shape, doc.appearance);
+    if (drawn.type === 'rect') {
       // Konva's Text hit-tests its full bounding box regardless of fill, so a text decoration is
-      // added as-is below; a rect decoration needs the designer-only placeholder fill above to
+      // added as drawn below; a rect decoration needs the designer-only placeholder fill above to
       // stay clickable across its interior, not just its stroke.
-      scene.add({ ...shape, fill: DECORATION_PLACEHOLDER_FILL, stroke: shape.stroke ?? DECORATION_STROKE });
+      scene.add({ ...drawn, fill: DECORATION_PLACEHOLDER_FILL, stroke: drawn.stroke ?? DECORATION_STROKE });
+      // Its name follows the frame — drawn again where the frame lands — and a press on it reaches the frame.
+      for (const object of name) scene.add({ ...object, locked: true });
     } else {
-      scene.add(onBoard(shape, doc.appearance));
+      scene.add(drawn);
     }
   }
 

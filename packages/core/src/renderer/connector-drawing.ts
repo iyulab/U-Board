@@ -1,15 +1,14 @@
 import { measureTextWidth, type DrawingObject } from '@canvas-kit/core';
 import { CAPTION_SIZE, captionBox } from '../caption-geometry.js';
 import { CONNECTOR_WIDTH, LABEL_SIZE, chipOf, placeConnectors, type ConnectorPlacement } from '../connector-geometry.js';
-import type { BoardAppearance, Connector, ConnectorDash, Node } from '../view-document.js';
+import type { BoardAppearance, Connector, Node } from '../view-document.js';
 import type { ConnectionQuality } from '../adapter.js';
 import { worstQuality } from '../quality-text.js';
+import { DASH_PATTERNS } from './decoration-drawing.js';
 
 /** A connector's look when its style leaves it out. */
 export const CONNECTOR_STROKE = '#94a3b8';
 type Line = Extract<DrawingObject, { type: 'line' }>;
-
-const DASHES: Record<ConnectorDash, number[]> = { solid: [], dashed: [6, 4], dotted: [2, 3] };
 
 /** A label sits on a chip of the board's paper, so it reads across the line under it. */
 const LABEL_CHIP: Record<BoardAppearance, { fill: string; ink: string }> = {
@@ -44,7 +43,7 @@ export function connectorObjects(nodes: readonly Node[], connectors: ReadonlyArr
   const held = { ...(extra.locked && { locked: true }), ...(extra.fixed && { fixed: true }) };
   for (const { connector, segment, label, arrows = [] } of placeOnCanvas(nodes, connectors)) {
     const { stroke = CONNECTOR_STROKE, strokeWidth = CONNECTOR_WIDTH, dash = 'solid' } = connector.style ?? {};
-    lines.push({ type: 'line', id: connector.id, x: 0, y: 0, points: segment, stroke, strokeWidth, ...(DASHES[dash].length > 0 && { dash: DASHES[dash] }), ...extra });
+    lines.push({ type: 'line', id: connector.id, x: 0, y: 0, points: segment, stroke, strokeWidth, ...(DASH_PATTERNS[dash].length > 0 && { dash: DASH_PATTERNS[dash] }), ...extra });
     // A head is filled, not stroked — a dashed line's head stays whole.
     arrows.forEach((points, i) => lines.push({ type: 'path', id: `${connector.id}#arrow${i}`, x: 0, y: 0, points, closed: true, fill: stroke, ...held }));
     if (label) {

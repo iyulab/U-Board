@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { clickEditorAt, clickScenePoint } from './support/authoring';
 
-test('draws a rect and a text decoration, selects each by clicking its interior, edits the text label, and it survives a reload', async ({ page }) => {
+test('draws a rect and a text decoration, selects each by clicking its interior, names the frame and edits the text, and both survive a reload', async ({ page }) => {
   await page.goto('/');
   await page.getByLabel('이메일').fill('e2e-decoration-owner@test.com');
   await page.getByLabel('비밀번호').fill('p4ssword!');
@@ -20,7 +20,12 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   // click well inside its interior, not on its border, to prove the designer's placeholder fill
   // (not just the stroke) is what makes it selectable.
   await clickEditorAt(page, { x: 160, y: 120 });
-  await expect(page.getByText('캔버스에서 드래그/리사이즈로 위치와 크기를 조정하세요.')).toBeVisible();
+  // The frame's name is drawn inside it (top left) — a press on the name still reaches the frame.
+  await page.getByLabel('이름', { exact: true }).fill('1번 베이');
+  await page.getByLabel('이름', { exact: true }).blur();
+  await page.getByLabel('모서리 둥글기').fill('6');
+  await page.getByLabel('모서리 둥글기').blur();
+  await page.getByLabel('선 모양').selectOption('dashed');
 
   await page.getByText('텍스트 장식 추가').click();
   // Cascades to (64, 64) as the second decoration (nextDecorationPosition — same cascade step as
@@ -37,6 +42,10 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   // click the same scene point (the text at scene (64, 64)) under the current view.
   await clickScenePoint(page, { x: 85, y: 72 });
   await expect(page.getByLabel('라벨')).toHaveValue('Zone A');
+  await clickScenePoint(page, { x: 60, y: 54 }); // on the frame's name
+  await expect(page.getByLabel('이름', { exact: true })).toHaveValue('1번 베이');
+  await expect(page.getByLabel('모서리 둥글기')).toHaveValue('6');
+  await expect(page.getByLabel('선 모양')).toHaveValue('dashed');
 
   // 빈 영역에서 끌어 상자로 두 장식을 함께 고르면, 한 항목의 패널 대신 선택 개수를 알린다
   // (열 때 fit에 16px 여백이 있어 편집기 모서리는 비어 있다).

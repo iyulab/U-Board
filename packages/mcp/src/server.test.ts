@@ -220,9 +220,9 @@ describe('u-board-mcp', () => {
   });
 
   it('validates as the server saves: a field the format does not have, or a colour a canvas cannot read, is an issue', async () => {
-    const document = { kind: 'canvas', background: {}, nodes: [], connectors: [], decorations: [{ id: 'z', type: 'rect', x: 0, y: 0, width: 9, height: 9, fill: 'var(--zone)', radius: 4 }] };
+    const document = { kind: 'canvas', background: {}, nodes: [], connectors: [], decorations: [{ id: 'z', type: 'rect', x: 0, y: 0, width: 9, height: 9, fill: 'var(--zone)', rotation: 45 }] };
     const { value } = await call('validate', { document });
-    expect(value.issues.map((issue: { path: string }) => issue.path)).toEqual(['/decorations/0/radius', '/decorations/0/fill']);
+    expect(value.issues.map((issue: { path: string }) => issue.path)).toEqual(['/decorations/0/rotation', '/decorations/0/fill']);
   });
 
   it('lists the data sources, never a credential', async () => {

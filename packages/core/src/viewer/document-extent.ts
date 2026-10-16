@@ -2,6 +2,7 @@ import { getObjectBounds, measureTextWidth } from '@canvas-kit/core';
 import { captionBox } from '../caption-geometry.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import type { CanvasView } from '../view-document.js';
+import { decorationObjects } from '../renderer/decoration-drawing.js';
 
 /** Fitting a document into view: space (CSS px) kept clear around it, and never magnified past its
  * natural size — a small board stays legible at 1:1 instead of blowing its widgets and a raster
@@ -20,7 +21,7 @@ export interface DocumentRect {
 /**
  * The region a viewer has to show for the whole document to be visible: the background image's
  * rect, grown to take in every node (at its default footprint when it has no size of its own) and
- * decoration (a text decoration by its rendered text box, as the canvas draws it). `null` when the
+ * decoration (a text decoration by its rendered text box — anchor and background included — as the canvas draws it). `null` when the
  * document has nothing to show.
  */
 export function documentExtent(doc: CanvasView): DocumentRect | null {
@@ -45,8 +46,10 @@ export function documentExtent(doc: CanvasView): DocumentRect | null {
     }
   }
   for (const shape of doc.decorations ?? []) {
-    const box = getObjectBounds(shape);
-    include(box.x, box.y, box.width, box.height);
+    for (const object of decorationObjects(shape, doc.appearance)) {
+      const box = getObjectBounds(object);
+      include(box.x, box.y, box.width, box.height);
+    }
   }
 
   if (minX === Infinity) return null;

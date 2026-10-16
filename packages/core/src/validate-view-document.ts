@@ -1,4 +1,4 @@
-import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, CONNECTOR_DASHES, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, type ConnectorArrow, type ConnectorDash } from './view-document.js';
+import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, PLACEMENTS, STROKE_DASHES, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, type ConnectorArrow, type Placement, type StrokeDash } from './view-document.js';
 import type { ElementDefinition } from './view-document.js';
 import { ELEMENT_NAME, elementNameOf } from './elements/element-type.js';
 import { parseTemplate } from './elements/template.js';
@@ -75,8 +75,8 @@ const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', '
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash', 'arrow'];
-const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth'];
-const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill'];
+const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'radius', 'dash', 'label', 'labelAt', 'labelSize'];
+const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill', 'anchor', 'background'];
 const WIDGET_FIELDS = ['type', 'props', 'bindings'];
 const BINDING_FIELDS = ['adapter', 'ref', 'map'];
 const VALUE_MAP_FIELDS = ['values', 'ranges', 'otherwise'];
@@ -127,7 +127,7 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
         if (style.strokeWidth !== undefined && !(Number.isFinite(style.strokeWidth) && (style.strokeWidth as number) > 0)) {
           doc.expected([...at, 'style', 'strokeWidth'], 'expected a number greater than 0', style.strokeWidth);
         }
-        if (style.dash !== undefined && !CONNECTOR_DASHES.includes(style.dash as ConnectorDash)) {
+        if (style.dash !== undefined && !STROKE_DASHES.includes(style.dash as StrokeDash)) {
           doc.fail([...at, 'style', 'dash'], 'expected "solid", "dashed" or "dotted"');
         }
         if (style.arrow !== undefined && !CONNECTOR_ARROWS.includes(style.arrow as ConnectorArrow)) {
@@ -348,17 +348,30 @@ function checkShape(doc: Checker, shape: unknown, at: string[]): void {
     doc.number(shape, [...at, 'height']);
     doc.optionalColor(shape, [...at, 'stroke']);
     doc.optionalNumber(shape, [...at, 'strokeWidth']);
+    if (shape.radius !== undefined && !(Number.isFinite(shape.radius) && (shape.radius as number) >= 0)) {
+      doc.expected([...at, 'radius'], 'expected a number of 0 or more', shape.radius);
+    }
+    if (shape.dash !== undefined && !STROKE_DASHES.includes(shape.dash as StrokeDash)) {
+      doc.fail([...at, 'dash'], 'expected "solid", "dashed" or "dotted"');
+    }
+    if (shape.label !== undefined) doc.string(shape, [...at, 'label']);
+    doc.placement(shape, [...at, 'labelAt']);
+    if (shape.labelSize !== undefined && !(Number.isFinite(shape.labelSize) && (shape.labelSize as number) > 0)) {
+      doc.expected([...at, 'labelSize'], 'expected a number greater than 0', shape.labelSize);
+    }
   } else {
     doc.known(shape, at, TEXT_FIELDS, 'text decoration', SHAPE_HINT);
     doc.string(shape, [...at, 'text']);
     doc.optionalNumber(shape, [...at, 'fontSize']);
+    doc.placement(shape, [...at, 'anchor']);
+    doc.optionalColor(shape, [...at, 'background']);
   }
   doc.optionalColor(shape, [...at, 'fill']);
 }
 
 /** What to do instead, for the fields a writer most often reaches for where the format has none. */
 const CONNECTOR_HINT = 'Its text goes in label (labelAt places it along the line), its colour, width, dash and arrowheads in style: { stroke, strokeWidth, dash, arrow }.';
-const SHAPE_HINT = 'A frame’s title is a text decoration over its top edge.';
+const SHAPE_HINT = 'A frame’s name is its label (labelAt places it inside the frame); a text’s background fills a box behind it.';
 const WIDGET_HINT = 'A prepared widget’s data, mapping and options go inside props.';
 
 /** Field checks that record an issue at a path and report whether the field passed. The last
@@ -382,6 +395,12 @@ class Checker {
         this.fail([...at, key], `a ${noun} has no "${key}" — it would be kept but never drawn. A ${noun} has: ${fields.join(', ')}.${hint ? ` ${hint}` : ''}`);
       }
     }
+  }
+
+  /** An optional point of a box — one of `PLACEMENTS`. */
+  placement(owner: Record<string, unknown>, at: string[]): void {
+    const value = owner[at[at.length - 1]];
+    if (value !== undefined && !PLACEMENTS.includes(value as Placement)) this.expected(at, `expected one of ${PLACEMENTS.map(p => `"${p}"`).join(', ')}`, value);
   }
 
   /** An optional decoration colour — a string, and with `strict` one of the forms every canvas reads. */

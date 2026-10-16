@@ -10,6 +10,8 @@ All notable changes to this package are documented here. The format follows
 
 - `look` can `focus` a connector (`"/connectors/2"`) — its line, heads and label up close.
 - The `canvas` topic teaches a connector's `arrow` (and binding it to a value's sign) and `labelAt`.
+- The `canvas` topic teaches a frame's own name (`label`, `labelAt`), `radius` and `dash`, and a text's `anchor` and
+  `background` — a frame no longer needs a separate text for its name, nor a tag a rect behind it.
 
 ### Changed
 

@@ -2,10 +2,9 @@ import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from './layout-defaults.js';
 import { captionBox, estimateTextWidth } from './caption-geometry.js';
 import { chipOf, placeConnectors } from './connector-geometry.js';
 import type { CanvasView, TextShape } from './view-document.js';
+import { DEFAULT_TEXT_SIZE, frameLabelBox, textDecorationBox } from './decoration-geometry.js';
 import type { ViewDocumentAdvice } from './lint-view-document.js';
 
-/** A text decoration's font size when it gives none — the canvas's default. */
-const DEFAULT_TEXT_SIZE = 16;
 /** How many layout findings a document gets one by one — advice an assistant reads is context too, but a writer
  *  sent only a few fixes the board in many rounds, resending it each time. The rest are counted by kind. */
 export const GEOMETRY_ADVICE_LIMIT = 30;
@@ -17,10 +16,10 @@ interface Box {
   height: number;
 }
 
-/** The box a text decoration takes, estimated as a reader without a canvas can: one line, x/y its top-left. */
+/** The box a text decoration takes, estimated as a reader without a canvas can: one line, placed by its anchor, with
+ *  its background's room around it. */
 export function textBox(text: TextShape): Box {
-  const size = text.fontSize ?? DEFAULT_TEXT_SIZE;
-  return { x: text.x, y: text.y, width: estimateTextWidth(text.text, size), height: size };
+  return textDecorationBox(text, estimateTextWidth(text.text, text.fontSize ?? DEFAULT_TEXT_SIZE));
 }
 
 /**
@@ -32,7 +31,13 @@ export function textBox(text: TextShape): Box {
  */
 export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
   const nodes = doc.nodes.map((node, i) => ({ id: node.id, at: `/nodes/${i}`, box: nodeBox(node) }));
-  const decorationTexts = (doc.decorations ?? []).flatMap((shape, i) => (shape.type === 'text' && shape.text.trim() !== '' ? [{ at: `/decorations/${i}`, box: textBox(shape) }] : []));
+  // A text decoration, or a frame's name — drawn in the decoration's place in the order, so a later one's background
+  // (or a frame's name inside it) is over an earlier frame's edge.
+  const decorationTexts = (doc.decorations ?? []).flatMap((shape, i): DecorationText[] => {
+    if (shape.type === 'text') return shape.text.trim() !== '' ? [{ at: `/decorations/${i}`, box: textBox(shape), drawn: i, backed: shape.background !== undefined }] : [];
+    const name = frameLabelBox(shape, estimateTextWidth);
+    return name ? [{ at: `/decorations/${i}/label`, box: name, drawn: i, backed: false }] : [];
+  });
   // A caption sits on a chip over the lines, so a line under it is hidden, not crossed — but it can still lie under a
   // node or run into another text.
   const captions = doc.nodes.flatMap((node, i) => (node.caption?.trim() ? [{ at: `/nodes/${i}/caption`, box: captionBox(node) }] : []));
@@ -58,7 +63,7 @@ export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
     if (crossing) found.push({ kind: 'texts on a connector', path: text.at, message: `connector "${crossing.connector.id}" runs through this text — place it beside the line, or use the connector’s label` });
   }
   for (const { at, box } of edgeCrossings(doc, texts)) {
-    found.push({ kind: 'frame edges through a text', path: at, message: `the edge of ${box} runs through this text — move it fully inside the frame or clear of its edge, or put a filled tag under it` });
+    found.push({ kind: 'frame edges through a text', path: at, message: `the edge of ${box} runs through this text — move it fully inside the frame or clear of its edge, give it a background, or name the frame with its label` });
   }
   for (let i = 0; i < texts.length; i++) {
     for (let j = i + 1; j < texts.length; j++) {
@@ -83,12 +88,21 @@ function overlaps(a: Box, b: Box): boolean {
   return Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x) > 0 && Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y) > 0;
 }
 
+interface DecorationText {
+  at: string;
+  box: Box;
+  /** Its decoration's place in the drawing order. */
+  drawn: number;
+  /** A text with a background of its own. */
+  backed: boolean;
+}
+
 /**
  * Texts a rect decoration's edge runs through: the text overlaps the rect without lying wholly inside it, and the rect
- * draws an edge (a stroke) — unless a filled rect drawn after that frame covers the whole text (a title tag on the
- * frame's edge). A text drawn before the frame is under its edge too.
+ * draws an edge (a stroke) — unless the text's own background, or a filled rect, drawn after that frame covers the
+ * whole text (a title tag on the frame's edge). A text drawn before the frame is under its edge too.
  */
-function edgeCrossings(doc: CanvasView, texts: ReadonlyArray<{ at: string; box: Box }>): Array<{ at: string; box: string }> {
+function edgeCrossings(doc: CanvasView, texts: ReadonlyArray<{ at: string; box: Box } & Partial<DecorationText>>): Array<{ at: string; box: string }> {
   const decorations = doc.decorations ?? [];
   const out: Array<{ at: string; box: string }> = [];
   decorations.forEach((frame, i) => {
@@ -96,6 +110,7 @@ function edgeCrossings(doc: CanvasView, texts: ReadonlyArray<{ at: string; box: 
     const rect = { x: frame.x, y: frame.y, width: frame.width, height: frame.height };
     for (const text of texts) {
       if (!overlaps(text.box, rect) || contains(rect, text.box)) continue;
+      if (text.backed && (text.drawn ?? -1) > i) continue; // its own background covers the edge
       const covered = decorations.some((tag, j) => j > i && tag.type === 'rect' && !!tag.fill && tag.fill.trim().toLowerCase() !== 'none' && contains(tag, text.box));
       if (!covered) out.push({ at: text.at, box: `/decorations/${i}` });
     }

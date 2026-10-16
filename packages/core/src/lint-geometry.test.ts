@@ -89,6 +89,28 @@ describe('lintGeometry', () => {
     expect(textBox({ id: 't', type: 'text', x: 5, y: 6, text: 'abcd', fontSize: 10 })).toEqual({ x: 5, y: 6, width: 24, height: 10 });
   });
 
+  it('places a text’s box by its anchor, grown by its background', () => {
+    expect(textBox({ id: 't', type: 'text', x: 50, y: 30, text: 'abcd', fontSize: 10, anchor: 'center' })).toEqual({ x: 38, y: 25, width: 24, height: 10 });
+    expect(textBox({ id: 't', type: 'text', x: 50, y: 30, text: 'abcd', fontSize: 10, anchor: 'bottom-end', background: '#fff' })).toEqual({ x: 22, y: 16, width: 32, height: 18 });
+  });
+
+  it('lets a text’s own background, drawn after a frame, cover the frame’s edge', () => {
+    const frame = { id: 'zone', type: 'rect' as const, x: 0, y: 100, width: 300, height: 200, stroke: '#888', strokeWidth: 1 };
+    const tag: Shape = { id: 'title', type: 'text', x: 10, y: 100, text: 'DMZ zone', fontSize: 12, anchor: 'start', background: '#888', fill: '#fff' };
+    expect(lintGeometry(canvas({ decorations: [frame, tag] }))).toEqual([]);
+    expect(lintGeometry(canvas({ decorations: [tag, frame] }))).toEqual([
+      { path: '/decorations/0', message: expect.stringContaining('the edge of /decorations/1 runs through this text') },
+    ]);
+  });
+
+  it('judges a frame’s name as a text — a node over it is named', () => {
+    const frame: Shape = { id: 'bay', type: 'rect', x: 0, y: 0, width: 400, height: 200, stroke: '#888', strokeWidth: 1, label: 'Line 1' };
+    expect(lintGeometry(canvas({ decorations: [frame] }))).toEqual([]);
+    expect(lintGeometry(canvas({ decorations: [frame], nodes: [node('a', 4, 4)] }))).toEqual([
+      { path: '/decorations/0/label', message: expect.stringContaining('lies under node "a"') },
+    ]);
+  });
+
   it('keeps to its limit and says how many more there are', () => {
     const nodes = Array.from({ length: 9 }, (_, i) => node(`n${i}`, i * 10, 0)); // 36 overlapping pairs
     const decorations = [text('a', 0, 400, 'one'), text('b', 5, 400, 'two')];

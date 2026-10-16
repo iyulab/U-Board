@@ -250,7 +250,24 @@ export interface UBoardLabels {
   // Decoration panel
   decorationHeading: string;
   decorationText: string;
-  decorationHint: string;
+  /** A frame's name, and where inside the frame it sits. */
+  decorationLabel: string;
+  decorationLabelAt: string;
+  decorationRadius: string;
+  decorationDash: string;
+  /** Which point of a text's box its position is. */
+  decorationAnchor: string;
+  decorationBackground: string;
+  /** The nine points of a box, as `labelAt` and `anchor` name them. */
+  placeTopStart: string;
+  placeTop: string;
+  placeTopEnd: string;
+  placeStart: string;
+  placeCenter: string;
+  placeEnd: string;
+  placeBottomStart: string;
+  placeBottom: string;
+  placeBottomEnd: string;
   /** The text a new text decoration starts with. */
   newTextDecoration: string;
 
@@ -454,7 +471,21 @@ export const DEFAULT_LABELS: UBoardLabels = {
 
   decorationHeading: 'Decoration',
   decorationText: 'Text',
-  decorationHint: 'Drag and resize it on the canvas to set its position and size.',
+  decorationLabel: 'Name',
+  decorationLabelAt: 'Name position',
+  decorationRadius: 'Corner radius',
+  decorationDash: 'Line style',
+  decorationAnchor: 'Anchored at',
+  decorationBackground: 'Background',
+  placeTopStart: 'Top left',
+  placeTop: 'Top',
+  placeTopEnd: 'Top right',
+  placeStart: 'Left',
+  placeCenter: 'Centre',
+  placeEnd: 'Right',
+  placeBottomStart: 'Bottom left',
+  placeBottom: 'Bottom',
+  placeBottomEnd: 'Bottom right',
   newTextDecoration: 'Label',
 
   connectorHeading: 'Line',

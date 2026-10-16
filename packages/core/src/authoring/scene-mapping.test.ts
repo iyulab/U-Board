@@ -134,6 +134,12 @@ describe('documentToScene', () => {
     expect(scene.getObjects().find(o => o.id === 'd1')).toMatchObject({ type: 'rect', x: 10, y: 20, width: 300, height: 150 });
     expect(scene.getObjects().find(o => o.id === 'd2')).toMatchObject({ type: 'text', x: 5, y: 5, text: 'Zone A' });
   });
+
+  it('draws a frame’s name inside it, locked, so a press on the name selects the frame under it', () => {
+    const scene = documentToScene(doc({ decorations: [{ id: 'f', type: 'rect', x: 10, y: 20, width: 300, height: 150, stroke: '#5f7a8c', strokeWidth: 1, radius: 4, label: 'Bay 1' }] }));
+    expect(scene.getObjects().find(o => o.id === 'f')).toMatchObject({ type: 'rect', cornerRadius: 4 });
+    expect(scene.getObjects().find(o => o.id === 'f#label')).toMatchObject({ type: 'text', x: 18, y: 28, text: 'Bay 1', locked: true });
+  });
 });
 
 describe('applySceneToDocument', () => {

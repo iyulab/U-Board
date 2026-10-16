@@ -1,5 +1,5 @@
-import type { ViewDocument, CanvasView, GridView, Placed, Node, GridItem, Connector, ConnectorArrow, ConnectorDash } from './view-document.js';
-import { CONNECTOR_ARROWS, CONNECTOR_DASHES } from './view-document.js';
+import type { ViewDocument, CanvasView, GridView, Placed, Node, GridItem, Connector, ConnectorArrow, StrokeDash } from './view-document.js';
+import { CONNECTOR_ARROWS, STROKE_DASHES } from './view-document.js';
 import type { Adapter, ConnectionQuality, ResolvedWidget } from './adapter.js';
 import { resolveBindings, resolveWidget } from './adapter.js';
 
@@ -65,7 +65,7 @@ export async function resolveConnector(connector: Connector, adapters: readonly 
     (path, value) => {
       if (path === 'label') return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
       if (path === 'style.strokeWidth') return typeof value === 'number' && value > 0 ? value : undefined;
-      if (path === 'style.dash') return CONNECTOR_DASHES.includes(value as ConnectorDash) ? value : undefined;
+      if (path === 'style.dash') return STROKE_DASHES.includes(value as StrokeDash) ? value : undefined;
       if (path === 'style.arrow') return CONNECTOR_ARROWS.includes(value as ConnectorArrow) ? value : undefined;
       if (path === 'style.stroke') return typeof value === 'string' ? value : undefined;
       return undefined;

@@ -18,7 +18,7 @@ void import('@iyulab/u-widgets/charts');
 import type { ResolvedCanvasView } from '../resolve-document.js';
 import { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from '../layout-defaults.js';
 import { DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
-import { onBoard } from './board-appearance.js';
+import { decorationObjects } from './decoration-drawing.js';
 import { NodeFrame } from './node-frame.js';
 import { captionObjects, connectorObjects, placeOnCanvas } from './connector-drawing.js';
 import { connectorMark } from './connector-mark.js';
@@ -63,7 +63,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
   }
 
   for (const shape of doc.decorations ?? []) {
-    scene.add(onBoard(shape, doc.appearance));
+    for (const object of decorationObjects(shape, doc.appearance)) scene.add(object);
   }
 
   for (const object of connectorObjects(doc.nodes, doc.connectors, doc.appearance)) scene.add(object);

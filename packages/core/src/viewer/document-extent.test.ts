@@ -24,6 +24,13 @@ describe('documentExtent', () => {
     expect(documentExtent(d)).toEqual({ x: 0, y: 0, width: 1200, height: 800 });
   });
 
+  it('takes in a text decoration where its anchor puts it, with its background', () => {
+    const d = doc({ decorations: [{ id: 't', type: 'text', x: 100, y: 100, text: 'Zone', fontSize: 10, anchor: 'bottom-end', background: '#fff' }] });
+    const extent = documentExtent(d)!;
+    expect(extent.x + extent.width).toBe(104);
+    expect(extent).toMatchObject({ y: 86, height: 18 });
+  });
+
   it('spans nodes at their default footprint when they carry no size of their own', () => {
     const d = doc({ nodes: [node('n1', 10, 20), node('n2', 300, 400, { width: 50, height: 60 })] });
     expect(documentExtent(d)).toEqual({ x: 10, y: 20, width: 340, height: 440 });

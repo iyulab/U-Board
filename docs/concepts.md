@@ -50,9 +50,11 @@ power flows by its sign (a value map from ranges to arrows); a label not showing
 (stale) or grey (disconnected).
 
 **Decoration** — a purely visual shape (a rectangle or a text label) placed on a canvas view to
-express structure — grouping related nodes inside a labeled frame, for example. A decoration
-carries no widget and no binding; like a background, the system does not interpret what it
-depicts.
+express structure — grouping related nodes inside a labeled frame, for example. A frame can carry
+its own name (`label`, placed inside it by `labelAt`), rounded corners (`radius`) and a line style
+(`dash`); a text is placed by the point of it its position names (`anchor`) and can sit on a
+`background`. A decoration carries no widget and no binding; like a background, the system does
+not interpret what it depicts.
 
 **Widget** — the visual content a node displays (a chart, a status indicator, a numeric value,
 and so on). A prepared widget is rendered by an external library the view consumes, not by the

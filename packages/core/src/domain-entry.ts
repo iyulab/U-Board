@@ -9,7 +9,7 @@ export type {
   ResolvedViewDocument,
   ResolvedOf,
 } from './resolve-document.js';
-export { emptyViewDocument, placedIn, CONNECTOR_BINDABLE, CONNECTOR_DASHES, CONNECTOR_ARROWS } from './view-document.js';
+export { emptyViewDocument, placedIn, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, PLACEMENTS } from './view-document.js';
 export { bindingsIn } from './document-bindings.js';
 export { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from './layout-defaults.js';
 export { resolveDocument, resolveConnector } from './resolve-document.js';

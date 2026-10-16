@@ -179,6 +179,10 @@
         }
       }
     },
+    "placement": {
+      "description": "A point of a box: start is the left, end the right.",
+      "enum": ["top-start", "top", "top-end", "start", "center", "end", "bottom-start", "bottom", "bottom-end"]
+    },
     "shape": {
       "description": "A purely visual decoration: a labeled frame or a text, with no widget and no binding.",
       "type": "object",
@@ -197,12 +201,23 @@
             "width": { "type": "number" },
             "height": { "type": "number" },
             "stroke": { "type": "string" },
-            "strokeWidth": { "type": "number" }
+            "strokeWidth": { "type": "number" },
+            "radius": { "type": "number", "minimum": 0, "description": "Rounds the corners; at most half the shorter side is drawn." },
+            "dash": { "enum": ["solid", "dashed", "dotted"] },
+            "label": { "type": "string", "description": "The frame's name, drawn inside it at labelAt, in the stroke's colour." },
+            "labelAt": { "$ref": "#/$defs/placement", "description": "Where inside the frame its name sits; top-start when left out." },
+            "labelSize": { "type": "number", "exclusiveMinimum": 0, "description": "The name's font size; 13 when left out." }
           },
           "required": ["width", "height"]
         },
         {
-          "properties": { "type": { "const": "text" }, "text": { "type": "string" }, "fontSize": { "type": "number" } },
+          "properties": {
+            "type": { "const": "text" },
+            "text": { "type": "string" },
+            "fontSize": { "type": "number" },
+            "anchor": { "$ref": "#/$defs/placement", "description": "Which point of the text's box x/y is; top-start when left out." },
+            "background": { "type": "string", "description": "Fills a box around the text, so it reads over what lies under it." }
+          },
           "required": ["text"]
         }
       ]

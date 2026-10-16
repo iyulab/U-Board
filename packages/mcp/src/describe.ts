@@ -68,9 +68,10 @@ const CANVAS = `# Canvas boards
 - A line stops at the edge of the box: with the name in caption, it meets the icon itself.
 
 ## Decorations (drawn under connectors and nodes, first one lowest)
-- rect: { id, type: "rect", x, y, width, height, fill?, stroke?, strokeWidth? } — no fill: transparent; stroke needs strokeWidth.
-- text: { id, type: "text", x, y, text, fontSize?: 16, fill? } — one line; x, y is the top-left of the text; about 0.6 × fontSize px per character.
-- A labelled frame: a rect, then a text just above its top edge or inside its top-left corner. A tag on the edge itself needs a small rect behind the text filled with the frame's own colour (and a light text on it) — the paper's colour is the host page's, not the board's.
+- rect: { id, type: "rect", x, y, width, height, fill?, stroke?, strokeWidth?, radius?, dash?: "solid"|"dashed"|"dotted", label?, labelAt?, labelSize?: 13 } — no fill: transparent; stroke needs strokeWidth; radius rounds the corners.
+- A frame's name is its label: drawn inside it, 8 px in from the edges labelAt names (default "top-start"), in the stroke's colour. No separate text needed.
+- text: { id, type: "text", x, y, text, fontSize?: 16, fill?, anchor?, background? } — one line, about 0.6 × fontSize px per character. anchor says which point of the text x, y is (default "top-start" = its top-left; "center" centres it on x, y). background fills a box 4 px around it — give fill too, so the text reads on it (a tag on a frame's edge: background in the frame's colour, a light fill).
+- labelAt and anchor take: "top-start", "top", "top-end", "start", "center", "end", "bottom-start", "bottom", "bottom-end" (start = left, end = right).
 - Colours: "#1f6feb", "#1f6feb33" (with alpha), rgb()/rgba(), hsl()/hsla(), a CSS name, "transparent", "none". Not var(--…): decorations draw on a canvas, which has no stylesheet.
 
 ## Order and appearance

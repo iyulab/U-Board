@@ -1,5 +1,5 @@
 import type { Adapter } from '../adapter.js';
-import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, CONNECTOR_DASHES, type Connector, type ConnectorArrow, type ConnectorDash, type ConnectorStyle, type Node } from '../view-document.js';
+import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, STROKE_DASHES, type Connector, type ConnectorArrow, type StrokeDash, type ConnectorStyle, type Node } from '../view-document.js';
 import { BindingEditor, FIELD_STYLE, type BindingField } from './BindingEditor.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
@@ -57,7 +57,7 @@ export function ConnectorPanel({ connector, nodes, onChange, onDelete, adapters,
     'style.arrow': labels.connectorArrow,
   };
   const fields: BindingField[] = CONNECTOR_BINDABLE.map(path => ({ path, label: fieldLabel[path] }));
-  const dashLabel: Record<ConnectorDash, string> = { solid: labels.dashSolid, dashed: labels.dashDashed, dotted: labels.dashDotted };
+  const dashLabel: Record<StrokeDash, string> = { solid: labels.dashSolid, dashed: labels.dashDashed, dotted: labels.dashDotted };
   const arrowLabel: Record<ConnectorArrow, string> = { none: labels.arrowNone, end: ends(labels.arrowEnd), start: ends(labels.arrowStart), both: labels.arrowBoth };
 
   return (
@@ -115,8 +115,8 @@ export function ConnectorPanel({ connector, nodes, onChange, onDelete, adapters,
       </label>
       <label className="ub-panel__field" style={FIELD_STYLE}>
         {labels.connectorDash}
-        <select value={connector.style?.dash ?? 'solid'} onChange={e => setStyle('dash', e.target.value === 'solid' ? undefined : (e.target.value as ConnectorDash))}>
-          {CONNECTOR_DASHES.map(dash => (
+        <select value={connector.style?.dash ?? 'solid'} onChange={e => setStyle('dash', e.target.value === 'solid' ? undefined : (e.target.value as StrokeDash))}>
+          {STROKE_DASHES.map(dash => (
             <option key={dash} value={dash}>
               {dashLabel[dash]}
             </option>

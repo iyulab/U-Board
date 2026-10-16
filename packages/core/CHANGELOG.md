@@ -12,7 +12,7 @@ All notable changes to this package are documented here. The format follows
   `fromNodeId`) or `both`. A head is filled in the line's colour, grows with its width, and its tip touches the box it
   points at; the line stops inside it. `style.arrow` is bindable, so a flow that changes sign turns its arrow through a
   value map (`ranges: [{ max: 0, value: 'start' }, { min: 0, value: 'end' }]`). `CONNECTOR_ARROWS` and
-  `CONNECTOR_DASHES` list the words each takes.
+  `STROKE_DASHES` list the words each takes.
 - **`Connector.labelAt`** — where along the line its label sits, from 0 (the `fromNodeId` end) to 1 (the `toNodeId`
   end). Left out, the label stays at the middle, side-by-side connectors' labels taking turns along their line.
 - The schema and strict validation know both, with the words `style.arrow` takes in the error.
@@ -30,6 +30,17 @@ All notable changes to this package are documented here. The format follows
   a node takes the connectors that join it along.
 - A node frame not showing a current headline value carries `data-quality` (`stale` or `disconnected`), as a
   connector's mark does — one attribute for how current any placed part is.
+- **Frames name themselves** — a rect decoration's `label` is drawn inside it at `labelAt` (`top-start` when left
+  out), `labelSize` (13) in the frame's stroke colour; `radius` rounds its corners and `dash` takes a connector's line
+  styles. A text decoration's `anchor` says which point of the text its `x`/`y` is (`top-start`, the top-left, when
+  left out — `center` centres it), and `background` fills a box around it. One vocabulary of nine points
+  (`Placement`, `PLACEMENTS`) for both. The editor's decoration panel sets all of them; the schema, strict
+  validation and the layout advice know them (a frame's name counts as a text a node can cover; a text's own
+  background covers a frame edge under it).
+
+### Changed
+
+- `ConnectorDash` is now `StrokeDash` — the same line styles serve a connector and a frame.
 
 ## [0.14.0] - 2026-10-16
 

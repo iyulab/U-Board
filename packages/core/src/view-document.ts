@@ -99,6 +99,10 @@ export type BoardAppearance = 'light' | 'dark';
  * (labeled group frames) needs — extend when a real one shows up, not ahead of it. */
 export type Shape = RectShape | TextShape;
 
+/** A point of a box, read as a reader of the page reads it: `start` is the left, `end` the right. */
+export type Placement = 'top-start' | 'top' | 'top-end' | 'start' | 'center' | 'end' | 'bottom-start' | 'bottom' | 'bottom-end';
+export const PLACEMENTS: readonly Placement[] = ['top-start', 'top', 'top-end', 'start', 'center', 'end', 'bottom-start', 'bottom', 'bottom-end'];
+
 export interface RectShape {
   id: string;
   type: 'rect';
@@ -109,16 +113,30 @@ export interface RectShape {
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
+  /** Rounds the corners — the radius in scene units, at most half the shorter side. */
+  radius?: number;
+  /** The stroke's line style, as a connector's. */
+  dash?: StrokeDash;
+  /** The frame's name, drawn inside it at `labelAt` (`top-start` when left out), in the stroke's colour. */
+  label?: string;
+  labelAt?: Placement;
+  /** The name's font size. Default 13. */
+  labelSize?: number;
 }
 
 export interface TextShape {
   id: string;
   type: 'text';
+  /** The point of the text's box that `anchor` names — its top-left when left out. */
   x: number;
   y: number;
   text: string;
   fontSize?: number;
   fill?: string;
+  /** Which point of the text's box `x`/`y` is: `top-start` (the default), `center`, `bottom-end`, … */
+  anchor?: Placement;
+  /** Fills a box around the text, so it reads over whatever lies under it. */
+  background?: string;
 }
 
 /** The media a canvas view is drawn over. The system attaches no domain meaning to it — what it
@@ -191,15 +209,15 @@ export interface ConnectorStyle {
   stroke?: string;
   /** Line width in scene units. */
   strokeWidth?: number;
-  dash?: ConnectorDash;
+  dash?: StrokeDash;
   /** Which ends carry an arrowhead: `end` points at the `toNodeId` node, `start` at the `fromNodeId` node. `none` when
    *  left out. */
   arrow?: ConnectorArrow;
 }
 
-export type ConnectorDash = 'solid' | 'dashed' | 'dotted';
+export type StrokeDash = 'solid' | 'dashed' | 'dotted';
 export type ConnectorArrow = 'none' | 'end' | 'start' | 'both';
-export const CONNECTOR_DASHES: readonly ConnectorDash[] = ['solid', 'dashed', 'dotted'];
+export const STROKE_DASHES: readonly StrokeDash[] = ['solid', 'dashed', 'dotted'];
 export const CONNECTOR_ARROWS: readonly ConnectorArrow[] = ['none', 'end', 'start', 'both'];
 
 /** The visual content a node displays. A prepared widget's rendering is delegated to an external
