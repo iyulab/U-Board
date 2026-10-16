@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { bindingsIn, type ViewDocument } from '@iyulab/u-board/domain';
+import { bindingsIn, boardStateOf, resolveDocument, type Adapter, type ViewDocument } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { findBoard } from '../db/boards.js';
 import { findConnector } from '../db/connectors.js';
@@ -137,6 +137,24 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     });
   });
 
+  /** Reads one of a board’s bindings for a request — only a valid ref this board’s document declares, for a connector
+   *  that exists (`isDeclaredBinding`); anything else answers `disconnected` without calling an upstream. Each connector
+   *  is looked up once per request, and upstream reads go through the shared reuse window (`resolveState`). */
+  const bindingReader = (workspaceId: string, document: ViewDocument) => {
+    const connectors = new Map<string, Promise<Connector | undefined>>();
+    const connectorOf = (id: string) => {
+      if (!connectors.has(id)) connectors.set(id, findConnector(db, workspaceId, id, secrets));
+      return connectors.get(id)!;
+    };
+    return async (connectorId: string, ref: unknown): Promise<ResolvedBinding> => {
+      if (!isValidRef(ref) || !isDeclaredBinding(document, connectorId, ref)) return DISCONNECTED;
+      const connector = await connectorOf(connectorId);
+      const target = connector && buildResolveTarget(connector, ref);
+      if (!connector || !target) return DISCONNECTED;
+      return resolveConnectorValue(connector, target, ref, resolveState);
+    };
+  };
+
   /** Resolves many of a board's bindings in one request, answering in request order — the only
    * resolve route a share link has. The viewer sends every binding it renders here at once, so
    * opening a board costs the same number of requests however many bindings it has, against an edge
@@ -163,23 +181,36 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     }
     await token.used();
 
-    const connectors = new Map<string, Promise<Connector | undefined>>();
-    const connectorOf = (id: string) => {
-      if (!connectors.has(id)) connectors.set(id, findConnector(db, token.workspaceId, id, secrets));
-      return connectors.get(id)!;
-    };
+    const read = bindingReader(token.workspaceId, board.document);
     const results = await Promise.all(
-      (bindings as { connectorId: string; ref?: unknown }[]).map(async ({ connectorId, ref }) => {
-        if (!isValidRef(ref) || !isDeclaredBinding(board.document, connectorId, ref)) return DISCONNECTED;
-        const connector = await connectorOf(connectorId);
-        const target = connector && buildResolveTarget(connector, ref);
-        if (!connector || !target) return DISCONNECTED;
-        return resolveConnectorValue(connector, target, ref, resolveState);
-      })
+      (bindings as { connectorId: string; ref?: unknown }[]).map(({ connectorId, ref }) => read(connectorId, ref))
     );
     // The board's revision rides along, so an open viewer learns its document was saved again since it
     // was read — and reads it again — without a request of its own.
     res.status(200).json({ results, revision: board.revision });
+  });
+
+  /** The board’s state now (`BoardState`): every binding the board declares read once, through the same gate and the
+   *  same reuse of upstream reads as the batch resolve, and what the board makes of the readings — each part’s state,
+   *  connection quality and its cause, how old its data is — with the revision it was computed from. No value leaves
+   *  in it. Computed on request and kept nowhere: a program watching a board asks again, and reads `evaluatedAt`. */
+  router.get('/boards/:boardId/state', async (req, res) => {
+    const boardId = req.params.boardId;
+    const token = await authenticate(req, res);
+    if (!token) return;
+    const board = await findBoard(db, token.workspaceId, boardId);
+    if (!board) {
+      res.status(404).json({ code: 'NOT_FOUND' });
+      return;
+    }
+    await token.used();
+
+    const read = bindingReader(token.workspaceId, board.document);
+    const ids = new Set<string>();
+    for (const { connectorId } of declaredBindings(board.document)) ids.add(connectorId);
+    const adapters: Adapter[] = [...ids].map(connectorId => ({ id: connectorId, resolve: ref => read(connectorId, ref) }));
+    const resolved = await resolveDocument(board.document, adapters);
+    res.status(200).json(boardStateOf(resolved, { now: Date.now(), revision: board.revision }));
   });
 
   return router;

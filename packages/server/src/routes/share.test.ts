@@ -326,4 +326,40 @@ describe('public share routes', () => {
     expect(resolveRes.status).toBe(200);
     expect(resolveRes.body).toEqual({ revision: 2, results: [{ value: 'running', quality: 'live', observedAt: expect.any(String) }] });
   });
+
+  it('answers the board’s state — each part’s state and quality, no values — for a share link and an API token', async () => {
+    const plant = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Plant', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const doc = {
+      kind: 'canvas' as const, background: {}, connectors: [],
+      nodes: [
+        { id: 'pump', x: 0, y: 0, anchored: false,
+          widget: { type: 'status', bindings: { 'data.value': { adapter: plant.id, ref: { path: '/pump', valuePath: 'state' } } } },
+          states: { from: 'data.value', map: { values: { Fault: 'fault' } } } },
+        { id: 'title', x: 0, y: 0, anchored: false, widget: { type: 'text' } },
+      ],
+    };
+    await updateBoard(db, workspaceId, boardId, { document: doc });
+    (fetch as any).mockImplementation(async () => jsonResponse({ state: 'Fault', temp: 73.2 }));
+    const token = await createShareToken();
+
+    const res = await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      evaluatedAt: expect.any(String),
+      revision: 2,
+      parts: { pump: { state: 'fault', quality: 'live', observedAt: expect.any(String) }, title: {} },
+    });
+    expect(JSON.stringify(res.body)).not.toContain('Fault');
+
+    const issue = await request(app).post(`/api/workspaces/${workspaceId}/api-tokens`).set('Cookie', ownerCookie).send({ name: 'tool', scope: 'read' });
+    const asTool = await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', `Bearer ${issue.body.token}`);
+    expect(asTool.status).toBe(200);
+    expect(asTool.body.parts.pump.state).toBe('fault');
+  });
+
+  it('answers 404 for the state of a board without a valid token', async () => {
+    const res = await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', 'Bearer nope');
+    expect(res.status).toBe(404);
+  });
 });
