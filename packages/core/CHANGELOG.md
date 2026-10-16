@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-16
+
 ### Added
 
 - **States** — `states` on a node or a grid item (`StateRule`: `from` one of its widget’s bindings, a `map` to state

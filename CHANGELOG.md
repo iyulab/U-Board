@@ -11,11 +11,20 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-16
+
 ### Added
 
+- **A board can show the state each part is in** (`@iyulab/u-board` 0.17.0): a node or a grid item names its state
+  from one of its bindings — `fault`, `running`, `hot` — and the share viewer and the console’s view draw it as a ring,
+  a blink or the part hidden, and say it to assistive technology. Written in the board’s source for now.
 - `GET /api/share/boards/:id/state` — a board’s state on request, for a share link or a workspace API token: each
   part’s state, connection quality and why, how old its data is, no values. Computed from the board’s declared
   bindings with the same reuse of upstream reads as the batch resolve; nothing is kept between requests.
+
+### Changed
+
+- Saving a board answers shorter advice: two overlapping parts are said once, not again for their captions.
 
 ## [0.7.0] - 2026-10-16
 

@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-16
+
 ### Added
 
 - The `board_state` tool — what a saved board shows now, part by part (state, connection quality and why, how old its
