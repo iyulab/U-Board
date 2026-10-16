@@ -1,4 +1,5 @@
 import type { GridItem, GridView } from '../view-document.js';
+import { triggersWithout, withTriggers } from './trigger-editing.js';
 
 /** An id for a new grid item. */
 export const newGridItemId = (): string => `item-${crypto.randomUUID()}`;
@@ -41,5 +42,5 @@ export function gridItemIndex(doc: GridView, id: string): number {
 }
 
 export function removeGridItem(doc: GridView, id: string): GridView {
-  return { ...doc, items: doc.items.filter(item => item.id !== id) };
+  return withTriggers({ ...doc, items: doc.items.filter(item => item.id !== id) }, triggersWithout(doc.triggers, new Set([id])));
 }

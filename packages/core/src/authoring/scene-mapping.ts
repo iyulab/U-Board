@@ -5,6 +5,7 @@ import { sizedNodes } from '../node-size.js';
 import { seedWidget } from './widget-catalog.js';
 import { decorationObjects } from '../renderer/decoration-drawing.js';
 import { captionObjects, connectorObjects } from '../renderer/connector-drawing.js';
+import { triggersWithout, withTriggers } from './trigger-editing.js';
 
 /** A newly-added rect decoration's default border — distinct from a node placeholder's blue
  * (`NODE_PLACEHOLDER_STROKE` below) so an author can tell a structural frame apart from a widget
@@ -182,7 +183,7 @@ export function removeParts(doc: CanvasView, ids: readonly string[]): CanvasView
   const kept = new Set(nodes.map(n => n.id));
   const connectors = doc.connectors.filter(c => !gone.has(c.id) && kept.has(c.fromNodeId) && kept.has(c.toNodeId));
   const decorations = doc.decorations?.filter(d => !gone.has(d.id));
-  return { ...doc, nodes, connectors, ...(decorations && { decorations }) };
+  return withTriggers({ ...doc, nodes, connectors, ...(decorations && { decorations }) }, triggersWithout(doc.triggers, gone));
 }
 
 /** Where to place the next decoration the author adds — same cascading-offset reasoning as
