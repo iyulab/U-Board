@@ -14,6 +14,11 @@ All notable changes to this package are documented here. The format follows
   place it by name, a new one, and the editor of one (name, `viewBox`, markup) with its problems said at once and a
   preview drawn as an element would draw it. Renaming a symbol renames its uses by name; one in use cannot be deleted.
 
+### Changed
+
+- The editor selects a node or decoration it adds, as it already did a connector, so the panel to edit it opens at
+  once.
+
 ## [0.15.0] - 2026-10-16
 
 ### Added

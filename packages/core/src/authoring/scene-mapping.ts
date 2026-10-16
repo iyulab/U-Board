@@ -137,15 +137,21 @@ export function nextNodePosition(doc: CanvasView, origin: { x: number; y: number
   return { x: origin.x + NEW_NODE_BASE_OFFSET + offset, y: origin.y + NEW_NODE_BASE_OFFSET + offset };
 }
 
-export function addNode(doc: CanvasView, position: { x: number; y: number }, widget: Widget = seedWidget('status')): CanvasView {
+/** Appends a new freely placed (not anchored) node at `position`. The id is the caller's, so it can select what it added (`newNodeId`) — as
+ * with every part the editor adds. */
+export function addNode(doc: CanvasView, id: string, position: { x: number; y: number }, widget: Widget = seedWidget('status')): CanvasView {
   const node: Node = {
-    id: `node-${crypto.randomUUID()}`,
+    id,
     x: position.x,
     y: position.y,
     anchored: false,
     widget,
   };
   return { ...doc, nodes: [...doc.nodes, node] };
+}
+
+export function newNodeId(): string {
+  return `node-${crypto.randomUUID()}`;
 }
 
 /** The document part a scene object draws: its id, or a part's own id before the `#` of one of its pieces (a
@@ -157,7 +163,7 @@ export function partOf(objectId: string): string {
 
 /** Joins two nodes with a new connector, `from` to `to`, drawn the board's way until styled. The id is the caller's,
  * so it can select what it added (`newConnectorId`). */
-export function addConnector(doc: CanvasView, fromNodeId: string, toNodeId: string, id: string): CanvasView {
+export function addConnector(doc: CanvasView, id: string, fromNodeId: string, toNodeId: string): CanvasView {
   const connector: Connector = { id, fromNodeId, toNodeId };
   return { ...doc, connectors: [...doc.connectors, connector] };
 }
@@ -192,12 +198,15 @@ export function nextDecorationPosition(doc: CanvasView, origin: { x: number; y: 
  * `applySceneToDocument` above), the same click-to-add-then-adjust pattern `addNode` already
  * establishes for widget nodes (docs/concepts.md — "Decoration"). The `decoration-` id prefix
  * (vs. `node-` for nodes) is cosmetic only — `applySceneToDocument` tells the two apart by
- * membership in `doc.nodes`/`doc.decorations`, not by parsing the id. */
-export function addDecoration(doc: CanvasView, type: Shape['type'], position: { x: number; y: number }, text = 'Label'): CanvasView {
-  const id = `decoration-${crypto.randomUUID()}`;
+ * membership in `doc.nodes`/`doc.decorations`, not by parsing the id. The id is the caller's (`newDecorationId`). */
+export function addDecoration(doc: CanvasView, id: string, type: Shape['type'], position: { x: number; y: number }, text = 'Label'): CanvasView {
   const shape: Shape =
     type === 'rect'
       ? { id, type: 'rect', x: position.x, y: position.y, width: DEFAULT_DECORATION_WIDTH, height: DEFAULT_DECORATION_HEIGHT, stroke: DECORATION_STROKE }
       : { id, type: 'text', x: position.x, y: position.y, text };
   return { ...doc, decorations: [...(doc.decorations ?? []), shape] };
+}
+
+export function newDecorationId(): string {
+  return `decoration-${crypto.randomUUID()}`;
 }

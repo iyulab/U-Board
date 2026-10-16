@@ -7,8 +7,10 @@ import {
   documentToScene,
   applySceneToDocument,
   addNode,
+  newNodeId,
   nextNodePosition,
   addDecoration,
+  newDecorationId,
   nextDecorationPosition,
   addConnector,
   newConnectorId,
@@ -179,7 +181,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
   const handleConnect = () => {
     if (!pair) return;
     const id = newConnectorId();
-    updateDoc(prev => addConnector(prev, pair[0], pair[1], id));
+    updateDoc(prev => addConnector(prev, id, pair[0], pair[1]));
     setPendingSelect(id);
     onFileError(null);
   };
@@ -202,14 +204,19 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
     handleDelete();
   };
 
+  // What the author adds is selected at once, so its panel opens — a node, a decoration or a connector alike.
   const handleAddNode = () => {
     const widget = seedWidget('status', { label: labels.newNodeLabel, value: labels.newNodeValue });
-    updateDoc(prev => addNode(prev, nextNodePosition(prev, visibleOrigin()), widget));
+    const id = newNodeId();
+    updateDoc(prev => addNode(prev, id, nextNodePosition(prev, visibleOrigin()), widget));
+    setPendingSelect(id);
     onFileError(null);
   };
 
   const handleAddDecoration = (type: Shape['type']) => {
-    updateDoc(prev => addDecoration(prev, type, nextDecorationPosition(prev, visibleOrigin()), labels.newTextDecoration));
+    const id = newDecorationId();
+    updateDoc(prev => addDecoration(prev, id, type, nextDecorationPosition(prev, visibleOrigin()), labels.newTextDecoration));
+    setPendingSelect(id);
     onFileError(null);
   };
 

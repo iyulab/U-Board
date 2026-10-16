@@ -3,10 +3,13 @@ import {
   documentToScene,
   applySceneToDocument,
   addNode,
+  newNodeId,
   nextNodePosition,
   addDecoration,
+  newDecorationId,
   nextDecorationPosition,
   addConnector,
+  newConnectorId,
   removeParts,
   partOf,
 } from './scene-mapping';
@@ -27,7 +30,7 @@ describe('partOf', () => {
 describe('addConnector', () => {
   it('joins two nodes with a connector of the given id, drawn the board’s way', () => {
     const before = doc({ nodes: [{ id: 'a', x: 0, y: 0, anchored: false, widget: { type: 'status' } }, { id: 'b', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] });
-    expect(addConnector(before, 'a', 'b', 'c9').connectors).toEqual([{ id: 'c9', fromNodeId: 'a', toNodeId: 'b' }]);
+    expect(addConnector(before, 'c9', 'a', 'b').connectors).toEqual([{ id: 'c9', fromNodeId: 'a', toNodeId: 'b' }]);
   });
 });
 
@@ -246,23 +249,22 @@ describe('addNode', () => {
       nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status' } }],
     });
 
-    const updated = addNode(original, { x: 40, y: 60 });
+    const updated = addNode(original, 'n2', { x: 40, y: 60 });
 
     expect(updated.nodes).toHaveLength(2);
     expect(updated.nodes[0]).toEqual(original.nodes[0]);
     const added = updated.nodes[1];
-    expect(added).toMatchObject({ x: 40, y: 60, anchored: false });
+    expect(added).toMatchObject({ id: 'n2', x: 40, y: 60, anchored: false });
     expect(added.widget.bindings).toBeUndefined();
     // u-widgets' status widget renders nothing without a `value` (see uw-status.ts) — the
     // default props must include a placeholder so a newly added node is actually visible.
     expect(added.widget.props?.data).toMatchObject({ value: expect.any(String) });
   });
 
-  it('assigns each new node a distinct id', () => {
-    let d = doc();
-    d = addNode(d, { x: 0, y: 0 });
-    d = addNode(d, { x: 0, y: 0 });
-    expect(d.nodes[0].id).not.toBe(d.nodes[1].id);
+  it('a new id per part, each kind its own prefix — a decoration id never collides with a node id', () => {
+    const ids = [newNodeId(), newNodeId(), newDecorationId(), newDecorationId(), newConnectorId()];
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.map(id => id.slice(0, id.indexOf('-')))).toEqual(['node', 'node', 'decoration', 'decoration', 'connector']);
   });
 });
 
@@ -272,33 +274,20 @@ describe('addDecoration', () => {
       decorations: [{ id: 'd1', type: 'text', x: 0, y: 0, text: 'existing' }],
     });
 
-    const updated = addDecoration(original, 'rect', { x: 40, y: 60 });
+    const updated = addDecoration(original, 'd2', 'rect', { x: 40, y: 60 });
 
     expect(updated.decorations).toHaveLength(2);
     expect(updated.decorations?.[0]).toEqual(original.decorations?.[0]);
     const added = updated.decorations?.[1];
-    expect(added).toMatchObject({ type: 'rect', x: 40, y: 60 });
+    expect(added).toMatchObject({ id: 'd2', type: 'rect', x: 40, y: 60 });
     expect((added as { width: number }).width).toBeGreaterThan(0);
     expect((added as { height: number }).height).toBeGreaterThan(0);
   });
 
   it('appends a new text decoration with placeholder text', () => {
-    const updated = addDecoration(doc(), 'text', { x: 10, y: 10 });
+    const updated = addDecoration(doc(), 'd1', 'text', { x: 10, y: 10 });
     expect(updated.decorations?.[0]).toMatchObject({ type: 'text', x: 10, y: 10 });
     expect((updated.decorations![0] as { text: string }).text.length).toBeGreaterThan(0);
-  });
-
-  it('assigns each new decoration a distinct id', () => {
-    let d = doc();
-    d = addDecoration(d, 'rect', { x: 0, y: 0 });
-    d = addDecoration(d, 'rect', { x: 0, y: 0 });
-    expect(d.decorations?.[0].id).not.toBe(d.decorations?.[1].id);
-  });
-
-  it("a decoration id never collides with a node id (folding back can tell them apart)", () => {
-    let d = doc({ nodes: [{ id: 'shared-namespace-check', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] });
-    d = addDecoration(d, 'rect', { x: 0, y: 0 });
-    expect(d.decorations?.[0].id).not.toBe(d.nodes[0].id);
   });
 });
 
@@ -331,7 +320,7 @@ describe('nextNodePosition', () => {
     for (let i = 0; i < 5; i++) {
       const position = nextNodePosition(d);
       positions.push(position);
-      d = addNode(d, position);
+      d = addNode(d, `n${i}`, position);
     }
     const unique = new Set(positions.map(p => `${p.x},${p.y}`));
     expect(unique.size).toBe(positions.length);

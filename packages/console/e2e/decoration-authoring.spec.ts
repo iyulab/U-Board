@@ -15,10 +15,14 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   await page.getByRole('button', { name: '생성' }).click();
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
 
+  // What is added is selected at once, so its panel opens.
   await page.getByText('사각형 장식 추가').click();
-  // Default rect decoration: scene (40, 40), 240x160 (packages/core/src/layout-defaults.ts) —
-  // click well inside its interior, not on its border, to prove the designer's placeholder fill
-  // (not just the stroke) is what makes it selectable.
+  await expect(page.getByLabel('모서리 둥글기')).toBeVisible();
+  // Default rect decoration: scene (40, 40), 240x160 (packages/core/src/layout-defaults.ts) — let go of it on the empty
+  // board, then click well inside its interior, not on its border, to prove the designer's placeholder fill (not
+  // just the stroke) is what makes it selectable.
+  await clickEditorAt(page, { x: 500, y: 320 });
+  await expect(page.getByLabel('모서리 둥글기')).toHaveCount(0);
   await clickEditorAt(page, { x: 160, y: 120 });
   // The frame's name is drawn inside it (top left) — a press on the name still reaches the frame.
   await page.getByLabel('이름', { exact: true }).fill('1번 베이');
@@ -27,10 +31,8 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   await page.getByLabel('모서리 둥글기').blur();
   await page.getByLabel('선 모양').selectOption('dashed');
 
+  // Cascades to (64, 64) as the second decoration (nextDecorationPosition — same cascade step as nodes), selected.
   await page.getByText('텍스트 장식 추가').click();
-  // Cascades to (64, 64) as the second decoration (nextDecorationPosition — same cascade step as
-  // nodes). A Konva Text hit-tests its whole bounding box, so a click near its center selects it.
-  await clickEditorAt(page, { x: 85, y: 72 });
   await expect(page.getByLabel('라벨')).toHaveValue('라벨');
 
   await page.getByLabel('라벨').fill('Zone A');
