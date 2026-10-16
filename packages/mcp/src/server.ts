@@ -224,7 +224,7 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
       'look',
       {
         description:
-          'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box, values not live) and the advice the board’s saving gave (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a node, grid item, connector or decoration to see it up close — and only its advice.',
+          'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box, values not live) and the advice the board’s saving gave (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a node, grid item, connector or decoration to see it up close — and only its problems and advice.',
         inputSchema: z.strictObject({
           board: boardId,
           focus: z.string().max(200).optional().describe('A JSON Pointer to one part: "/nodes/3", "/items/0", "/connectors/2", "/decorations/5".'),
@@ -243,10 +243,12 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
           const advice = [...lint, ...widgetAdvice(found.document)].filter(a => !focus || concerns(a, focus));
           // A folded line stands for the findings it counts.
           const left = advice.reduce((n, a) => n + (a.count ?? 1), 0);
+          // What went wrong while drawing is the whole board's; up close, only the part's — as its advice is.
+          const problems = focus ? report.problems.filter(p => concerns(p, focus)) : report.problems;
           return {
             content: [
               { type: 'image', data: image, mimeType: 'image/png' },
-              { type: 'text', text: JSON.stringify({ revision: found.revision, status: lookStatus(report.problems.length, left, focus), ...report, advice }) },
+              { type: 'text', text: JSON.stringify({ revision: found.revision, status: lookStatus(problems.length, left, focus), ...report, problems, advice }) },
             ],
           };
         } catch (error) {

@@ -212,6 +212,29 @@ describe('u-board-mcp', () => {
     expect(last.status).toBe('not done — 8 pieces of advice to fix on this part');
   });
 
+  it('up close answers only the part’s problems, and counts only those in its status', async () => {
+    const node = (i: number) => ({ id: `n${i}`, x: i * 300, y: 0, anchored: false, widget: { type: 'gauge' } });
+    server.boards.set('b6', { name: 'Apart', revision: 1, document: { kind: 'canvas', background: {}, connectors: [], nodes: [node(0), node(1), node(2)] } });
+    const drawn = [
+      { path: '/nodes/0', message: 'its element draws up to 11 px past its box' },
+      { path: '/nodes/2', message: 'its element draws up to 50 px past its box' },
+      { path: '/nodes/0', message: 'its text "!" reads at 1.0:1' },
+    ];
+    const looker = { look: async () => ({ image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems: drawn, quality: {}, console: [] } }) };
+    const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), looker);
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const viewer = new Client({ name: 'test', version: '0' });
+    await Promise.all([mcp.connect(b), viewer.connect(a)]);
+    const look = async (args: Record<string, unknown>) =>
+      JSON.parse(((await viewer.callTool({ name: 'look', arguments: { board: 'b6', ...args } })) as { content: Array<{ text?: string }> }).content[1].text!);
+
+    expect((await look({})).status).toBe('not done — 3 problems to fix');
+    const up = await look({ focus: '/nodes/2' });
+    expect(up.problems).toEqual([drawn[1]]);
+    expect(up.status).toBe('not done — 1 problem to fix on this part');
+    expect((await look({ focus: '/nodes/1' })).status).toBe('nothing to fix on this part — look at the whole board before finishing');
+  });
+
   it('says a clean board is done', async () => {
     server.boards.set('b4', { name: 'Clean', revision: 1, document: { kind: 'grid', items: [] } });
     const looker = { look: async () => ({ image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems: [{ message: 'x' }, { message: 'y' }], quality: {}, console: [] } }) };

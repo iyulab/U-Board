@@ -12,6 +12,11 @@ All notable changes to this package are documented here. The format follows
   (for the part, when it looks up close). The count includes the layout advice folded past the list's limit, and up
   close every finding about the part is kept, even one the whole board's list would fold.
 
+### Fixed
+
+- `look` with `focus` answers only that part's problems, as it already did its advice — it gave the whole board's
+  problems while its status counted them as the part's.
+
 ## [0.7.1] - 2026-10-16
 
 ### Changed
