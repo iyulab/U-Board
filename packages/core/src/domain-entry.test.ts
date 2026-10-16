@@ -30,11 +30,14 @@ describe('domain entry', () => {
   // effect — what a 0.x minor release adds or removes is read off this list.
   it('exports exactly these values', () => {
     expect(Object.keys(mod).sort()).toEqual([
-      'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn', 'boardStateOf',
-      'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts',
-      'emptyViewDocument', 'findHttpRefItem', 'getByPointer', 'isHttpRef', 'lintViewDocument', 'nodeSize', 'parseSourceTime',
-      'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading',
-      'sizedNodes', 'validateViewDocument', 'worstQuality',
+      'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT',
+      'FiringLimit', 'InvalidViewDocumentError', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS',
+      'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn', 'boardStateOf', 'coordinateOf',
+      'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts',
+      'emptyViewDocument', 'findHttpRefItem', 'firedBy', 'getByPointer', 'isHttpRef', 'isTriggerLink', 'linkFor',
+      'lintViewDocument', 'nodeSize', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef',
+      'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading', 'sizedNodes', 'stateChanges',
+      'validateViewDocument', 'worstQuality',
     ]);
     expect(Object.keys(viewer).sort()).toEqual([
       'DEFAULT_LABELS', 'DEFAULT_QUALITY_TEXT', 'KO_LABELS', 'ViewerPage', 'ageText', 'serverClock', 'timeText', 'useResolvedDocument',

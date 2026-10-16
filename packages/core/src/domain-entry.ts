@@ -9,7 +9,7 @@ export type {
   ResolvedViewDocument,
   ResolvedOf,
 } from './resolve-document.js';
-export { emptyViewDocument, placedIn, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, PLACEMENTS } from './view-document.js';
+export { emptyViewDocument, placedIn, isTriggerLink, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, PLACEMENTS, TRIGGER_EVENTS, TRIGGER_ACTIONS } from './view-document.js';
 export { bindingsIn } from './document-bindings.js';
 export { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from './layout-defaults.js';
 export { nodeSize, sizedNodes } from './node-size.js';
@@ -17,6 +17,8 @@ export type { BoxSize, SizedNode } from './node-size.js';
 export { resolveDocument, resolveConnector } from './resolve-document.js';
 export { boardStateOf } from './board-state.js';
 export type { BoardState, PartState } from './board-state.js';
+export { firedBy, stateChanges, linkFor, FiringLimit } from './triggers.js';
+export type { FiredEvent } from './triggers.js';
 export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
 export { validateViewDocument } from './validate-view-document.js';
 export type { ViewDocumentIssue } from './validate-view-document.js';
