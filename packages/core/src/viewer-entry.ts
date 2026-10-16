@@ -8,5 +8,6 @@ export { KO_LABELS } from './labels-ko.js';
 export type { UBoardLabels } from './labels.js';
 export { DEFAULT_QUALITY_TEXT, ageText } from './quality-text.js';
 export type { QualityText } from './quality-text.js';
+export type { BoardState, PartState } from './board-state.js';
 export { serverClock } from './server-clock.js';
 export type { ServerClock, ResponseWithHeaders } from './server-clock.js';

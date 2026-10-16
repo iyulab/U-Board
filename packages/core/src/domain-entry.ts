@@ -15,6 +15,8 @@ export { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from './layout-defaults.js';
 export { nodeSize, sizedNodes } from './node-size.js';
 export type { BoxSize, SizedNode } from './node-size.js';
 export { resolveDocument, resolveConnector } from './resolve-document.js';
+export { boardStateOf } from './board-state.js';
+export type { BoardState, PartState } from './board-state.js';
 export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
 export { validateViewDocument } from './validate-view-document.js';
 export type { ViewDocumentIssue } from './validate-view-document.js';
