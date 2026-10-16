@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route, Link } from 'react-router';
 import { BoardEditorPage } from './BoardEditorPage.js';
@@ -166,6 +166,21 @@ describe('BoardEditorPage', () => {
     await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
 
     expect(await screen.findByText('boards list page')).toBeInTheDocument();
+  });
+
+  it('opens the board a trigger asks for, in View', async () => {
+    const linked = {
+      kind: 'grid' as const,
+      items: [{ id: 'a', widget: { type: 'text' } }],
+      triggers: [{ on: { event: 'click' as const, node: 'a' }, do: [{ action: 'go-to-board' as const, board: 'b2' }] }],
+    };
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: linked, updatedAt: 't', revision: 1 });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '보기' }));
+    const board = await screen.findByRole('region', { name: '보드 보기' });
+    await userEvent.click(within(board).getByRole('button'));
+
+    await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('w1', 'b2'));
   });
 
   it('shows an error instead of getting stuck on the loading placeholder when the board fails to load', async () => {

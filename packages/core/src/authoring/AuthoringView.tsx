@@ -9,6 +9,7 @@ import { CanvasAuthoring } from './CanvasAuthoring.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
 import { ElementHost } from '../renderer/element-view.js';
+import type { ViewerPageProps } from '../viewer/ViewerPage.js';
 import { endTyping, recordEdit, redo, startHistory, textEntry, undo, type DocumentHistory } from './document-history.js';
 
 export interface AuthoringViewProps {
@@ -41,6 +42,13 @@ export interface AuthoringViewProps {
   /** As `ViewerPage`'s — where the board's script elements run. A frame serves a definition as last saved, so an
    * element edited since is drawn again once the board is saved. */
   elementFrames?: string;
+  /** As `ViewerPage`'s: the board's id, what its triggers' events hand the host, a request to show another board, and
+   *  the origins a link may open. Triggers run in View only — in Edit a click selects. Each switch to View opens the
+   *  board again (`open` triggers fire). */
+  boardId?: string;
+  onTrigger?: ViewerPageProps['onTrigger'];
+  onNavigate?: ViewerPageProps['onNavigate'];
+  linkOrigins?: readonly string[];
 }
 
 /**
@@ -55,7 +63,7 @@ export interface AuthoringViewProps {
  * has unsaved changes, Save, Export, Import, the mode. Importing a document of the other kind opens it in that kind's
  * editor.
  */
-export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now, elementOrigins, elementFrames }: AuthoringViewProps) {
+export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins }: AuthoringViewProps) {
   const labels = useLabels(labelsProp);
   // The document with the edits that led to it, since it was opened.
   const [history, setHistory] = useState<DocumentHistory<ViewDocument>>(() => startHistory(initialDocument));
@@ -226,6 +234,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     connectorLabels,
     labels,
     clock,
+    triggerHosting: { boardId, onTrigger, onNavigate, linkOrigins },
   };
 
   return (

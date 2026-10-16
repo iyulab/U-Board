@@ -4,6 +4,7 @@ import { GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN } from '../view-document.js';
 import type { QualityText } from '../quality-text.js';
 import { NodeFrame } from './node-frame.js';
 import { elementNameOf } from '../elements/element-type.js';
+import { elementListeners } from '../triggers.js';
 
 /** Where a grid's width changes how it lays out — the width of the board's own container, not of the window:
  *  a board embedded in a narrow panel of a wide page lays out as a narrow one. */
@@ -74,6 +75,7 @@ function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | 
 }
 
 export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell, activatable, onItemActivate, onElementEvent }: GridBoardProps) {
+  const listened = onElementEvent ? elementListeners(doc.triggers) : undefined;
   return (
     <div className="ub-grid" role="region" aria-label={ariaLabel} data-appearance={doc.appearance ?? 'light'}>
       <style href="u-board-grid" precedence="u-board">
@@ -87,7 +89,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} />,
+                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} elementEvents={listened?.get(item.id)} />,
                 index
               )}
             </div>

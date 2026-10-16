@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ViewerPage, KO_LABELS, type ViewDocument, type Adapter, type Attribution } from '@iyulab/u-board/viewer';
+import { ViewerPage, KO_LABELS, type ViewDocument, type Adapter, type Attribution, type BoardEvent } from '@iyulab/u-board/viewer';
 import { ShareConnectorAdapter, ShareResolveBatcher } from './share-connector-adapter.js';
 import { API_BASE, fetchWithRetry, apiClock } from './api-base.js';
 import './App.css';
@@ -40,6 +40,16 @@ export const SHARE_POLL_INTERVAL_MS = 30_000;
  *  own after an outage of any length, without a crowd of screens hammering a server that is starting. */
 export function retryDelayMs(attempt: number): number {
   return Math.min(2_000 * 2 ** attempt, 60_000);
+}
+
+/** Hands an event a board's trigger emits to the page the share link is embedded in, as a `u-board:event` message:
+ *  the trigger's name, the board, and the part and state it came from — never a value. A link opened on its own has no
+ *  page to tell. Any page may embed a link (the installation's frame-ancestors setting decides which), so the message
+ *  goes to whichever page that is. */
+export function tellEmbeddingPage(event: BoardEvent): void {
+  if (window.parent === window) return;
+  const { name, board, node, state } = event;
+  window.parent.postMessage({ type: 'u-board:event', name, board, node, state }, '*');
 }
 
 export function App() {
@@ -156,6 +166,8 @@ export function App() {
       clock={apiClock.now}
       elementOrigins={state.elementOrigins}
       elementFrames={state.elementFrames}
+      boardId={boardId ?? undefined}
+      onTrigger={tellEmbeddingPage}
     />
   );
 }

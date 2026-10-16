@@ -71,6 +71,10 @@ export interface ElementViewProps {
   /** An event the element raised: `ub.emit(name)` in a script element, or a click on a part of a template element's
    *  markup marked `data-ub-event="name"`. */
   onEvent?: (name: string) => void;
+  /** The event names something listens for. A template element's regions marked with one of them take the keyboard:
+   *  focusable (`tabindex="0"`), a button to assistive technology (`role="button"`) unless the markup says otherwise,
+   *  and raised by Enter or Space as by a click. */
+  events?: ReadonlySet<string>;
 }
 
 /**
@@ -79,7 +83,7 @@ export interface ElementViewProps {
  * element runs in a sandboxed frame its server builds — a frame of its own origin, with no network — and receives
  * its props by message. An element it cannot draw says so in its box rather than leaving it blank.
  */
-export function ElementView({ definition, name, props, appearance = 'light', accent, symbols, onEvent }: ElementViewProps) {
+export function ElementView({ definition, name, props, appearance = 'light', accent, symbols, onEvent, events }: ElementViewProps) {
   const frames = useContext(ElementFrameContext);
   const theme = useMemo(() => boardTheme(appearance, accent), [appearance, accent]);
   if (!definition) return <div style={NOTICE_STYLE} data-element-notice="">{`No element “${name}”`}</div>;
@@ -87,15 +91,15 @@ export function ElementView({ definition, name, props, appearance = 'light', acc
     if (!frames) return <div style={NOTICE_STYLE} data-element-notice="">{`“${name}” runs a script — shown where the board is served`}</div>;
     return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} theme={theme} onEvent={onEvent} />;
   }
-  return <TemplateElement definition={definition} name={name} props={props} theme={theme} symbols={symbols} onEvent={onEvent} />;
+  return <TemplateElement definition={definition} name={name} props={props} theme={theme} symbols={symbols} onEvent={onEvent} events={events} />;
 }
 
-function TemplateElement({ definition, name, props, theme, symbols, onEvent }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string>; symbols?: Record<string, SymbolDefinition>; onEvent?: (name: string) => void }) {
+function TemplateElement({ definition, name, props, theme, symbols, onEvent, events }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string>; symbols?: Record<string, SymbolDefinition>; onEvent?: (name: string) => void; events?: ReadonlySet<string> }) {
   const host = useRef<HTMLDivElement>(null);
   const origins = useContext(ElementOriginsContext);
-  const latest = useRef(onEvent);
+  const latest = useRef({ onEvent, events });
   useLayoutEffect(() => {
-    latest.current = onEvent;
+    latest.current = { onEvent, events };
   });
   // A click inside the markup reaches the host retargeted; its path still names the part clicked. The nearest part
   // marked `data-ub-event` names the event.
@@ -107,20 +111,40 @@ function TemplateElement({ definition, name, props, theme, symbols, onEvent }: {
         if (target === element) return;
         const named = target instanceof Element ? target.getAttribute('data-ub-event') : null;
         if (named) {
-          if (named.length <= 64) latest.current?.(named);
+          if (named.length <= 64) latest.current.onEvent?.(named);
           return;
         }
       }
     };
+    // What a click on a listened region does, Enter or Space on it does (WCAG 2.1.1) — and only that: the part around
+    // it, a button itself when clicking it does something, is not also pressed.
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const target = event.composedPath()[0];
+      const named = target instanceof Element ? target.getAttribute('data-ub-event') : null;
+      if (!named || !latest.current.events?.has(named)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      latest.current.onEvent?.(named);
+    };
     element.addEventListener('click', onClick);
-    return () => element.removeEventListener('click', onClick);
+    element.addEventListener('keydown', onKey);
+    return () => {
+      element.removeEventListener('click', onClick);
+      element.removeEventListener('keydown', onKey);
+    };
   }, []);
   useLayoutEffect(() => {
     const element = host.current;
     if (!element) return;
     const root = element.shadowRoot ?? element.attachShadow({ mode: 'open' });
     root.replaceChildren(renderTemplateElement(definition, props, element.ownerDocument, origins, symbols));
-  }, [definition, props, origins, symbols]);
+    for (const region of root.querySelectorAll('[data-ub-event]')) {
+      if (!events?.has(region.getAttribute('data-ub-event') ?? '')) continue;
+      if (!region.hasAttribute('tabindex')) region.setAttribute('tabindex', '0');
+      if (!region.hasAttribute('role')) region.setAttribute('role', 'button');
+    }
+  }, [definition, props, origins, symbols, events]);
   return <div ref={host} style={{ ...FILL, ...(theme as CSSProperties) }} data-element={name} />;
 }
 

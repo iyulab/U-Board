@@ -14,7 +14,7 @@ function documentSchema(): unknown {
 
 /** The topics `describe` answers, each in one line — what an assistant reads first. */
 export const TOPICS: Record<string, string> = {
-  rules: 'How to write a board: the workflow, JSON Patch, the two kinds, widgets. Read this first.',
+  rules: 'How to write a board: the workflow, JSON Patch, the two kinds, widgets, triggers. Read this first.',
   canvas: 'A canvas board: coordinates and sizes, connectors, decorations (frames, labels), colours, what draws over what.',
   data: 'Live values: data sources, bindings, picking an item of a list, mapping a source’s words to a prop.',
   elements: 'Elements — what a board draws when no widget does: template (HTML/SVG + CSS) or script (sandboxed frame).',
@@ -50,7 +50,14 @@ const RULES = `# Writing a U-Board board
 - widget = { type, props?, bindings? }. type is a prepared widget ("gauge", "list", "chart.bar" — describe("widgets", query)) or "element:<name>".
 - A prepared widget's props are its u-widgets spec without "widget": { data, mapping?, options?, … } — describe("widget:<type>") shows each example ready to paste.
 - A widget draws inside its node's box (or grid cell) and is clipped to it.
-- When no widget draws it — a symbol, a schematic part, a custom gauge — define an element once and place it by name: describe("elements").`;
+- When no widget draws it — a symbol, a schematic part, a custom gauge — define an element once and place it by name: describe("elements").
+
+## Triggers — what a viewer does when something happens
+- triggers: [{ on, when?, do: [action, …] }] at the top level, either kind.
+- on: { event: "click", node } | { event: "enter" | "leave", node, state } (the part's state changes) | { event: "element", node, name } | { event: "open" }. An element raises name with data-ub-event="name" on template markup (a click there) or ub.emit("name") in a script.
+- when: { node, state: "fault" | ["fault", "hot"] } — only while that part is in one of those states.
+- do: { action: "open-link", url } (https:// or a /path; fills only {{node}}, {{state}}, {{board}}) | { action: "focus", node } | { action: "emit", name } (tells the page the board is on) | { action: "go-to-board", board } (that page decides).
+- Triggers show, move and tell — they never write to a source. A part with a click trigger becomes a button named by its caption (else its id).`;
 
 const CANVAS = `# Canvas boards
 

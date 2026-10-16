@@ -792,3 +792,29 @@ describe('AuthoringView background image', () => {
     expect('appearance' in onSave.mock.calls[1][0]).toBe(false);
   });
 });
+
+describe('AuthoringView triggers', () => {
+  const board = (): CanvasView => ({
+    ...doc(),
+    nodes: [{ id: 'pump', x: 0, y: 0, width: 100, height: 60, anchored: false, widget: { type: 'text' } }],
+    triggers: [
+      { on: { event: 'open' }, do: [{ action: 'emit', name: 'opened' }] },
+      { on: { event: 'click', node: 'pump' }, do: [{ action: 'go-to-board', board: 'b2' }] },
+    ],
+  });
+
+  it('runs a canvas board\'s triggers in View only, handing the host what they ask for', async () => {
+    const onTrigger = vi.fn();
+    const onNavigate = vi.fn();
+    render(<AuthoringView initialDocument={board()} adapters={[]} boardId="b1" onTrigger={onTrigger} onNavigate={onNavigate} />);
+    await waitFor(() => expect(designerProps).toHaveBeenCalled());
+    expect(onTrigger).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    await screen.findByTestId('viewer');
+    await waitFor(() => expect(onTrigger).toHaveBeenCalledWith({ name: 'opened', board: 'b1' }));
+    const pump = viewerProps.mock.lastCall![0].overlays[0].content as React.ReactElement<NodeFrameProps>;
+    act(() => pump.props.onActivate!());
+    expect(onNavigate).toHaveBeenCalledWith({ board: 'b2' });
+  });
+});

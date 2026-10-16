@@ -127,6 +127,8 @@ const demoDocument: CanvasView = {
     },
   ],
   connectors: [{ id: 'a-to-b', fromNodeId: 'pump-a', toNodeId: 'pump-b' }],
+  // Clicking Pump A hands the page an event — what a host does with it is its own (here: a line under the board).
+  triggers: [{ on: { event: 'click', node: 'pump-a' }, do: [{ action: 'emit', name: 'pump-a-details' }] }],
 };
 
 /** The same widgets laid out as a grid view: in order, by span — what an ordinary dashboard looks like. */
@@ -138,6 +140,7 @@ const demoGrid: GridView = {
 export function App() {
   const adapters = useMemo(() => [new FixtureAdapter()], []);
   const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author' | 'elements' | 'elements-author'>('author');
+  const [boardEvent, setBoardEvent] = useState<string | null>(null);
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
@@ -213,8 +216,11 @@ export function App() {
             with no editing controls and no dependency on the designer.
           </p>
           <div style={{ height: 560, maxWidth: 900 }}>
-            <ViewerPage document={demoDocument} adapters={adapters} />
+            <ViewerPage document={demoDocument} adapters={adapters} boardId="demo" onTrigger={event => setBoardEvent(`${event.name} (${event.node})`)} />
           </div>
+          <p role="status" style={{ color: '#64748b' }}>
+            Board event: {boardEvent ?? 'none yet — click Pump A'}
+          </p>
         </>
       )}
     </div>

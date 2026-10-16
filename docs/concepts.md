@@ -104,6 +104,13 @@ and why, and how old its data is — no values. It is published beside the board
 a viewer hands it to its host (`onBoardState`), a U-Board server answers it on request, and an assistant reads it with
 `board_state`. It says when it was computed; a state nobody has computed lately says nothing about now.
 
+**Trigger** — what a board does when something happens on it, in a viewer: `on` an event (a part clicked, an event an
+element raises, a part entering or leaving a state, the board opened), only `when` a part is in a given state if the
+trigger says so, `do` its actions in order — open a link, bring a part into view, hand the page the board is on an event,
+or ask that page to show another board. Triggers only show, move and tell: nothing a trigger does writes to the systems a
+board reads. Each trigger fires at most once a second, so a value hovering at a range’s edge cannot drive it without end.
+An editor runs none while editing — a click there selects.
+
 **Adapter** — a pluggable package that resolves bindings against one specific external system. The
 core binding surface is generic; system-specific knowledge lives in an adapter, not in the core.
 

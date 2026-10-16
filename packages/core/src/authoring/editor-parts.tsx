@@ -3,6 +3,7 @@ import type { Adapter } from '../adapter.js';
 import type { ViewDocument } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import { GROUP_STYLE, ERROR_STYLE } from '../ui-style.js';
+import type { TriggerHandlers } from '../viewer/use-triggers.js';
 
 export type AuthoringMode = 'edit' | 'view';
 
@@ -26,7 +27,12 @@ export interface KindEditorProps<D extends ViewDocument> {
   connectorLabels?: Record<string, string>;
   labels: UBoardLabels;
   clock: () => number;
+  /** What the board's triggers hand the host in View — Edit runs none (a click there selects). */
+  triggerHosting: TriggerHosting;
 }
+
+/** The host's side of a board's triggers — `ViewerPage`'s props of the same names. */
+export type TriggerHosting = Pick<TriggerHandlers, 'boardId' | 'onTrigger' | 'onNavigate' | 'linkOrigins'>;
 
 /** The Edit / View switch. */
 export function ModeSwitch({ mode, onEdit, onView, labels }: { mode: AuthoringMode; onEdit: () => void; onView: () => void; labels: UBoardLabels }) {

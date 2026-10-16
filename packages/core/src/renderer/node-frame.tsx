@@ -90,6 +90,11 @@ export interface NodeFrameProps {
   onActivate?: () => void;
   /** An event the part's element raised (`ElementView`'s `onEvent`). */
   onElementEvent?: (name: string) => void;
+  /** What the part is called — a canvas node's caption. A part a click does something on is a button named by it, or
+   *  by its id when it has none: a widget's drawing is no name (a chart has no text). */
+  name?: string;
+  /** The names of the element events a trigger listens for on this part — its marked regions that take the keyboard. */
+  elementEvents?: ReadonlySet<string>;
 }
 
 /**
@@ -104,7 +109,7 @@ export interface NodeFrameProps {
  * When it has states, the one it is in is named on it and drawn by its look around the frame — never in place of the
  * quality’s border.
  */
-export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, onActivate, onElementEvent }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, onActivate, onElementEvent, elementEvents, name }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -125,6 +130,7 @@ export function NodeFrame({ widget, appearance, accent, symbols, qualityText = D
       }}
       {...(onActivate && {
         role: 'button',
+        'aria-label': name?.trim() || nodeId,
         tabIndex: 0,
         onClick: onActivate,
         onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
@@ -139,7 +145,7 @@ export function NodeFrame({ widget, appearance, accent, symbols, qualityText = D
       {...(state !== undefined && { 'data-state': state })}
     >
       {element !== undefined ? (
-        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} symbols={symbols} onEvent={onElementEvent} />
+        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} symbols={symbols} onEvent={onElementEvent} events={elementEvents} />
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.

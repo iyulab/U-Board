@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { KonvaDesigner, type DesignerHandle } from '@canvas-kit/designer';
 import { Viewer } from '@canvas-kit/viewer';
 import { viewToScene } from '@canvas-kit/core';
@@ -19,7 +19,8 @@ import {
 } from './scene-mapping.js';
 import { resolveDocument } from '../resolve-document.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
-import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
+import type { ResolvedCanvasView } from '../resolve-document.js';
+import { focusPart, useTriggers } from '../viewer/use-triggers.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { BoardPanel } from './BoardPanel.js';
 import { ElementsPanel } from './ElementsPanel.js';
@@ -51,10 +52,11 @@ import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
  * and stays fitted as it resizes until the author pans or zooms; "Fit to view" restores that, and a
  * new node or decoration is placed in view.
  */
-export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, onFileError, adapters, width, height, connectorLabels, labels, clock }: KindEditorProps<CanvasView>) {
+export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, onFileError, adapters, width, height, connectorLabels, labels, clock, triggerHosting }: KindEditorProps<CanvasView>) {
   // Read when a result is drawn, not watched: a new function on every render must not re-resolve.
   const readClock = useEffectEvent(() => clock());
-  const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
+  // The board as its bindings last resolved, and when — drawn below as a viewer draws it.
+  const [resolved, setResolved] = useState<{ doc: ResolvedCanvasView; now: number } | null>(null);
   // The anchored nodes' coordinates from before the reference points last changed or went away, until the
   // author puts the nodes back there or leaves them (anchor-snapshot.ts).
   // `byImage`: the points went with the image (replaced by one of another size, or removed), so the author
@@ -88,7 +90,22 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
   const designerRef = useRef<DesignerHandle>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const view = useFittedView();
-  const { fitTo, transform } = view;
+  const { fitTo, focusOn, transform } = view;
+  // The board's triggers run in View only, as a shared link runs them; in Edit a click selects.
+  const shownDoc = mode === 'view' ? (resolved?.doc ?? null) : null;
+  const focus = useCallback((node: string) => focusPart(shownDoc, node, focusOn, null), [shownDoc, focusOn]);
+  const { activatable, activate, elementEvent } = useTriggers(doc, shownDoc, { ...triggerHosting, focus });
+  const preview = useMemo(
+    () =>
+      resolved &&
+      toCanvasKit(resolved.doc, {
+        qualityText: labels.qualityText,
+        now: resolved.now,
+        locale: labels.locale,
+        ...(mode === 'view' && { activatable, onNodeActivate: activate, onElementEvent: elementEvent }),
+      }),
+    [resolved, labels, mode, activatable, activate, elementEvent]
+  );
   // The document as it was opened — this editor is mounted afresh for each document opened — which is what
   // fits into view; not each edit.
   const [openedDoc] = useState(doc);
@@ -132,14 +149,13 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
 
   useEffect(() => {
     let cancelled = false;
-    resolveDocument(doc, adapters).then(resolved => {
-      if (cancelled) return;
-      setPreview(toCanvasKit(resolved, { qualityText: labels.qualityText, now: readClock(), locale: labels.locale }));
+    resolveDocument(doc, adapters).then(result => {
+      if (!cancelled) setResolved({ doc: result, now: readClock() });
     });
     return () => {
       cancelled = true;
     };
-  }, [doc, adapters, labels]);
+  }, [doc, adapters]);
   const attributions = useMemo(() => boardAttributions(doc, adapters), [doc, adapters]);
 
   // A part that leaves the document (undone, imported over) leaves the selection.

@@ -16,8 +16,7 @@ import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from './attribution.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { boardStateOf, type BoardState } from '../board-state.js';
-import { useTriggers, type BoardEvent } from './use-triggers.js';
-import { sizedNodes } from '../node-size.js';
+import { focusPart, useTriggers, type BoardEvent } from './use-triggers.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -121,17 +120,7 @@ export function ViewerPage({
   const { fitTo, focusOn } = view;
   const surface = useRef<HTMLDivElement>(null);
   // A part a trigger points at: on a canvas, its box brought into view; in a grid, its cell scrolled into view.
-  const focus = useCallback(
-    (node: string) => {
-      if (resolved?.kind === 'canvas') {
-        const box = sizedNodes(resolved).find(n => n.id === node);
-        if (box) focusOn({ x: box.x, y: box.y, width: box.width, height: box.height });
-      } else {
-        surface.current?.querySelector(`[data-item-id="${CSS.escape(node)}"]`)?.scrollIntoView({ block: 'nearest' });
-      }
-    },
-    [resolved, focusOn]
-  );
+  const focus = useCallback((node: string) => focusPart(resolved, node, focusOn, surface.current), [resolved, focusOn]);
   const triggers = useTriggers(document, resolved, { boardId, onTrigger, onNavigate, linkOrigins, focus });
   const { activatable, activate, elementEvent } = triggers;
   // Fit whenever a document covering a new area is shown — not on a preview refresh, which is only

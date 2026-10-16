@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { AuthoringView, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
@@ -98,6 +98,14 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   );
 
   const connectorLabels = useMemo(() => Object.fromEntries(connectors.map(c => [c.id, c.name])), [connectors]);
+
+  // A board's trigger asking for another board (in View) opens that board here — asking first, as the way back does,
+  // when changes are unsaved.
+  const navigate = useNavigate();
+  function handleNavigate({ board }: { board: string }) {
+    if (hasUnsavedChanges && !window.confirm('저장되지 않은 변경 사항이 있습니다. 다른 보드로 이동할까요?')) return;
+    navigate(`/boards/${encodeURIComponent(board)}/edit`);
+  }
 
   function handleBackClick(e: MouseEvent) {
     // AuthoringView's unsaved-changes guard is a native `beforeunload` listener, which only
@@ -251,6 +259,8 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           onSave={handleSave}
           labels={EDITOR_LABELS}
           clock={apiClock.now}
+          boardId={boardId}
+          onNavigate={handleNavigate}
           elementOrigins={elementOrigins}
           // The server serves the frames the board's script elements run in under this address — none while opened
           // with scripts off, so no element code runs.

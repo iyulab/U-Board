@@ -138,6 +138,19 @@ A share link (`https://<host>/share/?board=…&token=…`) opens one board read-
 in, until it is revoked or reaches the expiry its owner chose. Embed it in another application's
 page with an `<iframe>`; `UBOARD_SHARE_FRAME_ANCESTORS` decides which pages may.
 
+An embedded board tells its page what its triggers emit, as a message to the parent window:
+`{ type: 'u-board:event', name, board, node?, state? }` — the event’s name, the board’s id, and the part and state it
+came from, never a value. Listen for it to open a panel of your own or play a sound:
+
+```js
+window.addEventListener('message', event => {
+  if (event.origin !== 'https://<host>' || event.data?.type !== 'u-board:event') return;
+  console.log(event.data.name, event.data.node, event.data.state);
+});
+```
+
+A trigger that asks to show another board does nothing in a share link: a link opens one board.
+
 A link serves the board's document, its values, and the credit each of its data sources carries (shown
 under the board) — never a data source's address or credentials. A source that takes its key in the
 address (a query parameter, or `{key}` in the connector's base URL) keeps it in the connector, which puts

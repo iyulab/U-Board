@@ -128,3 +128,36 @@ describe('AuthoringView with a grid view', () => {
     expect(screen.getByLabelText('너비(12열 중)')).toBeInTheDocument();
   });
 });
+
+describe('triggers in a grid view', () => {
+  const withTriggers = (): GridView => ({
+    ...grid(),
+    triggers: [
+      { on: { event: 'open' }, do: [{ action: 'emit', name: 'opened' }] },
+      { on: { event: 'click', node: 'a' }, do: [{ action: 'emit', name: 'a-details' }] },
+    ],
+  });
+
+  it('runs none while editing — a click there picks the item', async () => {
+    const onTrigger = vi.fn();
+    render(<AuthoringView initialDocument={withTriggers()} adapters={[]} boardId="b1" onTrigger={onTrigger} />);
+    fireEvent.click(pick(1));
+    await waitFor(() => expect(pick(1)).toHaveAttribute('aria-pressed', 'true'));
+    expect(onTrigger).not.toHaveBeenCalled();
+  });
+
+  it('runs them in View as a shared link does, and opens the board again on each switch to View', async () => {
+    const onTrigger = vi.fn();
+    render(<AuthoringView initialDocument={withTriggers()} adapters={[]} boardId="b1" onTrigger={onTrigger} />);
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    const board = await screen.findByRole('region', { name: 'Board view' });
+    await waitFor(() => expect(onTrigger).toHaveBeenCalledWith({ name: 'opened', board: 'b1' }));
+    const [item] = within(board).getAllByRole('button');
+    fireEvent.click(item);
+    expect(onTrigger).toHaveBeenLastCalledWith({ name: 'a-details', node: 'a', board: 'b1' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    await waitFor(() => expect(onTrigger.mock.calls.filter(([event]) => event.name === 'opened')).toHaveLength(2));
+  });
+});

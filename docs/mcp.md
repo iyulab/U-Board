@@ -25,7 +25,7 @@ needs a key, a token or OAuth is set up by a person in the console, and the assi
 
 | Tool | What it does |
 |---|---|
-| `describe` | Explains the board format to the assistant, a topic at a time: `rules` first, then `canvas` (coordinates, connectors, decorations, colours), `data` (sources and bindings), `elements`, the prepared widgets (searchable by what they should show, each example in the form a board places it) and the JSON Schema by pointer. |
+| `describe` | Explains the board format to the assistant, a topic at a time: `rules` first (with triggers — what a viewer does when a part is clicked, an element raises an event or a state changes), then `canvas` (coordinates, connectors, decorations, colours), `data` (sources and bindings), `elements`, the prepared widgets (searchable by what they should show, each example in the form a board places it) and the JSON Schema by pointer. |
 | `list_boards`, `get_board` | Reads boards — one part of a document at a time, by JSON Pointer. |
 | `create_board`, `patch_board`, `delete_board` | Makes a board, changes it with JSON Patch (RFC 6902) on a revision — each answer carries the new revision and advice — and deletes one for good. |
 | `validate` | Checks a document, or a board with a patch, without saving. |

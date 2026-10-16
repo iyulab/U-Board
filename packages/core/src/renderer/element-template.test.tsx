@@ -172,6 +172,48 @@ describe('ElementView — events of a template element', () => {
   });
 });
 
+describe('ElementView — a template element’s events from the keyboard', () => {
+  const valve: ElementDefinition = {
+    render: 'template',
+    template: '<svg viewBox="0 0 10 10"><g data-ub-event="open-valve"><rect width="5" height="5"/></g><g data-ub-event="unheard" tabindex="-1"><circle r="2"/></g><g data-ub-event="close-valve" role="switch"><rect x="6" width="4" height="4"/></g></svg>',
+  };
+  const shown = (onEvent = vi.fn()) => {
+    const { container } = render(<ElementView definition={valve} name="valve" props={{}} onEvent={onEvent} events={new Set(['open-valve', 'close-valve'])} />);
+    return { root: container.querySelector('[data-element]')!.shadowRoot!, onEvent };
+  };
+  const press = (target: Element, key: string) => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, composed: true, cancelable: true });
+    act(() => target.dispatchEvent(event));
+    return event;
+  };
+
+  it('makes only the regions something listens for focusable buttons, keeping what the markup says', () => {
+    const { root } = shown();
+    const [open, unheard, close] = root.querySelectorAll('[data-ub-event]');
+    expect(open.getAttribute('tabindex')).toBe('0');
+    expect(open.getAttribute('role')).toBe('button');
+    expect(unheard.getAttribute('tabindex')).toBe('-1');
+    expect(unheard.hasAttribute('role')).toBe(false);
+    expect(close.getAttribute('role')).toBe('switch');
+  });
+
+  it('raises a listened region’s event on Enter or Space, and keeps the key from the part around it', () => {
+    const { root, onEvent } = shown();
+    const [open, unheard] = root.querySelectorAll('[data-ub-event]');
+    const enter = press(open, 'Enter');
+    press(open, ' ');
+    press(open, 'a');
+    press(unheard, 'Enter');
+    expect(onEvent.mock.calls).toEqual([['open-valve'], ['open-valve']]);
+    expect(enter.defaultPrevented).toBe(true);
+  });
+
+  it('takes no keyboard where nothing listens', () => {
+    const { container } = render(<ElementView definition={valve} name="valve" props={{}} />);
+    expect(container.querySelector('[data-element]')!.shadowRoot!.querySelector('[data-ub-event="open-valve"]')!.hasAttribute('tabindex')).toBe(false);
+  });
+});
+
 describe('ElementView — script element', () => {
   const chart: ElementDefinition = { render: 'script', script: 'ub.onProps(draw)' };
 

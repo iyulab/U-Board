@@ -670,6 +670,61 @@ What a resolved board shows, part by part — no values. For example:
 `ViewerPage` hands it to its host through `onBoardState` each time it draws new values (a view that has stopped updating
 reports its parts `stale`); a U-Board server answers it at `GET /api/share/boards/:id/state`.
 
+### Triggers — `Trigger`
+
+What a board does when something happens on it — `triggers` at the top level of either kind, run by a viewer:
+
+```ts
+interface Trigger {
+  on:
+    | { event: 'click'; node: string } // the part is clicked, or activated from the keyboard
+    | { event: 'element'; node: string; name: string } // the part's element raises `name`
+    | { event: 'enter' | 'leave'; node: string; state: string } // the part's state changes
+    | { event: 'open' }; // the board is first drawn
+  when?: { node: string; state: string | string[] }; // only while that part is in one of these states
+  do: Array<
+    | { action: 'open-link'; url: string } // a new tab
+    | { action: 'focus'; node: string } // bring a part into view
+    | { action: 'emit'; name: string } // hand the host an event
+    | { action: 'go-to-board'; board: string } // ask the host to show another board
+  >;
+}
+
+triggers: [
+  { on: { event: 'click', node: 'pump' }, do: [{ action: 'open-link', url: '/maintenance?asset={{node}}' }] },
+  { on: { event: 'enter', node: 'pump', state: 'fault' }, do: [{ action: 'focus', node: 'pump' }, { action: 'emit', name: 'pump-fault' }] },
+]
+```
+
+- `open-link` opens an `https://` address or a path on the installation the board is served from (`/…`, never `//…`)
+  in a new tab, with no opener. `{{node}}`, `{{state}}` and `{{board}}` in it are filled in, each URL-encoded — a
+  part’s values are not. A host narrows where links may go with `linkOrigins`.
+- `enter` and `leave` fire on a change between two draws of one viewer, never on the first draw — `open` is for that.
+- A part with a `click` trigger becomes a button: Enter and Space press it, and it is named by its `caption` (by its
+  id without one — give a clickable part a caption). A drag that starts on it pans the board and presses nothing.
+- An element raises an event with `ub.emit(name)` in a script element, or, in a template element’s markup, from a
+  region marked `data-ub-event="name"` that is clicked. A marked region some trigger listens for also takes the
+  keyboard: it is focusable and a button to assistive technology (unless the markup gives it its own `tabindex` or
+  `role`), and Enter or Space raise its event.
+- A trigger naming a part the board does not place does nothing; validation names its path.
+- Each trigger fires at most once a second.
+
+`ViewerPage` runs a board’s triggers; `AuthoringView` runs them in View only. Both take the host’s side:
+
+| Prop | |
+|---|---|
+| `boardId` | The board’s id — what `{{board}}` becomes, and what the events it hands the host name. |
+| `onTrigger(event: BoardEvent)` | An `emit`: `{ name, board?, node?, state? }` — the event’s name and the part and state it came from, never a value. |
+| `onNavigate({ board })` | A `go-to-board`. Without it, nothing happens: the viewer does not go anywhere on its own. |
+| `linkOrigins` | The origins an `open-link` may open besides this installation’s paths. Left out: any `https` address. |
+
+The share viewer posts each event to the page it is embedded in ([self-hosting.md](self-hosting.md) — Share links). The decisions are pure functions in
+`@iyulab/u-board/domain`, for a host that draws a board its own way: `firedBy(triggers, event, states)` — the
+triggers an event fires, given the parts’ states now; `stateChanges(before, now)` — the `leave` and `enter` events
+between two draws; `linkFor(url, { node, state, board }, { origins })` — the address an `open-link` opens, or
+`undefined` when it may not open; `elementListeners(triggers)` — by part, the element events triggers listen for;
+`FiringLimit` — once a second per trigger.
+
 ### `resolveWidget(widget, adapters)`
 
 ```ts

@@ -17,7 +17,7 @@ export type { BoxSize, SizedNode } from './node-size.js';
 export { resolveDocument, resolveConnector } from './resolve-document.js';
 export { boardStateOf } from './board-state.js';
 export type { BoardState, PartState } from './board-state.js';
-export { firedBy, stateChanges, linkFor, FiringLimit } from './triggers.js';
+export { firedBy, stateChanges, linkFor, elementListeners, FiringLimit } from './triggers.js';
 export type { FiredEvent } from './triggers.js';
 export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
 export { validateViewDocument } from './validate-view-document.js';

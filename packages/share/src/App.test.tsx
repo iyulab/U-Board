@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { App, SHARE_POLL_INTERVAL_MS, retryDelayMs } from './App.js';
+import { App, SHARE_POLL_INTERVAL_MS, retryDelayMs, tellEmbeddingPage } from './App.js';
 import { apiClock } from './api-base.js';
 
 vi.mock('@iyulab/u-board/viewer', async () => {
@@ -15,6 +15,9 @@ vi.mock('@iyulab/u-board/viewer', async () => {
         <span data-testid="node-ids">{props.document.nodes.map((n: any) => n.id).join(',')}</span>
         <button type="button" onClick={() => props.adapters[0]?.resolve({ path: '/x' })}>
           resolve
+        </button>
+        <button type="button" data-board={props.boardId} onClick={() => props.onTrigger?.({ name: 'pump-details', node: 'pump', state: 'fault', board: props.boardId })}>
+          trigger
         </button>
       </div>
     ),
@@ -45,6 +48,42 @@ describe('App', () => {
     render(<App />);
     expect(await screen.findByTestId('viewer-page')).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('/api/share/boards/b1', expect.objectContaining({ headers: { Authorization: 'Bearer tok' } }));
+  });
+
+  describe('events from a board’s triggers', () => {
+    it('names the board to the viewer and hands its events to the embedding page', async () => {
+      setLocation('?board=b1&token=tok');
+      (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+      const parent = { postMessage: vi.fn() };
+      const framed = vi.spyOn(window, 'parent', 'get').mockReturnValue(parent as unknown as Window);
+      try {
+        render(<App />);
+        const trigger = await screen.findByRole('button', { name: 'trigger' });
+        expect(trigger).toHaveAttribute('data-board', 'b1');
+        fireEvent.click(trigger);
+        expect(parent.postMessage).toHaveBeenCalledWith({ type: 'u-board:event', name: 'pump-details', board: 'b1', node: 'pump', state: 'fault' }, '*');
+      } finally {
+        framed.mockRestore();
+      }
+    });
+
+    it('carries only the name, board, part and state — nothing else an event object might hold', () => {
+      const parent = { postMessage: vi.fn() };
+      const framed = vi.spyOn(window, 'parent', 'get').mockReturnValue(parent as unknown as Window);
+      try {
+        tellEmbeddingPage({ name: 'opened', board: 'b1', value: 42 } as never);
+        expect(parent.postMessage).toHaveBeenCalledWith({ type: 'u-board:event', name: 'opened', board: 'b1', node: undefined, state: undefined }, '*');
+      } finally {
+        framed.mockRestore();
+      }
+    });
+
+    it('tells no one when the link is opened on its own', () => {
+      const post = vi.spyOn(window, 'postMessage');
+      tellEmbeddingPage({ name: 'opened', board: 'b1' });
+      expect(post).not.toHaveBeenCalled();
+      post.mockRestore();
+    });
   });
 
   describe('a board saved again while it is open', () => {

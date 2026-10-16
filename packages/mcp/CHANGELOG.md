@@ -6,6 +6,16 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `describe("rules")` teaches triggers: their shape, the five events and four actions, how an element raises an event
+  (`data-ub-event`, `ub.emit`), that a link fills only `{{node}}`, `{{state}}`, `{{board}}`, and that showing another
+  board is the host’s to do.
+
+### Changed
+
+- `@iyulab/u-widgets` `^0.35.0` — the widget examples and option lists `describe` answers come from it.
+
 ## [0.6.0] - 2026-10-16
 
 ### Added

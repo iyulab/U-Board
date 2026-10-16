@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { firedBy, stateChanges, linkFor, FiringLimit } from './triggers';
+import { firedBy, stateChanges, linkFor, elementListeners, FiringLimit } from './triggers';
 import type { Trigger } from './view-document';
 
 const emit = (name: string) => [{ action: 'emit' as const, name }];
@@ -85,5 +85,17 @@ describe('FiringLimit', () => {
     expect(limit.allow(0, 999)).toBe(false);
     expect(limit.allow(1, 999)).toBe(true);
     expect(limit.allow(0, 1000)).toBe(true);
+  });
+});
+
+describe('elementListeners', () => {
+  it('names, by part, the element events some trigger listens for', () => {
+    const triggers: Trigger[] = [
+      { on: { event: 'element', node: 'valve', name: 'open' }, do: [{ action: 'emit', name: 'a' }] },
+      { on: { event: 'element', node: 'valve', name: 'close' }, do: [{ action: 'emit', name: 'b' }] },
+      { on: { event: 'click', node: 'pump' }, do: [{ action: 'emit', name: 'c' }] },
+    ];
+    expect(elementListeners(triggers)).toEqual(new Map([['valve', new Set(['open', 'close'])]]));
+    expect(elementListeners(undefined).size).toBe(0);
   });
 });

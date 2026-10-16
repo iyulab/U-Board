@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { applyJsonPatch, type ViewDocument } from '@iyulab/u-board/domain';
+import { applyJsonPatch, TRIGGER_ACTIONS, TRIGGER_EVENTS, type ViewDocument } from '@iyulab/u-board/domain';
 import { UBoardClient } from './client.js';
 import { createServer } from './server.js';
 
@@ -118,6 +118,13 @@ describe('u-board-mcp', () => {
     expect((await call('describe', { topic: 'widget:gauge' })).value.type).toBe('gauge');
     const unknown = await call('describe', { topic: 'widget:nope' });
     expect(unknown.isError).toBe(true);
+  });
+
+  it('teaches every trigger event and action the format has, and how an element raises one', async () => {
+    const { value: rules } = await call('describe', { topic: 'rules' });
+    for (const name of [...TRIGGER_EVENTS, ...TRIGGER_ACTIONS]) expect(rules, name).toContain(`"${name}"`);
+    expect(rules).toContain('data-ub-event=');
+    expect(rules).toContain('ub.emit(');
   });
 
   it('keeps every topic within its budget — the answer an assistant reads before it can write', async () => {

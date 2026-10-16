@@ -58,6 +58,13 @@ describe('NodeFrame as a button', () => {
     expect(onActivate).toHaveBeenCalledTimes(3);
   });
 
+  it('is named by the part’s caption, or by its id without one — the state stays its description', () => {
+    expect(frame({ onActivate: vi.fn(), nodeId: 'p1', name: 'Pump 1' }).props['aria-label']).toBe('Pump 1');
+    const unnamed = frame({ onActivate: vi.fn(), nodeId: 'p1', name: ' ', state: 'fault' });
+    expect(unnamed.props['aria-label']).toBe('p1');
+    expect(unnamed.props.title).toBe('fault');
+  });
+
   it('is no button otherwise', () => {
     const el = frame({});
     expect(el.props.role).toBeUndefined();

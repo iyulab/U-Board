@@ -6,8 +6,24 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Triggers** — `triggers` at the top level of either kind: `on` an event (`click`, `element`, `enter`, `leave`,
+  `open`), optionally `when` a part is in a state, `do` actions (`open-link`, `focus`, `emit`, `go-to-board`). Validated
+  with paths, in the JSON Schema, and run by `ViewerPage` — a part with a click trigger becomes a button named by its
+  caption (or id), each trigger fires at most once a second, links open only `https` or this installation’s paths.
+  Host props `boardId`, `onTrigger`, `onNavigate`, `linkOrigins` on `ViewerPage` and `AuthoringView` (View only);
+  `BoardEvent` is exported from `./viewer`.
+- Elements raise events: `ub.emit(name)` in a script element; a region of a template element’s markup marked
+  `data-ub-event="name"`, raised by a click — and, where a trigger listens for it, by Enter or Space (the region is made
+  focusable and a button unless the markup says otherwise).
+- `firedBy`, `stateChanges`, `linkFor`, `elementListeners`, `FiringLimit` and `isTriggerLink` in `./domain`, for a host
+  that draws a board its own way.
+
 ### Changed
 
+- `@iyulab/u-widgets` `^0.35.0`: gauge and progress show their value in the widget’s locale, `number:N`/`percent:N`
+  format hints, a value x axis for line and area charts.
 - `applyJsonPatch`: an index that is not in a list says how long the list is (“the list has 44 items (0–43)”).
 
 ## [0.17.0] - 2026-10-16

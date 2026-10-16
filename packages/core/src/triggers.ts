@@ -12,6 +12,19 @@ export type FiredEvent =
  * state — and whose `when`, if any, holds for the parts' states now (`states`, by part id; a part without a state is in
  * none). A trigger naming a part the board does not place matches no event of that part, so a stale one does nothing.
  */
+/** The element events a board's triggers listen for, by part id — which marked regions of a part's element do something,
+ *  so a viewer makes those, and only those, reachable from the keyboard. */
+export function elementListeners(triggers: readonly Trigger[] | undefined): Map<string, Set<string>> {
+  const listened = new Map<string, Set<string>>();
+  for (const { on } of triggers ?? []) {
+    if (on.event !== 'element') continue;
+    const names = listened.get(on.node) ?? new Set<string>();
+    names.add(on.name);
+    listened.set(on.node, names);
+  }
+  return listened;
+}
+
 export function firedBy(
   triggers: readonly Trigger[] | undefined,
   event: FiredEvent,

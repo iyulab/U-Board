@@ -26,6 +26,7 @@ describe('widgetFields', () => {
       'options.unit:text',
       'options.label:text',
       'options.subtitle:text',
+      'options.format:text',
     ]);
     expect(fields.find(f => f.key === 'max')?.defaultValue).toBe(100);
     expect(otherOptions).toBe(1); // thresholds — a list
@@ -39,8 +40,8 @@ describe('widgetFields', () => {
 
   it("names each field as the widget library does, in the labels' language", () => {
     const names = (locale?: string) => widgetFields(seedWidget('gauge'), locale).fields.map(f => f.label);
-    expect(names()).toEqual(['Value', 'Minimum', 'Maximum', 'Unit', 'Label', 'Subtitle']);
-    expect(names('ko-KR')).toEqual(['값', '최솟값', '최댓값', '단위', '라벨', '부제']);
+    expect(names()).toEqual(['Value', 'Minimum', 'Maximum', 'Unit', 'Label', 'Subtitle', 'Value format']);
+    expect(names('ko-KR')).toEqual(['값', '최솟값', '최댓값', '단위', '라벨', '부제', '값 서식']);
     expect(widgetFields(seedWidget('gauge')).fields[1].description).toBe('Minimum range value');
   });
 
@@ -95,7 +96,7 @@ describe('WidgetPropsForm', () => {
 
   it('marks a field that is bound', () => {
     render(<WidgetPropsForm widget={gauge} onChange={vi.fn()} />);
-    expect(screen.getByLabelText(/^Value/).closest('label')).toHaveTextContent('· bound');
+    expect(screen.getByLabelText(/^Value(?! format)/).closest('label')).toHaveTextContent('· bound');
   });
 
   it('sets a choice at once, and leaves an untouched text field alone', () => {

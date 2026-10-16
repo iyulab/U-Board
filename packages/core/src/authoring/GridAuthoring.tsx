@@ -1,9 +1,10 @@
-import { useEffect, useEffectEvent, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { resolveDocument, type ResolvedGridView } from '../resolve-document.js';
 import type { ResolvedWidget } from '../adapter.js';
 import type { GridView, Widget } from '../view-document.js';
 import { GridBoard, GRID_MEDIUM_MIN_WIDTH, GRID_WIDE_MIN_WIDTH } from '../renderer/grid-board.js';
 import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
+import { focusPart, useTriggers } from '../viewer/use-triggers.js';
 import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { PropertyPanel } from './PropertyPanel.js';
 import { BoardPanel } from './BoardPanel.js';
@@ -51,7 +52,7 @@ const unresolved = (widget: Widget): ResolvedWidget => ({ type: widget.type, pro
  * item" puts a new item after the selected one. The layout width lays the grid out as a medium or a narrow screen
  * will, so the author sees each.
  */
-export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, adapters, width, height, connectorLabels, labels, clock }: KindEditorProps<GridView>) {
+export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, adapters, width, height, connectorLabels, labels, clock, triggerHosting }: KindEditorProps<GridView>) {
   const readClock = useEffectEvent(() => clock());
   const [preview, setPreview] = useState<{ doc: ResolvedGridView; now: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -70,6 +71,11 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
     };
   }, [doc, adapters]);
   const attributions = useMemo(() => boardAttributions(doc, adapters), [doc, adapters]);
+  // The board's triggers run in View only, as a shared link runs them; in Edit a click selects.
+  const surface = useRef<HTMLDivElement>(null);
+  const shownDoc = mode === 'view' ? (preview?.doc ?? null) : null;
+  const focus = useCallback((node: string) => focusPart(shownDoc, node, () => {}, surface.current), [shownDoc]);
+  const { activatable, activate, elementEvent } = useTriggers(doc, shownDoc, { ...triggerHosting, focus });
 
   // Where each item is, how much room it takes and which widget it is come from the document as edited now; only
   // what a widget shows waits for its bindings, so a moved or resized item does not lag behind a slow source.
@@ -191,8 +197,17 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
               />
             </div>
           ) : preview ? (
-            <div className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={surfaceStyle}>
-              <GridBoard doc={preview.doc} ariaLabel={labels.previewRegion} qualityText={labels.qualityText} now={preview.now} locale={labels.locale} />
+            <div ref={surface} className="ub-authoring__surface" data-appearance={doc.appearance ?? 'light'} style={surfaceStyle}>
+              <GridBoard
+                doc={preview.doc}
+                ariaLabel={labels.previewRegion}
+                qualityText={labels.qualityText}
+                now={preview.now}
+                locale={labels.locale}
+                activatable={activatable}
+                onItemActivate={activate}
+                onElementEvent={elementEvent}
+              />
             </div>
           ) : (
             <p className="ub-authoring__status">{labels.resolving}</p>

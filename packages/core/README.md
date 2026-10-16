@@ -92,6 +92,12 @@ through `resolvedAt` and `stalled` for a host that renders its own view.
 quality and why, how old its data is, no values (`BoardState`) — for a host that acts on it: a count of faults in its
 own header, a sound.
 
+A board’s triggers (`triggers` — a part clicked, an element’s event, a state entered or left, the board opened) run in
+`ViewerPage`. What they ask of the page is the host’s: `onTrigger` receives an `emit`’s event (its name, the part and
+state it came from, never a value), `onNavigate` a request to show another board — nothing happens without it — and
+`linkOrigins` narrows where a trigger’s link may go. `boardId` is what `{{board}}` in a link becomes. `AuthoringView`
+takes the same props and runs triggers in View only.
+
 How long ago a value was obtained is measured against `clock` (default `Date.now`). Its
 `observedAt` comes from the source's side, so on a screen whose own clock may drift, pass a clock
 set by the server's: `serverClock()` follows the `Date` of the responses you hand it.

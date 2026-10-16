@@ -22,6 +22,7 @@ import { decorationObjects } from './decoration-drawing.js';
 import { NodeFrame } from './node-frame.js';
 import { captionObjects, connectorObjects, placeOnCanvas } from './connector-drawing.js';
 import { connectorMark } from './connector-mark.js';
+import { elementListeners } from '../triggers.js';
 
 /** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
  * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
@@ -76,6 +77,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
   for (const object of captionObjects(nodes, doc.appearance)) scene.add(object);
 
   const at = now ?? Date.now();
+  const listened = onElementEvent ? elementListeners(doc.triggers) : undefined;
   const overlays: ViewerOverlayItem[] = nodes.map(node => ({
     id: node.id,
     x: node.x,
@@ -83,7 +85,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     width: node.width,
     height: node.height,
     // A widget takes its node's box exactly — the box the author drew is the layout.
-    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} />,
+    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} elementEvents={listened?.get(node.id)} name={node.caption} />,
   }));
   for (const placed of placeOnCanvas(nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 

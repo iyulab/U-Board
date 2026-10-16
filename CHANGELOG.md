@@ -11,6 +11,19 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- **Boards act on what happens on them** (`@iyulab/u-board` triggers): a part clicked, an element’s event, a part
+  entering or leaving a state, or the board opened can open a link, bring a part into view, or tell the page — in the
+  share viewer and in the console’s View. The share viewer posts each event to the page it is embedded in
+  (`u-board:event` — its name, the board, the part and its state, never a value); the console’s View opens the board a
+  trigger asks for, asking first when changes are unsaved. Written in the board’s source for now.
+
+### Changed
+
+- Widgets from `@iyulab/u-widgets` 0.35.0: a gauge’s and a progress bar’s value in the page’s locale, fixed-decimal
+  number formats.
+
 ## [0.8.0] - 2026-10-16
 
 ### Added

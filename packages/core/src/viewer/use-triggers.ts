@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { firedBy, stateChanges, linkFor, FiringLimit, type FiredEvent } from '../triggers.js';
 import { placedIn, type TriggerAction, type ViewDocument } from '../view-document.js';
 import type { ResolvedViewDocument } from '../resolve-document.js';
+import { sizedNodes } from '../node-size.js';
+import type { DocumentRect } from './document-extent.js';
 
 /** An event a board hands its host (`emit`): the trigger's name, and the part and state it came from — never a value. */
 export interface BoardEvent {
@@ -61,7 +63,13 @@ export function useTriggers(doc: ViewDocument, resolved: ResolvedViewDocument | 
   }, []);
 
   useEffect(() => {
-    if (!resolved) return;
+    // Not shown — not drawn yet, or an editor back in its edit mode: showing it again is opening it again.
+    if (!resolved) {
+      opened.current = false;
+      states.current = undefined;
+      limit.current = new FiringLimit();
+      return;
+    }
     const now = Object.fromEntries(placedIn(resolved).map(part => [part.id, part.state]));
     const changes = stateChanges(states.current, now);
     states.current = now;
@@ -97,5 +105,16 @@ function carryOut(action: TriggerAction, from: { node?: string; state?: string }
     case 'go-to-board':
       on.onNavigate?.({ board: action.board });
       return;
+  }
+}
+
+/** Brings a part a trigger points at (`focus`) into view: on a canvas, its box (`focusOn`); in a grid, its cell, scrolled
+ *  into view within `surface`. A part the board does not place is ignored. */
+export function focusPart(doc: ResolvedViewDocument | null, node: string, focusOn: (rect: DocumentRect) => void, surface: HTMLElement | null): void {
+  if (doc?.kind === 'canvas') {
+    const box = sizedNodes(doc).find(n => n.id === node);
+    if (box) focusOn({ x: box.x, y: box.y, width: box.width, height: box.height });
+  } else {
+    surface?.querySelector(`[data-item-id="${CSS.escape(node)}"]`)?.scrollIntoView({ block: 'nearest' });
   }
 }
