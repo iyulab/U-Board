@@ -31,7 +31,7 @@ describe('domain entry', () => {
   it('exports exactly these values', () => {
     expect(Object.keys(mod).sort()).toEqual([
       'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'InvalidViewDocumentError', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn',
-      'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameScripts',
+      'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts',
       'emptyViewDocument', 'findHttpRefItem', 'getByPointer', 'isHttpRef', 'lintViewDocument', 'nodeSize', 'parseSourceTime',
       'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef', 'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading',
       'sizedNodes', 'validateViewDocument', 'worstQuality',

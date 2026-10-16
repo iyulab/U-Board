@@ -492,12 +492,15 @@ that has left a question unanswered for six seconds — code that never yields o
 pattern that backtracks without end — with a notice on its box. That keeps the page usable where the browser runs the frame in a process of its own, as
 Chrome and Edge do with site isolation; a browser that runs it with the page (Firefox, Safari) is held by such code
 too. Either way the code keeps running in the browser until it is restarted, and the board's other script elements,
-which share its process, stop answering as well — so an element's code must always return. The console opens a
+which share its process, stop answering as well — so an element's code must always return; a server that serves each
+definition from an origin of its own (`UBOARD_ELEMENT_FRAME_ORIGIN`) keeps the others apart from it in Chrome and Edge. The console opens a
 board without running its script elements at `…/boards/<id>/edit?scripts=off`, to fix such code. `ViewerPage`'s and `AuthoringView`'s `elementFrames` says where the frames are served —
 `/api/element-frames/<board id>` on a U-Board server, which answers
 `/api/element-frames/<board id>/<element>/<definition hash>` (`elementDefinitionHash`) only while the
-saved board defines that element exactly so. Without `elementFrames`, a script element shows a notice in
-its box; an element edited in the editor is drawn again once the board is saved.
+saved board defines that element exactly so. `{definition}` in `elementFrames` is replaced by the definition's own
+label (`elementFrameLabel` — lowercase hex), for frames served from an origin per definition: a U-Board server with
+`UBOARD_ELEMENT_FRAME_ORIGIN` set gives that address as `elementFrames` with each board. Without `elementFrames`, a
+script element shows a notice in its box; an element edited in the editor is drawn again once the board is saved.
 
 ### `Node`, `Connector`, `Background`, `Shape`
 

@@ -24,6 +24,44 @@ export function elementOriginsFromEnv(value: string | undefined): string[] {
   return origins;
 }
 
+/**
+ * Reads `UBOARD_ELEMENT_FRAME_ORIGIN`: an https origin whose host starts with a `*` label — `https://*.frames.example.com`
+ * — to serve each script element definition's frames from an origin of its own under it (`<definition label>.frames…`,
+ * `elementFrameLabel`). A browser runs each origin's frames in a process of its own, so one element whose code never
+ * yields does not stop the board's other script elements (measured, Chrome and Edge). Needs a wildcard DNS name and
+ * certificate pointing at this server. Unset: frames are served from the server's own origin, as before.
+ */
+export function elementFrameOriginFromEnv(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const sample = value.replace('*', 'x');
+  let origin: string | undefined;
+  try {
+    origin = new URL(sample).origin;
+  } catch {
+    // reported below
+  }
+  if (!value.startsWith('https://*.') || origin !== sample) {
+    throw new Error(`UBOARD_ELEMENT_FRAME_ORIGIN must be an https origin whose host starts with "*." such as https://*.frames.example.com (got "${value}")`);
+  }
+  return value;
+}
+
+/** The address a page builds a board's script element frames from (`elementFrames`): `{definition}` stands for each
+ *  definition's label. */
+export function elementFramesAddress(frameOrigin: string, boardId: string): string {
+  return `${frameOrigin.replace('*', '{definition}')}/api/element-frames/${encodeURIComponent(boardId)}`;
+}
+
+/** The label a request's host gives in place of the frame origin's `*`, or `undefined` when the host is not one of the
+ *  frame origin's. */
+export function frameHostLabel(frameOrigin: string, host: string | undefined): string | undefined {
+  const suffix = new URL(frameOrigin.replace('*', 'x')).host.slice(1);
+  const asked = host?.toLowerCase();
+  if (!asked?.endsWith(suffix)) return undefined;
+  const label = asked.slice(0, -suffix.length);
+  return label !== '' && !label.includes('.') ? label : undefined;
+}
+
 function sha256(text: string): string {
   return `'sha256-${createHash('sha256').update(text, 'utf8').digest('base64')}'`;
 }

@@ -13,6 +13,19 @@ export async function elementDefinitionHash(definition: ElementDefinition): Prom
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+/**
+ * The definition as a host name's first label — the hash's first 16 bytes in hex (lowercase letters and digits, as DNS
+ * takes them). Where the frames are served from an origin of each definition's own (`{definition}` in the frames
+ * address), it names that origin: a browser runs each origin's frames in a process of its own, so one element that
+ * never yields does not stop the others (measured, Chrome and Edge).
+ */
+export function elementFrameLabel(hash: string): string {
+  const binary = atob(hash.replace(/-/g, '+').replace(/_/g, '/'));
+  let hex = '';
+  for (let i = 0; i < 16; i++) hex += binary.charCodeAt(i).toString(16).padStart(2, '0');
+  return hex;
+}
+
 /** JSON with every object's keys sorted — one text for one value, whatever order its keys came in. */
 export function canonicalJson(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(item => canonicalJson(item ?? null)).join(',')}]`;

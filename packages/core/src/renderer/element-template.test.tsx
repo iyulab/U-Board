@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { act, render, waitFor } from '@testing-library/react';
 import { ELEMENT_THEME, accentTokens, boardTheme, fillTemplate, renderTemplateElement } from './element-template';
 import { ElementHost, ElementOriginsContext, ElementView, FRAME_PING_INTERVAL_MS, FRAME_STALL_MS } from './element-view';
-import { elementDefinitionHash } from '../elements/definition-hash';
+import { elementDefinitionHash, elementFrameLabel } from '../elements/definition-hash';
 import { parseTemplate } from '../elements/template';
 import type { ElementDefinition } from '../view-document';
 
@@ -185,6 +185,17 @@ describe('ElementView — script element', () => {
     expect(frame.getAttribute('sandbox')).toBe('allow-scripts');
     expect(frame.getAttribute('loading')).toBe('lazy');
     expect(frame.style.visibility).toBe('hidden');
+  });
+
+  it('is served from an origin of the definition’s own where the frames address names one', async () => {
+    const view = render(
+      <ElementHost frames="https://{definition}.frames.example.com/api/element-frames/b1">
+        <ElementView definition={chart} name="chart" props={{}} appearance="light" />
+      </ElementHost>,
+    );
+    const frame = await waitFor(() => view.container.querySelector('iframe') ?? Promise.reject(new Error('no frame yet')));
+    const hash = await elementDefinitionHash(chart);
+    expect(frame.getAttribute('src')).toBe(`https://${elementFrameLabel(hash)}.frames.example.com/api/element-frames/b1/chart/${hash}`);
   });
 
   it('sends its props and theme once the frame is ready, and again when they change, to that frame only', async () => {

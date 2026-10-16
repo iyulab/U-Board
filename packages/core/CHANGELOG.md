@@ -22,6 +22,9 @@ All notable changes to this package are documented here. The format follows
 - The script element frame runtime keeps the clock a bounded loop asks (`__ubLoopStart`, `__ubLoopCheck` — a
   second): a server that bounds each loop of the element's code with it (U-Board's does) has a loop that never ends
   throw instead of holding the frame.
+- `elementFrameLabel(hash)` and `{definition}` in `elementFrames` — a frames address with an origin per definition
+  (`https://{definition}.frames.example.com/api/element-frames/<board>`); a script element's frame is loaded from the
+  address with its definition's label in place.
 
 ### Changed
 

@@ -23,6 +23,10 @@ do when upgrading. Each release's notes carry its section.
 - **Undo and Redo** in the editor; a node or decoration the editor adds is selected at once.
 - A node without a box takes the size of the element it places.
 - `look` (MCP) answers the advice that still stands with its picture.
+- **`UBOARD_ELEMENT_FRAME_ORIGIN`** — serve each script element definition's frames from an origin of its own
+  (`https://*.frames.example.com`, wildcard DNS and certificate), so in Chrome and Edge an element whose code never
+  yields does not stop the board's other script elements. The frame hosts answer element frames only.
+- The grid editor moves an item dragged onto another.
 
 ## [0.6.0] - 2026-10-16
 

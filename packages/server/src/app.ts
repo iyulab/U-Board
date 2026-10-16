@@ -17,6 +17,7 @@ import { createApiTokensRouter, createTokenInfoRouter } from './routes/api-token
 import { ClientCredentialsTokens } from './oauth-client-credentials.js';
 import { DEFAULT_UPSTREAM_REUSE_MS, type ResolveState } from './resolve-connector.js';
 import { serveWebApps, type WebApps } from './web-apps.js';
+import { frameHostLabel } from './element-frame.js';
 import type { WorkspaceCreation } from './workspace-creation.js';
 
 export interface AppConfig {
@@ -60,6 +61,9 @@ export interface AppConfig {
   webApps?: WebApps;
   /** The origins a board's elements may load from when they also list them (`UBOARD_ELEMENT_ORIGINS`). Unset: none. */
   elementOrigins?: string[];
+  /** Where each script element definition's frames are served from an origin of its own — `https://*.frames.example.com`
+   *  (`UBOARD_ELEMENT_FRAME_ORIGIN`); needs `publicUrl`. Unset: from the server's own origin. */
+  elementFrameOrigin?: string;
 }
 
 /** `req.ip` collapses to the single ingress IP behind Cloudflare -> the hosting platform unless the
@@ -82,6 +86,14 @@ export function createApp(config: AppConfig): express.Express {
   app.disable('x-powered-by');
   // 10mb: default 100kb rejects a ViewDocument whose background.image.src is a data: URI.
   // A board changed in part comes as a JSON Patch (RFC 6902), whose media type is its own.
+  // A frame origin's hosts serve element frames and nothing else — not the console, the share viewer or the API.
+  const frameOrigin = config.elementFrameOrigin;
+  if (frameOrigin) {
+    app.use((req, res, next) => {
+      if (frameHostLabel(frameOrigin, req.headers.host) === undefined || (req.method === 'GET' && req.path.startsWith('/api/element-frames/'))) return next();
+      res.status(404).json({ code: 'NOT_FOUND' });
+    });
+  }
   app.use(express.json({ limit: '10mb', type: ['application/json', 'application/json-patch+json'] }));
   app.use(cookieParser());
   // Per-process resolve state shared by the member and share-link resolve routes: last-known values

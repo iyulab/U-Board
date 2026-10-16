@@ -11,6 +11,7 @@ import { findWorkspaceUser } from '../db/workspaces.js';
 import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from '../resolve-connector.js';
 import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { Connector } from '../db/connectors.js';
+import { elementFramesAddress } from '../element-frame.js';
 
 /** Upper bound on one batch resolve request. A board's own bindings are the only entries that
  * resolve, so this only bounds the work a malformed or hostile request can make the server do. */
@@ -131,6 +132,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       document: board.document,
       revision: board.revision,
       elementOrigins: config.elementOrigins ?? [],
+      ...(config.elementFrameOrigin && { elementFrames: elementFramesAddress(config.elementFrameOrigin, boardId) }),
       ...(await connectorsForViewer(db, token.workspaceId, board.document)),
     });
   });

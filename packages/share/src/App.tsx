@@ -12,6 +12,8 @@ type BoardBody = {
   revision?: number;
   /** The origins this installation lets the board's elements load from. */
   elementOrigins?: string[];
+  /** Where the board's script elements' frames are served, when each definition has an origin of its own. */
+  elementFrames?: string;
   connectorIds: string[];
   attributions?: Record<string, Attribution>;
 };
@@ -108,7 +110,7 @@ export function App() {
       });
       const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id, body.attributions?.[id]));
       shown.current.revision = body.revision;
-      setState({ name: body.name, document: body.document, adapters, revision: body.revision, elementOrigins: body.elementOrigins ?? [], elementFrames: `${API_BASE}/element-frames/${encodeURIComponent(boardId)}` });
+      setState({ name: body.name, document: body.document, adapters, revision: body.revision, elementOrigins: body.elementOrigins ?? [], elementFrames: body.elementFrames ?? `${API_BASE}/element-frames/${encodeURIComponent(boardId)}` });
     };
     read()
       .then(async res => {

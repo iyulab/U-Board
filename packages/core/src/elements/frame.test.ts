@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ELEMENT_FRAME_RUNTIME, elementFrameHtml, elementFrameScripts } from './frame';
-import { canonicalJson, elementDefinitionHash } from './definition-hash';
+import { canonicalJson, elementDefinitionHash, elementFrameLabel } from './definition-hash';
 
 describe('elementFrameHtml', () => {
   it('runs the runtime, then the element, with its style', () => {
@@ -32,6 +32,16 @@ describe('elementDefinitionHash', () => {
     expect(a).toBe(b);
     expect(a).not.toBe(c);
     expect(a).toMatch(/^[A-Za-z0-9_-]{43}$/);
+  });
+
+  it('names a definition as a host name label: lowercase hex of the hash, the same for the same definition', async () => {
+    const hash = await elementDefinitionHash({ render: 'script', script: 'x' });
+    const label = elementFrameLabel(hash);
+    expect(label).toMatch(/^[0-9a-f]{32}$/);
+    expect(elementFrameLabel(hash)).toBe(label);
+    expect(elementFrameLabel(await elementDefinitionHash({ render: 'script', script: 'y' }))).not.toBe(label);
+    // The hash's first bytes, written another way.
+    expect(elementFrameLabel('_-8AAQ' + 'A'.repeat(37))).toBe('ffef0001' + '0'.repeat(24));
   });
 
   it('writes nested keys in order and leaves out what is undefined', () => {

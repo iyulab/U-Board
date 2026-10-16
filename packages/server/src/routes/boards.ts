@@ -6,6 +6,7 @@ import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
 import { pathParam } from '../middleware/path-param.js';
 import { requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from '../db/boards.js';
+import { elementFramesAddress } from '../element-frame.js';
 
 /** How many document issues a 400 names at most. */
 const MAX_REPORTED_ISSUES = 20;
@@ -71,6 +72,7 @@ export function createBoardsRouter(config: AppConfig): Router {
         updatedAt: board.updatedAt,
         revision: board.revision,
         elementOrigins: config.elementOrigins ?? [],
+        ...(config.elementFrameOrigin && { elementFrames: elementFramesAddress(config.elementFrameOrigin, board.id) }),
       });
   });
 

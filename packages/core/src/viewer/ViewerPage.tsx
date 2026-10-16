@@ -47,7 +47,9 @@ export interface ViewerPageProps {
    * in its `resources`. Default none: a board loads nothing from another origin unless its host allows it here. */
   elementOrigins?: readonly string[];
   /** Where the board's script elements run: the address its server serves their frames under —
-   * `/api/element-frames/<board id>` on a U-Board server. Omitted, a script element shows a notice in its box. */
+   * `/api/element-frames/<board id>` on a U-Board server, or the address its board answer gives (`elementFrames`) when
+   * it serves each definition from an origin of its own (`{definition}` in it names that origin). Omitted, a script
+   * element shows a notice in its box. */
   elementFrames?: string;
 }
 

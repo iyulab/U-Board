@@ -20,7 +20,7 @@ export { validateViewDocument } from './validate-view-document.js';
 export type { ViewDocumentIssue } from './validate-view-document.js';
 export { lintViewDocument } from './lint-view-document.js';
 export { elementFrameHtml, elementFrameScripts } from './elements/frame.js';
-export { elementDefinitionHash } from './elements/definition-hash.js';
+export { elementDefinitionHash, elementFrameLabel } from './elements/definition-hash.js';
 export { applyJsonPatch, getByPointer, JsonPatchError } from './json-patch.js';
 export type { JsonPatchOperation } from './json-patch.js';
 export type { ElementFrameMessage } from './elements/frame.js';

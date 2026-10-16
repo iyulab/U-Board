@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
 import type { ElementFrameMessage } from '../elements/frame.js';
-import { elementDefinitionHash } from '../elements/definition-hash.js';
+import { elementDefinitionHash, elementFrameLabel } from '../elements/definition-hash.js';
 import { boardTheme, renderTemplateElement } from './element-template.js';
 
 /** The origins this host lets an element load from — an element reaches an origin only when it declares it in
@@ -10,8 +10,9 @@ import { boardTheme, renderTemplateElement } from './element-template.js';
 export const ElementOriginsContext = createContext<readonly string[]>([]);
 
 /** Where the board's script elements' frames are served: an address the frame of element `name` is found under as
- *  `<this>/<name>/<definition hash>` — the board's server builds it from the definition it stores. Without one, a
- *  script element cannot be drawn and says so. */
+ *  `<this>/<name>/<definition hash>` — the board's server builds it from the definition it stores. `{definition}` in it
+ *  is replaced by the definition's own label (`elementFrameLabel`), for a server that serves each definition from an
+ *  origin of its own. Without one, a script element cannot be drawn and says so. */
 export const ElementFrameContext = createContext<string | undefined>(undefined);
 
 const FILL: CSSProperties = { width: '100%', height: '100%' };
@@ -106,7 +107,7 @@ function ScriptElement({ name, definition, frames, props, appearance, theme }: {
   useEffect(() => {
     let current = true;
     void elementDefinitionHash(definition).then(hash => {
-      if (current) setUrl(`${frames}/${encodeURIComponent(name)}/${hash}`);
+      if (current) setUrl(`${frames.replaceAll('{definition}', elementFrameLabel(hash))}/${encodeURIComponent(name)}/${hash}`);
     });
     return () => {
       current = false;

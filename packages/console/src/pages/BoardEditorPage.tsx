@@ -29,6 +29,8 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const [document, setDocument] = useState<ViewDocument | null>(null);
   // The origins this installation lets a board's elements load from, as the server says with the board.
   const [elementOrigins, setElementOrigins] = useState<readonly string[]>([]);
+  // Where the board's script elements' frames are served: the server says when each definition has an origin of its own.
+  const [elementFrames, setElementFrames] = useState<string | undefined>();
   const [boardName, setBoardName] = useState('');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connectors, setConnectors] = useState<ConnectorSummary[]>([]);
@@ -66,6 +68,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         if (cancelled) return;
         setDocument(board.document);
         setElementOrigins(board.elementOrigins ?? []);
+        setElementFrames(board.elementFrames);
         revision.current = board.revision;
         setBoardName(board.name);
       })
@@ -251,7 +254,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           elementOrigins={elementOrigins}
           // The server serves the frames the board's script elements run in under this address — none while opened
           // with scripts off, so no element code runs.
-          elementFrames={scriptsOff ? undefined : `/api/element-frames/${encodeURIComponent(boardId!)}`}
+          elementFrames={scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`)}
         />
       </div>
       {isOwner && (

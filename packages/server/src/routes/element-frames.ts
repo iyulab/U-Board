@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { elementDefinitionHash } from '@iyulab/u-board/domain';
+import { elementDefinitionHash, elementFrameLabel } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { findBoardById } from '../db/boards.js';
-import { sendElementFrame } from '../element-frame.js';
+import { frameHostLabel, sendElementFrame } from '../element-frame.js';
 
 /**
  * The frames script elements run in: `GET /api/element-frames/:boardId/:name/:hash`. The address names the definition
@@ -10,18 +10,24 @@ import { sendElementFrame } from '../element-frame.js';
  * so — and naming it takes having the definition already. That is what lets the console and a share link, which reach
  * a board by different credentials, load the same frame with none: the answer is the definition the asking page
  * already holds, built into a sandboxed document. Any other address answers 404, an unsaved edit included.
+ *
+ * With a frame origin (`UBOARD_ELEMENT_FRAME_ORIGIN`), each definition is served from its own host under it, and a
+ * host naming another definition answers 404 — one origin, one definition.
  */
 export function createElementFramesRouter(config: AppConfig): Router {
   const { db } = config;
   const router = Router();
-  // The frame is shown by the console, by the share viewer, and by any page that embeds the share viewer.
-  const frameAncestors = `'self' ${config.webApps?.shareFrameAncestors ?? 'https:'}`;
+  // The frame is shown by the console, by the share viewer, and by any page that embeds the share viewer — from the
+  // server's own origin, which is not the frame's when frames have origins of their own.
+  const pages = config.webApps?.shareFrameAncestors ?? 'https:';
+  const frameAncestors = config.elementFrameOrigin && config.publicUrl ? `${config.publicUrl} ${pages}` : `'self' ${pages}`;
 
   router.get('/:boardId/:name/:hash', async (req, res) => {
     const { boardId, name, hash } = req.params;
     const board = await findBoardById(db, boardId);
     const definition = board && Object.hasOwn(board.document.elements ?? {}, name) ? board.document.elements![name] : undefined;
-    if (!board || !definition || (await elementDefinitionHash(definition)) !== hash) {
+    const label = config.elementFrameOrigin ? frameHostLabel(config.elementFrameOrigin, req.headers.host) : undefined;
+    if (!board || !definition || (await elementDefinitionHash(definition)) !== hash || (label !== undefined && label !== elementFrameLabel(hash))) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }

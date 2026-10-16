@@ -34,6 +34,15 @@ beforeEach(async () => {
 });
 
 describe('boards routes', () => {
+  it('gives the address its script elements’ frames are served from, when each definition has an origin of its own', async () => {
+    const framed = createApp({ db, sessionSecret: SECRET, publicUrl: 'https://board.example.com', elementFrameOrigin: 'https://*.frames.example.com' });
+    const create = await request(framed).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'B' });
+    const get = await request(framed).get(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie);
+    expect(get.body.elementFrames).toBe(`https://{definition}.frames.example.com/api/element-frames/${create.body.id}`);
+    const plain = await request(app).get(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie);
+    expect(plain.body).not.toHaveProperty('elementFrames');
+  });
+
   it('rejects a non-member with 403', async () => {
     const res = await request(app).get(`/api/workspaces/${workspaceId}/boards`).set('Cookie', strangerCookie);
     expect(res.status).toBe(403);

@@ -8,8 +8,8 @@ import { createApp } from '../app.js';
 import { createWorkspace } from '../db/workspaces.js';
 import { createUser } from '../db/users.js';
 import { createBoard, updateBoard } from '../db/boards.js';
-import { elementDefinitionHash, elementFrameScripts, type ElementDefinition, type ViewDocument } from '@iyulab/u-board/domain';
-import { elementOriginsFromEnv } from '../element-frame.js';
+import { elementDefinitionHash, elementFrameLabel, elementFrameScripts, type ElementDefinition, type ViewDocument } from '@iyulab/u-board/domain';
+import { elementFrameOriginFromEnv, elementFramesAddress, elementOriginsFromEnv, frameHostLabel } from '../element-frame.js';
 
 const chart: ElementDefinition = {
   render: 'script',
@@ -118,5 +118,47 @@ describe('elementOriginsFromEnv', () => {
 
   it.each(['http://a.example.com', 'https://a.example.com/', 'https://a.example.com/lib', 'a.example.com', 'https://a.example.com:443'])('refuses %s', origin => {
     expect(() => elementOriginsFromEnv(origin)).toThrow(/UBOARD_ELEMENT_ORIGINS/);
+  });
+});
+
+describe('frames from an origin of each definition’s own (UBOARD_ELEMENT_FRAME_ORIGIN)', () => {
+  const FRAMES = 'https://*.frames.example.com';
+  const framed = () => createApp({ db, sessionSecret: 'test-secret-at-least-16-chars', publicUrl: 'https://board.example.com', elementFrameOrigin: FRAMES });
+
+  it('reads an https origin whose host starts with a * label, and refuses anything else', () => {
+    expect(elementFrameOriginFromEnv(undefined)).toBeUndefined();
+    expect(elementFrameOriginFromEnv('')).toBeUndefined();
+    expect(elementFrameOriginFromEnv(FRAMES)).toBe(FRAMES);
+    expect(elementFrameOriginFromEnv('https://*.frames.example.com:8443')).toBe('https://*.frames.example.com:8443');
+    for (const wrong of ['https://frames.example.com', 'http://*.frames.example.com', 'https://*.frames.example.com/x', 'https://a*.frames.example.com', 'https://*']) {
+      expect(() => elementFrameOriginFromEnv(wrong), wrong).toThrow(/UBOARD_ELEMENT_FRAME_ORIGIN/);
+    }
+  });
+
+  it('tells which definition a host names, and none for any other host', () => {
+    expect(frameHostLabel(FRAMES, '0a1b.frames.example.com')).toBe('0a1b');
+    expect(frameHostLabel(FRAMES, '0A1B.FRAMES.example.com')).toBe('0a1b');
+    expect(frameHostLabel(FRAMES, 'board.example.com')).toBeUndefined();
+    expect(frameHostLabel(FRAMES, 'frames.example.com')).toBeUndefined();
+    expect(frameHostLabel(FRAMES, 'a.b.frames.example.com')).toBeUndefined();
+    expect(frameHostLabel(FRAMES, undefined)).toBeUndefined();
+    expect(elementFramesAddress(FRAMES, 'b 1')).toBe('https://{definition}.frames.example.com/api/element-frames/b%201');
+  });
+
+  it('serves a definition from its own host only, framed by the board’s pages', async () => {
+    const hash = await elementDefinitionHash(chart);
+    const path = `/api/element-frames/${boardId}/chart/${hash}`;
+    const own = await request(framed()).get(path).set('Host', `${elementFrameLabel(hash)}.frames.example.com`);
+    expect(own.status).toBe(200);
+    expect(own.get('Content-Security-Policy')).toContain('frame-ancestors https://board.example.com https:');
+    const another = await request(framed()).get(path).set('Host', `${'0'.repeat(32)}.frames.example.com`);
+    expect(another.status).toBe(404);
+  });
+
+  it('answers nothing else on a frame host — not the API, not the pages', async () => {
+    const host = `${'0'.repeat(32)}.frames.example.com`;
+    expect((await request(framed()).get('/health').set('Host', host)).status).toBe(404);
+    expect((await request(framed()).post('/api/auth/login').set('Host', host).send({})).status).toBe(404);
+    expect((await request(framed()).get('/health').set('Host', 'board.example.com')).status).toBe(200);
   });
 });
