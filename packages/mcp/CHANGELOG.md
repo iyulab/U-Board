@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `look` no longer reports bold text on a gradient as reading at 1:1: the colour behind a text is the commonest one
+  in its box other than its own ink — the glyph's pixels could outnumber each step of the gradient. Text drawn on its
+  own colour is still reported.
+
 ## [0.8.0] - 2026-10-17
 
 ### Added

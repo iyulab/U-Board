@@ -115,6 +115,22 @@ describe('findLowContrast', () => {
     expect(await lowContrast([node('a')])).toEqual([]);
   });
 
+  it('reads the paper around the glyph, not the glyph — bold ink on a gradient passes, ink on its own colour does not', async () => {
+    // A node badge: dark bold digit on a radial gradient. Every gradient step is a colour of its own, so the glyph's one
+    // solid ink can outnumber each of them inside the text's box.
+    const badge = (n: number) => `
+      <div data-node-id="n${n}" style="position:absolute;left:${(n - 1) * 50}px;top:0;width:36px;height:36px">
+        <svg viewBox="0 0 36 36" width="100%" height="100%"><defs><radialGradient id="g${n}" cx="38%" cy="34%" r="72%"><stop offset="0%" stop-color="#ffd25a"/><stop offset="55%" stop-color="#f6a71a"/><stop offset="100%" stop-color="#b9760c"/></radialGradient></defs>
+          <circle cx="18" cy="18" r="17" fill="#1f8f4a"/><circle cx="18" cy="18" r="15" fill="url(#g${n})" stroke="#ffe28a" stroke-width="1.4"/>
+          <text x="18" y="18.5" text-anchor="middle" dominant-baseline="central" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="#2b1a00">${n}</text></svg>
+      </div>`;
+    await show(`<div style="position:absolute;inset:0;background:#141a28"></div>${Array.from({ length: 14 }, (_, i) => badge(i + 1)).join('')}
+      <div data-node-id="alert" style="position:absolute;left:0;top:60px"><svg width="24" height="24"><rect width="24" height="24" fill="#d32f2f"/><text x="12" y="18" text-anchor="middle" font-size="16" font-weight="700" fill="#d32f2f">!</text></svg></div>`);
+    const found = await lowContrast([...Array.from({ length: 14 }, (_, i) => node(`n${i + 1}`)), node('alert')]);
+    expect(found.map(f => f.path)).toEqual(['/nodes/alert']);
+    expect(found[0].message).toContain('reads at 1.0:1');
+  });
+
   it('skips text that is not drawn where it sits: in definitions, hidden, transparent, or kept for a screen reader', async () => {
     await show(`
       <div data-node-id="a">

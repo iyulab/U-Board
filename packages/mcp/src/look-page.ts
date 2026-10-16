@@ -83,18 +83,24 @@ export async function findLowContrast(args: { picture: string; ratio: number; pl
   canvas.height = image.height;
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   ctx.drawImage(image, 0, 0);
-  const behind = (rect: DOMRect): [number, number, number] | undefined => {
+  const bucket = (r: number, g: number, b: number) => ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+  /** The commonest colour in the text's box other than its own ink — the glyph's pixels are in the box too, and on a
+   *  gradient (each step a colour of its own) a bold glyph's one ink can outnumber every one of them. A box of nothing
+   *  but the ink is text on its own colour. */
+  const behind = (rect: DOMRect, ink: [number, number, number]): [number, number, number] | undefined => {
     const x = Math.max(0, Math.floor(rect.left * args.ratio));
     const y = Math.max(0, Math.floor(rect.top * args.ratio));
     const w = Math.min(canvas.width - x, Math.ceil(rect.width * args.ratio));
     const h = Math.min(canvas.height - y, Math.ceil(rect.height * args.ratio));
     if (w <= 0 || h <= 0) return undefined;
     const data = ctx.getImageData(x, y, w, h).data;
+    const own = bucket(...ink);
     const counts = new Map<number, number>();
     for (let i = 0; i < data.length; i += 4) {
-      const key = ((data[i] >> 3) << 10) | ((data[i + 1] >> 3) << 5) | (data[i + 2] >> 3);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+      const key = bucket(data[i], data[i + 1], data[i + 2]);
+      if (key !== own) counts.set(key, (counts.get(key) ?? 0) + 1);
     }
+    if (counts.size === 0) return ink;
     const [key] = [...counts].sort((a, b) => b[1] - a[1])[0];
     return [((key >> 10) & 31) * 8 + 4, ((key >> 5) & 31) * 8 + 4, (key & 31) * 8 + 4];
   };
@@ -127,7 +133,7 @@ export async function findLowContrast(args: { picture: string; ratio: number; pl
       const range = document.createRange();
       range.selectNodeContents(node);
       for (const rect of range.getClientRects()) {
-        const paper = behind(rect);
+        const paper = behind(rect, ink);
         if (!paper) continue;
         const ratio = contrast(ink, paper);
         if (!worst || ratio < worst.ratio) worst = { ratio, text: (node.textContent ?? '').trim().slice(0, 30) };
