@@ -51,7 +51,7 @@ import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
  * and stays fitted as it resizes until the author pans or zooms; "Fit to view" restores that, and a
  * new node or decoration is placed in view.
  */
-export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileActions, fileError, onFileError, adapters, width, height, connectorLabels, labels, clock }: KindEditorProps<CanvasView>) {
+export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, onFileError, adapters, width, height, connectorLabels, labels, clock }: KindEditorProps<CanvasView>) {
   // Read when a result is drawn, not watched: a new function on every render must not re-resolve.
   const readClock = useEffectEvent(() => clock());
   const [preview, setPreview] = useState<CanvasKitRenderOutput | null>(null);
@@ -333,7 +333,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, fileAction
             {labels.deleteSelected}
           </button>
         </div>
-        {fileActions}
+        {documentActions}
         <ModeSwitch mode={mode} onEdit={() => onModeChange('edit')} onView={handleViewMode} labels={labels} />
         <div className="ub-authoring__group" style={GROUP_STYLE}>
           <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />

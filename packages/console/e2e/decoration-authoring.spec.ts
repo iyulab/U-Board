@@ -34,6 +34,12 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   // Cascades to (64, 64) as the second decoration (nextDecorationPosition — same cascade step as nodes), selected.
   await page.getByText('텍스트 장식 추가').click();
   await expect(page.getByLabel('라벨')).toHaveValue('라벨');
+  // Undo takes it away again, Redo (Ctrl+Shift+Z) brings it back — then a click on it selects it.
+  await page.getByRole('button', { name: '실행 취소' }).click();
+  await expect(page.getByLabel('라벨', { exact: true })).toHaveCount(0);
+  await page.keyboard.press('Control+Shift+Z');
+  await clickEditorAt(page, { x: 85, y: 72 });
+  await expect(page.getByLabel('라벨')).toHaveValue('라벨');
 
   await page.getByLabel('라벨').fill('Zone A');
   await page.getByRole('button', { name: '저장', exact: true }).click();

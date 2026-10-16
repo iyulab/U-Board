@@ -20,6 +20,8 @@ export const KO_LABELS: UBoardLabels = {
   addConnector: '연결선 추가',
   connectHint: '연결할 두 노드를 선택하세요(두 번째는 Shift+클릭).',
   deleteSelected: '삭제',
+  undo: '실행 취소',
+  redo: '다시 실행',
   save: '저장',
   export: '내보내기',
   import: '가져오기',

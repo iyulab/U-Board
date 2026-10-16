@@ -117,6 +117,61 @@ describe('AuthoringView new nodes', () => {
   });
 });
 
+describe('AuthoringView undo and redo', () => {
+  const savedAfter = async (onSave: ReturnType<typeof vi.fn>) => {
+    onSave.mockClear();
+    fireEvent.click(screen.getByText('Save'));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    return onSave.mock.calls[0][0] as CanvasView;
+  };
+
+  it('steps back and forth through the edits — with the buttons, or Ctrl+Z and Ctrl+Shift+Z / Ctrl+Y', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} onSave={onSave} />);
+    const undoButton = screen.getByRole('button', { name: 'Undo' });
+    const redoButton = screen.getByRole('button', { name: 'Redo' });
+    expect(undoButton).toBeDisabled();
+
+    fireEvent.click(screen.getByText('Add node'));
+    fireEvent.click(screen.getByText('Add rect decoration'));
+    expect(redoButton).toBeDisabled();
+    fireEvent.click(undoButton);
+    expect((await savedAfter(onSave)).decorations ?? []).toHaveLength(0);
+    fireEvent.keyDown(screen.getByTestId('konva-designer'), { key: 'z', ctrlKey: true });
+    expect((await savedAfter(onSave)).nodes).toHaveLength(0);
+    expect(undoButton).toBeDisabled();
+
+    fireEvent.keyDown(screen.getByTestId('konva-designer'), { key: 'Z', ctrlKey: true, shiftKey: true });
+    expect((await savedAfter(onSave)).nodes).toHaveLength(1);
+    fireEvent.keyDown(screen.getByTestId('konva-designer'), { key: 'y', metaKey: true });
+    expect((await savedAfter(onSave)).decorations).toHaveLength(1);
+    expect(redoButton).toBeDisabled();
+  });
+
+  it('leaves Ctrl+Z in a field to the field, and counts what is typed there as one step', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const withText: CanvasView = { ...doc(), decorations: [{ id: 'decoration-1', type: 'text', x: 0, y: 0, text: 'Zone A' }] };
+    render(<AuthoringView initialDocument={withText} adapters={[]} width={400} height={300} onSave={onSave} />);
+    fireEvent.click(screen.getByText('select-decoration-1'));
+    const field = screen.getByLabelText('Text');
+    field.focus();
+    for (const text of ['Zone B', 'Zone Bx', 'Zone Bxy']) fireEvent.change(field, { target: { value: text } });
+    fireEvent.keyDown(field, { key: 'z', ctrlKey: true });
+    expect(field).toHaveValue('Zone Bxy');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(((await savedAfter(onSave)).decorations![0] as { text: string }).text).toBe('Zone A');
+  });
+
+  it('is off while viewing', () => {
+    render(<AuthoringView initialDocument={doc()} adapters={[]} width={400} height={300} />);
+    fireEvent.click(screen.getByText('Add node'));
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled();
+  });
+});
+
 describe('AuthoringView onSave', () => {
   it('renders a Save button and calls onSave with the current document when provided', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);

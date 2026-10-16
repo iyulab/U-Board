@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument } from '../view-document.js';
@@ -9,6 +9,7 @@ import { CanvasAuthoring } from './CanvasAuthoring.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
 import { ElementHost } from '../renderer/element-view.js';
+import { endTyping, recordEdit, redo, startHistory, textEntry, undo, type DocumentHistory } from './document-history.js';
 
 export interface AuthoringViewProps {
   /** The document to edit, of either kind — a canvas view or a grid view. */
@@ -50,12 +51,15 @@ export interface AuthoringViewProps {
  * through the path a real viewer uses (`resolveDocument`, then the kind's renderer), and the authoring tool's
  * weight never reaches the viewer (docs/principles.md — editor/renderer separation).
  *
- * What does not depend on the kind lives here: the document, whether it has unsaved changes, Save, Export,
- * Import, the mode. Importing a document of the other kind opens it in that kind's editor.
+ * What does not depend on the kind lives here: the document and its edits back and forth (Undo, Redo), whether it
+ * has unsaved changes, Save, Export, Import, the mode. Importing a document of the other kind opens it in that kind's
+ * editor.
  */
 export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now, elementOrigins, elementFrames }: AuthoringViewProps) {
   const labels = useLabels(labelsProp);
-  const [doc, setDoc] = useState(initialDocument);
+  // The document with the edits that led to it, since it was opened.
+  const [history, setHistory] = useState<DocumentHistory<ViewDocument>>(() => startHistory(initialDocument));
+  const doc = history.present;
   // One board, in one of two modes: edited, or viewed exactly as a shared board shows it.
   const [mode, setMode] = useState<AuthoringMode>('edit');
   const [fileError, setFileError] = useState<string | null>(null);
@@ -114,7 +118,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     e.target.value = ''; // allow re-selecting the same file later
     if (!file) return;
     try {
-      setDoc(parseViewDocument(await file.text()));
+      setHistory(startHistory(parseViewDocument(await file.text())));
       setOpened(n => n + 1);
       setFileError(null);
     } catch (err) {
@@ -122,34 +126,80 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     }
   };
 
-  const fileActions = (
-    <div className="ub-authoring__group" style={GROUP_STYLE}>
-      {onSave && (
-        <button type="button" className="ub-action ub-action--primary" onClick={handleSave}>
-          {labels.save}
+  // An edit typed into a field counts with the rest of what is typed there (document-history.ts) — until focus moves:
+  // the same field, refilled for another part, is another step.
+  const edit = (update: (current: ViewDocument) => ViewDocument) => {
+    const typingIn = textEntry(document.activeElement);
+    setHistory(h => recordEdit(h, update(h.present), typingIn));
+  };
+  // A view shows the board as it is: the edits are walked back and forth only while editing.
+  const canUndo = mode === 'edit' && history.past.length > 0;
+  const canRedo = mode === 'edit' && history.future.length > 0;
+
+  // Ctrl+Z (⌘Z) undoes, Ctrl+Shift+Z or Ctrl+Y redoes — but in a field being typed into, the field's own undo. Heard
+  // anywhere in the editor (its board, its panels), as is focus moving on.
+  const rootRef = useRef<HTMLDivElement>(null);
+  const handleKey = useEffectEvent((e: KeyboardEvent) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || textEntry(e.target as Element)) return;
+    const key = e.key.toLowerCase();
+    const back = key === 'z' && !e.shiftKey;
+    const forward = (key === 'z' && e.shiftKey) || (key === 'y' && !e.shiftKey);
+    if (!back && !forward) return;
+    e.preventDefault();
+    if (back && canUndo) setHistory(undo);
+    if (forward && canRedo) setHistory(redo);
+  });
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const keyDown = (e: KeyboardEvent) => handleKey(e);
+    const focusMoved = () => setHistory(endTyping);
+    root.addEventListener('keydown', keyDown);
+    root.addEventListener('focusin', focusMoved);
+    return () => {
+      root.removeEventListener('keydown', keyDown);
+      root.removeEventListener('focusin', focusMoved);
+    };
+  }, []);
+
+  const documentActions = (
+    <>
+      <div className="ub-authoring__group" style={GROUP_STYLE}>
+        <button type="button" className="ub-action" onClick={() => setHistory(undo)} disabled={!canUndo} aria-keyshortcuts="Control+Z Meta+Z">
+          {labels.undo}
         </button>
-      )}
-      <button type="button" className="ub-action" onClick={handleExport}>
-        {labels.export}
-      </button>
-      <button type="button" className="ub-action" onClick={() => fileInputRef.current?.click()}>
-        {labels.import}
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="application/json"
-        onChange={handleImportFile}
-        style={{ display: 'none' }}
-        data-testid="import-file-input"
-      />
-    </div>
+        <button type="button" className="ub-action" onClick={() => setHistory(redo)} disabled={!canRedo} aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y">
+          {labels.redo}
+        </button>
+      </div>
+      <div className="ub-authoring__group" style={GROUP_STYLE}>
+        {onSave && (
+          <button type="button" className="ub-action ub-action--primary" onClick={handleSave}>
+            {labels.save}
+          </button>
+        )}
+        <button type="button" className="ub-action" onClick={handleExport}>
+          {labels.export}
+        </button>
+        <button type="button" className="ub-action" onClick={() => fileInputRef.current?.click()}>
+          {labels.import}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          onChange={handleImportFile}
+          style={{ display: 'none' }}
+          data-testid="import-file-input"
+        />
+      </div>
+    </>
   );
 
   const shared = {
     mode,
     onModeChange: setMode,
-    fileActions,
+    documentActions,
     fileError,
     onFileError: setFileError,
     adapters,
@@ -162,19 +212,19 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
 
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>
-      <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }} ref={rootRef}>
         {doc.kind === 'canvas' ? (
           <CanvasAuthoring
             key={opened}
             doc={doc}
-            updateDoc={update => setDoc(current => (current.kind === 'canvas' ? update(current) : current))}
+            updateDoc={update => edit(current => (current.kind === 'canvas' ? update(current) : current))}
             {...shared}
           />
         ) : (
           <GridAuthoring
             key={opened}
             doc={doc}
-            updateDoc={update => setDoc(current => (current.kind === 'grid' ? update(current) : current))}
+            updateDoc={update => edit(current => (current.kind === 'grid' ? update(current) : current))}
             {...shared}
           />
         )}

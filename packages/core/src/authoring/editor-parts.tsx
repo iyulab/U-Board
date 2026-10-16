@@ -15,8 +15,8 @@ export interface KindEditorProps<D extends ViewDocument> {
   updateDoc: (update: (current: D) => D) => void;
   mode: AuthoringMode;
   onModeChange: (mode: AuthoringMode) => void;
-  /** Save, Export and Import — the same for every kind. */
-  fileActions: ReactNode;
+  /** Undo and Redo, Save, Export and Import — the same for every kind. */
+  documentActions: ReactNode;
   /** A file that could not be used, said under the toolbar; an editor reports its own (a background image) too. */
   fileError: string | null;
   onFileError: (message: string | null) => void;

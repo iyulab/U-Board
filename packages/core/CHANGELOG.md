@@ -13,6 +13,10 @@ All notable changes to this package are documented here. The format follows
 - **Symbols in the editor** — beside the board's elements, its symbols: each with how many templates and symbols
   place it by name, a new one, and the editor of one (name, `viewBox`, markup) with its problems said at once and a
   preview drawn as an element would draw it. Renaming a symbol renames its uses by name; one in use cannot be deleted.
+- **Undo and Redo** in the editor, for every edit of either kind of board — the toolbar's buttons, or Ctrl+Z (⌘Z)
+  and Ctrl+Shift+Z or Ctrl+Y. What is typed into one field, until focus moves on, is one step; in a field being typed
+  into, Ctrl+Z is the field's own. The last 100 steps since the board was opened are kept; viewing turns them off.
+  Labels `undo`, `redo`.
 
 ### Changed
 

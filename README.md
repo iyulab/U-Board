@@ -56,7 +56,8 @@ error.
 
 This project is in early development. The rendering pipeline (canvas-kit + u-widgets), the
 authoring UI (set the background image; add/drag/resize nodes and rect/text decorations; join two
-nodes with a line and edit its label, look, arrowheads and bindings; delete what is selected; a
+nodes with a line and edit its label, look, arrowheads and bindings; delete what is selected; undo
+and redo any edit; a
 property panel for editing the selected node's widget type, static props, and data bindings,
 including a path explorer for HTTP-shaped adapter responses and a value map that turns a source's
 words or numbers — by exact value or numeric range — into what the widget takes; a frame decoration's

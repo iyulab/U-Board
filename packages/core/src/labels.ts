@@ -28,6 +28,9 @@ export interface UBoardLabels {
   connectHint: string;
   /** Deletes the selected parts (a node takes its lines with it). */
   deleteSelected: string;
+  /** Steps back through the edits since the document was opened (Ctrl+Z), and forward again (Ctrl+Shift+Z or Ctrl+Y). */
+  undo: string;
+  redo: string;
   /** The save button when the host handles saving (`onSave`). */
   save: string;
   /** The save button when the document is downloaded as a file (no `onSave`). */
@@ -331,6 +334,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   addConnector: 'Connect nodes',
   connectHint: 'Select two nodes (Shift+click the second) to connect them.',
   deleteSelected: 'Delete',
+  undo: 'Undo',
+  redo: 'Redo',
   save: 'Save',
   export: 'Export',
   import: 'Import',

@@ -49,7 +49,7 @@ const unresolved = (widget: Widget): ResolvedWidget => ({ type: widget.type, pro
  * item" puts a new item after the selected one. The layout width lays the grid out as a medium or a narrow screen
  * will, so the author sees each.
  */
-export function GridAuthoring({ doc, updateDoc, mode, onModeChange, fileActions, fileError, adapters, width, height, connectorLabels, labels, clock }: KindEditorProps<GridView>) {
+export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, adapters, width, height, connectorLabels, labels, clock }: KindEditorProps<GridView>) {
   const readClock = useEffectEvent(() => clock());
   const [preview, setPreview] = useState<{ doc: ResolvedGridView; now: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -111,7 +111,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, fileActions,
             {labels.addItem}
           </button>
         </div>
-        {fileActions}
+        {documentActions}
         <ModeSwitch mode={mode} onEdit={() => onModeChange('edit')} onView={handleViewMode} labels={labels} />
         {mode === 'edit' && (
           <div className="ub-authoring__group ub-authoring__layout-width" style={GROUP_STYLE} role="group" aria-label={labels.layoutWidth}>
