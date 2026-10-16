@@ -168,6 +168,32 @@ describe('resolveDocument', () => {
     expect(resolved.items[0].widget.quality).toEqual({ value: 'live' });
     expect(resolved.items[1].widget.props).toEqual({ content: 'note' });
   });
+
+  it('names each part’s state from the source’s reading — before the prop’s own map — on both kinds', async () => {
+    const pumps = new InMemoryAdapter('plant', {
+      'p1': { value: 'Fault', quality: 'live' },
+      'p2': { value: 'Running', quality: 'stale' },
+      'p3': { value: undefined, quality: 'disconnected' },
+    });
+    const states = { from: 'data.value', map: { values: { Fault: 'fault', Running: 'running' } } };
+    const part = (id: string, ref: string) => ({
+      id,
+      widget: { type: 'status', bindings: { 'data.value': { adapter: 'plant', ref, map: { values: { Fault: 'error' } } } } },
+      states,
+    });
+    const canvas: CanvasView = {
+      kind: 'canvas', background: {}, connectors: [],
+      nodes: [{ ...part('a', 'p1'), x: 0, y: 0, anchored: false }, { ...part('b', 'p2'), x: 0, y: 0, anchored: false }, { ...part('c', 'p3'), x: 0, y: 0, anchored: false }],
+    };
+    const resolved = await resolveDocument(canvas, [pumps]);
+    expect(resolved.nodes.map(n => n.state)).toEqual(['fault', 'running', undefined]);
+    // The prop still takes its own map; the state read the source’s word.
+    expect(resolved.nodes[0].widget.props).toEqual({ data: { value: 'error' } });
+    expect('state' in resolved.nodes[2]).toBe(false);
+
+    const grid: GridView = { kind: 'grid', items: [part('a', 'p1')] };
+    expect((await resolveDocument(grid, [pumps])).items[0].state).toBe('fault');
+  });
 });
 
 describe('placedIn', () => {

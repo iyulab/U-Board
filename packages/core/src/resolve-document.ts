@@ -1,11 +1,12 @@
 import type { ViewDocument, CanvasView, GridView, Placed, Node, GridItem, Connector, ConnectorArrow, StrokeDash } from './view-document.js';
 import { CONNECTOR_ARROWS, STROKE_DASHES } from './view-document.js';
 import type { Adapter, ConnectionQuality, ResolvedWidget } from './adapter.js';
-import { resolveBindings, resolveWidget } from './adapter.js';
+import { resolveBindings, resolveWidgetReadings } from './adapter.js';
+import { stateOf } from './states.js';
 
 /** A placed widget resolved against a set of adapters — everything a renderer needs to paint it without
- *  itself knowing how bindings are resolved. */
-export type Resolved<T extends Placed> = Omit<T, 'widget'> & { widget: ResolvedWidget };
+ *  itself knowing how bindings are resolved — and, when it has states, the one it is in now (`stateOf`). */
+export type Resolved<T extends Placed> = Omit<T, 'widget'> & { widget: ResolvedWidget; state?: string };
 
 /** A canvas view's node, resolved. */
 export type ResolvedNode = Resolved<Node>;
@@ -45,7 +46,13 @@ export async function resolveDocument(doc: GridView, adapters: readonly Adapter[
 export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument>;
 export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument> {
   const resolve = <T extends Placed>(placed: readonly T[]) =>
-    Promise.all(placed.map(async (p): Promise<Resolved<T>> => ({ ...p, widget: await resolveWidget(p.widget, adapters) })));
+    Promise.all(
+      placed.map(async (p): Promise<Resolved<T>> => {
+        const { widget, readings } = await resolveWidgetReadings(p.widget, adapters);
+        const state = stateOf(p.states, readings, widget.quality);
+        return { ...p, widget, ...(state !== undefined && { state }) };
+      })
+    );
   return doc.kind === 'canvas'
     ? { ...doc, nodes: await resolve(doc.nodes), connectors: await Promise.all(doc.connectors.map(c => resolveConnector(c, adapters))) }
     : { ...doc, items: await resolve(doc.items) };

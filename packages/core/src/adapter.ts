@@ -109,11 +109,20 @@ export async function resolveWidget(
   widget: Widget,
   adapters: readonly Adapter[]
 ): Promise<ResolvedWidget> {
-  const { values: props, quality, reasons, observedAt } = await resolveBindings({ ...widget.props }, widget.bindings, adapters);
-  const result: ResolvedWidget = { type: widget.type, props, quality };
-  if (Object.keys(reasons).length > 0) result.reasons = reasons;
-  if (Object.keys(observedAt).length > 0) result.observedAt = observedAt;
-  return result;
+  return (await resolveWidgetReadings(widget, adapters)).widget;
+}
+
+/** `resolveWidget`, with each binding’s reading as the source gave it (`ResolvedBindings.readings`) — what a part’s
+ *  state is named from. */
+export async function resolveWidgetReadings(
+  widget: Widget,
+  adapters: readonly Adapter[]
+): Promise<{ widget: ResolvedWidget; readings: Record<string, unknown> }> {
+  const { values: props, quality, reasons, observedAt, readings } = await resolveBindings({ ...widget.props }, widget.bindings, adapters);
+  const resolved: ResolvedWidget = { type: widget.type, props, quality };
+  if (Object.keys(reasons).length > 0) resolved.reasons = reasons;
+  if (Object.keys(observedAt).length > 0) resolved.observedAt = observedAt;
+  return { widget: resolved, readings };
 }
 
 /** What `resolveBindings` gives back: `values` with every readable binding written in, and per path how it read. */
@@ -122,6 +131,9 @@ export interface ResolvedBindings {
   quality: Record<string, ConnectionQuality>;
   reasons: Record<string, QualityReason>;
   observedAt: Record<string, string>;
+  /** Per path, the value read from the source — before the binding’s `map` and before `accept` — for the readings
+   *  that had one (`live` or `stale`). What a state is named from (`StateRule.from`). */
+  readings: Record<string, unknown>;
 }
 
 /**
@@ -139,6 +151,7 @@ export async function resolveBindings(
   const quality: Record<string, ConnectionQuality> = {};
   const reasons: Record<string, QualityReason> = {};
   const observedAt: Record<string, string> = {};
+  const readings: Record<string, unknown> = {};
   const props = values;
 
   const bindingEntries = Object.entries(bindings ?? {});
@@ -155,6 +168,7 @@ export async function resolveBindings(
         // `stale` is the last-known value by definition. A `disconnected` reading has none — any
         // `value` it carries is meaningless — so the author's placeholder stays.
         if (resolved.quality !== 'disconnected') {
+          readings[propPath] = resolved.value;
           const value = accept(propPath, binding.map ? applyValueMap(binding.map, resolved.value) : resolved.value);
           if (value !== undefined) setPath(props, propPath, value);
         }
@@ -166,7 +180,7 @@ export async function resolveBindings(
       }
     })
   );
-  return { values: props, quality, reasons, observedAt };
+  return { values: props, quality, reasons, observedAt, readings };
 }
 
 /** The value `map` gives `value` (`Binding.map`): the entry for the value's text when it is a

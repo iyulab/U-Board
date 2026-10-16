@@ -20,6 +20,9 @@ export type ViewKind = ViewDocument['kind'];
 export interface Placed {
   id: string;
   widget: Widget;
+  /** The states it can be in, read from one of its widget’s bindings, and how each is shown — see `StateRule`.
+   *  Absent: it has no states. */
+  states?: StateRule;
 }
 
 /** A canvas view: widgets placed by position over a background, optionally joined by connectors. */
@@ -329,18 +332,45 @@ export interface Binding {
  *    a JSON object key can name any of them.
  * 2. `ranges` — a number (or text that reads as one, `"92.5"`) takes the first range it falls in.
  * 3. `otherwise` — or, when there is none, the value passes through unchanged, the way the raw
- *    reading would have. */
-export interface ValueMap {
-  values?: Record<string, unknown>;
-  ranges?: ValueRange[];
-  otherwise?: unknown;
+ *    reading would have. `V` is what it gives — anything a prop takes, or a state’s name (`StateRule`). */
+export interface ValueMap<V = unknown> {
+  values?: Record<string, V>;
+  ranges?: ValueRange<V>[];
+  otherwise?: V;
 }
 
 /** A band of numbers and the value a prop takes for it: from `min` up to but not including `max`,
  * so adjacent ranges meet without overlapping — `{ min: 70, max: 80 }` then `{ min: 80 }` reads
  * "70 or more" and "80 or more". A missing bound leaves that end open; at least one is given. */
-export interface ValueRange {
+export interface ValueRange<V = unknown> {
   min?: number;
   max?: number;
-  value: unknown;
+  value: V;
+}
+
+/**
+ * The states a placed widget can be in — a pump’s `running`, `stopped`, `fault` — and how the board shows each.
+ * The state is named from the reading of one of the widget’s own bindings (`from`, a key of `widget.bindings`): the
+ * source’s value, before that binding’s `map`, looked up in `map` as a prop’s value map is (`values`, then `ranges`,
+ * then `otherwise`). A reading the map names nothing for is no state — not the reading itself — and so is a binding
+ * that read no value. A state is computed from the current reading alone; it remembers nothing.
+ */
+export interface StateRule {
+  from: string;
+  map: ValueMap<string>;
+  /** How each state is shown, by name. A state without one is still named — in the board state, on the part for
+   *  assistive technology — and drawn as usual. */
+  looks?: Record<string, StateLook>;
+}
+
+/** How a part is shown while it is in a state. Separate from how it shows its connection quality (the frame’s border):
+ *  a look draws around the frame, so the two never take each other’s place. */
+export interface StateLook {
+  /** A ring around the part in this colour — the forms a decoration colour takes. */
+  outline?: string;
+  /** The ring (or the part, without one) blinks — for a state that asks for attention. Not where a reader asks for
+   *  reduced motion. Needs the default stylesheet; without it the part does not blink. */
+  blink?: boolean;
+  /** The part is not drawn while in this state. Connectors to it still are. */
+  hidden?: boolean;
 }

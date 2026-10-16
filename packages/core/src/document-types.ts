@@ -19,6 +19,8 @@ export type {
   Binding,
   ValueMap,
   ValueRange,
+  StateRule,
+  StateLook,
   Shape,
   RectShape,
   TextShape,
