@@ -21,12 +21,20 @@ do when upgrading. Each release's notes carry its section.
 ### Added
 
 - **Undo and Redo** in the editor; a node or decoration the editor adds is selected at once.
-- A node without a box takes the size of the element it places.
-- `look` (MCP) answers the advice that still stands with its picture.
+- **Symbols in the editor** — a board's symbols listed beside its elements, each with how often it is placed, made
+  and edited there with a preview; a frame's name can take a colour of its own.
+- `look` (MCP) answers the advice that still stands with its picture, and the AI rules teach how a symbol's parts are
+  styled; a JSON Patch that adds under a missing part says to add that part first.
 - **`UBOARD_ELEMENT_FRAME_ORIGIN`** — serve each script element definition's frames from an origin of its own
   (`https://*.frames.example.com`, wildcard DNS and certificate), so in Chrome and Edge an element whose code never
   yields does not stop the board's other script elements. The frame hosts answer element frames only.
 - The grid editor moves an item dragged onto another.
+
+### Changed
+
+- **A node without a box takes the size of the element it places** (its `size`), as an image takes its own; other
+  nodes stay 160 × 100. When upgrading: a saved board whose element nodes give no `width`/`height` draws them at the
+  element's size — give such a node a box to keep it as it was.
 
 ## [0.6.0] - 2026-10-16
 
