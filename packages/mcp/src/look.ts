@@ -1,12 +1,12 @@
 import type { Browser, Page } from 'playwright-core';
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, getByPointer, nodeSize, type ViewDocument } from '@iyulab/u-board/domain';
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, expandComponents, getByPointer, instancePartId, nodeSize, type ViewDocument } from '@iyulab/u-board/domain';
 import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
 
 /** What `look` is asked for: a saved board, optionally one part of it, optionally on the other paper. */
 export interface LookRequest {
   board: string;
-  /** A JSON Pointer to a node, grid item, connector or decoration ("/nodes/3", "/items/0", "/connectors/2",
-   *  "/decorations/5") — only that part. */
+  /** A JSON Pointer to a node, grid item, connector, decoration or component instance ("/nodes/3", "/items/0",
+   *  "/connectors/2", "/decorations/5", "/instances/1") — only that part. */
   focus?: string;
   appearance?: 'light' | 'dark';
   width: number;
@@ -24,7 +24,8 @@ export interface LookReport {
   /** How big the board was drawn: scene px per screen px (1 = actual size), and the screen size of the picture. */
   scale?: number;
   picture: { width: number; height: number };
-  /** Parts that did not draw as written: an element's error or notice, a widget's content running past its box. */
+  /** Parts that did not draw as written: an element's error or notice, a widget's content running past its box. A part
+   *  a component instance draws is reported at its node in the component, naming the instance. */
   problems: Array<{ path?: string; message: string }>;
   /** How current the bound values are: how many parts — nodes, grid items, connectors — show each quality short of
    *  live (`stale`, `disconnected`). */
@@ -85,7 +86,7 @@ export class BrowserLooker implements Looker {
         ratio: request.focus ? 2 : 1,
         placed: placedParts(document),
         limit: MAX_CONTRAST_PROBLEMS,
-      });
+      }).then(found => found.map(problem => inDocument(document, problem)));
       return {
         image: png.toString('base64'),
         report: {
@@ -126,7 +127,7 @@ interface Scale {
 /** How the viewer placed the scene, read off a drawn node: its screen box against its scene box. */
 async function sceneScale(page: Page, document: ViewDocument): Promise<Scale | undefined> {
   if (document.kind !== 'canvas') return undefined;
-  for (const node of document.nodes) {
+  for (const node of expandComponents(document).nodes) {
     const box = await page.locator(`[data-node-id="${cssString(node.id)}"]`).first().boundingBox().catch(() => null);
     if (!box) continue;
     const factor = box.width / nodeSize(node, document.elements).width;
@@ -141,9 +142,10 @@ const MAX_CONTRAST_PROBLEMS = 10;
 
 async function focusClip(page: Page, document: ViewDocument, focus: string, scale: Scale | undefined) {
   const part = getByPointer(document, focus) as { id?: string; type?: string; x?: number; y?: number; width?: number; height?: number; text?: string; fontSize?: number } | undefined;
-  if (!part || typeof part !== 'object') throw new Error(`nothing at ${focus} — focus a node ("/nodes/3"), a grid item ("/items/0"), a connector ("/connectors/2") or a decoration ("/decorations/5")`);
+  if (!part || typeof part !== 'object') throw new Error(`nothing at ${focus} — focus a node ("/nodes/3"), a grid item ("/items/0"), a connector ("/connectors/2"), a decoration ("/decorations/5") or an instance ("/instances/1")`);
   let box: { x: number; y: number; width: number; height: number } | null = null;
   if (focus.startsWith('/nodes/') && part.id) box = await page.locator(`[data-node-id="${cssString(part.id)}"]`).first().boundingBox();
+  else if (/^\/instances\/\d+$/.test(focus) && part.id) box = await unionBox(page.locator(`[data-node-id^="${cssString(instancePartId(part.id, ''))}"]`));
   else if (focus.startsWith('/items/') && part.id) box = await page.locator(`[data-item-id="${cssString(part.id)}"]`).first().boundingBox();
   else if (focus.startsWith('/connectors/') && part.id) box = await page.locator(`[data-connector-id="${cssString(part.id)}"]`).first().boundingBox();
   else if (focus.startsWith('/decorations/') && scale && typeof part.x === 'number' && typeof part.y === 'number') {
@@ -160,16 +162,41 @@ async function focusClip(page: Page, document: ViewDocument, focus: string, scal
   return { x, y, width: Math.min(viewport.width - x, box.width + 2 * margin), height: Math.min(viewport.height - y, box.height + 2 * margin) };
 }
 
-/** Elements that failed or were held back, and widgets whose content runs past their box. */
-async function problems(page: Page, doc: ViewDocument): Promise<LookReport['problems']> {
-  return page.evaluate(findProblems, placedParts(doc));
+/** The box around every element `parts` finds — an instance's parts, together. */
+async function unionBox(parts: ReturnType<Page['locator']>): Promise<{ x: number; y: number; width: number; height: number } | null> {
+  const boxes = (await Promise.all((await parts.all()).map(part => part.boundingBox()))).filter(box => box !== null);
+  if (boxes.length === 0) return null;
+  const x = Math.min(...boxes.map(b => b.x));
+  const y = Math.min(...boxes.map(b => b.y));
+  return { x, y, width: Math.max(...boxes.map(b => b.x + b.width)) - x, height: Math.max(...boxes.map(b => b.y + b.height)) - y };
 }
 
-/** Each node or grid item, with where it is in the document and the attribute its frame carries on the page. */
-function placedParts(doc: ViewDocument): Array<{ id: string; path: string; attr: string }> {
-  return doc.kind === 'canvas'
-    ? doc.nodes.map((n, i) => ({ id: n.id, path: `/nodes/${i}`, attr: 'data-node-id' }))
-    : doc.items.map((n, i) => ({ id: n.id, path: `/items/${i}`, attr: 'data-item-id' }));
+/** Elements that failed or were held back, and widgets whose content runs past their box. */
+async function problems(page: Page, doc: ViewDocument): Promise<LookReport['problems']> {
+  return (await page.evaluate(findProblems, placedParts(doc))).map(problem => inDocument(doc, problem));
+}
+
+/** Each node or grid item the viewer draws, with where it is and the attribute its frame carries on the page — a part a
+ *  component instance draws at `/instances/<i>/<part id>`, which `inDocument` turns into a place in the document. */
+export function placedParts(doc: ViewDocument): Array<{ id: string; path: string; attr: string }> {
+  if (doc.kind !== 'canvas') return doc.items.map((n, i) => ({ id: n.id, path: `/items/${i}`, attr: 'data-item-id' }));
+  const own = doc.nodes.map((n, i) => ({ id: n.id, path: `/nodes/${i}`, attr: 'data-node-id' }));
+  const drawn = (doc.instances ?? []).flatMap((instance, i) =>
+    (doc.components?.[instance.component]?.nodes ?? []).map(node => ({ id: instancePartId(instance.id, node.id), path: `/instances/${i}/${node.id}`, attr: 'data-node-id' }))
+  );
+  return [...own, ...drawn];
+}
+
+/** A problem with a part an instance draws, at the part's node in the component — what to change to fix it — naming
+ *  the instance it was seen in. */
+export function inDocument<P extends { path?: string; message: string }>(doc: ViewDocument, problem: P): P {
+  const drawn = /^\/instances\/(\d+)\/(.+)$/.exec(problem.path ?? '');
+  if (!drawn || doc.kind !== 'canvas') return problem;
+  const instance = doc.instances?.[Number(drawn[1])];
+  const nodes = instance ? doc.components?.[instance.component]?.nodes : undefined;
+  if (!instance || !nodes) return problem;
+  const component = instance.component.replace(/~/g, '~0').replace(/\//g, '~1');
+  return { ...problem, path: `/components/${component}/nodes/${nodes.findIndex(n => n.id === drawn[2])}`, message: `${problem.message} — in the instance "${instance.id}" (/instances/${drawn[1]})` };
 }
 
 async function quality(page: Page): Promise<Record<string, number>> {

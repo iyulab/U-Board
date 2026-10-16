@@ -111,6 +111,8 @@ describe('u-board-mcp', () => {
     expect((await call('describe', { topic: 'rules' })).value).toContain('## JSON Patch');
     expect((await call('describe', { topic: 'elements' })).value).toContain('graphic contrast of 3:1');
     expect((await call('describe', { topic: 'canvas' })).value).toContain('top-left of its box');
+    expect((await call('describe', { topic: 'components' })).value).toContain('"<instance id>/<part id>"');
+    expect((await call('describe', { topic: 'schema', pointer: '/$defs/instance' })).value.required).toEqual(['id', 'component', 'x', 'y', 'anchored']);
     expect((await call('describe', { topic: 'schema', pointer: '/$defs/elementDefinition' })).value.required).toEqual(['render']);
     const lost = await call('describe', { topic: 'schema', pointer: '/properties' });
     expect(lost.isError).toBe(true);
@@ -130,7 +132,7 @@ describe('u-board-mcp', () => {
   it('keeps every topic within its budget — the answer an assistant reads before it can write', async () => {
     const { value: topics } = await call('describe');
     expect(JSON.stringify(topics).length).toBeLessThan(1200);
-    for (const topic of ['rules', 'canvas', 'data', 'elements']) {
+    for (const topic of ['rules', 'canvas', 'data', 'elements', 'components']) {
       expect((await call('describe', { topic })).value.length, topic).toBeLessThan(4000);
     }
     expect(JSON.stringify((await call('describe', { topic: 'widgets' })).value).length).toBeLessThan(4000);

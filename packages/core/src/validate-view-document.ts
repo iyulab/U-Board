@@ -130,7 +130,8 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
   }
   for (const id of doc.instanceNodeIds) nodeIds.add(id);
   if (doc.array(value, ['connectors'])) {
-    (value.connectors as unknown[]).forEach((connector, i) => checkConnector(doc, connector, ['connectors', String(i)], nodeIds, '/nodes'));
+    const where = doc.instanceNodeIds.length > 0 ? '/nodes or of an instance (<instance id>/<part id>)' : '/nodes';
+    (value.connectors as unknown[]).forEach((connector, i) => checkConnector(doc, connector, ['connectors', String(i)], nodeIds, where));
   }
   if (value.decorations !== undefined && doc.array(value, ['decorations'])) {
     (value.decorations as unknown[]).forEach((shape, i) => checkShape(doc, shape, ['decorations', String(i)]));

@@ -18,6 +18,7 @@ export const TOPICS: Record<string, string> = {
   canvas: 'A canvas board: coordinates and sizes, connectors, decorations (frames, labels), colours, what draws over what.',
   data: 'Live values: data sources, bindings, picking an item of a list, mapping a source’s words to a prop.',
   elements: 'Elements — what a board draws when no widget does: template (HTML/SVG + CSS) or script (sandboxed frame).',
+  components: 'Components — a group of canvas parts (frame, widgets, lines) defined once and drawn per instance with its own values.',
   widgets: 'The prepared widgets, one line each by category; pass `query` ("list of messages") for only the ones that match.',
   'widget:<type>': 'One prepared widget in full, its examples in board form — e.g. "widget:gauge".',
   schema: 'The board document JSON Schema; pass `pointer` for one part, e.g. "/$defs/elementDefinition".',
@@ -42,7 +43,7 @@ const RULES = `# Writing a U-Board board
 
 ## Kinds
 - grid: { kind: "grid", items: [{ id, span?: 1-12 (4), spanMedium?: 1-6, height?: px, widget }] } — an ordinary dashboard, laid out in order to the screen's width.
-- canvas: { kind: "canvas", background: { image? }, nodes: [{ id, x, y, width?, height?, anchored, widget }], connectors: [], decorations? } — placed by coordinates, over a drawing or plan. describe("canvas") before drawing one.
+- canvas: { kind: "canvas", background: { image? }, nodes: [{ id, x, y, width?, height?, anchored, widget }], connectors: [], decorations?, components?, instances? } — placed by coordinates, over a drawing or plan. describe("canvas") before drawing one; describe("components") when the same group of parts repeats.
 - Every id is unique in the document. appearance: "light" (default) | "dark". accent: a colour — the board's primary colour (a gauge's arc, the first series, a tank's fill, --u-widget-primary in an element) in place of the theme's; set it to match the reference instead of fixing colours in widgets or elements.
 - The format is closed: a field it does not have is refused, and the issue lists the fields that place takes.
 
@@ -135,6 +136,28 @@ symbols    = { "<name>": { viewBox?, markup } } — top level: SVG drawings any 
 - A library is loaded from an origin in resources (e.g. a <script src> it adds, or import()), and only where the installation allows that origin.
 - The frame is drawn from the saved board — save before checking it.`;
 
+const COMPONENTS = `# Components (canvas)
+
+Use one when the same group of parts — a frame, its widgets, the lines between them — is drawn twice or more (a card per
+machine). A group drawn once: draw its parts directly.
+
+components = { "<name>": { params?, nodes, connectors?, decorations? } } — top level.
+  params:      { type: "object", properties: { "<param>": { type, default? } }, required?: [...] } — as an element's props.
+  nodes:       [{ id, x, y, width?, height?, caption?, widget, states? }] — no anchored; x, y from the component's own 0, 0.
+  connectors:  between its own nodes. decorations: frames and texts, from its 0, 0.
+instances  = [{ id, component, x, y, anchored, params: { "<param>": value } }] — draws the component with its 0, 0 at x, y.
+
+- "{{param}}" in any text of its parts — a label, a prop, a caption, a binding's ref ("/machines/{{machine}}") — takes the
+  instance's value. A text that is only "{{max}}" takes the value itself (a number stays a number). Declare every
+  parameter its parts use; an instance gives a value to each one without a default, and nothing else.
+- Each part an instance draws has the id "<instance id>/<part id>": a board connector joins it, a trigger or focus names
+  it, board_state reports it ("press-2/temp"). No "/" in an instance's or a part's id.
+- Change the component once to change every instance ("/components/<name>/nodes/0/width"); move an instance by its x, y.
+  A part an instance draws is not edited on its own — give the component a parameter instead.
+- An issue in a component is at its path there, naming the instance it was found for: "… — for the instance "b"
+  (/instances/1)". look reports a drawn part the same way; look({ focus: "/instances/1" }) shows one instance.
+- get_board answers components and instances as written; board_state and look answer the parts as drawn.`;
+
 /** One part of the schema — and when there is nothing there, the pointers that do lead somewhere. */
 function schemaPart(pointer: string): unknown {
   try {
@@ -176,6 +199,7 @@ export function describeTopic(topic: string | undefined, pointer: string | undef
   if (topic === 'canvas') return CANVAS;
   if (topic === 'data') return DATA;
   if (topic === 'elements') return ELEMENTS;
+  if (topic === 'components') return COMPONENTS;
   if (topic === 'schema') return pointer ? schemaPart(pointer) : documentSchema();
   if (topic === 'widgets') return widgetCatalog(query);
   if (topic.startsWith('widget:')) return widgetDetail(topic.slice('widget:'.length));

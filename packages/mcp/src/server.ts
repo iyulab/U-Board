@@ -227,7 +227,7 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
           'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box, values not live) and the advice the board’s saving gave (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a node, grid item, connector or decoration to see it up close — and only its problems and advice.',
         inputSchema: z.strictObject({
           board: boardId,
-          focus: z.string().max(200).optional().describe('A JSON Pointer to one part: "/nodes/3", "/items/0", "/connectors/2", "/decorations/5".'),
+          focus: z.string().max(200).optional().describe('A JSON Pointer to one part: "/nodes/3", "/items/0", "/connectors/2", "/decorations/5", or a component instance, "/instances/1".'),
           appearance: z.enum(['light', 'dark']).optional().describe('Draw it on this paper instead of the board’s own — to check the other one.'),
           width: z.number().int().min(320).max(2560).optional().describe('The screen width, px (1600).'),
           height: z.number().int().min(240).max(1600).optional().describe('The screen height, px (900).'),

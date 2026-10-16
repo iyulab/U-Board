@@ -6,6 +6,18 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `describe("components")` teaches components — a group of canvas parts defined once and drawn per instance with its own
+  parameter values: when to use one, `{{param}}`, the `<instance id>/<part id>` names, where an issue is reported.
+- `look` checks the parts component instances draw, reporting a problem at the part's node in the component and naming
+  the instance; `focus: "/instances/1"` shows one instance.
+
+### Fixed
+
+- Widget advice judges a component's widgets as each instance draws them, its parameters filled in, rather than the
+  `{{name}}` they are written with.
+
 ## [0.9.0] - 2026-10-17
 
 ### Added

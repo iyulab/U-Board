@@ -111,6 +111,13 @@ describe('a component board, validated', () => {
     expect(validateViewDocument(doc)).toEqual([{ path: '/components/card/decorations/0/text', message: '{{line}}: the component declares no parameter "line" — it has: machine, max' }]);
   });
 
+  it('says a board connector may join an instance’s part, when it joins nothing', () => {
+    const doc = board({ connectors: [{ id: 'feed', fromNodeId: 'hall', toNodeId: 'press-3/temp' }] });
+    expect(validateViewDocument(doc)).toEqual([
+      { path: '/connectors/0/toNodeId', message: 'no node has the id "press-3/temp" — a connector joins two nodes of /nodes or of an instance (<instance id>/<part id>)' },
+    ]);
+  });
+
   it('refuses a part id another part of the board has, at the instance', () => {
     const doc = board({ nodes: [{ id: 'press-1/temp', x: 0, y: 0, anchored: false, widget: { type: 'status' } }] });
     expect(validateViewDocument(doc)).toEqual([

@@ -33,6 +33,26 @@ describe('widgetAdvice', () => {
     expect(widgetAdvice(doc)).toEqual([]);
   });
 
+  it('checks a component’s widgets as each instance draws them, once for the same advice, at the component', () => {
+    const doc = {
+      kind: 'canvas',
+      background: {},
+      nodes: [],
+      connectors: [],
+      components: { card: { params: { type: 'object', properties: { max: {} } }, nodes: [{ id: 'g', x: 0, y: 0, widget: { type: 'gauge', props: { data: { value: 1 }, options: { max: '{{max}}' } } } }] } },
+      instances: [
+        { id: 'a', component: 'card', x: 0, y: 0, anchored: false, params: { max: 10 } },
+        { id: 'b', component: 'card', x: 0, y: 0, anchored: false, params: { max: 'ten' } },
+        { id: 'c', component: 'card', x: 0, y: 0, anchored: false, params: { max: 'ten' } },
+      ],
+    };
+    expect(widgetAdvice(doc)).toEqual([
+      { path: '/components/card/nodes/0/widget/props', message: 'options.max should be a number, not "ten" — for the instance "b" (/instances/1)' },
+    ]);
+    // A patch adding the component alone: what a parameter fills is not judged as its "{{name}}".
+    expect(widgetAdvice(doc.components, '/components')).toEqual([]);
+  });
+
   it('checks the widgets a patch operation adds, at the path it adds them', () => {
     expect(widgetAdvice(node({ type: 'gauge', props: { data: { value: 1 }, options: { max: '9' } } }), '/nodes/-')).toEqual([
       { path: '/nodes/-/widget/props', message: 'options.max should be a number, not "9"' },
