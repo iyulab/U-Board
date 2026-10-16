@@ -34,13 +34,14 @@ import { DecorationPanel } from './DecorationPanel.js';
 import { ConnectorPanel } from './ConnectorPanel.js';
 import { InstancePanel } from './InstancePanel.js';
 import { partNamer } from './part-names.js';
-import { canMakeComponent, detachInstance, makeComponent, newComponentName, newInstanceId } from './component-editing.js';
+import { canMakeComponent, componentBoard, detachInstance, makeComponent, newComponentName, newInstanceId, setComponentParams, withComponentBoard } from './component-editing.js';
+import { ComponentPanel } from './ComponentPanel.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { sizedNodes } from '../node-size.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
-import type { BoardAppearance, Connector, Node, ReferencePoint, CanvasView, Widget, Shape } from '../view-document.js';
+import type { BoardAppearance, Connector, Node, ReferencePoint, CanvasView, PropsSchema, Widget, Shape } from '../view-document.js';
 import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
 import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
@@ -58,7 +59,67 @@ import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
  * and stays fitted as it resizes until the author pans or zooms; "Fit to view" restores that, and a
  * new node or decoration is placed in view.
  */
-export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, onFileError, adapters, width, height, connectorLabels, labels, clock, triggerHosting }: KindEditorProps<CanvasView>) {
+export function CanvasAuthoring(props: KindEditorProps<CanvasView>) {
+  const { doc, updateDoc } = props;
+  // The component being edited, if one is: the same editor, on the component as a board of its own (`componentBoard`),
+  // each edit written back into the board (`withComponentBoard`) — so Undo, Save and the history are the board's.
+  const [editing, setEditing] = useState<string | null>(null);
+  const board = useMemo(() => (editing ? componentBoard(doc, editing) : null), [doc, editing]);
+  // Undone past its making, the component is gone: back to the board.
+  useEffect(() => {
+    if (editing && !board) setEditing(null);
+  }, [editing, board]);
+  const updateComponent = useCallback(
+    (update: (current: CanvasView) => CanvasView) => {
+      if (!editing) return;
+      updateDoc(prev => {
+        const current = componentBoard(prev, editing);
+        return current ? withComponentBoard(prev, editing, update(current)) : prev;
+      });
+    },
+    [editing, updateDoc]
+  );
+  if (editing && board) {
+    const scope: ComponentScope = {
+      name: editing,
+      params: doc.components?.[editing]?.params,
+      instances: (doc.instances ?? []).filter(instance => instance.component === editing).length,
+      onParamsChange: params => updateDoc(prev => setComponentParams(prev, editing, params)),
+      onDone: () => setEditing(null),
+    };
+    return <CanvasEditor key={`component:${editing}`} {...props} doc={board} updateDoc={updateComponent} component={scope} />;
+  }
+  return <CanvasEditor key="board" {...props} onEditComponent={setEditing} />;
+}
+
+/** A component being edited — what the editor needs of it besides its parts. */
+interface ComponentScope {
+  name: string;
+  params: PropsSchema | undefined;
+  instances: number;
+  onParamsChange: (params: PropsSchema | undefined) => void;
+  onDone: () => void;
+}
+
+/** The editor itself — of a board, or of a component as a board of its own (`component`). */
+function CanvasEditor({
+  doc,
+  updateDoc,
+  mode,
+  onModeChange,
+  documentActions,
+  fileError,
+  onFileError,
+  adapters,
+  width,
+  height,
+  connectorLabels,
+  labels,
+  clock,
+  triggerHosting,
+  component,
+  onEditComponent,
+}: KindEditorProps<CanvasView> & { component?: ComponentScope; onEditComponent?: (name: string) => void }) {
   // Read when a result is drawn, not watched: a new function on every render must not re-resolve.
   const readClock = useEffectEvent(() => clock());
   // The board as its bindings last resolved, and when — drawn below as a viewer draws it.
@@ -355,6 +416,15 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
 
   return (
     <>
+      {component && (
+        // Always in sight while a component is edited, whatever its panel shows.
+        <div className="ub-authoring__scope" role="status" style={TOOLBAR_STYLE}>
+          <span>{labels.componentEditing.replace('{component}', component.name)}</span>
+          <button type="button" className="ub-action" onClick={component.onDone}>
+            {labels.componentDone}
+          </button>
+        </div>
+      )}
       <div className="ub-authoring__toolbar" style={TOOLBAR_STYLE}>
         <div className="ub-authoring__group" style={GROUP_STYLE}>
           <button type="button" className="ub-action" onClick={handleAddNode}>
@@ -369,9 +439,11 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
           <button type="button" className="ub-action" onClick={handleConnect} disabled={!pair} title={pair ? undefined : labels.connectHint}>
             {labels.addConnector}
           </button>
-          <button type="button" className="ub-action" onClick={handleMakeComponent} disabled={!canMake} title={canMake ? undefined : labels.makeComponentHint}>
-            {labels.makeComponent}
-          </button>
+          {!component && (
+            <button type="button" className="ub-action" onClick={handleMakeComponent} disabled={!canMake} title={canMake ? undefined : labels.makeComponentHint}>
+              {labels.makeComponent}
+            </button>
+          )}
           <button type="button" className="ub-action" onClick={handleDelete} disabled={selectedIds.length === 0}>
             {labels.deleteSelected}
           </button>
@@ -451,6 +523,7 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               instance={selectedInstance}
               component={doc.components?.[selectedInstance.component]}
               onParamChange={(name, value) => updateDoc(prev => setInstanceParam(prev, selectedInstance.id, name, value))}
+              onEditComponent={onEditComponent && (() => onEditComponent(selectedInstance.component))}
               onDetach={() => {
                 updateDoc(prev => detachInstance(prev, selectedInstance.id));
                 designerRef.current?.select([]);
@@ -465,12 +538,22 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               connectorLabels={connectorLabels}
               onChange={handleWidgetChange}
               onPartChange={handlePartChange}
-              triggers={triggerEditing(doc, updateDoc, labels.locale)}
+              triggers={component ? undefined : triggerEditing(doc, updateDoc, labels.locale)}
               background={doc.background}
               onNodeChange={handleNodeChange}
               elements={doc.elements}
               labels={labels}
               clock={clock}
+            />
+          ) : component ? (
+            <ComponentPanel
+              key={component.name}
+              name={component.name}
+              params={component.params}
+              instances={component.instances}
+              onParamsChange={component.onParamsChange}
+              onDone={component.onDone}
+              labels={labels}
             />
           ) : (
             <BoardPanel
@@ -500,8 +583,9 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               labels={labels}
             />
           )}
-          {selectedIds.length === 0 && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
-          {selectedIds.length === 0 && <SymbolsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
+          {/* The board's elements and symbols are edited on the board, where every use of them is. */}
+          {selectedIds.length === 0 && !component && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
+          {selectedIds.length === 0 && !component && <SymbolsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
         </div>
       </div>
     </>

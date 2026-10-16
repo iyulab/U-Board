@@ -347,6 +347,18 @@ export interface UBoardLabels {
   /** Draws the instance as parts of the board's own, and the hint saying what that does. */
   detachInstance: string;
   detachInstanceHint: string;
+  /** Opens the component the instance draws, to edit it as a board of its own. */
+  editComponent: string;
+
+  // Component panel — while a component is edited; `{component}` names it, `{count}` how many instances draw it
+  componentHeading: string;
+  componentInstances: string;
+  componentParams: string;
+  componentParamsHint: string;
+  componentParamsInvalid: string;
+  componentDone: string;
+  /** Said above the editor while a component is edited. */
+  componentEditing: string;
 
   // Connector (line) panel — `{from}`/`{to}` name the nodes it joins
   connectorHeading: string;
@@ -635,6 +647,15 @@ export const DEFAULT_LABELS: UBoardLabels = {
   instanceEditHint: 'Drag it to move it. What it draws is the component’s — a change there reaches every instance.',
   detachInstance: 'Detach into parts',
   detachInstanceHint: 'Draws it as the board’s own parts, its values filled in — they no longer follow the component.',
+  editComponent: 'Edit component',
+
+  componentHeading: 'Component "{component}"',
+  componentInstances: 'Drawn by {count} instance(s) — a change here reaches every one.',
+  componentParams: 'Parameters (JSON Schema)',
+  componentParamsHint: 'In any text of its parts, {{name}} takes a parameter’s value; a text that is only {{name}} takes the value itself.',
+  componentParamsInvalid: 'Expected a JSON object schema: { "type": "object", "properties": { … } }',
+  componentDone: 'Back to the board',
+  componentEditing: 'Editing the component "{component}" — every instance draws it.',
 
   connectorHeading: 'Line',
   connectorEnds: '{from} → {to}',

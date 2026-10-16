@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canMakeComponent, detachInstance, makeComponent, newComponentName, newInstanceId } from './component-editing';
+import { canMakeComponent, componentBoard, detachInstance, makeComponent, newComponentName, newInstanceId, setComponentParams, withComponentBoard } from './component-editing';
 import { validateViewDocument } from '../validate-view-document';
 import { expandComponents } from '../components';
 import type { CanvasView, Node } from '../view-document';
@@ -90,5 +90,44 @@ describe('detachInstance', () => {
     expect(detached.decorations?.map(d => d.id)).toEqual(['c1-frame']);
     expect(detached.triggers?.[0].on).toEqual({ event: 'click', node: 'c1-temp' });
     expect(validateViewDocument(detached, { strict: true })).toEqual([]);
+  });
+});
+
+describe('editing a component as a board of its own', () => {
+  const made = () => {
+    const doc = makeComponent(board(), ['temp', 'speed', 'frame'], 'card', 'c1');
+    return { ...doc, instances: [...doc.instances!, { id: 'c2', component: 'card', x: 600, y: 80, anchored: false }] };
+  };
+
+  it('opens the component as a board — its parts from its origin, nodes free — and writes back what it holds', () => {
+    const doc = made();
+    const sub = componentBoard(doc, 'card')!;
+    expect(sub.nodes.map(n => [n.id, n.x, n.y, n.anchored])).toEqual([
+      ['temp', 10, 20, false],
+      ['speed', 10, 140, false],
+    ]);
+    const moved = { ...sub, nodes: sub.nodes.map(n => (n.id === 'temp' ? { ...n, x: 40 } : n)) };
+    const back = withComponentBoard(doc, 'card', moved);
+    expect(back.components?.card.nodes[0]).toEqual({ id: 'temp', x: 40, y: 20, widget: { type: 'gauge' } });
+    expect(back.nodes).toEqual(doc.nodes);
+    expect(componentBoard(doc, 'nothing')).toBeNull();
+  });
+
+  it('takes a part removed from the component out of every instance, with the board’s lines and triggers to it', () => {
+    const doc = made();
+    doc.connectors.push({ id: 'feed2', fromNodeId: 'hall', toNodeId: 'c2/temp' });
+    const sub = componentBoard(doc, 'card')!;
+    const back = withComponentBoard(doc, 'card', { ...sub, nodes: sub.nodes.filter(n => n.id !== 'temp'), connectors: [] });
+    expect(back.components?.card.nodes.map(n => n.id)).toEqual(['speed']);
+    expect(back.connectors.map(c => c.id)).toEqual([]);
+    // The click on c1/temp went; the "only when c1/speed" trigger stays.
+    expect(back.triggers?.map(t => t.on)).toEqual([{ event: 'open' }]);
+    expect(validateViewDocument(back, { strict: true })).toEqual([]);
+  });
+
+  it('sets the parameters a component declares, and takes them away', () => {
+    const doc = setComponentParams(made(), 'card', { type: 'object', properties: { name: { type: 'string' } } });
+    expect(doc.components?.card.params).toEqual({ type: 'object', properties: { name: { type: 'string' } } });
+    expect(setComponentParams(doc, 'card', undefined).components?.card).not.toHaveProperty('params');
   });
 });

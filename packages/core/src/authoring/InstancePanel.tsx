@@ -12,6 +12,8 @@ export interface InstancePanelProps {
   onParamChange: (name: string, value: unknown) => void;
   /** Draws it as parts of the board's own instead. */
   onDetach?: () => void;
+  /** Opens the component it draws, to edit. */
+  onEditComponent?: () => void;
   labels?: UBoardLabels;
 }
 
@@ -20,7 +22,7 @@ export interface InstancePanelProps {
  * parameters, as an element's props are edited. Where it stands is dragged on the canvas; what it draws is the
  * component's, changed in the component for every instance at once.
  */
-export function InstancePanel({ instance, component, onParamChange, onDetach, labels = DEFAULT_LABELS }: InstancePanelProps) {
+export function InstancePanel({ instance, component, onParamChange, onDetach, onEditComponent, labels = DEFAULT_LABELS }: InstancePanelProps) {
   const { fields, otherOptions } = useMemo(() => schemaFields(component?.params, 'params'), [component]);
   return (
     <div className="ub-panel ub-panel--instance">
@@ -38,6 +40,11 @@ export function InstancePanel({ instance, component, onParamChange, onDetach, la
       )}
       {otherOptions > 0 && <p className="ub-panel__hint">{labels.instanceOtherParams.replace('{count}', String(otherOptions))}</p>}
       <p className="ub-panel__hint">{labels.instanceEditHint}</p>
+      {onEditComponent && component && (
+        <button type="button" className="ub-action" onClick={onEditComponent}>
+          {labels.editComponent}
+        </button>
+      )}
       {onDetach && component && (
         <>
           <button type="button" className="ub-action" onClick={onDetach}>

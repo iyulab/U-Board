@@ -259,6 +259,15 @@ export const KO_LABELS: UBoardLabels = {
   instanceEditHint: '끌어서 옮깁니다. 그리는 내용은 컴포넌트의 것이라, 거기서 고치면 모든 인스턴스에 반영됩니다.',
   detachInstance: '부품으로 풀기',
   detachInstanceHint: '값을 채운 보드 부품으로 그립니다 — 더는 컴포넌트를 따르지 않습니다.',
+  editComponent: '컴포넌트 편집',
+
+  componentHeading: '컴포넌트 "{component}"',
+  componentInstances: '인스턴스 {count}개가 그립니다 — 여기서 고치면 모두에 반영됩니다.',
+  componentParams: '매개변수(JSON Schema)',
+  componentParamsHint: '부품의 글 어디서든 {{name}}은 매개변수 값을 받습니다. 글 전체가 {{name}}이면 값 그대로입니다.',
+  componentParamsInvalid: 'JSON 객체 스키마여야 합니다: { "type": "object", "properties": { … } }',
+  componentDone: '보드로 돌아가기',
+  componentEditing: '컴포넌트 "{component}" 편집 중 — 모든 인스턴스가 이것을 그립니다.',
 
   connectorHeading: '연결선',
   connectorEnds: '{from} → {to}',

@@ -13,6 +13,10 @@ All notable changes to this package are documented here. The format follows
 - The editor makes the selected nodes and frames a component (**Make component**) — the lines between them go with
   them, and an instance draws them where they were, the board's other lines and triggers to them renamed — and draws an
   instance as parts of the board's own again (**Detach into parts**), its values filled in.
+- The editor edits a component as a board of its own (**Edit component** on an instance): its parts on the canvas,
+  its parameters as a JSON Schema in its panel, a bar above the toolbar naming it with the way back — each change
+  written into the board, so every instance draws it and Undo takes it back. A part taken out of it goes from every
+  instance, with the board's lines and triggers to it. The board's elements and symbols stay edited on the board.
 
 ### Fixed
 

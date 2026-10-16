@@ -1,7 +1,7 @@
-import type { CanvasView, ComponentDefinition, ComponentNode, Connector, Shape, Trigger } from '../view-document.js';
+import type { CanvasView, ComponentDefinition, ComponentNode, Connector, PropsSchema, Shape, Trigger } from '../view-document.js';
 import { ELEMENT_NAME } from '../elements/element-type.js';
 import { instancePartId, instanceParts } from '../components.js';
-import { withTriggers } from './trigger-editing.js';
+import { triggersWithout, withTriggers } from './trigger-editing.js';
 
 /** A name no component of `doc` has yet: `component-1`, `component-2`, … */
 export function newComponentName(doc: CanvasView): string {
@@ -90,6 +90,65 @@ export function detachInstance(doc: CanvasView, id: string): CanvasView {
     instances: doc.instances!.filter(i => i.id !== id),
   };
   return withTriggers(board, renameTriggerParts(doc.triggers, renamed));
+}
+
+/**
+ * Component `name` of `doc` as a board of its own, to edit with the board's editor: its parts placed from its origin,
+ * its nodes free, with the board's elements, symbols, tone and accent. `null` when `doc` has no such component.
+ */
+export function componentBoard(doc: CanvasView, name: string): CanvasView | null {
+  const definition = doc.components?.[name];
+  if (!definition) return null;
+  return {
+    kind: 'canvas',
+    background: {},
+    nodes: definition.nodes.map(node => ({ ...node, anchored: false })),
+    connectors: definition.connectors ?? [],
+    ...(definition.decorations && { decorations: definition.decorations }),
+    ...(doc.elements && { elements: doc.elements }),
+    ...(doc.symbols && { symbols: doc.symbols }),
+    ...(doc.appearance && { appearance: doc.appearance }),
+    ...(doc.accent && { accent: doc.accent }),
+  };
+}
+
+/**
+ * `doc` with component `name` made what `board` (a `componentBoard` of it, edited) holds — its parts. The elements
+ * and symbols stay the board's: they are edited on the board, where every use of them is. A part it no longer has
+ * goes from every instance, and so do the board's lines and triggers that named it there.
+ */
+export function withComponentBoard(doc: CanvasView, name: string, board: CanvasView): CanvasView {
+  const definition = doc.components?.[name];
+  if (!definition) return doc;
+  const component: ComponentDefinition = {
+    ...(definition.params && { params: definition.params }),
+    nodes: board.nodes.map(placed => {
+      const { anchored: _anchored, ...node } = placed;
+      return node;
+    }),
+    ...(board.connectors.length > 0 && { connectors: board.connectors }),
+    ...(board.decorations && board.decorations.length > 0 && { decorations: board.decorations }),
+  };
+  const left = new Set(component.nodes.map(node => node.id));
+  const gone = new Set(
+    (doc.instances ?? [])
+      .filter(instance => instance.component === name)
+      .flatMap(instance => definition.nodes.filter(node => !left.has(node.id)).map(node => instancePartId(instance.id, node.id)))
+  );
+  const next: CanvasView = {
+    ...doc,
+    components: { ...doc.components, [name]: component },
+    connectors: gone.size > 0 ? doc.connectors.filter(c => !gone.has(c.fromNodeId) && !gone.has(c.toNodeId)) : doc.connectors,
+  };
+  return gone.size > 0 ? withTriggers(next, triggersWithout(doc.triggers, gone)) : next;
+}
+
+/** `doc` with component `name` taking the parameters `params` declares — none when `undefined`. */
+export function setComponentParams(doc: CanvasView, name: string, params: PropsSchema | undefined): CanvasView {
+  const definition = doc.components?.[name];
+  if (!definition) return doc;
+  const { params: _old, ...rest } = definition;
+  return { ...doc, components: { ...doc.components, [name]: params ? { ...rest, params } : rest } };
 }
 
 /** The board's own nodes and decorations among `ids`, in the board's order. */

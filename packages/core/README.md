@@ -216,6 +216,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 |---|---|
 | `ub-authoring` | The authoring view |
 | `ub-authoring__toolbar`, `ub-authoring__group` | Its toolbar, and each group of related actions in it |
+| `ub-authoring__scope` | Above the toolbar while a component is edited: which one, and the way back to the board |
 | `ub-authoring__appearance` | The board tone picker (light or dark board), with the board's settings in the panel |
 | `ub-authoring__mode` | The Edit / View switch in the toolbar (the chosen button has `aria-pressed="true"`) |
 | `ub-authoring__panes`, `ub-authoring__pane` | The row holding the board and the panel; the board's column |
@@ -224,7 +225,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-authoring__pick`, `ub-authoring__layout-width` | On a grid view's editor: the button over each item that selects it (`aria-pressed` when selected); the Wide / Medium / Narrow layout width switch |
 | `ub-authoring__panel` | The column holding the board, property or decoration panel |
 | `ub-authoring__error`, `ub-authoring__status`, `ub-authoring__source` | A file that could not be used; "resolving"; the document source (`showDocumentSource`) |
-| `ub-panel` (`--board`, `--properties`, `--decoration`, `--connector`, `--instance`, `--item`, `--elements`, `--element`, `--symbols`, `--symbol`) | The board's settings (background, tone, accent — while nothing is selected), a node's, decoration's or connector's properties, a component instance's values, a grid item's layout (its widths, height and place in the order), the board's elements, one element's definition, the board's symbols, or one symbol |
+| `ub-panel` (`--board`, `--properties`, `--decoration`, `--connector`, `--instance`, `--component`, `--item`, `--elements`, `--element`, `--symbols`, `--symbol`) | The board's settings (background, tone, accent — while nothing is selected), a node's, decoration's or connector's properties, a component instance's values, the component being edited (its parameters), a grid item's layout (its widths, height and place in the order), the board's elements, one element's definition, the board's symbols, or one symbol |
 | `ub-panel__heading`, `ub-panel__subheading`, `ub-panel__field`, `ub-panel__hint`, `ub-panel__error` | Its heading, section heading, a labelled field, hint text and an error |
 | `ub-panel__widget-form`, `ub-panel__group` | The widget's own fields, and each group of them (data, display options) |
 | `ub-panel__list` | The board's elements or symbols, one row each, in their panel |
