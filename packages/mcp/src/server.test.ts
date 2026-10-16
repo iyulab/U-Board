@@ -193,6 +193,35 @@ describe('u-board-mcp', () => {
     expect((await look({ focus: '/nodes/2' })).status).toBe('nothing to fix on this part — look at the whole board before finishing');
   });
 
+  it('up close on an instance, answers what is said of its component and of the instance itself', async () => {
+    const gauge = (id: string, x: number) => ({ id, x, y: 0, widget: { type: 'gauge' } });
+    server.boards.set('b4', {
+      name: 'Cards',
+      revision: 2,
+      document: {
+        kind: 'canvas', background: {}, nodes: [], connectors: [],
+        components: { card: { nodes: [gauge('a', 0), gauge('b', 50)] }, lamp: { nodes: [gauge('l', 0)] } },
+        instances: [
+          { id: 'p1', component: 'card', x: 0, y: 0, anchored: false },
+          { id: 'p2', component: 'card', x: 1000, y: 0, anchored: false },
+          { id: 'q', component: 'lamp', x: 1100, y: 0, anchored: false },
+        ],
+      },
+    });
+    const looker = { look: async () => ({ image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems: [], quality: {}, console: [] } }) };
+    const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), looker);
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const viewer = new Client({ name: 'test', version: '0' });
+    await Promise.all([mcp.connect(b), viewer.connect(a)]);
+    const look = async (focus: string) =>
+      JSON.parse(((await viewer.callTool({ name: 'look', arguments: { board: 'b4', focus } })) as { content: Array<{ text?: string }> }).content[1].text!).advice.map((x: { path: string }) => x.path);
+
+    // The card's own overlap holds for both instances; both of p2's parts also run into q.
+    expect(await look('/instances/0')).toEqual(['/components/card/nodes/0']);
+    expect(await look('/instances/1')).toEqual(['/components/card/nodes/0', '/instances/1', '/instances/1']);
+    expect(await look('/instances/2')).toEqual(['/instances/1', '/instances/1']);
+  });
+
   it('counts every piece of advice in the status, folded ones too, and up close loses none of the part’s to the fold', async () => {
     const node = (i: number) => ({ id: `n${i}`, x: i * 10, y: 0, anchored: false, widget: { type: 'gauge' } });
     // Nine nodes over one another: 36 overlapping pairs, more than saving lists one by one.

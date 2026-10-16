@@ -43,9 +43,18 @@ function lookStatus(problems: number, advice: number, focus: string | undefined)
   return focus ? 'nothing to fix on this part — look at the whole board before finishing' : 'done — nothing to fix';
 }
 
-/** Whether advice is about the part at `focus`: at it or inside it, or naming it ("overlaps node … (/nodes/3)"). */
-function concerns(advice: { path?: string; message: string }, focus: string): boolean {
-  return advice.path === focus || !!advice.path?.startsWith(`${focus}/`) || advice.message.includes(`(${focus})`);
+/** Whether advice is about the part at `focus`: at it or inside it, or naming it ("overlaps node … (/nodes/3)") — and for
+ *  a component instance, what is said of its component (`within`, "/components/card/"), which it draws too. */
+function concerns(advice: { path?: string; message: string }, focus: string, within?: string): boolean {
+  return advice.path === focus || !!advice.path?.startsWith(`${focus}/`) || advice.message.includes(`(${focus})`) || (!!within && !!advice.path?.startsWith(within));
+}
+
+/** The pointer prefix of the component the instance at `focus` draws, when `focus` is one. */
+function componentOf(document: ViewDocument, focus: string | undefined): string | undefined {
+  const instance = focus && /^\/instances\/(\d+)$/.exec(focus);
+  if (!instance || document.kind !== 'canvas') return undefined;
+  const name = document.instances?.[Number(instance[1])]?.component;
+  return name === undefined ? undefined : `/components/${name.replace(/~/g, '~0').replace(/\//g, '~1')}/`;
 }
 
 async function tool(run: () => Promise<unknown> | unknown): Promise<ToolResult> {
@@ -240,11 +249,12 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
           // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
           // Up close, every layout finding is read before keeping the part's own — a fold past the limit would hide some.
           const lint = lintViewDocument(found.document, focus ? { geometryLimit: Infinity } : {});
-          const advice = [...lint, ...widgetAdvice(found.document)].filter(a => !focus || concerns(a, focus));
+          const within = componentOf(found.document, focus);
+          const advice = [...lint, ...widgetAdvice(found.document)].filter(a => !focus || concerns(a, focus, within));
           // A folded line stands for the findings it counts.
           const left = advice.reduce((n, a) => n + (a.count ?? 1), 0);
           // What went wrong while drawing is the whole board's; up close, only the part's — as its advice is.
-          const problems = focus ? report.problems.filter(p => concerns(p, focus)) : report.problems;
+          const problems = focus ? report.problems.filter(p => concerns(p, focus, within)) : report.problems;
           return {
             content: [
               { type: 'image', data: image, mimeType: 'image/png' },

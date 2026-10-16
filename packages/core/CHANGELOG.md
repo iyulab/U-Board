@@ -14,7 +14,8 @@ All notable changes to this package are documented here. The format follows
   instance's value. `expandComponents` gives the board as drawn — each part with the id `<instance id>/<part id>`
   (`instancePartId`), which a board connector, a trigger and the board state use — and `resolveDocument` and
   `bindingsIn` expand first, so a share link reads only what the instances name. `validateViewDocument`, the JSON
-  Schema and the advice on elements and states know components (the layout advice does not look inside instances yet); the editor draws an instance's parts locked, and renaming an element
+  Schema and the advice know components — the layout advice judges the board as drawn, saying what lies within one
+  instance at the component and what involves an instance at the instance; the editor draws an instance's parts locked, and renaming an element
   renames it inside components too. The component's own editor comes later.
 
 ## [0.21.0] - 2026-10-17

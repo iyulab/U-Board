@@ -2,6 +2,7 @@ import { sizedNodes } from './node-size.js';
 import { captionBox, estimateTextWidth } from './caption-geometry.js';
 import { boxOf, chipOf, placeConnectors, segmentsOf } from './connector-geometry.js';
 import type { CanvasView, TextShape } from './view-document.js';
+import { expandComponents } from './components.js';
 import { DEFAULT_TEXT_SIZE, frameLabelBox, textDecorationBox } from './decoration-geometry.js';
 import type { ViewDocumentAdvice } from './lint-view-document.js';
 
@@ -29,25 +30,30 @@ export function textBox(text: TextShape): Box {
  * through a text decoration; a frame's edge running through a text. Connectors are placed as the renderer places
  * them (`placeConnectors`). The most damaging first, at most `limit` (by default {@link GEOMETRY_ADVICE_LIMIT}), then
  * the rest folded into one line that counts them by kind and carries how many it stands for (`count`).
+ *
+ * The board is judged as drawn, its component instances' parts with it. What lies within one instance is said at the
+ * component — that is where it is fixed — once for all the instances it holds for; what involves an instance and
+ * another part of the board is said at the instance, which moves.
  */
-export function lintGeometry(doc: CanvasView, limit = GEOMETRY_ADVICE_LIMIT): ViewDocumentAdvice[] {
+export function lintGeometry(saved: CanvasView, limit = GEOMETRY_ADVICE_LIMIT): ViewDocumentAdvice[] {
+  const doc = expandComponents(saved);
   const sized = sizedNodes(doc);
-  const nodes = sized.map((node, i) => ({ id: node.id, at: `/nodes/${i}`, box: boxOf(node) }));
+  const nodes = sized.map((node, i) => ({ id: node.id, at: ref('nodes', i), box: boxOf(node) }));
   // A text decoration, or a frame's name — drawn in the decoration's place in the order, so a later one's background
   // (or a frame's name inside it) is over an earlier frame's edge.
   const decorationTexts = (doc.decorations ?? []).flatMap((shape, i): DecorationText[] => {
-    if (shape.type === 'text') return shape.text.trim() !== '' ? [{ at: `/decorations/${i}`, box: textBox(shape), drawn: i, backed: shape.background !== undefined }] : [];
+    if (shape.type === 'text') return shape.text.trim() !== '' ? [{ at: ref('decorations', i), box: textBox(shape), drawn: i, backed: shape.background !== undefined }] : [];
     const name = frameLabelBox(shape, estimateTextWidth);
-    return name ? [{ at: `/decorations/${i}/label`, box: name, drawn: i, backed: false }] : [];
+    return name ? [{ at: ref('decorations', i, '/label'), box: name, drawn: i, backed: false }] : [];
   });
   // A caption sits on a chip over the lines, so a line under it is hidden, not crossed — but it can still lie under a
   // node or run into another text.
-  const captions = sized.flatMap((node, i) => (node.caption?.trim() ? [{ at: `/nodes/${i}/caption`, box: captionBox(node), owner: i }] : []));
+  const captions = sized.flatMap((node, i) => (node.caption?.trim() ? [{ at: ref('nodes', i, '/caption'), box: captionBox(node), owner: i }] : []));
   const placements = placeConnectors(sized, doc.connectors);
   // A label sits on its chip, which covers the lines under it — so, like a caption, it is judged by its chip.
-  const labels = placements.flatMap(({ label, index }) => (label ? [{ at: `/connectors/${index}/label`, box: chipOf(label) }] : []));
-  const texts: Array<{ at: string; box: Box; owner?: number }> = [...decorationTexts, ...captions, ...labels];
-  const found: Array<ViewDocumentAdvice & { kind: string }> = [];
+  const labels = placements.flatMap(({ label, index }) => (label ? [{ at: ref('connectors', index, '/label'), box: chipOf(label) }] : []));
+  const texts: Array<{ at: Ref; box: Box; owner?: number }> = [...decorationTexts, ...captions, ...labels];
+  const found: Finding[] = [];
 
   // Two overlapping nodes are said once: their captions' trouble with each other follows from it, and goes when they
   // are moved apart — saying it again only makes the answer longer.
@@ -58,34 +64,131 @@ export function lintGeometry(doc: CanvasView, limit = GEOMETRY_ADVICE_LIMIT): Vi
     for (let j = i + 1; j < nodes.length; j++) {
       if (overlaps(nodes[i].box, nodes[j].box)) {
         overlapping.add(pair(i, j));
-        found.push({ kind: 'overlapping nodes', path: nodes[i].at, message: `its box overlaps node "${nodes[j].id}" (${nodes[j].at}) — one widget draws over the other; move or resize one` });
+        found.push({ kind: 'overlapping nodes', at: nodes[i].at, other: nodes[j].at, message: (other, name) => `its box overlaps node "${name}" (${other}) — one widget draws over the other; move or resize one` });
       }
     }
   }
   for (const text of texts) {
     const under = nodes.find((node, k) => overlaps(text.box, node.box) && !fromOverlap(text.owner, k));
-    if (under) found.push({ kind: 'texts under a node', path: text.at, message: `this text lies under node "${under.id}" (${under.at}), which draws over it — move it clear of ${describe(under.box)}` });
+    if (under) found.push({ kind: 'texts under a node', at: text.at, other: under.at, message: (other, name) => `this text lies under node "${name}" (${other}), which draws over it — move it clear of ${describe(under.box)}` });
   }
   for (const text of decorationTexts) {
     const crossing = placements.find(({ points }) => segmentsOf(points).some(([x1, y1, x2, y2]) => crosses({ x: x1, y: y1 }, { x: x2, y: y2 }, inset(text.box, 1))));
-    if (crossing) found.push({ kind: 'texts on a connector', path: text.at, message: `connector "${crossing.connector.id}" runs through this text — place it beside the line, or use the connector’s label` });
+    if (crossing) found.push({ kind: 'texts on a connector', at: text.at, other: ref('connectors', crossing.index), message: () => `connector "${crossing.connector.id}" runs through this text — place it beside the line, or use the connector’s label` });
   }
-  for (const { at, box } of edgeCrossings(doc, texts)) {
-    found.push({ kind: 'frame edges through a text', path: at, message: `the edge of ${box} runs through this text — move it fully inside the frame or clear of its edge, give it a background, or name the frame with its label` });
+  for (const { at, frame } of edgeCrossings(doc, texts)) {
+    found.push({ kind: 'frame edges through a text', at, other: ref('decorations', frame), message: other => `the edge of ${other} runs through this text — move it fully inside the frame or clear of its edge, give it a background, or name the frame with its label` });
   }
   for (let i = 0; i < texts.length; i++) {
     for (let j = i + 1; j < texts.length; j++) {
-      if (overlaps(texts[i].box, texts[j].box) && !fromOverlap(texts[i].owner, texts[j].owner)) found.push({ kind: 'texts running together', path: texts[i].at, message: `this text runs into ${texts[j].at} — the two overlap` });
+      if (overlaps(texts[i].box, texts[j].box) && !fromOverlap(texts[i].owner, texts[j].owner)) found.push({ kind: 'texts running together', at: texts[i].at, other: texts[j].at, message: other => `this text runs into ${other} — the two overlap` });
     }
   }
 
-  const shown = found.slice(0, limit).map(({ path, message }) => ({ path, message }));
-  if (found.length <= limit) return shown;
+  const said = inDocument(saved, found);
+  const shown = said.slice(0, limit).map(({ path, message }) => ({ path, message }));
+  if (said.length <= limit) return shown;
   const rest = new Map<string, number>();
-  for (const { kind } of found.slice(limit)) rest.set(kind, (rest.get(kind) ?? 0) + 1);
+  for (const { kind } of said.slice(limit)) rest.set(kind, (rest.get(kind) ?? 0) + 1);
   const counted = [...rest].map(([kind, n]) => `${n} ${kind}`).join(', ');
-  const more = found.length - limit;
+  const more = said.length - limit;
   return [...shown, { path: '', message: `${more} more: ${counted} — fix the ones above, then check again`, count: more }];
+}
+
+/** A part of the board as drawn: which list, its place there, and the member of it a finding is about. */
+interface Ref {
+  list: 'nodes' | 'connectors' | 'decorations';
+  index: number;
+  suffix: string;
+}
+
+function ref(list: Ref['list'], index: number, suffix = ''): Ref {
+  return { list, index, suffix };
+}
+
+/** A layout finding on the board as drawn: about `at`, naming `other` when there is one — `message` is given where
+ *  it is said to be and what it is called there. */
+interface Finding {
+  kind: string;
+  at: Ref;
+  other?: Ref;
+  message: (other: string, name: string) => string;
+}
+
+/**
+ * Findings on the drawn board said at places in the board as saved. A part of the board's own is its own path. A
+ * finding within one component instance is said at the component (`/components/<name>/…`) — once for all the
+ * instances it holds for, naming them unless it holds for every one. One between an instance's part and another part
+ * of the board is said at the instance, which moves, naming the part.
+ */
+function inDocument(saved: CanvasView, found: readonly Finding[]): Array<ViewDocumentAdvice & { kind: string }> {
+  const drawnFrom = origins(saved);
+  const drawn = expandComponents(saved);
+  const drawnAs = (r: Ref) => (drawn[r.list] ?? [])[r.index]?.id ?? '';
+  const where = (r: Ref) => {
+    const origin = drawnFrom[r.list][r.index];
+    if (!origin) return { own: `/${r.list}/${r.index}${r.suffix}`, drawnAs: drawnAs(r) };
+    const instance = saved.instances![origin.instance];
+    const component = saved.components![instance.component];
+    return {
+      instance: origin.instance,
+      definition: `/components/${pointerSegment(instance.component)}/${r.list}/${origin.part}${r.suffix}`,
+      at: `/instances/${origin.instance}`,
+      part: (component[r.list] ?? [])[origin.part]?.id ?? '',
+      drawnAs: drawnAs(r),
+    };
+  };
+  const said: Array<ViewDocumentAdvice & { kind: string; instances?: number[]; component?: string }> = [];
+  const within = new Map<string, (typeof said)[number]>();
+  for (const finding of found) {
+    const at = where(finding.at);
+    const other = finding.other && where(finding.other);
+    if (at.own !== undefined) {
+      const otherPath = other ? (other.own ?? other.at!) : '';
+      said.push({ kind: finding.kind, path: at.own, message: finding.message(otherPath, other?.drawnAs ?? '') });
+    } else if (!other || (other.instance === at.instance && other.own === undefined)) {
+      // Within one instance a part is called by its id in the component, so every instance says the same.
+      const message = finding.message(other?.definition ?? '', other?.part ?? '');
+      const key = `${at.definition}\n${message}`;
+      const known = within.get(key);
+      if (known) known.instances!.push(at.instance!);
+      else {
+        const entry = { kind: finding.kind, path: at.definition!, message, instances: [at.instance!], component: saved.instances![at.instance!].component };
+        within.set(key, entry);
+        said.push(entry);
+      }
+    } else {
+      const otherPath = other.own ?? other.at!;
+      said.push({ kind: finding.kind, path: at.at!, message: `its part "${at.part}": ${finding.message(otherPath, other.drawnAs)}` });
+    }
+  }
+  return said.map(({ kind, path, message, instances, component }) => {
+    if (!instances) return { kind, path, message };
+    const all = saved.instances!.filter(instance => instance.component === component).length;
+    if (instances.length === all) return { kind, path, message };
+    const first = instances[0];
+    const more = instances.length > 1 ? ` and ${instances.length - 1} more` : '';
+    return { kind, path, message: `${message} — in the instance "${saved.instances![first].id}" (/instances/${first})${more}` };
+  });
+}
+
+/** For each part of the drawn board, in each list, the instance and the place in its component it comes from — none for
+ *  the board's own parts. In the order `expandComponents` draws them. */
+function origins(saved: CanvasView): Record<Ref['list'], Array<{ instance: number; part: number } | undefined>> {
+  const lists = { nodes: [], connectors: [], decorations: [] } as Record<Ref['list'], Array<{ instance: number; part: number } | undefined>>;
+  for (const list of ['nodes', 'connectors', 'decorations'] as const) {
+    lists[list].push(...Array.from({ length: saved[list]?.length ?? 0 }, () => undefined));
+    (saved.instances ?? []).forEach((instance, i) => {
+      const component = saved.components?.[instance.component];
+      if (!component) return;
+      (component[list] ?? []).forEach((_, part) => lists[list].push({ instance: i, part }));
+    });
+  }
+  return lists;
+}
+
+function pointerSegment(segment: string): string {
+  return segment.replace(/~/g, '~0').replace(/\//g, '~1');
 }
 
 /** Whether two boxes share some area — touching edges do not count. */
@@ -94,7 +197,7 @@ function overlaps(a: Box, b: Box): boolean {
 }
 
 interface DecorationText {
-  at: string;
+  at: Ref;
   box: Box;
   /** Its decoration's place in the drawing order. */
   drawn: number;
@@ -107,9 +210,9 @@ interface DecorationText {
  * draws an edge (a stroke) — unless the text's own background, or a filled rect, drawn after that frame covers the
  * whole text (a title tag on the frame's edge). A text drawn before the frame is under its edge too.
  */
-function edgeCrossings(doc: CanvasView, texts: ReadonlyArray<{ at: string; box: Box } & Partial<DecorationText>>): Array<{ at: string; box: string }> {
+function edgeCrossings(doc: Pick<CanvasView, 'decorations'>, texts: ReadonlyArray<{ at: Ref; box: Box } & Partial<DecorationText>>): Array<{ at: Ref; frame: number }> {
   const decorations = doc.decorations ?? [];
-  const out: Array<{ at: string; box: string }> = [];
+  const out: Array<{ at: Ref; frame: number }> = [];
   decorations.forEach((frame, i) => {
     if (frame.type !== 'rect' || !frame.stroke || frame.stroke.trim().toLowerCase() === 'none' || !(frame.strokeWidth ?? 0)) return;
     const rect = { x: frame.x, y: frame.y, width: frame.width, height: frame.height };
@@ -117,7 +220,7 @@ function edgeCrossings(doc: CanvasView, texts: ReadonlyArray<{ at: string; box: 
       if (!overlaps(text.box, rect) || contains(rect, text.box)) continue;
       if (text.backed && (text.drawn ?? -1) > i) continue; // its own background covers the edge
       const covered = decorations.some((tag, j) => j > i && tag.type === 'rect' && !!tag.fill && tag.fill.trim().toLowerCase() !== 'none' && contains(tag, text.box));
-      if (!covered) out.push({ at: text.at, box: `/decorations/${i}` });
+      if (!covered) out.push({ at: text.at, frame: i });
     }
   });
   return out;

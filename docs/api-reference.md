@@ -833,7 +833,10 @@ be drawn over one another: two nodes whose boxes overlap (a node without a size 
 decoration under a node (nodes draw over decorations), a connector running through a text, two texts running into
 each other — a text's box estimated as one line, 0.6 × its font size per character. At most 30 of these
 (`geometryLimit`; `Infinity` lists them all), then one line counting the rest by kind, whose `count` says how many it
-stands for — so the advice comes to the sum of the counts, one for a line without one. Then an element defined but placed
+stands for — so the advice comes to the sum of the counts, one for a line without one. The board is judged as drawn,
+its component instances' parts with it: what lies within one instance is said at the component (`/components/<name>/…`)
+— once, naming the instances it holds for unless it holds for every one — and what involves an instance and another part
+is said at the instance (`/instances/<i>`), naming its part. Then an element defined but placed
 nowhere, more than 30 script elements on one board (each runs in a frame of its own), an element whose
 markup, script and CSS together pass 32 KB.
 
