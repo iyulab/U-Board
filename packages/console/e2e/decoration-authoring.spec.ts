@@ -38,6 +38,8 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   await page.getByRole('button', { name: '실행 취소' }).click();
   await expect(page.getByLabel('라벨', { exact: true })).toHaveCount(0);
   await page.keyboard.press('Control+Shift+Z');
+  // Redone — nothing is left to redo — before the click, or under load the click lands where the text is not yet drawn.
+  await expect(page.getByRole('button', { name: '다시 실행' })).toBeDisabled();
   await clickEditorAt(page, { x: 85, y: 72 });
   await expect(page.getByLabel('라벨')).toHaveValue('라벨');
 

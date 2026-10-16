@@ -10,6 +10,9 @@ All notable changes to this package are documented here. The format follows
 
 - The editor names a part a component instance draws by the instance and the part — a line's end ("Status 1 →
   press-2 › Temp"), and the choices of a trigger, which can now name such a part, its states offered too.
+- The editor makes the selected nodes and frames a component (**Make component**) — the lines between them go with
+  them, and an instance draws them where they were, the board's other lines and triggers to them renamed — and draws an
+  instance as parts of the board's own again (**Detach into parts**), its values filled in.
 
 ### Fixed
 

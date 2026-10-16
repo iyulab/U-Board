@@ -19,6 +19,8 @@ export const KO_LABELS: UBoardLabels = {
   addTextDecoration: '텍스트 장식 추가',
   addConnector: '연결선 추가',
   connectHint: '연결할 두 노드를 선택하세요(두 번째는 Shift+클릭).',
+  makeComponent: '컴포넌트로 만들기',
+  makeComponentHint: '다른 곳에도 그릴 노드와 틀을 선택하세요 — 모두 고정이거나 모두 자유 배치.',
   deleteSelected: '삭제',
   undo: '실행 취소',
   redo: '다시 실행',
@@ -255,6 +257,8 @@ export const KO_LABELS: UBoardLabels = {
   instanceParams: '값',
   instanceOtherParams: '여기 입력란이 없는 값: {count}개 — 문서 소스에서 고치세요.',
   instanceEditHint: '끌어서 옮깁니다. 그리는 내용은 컴포넌트의 것이라, 거기서 고치면 모든 인스턴스에 반영됩니다.',
+  detachInstance: '부품으로 풀기',
+  detachInstanceHint: '값을 채운 보드 부품으로 그립니다 — 더는 컴포넌트를 따르지 않습니다.',
 
   connectorHeading: '연결선',
   connectorEnds: '{from} → {to}',

@@ -26,6 +26,10 @@ export interface UBoardLabels {
   /** Joins the two selected nodes with a line; `connectHint` says how to select them. */
   addConnector: string;
   connectHint: string;
+  /** Makes the selected nodes and decorations a component, drawn by an instance where they were; `makeComponentHint`
+   *  says what can be made one. */
+  makeComponent: string;
+  makeComponentHint: string;
   /** Deletes the selected parts (a node takes its lines with it). */
   deleteSelected: string;
   /** Steps back through the edits since the document was opened (Ctrl+Z), and forward again (Ctrl+Shift+Z or Ctrl+Y). */
@@ -340,6 +344,9 @@ export interface UBoardLabels {
   instanceParams: string;
   instanceOtherParams: string;
   instanceEditHint: string;
+  /** Draws the instance as parts of the board's own, and the hint saying what that does. */
+  detachInstance: string;
+  detachInstanceHint: string;
 
   // Connector (line) panel — `{from}`/`{to}` name the nodes it joins
   connectorHeading: string;
@@ -386,6 +393,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   addTextDecoration: 'Add text decoration',
   addConnector: 'Connect nodes',
   connectHint: 'Select two nodes (Shift+click the second) to connect them.',
+  makeComponent: 'Make component',
+  makeComponentHint: 'Select the nodes and frames to draw again elsewhere — all anchored or all free.',
   deleteSelected: 'Delete',
   undo: 'Undo',
   redo: 'Redo',
@@ -624,6 +633,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   instanceParams: 'Values',
   instanceOtherParams: 'Values without a field here: {count} — edit them in the document source.',
   instanceEditHint: 'Drag it to move it. What it draws is the component’s — a change there reaches every instance.',
+  detachInstance: 'Detach into parts',
+  detachInstanceHint: 'Draws it as the board’s own parts, its values filled in — they no longer follow the component.',
 
   connectorHeading: 'Line',
   connectorEnds: '{from} → {to}',

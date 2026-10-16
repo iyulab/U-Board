@@ -34,6 +34,7 @@ import { DecorationPanel } from './DecorationPanel.js';
 import { ConnectorPanel } from './ConnectorPanel.js';
 import { InstancePanel } from './InstancePanel.js';
 import { partNamer } from './part-names.js';
+import { canMakeComponent, detachInstance, makeComponent, newComponentName, newInstanceId } from './component-editing.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
 import { sizedNodes } from '../node-size.js';
@@ -208,6 +209,18 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
     onFileError(null);
   };
 
+  // The selection, made a component and drawn where it was by a new instance — which is then selected.
+  const canMake = canMakeComponent(doc, selectedIds);
+  const handleMakeComponent = () => {
+    if (!canMake) return;
+    const id = newInstanceId(doc);
+    const ids = selectedIds;
+    updateDoc(prev => makeComponent(prev, ids, newComponentName(prev), id));
+    designerRef.current?.select([]);
+    setSelectedIds([]);
+    setPendingSelect(id);
+  };
+
   const handleDelete = () => {
     if (selectedIds.length === 0) return;
     const ids = selectedIds;
@@ -356,6 +369,9 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
           <button type="button" className="ub-action" onClick={handleConnect} disabled={!pair} title={pair ? undefined : labels.connectHint}>
             {labels.addConnector}
           </button>
+          <button type="button" className="ub-action" onClick={handleMakeComponent} disabled={!canMake} title={canMake ? undefined : labels.makeComponentHint}>
+            {labels.makeComponent}
+          </button>
           <button type="button" className="ub-action" onClick={handleDelete} disabled={selectedIds.length === 0}>
             {labels.deleteSelected}
           </button>
@@ -435,6 +451,11 @@ export function CanvasAuthoring({ doc, updateDoc, mode, onModeChange, documentAc
               instance={selectedInstance}
               component={doc.components?.[selectedInstance.component]}
               onParamChange={(name, value) => updateDoc(prev => setInstanceParam(prev, selectedInstance.id, name, value))}
+              onDetach={() => {
+                updateDoc(prev => detachInstance(prev, selectedInstance.id));
+                designerRef.current?.select([]);
+                setSelectedIds([]);
+              }}
               labels={labels}
             />
           ) : selectedNode ? (

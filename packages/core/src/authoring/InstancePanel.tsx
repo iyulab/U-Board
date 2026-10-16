@@ -10,6 +10,8 @@ export interface InstancePanelProps {
   component: ComponentDefinition | undefined;
   /** Sets one parameter's value; `undefined` takes it out, so its default applies. */
   onParamChange: (name: string, value: unknown) => void;
+  /** Draws it as parts of the board's own instead. */
+  onDetach?: () => void;
   labels?: UBoardLabels;
 }
 
@@ -18,7 +20,7 @@ export interface InstancePanelProps {
  * parameters, as an element's props are edited. Where it stands is dragged on the canvas; what it draws is the
  * component's, changed in the component for every instance at once.
  */
-export function InstancePanel({ instance, component, onParamChange, labels = DEFAULT_LABELS }: InstancePanelProps) {
+export function InstancePanel({ instance, component, onParamChange, onDetach, labels = DEFAULT_LABELS }: InstancePanelProps) {
   const { fields, otherOptions } = useMemo(() => schemaFields(component?.params, 'params'), [component]);
   return (
     <div className="ub-panel ub-panel--instance">
@@ -36,6 +38,14 @@ export function InstancePanel({ instance, component, onParamChange, labels = DEF
       )}
       {otherOptions > 0 && <p className="ub-panel__hint">{labels.instanceOtherParams.replace('{count}', String(otherOptions))}</p>}
       <p className="ub-panel__hint">{labels.instanceEditHint}</p>
+      {onDetach && component && (
+        <>
+          <button type="button" className="ub-action" onClick={onDetach}>
+            {labels.detachInstance}
+          </button>
+          <p className="ub-panel__hint">{labels.detachInstanceHint}</p>
+        </>
+      )}
     </div>
   );
 }
