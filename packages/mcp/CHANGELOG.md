@@ -6,10 +6,7 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
-### Security
-
-- `@iyulab/u-widgets` `^0.35.3`: the widget advice and rules come from the release that escapes markdown link quotes and
-  heatmap tooltip names.
+## [0.10.0] - 2026-10-17
 
 ### Added
 
@@ -20,6 +17,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- Needs `@iyulab/u-board` `^0.22.0` (components).
 - `describe("components")` tells a component from an element: a card that is one picture filled with values is an
   element placed per card; a component is for a group whose parts are nodes of their own. A schema pointer with nothing
   there says to leave it out for the whole schema.
@@ -28,6 +26,11 @@ All notable changes to this package are documented here. The format follows
 
 - Widget advice judges a component's widgets as each instance draws them, its parameters filled in, rather than the
   `{{name}}` they are written with.
+
+### Security
+
+- `@iyulab/u-widgets` `^0.35.3`: the widget advice and rules come from the release that escapes markdown link quotes and
+  heatmap tooltip names.
 
 ## [0.9.0] - 2026-10-17
 
