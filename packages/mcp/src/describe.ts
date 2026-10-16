@@ -95,12 +95,13 @@ const ELEMENTS = `# Elements
 definition = { render: "template" | "script", props?, template?, script?, style?, size?: { width, height }, resources?: ["https://cdn.example.com"] }
 placement  = { type: "element:<name>", props: { … }, bindings?: { … } } — on as many nodes or items as needed; never repeat markup per item.
 symbols    = { "<name>": { viewBox?, markup } } — top level: SVG drawings any template element places with <use href="#<name>"/>. No {{values}} in a symbol; pick one by value: href="#pump-{{state}}".
+  CSS selectors (".icon path") do not reach into what a <use> draws — only inherited fill, stroke, color, --vars do: put each part's look in the symbol (fill="none" stroke="currentColor"), colour the <use>.
 
 ## Drawing well
 - Prefer render "template": HTML/SVG + CSS, no script. Numbers become drawing through CSS: style="--level: {{level}}", height: calc(var(--level) * 1%).
 - Use the theme variables, never fixed colours: --u-widget-bg, -surface, -text, -text-secondary, -border, -primary, -positive, -negative, -warning, -font-family, -font-mono. To match a brand colour, set the board's accent (it sets -primary), not a fixed colour.
 - Tell states apart by shape as well as colour (filled running, outlined stopped), with a graphic contrast of 3:1 against its background (WCAG 1.4.11) — never mark a state with the faintest token (--u-widget-border). Colour only what needs attention.
-- Choose by a value with an attribute and CSS: data-state="{{state}}" + [data-state="fault"] { … }, or <use href="#icon-{{kind}}"> for a symbol per kind. Sections test only empty/non-empty.
+- Choose by a value with an attribute and CSS: data-state="{{state}}" + [data-state="fault"] { … }, or a symbol per value (above). Sections test only empty/non-empty.
 - Draw repeated shapes once (a document symbol, <symbol>/<use>, a {{#list}} section). Keep an element under 32 KB.
 - A props schema (type, enum, const, properties, required, items, minimum, maximum, minLength, maxLength, title, description, default) says what an element takes; placed props are checked against it. A default only seeds the editor — it is not applied when drawing, so give every prop the markup uses.
 - render "script" only when a template cannot. More than 30 placed script elements is too many.
@@ -121,7 +122,7 @@ symbols    = { "<name>": { viewBox?, markup } } — top level: SVG drawings any 
 ## script
 - Runs in <iframe sandbox="allow-scripts"> served by the board's server: an origin of its own, no cookies, no page access, no network (connect-src 'none').
 - ub.onProps((props, appearance) => draw(props)) — called with the latest props and on every change; ub.reportError(error) shows on its box.
-- Code must always return: no loop that waits for a condition, no long synchronous work. A frame that stops answering is removed; in some browsers it freezes the whole board first.
+- Code must return: a loop running 1 s throws; other endless work gets its frame removed.
 - A library is loaded from an origin in resources (e.g. a <script src> it adds, or import()), and only where the installation allows that origin.
 - The frame is drawn from the saved board — save before checking it.`;
 

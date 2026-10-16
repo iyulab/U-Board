@@ -13,6 +13,8 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - The `canvas` topic says a node without a box takes its element's size; `look` measures the board the same way.
+- The `elements` topic says how a symbol's parts are styled: in the symbol, or by what they inherit from the `<use>` —
+  an element's CSS selectors do not reach into what a `<use>` draws.
 
 ### Fixed
 
