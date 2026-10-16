@@ -44,7 +44,7 @@ error.
 
 - Not a general business-intelligence tool — no chart-and-pivot-table dashboards over a data
   warehouse.
-- Not an HMI/SCADA package. There is no symbol library, alarm handling, control output, or screen
+- Not an HMI/SCADA package. There is no built-in symbol library (a board draws its own), alarm handling, control output, or screen
   navigation; U-Board draws status views, and the host application around them keeps those
   responsibilities.
 - Not a full 3D digital-twin engine. Views are 2D/2.5D; a rotating 3D model of a single object
@@ -59,8 +59,9 @@ authoring UI (set the background image; add/drag/resize nodes and rect/text deco
 nodes with a line and edit its label, look, arrowheads and bindings; delete what is selected; a
 property panel for editing the selected node's widget type, static props, and data bindings,
 including a path explorer for HTTP-shaped adapter responses and a value map that turns a source's
-words or numbers — by exact value or numeric range — into what the widget takes; a label editor for
-the selected text decoration; reference points that make an anchored node's place a coordinate, kept when the background image is redone), export/import of the document as a file (beside the host's own
+words or numbers — by exact value or numeric range — into what the widget takes; a frame decoration's
+name, corners and line style, and a text decoration's words, anchor and background; the board's accent
+colour; reference points that make an anchored node's place a coordinate, kept when the background image is redone), export/import of the document as a file (beside the host's own
 Save, when it has one), and a read-only viewer mode are implemented and browser-verified. The editor and
 the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
 or keyboard.
@@ -69,7 +70,8 @@ viewer's width — edited, saved and shared the same way. A board can define its
 prepared widget draws: markup and CSS drawn in an isolated root, or a script run in a sandboxed frame with no
 network, which is stopped when it stops answering. They are placed like widgets, their props get controls from
 their schema in the property panel, and their definitions are listed and edited in the editor with a template
-previewed as it is typed. An AI assistant reads and draws a workspace's boards from outside, through the MCP
+previewed as it is typed. A board's **symbols** — SVG drawings defined once — are placed by any of its template
+elements, and edited beside them. An AI assistant reads and draws a workspace's boards from outside, through the MCP
 server [`@iyulab/u-board-mcp`](packages/mcp/README.md) and a workspace API token: JSON Patch on a board's
 revision, a data source's response summarized by its shape, advice on what would be drawn over what, a picture of
 the board as its viewers see it (`look`), and compact answers ([`docs/mcp.md`](docs/mcp.md)).
