@@ -186,6 +186,24 @@ describe('u-board-mcp', () => {
     // Up close, only what concerns that part — named either way.
     expect((await look({ focus: '/nodes/1' })).advice).toHaveLength(1);
     expect((await look({ focus: '/nodes/2' })).advice).toEqual([]);
+    // What is left, said in one line a writer cannot read past.
+    expect(whole.status).toBe('not done — 1 piece of advice to fix');
+    expect((await look({ focus: '/nodes/2' })).status).toBe('nothing to fix on this part — look at the whole board before finishing');
+  });
+
+  it('says a clean board is done', async () => {
+    server.boards.set('b4', { name: 'Clean', revision: 1, document: { kind: 'grid', items: [] } });
+    const looker = { look: async () => ({ image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems: [{ message: 'x' }, { message: 'y' }], quality: {}, console: [] } }) };
+    const clean = { look: async () => ({ image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems: [], quality: {}, console: [] } }) };
+    const status = async (l: typeof looker) => {
+      const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), l);
+      const [a, b] = InMemoryTransport.createLinkedPair();
+      const viewer = new Client({ name: 'test', version: '0' });
+      await Promise.all([mcp.connect(b), viewer.connect(a)]);
+      return JSON.parse(((await viewer.callTool({ name: 'look', arguments: { board: 'b4' } })) as { content: Array<{ text?: string }> }).content[1].text!).status;
+    };
+    expect(await status(looker)).toBe('not done — 2 problems to fix');
+    expect(await status(clean)).toBe('done — nothing to fix');
   });
 
   it('says when an operation or a document is wrapped in its own first key — the commonest shape mistake', async () => {

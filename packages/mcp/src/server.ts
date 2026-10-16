@@ -34,6 +34,15 @@ function failed(error: unknown): ToolResult {
   return { content: [{ type: 'text', text: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }) }], isError: true };
 }
 
+/** What is left after a look, in one line — first in the answer, so a writer that skims to the picture still reads that
+ *  the board is not done while problems or advice stand. A part seen up close says so for the part only. */
+function lookStatus(problems: number, advice: number, focus: string | undefined): string {
+  const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  const left = [problems > 0 && count(problems, 'problem', 'problems'), advice > 0 && count(advice, 'piece of advice', 'pieces of advice')].filter(Boolean).join(' and ');
+  if (left) return `not done — ${left} to fix${focus ? ' on this part' : ''}`;
+  return focus ? 'nothing to fix on this part — look at the whole board before finishing' : 'done — nothing to fix';
+}
+
 /** Whether advice is about the part at `focus`: at it or inside it, or naming it ("overlaps node … (/nodes/3)"). */
 function concerns(advice: { path?: string; message: string }, focus: string): boolean {
   return advice.path === focus || !!advice.path?.startsWith(`${focus}/`) || advice.message.includes(`(${focus})`);
@@ -233,7 +242,7 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
           return {
             content: [
               { type: 'image', data: image, mimeType: 'image/png' },
-              { type: 'text', text: JSON.stringify({ revision: found.revision, ...report, advice }) },
+              { type: 'text', text: JSON.stringify({ revision: found.revision, status: lookStatus(report.problems.length, advice.length, focus), ...report, advice }) },
             ],
           };
         } catch (error) {
