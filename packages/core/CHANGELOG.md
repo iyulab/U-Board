@@ -10,6 +10,9 @@ All notable changes to this package are documented here. The format follows
 
 - `RectShape.labelFill` — a frame's name in a colour of its own (a light frame line under a darker name), the stroke's
   when left out. The decoration panel sets it.
+- **Symbols in the editor** — beside the board's elements, its symbols: each with how many templates and symbols
+  place it by name, a new one, and the editor of one (name, `viewBox`, markup) with its problems said at once and a
+  preview drawn as an element would draw it. Renaming a symbol renames its uses by name; one in use cannot be deleted.
 
 ## [0.15.0] - 2026-10-16
 

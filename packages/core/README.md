@@ -213,10 +213,10 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-authoring__pick`, `ub-authoring__layout-width` | On a grid view's editor: the button over each item that selects it (`aria-pressed` when selected); the Wide / Medium / Narrow layout width switch |
 | `ub-authoring__panel` | The column holding the board, property or decoration panel |
 | `ub-authoring__error`, `ub-authoring__status`, `ub-authoring__source` | A file that could not be used; "resolving"; the document source (`showDocumentSource`) |
-| `ub-panel` (`--board`, `--properties`, `--decoration`, `--connector`, `--item`, `--elements`, `--element`) | The board's settings (background, tone — while nothing is selected), a node's, decoration's or connector's properties, a grid item's layout (its widths, height and place in the order), the board's elements, or one element's definition |
+| `ub-panel` (`--board`, `--properties`, `--decoration`, `--connector`, `--item`, `--elements`, `--element`, `--symbols`, `--symbol`) | The board's settings (background, tone, accent — while nothing is selected), a node's, decoration's or connector's properties, a grid item's layout (its widths, height and place in the order), the board's elements, one element's definition, the board's symbols, or one symbol |
 | `ub-panel__heading`, `ub-panel__subheading`, `ub-panel__field`, `ub-panel__hint`, `ub-panel__error` | Its heading, section heading, a labelled field, hint text and an error |
 | `ub-panel__widget-form`, `ub-panel__group` | The widget's own fields, and each group of them (data, display options) |
-| `ub-panel__list` | The board's elements, one row each, in the elements panel |
+| `ub-panel__list` | The board's elements or symbols, one row each, in their panel |
 | `ub-panel__field-name`, `ub-panel__field--check` | A field's name (with its key); a checkbox field |
 | `ub-panel__advanced`, `ub-panel__json` | The folded "edit as JSON" section, and its editor |
 | `ub-panel__bindings`, `ub-panel__binding`, `ub-panel__binding-path`, `ub-panel__binding-ref`, `ub-panel__binding-tag` | The list of bindings, one entry, its prop path, what it points at, and its "mapped" tag |

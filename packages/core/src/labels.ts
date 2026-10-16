@@ -165,6 +165,19 @@ export interface UBoardLabels {
   elementProblems: string;
   removeElement: string;
   removeElementPlaced: string;
+  /** The board's symbols: their list, and the editor of one. */
+  symbolsHeading: string;
+  symbolsHint: string;
+  addSymbol: string;
+  symbolUsedCount: string;
+  symbolUnused: string;
+  backToSymbols: string;
+  symbolName: string;
+  symbolNameTaken: string;
+  symbolViewBox: string;
+  symbolMarkup: string;
+  removeSymbol: string;
+  removeSymbolUsed: string;
   boundField: string;
   choiceDefault: string;
   advancedProps: string;
@@ -415,6 +428,18 @@ export const DEFAULT_LABELS: UBoardLabels = {
   elementProblems: 'Problems',
   removeElement: 'Delete element',
   removeElementPlaced: 'Placed {count} times — change or remove those widgets first.',
+  symbolsHeading: 'Symbols',
+  symbolsHint: 'Drawings the elements share — an element places one with <use href="#name"/>.',
+  addSymbol: 'New symbol',
+  symbolUsedCount: 'used {count}',
+  symbolUnused: 'not used',
+  backToSymbols: 'All symbols',
+  symbolName: 'Name',
+  symbolNameTaken: 'Another symbol has this name.',
+  symbolViewBox: 'viewBox',
+  symbolMarkup: 'SVG markup',
+  removeSymbol: 'Delete symbol',
+  removeSymbolUsed: 'Used {count} times by name — change those first.',
   boundField: 'bound',
   choiceDefault: 'Default',
   advancedProps: 'Advanced: edit as JSON',
