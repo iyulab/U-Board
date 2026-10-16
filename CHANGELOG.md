@@ -11,9 +11,11 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-16
+
 ### Added
 
-- **States and triggers in the console’s editor**: a part’s panel gives it states — the binding they are read from, a
+- **States and triggers in the console’s editor** (`@iyulab/u-board` 0.19.0): a part’s panel gives it states — the binding they are read from, a
   value → state map, and a ring, blink or hiding for each state — and triggers on it (clicked, its element’s event, a
   state entered or left; open a link, bring a part into view, tell the page, show another board). The board panel
   holds what runs when the board opens. A trigger is saved once it is complete; a link a board may not open is

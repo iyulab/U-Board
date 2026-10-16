@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-16
+
 ### Added
 
 - `AuthoringView` edits states and triggers: a **States** section in the property panel (which binding, the value →
