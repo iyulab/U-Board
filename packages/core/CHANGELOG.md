@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-16
+
 ### Added
 
 - **Connector arrowheads** — `style.arrow`: `none` (the default), `end` (pointing at `toNodeId`), `start` (pointing at

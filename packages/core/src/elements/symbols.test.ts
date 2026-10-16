@@ -9,7 +9,7 @@ const symbols = {
 
 describe('symbols', () => {
   it('reads the ids markup places, by href or xlink:href, in either quote', () => {
-    expect(symbolReferences(`<use href="#pump"/><use xlink:href='#valve'/><use href="#pump"/><a href="https://x">`)).toEqual(['pump', 'valve']);
+    expect(symbolReferences(`<use href="#pump"/><use xlink:href='#valve'/><use href="#pump"/><a href="https://cdn.example.com">`)).toEqual(['pump', 'valve']);
   });
 
   it('takes the symbols markup uses and those they use, each once — and nothing it does not', () => {

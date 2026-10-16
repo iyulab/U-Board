@@ -11,6 +11,23 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-16
+
+### Added
+
+- **Connectors are drawn and edited in the editor** — select two nodes and "Connect nodes" joins them; a connector
+  takes arrowheads (bindable, so a flow's direction can follow its sign), a label placed along its line, a colour,
+  width and line style, and the same bindings a widget takes. **Delete** (the toolbar button, or the Delete key)
+  removes what is selected.
+- **Frames name themselves** — a frame decoration carries its own name inside it, rounded corners and a dashed or
+  dotted edge; a text decoration can be centred (or anchored at any corner or edge) on its position and sit on a
+  background.
+- **A board's accent colour** — set once in the board panel, the colour its widgets and elements fill and highlight
+  with, in place of the theme's.
+- **Shared symbols** — SVG drawings a board defines once, placed by its template elements, so a plant's symbol set is
+  drawn the same everywhere.
+- A connector's line and label have a place on the page, for a screen reader and for tools reading the board.
+
 ## [0.5.0] - 2026-10-16
 
 ### Added
