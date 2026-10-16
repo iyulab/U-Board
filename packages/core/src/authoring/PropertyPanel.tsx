@@ -8,9 +8,9 @@ import { getWidgetLabel } from '@iyulab/u-widgets/tools';
 import { WIDGET_TYPES, seedElementWidget, seedWidget, headlinePropPath, type WidgetType } from './widget-catalog.js';
 import { WidgetPropsForm } from './WidgetPropsForm.js';
 import { widgetFields } from './widget-fields.js';
-import { BindingEditor, FIELD_STYLE } from './BindingEditor.js';
+import { BindingEditor } from './BindingEditor.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
-import { ERROR_STYLE } from '../ui-style.js';
+import { ERROR_STYLE, FIELD_STYLE } from '../ui-style.js';
 
 export interface PropertyPanelProps {
   /** The selected widget — a canvas node or a grid item (`Placed`); a node's place is edited only with

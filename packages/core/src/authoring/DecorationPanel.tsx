@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { PLACEMENTS, STROKE_DASHES, type Placement, type RectShape, type Shape, type StrokeDash, type TextShape } from '../view-document.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
-import { FIELD_STYLE } from './BindingEditor.js';
+import { FIELD_STYLE } from '../ui-style.js';
 
 export interface DecorationPanelProps {
   decoration: Shape;

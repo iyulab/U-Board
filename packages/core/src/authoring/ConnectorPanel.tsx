@@ -1,6 +1,7 @@
 import type { Adapter } from '../adapter.js';
 import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, STROKE_DASHES, type Connector, type ConnectorArrow, type StrokeDash, type ConnectorStyle, type Node } from '../view-document.js';
-import { BindingEditor, FIELD_STYLE, type BindingField } from './BindingEditor.js';
+import { BindingEditor, type BindingField } from './BindingEditor.js';
+import { FIELD_STYLE } from '../ui-style.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
 import { widgetTypeName } from './widget-catalog.js';
