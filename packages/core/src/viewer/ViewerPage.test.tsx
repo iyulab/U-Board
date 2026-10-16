@@ -409,3 +409,39 @@ describe('ViewerPage with a grid view', () => {
     expect(region.ownerDocument.querySelector('.ub-freshness')).toBeInTheDocument();
   });
 });
+
+describe('onBoardState', () => {
+  const stateDoc = (): GridView => ({
+    kind: 'grid',
+    items: [{ id: 'pump', widget: { type: 'status', bindings: { 'data.value': { adapter: 'plant', ref: 'p' } } }, states: { from: 'data.value', map: { values: { Fault: 'fault' } } } }],
+  });
+
+  it('hands the host the board state each time the board is drawn', async () => {
+    const onBoardState = vi.fn();
+    const plant: Adapter = { id: 'plant', resolve: async () => ({ value: 'Fault', quality: 'live' }) };
+    render(<ViewerPage document={stateDoc()} adapters={[plant]} onBoardState={onBoardState} clock={() => Date.parse('2026-10-16T09:00:00Z')} />);
+    await waitFor(() => expect(onBoardState).toHaveBeenCalled());
+    expect(onBoardState.mock.lastCall![0]).toEqual({ evaluatedAt: '2026-10-16T09:00:00.000Z', parts: { pump: { state: 'fault', quality: 'live' } } });
+  });
+
+  it('says stale, not live, once the view has stopped updating — the state it last read stays', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-16T09:00:00Z') });
+    const onBoardState = vi.fn();
+    let hold = false;
+    const plant: Adapter = {
+      id: 'plant',
+      resolve: () => (hold ? new Promise<ResolvedBinding>(() => {}) : Promise.resolve({ value: 'Fault', quality: 'live' })),
+    };
+    render(<ViewerPage document={stateDoc()} adapters={[plant]} pollIntervalMs={1000} onBoardState={onBoardState} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(onBoardState.mock.lastCall![0].parts.pump).toEqual({ state: 'fault', quality: 'live' });
+
+    hold = true;
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+    expect(onBoardState.mock.lastCall![0].parts.pump).toEqual({ state: 'fault', quality: 'stale' });
+  });
+});

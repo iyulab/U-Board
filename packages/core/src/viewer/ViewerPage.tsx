@@ -15,6 +15,7 @@ import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { AttributionLine, boardAttributions } from './attribution.js';
 import { ElementHost } from '../renderer/element-view.js';
+import { boardStateOf, type BoardState } from '../board-state.js';
 
 export interface ViewerPageProps {
   adapters: readonly Adapter[];
@@ -51,6 +52,10 @@ export interface ViewerPageProps {
    * it serves each definition from an origin of its own (`{definition}` in it names that origin). Omitted, a script
    * element shows a notice in its box. */
   elementFrames?: string;
+  /** Called with the board’s state each time new values are drawn — what each part shows: its state, its connection
+   *  quality and why, how old its data is (`BoardState`, no values). A board that has stopped updating reports its
+   *  parts `stale`. For a host that acts on what the board shows — a count of faults in its own header, a sound. */
+  onBoardState?: (state: BoardState) => void;
 }
 
 /** What is on screen: a canvas view as canvas-kit draws it, or a grid view as it lays out — with the time its
@@ -78,12 +83,14 @@ export function ViewerPage({
   attribution = true,
   elementOrigins,
   elementFrames,
+  onBoardState,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
   const [drawn, setDrawn] = useState<Drawn | null>(null);
 
   // Read when a result is drawn, not watched: a new function on every render must not redraw the view.
   const readClock = useEffectEvent(() => clock());
+  const reportState = useEffectEvent((state: BoardState) => onBoardState?.(state));
   const { resolved: received, resolvedAt, stalled } = useResolvedDocument(document, adapters, { pollIntervalMs, clock });
   // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
@@ -112,6 +119,7 @@ export function ViewerPage({
         ? { kind: 'canvas', preview: toCanvasKit(resolved, { qualityText: labels.qualityText, now, locale: labels.locale }), now }
         : { kind: 'grid', doc: resolved, now }
     );
+    reportState(boardStateOf(resolved, { now }));
   }, [resolved, labels]);
 
   return (
