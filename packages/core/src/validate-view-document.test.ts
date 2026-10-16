@@ -350,3 +350,12 @@ describe('state rules', () => {
     expect(validateViewDocument(node({ from: 'data.value' }))).toEqual([{ path: '/nodes/0/states/map', message: 'expected an object — it is missing' }]);
   });
 });
+
+describe('naming a field a part does not have', () => {
+  it('reads as a sentence, whatever the part is called', () => {
+    const doc = { kind: 'grid', items: [], elements: { device: { render: 'template', template: '<b></b>', symbols: {} } } };
+    expect(validateViewDocument(doc, { strict: true })).toEqual([
+      { path: '/elements/device/symbols', message: expect.stringMatching(/^an element definition has no "symbols" — .* An element definition has: /) },
+    ]);
+  });
+});

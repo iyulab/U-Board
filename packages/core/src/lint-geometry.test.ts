@@ -22,6 +22,11 @@ describe('lintGeometry', () => {
     expect(lintGeometry(doc)).toEqual([{ path: '/nodes/0', message: expect.stringContaining('overlaps node "b" (/nodes/1)') }]);
   });
 
+  it('says two overlapping nodes once — not again for their captions under each other or running together', () => {
+    const doc = canvas({ nodes: [{ ...node('a', 0, 0, { width: 44, height: 44 }), caption: 'core#1' }, { ...node('b', 20, 0, { width: 44, height: 44 }), caption: 'edge#1' }] });
+    expect(lintGeometry(doc)).toEqual([{ path: '/nodes/0', message: expect.stringContaining('overlaps node "b"') }]);
+  });
+
   it('does not count boxes that only touch', () => {
     expect(lintGeometry(canvas({ nodes: [node('a', 0, 0), node('b', 160, 0)] }))).toEqual([]);
   });

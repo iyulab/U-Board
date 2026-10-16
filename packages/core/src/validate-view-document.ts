@@ -373,7 +373,7 @@ function checkValueMap(doc: Checker, map: Record<string, unknown>, at: string[])
 
 /** A part’s state rule: `from` names one of its widget’s bindings, its map gives state names, each look its fields. */
 function checkStates(doc: Checker, rule: Record<string, unknown>, widget: unknown, at: string[]): void {
-  doc.known(rule, at, STATES_FIELDS, 'states rule', STATES_HINT);
+  doc.known(rule, at, STATES_FIELDS, 'state rule', STATES_HINT);
   const bindings = isRecord(widget) && isRecord(widget.bindings) ? Object.keys(widget.bindings) : [];
   if (typeof rule.from !== 'string') doc.expected([...at, 'from'], 'expected the key of one of this widget’s bindings', rule.from);
   else if (!bindings.includes(rule.from)) {
@@ -476,7 +476,8 @@ class Checker {
     if (!this.strict) return;
     for (const key of Object.keys(owner)) {
       if (!fields.includes(key)) {
-        this.fail([...at, key], `a ${noun} has no "${key}" — it would be kept but never drawn. A ${noun} has: ${fields.join(', ')}.${hint ? ` ${hint}` : ''}`);
+        const a = /^[aeiou]/.test(noun) ? 'an' : 'a';
+        this.fail([...at, key], `${a} ${noun} has no "${key}" — it would be kept but never drawn. ${a === 'an' ? 'An' : 'A'} ${noun} has: ${fields.join(', ')}.${hint ? ` ${hint}` : ''}`);
       }
     }
   }

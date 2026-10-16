@@ -33,6 +33,7 @@ describe('applyJsonPatch — RFC 6902 Appendix A', () => {
     ['"/" taken for the whole document', { a: 1 }, [{ op: 'replace', path: '/', value: {} }], 'nothing at / — the whole document is the path "", not "/"'],
     ['A.15 compare strings and numbers', { '/': 9, '~1': 10 }, [{ op: 'test', path: '/~01', value: '10' }], 'test failed'],
     ['remove what is not there', { a: 1 }, [{ op: 'remove', path: '/b' }], 'nothing at /b'],
+    ['replace a member that is not there', { a: {} }, [{ op: 'replace', path: '/a/b', value: 1 }], 'nothing at /a/b — "replace" changes a value that is there; to set one that is not, use "add"'],
     ['an index past the end', { a: [1] }, [{ op: 'replace', path: '/a/5', value: 2 }], 'no item at /a/5'],
     ['a leading zero index', { a: [1, 2] }, [{ op: 'remove', path: '/a/01' }], 'no item at /a/01'],
     ['an unknown op', { a: 1 }, [{ op: 'merge', path: '/a', value: 2 }], 'unknown op'],

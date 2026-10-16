@@ -41,22 +41,28 @@ export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
   });
   // A caption sits on a chip over the lines, so a line under it is hidden, not crossed — but it can still lie under a
   // node or run into another text.
-  const captions = sized.flatMap((node, i) => (node.caption?.trim() ? [{ at: `/nodes/${i}/caption`, box: captionBox(node) }] : []));
+  const captions = sized.flatMap((node, i) => (node.caption?.trim() ? [{ at: `/nodes/${i}/caption`, box: captionBox(node), owner: i }] : []));
   const placements = placeConnectors(sized, doc.connectors);
   // A label sits on its chip, which covers the lines under it — so, like a caption, it is judged by its chip.
   const labels = placements.flatMap(({ label, index }) => (label ? [{ at: `/connectors/${index}/label`, box: chipOf(label) }] : []));
-  const texts = [...decorationTexts, ...captions, ...labels];
+  const texts: Array<{ at: string; box: Box; owner?: number }> = [...decorationTexts, ...captions, ...labels];
   const found: Array<ViewDocumentAdvice & { kind: string }> = [];
 
+  // Two overlapping nodes are said once: their captions' trouble with each other follows from it, and goes when they
+  // are moved apart — saying it again only makes the answer longer.
+  const overlapping = new Set<string>();
+  const pair = (i: number, j: number) => (i < j ? `${i} ${j}` : `${j} ${i}`);
+  const fromOverlap = (a?: number, b?: number) => a !== undefined && b !== undefined && overlapping.has(pair(a, b));
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       if (overlaps(nodes[i].box, nodes[j].box)) {
+        overlapping.add(pair(i, j));
         found.push({ kind: 'overlapping nodes', path: nodes[i].at, message: `its box overlaps node "${nodes[j].id}" (${nodes[j].at}) — one widget draws over the other; move or resize one` });
       }
     }
   }
   for (const text of texts) {
-    const under = nodes.find(node => overlaps(text.box, node.box));
+    const under = nodes.find((node, k) => overlaps(text.box, node.box) && !fromOverlap(text.owner, k));
     if (under) found.push({ kind: 'texts under a node', path: text.at, message: `this text lies under node "${under.id}" (${under.at}), which draws over it — move it clear of ${describe(under.box)}` });
   }
   for (const text of decorationTexts) {
@@ -68,7 +74,7 @@ export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
   }
   for (let i = 0; i < texts.length; i++) {
     for (let j = i + 1; j < texts.length; j++) {
-      if (overlaps(texts[i].box, texts[j].box)) found.push({ kind: 'texts running together', path: texts[i].at, message: `this text runs into ${texts[j].at} — the two overlap` });
+      if (overlaps(texts[i].box, texts[j].box) && !fromOverlap(texts[i].owner, texts[j].owner)) found.push({ kind: 'texts running together', path: texts[i].at, message: `this text runs into ${texts[j].at} — the two overlap` });
     }
   }
 

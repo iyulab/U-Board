@@ -57,7 +57,7 @@ function applyOperation(root: unknown, operation: unknown): unknown {
     case 'replace':
       if (!has('value')) throw new Error('"replace" needs a "value"');
       if (path === '') return structuredClone(value);
-      get(root, parsePointer(path));
+      replaceable(root, parsePointer(path));
       return add(remove(root, parsePointer(path)).root, parsePointer(path), structuredClone(value));
     case 'move': {
       if (typeof from !== 'string') throw new Error('"move" needs "from", a JSON Pointer');
@@ -109,6 +109,26 @@ function get(root: unknown, tokens: string[]): unknown {
     }
   }
   return at;
+}
+
+/** Throws unless there is a value to replace at `tokens` — saying, when only its last part is missing from an object,
+ *  that "add" is what sets a member that is not there (a writer otherwise reads «nothing at» and tries "replace" again). */
+function replaceable(root: unknown, tokens: string[]): void {
+  try {
+    get(root, tokens);
+  } catch (error) {
+    let parent: unknown;
+    try {
+      parent = get(root, tokens.slice(0, -1));
+    } catch {
+      throw error;
+    }
+    const key = tokens[tokens.length - 1];
+    if (!Array.isArray(parent) && isObject(parent) && key !== '') {
+      throw new Error(`${(error as Error).message} — "replace" changes a value that is there; to set one that is not, use "add"`);
+    }
+    throw error;
+  }
 }
 
 function add(root: unknown, tokens: string[], value: unknown): unknown {
