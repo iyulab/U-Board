@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { UWidget } from '@iyulab/u-widgets/react';
 import '@iyulab/u-widgets';
 import type { ResolvedWidget } from '../adapter.js';
-import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
+import type { BoardAppearance, ElementDefinition, StateLook, SymbolDefinition } from '../view-document.js';
 import { elementNameOf } from '../elements/element-type.js';
 import { ElementView } from './element-view.js';
 import { accentTokens } from './element-template.js';
@@ -82,6 +82,10 @@ export interface NodeFrameProps {
   /** The canvas node this frame draws, marked on it as `data-node-id` — how a page (a test, a tool taking a picture
    *  of one node) finds a node on screen. */
   nodeId?: string;
+  /** The state the part is in (`StateRule`), marked on it as `data-state` and named first in what it says about itself. */
+  state?: string;
+  /** How each state is shown, by name — the part’s `states.looks`. */
+  looks?: Record<string, StateLook>;
 }
 
 /**
@@ -92,21 +96,32 @@ export interface NodeFrameProps {
  * u-widgets fits a host height in both directions: a chart fills it and lays itself out compactly when
  * small, media (a gauge, an image) scales down whole, and content that runs on (a table, a list) scrolls
  * inside. Nothing spills over a neighbour.
+ *
+ * When it has states, the one it is in is named on it and drawn by its look around the frame — never in place of the
+ * quality’s border.
  */
-export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
-  const label = describeQuality(widget, { text: qualityText, now });
+  const look = state !== undefined ? looks?.[state] : undefined;
+  const said = describeQuality(widget, { text: qualityText, now });
+  const label = state !== undefined ? (said ? `${state} — ${said}` : state) : said;
   const badge = key === undefined ? undefined : badgeText(widget, key, qualityText, now);
   const element = elementNameOf(widget.type);
 
   return (
     <div
-      style={{ position: 'relative', width: '100%', height: '100%', ...frameStyle }}
+      className={look?.blink ? (look.outline ? 'ub-state-blink ub-state-blink--ring' : 'ub-state-blink') : undefined}
+      style={{
+        position: 'relative', width: '100%', height: '100%', ...frameStyle,
+        ...(look?.outline && { boxShadow: `0 0 0 3px ${look.outline}` }),
+        ...(look?.hidden && { visibility: 'hidden' as const }),
+      }}
       title={label}
       {...(nodeId !== undefined && { 'data-node-id': nodeId })}
       {...(quality && quality !== 'live' && { 'data-quality': quality })}
+      {...(state !== undefined && { 'data-state': state })}
     >
       {element !== undefined ? (
         <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} symbols={symbols} />

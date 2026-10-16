@@ -63,6 +63,21 @@ function badgeFor(widget: Partial<ResolvedWidget> & Pick<ResolvedWidget, 'qualit
 }
 
 describe('toCanvasKit', () => {
+  it('hands each node its state and looks, and still draws connectors to a hidden node', () => {
+    const widget: ResolvedWidget = { type: 'status', props: {}, quality: {} };
+    const out = toCanvasKit(doc({
+      nodes: [
+        { id: 'a', x: 0, y: 0, width: 10, height: 10, anchored: false, widget, state: 'off', states: { from: 'v', map: { values: { x: 'off' } }, looks: { off: { hidden: true } } } },
+        { id: 'b', x: 50, y: 0, width: 10, height: 10, anchored: false, widget },
+      ],
+      connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b' }],
+    }));
+    const frame = out.overlays[0].content as ReactElement<NodeFrameProps>;
+    expect(frame.props.state).toBe('off');
+    expect(frame.props.looks).toEqual({ off: { hidden: true } });
+    expect(out.scene.getObjects().some(o => o.type === 'line')).toBe(true);
+  });
+
   it('adds an image DrawingObject for the background when one is set', () => {
     const { scene } = toCanvasKit(
       doc({ background: { image: { src: 'plan.png', width: 800, height: 600 } } })

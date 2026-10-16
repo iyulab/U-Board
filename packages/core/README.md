@@ -230,6 +230,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-view-controls` | The zoom out / zoom in / fit buttons |
 | `ub-freshness`, `ub-freshness__time`, `ub-freshness__alert` | When the values were last updated, and the "not updating" notice |
 | `ub-action` (`--primary`, `--icon`) | Every button; the primary one; a button holding one symbol |
+| `ub-state-blink` (`--ring`) | A part in a state whose look blinks (`StateLook.blink`) — the part, or its ring when the look has one; still under `prefers-reduced-motion` |
 
 ## Widgets
 

@@ -418,3 +418,28 @@
 .ub-freshness__alert {
   font-weight: 600;
 }
+
+/* A part in a state whose look blinks: its ring pulses, or the part does when its look has no ring. Never where a
+   reader asks for less motion — it then stays still. An animation outranks the frame's inline ring, so the ring can
+   be switched off for half of each beat. */
+@keyframes ub-state-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes ub-state-blink-ring {
+  50% {
+    box-shadow: none;
+  }
+}
+.ub-state-blink {
+  animation: ub-state-blink 1s step-end infinite;
+}
+.ub-state-blink--ring {
+  animation-name: ub-state-blink-ring;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ub-state-blink {
+    animation: none;
+  }
+}

@@ -82,7 +82,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} />,
+                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} />,
                 index
               )}
             </div>
