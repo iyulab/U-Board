@@ -77,7 +77,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     width: node.width ?? DEFAULT_NODE_WIDTH,
     height: node.height ?? DEFAULT_NODE_HEIGHT,
     // A widget takes its node's box exactly — the box the author drew is the layout.
-    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} />,
+    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} />,
   }));
   for (const placed of placeOnCanvas(doc.nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 

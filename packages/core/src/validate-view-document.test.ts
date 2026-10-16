@@ -48,6 +48,19 @@ describe('validateViewDocument', () => {
     ]));
   });
 
+  it('checks symbols and the uses that place them', () => {
+    const grid = (symbols: unknown, template: string) => ({ kind: 'grid', items: [], symbols, elements: { dot: { render: 'template', template } } });
+    const sym = { valve: { viewBox: '0 0 24 24', markup: '<path d="M0 0"/>' } };
+    expect(validateViewDocument(grid(sym, '<svg><use href="#valve"/><use href="#state-{{s}}"/></svg>'), { strict: true })).toEqual([]);
+    expect(validateViewDocument(grid(sym, '<svg><defs><g id="dot"/></defs><use href="#dot"/></svg>'))).toEqual([]);
+    expect(validateViewDocument(grid(sym, '<svg><use href="#pump"/></svg>'))).toEqual([
+      { path: '/elements/dot/template', message: expect.stringContaining('no symbol "pump"') },
+    ]);
+    expect(validateViewDocument(grid({ valve: { viewBox: '0 0 24', markup: '<path d="{{d}}"/><script/>', fill: 'red' } }, '<b/>'), { strict: true }).map(i => i.path)).toEqual([
+      '/symbols/valve/fill', '/symbols/valve/viewBox', '/symbols/valve/markup', '/symbols/valve/markup',
+    ]);
+  });
+
   it('says when a document is wrapped in its own "kind"', () => {
     expect(validateViewDocument({ kind: { kind: 'canvas', background: {}, nodes: [], connectors: [] } })).toEqual([
       { path: '/kind', message: expect.stringContaining('the document is wrapped one level too deep') },

@@ -4,6 +4,7 @@ import { ELEMENT_NAME, elementNameOf } from './elements/element-type.js';
 import { parseTemplate } from './elements/template.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from './elements/markup-policy.js';
 import { checkPropsSchema, checkPropsValue } from './elements/props-schema.js';
+import { VIEW_BOX, symbolReferences } from './elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor } from './css-color.js';
 
 /** One way a value fails to be a `ViewDocument`: where (an RFC 6901 JSON Pointer into the value,
@@ -53,6 +54,8 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
     doc.expected(['appearance'], 'expected "light" or "dark"', value.appearance);
   }
   doc.optionalColor(value, ['accent']);
+  // Before the elements: a template's `<use href="#…">` is checked against the symbols the board defines.
+  if (value.symbols !== undefined && doc.record(value, ['symbols'])) checkSymbols(doc, value.symbols as Record<string, unknown>);
   if (value.elements !== undefined && doc.record(value, ['elements'])) checkElements(doc, value.elements as Record<string, unknown>);
 
   if (value.kind === 'canvas') {
@@ -70,14 +73,15 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
 }
 
 /** The fields each part of a document has — what `strict` holds a written document to. */
-const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'background', 'nodes', 'connectors', 'decorations'];
-const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'columns', 'items'];
+const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'background', 'nodes', 'connectors', 'decorations'];
+const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'columns', 'items'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash', 'arrow'];
 const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'radius', 'dash', 'label', 'labelAt', 'labelSize'];
 const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill', 'anchor', 'background'];
+const SYMBOL_FIELDS = ['viewBox', 'markup'];
 const WIDGET_FIELDS = ['type', 'props', 'bindings'];
 const BINDING_FIELDS = ['adapter', 'ref', 'map'];
 const VALUE_MAP_FIELDS = ['values', 'ranges', 'otherwise'];
@@ -253,6 +257,30 @@ function checkElements(doc: Checker, elements: Record<string, unknown>): void {
   }
 }
 
+function checkSymbols(doc: Checker, symbols: Record<string, unknown>): void {
+  for (const [name, symbol] of Object.entries(symbols)) {
+    const at = ['symbols', name];
+    if (!ELEMENT_NAME.test(name)) doc.fail(at, 'expected a name of lowercase letters, digits and hyphens, starting with a letter (at most 40) — it is the id a <use href="#…"> places');
+    if (!doc.isRecordAt(symbol, at)) continue;
+    doc.symbols.add(name);
+    doc.known(symbol, at, SYMBOL_FIELDS, 'symbol');
+    if (symbol.viewBox !== undefined && !(typeof symbol.viewBox === 'string' && VIEW_BOX.test(symbol.viewBox))) {
+      doc.expected([...at, 'viewBox'], 'expected four numbers, "min-x min-y width height", such as "0 0 24 24"', symbol.viewBox);
+    }
+    if (typeof symbol.markup !== 'string') {
+      doc.expected([...at, 'markup'], 'expected SVG markup', symbol.markup);
+      continue;
+    }
+    if (symbol.markup.includes('{{')) doc.fail([...at, 'markup'], 'a symbol has no values — let the element choose between symbols instead: href="#state-{{state}}"');
+    for (const issue of checkTemplateMarkup(symbol.markup, [])) doc.fail([...at, 'markup'], issue.message);
+  }
+}
+
+/** Whether markup gives a part of itself `id="name"`. */
+function definesId(markup: string, name: string): boolean {
+  return markup.includes(`id="${name}"`) || markup.includes(`id='${name}'`);
+}
+
 function checkElementDefinition(doc: Checker, definition: Record<string, unknown>, at: string[]): void {
   const resources: string[] = [];
   if (definition.resources !== undefined && doc.array(definition, [...at, 'resources'])) {
@@ -273,6 +301,10 @@ function checkElementDefinition(doc: Checker, definition: Record<string, unknown
       const parsed = parseTemplate(definition.template);
       if (!parsed.ok) doc.fail([...at, 'template'], `${parsed.error} (at character ${parsed.offset})`);
       for (const issue of checkTemplateMarkup(definition.template, resources)) doc.fail([...at, 'template'], issue.message);
+      for (const name of symbolReferences(definition.template)) {
+        if (name.includes('{{') || doc.symbols.has(name) || definesId(definition.template, name)) continue;
+        doc.fail([...at, 'template'], `<use href="#${name}">: no symbol "${name}" — define it in symbols, or give a part of this template id="${name}"`);
+      }
     }
   } else {
     if (definition.template !== undefined) doc.fail([...at, 'template'], 'a script element draws with its script — remove the template, or use render: "template"');
@@ -382,6 +414,8 @@ class Checker {
   private readonly ids = new Map<string, string>();
   /** The elements the document defines: the definition when it holds, `null` when it is defined but does not. */
   readonly elements = new Map<string, ElementDefinition | null>();
+  /** The symbols the document defines. */
+  readonly symbols = new Set<string>();
 
   constructor(
     private readonly issues: ViewDocumentIssue[],

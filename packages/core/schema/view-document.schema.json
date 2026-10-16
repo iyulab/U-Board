@@ -16,7 +16,8 @@
         "decorations": { "type": "array", "items": { "$ref": "#/$defs/shape" } },
         "appearance": { "$ref": "#/$defs/appearance" },
         "accent": { "$ref": "#/$defs/accent" },
-        "elements": { "$ref": "#/$defs/elements" }
+        "elements": { "$ref": "#/$defs/elements" },
+        "symbols": { "$ref": "#/$defs/symbols" }
       }
     },
     "gridView": {
@@ -32,7 +33,21 @@
         "columns": { "description": "Columns at full width. Only 12 for now; absent means 12.", "const": 12 },
         "appearance": { "$ref": "#/$defs/appearance" },
         "accent": { "$ref": "#/$defs/accent" },
-        "elements": { "$ref": "#/$defs/elements" }
+        "elements": { "$ref": "#/$defs/elements" },
+        "symbols": { "$ref": "#/$defs/symbols" }
+      }
+    },
+    "symbols": {
+      "description": "Drawings the board's template elements share, by name: <use href=\"#name\"/> places one. Markup is held to the template policy and has no values.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{0,39}$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["markup"],
+        "properties": {
+          "viewBox": { "type": "string", "description": "min-x min-y width height, such as \"0 0 24 24\"." },
+          "markup": { "type": "string" }
+        }
       }
     },
     "accent": {

@@ -44,6 +44,37 @@ describe('accentTokens', () => {
   });
 });
 
+describe('symbols in a template element', () => {
+  const symbols = {
+    'state-run': { viewBox: '0 0 10 10', markup: '<circle r="5"/>' },
+    'state-stop': { markup: '<rect width="10" height="10"/><use href="#stop-mark"/>' },
+    'stop-mark': { markup: '<path d="M0 0"/>' },
+    unused: { markup: '<path/>' },
+    bad: { markup: '<path onclick="x()"/><script>x</script>' },
+  };
+  const rootOf = (template: string, props: unknown) => {
+    const box = document.createElement('div');
+    box.append(renderTemplateElement({ render: 'template', template }, props, document, [], symbols));
+    return box;
+  };
+
+  it('defines in its root the symbols its markup places — chosen by a value — and those they place, not the rest', () => {
+    const root = rootOf('<svg><use href="#state-{{state}}"/></svg>', { state: 'stop' });
+    expect([...root.querySelectorAll('symbol')].map(s => s.id)).toEqual(['state-stop', 'stop-mark']);
+    expect(root.lastElementChild!.querySelector('use')!.getAttribute('href')).toBe('#state-stop'); // the element's own markup, after the symbols
+  });
+
+  it('holds a symbol to the template policy', () => {
+    const root = rootOf('<svg><use href="#bad"/></svg>', {});
+    expect(root.querySelector('symbol#bad path')!.hasAttribute('onclick')).toBe(false);
+    expect(root.querySelector('script')).toBeNull();
+  });
+
+  it('adds nothing where the markup places none', () => {
+    expect(rootOf('<b>{{v}}</b>', { v: 1 }).querySelector('svg')).toBeNull();
+  });
+});
+
 describe('fillTemplate', () => {
   it('escapes every value, in text and in attributes', () => {
     expect(filled('<b title="{{t}}">{{v}}</b>', { v: '<script>x</script>', t: '" onclick="x()' })).toBe(

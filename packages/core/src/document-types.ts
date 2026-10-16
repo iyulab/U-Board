@@ -23,6 +23,7 @@ export type {
   RectShape,
   TextShape,
   Placement,
+  SymbolDefinition,
   BoardAppearance,
   ElementDefinition,
   ElementRender,

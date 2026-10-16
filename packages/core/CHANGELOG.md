@@ -42,6 +42,10 @@ All notable changes to this package are documented here. The format follows
   with, in place of the theme's primary colour: it sets `--u-widget-primary`, the first series colour and the ink on a
   primary fill (light, or dark on a light accent) for every widget and element on the board. Set in the editor's
   board panel; the schema and strict validation know it.
+- **Shared symbols** — a document's `symbols` (`SymbolDefinition`: a `viewBox` and SVG `markup`, by name) are drawings
+  every template element can place with `<use href="#name">`. Each element's isolated root receives the symbols its
+  filled markup places, and those they place — so a value can choose one (`href="#state-{{state}}"`) — held to the
+  template policy. Validation names a `<use>` of a symbol the document does not define, and a symbol with values.
 
 ### Changed
 

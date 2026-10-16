@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { UWidget } from '@iyulab/u-widgets/react';
 import '@iyulab/u-widgets';
 import type { ResolvedWidget } from '../adapter.js';
-import type { BoardAppearance, ElementDefinition } from '../view-document.js';
+import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
 import { elementNameOf } from '../elements/element-type.js';
 import { ElementView } from './element-view.js';
 import { accentTokens } from './element-template.js';
@@ -68,6 +68,8 @@ export interface NodeFrameProps {
   appearance?: BoardAppearance;
   /** The board's accent, in place of the palette's primary colour. */
   accent?: string;
+  /** The board's symbols, for an element that places them. */
+  symbols?: Record<string, SymbolDefinition>;
   /** Words for the connection-quality tooltip, mark and announcement (English by default). */
   qualityText?: QualityText;
   /** The time a stale value's age is measured to, in epoch milliseconds — read by the caller when it draws, so a
@@ -91,7 +93,7 @@ export interface NodeFrameProps {
  * small, media (a gauge, an image) scales down whole, and content that runs on (a table, a list) scrolls
  * inside. Nothing spills over a neighbour.
  */
-export function NodeFrame({ widget, appearance, accent, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -107,7 +109,7 @@ export function NodeFrame({ widget, appearance, accent, qualityText = DEFAULT_QU
       {...(quality && quality !== 'live' && { 'data-quality': quality })}
     >
       {element !== undefined ? (
-        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} />
+        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} symbols={symbols} />
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.

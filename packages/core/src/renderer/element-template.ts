@@ -1,4 +1,5 @@
-import type { BoardAppearance, ElementDefinition } from '../view-document.js';
+import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
+import { symbolSheet, symbolsUsed } from '../elements/symbols.js';
 import { parseTemplate, type TemplateNode } from '../elements/template.js';
 import { TEMPLATE_TAGS, attributeProblem, checkStyle, isResourceOrigin } from '../elements/markup-policy.js';
 
@@ -132,7 +133,13 @@ function escapeHtml(text: string): string {
  * met the validator draws nothing it should not, and a value cannot bring in what its template did not (a URL off
  * the declared origins, CSS that loads one).
  */
-export function renderTemplateElement(definition: ElementDefinition, props: unknown, owner: Document, allowedOrigins: readonly string[] = []): DocumentFragment {
+export function renderTemplateElement(
+  definition: ElementDefinition,
+  props: unknown,
+  owner: Document,
+  allowedOrigins: readonly string[] = [],
+  symbols?: Readonly<Record<string, SymbolDefinition>>
+): DocumentFragment {
   const fragment = owner.createDocumentFragment();
   // An origin reaches the element only when it declares it and the host allows it — none, unless the host says so.
   const resources = (definition.resources ?? []).filter(origin => isResourceOrigin(origin) && allowedOrigins.includes(origin));
@@ -143,7 +150,11 @@ export function renderTemplateElement(definition: ElementDefinition, props: unkn
   const parsed = parseTemplate(definition.template ?? '');
   if (!parsed.ok) return fragment;
   const inert = owner.createElement('template');
-  inert.innerHTML = fillTemplate(parsed.nodes, props);
+  const filled = fillTemplate(parsed.nodes, props);
+  // The board's symbols this markup places — chosen by a value, maybe — defined ahead of it in its own root, and held
+  // to the same policy.
+  const used = symbolsUsed(filled, symbols);
+  inert.innerHTML = (used.length > 0 ? symbolSheet(used, symbols!) : '') + filled;
   keepToPolicy(inert.content, resources);
   fragment.append(inert.content);
   return fragment;

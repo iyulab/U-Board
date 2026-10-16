@@ -43,6 +43,8 @@ export interface CanvasView {
   accent?: string;
   /** The elements this board defines, by name — see `ElementDefinition`. */
   elements?: Record<string, ElementDefinition>;
+  /** Drawings its template elements share, by name — see `SymbolDefinition`. */
+  symbols?: Record<string, SymbolDefinition>;
 }
 
 /** A grid view: widgets laid out in order, in rows of `columns` columns — no position, so the same
@@ -59,6 +61,8 @@ export interface GridView {
   accent?: string;
   /** As a canvas view's — the elements this board defines. */
   elements?: Record<string, ElementDefinition>;
+  /** As a canvas view's — the drawings its template elements share. */
+  symbols?: Record<string, SymbolDefinition>;
 }
 
 /** A widget in a grid view and the room it takes. */
@@ -272,6 +276,20 @@ export interface ElementDefinition {
 }
 
 export type ElementRender = 'template' | 'script';
+
+/**
+ * An SVG drawing a board defines once and its template elements place by name — `<svg><use href="#valve"/></svg>` —
+ * a plant's symbol set drawn the same in every element. A template element's root receives the symbols its markup
+ * places (and those they place); a value may choose one: `href="#state-{{state}}"`. Its markup is held to the
+ * template policy and has no values of its own.
+ */
+export interface SymbolDefinition {
+  /** Its own coordinates, as an SVG `viewBox`: `"0 0 24 24"`. */
+  viewBox?: string;
+  /** SVG markup — paths, shapes, groups; colour from the theme variables (`fill: var(--u-widget-primary)`) or
+   *  `currentColor`. */
+  markup: string;
+}
 
 /** A JSON Schema, in the subset an element's props are described with (`PROPS_SCHEMA_KEYWORDS`). */
 export interface PropsSchema {

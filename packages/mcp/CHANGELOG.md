@@ -14,6 +14,7 @@ All notable changes to this package are documented here. The format follows
   `background` — a frame no longer needs a separate text for its name, nor a tag a rect behind it.
 - `delete_board` — deletes a board for good, marked destructive so a client can ask first. A data source is still
   removed by a person in the console.
+- The `elements` topic teaches document `symbols` — drawings every template element places with `<use href="#name">`.
 - The rules teach a board's `accent` — the colour to set instead of fixing one in a widget or an element.
 
 ### Changed

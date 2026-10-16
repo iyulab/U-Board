@@ -70,7 +70,8 @@ items as a widget of type `element:<name>`, each with its own props — bound li
 **template element** is HTML or SVG markup with `{{prop}}` values and its own CSS, drawn in an
 isolated part of the page: its CSS reaches only its own markup, the page's does not reach in, and
 only the board's theme passes through (`--u-widget-*` CSS variables — the colours the prepared widgets use).
-It runs no script. A **script element** runs code in a sandboxed frame that cannot reach the page,
+A board's **symbols** — SVG drawings it defines once, by name — reach every template element that places
+one with `<use href="#name">`, so a plant's symbol set is drawn the same everywhere. It runs no script. A **script element** runs code in a sandboxed frame that cannot reach the page,
 the viewer's session or the network. An element loads nothing from another origin unless it
 declares the origin and the host allows it. Its definition describes its props as a JSON Schema,
 so a tool — or an AI — writing a board knows what it takes.

@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { BoardAppearance, ElementDefinition } from '../view-document.js';
+import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
 import type { ElementFrameMessage } from '../elements/frame.js';
 import { elementDefinitionHash } from '../elements/definition-hash.js';
 import { boardTheme, renderTemplateElement } from './element-template.js';
@@ -65,6 +65,8 @@ export interface ElementViewProps {
   appearance?: BoardAppearance;
   /** The board's accent, in place of the theme's primary colour. */
   accent?: string;
+  /** The board's symbols, for a template element's `<use>`s. */
+  symbols?: Record<string, SymbolDefinition>;
 }
 
 /**
@@ -73,7 +75,7 @@ export interface ElementViewProps {
  * element runs in a sandboxed frame its server builds — a frame of its own origin, with no network — and receives
  * its props by message. An element it cannot draw says so in its box rather than leaving it blank.
  */
-export function ElementView({ definition, name, props, appearance = 'light', accent }: ElementViewProps) {
+export function ElementView({ definition, name, props, appearance = 'light', accent, symbols }: ElementViewProps) {
   const frames = useContext(ElementFrameContext);
   const theme = useMemo(() => boardTheme(appearance, accent), [appearance, accent]);
   if (!definition) return <div style={NOTICE_STYLE} data-element-notice="">{`No element “${name}”`}</div>;
@@ -81,18 +83,18 @@ export function ElementView({ definition, name, props, appearance = 'light', acc
     if (!frames) return <div style={NOTICE_STYLE} data-element-notice="">{`“${name}” runs a script — shown where the board is served`}</div>;
     return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} theme={theme} />;
   }
-  return <TemplateElement definition={definition} name={name} props={props} theme={theme} />;
+  return <TemplateElement definition={definition} name={name} props={props} theme={theme} symbols={symbols} />;
 }
 
-function TemplateElement({ definition, name, props, theme }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string> }) {
+function TemplateElement({ definition, name, props, theme, symbols }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string>; symbols?: Record<string, SymbolDefinition> }) {
   const host = useRef<HTMLDivElement>(null);
   const origins = useContext(ElementOriginsContext);
   useLayoutEffect(() => {
     const element = host.current;
     if (!element) return;
     const root = element.shadowRoot ?? element.attachShadow({ mode: 'open' });
-    root.replaceChildren(renderTemplateElement(definition, props, element.ownerDocument, origins));
-  }, [definition, props, origins]);
+    root.replaceChildren(renderTemplateElement(definition, props, element.ownerDocument, origins, symbols));
+  }, [definition, props, origins, symbols]);
   return <div ref={host} style={{ ...FILL, ...(theme as CSSProperties) }} data-element={name} />;
 }
 
