@@ -101,7 +101,8 @@ function get(root: unknown, tokens: string[]): unknown {
       if (index === undefined) throw new Error(`no item at ${where()}`);
       at = at[index];
     } else if (isObject(at)) {
-      if (!Object.hasOwn(at, token)) throw new Error(`nothing at ${where()}`);
+      // "/" names a member whose key is empty — not the whole document, which is "".
+      if (!Object.hasOwn(at, token)) throw new Error(`nothing at ${where()}${where() === '/' ? ' — the whole document is the path "", not "/"' : ''}`);
       at = at[token];
     } else {
       throw new Error(`nothing at ${where()} — its parent is not an object or array`);
@@ -112,7 +113,13 @@ function get(root: unknown, tokens: string[]): unknown {
 
 function add(root: unknown, tokens: string[], value: unknown): unknown {
   if (tokens.length === 0) return value;
-  const parent = get(root, tokens.slice(0, -1));
+  let parent: unknown;
+  try {
+    parent = get(root, tokens.slice(0, -1));
+  } catch (error) {
+    // "add" makes the last part of its path only — a board without symbols takes "/symbols" before "/symbols/valve".
+    throw new Error(`${(error as Error).message} — "add" makes only the last part of its path: add that first (an object {} or a list []), or add the whole of it at once`);
+  }
   const key = tokens[tokens.length - 1];
   if (Array.isArray(parent)) {
     const index = key === '-' ? parent.length : arrayIndex(key, parent.length);

@@ -29,7 +29,8 @@ describe('applyJsonPatch — RFC 6902 Appendix A', () => {
 
   it.each([
     ['A.9 test a value: error', { baz: 'qux' }, [{ op: 'test', path: '/baz', value: 'bar' }], 'test failed at /baz'],
-    ['A.12 add to a nonexistent target', { foo: 'bar' }, [{ op: 'add', path: '/baz/bat', value: 'qux' }], 'nothing at /baz'],
+    ['A.12 add to a nonexistent target', { foo: 'bar' }, [{ op: 'add', path: '/baz/bat', value: 'qux' }], 'nothing at /baz — "add" makes only the last part of its path: add that first'],
+    ['"/" taken for the whole document', { a: 1 }, [{ op: 'replace', path: '/', value: {} }], 'nothing at / — the whole document is the path "", not "/"'],
     ['A.15 compare strings and numbers', { '/': 9, '~1': 10 }, [{ op: 'test', path: '/~01', value: '10' }], 'test failed'],
     ['remove what is not there', { a: 1 }, [{ op: 'remove', path: '/b' }], 'nothing at /b'],
     ['an index past the end', { a: [1] }, [{ op: 'replace', path: '/a/5', value: 2 }], 'no item at /a/5'],

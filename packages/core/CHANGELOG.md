@@ -26,6 +26,11 @@ All notable changes to this package are documented here. The format follows
   (`https://{definition}.frames.example.com/api/element-frames/<board>`); a script element's frame is loaded from the
   address with its definition's label in place.
 
+### Fixed
+
+- A JSON Patch `add` under a part the document does not have yet (`/symbols/valve` on a board without symbols) says
+  to add that part first; a path `"/"` meant as the whole document is told the whole document is `""`.
+
 ### Changed
 
 - **A node that gives no box takes the size of the element it places** (`ElementDefinition.size`), as an image without
