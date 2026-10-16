@@ -39,6 +39,9 @@ function fakeServer() {
       boards.set('b2', { name: body.name, revision: 1, document: body.kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', background: {}, nodes: [], connectors: [] } });
       return json(201, { id: 'b2', revision: 1 });
     }
+    if (url.pathname === '/api/share/boards/b1/state') {
+      return json(200, { evaluatedAt: '2026-10-16T09:00:00.000Z', revision: 4, parts: { a: { state: 'fault', quality: 'live' } } });
+    }
     const id = url.pathname.split('/').pop()!;
     const board = boards.get(id);
     if (!board) return json(404, { code: 'NOT_FOUND' });
@@ -84,7 +87,7 @@ describe('u-board-mcp', () => {
   it('offers few tools, each with a strict input', async () => {
     const { tools } = await client.listTools();
     expect(tools.map(t => t.name).sort()).toEqual([
-      'create_board', 'create_source', 'delete_board', 'describe', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'sample_source', 'validate',
+      'board_state', 'create_board', 'create_source', 'delete_board', 'describe', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'sample_source', 'validate',
     ]);
     for (const tool of tools) expect(tool.inputSchema.additionalProperties, tool.name).toBe(false);
   });
@@ -199,6 +202,13 @@ describe('u-board-mcp', () => {
     expect(value).toEqual({ workspace: { id: 'w1', name: 'Plant' }, boards: [{ id: 'b1', name: 'Line 1', kind: 'grid', updatedAt: 't' }] });
     await call('list_boards');
     expect(server.requests.filter(r => r.path === '/api/token')).toHaveLength(1);
+  });
+
+  it('answers what a board shows now — each part’s state and quality — with the server’s own answer', async () => {
+    const { value, isError } = await call('board_state', { board: 'b1' });
+    expect(isError).toBe(false);
+    expect(value).toEqual({ evaluatedAt: '2026-10-16T09:00:00.000Z', revision: 4, parts: { a: { state: 'fault', quality: 'live' } } });
+    expect(server.requests.at(-1)).toMatchObject({ method: 'GET', path: '/api/share/boards/b1/state' });
   });
 
   it('reads one part of a board by JSON Pointer', async () => {

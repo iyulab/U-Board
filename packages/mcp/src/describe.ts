@@ -32,7 +32,8 @@ const RULES = `# Writing a U-Board board
    Each save is a new revision; a new board is revision 1, and create_board with a document saves it as revision 2.
 4. Read the answer: the new revision and advice — act on the advice. A 412 means someone saved since — get_board again and redo the patch.
 5. validate({ document } | { board, patch }) checks without saving, exactly as saving does.
-6. look({ board }) after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands. Fix what you see and what it advises — the board is done when both are empty; focus one part to see it up close.
+6. board_state({ board }) — what each part shows now (state, quality), no picture: the cheap check after a change to states or bindings.
+7. look({ board }) after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands. Fix what you see and what it advises — the board is done when both are empty; focus one part to see it up close.
 
 ## JSON Patch
 - \`add\` sets an object member whether or not it exists, and inserts into an array ("/items/-" appends, "/items/0" prepends).
@@ -87,6 +88,7 @@ const DATA = `# Data sources and bindings
 - An item of a list, by its fields rather than its place (lists reorder): ref: { path, item: { list: "/items", where: { "id": "P-101" } }, valuePath: "/temp" } — valuePath is then inside the item. Use a field sample_source lists among the list's keys.
 - Without valuePath a binding takes the whole response (or the whole item) — give it to a widget that takes rows (a table, a chart's data).
 - A value in the source's own words maps to a prop with map: { values: { "Fault": "error" }, ranges: [{ min: 80, value: "warning" }], otherwise: "ok" }.
+- A part can be in named states, read from one of its widget’s bindings: states: { from: "<that binding’s key>", map: { values: { "Fault": "fault" }, ranges: [{ min: 80, value: "hot" }], otherwise: "ok" }, looks: { "fault": { outline: "<colour>", blink: true }, "off": { hidden: true } } } — on the node or grid item, beside widget. map reads the source’s value before the binding’s own map; a value it names nothing for is no state. A state is named from the current reading only — no delay, no latch. Looks draw around the part (its border stays the connection quality); a state without a look is still named. board_state answers each part’s state.
 - A source that publishes on a schedule says how old its value may be: maxAgeSeconds (an hourly feed: 5400); its time: observedAtPath.
 - create_source makes a source that needs no credential. One that needs a key, token or OAuth is made by a person in the console — ask them for its id. Credentials never pass through you.`;
 

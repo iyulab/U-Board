@@ -84,6 +84,12 @@ export class UBoardClient {
     return this.request<Board>('GET', await this.workspacePath(`/boards/${encodeURIComponent(boardId)}`));
   }
 
+  /** What a board shows now (the server’s `BoardState`): each part’s state, connection quality and its cause, how old
+   *  its data is — no values. Read through the share route, which takes this token as a viewer. */
+  async getBoardState(boardId: string): Promise<unknown> {
+    return this.request('GET', `/api/share/boards/${encodeURIComponent(boardId)}/state`);
+  }
+
   async createBoard(name: string, kind: ViewKind): Promise<{ id: string; revision: number }> {
     return this.request('POST', await this.workspacePath('/boards'), { body: { name, kind } });
   }

@@ -120,6 +120,16 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
   );
 
   server.registerTool(
+    'board_state',
+    {
+      description:
+        'What a saved board shows now, part by part: the state each part is in (its states rule), its connection quality and why, how old its data is — no values, a few hundred bytes. Ask it before look to check what a change does to the states; look shows how it is drawn.',
+      inputSchema: z.strictObject({ board: boardId }),
+    },
+    async ({ board }) => tool(() => client.getBoardState(board))
+  );
+
+  server.registerTool(
     'create_board',
     {
       description: 'Makes a board of a kind ("grid" for an ordinary dashboard, "canvas" to place over a drawing), optionally with a whole first document.',
