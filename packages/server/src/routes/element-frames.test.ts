@@ -130,7 +130,7 @@ describe('frames from an origin of each definition’s own (UBOARD_ELEMENT_FRAME
     expect(elementFrameOriginFromEnv('')).toBeUndefined();
     expect(elementFrameOriginFromEnv(FRAMES)).toBe(FRAMES);
     expect(elementFrameOriginFromEnv('https://*.frames.example.com:8443')).toBe('https://*.frames.example.com:8443');
-    for (const wrong of ['https://frames.example.com', 'http://*.frames.example.com', 'https://*.frames.example.com/x', 'https://a*.frames.example.com', 'https://*']) {
+    for (const wrong of ['https://frames.example.com', 'http://*.frames.example.com', 'https://*.frames.example.com/x', 'https://*x.frames.example.com', 'https://*']) {
       expect(() => elementFrameOriginFromEnv(wrong), wrong).toThrow(/UBOARD_ELEMENT_FRAME_ORIGIN/);
     }
   });
