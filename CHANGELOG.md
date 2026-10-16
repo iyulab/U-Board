@@ -11,6 +11,19 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Fixed
+
+- **A script element's loop that never ends no longer holds the page.** The server serves an element's code with each
+  loop that cannot yield bounded to a second: past it the loop throws, the element shows the error, and the frame — and
+  in Firefox and Safari, the whole page — goes on. Before, such a loop held the page in browsers without site isolation
+  and, in Chrome and Edge, kept every script element of the board stopped until the browser was restarted.
+
+### Added
+
+- **Undo and Redo** in the editor; a node or decoration the editor adds is selected at once.
+- A node without a box takes the size of the element it places.
+- `look` (MCP) answers the advice that still stands with its picture.
+
 ## [0.6.0] - 2026-10-16
 
 ### Added

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Response } from 'express';
 import { elementFrameHtml, elementFrameScripts, type ViewDocument } from '@iyulab/u-board/domain';
+import { guardLoops } from './loop-guard.js';
 
 /**
  * Reads `UBOARD_ELEMENT_ORIGINS`: the origins a board's elements may load from — a font, an image, a script library —
@@ -36,6 +37,9 @@ function sha256(text: string): string {
  *   installation allows; the same origins for styles, images, fonts and media;
  * - no network (`connect-src 'none'`) — its data arrives as props, through the board's bindings;
  * - framed only by the page that shows the board (`frameAncestors`).
+ *
+ * The element's code is served with its loops bounded in time (`guardLoops`), so one that never ends stops with an
+ * error instead of holding the frame — in a browser without site isolation, the whole page.
  */
 export function sendElementFrame(res: Response, doc: ViewDocument, name: string, allowedOrigins: readonly string[], frameAncestors: string): void {
   const definition = Object.hasOwn(doc.elements ?? {}, name) ? doc.elements![name] : undefined;
@@ -44,8 +48,9 @@ export function sendElementFrame(res: Response, doc: ViewDocument, name: string,
     return;
   }
   const origins = (definition.resources ?? []).filter(origin => allowedOrigins.includes(origin)).join(' ');
-  const html = elementFrameHtml(definition);
-  const scripts = elementFrameScripts(definition).map(sha256).join(' ');
+  const served = definition.script === undefined ? definition : { ...definition, script: guardLoops(definition.script) };
+  const html = elementFrameHtml(served);
+  const scripts = elementFrameScripts(served).map(sha256).join(' ');
   const from = (base: string) => (origins ? `${base} ${origins}` : base);
   const csp = [
     'sandbox allow-scripts',

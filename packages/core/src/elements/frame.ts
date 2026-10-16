@@ -15,6 +15,10 @@ import type { ElementDefinition } from '../view-document.js';
  * In the frame, the element's code reads its props through `ub.onProps((props, appearance) => …)`, called at once
  * with the latest props if they have arrived, and again on every change; `ub.reportError(error)` says something
  * went wrong. The frame has no network: its data arrives as props.
+ *
+ * A loop in the element's code that runs {@link ELEMENT_LOOP_LIMIT_MS} without finishing throws: its server bounds
+ * each loop that cannot yield (`__ubLoopStart` when it begins, `__ubLoopCheck` each turn — the runtime's clock), so a
+ * loop that never ends is reported as an error rather than holding the frame.
  */
 export type ElementFrameMessage =
   | { type: 'ub:ready'; heartbeat?: boolean }
@@ -23,9 +27,17 @@ export type ElementFrameMessage =
   | { type: 'ub:ping' }
   | { type: 'ub:pong' };
 
-/** The code every element frame runs before the element's own: the `ub` object and its half of the messages. */
+/** How long a loop in a script element's code may run without finishing before it is stopped. */
+export const ELEMENT_LOOP_LIMIT_MS = 1000;
+
+/** The code every element frame runs before the element's own: the `ub` object and its half of the messages, and the
+ *  clock a bounded loop asks. */
 export const ELEMENT_FRAME_RUNTIME = `(function () {
   var handlers = [], last = null;
+  Object.defineProperty(window, '__ubLoopStart', { value: function () { return Date.now(); } });
+  Object.defineProperty(window, '__ubLoopCheck', { value: function (since) {
+    if (Date.now() - since > ${ELEMENT_LOOP_LIMIT_MS}) throw new Error('a loop ran ${ELEMENT_LOOP_LIMIT_MS / 1000} s without finishing, so it was stopped');
+  } });
   function send(message) { parent.postMessage(message, '*'); }
   function report(error) { send({ type: 'ub:error', message: String((error && error.message) || error) }); }
   function call(handler) { try { handler(last.props, last.appearance); } catch (error) { report(error); } }

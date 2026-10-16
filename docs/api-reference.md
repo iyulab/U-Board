@@ -485,9 +485,11 @@ ub.reportError(error);                             // shown on the element's box
 
 The board's theme is set on the frame's root as the same `--u-widget-*` variables; an uncaught error,
 or a load its policy blocks, is reported on the element's box as well. The frame loads when the element
-nears the screen. The page asks a running frame every two seconds whether it still answers, and removes one
-that has left a question unanswered for six seconds — code that never yields, such as a loop that never ends —
-with a notice on its box. That keeps the page usable where the browser runs the frame in a process of its own, as
+nears the screen. A U-Board server serves the element's code with each loop bounded in time: a loop that runs a
+second without finishing throws, reported like any error, and the frame lives on (a loop that awaits or yields is
+left as written). The page asks a running frame every two seconds whether it still answers, and removes one
+that has left a question unanswered for six seconds — code that never yields other than by a loop, such as a
+pattern that backtracks without end — with a notice on its box. That keeps the page usable where the browser runs the frame in a process of its own, as
 Chrome and Edge do with site isolation; a browser that runs it with the page (Firefox, Safari) is held by such code
 too. Either way the code keeps running in the browser until it is restarted, and the board's other script elements,
 which share its process, stop answering as well — so an element's code must always return. The console opens a

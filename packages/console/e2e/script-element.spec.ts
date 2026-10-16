@@ -62,13 +62,21 @@ test('a script element runs sandboxed, in the editor and from a share link', asy
   await expectCounterDrawn(sharePage);
   await shareContext.close();
 
-  // An element whose code never finishes: the editor stays usable, and the frame is stopped with a notice.
-  const spinning = {
-    ...document,
-    elements: { ...document.elements, counter: { ...document.elements.counter, script: 'ub.onProps(function () { while (true) {} });' } },
+  const saveScript = async (script: string) => {
+    const changed = { ...document, elements: { ...document.elements, counter: { ...document.elements.counter, script } } };
+    const resaved = await page.request.put(`/api/workspaces/${session.activeWorkspaceId}/boards/${boardId}`, { data: { document: changed } });
+    expect(resaved.status()).toBe(200);
   };
-  const resaved = await page.request.put(`/api/workspaces/${session.activeWorkspaceId}/boards/${boardId}`, { data: { document: spinning } });
-  expect(resaved.status()).toBe(200);
+
+  // A loop that never ends is stopped after a second with an error, and the element's frame lives on.
+  await saveScript('ub.onProps(function () { while (true) {} });');
+  await page.reload();
+  await expect(page.locator('[data-element="counter"] [data-element-error]')).toContainText('without finishing', { timeout: 20_000 });
+  await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
+
+  // Code that never finishes without a loop (a pattern that backtracks without end): the editor stays usable, and the
+  // frame is stopped with a notice.
+  await saveScript("ub.onProps(function () { /^(a+)+$/.test('a'.repeat(40) + '!'); });");
   await page.reload();
   await expect(page.locator('[data-element="counter"]')).toContainText('stopped answering', { timeout: 20_000 });
   await expect(page.locator('[data-element="counter"] iframe')).toHaveCount(0);
