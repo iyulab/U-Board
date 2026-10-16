@@ -58,6 +58,8 @@ describe('a board with component instances, in the designer', () => {
     // Its node at 300, 40 (160 × 100) and its frame from 290, 30 (180 × 120).
     expect(box).toMatchObject({ type: 'rect', x: 290, y: 30, width: 180, height: 120 });
     expect(box.locked).toBeFalsy();
+    // Dragged, never resized or rotated.
+    expect(box.fixedSize).toBe(true);
     // Under the board's lines: a line to one of its parts is still picked where it runs over the instance.
     const order = scene.getObjects().map(o => o.id && partOf(o.id));
     expect(order.indexOf('p1')).toBeLessThan(order.indexOf('feed'));

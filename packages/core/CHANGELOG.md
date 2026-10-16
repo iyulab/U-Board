@@ -18,10 +18,16 @@ All notable changes to this package are documented here. The format follows
   written into the board, so every instance draws it and Undo takes it back. A part taken out of it goes from every
   instance, with the board's lines and triggers to it. The board's elements and symbols stay edited on the board.
 
+### Changed
+
+- `@canvas-kit/core` `^0.8.0`, `@canvas-kit/designer` `^0.10.0`, `@canvas-kit/viewer` `^0.5.4`.
+
 ### Fixed
 
 - In the editor, a line of the board's own that runs over a component instance is picked there too — the instance's
   box lay over it.
+- In the editor, a selected component instance takes no resize or rotate handles — its size is its component's; they
+  showed, and let go of, it sprang back.
 
 ## [0.22.0] - 2026-10-17
 

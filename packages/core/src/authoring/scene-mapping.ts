@@ -83,7 +83,8 @@ export function documentToScene(saved: CanvasView): Scene {
   // still picked where it runs over the instance.
   for (const instance of saved.instances ?? []) {
     const box = instanceBox(saved, instance);
-    if (box) scene.add({ type: 'rect', id: instance.id, ...box, fill: INSTANCE_PLACEHOLDER_FILL, stroke: INSTANCE_PLACEHOLDER_STROKE, strokeWidth: 1 });
+    // Moved, never resized or rotated: an instance has a place, its size is its component's.
+    if (box) scene.add({ type: 'rect', id: instance.id, ...box, fill: INSTANCE_PLACEHOLDER_FILL, stroke: INSTANCE_PLACEHOLDER_STROKE, strokeWidth: 1, fixedSize: true });
   }
 
   // Follows its two nodes: selected to be edited, never dragged — moving a line or its label would move nothing.
