@@ -27,9 +27,10 @@ export function textBox(text: TextShape): Box {
  * without a picture cannot: two nodes whose boxes overlap; a text — a decoration, a node's caption, a connector's
  * label — under a node (nodes draw over everything on the canvas) or running into another text; a connector running
  * through a text decoration; a frame's edge running through a text. Connectors are placed as the renderer places
- * them (`placeConnectors`). The most damaging first, at most {@link GEOMETRY_ADVICE_LIMIT}, then the rest counted.
+ * them (`placeConnectors`). The most damaging first, at most `limit` (by default {@link GEOMETRY_ADVICE_LIMIT}), then
+ * the rest folded into one line that counts them by kind and carries how many it stands for (`count`).
  */
-export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
+export function lintGeometry(doc: CanvasView, limit = GEOMETRY_ADVICE_LIMIT): ViewDocumentAdvice[] {
   const sized = sizedNodes(doc);
   const nodes = sized.map((node, i) => ({ id: node.id, at: `/nodes/${i}`, box: boxOf(node) }));
   // A text decoration, or a frame's name — drawn in the decoration's place in the order, so a later one's background
@@ -78,12 +79,13 @@ export function lintGeometry(doc: CanvasView): ViewDocumentAdvice[] {
     }
   }
 
-  const shown = found.slice(0, GEOMETRY_ADVICE_LIMIT).map(({ path, message }) => ({ path, message }));
-  if (found.length <= GEOMETRY_ADVICE_LIMIT) return shown;
+  const shown = found.slice(0, limit).map(({ path, message }) => ({ path, message }));
+  if (found.length <= limit) return shown;
   const rest = new Map<string, number>();
-  for (const { kind } of found.slice(GEOMETRY_ADVICE_LIMIT)) rest.set(kind, (rest.get(kind) ?? 0) + 1);
+  for (const { kind } of found.slice(limit)) rest.set(kind, (rest.get(kind) ?? 0) + 1);
   const counted = [...rest].map(([kind, n]) => `${n} ${kind}`).join(', ');
-  return [...shown, { path: '', message: `${found.length - GEOMETRY_ADVICE_LIMIT} more: ${counted} — fix the ones above, then check again` }];
+  const more = found.length - limit;
+  return [...shown, { path: '', message: `${more} more: ${counted} — fix the ones above, then check again`, count: more }];
 }
 
 /** Whether two boxes share some area — touching edges do not count. */

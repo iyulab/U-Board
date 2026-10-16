@@ -121,7 +121,15 @@ describe('lintGeometry', () => {
     const decorations = [text('a', 0, 400, 'one'), text('b', 5, 400, 'two')];
     const advice = lintGeometry(canvas({ nodes, decorations }));
     expect(advice).toHaveLength(GEOMETRY_ADVICE_LIMIT + 1);
-    expect(advice.at(-1)).toEqual({ path: '', message: '7 more: 6 overlapping nodes, 1 texts running together — fix the ones above, then check again' });
+    expect(advice.at(-1)).toEqual({ path: '', message: '7 more: 6 overlapping nodes, 1 texts running together — fix the ones above, then check again', count: 7 });
+  });
+
+  it('lists every finding when asked to, so a reader keeping some of them loses none to the fold', () => {
+    const nodes = Array.from({ length: 9 }, (_, i) => node(`n${i}`, i * 10, 0));
+    const advice = lintGeometry(canvas({ nodes }), Infinity);
+    expect(advice).toHaveLength(36);
+    expect(advice.every(a => a.count === undefined)).toBe(true);
+    expect(lintViewDocument(canvas({ nodes }), { geometryLimit: Infinity })).toHaveLength(36);
   });
 
   it('is part of lintViewDocument for a canvas board, before the element advice', () => {

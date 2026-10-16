@@ -9,7 +9,8 @@ All notable changes to this package are documented here. The format follows
 ### Added
 
 - `look` answers a one-line `status` first: `done — nothing to fix`, or how many problems and pieces of advice are left
-  (for the part, when it looks up close).
+  (for the part, when it looks up close). The count includes the layout advice folded past the list's limit, and up
+  close every finding about the part is kept, even one the whole board's list would fold.
 
 ## [0.7.1] - 2026-10-16
 

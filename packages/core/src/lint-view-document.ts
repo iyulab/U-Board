@@ -7,6 +7,16 @@ import { lintGeometry } from './lint-geometry.js';
 export interface ViewDocumentAdvice {
   path: string;
   message: string;
+  /** How many findings this one line stands for, when it folds several — the layout findings past the limit, counted
+   *  rather than listed. Absent: one. */
+  count?: number;
+}
+
+export interface LintOptions {
+  /** How many layout findings (`lintGeometry`) are given one by one before the rest are folded into one counted line.
+   *  Defaults to `GEOMETRY_ADVICE_LIMIT`; `Infinity` lists them all — for a reader that keeps only some of them
+   *  (one part's) and must not lose any to the fold. */
+  geometryLimit?: number;
 }
 
 /**
@@ -17,8 +27,8 @@ export interface ViewDocumentAdvice {
  * heavier than one should be, a look for a state its map never names, a trigger waiting for a state a part never
  * enters. For whoever writes the document — an author, a tool, an AI — to act on.
  */
-export function lintViewDocument(doc: ViewDocument): ViewDocumentAdvice[] {
-  const advice: ViewDocumentAdvice[] = doc.kind === 'canvas' ? lintGeometry(doc) : [];
+export function lintViewDocument(doc: ViewDocument, options: LintOptions = {}): ViewDocumentAdvice[] {
+  const advice: ViewDocumentAdvice[] = doc.kind === 'canvas' ? lintGeometry(doc, options.geometryLimit) : [];
   const elements = doc.elements ?? {};
   const placed = new Map<string, number>();
   for (const { widget } of placedIn(doc)) {

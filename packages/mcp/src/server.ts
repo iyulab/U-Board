@@ -238,11 +238,15 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
           const found = await client.getBoard(board);
           const { image, report } = await looker.look({ board, focus, appearance, width, height }, found.document);
           // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
-          const advice = [...lintViewDocument(found.document), ...widgetAdvice(found.document)].filter(a => !focus || concerns(a, focus));
+          // Up close, every layout finding is read before keeping the part's own — a fold past the limit would hide some.
+          const lint = lintViewDocument(found.document, focus ? { geometryLimit: Infinity } : {});
+          const advice = [...lint, ...widgetAdvice(found.document)].filter(a => !focus || concerns(a, focus));
+          // A folded line stands for the findings it counts.
+          const left = advice.reduce((n, a) => n + (a.count ?? 1), 0);
           return {
             content: [
               { type: 'image', data: image, mimeType: 'image/png' },
-              { type: 'text', text: JSON.stringify({ revision: found.revision, status: lookStatus(report.problems.length, advice.length, focus), ...report, advice }) },
+              { type: 'text', text: JSON.stringify({ revision: found.revision, status: lookStatus(report.problems.length, left, focus), ...report, advice }) },
             ],
           };
         } catch (error) {

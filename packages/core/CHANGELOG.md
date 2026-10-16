@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `lintViewDocument(doc, { geometryLimit })`: how many layout findings are listed one by one before the rest fold into
+  one counted line (`Infinity` lists them all). The folded line carries `count`, how many findings it stands for.
+
 ## [0.19.0] - 2026-10-16
 
 ### Added

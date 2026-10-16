@@ -191,6 +191,27 @@ describe('u-board-mcp', () => {
     expect((await look({ focus: '/nodes/2' })).status).toBe('nothing to fix on this part — look at the whole board before finishing');
   });
 
+  it('counts every piece of advice in the status, folded ones too, and up close loses none of the part’s to the fold', async () => {
+    const node = (i: number) => ({ id: `n${i}`, x: i * 10, y: 0, anchored: false, widget: { type: 'gauge' } });
+    // Nine nodes over one another: 36 overlapping pairs, more than saving lists one by one.
+    server.boards.set('b5', { name: 'Pile', revision: 1, document: { kind: 'canvas', background: {}, connectors: [], nodes: Array.from({ length: 9 }, (_, i) => node(i)) } });
+    const looker = { look: async () => ({ image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems: [], quality: {}, console: [] } }) };
+    const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), looker);
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const viewer = new Client({ name: 'test', version: '0' });
+    await Promise.all([mcp.connect(b), viewer.connect(a)]);
+    const look = async (args: Record<string, unknown>) =>
+      JSON.parse(((await viewer.callTool({ name: 'look', arguments: { board: 'b5', ...args } })) as { content: Array<{ text?: string }> }).content[1].text!);
+
+    const whole = await look({});
+    expect(whole.advice.at(-1)).toMatchObject({ path: '', count: 6 });
+    expect(whole.status).toBe('not done — 36 pieces of advice to fix');
+    // The last node overlaps all eight others — most of those findings are past the fold on the whole board.
+    const last = await look({ focus: '/nodes/8' });
+    expect(last.advice).toHaveLength(8);
+    expect(last.status).toBe('not done — 8 pieces of advice to fix on this part');
+  });
+
   it('says a clean board is done', async () => {
     server.boards.set('b4', { name: 'Clean', revision: 1, document: { kind: 'grid', items: [] } });
     const looker = { look: async () => ({ image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems: [{ message: 'x' }, { message: 'y' }], quality: {}, console: [] } }) };

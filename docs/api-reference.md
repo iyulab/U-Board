@@ -785,18 +785,19 @@ validateViewDocument(doc, { strict: true });
 // → [{ path: '/connectors/0/color', message: 'a connector has no "color" — it would be kept but never drawn. A connector has: id, fromNodeId, toNodeId, label, labelAt, style, bindings. …' }]
 ```
 
-### `lintViewDocument(doc)`
+### `lintViewDocument(doc, options?)`
 
 ```ts
-interface ViewDocumentAdvice { path: string; message: string }
-function lintViewDocument(doc: ViewDocument): ViewDocumentAdvice[];
+interface ViewDocumentAdvice { path: string; message: string; count?: number }
+function lintViewDocument(doc: ViewDocument, options?: { geometryLimit?: number }): ViewDocumentAdvice[];
 ```
 
 Advice on a valid document — none of it stops it being saved or drawn. On a canvas board, first where parts would
 be drawn over one another: two nodes whose boxes overlap (a node without a size counts at 160 × 100), a text
 decoration under a node (nodes draw over decorations), a connector running through a text, two texts running into
-each other — a text's box estimated as one line, 0.6 × its font size per character. At most ten of these, then one
-line saying how many more. Then an element defined but placed
+each other — a text's box estimated as one line, 0.6 × its font size per character. At most 30 of these
+(`geometryLimit`; `Infinity` lists them all), then one line counting the rest by kind, whose `count` says how many it
+stands for — so the advice comes to the sum of the counts, one for a line without one. Then an element defined but placed
 nowhere, more than 30 script elements on one board (each runs in a frame of its own), an element whose
 markup, script and CSS together pass 32 KB.
 
