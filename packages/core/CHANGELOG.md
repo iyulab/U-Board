@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-16
+
 ### Added
 
 - **Triggers** — `triggers` at the top level of either kind: `on` an event (`click`, `element`, `enter`, `leave`,

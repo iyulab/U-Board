@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-16
+
 ### Added
 
 - `describe("rules")` teaches triggers: their shape, the five events and four actions, how an element raises an event
