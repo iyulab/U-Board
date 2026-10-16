@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The rules teach a connector's `style.route: "orthogonal"` — pipes and wiring with right-angle turns.
+
 ### Fixed
 
 - `look` no longer reports bold text on a gradient as reading at 1:1: the colour behind a text is the commonest one

@@ -249,7 +249,7 @@ describe('validateViewDocument', () => {
       expect(issues).toHaveLength(1);
       expect(issues[0].path).toBe('/connectors/0/color');
       expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId, label, labelAt, style, bindings.');
-      expect(issues[0].message).toContain('style: { stroke, strokeWidth, dash, arrow }');
+      expect(issues[0].message).toContain('style: { stroke, strokeWidth, dash, arrow, route }');
     });
 
     it('checks a connector’s label, where it sits, and its style', () => {
@@ -258,6 +258,10 @@ describe('validateViewDocument', () => {
         '/connectors/0/label', '/connectors/0/labelAt', '/connectors/0/style/stroke', '/connectors/0/style/strokeWidth', '/connectors/0/style/dash', '/connectors/0/style/arrow',
       ]);
       expect(strict(broken(d => { d.connectors[0].style = { arrow: 'forward' }; }))[0].message).toBe('expected "none", "end" (pointing at toNodeId), "start" (pointing at fromNodeId) or "both"');
+      expect(strict(broken(d => { d.connectors[0].style = { route: 'orthogonal' }; }))).toEqual([]);
+      expect(strict(broken(d => { d.connectors[0].style = { route: 'elbow' }; }))).toEqual([
+        { path: '/connectors/0/style/route', message: 'expected "straight" or "orthogonal" (out of the facing side, one turn, into the other)' },
+      ]);
     });
 
     it('finds unknown fields at every level', () => {

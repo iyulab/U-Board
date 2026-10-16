@@ -9,7 +9,7 @@ export type {
   ResolvedViewDocument,
   ResolvedOf,
 } from './resolve-document.js';
-export { emptyViewDocument, placedIn, isTriggerLink, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, PLACEMENTS, TRIGGER_EVENTS, TRIGGER_ACTIONS } from './view-document.js';
+export { emptyViewDocument, placedIn, isTriggerLink, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, CONNECTOR_ROUTES, PLACEMENTS, TRIGGER_EVENTS, TRIGGER_ACTIONS } from './view-document.js';
 export { bindingsIn } from './document-bindings.js';
 export { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from './layout-defaults.js';
 export { nodeSize, sizedNodes } from './node-size.js';

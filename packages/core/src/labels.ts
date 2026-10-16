@@ -350,6 +350,9 @@ export interface UBoardLabels {
   arrowEnd: string;
   arrowStart: string;
   arrowBoth: string;
+  connectorRoute: string;
+  routeStraight: string;
+  routeOrthogonal: string;
 
   /** Words for connection quality — the node tooltip, screen-reader announcement and binding
    * preview (`describeQuality`). */
@@ -623,6 +626,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   arrowEnd: 'Toward {to}',
   arrowStart: 'Toward {from}',
   arrowBoth: 'Both ways',
+  connectorRoute: 'Route',
+  routeStraight: 'Straight',
+  routeOrthogonal: 'Right angles',
 
   qualityText: DEFAULT_QUALITY_TEXT,
 };

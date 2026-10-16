@@ -30,7 +30,7 @@ describe('domain entry', () => {
   // effect — what a 0.x minor release adds or removes is read off this list.
   it('exports exactly these values', () => {
     expect(Object.keys(mod).sort()).toEqual([
-      'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT',
+      'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'CONNECTOR_ROUTES', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT',
       'FiringLimit', 'InvalidViewDocumentError', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS',
       'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn', 'boardStateOf', 'coordinateOf',
       'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts', 'elementListeners',

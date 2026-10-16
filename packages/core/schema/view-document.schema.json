@@ -193,7 +193,8 @@
             "stroke": { "type": "string", "description": "A colour in the forms a decoration takes." },
             "strokeWidth": { "type": "number", "exclusiveMinimum": 0 },
             "dash": { "enum": ["solid", "dashed", "dotted"] },
-            "arrow": { "enum": ["none", "end", "start", "both"], "description": "Which ends carry an arrowhead: end points at the toNodeId node, start at the fromNodeId node." }
+            "arrow": { "enum": ["none", "end", "start", "both"], "description": "Which ends carry an arrowhead: end points at the toNodeId node, start at the fromNodeId node." },
+            "route": { "enum": ["straight", "orthogonal"], "description": "The way the line runs: straight (when left out) from box to box, or orthogonal — out of the side facing the other node, one turn at the middle of the gap, into the other's facing side." }
           }
         },
         "bindings": {

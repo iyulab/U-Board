@@ -42,9 +42,9 @@ export function connectorObjects(nodes: readonly SizedNode[], connectors: Readon
   const lines: DrawingObject[] = [];
   const labels: DrawingObject[] = [];
   const held = { ...(extra.locked && { locked: true }), ...(extra.fixed && { fixed: true }) };
-  for (const { connector, segment, label, arrows = [] } of placeOnCanvas(nodes, connectors)) {
+  for (const { connector, points, label, arrows = [] } of placeOnCanvas(nodes, connectors)) {
     const { stroke = CONNECTOR_STROKE, strokeWidth = CONNECTOR_WIDTH, dash = 'solid' } = connector.style ?? {};
-    lines.push({ type: 'line', id: connector.id, x: 0, y: 0, points: segment, stroke, strokeWidth, ...(DASH_PATTERNS[dash].length > 0 && { dash: DASH_PATTERNS[dash] }), ...extra });
+    lines.push({ type: 'line', id: connector.id, x: 0, y: 0, points, stroke, strokeWidth, ...(DASH_PATTERNS[dash].length > 0 && { dash: DASH_PATTERNS[dash] }), ...extra });
     // A head is filled, not stroked — a dashed line's head stays whole.
     arrows.forEach((points, i) => lines.push({ type: 'path', id: `${connector.id}#arrow${i}`, x: 0, y: 0, points, closed: true, fill: stroke, ...held }));
     if (label) {

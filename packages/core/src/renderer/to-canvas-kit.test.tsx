@@ -217,6 +217,47 @@ describe('toCanvasKit', () => {
     expect((heads(objects('end', 5))[0] as { points: number[] }).points.slice(2, 4)).toEqual([280, 57.5]);
   });
 
+  it('runs an orthogonal connector out of the facing side, turning once at the middle of the gap, into the other', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const at = (x: number, y: number, id: string, w = 100) => ({ id, x, y, width: w, height: 100, anchored: false, widget });
+    const line = (nodes: ReturnType<typeof at>[], style: Connector['style'] = {}, label?: string) => {
+      const objects = toCanvasKit(doc({ nodes, connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', ...(label && { label }), style: { route: 'orthogonal', ...style } }] })).scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+      return { points: (objects.find(o => o.id === 'c') as { points: number[] }).points, objects };
+    };
+    // Further apart across than down: out of the right side, across to the middle, down, across into the left side.
+    expect(line([at(0, 0, 'a'), at(300, 200, 'b')]).points).toEqual([100, 50, 200, 50, 200, 250, 300, 250]);
+    // Further apart down than across: out of the bottom, down to the middle, across, down into the top.
+    expect(line([at(0, 0, 'a'), at(40, 300, 'b')]).points).toEqual([50, 100, 50, 200, 90, 200, 90, 300]);
+    // From right to left too, out of the left side.
+    expect(line([at(300, 200, 'a'), at(0, 0, 'b')]).points).toEqual([300, 250, 200, 250, 200, 50, 100, 50]);
+    // Lined up: straight across.
+    expect(line([at(0, 0, 'a'), at(300, 0, 'b')]).points).toEqual([100, 50, 300, 50]);
+    // Overlapping boxes leave no gap to turn in: drawn straight, as a straight connector is.
+    expect(line([at(0, 0, 'a'), at(50, 50, 'b')]).points).toEqual(line([at(0, 0, 'a'), at(50, 50, 'b')], { route: 'straight' }).points);
+
+    // The head points along the last run, its tip on the box; the line stops inside it.
+    const headed = line([at(0, 0, 'a'), at(300, 200, 'b')], { arrow: 'end' });
+    expect(headed.points).toEqual([100, 50, 200, 50, 200, 250, 296, 250]);
+    expect(headed.objects.find(o => o.id === 'c#arrow0')).toMatchObject({ points: [300, 250, 292, 253, 292, 247] });
+    // A label at the middle of the line's length — the middle of the run that turns.
+    const labelled = line([at(0, 0, 'a'), at(300, 200, 'b')], {}, 'x');
+    const text = labelled.objects.find(o => o.id === 'c#label') as { y: number; fontSize: number };
+    expect(text.y + text.fontSize / 2).toBe(150);
+  });
+
+  it('keeps side-by-side orthogonal connectors apart along their whole length', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const nodes = [
+      { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+      { id: 'b', x: 300, y: 200, width: 100, height: 100, anchored: false, widget },
+    ];
+    const route = { route: 'orthogonal' } as const;
+    const objects = toCanvasKit(doc({ nodes, connectors: [{ id: 'c1', fromNodeId: 'a', toNodeId: 'b', style: route }, { id: 'c2', fromNodeId: 'b', toNodeId: 'a', style: route }] })).scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+    const [one, two] = ['c1', 'c2'].map(id => (objects.find(o => o.id === id) as { points: number[] }).points);
+    expect(one).toEqual([100, 46, 196, 46, 196, 246, 300, 246]);
+    expect(two).toEqual([300, 254, 204, 254, 204, 54, 100, 54]);
+  });
+
   it('places a label where its labelAt says along the line, from the fromNodeId end', () => {
     const widget = { type: 'metric', props: {}, quality: {} };
     const nodes = [

@@ -232,12 +232,17 @@ export interface ConnectorStyle {
   /** Which ends carry an arrowhead: `end` points at the `toNodeId` node, `start` at the `fromNodeId` node. `none` when
    *  left out. */
   arrow?: ConnectorArrow;
+  /** The way the line runs: `straight` (when left out) from box to box, or `orthogonal` — out of the side facing the
+   *  other node, one turn at the middle of the gap, into the other's facing side, as pipes and wiring are drawn. */
+  route?: ConnectorRoute;
 }
 
 export type StrokeDash = 'solid' | 'dashed' | 'dotted';
 export type ConnectorArrow = 'none' | 'end' | 'start' | 'both';
 export const STROKE_DASHES: readonly StrokeDash[] = ['solid', 'dashed', 'dotted'];
 export const CONNECTOR_ARROWS: readonly ConnectorArrow[] = ['none', 'end', 'start', 'both'];
+export type ConnectorRoute = 'straight' | 'orthogonal';
+export const CONNECTOR_ROUTES: readonly ConnectorRoute[] = ['straight', 'orthogonal'];
 
 /** The visual content a node displays. A prepared widget's rendering is delegated to an external
  * widget library (docs/architecture.md) — `type` and `props` describe what that library should render

@@ -28,9 +28,9 @@ type Placed = ConnectorPlacement & { connector: { quality?: Record<string, Conne
  * board (a test, a tool taking a picture of one part). Display-only — the pointer passes through it — and nothing
  * shows: its label is text for a reader, its quality (`data-quality`, like a node frame's) announced as a node's is.
  */
-export function connectorMark({ connector, segment, label, arrows = [] }: Placed, qualityText: QualityText, now: number): ViewerOverlayItem {
-  const xs = [segment[0], segment[2], ...arrows.flatMap(head => [head[0], head[2], head[4]])];
-  const ys = [segment[1], segment[3], ...arrows.flatMap(head => [head[1], head[3], head[5]])];
+export function connectorMark({ connector, points, label, arrows = [] }: Placed, qualityText: QualityText, now: number): ViewerOverlayItem {
+  const xs = [...points.filter((_, i) => i % 2 === 0), ...arrows.flatMap(head => [head[0], head[2], head[4]])];
+  const ys = [...points.filter((_, i) => i % 2 === 1), ...arrows.flatMap(head => [head[1], head[3], head[5]])];
   if (label) {
     const chip = chipOf(label);
     xs.push(chip.x, chip.x + chip.width);

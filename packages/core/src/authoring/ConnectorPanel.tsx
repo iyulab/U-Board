@@ -1,5 +1,5 @@
 import type { Adapter } from '../adapter.js';
-import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, STROKE_DASHES, type Connector, type ConnectorArrow, type StrokeDash, type ConnectorStyle, type Node } from '../view-document.js';
+import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, CONNECTOR_ROUTES, STROKE_DASHES, type Connector, type ConnectorArrow, type ConnectorRoute, type StrokeDash, type ConnectorStyle, type Node } from '../view-document.js';
 import { BindingEditor, type BindingField } from './BindingEditor.js';
 import { FIELD_STYLE } from '../ui-style.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
@@ -60,6 +60,7 @@ export function ConnectorPanel({ connector, nodes, onChange, onDelete, adapters,
   const fields: BindingField[] = CONNECTOR_BINDABLE.map(path => ({ path, label: fieldLabel[path] }));
   const dashLabel: Record<StrokeDash, string> = { solid: labels.dashSolid, dashed: labels.dashDashed, dotted: labels.dashDotted };
   const arrowLabel: Record<ConnectorArrow, string> = { none: labels.arrowNone, end: ends(labels.arrowEnd), start: ends(labels.arrowStart), both: labels.arrowBoth };
+  const routeLabel: Record<ConnectorRoute, string> = { straight: labels.routeStraight, orthogonal: labels.routeOrthogonal };
 
   return (
     <div className="ub-panel ub-panel--connector">
@@ -130,6 +131,16 @@ export function ConnectorPanel({ connector, nodes, onChange, onDelete, adapters,
           {CONNECTOR_ARROWS.map(arrow => (
             <option key={arrow} value={arrow}>
               {arrowLabel[arrow]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.connectorRoute}
+        <select value={connector.style?.route ?? 'straight'} onChange={e => setStyle('route', e.target.value === 'straight' ? undefined : (e.target.value as ConnectorRoute))}>
+          {CONNECTOR_ROUTES.map(route => (
+            <option key={route} value={route}>
+              {routeLabel[route]}
             </option>
           ))}
         </select>

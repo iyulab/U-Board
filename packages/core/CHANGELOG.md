@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Connector `style.route`: `straight` (the default) or `orthogonal` — out of the side facing the other node, one
+  right-angle turn at the middle of the gap, into the other's facing side (straight when the two line up, or when the
+  boxes overlap and leave no gap to turn in). Side-by-side connectors stay apart along the whole line; the label sits
+  along the line's length, arrowheads point along the run they end, and the layout advice follows the turn. The
+  editor's connector panel has a **Route** choice. `CONNECTOR_ROUTES` lists the routes.
+
 ### Changed
 
 - `applyJsonPatch` (and `getByPointer`): a pointer naming a member an object does not have says what that object does

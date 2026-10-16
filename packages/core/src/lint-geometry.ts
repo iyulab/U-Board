@@ -1,6 +1,6 @@
 import { sizedNodes } from './node-size.js';
 import { captionBox, estimateTextWidth } from './caption-geometry.js';
-import { boxOf, chipOf, placeConnectors } from './connector-geometry.js';
+import { boxOf, chipOf, placeConnectors, segmentsOf } from './connector-geometry.js';
 import type { CanvasView, TextShape } from './view-document.js';
 import { DEFAULT_TEXT_SIZE, frameLabelBox, textDecorationBox } from './decoration-geometry.js';
 import type { ViewDocumentAdvice } from './lint-view-document.js';
@@ -67,7 +67,7 @@ export function lintGeometry(doc: CanvasView, limit = GEOMETRY_ADVICE_LIMIT): Vi
     if (under) found.push({ kind: 'texts under a node', path: text.at, message: `this text lies under node "${under.id}" (${under.at}), which draws over it — move it clear of ${describe(under.box)}` });
   }
   for (const text of decorationTexts) {
-    const crossing = placements.find(({ segment: [x1, y1, x2, y2] }) => crosses({ x: x1, y: y1 }, { x: x2, y: y2 }, inset(text.box, 1)));
+    const crossing = placements.find(({ points }) => segmentsOf(points).some(([x1, y1, x2, y2]) => crosses({ x: x1, y: y1 }, { x: x2, y: y2 }, inset(text.box, 1))));
     if (crossing) found.push({ kind: 'texts on a connector', path: text.at, message: `connector "${crossing.connector.id}" runs through this text — place it beside the line, or use the connector’s label` });
   }
   for (const { at, box } of edgeCrossings(doc, texts)) {

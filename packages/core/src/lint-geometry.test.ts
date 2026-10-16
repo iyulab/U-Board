@@ -49,6 +49,17 @@ describe('lintGeometry', () => {
     ]);
   });
 
+  it('follows an orthogonal connector along its turn, not the straight line it no longer draws', () => {
+    // a's right side to b's left side, turning at x = 280: the text sits on the turn, well off the straight diagonal.
+    const parts = (route?: 'orthogonal') => canvas({
+      nodes: [node('a', 0, 0), node('b', 400, 300)],
+      connectors: [{ id: 'link', fromNodeId: 'a', toNodeId: 'b', ...(route && { style: { route } }) }],
+      decorations: [text('onTurn', 270, 300, 'N/A')],
+    });
+    expect(lintGeometry(parts('orthogonal'))).toEqual([{ path: '/decorations/0', message: expect.stringContaining('connector "link" runs through this text') }]);
+    expect(lintGeometry(parts())).toEqual([]);
+  });
+
   it('counts a node’s caption as a text under its box: under another node, or running into a text', () => {
     const doc = canvas({
       nodes: [node('a', 0, 0, { width: 40, height: 40 }), node('b', 0, 50, { width: 40, height: 40 })],
