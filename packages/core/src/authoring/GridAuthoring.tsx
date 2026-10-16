@@ -11,7 +11,7 @@ import { ElementsPanel } from './ElementsPanel.js';
 import { SymbolsPanel } from './SymbolsPanel.js';
 import { GridItemPanel } from './GridItemPanel.js';
 import { seedWidget, widgetTypeName } from './widget-catalog.js';
-import { addGridItem, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from './grid-editing.js';
+import { addGridItem, gridItemIndex, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from './grid-editing.js';
 import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
 
 /** The widths the editor can lay a grid out at — one inside each of the grid's three bands. */
@@ -37,6 +37,8 @@ const PICK_STYLE: CSSProperties = {
   padding: 0,
 };
 const PICKED_STYLE: CSSProperties = { ...PICK_STYLE, borderColor: 'var(--_ub-brand-solid, var(--ub-brand-solid, #2563eb))' };
+// Where a dragged item would go: the item it is held over, whose place it takes.
+const DROP_STYLE: CSSProperties = { ...PICK_STYLE, borderStyle: 'dashed', borderColor: 'var(--_ub-brand-solid, var(--ub-brand-solid, #2563eb))' };
 // Above the cell's top-right corner — the quality mark takes the top-left one.
 const TAG_STYLE: CSSProperties = { position: 'absolute', right: 0, bottom: '100%', marginBottom: 6, whiteSpace: 'nowrap' };
 
@@ -53,6 +55,9 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
   const readClock = useEffectEvent(() => clock());
   const [preview, setPreview] = useState<{ doc: ResolvedGridView; now: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // An item being dragged to another place, and the item it is held over.
+  const [dragged, setDragged] = useState<string | null>(null);
+  const [dropOn, setDropOn] = useState<string | null>(null);
   const [layoutWidth, setLayoutWidth] = useState<LayoutWidth>('wide');
 
   useEffect(() => {
@@ -143,13 +148,42 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                       <span className="ub-authoring__node-tag" style={TAG_STYLE}>
                         {name}
                       </span>
+                      {/* Pressed, it selects the item; dragged onto another, it moves there (the panel moves it a place at a time,
+                          by keyboard too). */}
                       <button
                         type="button"
                         className="ub-authoring__pick"
                         aria-label={`${index + 1}. ${name}`}
                         aria-pressed={picked}
-                        style={picked ? PICKED_STYLE : PICK_STYLE}
+                        style={dropOn === item.id ? DROP_STYLE : picked ? PICKED_STYLE : PICK_STYLE}
                         onClick={() => setSelectedId(picked ? null : item.id)}
+                        draggable
+                        onDragStart={e => {
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('text/plain', item.id);
+                          setDragged(item.id);
+                        }}
+                        onDragOver={e => {
+                          if (!dragged || dragged === item.id) return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDropOn(item.id);
+                        }}
+                        onDragLeave={() => setDropOn(on => (on === item.id ? null : on))}
+                        onDrop={e => {
+                          e.preventDefault();
+                          if (dragged) {
+                            const moving = dragged;
+                            updateDoc(current => moveGridItem(current, moving, gridItemIndex(current, item.id)));
+                            setSelectedId(moving);
+                          }
+                          setDragged(null);
+                          setDropOn(null);
+                        }}
+                        onDragEnd={() => {
+                          setDragged(null);
+                          setDropOn(null);
+                        }}
                       />
                     </div>
                   );
@@ -173,7 +207,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 isFirst={selectedIndex === 0}
                 isLast={selectedIndex === doc.items.length - 1}
                 onChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
-                onMove={by => updateDoc(current => moveGridItem(current, selected.id, by))}
+                onMove={by => updateDoc(current => moveGridItem(current, selected.id, gridItemIndex(current, selected.id) + by))}
                 onRemove={handleRemove}
                 labels={labels}
               />

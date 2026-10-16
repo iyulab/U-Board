@@ -29,6 +29,15 @@ test('a grid board: made as a grid, given items in order, saved, and opened from
   await expect(editor.locator('.ub-authoring__pick')).toHaveCount(2);
   await editor.locator('.ub-authoring__pick').first().click();
   await page.getByLabel('너비(12열 중)').selectOption('8');
+  // Dragged onto the first, the second takes its place and is selected; dragged back, the order is as it was.
+  const picks = editor.locator('.ub-authoring__pick');
+  await picks.nth(1).dragTo(picks.first());
+  await expect(picks.first()).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('너비(12열 중)')).not.toHaveValue('8');
+  await picks.first().dragTo(picks.nth(1));
+  await expect(picks.nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await picks.first().click();
+  await expect(page.getByLabel('너비(12열 중)')).toHaveValue('8');
   await expectNoAxeViolations(page, 'grid editor');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();

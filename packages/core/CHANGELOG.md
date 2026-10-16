@@ -17,6 +17,8 @@ All notable changes to this package are documented here. The format follows
   and Ctrl+Shift+Z or Ctrl+Y. What is typed into one field, until focus moves on, is one step; in a field being typed
   into, Ctrl+Z is the field's own. The last 100 steps since the board was opened are kept; viewing turns them off.
   Labels `undo`, `redo`.
+- The grid editor moves an item dragged onto another to that item's place (the panel's buttons still move it a
+  place at a time, by keyboard too).
 - The script element frame runtime keeps the clock a bounded loop asks (`__ubLoopStart`, `__ubLoopCheck` — a
   second): a server that bounds each loop of the element's code with it (U-Board's does) has a loop that never ends
   throw instead of holding the frame.

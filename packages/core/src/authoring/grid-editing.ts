@@ -24,14 +24,20 @@ export function updateGridItem(doc: GridView, id: string, change: Partial<Omit<G
   };
 }
 
-/** Moves the item with `id` one place earlier (`-1`) or later (`1`) in the order; at either end, unchanged. */
-export function moveGridItem(doc: GridView, id: string, by: -1 | 1): GridView {
+/** Moves the item with `id` to place `to` in the order, the others closing up behind it — one place earlier or later
+ *  (a button, a key), or wherever it is dropped. A place past either end, or the one it is in, leaves the order as it is. */
+export function moveGridItem(doc: GridView, id: string, to: number): GridView {
   const from = doc.items.findIndex(item => item.id === id);
-  const to = from + by;
-  if (from < 0 || to < 0 || to >= doc.items.length) return doc;
+  if (from < 0 || from === to || to < 0 || to >= doc.items.length) return doc;
   const items = [...doc.items];
-  [items[from], items[to]] = [items[to], items[from]];
+  const [moved] = items.splice(from, 1);
+  items.splice(to, 0, moved);
   return { ...doc, items };
+}
+
+/** The place of the item with `id` in the order, or -1. */
+export function gridItemIndex(doc: GridView, id: string): number {
+  return doc.items.findIndex(item => item.id === id);
 }
 
 export function removeGridItem(doc: GridView, id: string): GridView {

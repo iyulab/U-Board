@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addGridItem, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from './grid-editing';
+import { addGridItem, gridItemIndex, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from './grid-editing';
 import type { GridView } from '../view-document';
 
 const widget = { type: 'gauge' };
@@ -15,12 +15,17 @@ describe('grid editing', () => {
     expect(newGridItemId()).not.toBe(newGridItemId());
   });
 
-  it('moves an item one place earlier or later, and leaves it at either end', () => {
-    expect(ids(moveGridItem(grid(), 'b', -1))).toEqual(['b', 'a', 'c']);
-    expect(ids(moveGridItem(grid(), 'b', 1))).toEqual(['a', 'c', 'b']);
+  it('moves an item to a place — one earlier or later, or where it is dropped — and leaves it past either end', () => {
+    expect(ids(moveGridItem(grid(), 'b', 0))).toEqual(['b', 'a', 'c']);
+    expect(ids(moveGridItem(grid(), 'b', 2))).toEqual(['a', 'c', 'b']);
+    // Dropped further away, the others close up behind it.
+    expect(ids(moveGridItem(grid(), 'a', 2))).toEqual(['b', 'c', 'a']);
+    expect(ids(moveGridItem(grid(), 'c', 0))).toEqual(['c', 'a', 'b']);
     const doc = grid();
     expect(moveGridItem(doc, 'a', -1)).toBe(doc);
-    expect(moveGridItem(doc, 'c', 1)).toBe(doc);
+    expect(moveGridItem(doc, 'c', 3)).toBe(doc);
+    expect(moveGridItem(doc, 'b', 1)).toBe(doc);
+    expect(gridItemIndex(doc, 'c')).toBe(2);
   });
 
   it('sets an item’s room, and leaves out a field set back to its default', () => {
