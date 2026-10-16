@@ -4,6 +4,8 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
+# The test setups the packages' typecheck reads (not shipped — the runtime stage copies only built output).
+COPY test-support test-support
 COPY packages/core packages/core
 COPY packages/server packages/server
 COPY packages/console packages/console
