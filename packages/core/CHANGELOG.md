@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-17
+
 ### Added
 
 - `lintViewDocument(doc, { geometryLimit })`: how many layout findings are listed one by one before the rest fold into

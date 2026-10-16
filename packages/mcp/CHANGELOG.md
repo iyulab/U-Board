@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-17
+
 ### Added
 
 - `look` answers a one-line `status` first: `done — nothing to fix`, or how many problems and pieces of advice are left
@@ -16,6 +18,10 @@ All notable changes to this package are documented here. The format follows
 
 - `look` with `focus` answers only that part's problems, as it already did its advice — it gave the whole board's
   problems while its status counted them as the part's.
+
+### Changed
+
+- `@iyulab/u-board` `^0.20.0`.
 
 ## [0.7.1] - 2026-10-16
 
