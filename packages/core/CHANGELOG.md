@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-16
+
 ### Added
 
 - `RectShape.labelFill` — a frame's name in a colour of its own (a light frame line under a darker name), the stroke's

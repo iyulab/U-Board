@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-16
+
 ### Fixed
 
 - **A script element's loop that never ends no longer holds the page.** The server serves an element's code with each

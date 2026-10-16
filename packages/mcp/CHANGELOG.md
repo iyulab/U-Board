@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-16
+
 ### Added
 
 - The `canvas` topic teaches a frame name's own colour, `labelFill`.
