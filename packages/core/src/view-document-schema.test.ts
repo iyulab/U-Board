@@ -18,6 +18,11 @@ const dot = { render: 'template', props: { type: 'object', properties: { on: { t
 
 /** Documents both judge the same way. */
 const AGREED: [string, unknown, boolean][] = [
+  ['a node with states and looks', canvas({ nodes: [{ ...node('a', { type: 'status', bindings: { v: { adapter: 'p', ref: '/v' } } }), states: { from: 'v', map: { values: { Fault: 'fault' }, ranges: [{ min: 80, value: 'hot' }], otherwise: 'ok' }, looks: { fault: { outline: '#dc2626', blink: true }, ok: { hidden: true } } } }] }), true],
+  ['a grid item with states', grid({ items: [{ id: 'a', widget: { type: 'gauge', bindings: { v: { adapter: 'p', ref: '/v' } } }, states: { from: 'v', map: { values: { a: 'b' } } } }] }), true],
+  ['states without a map', canvas({ nodes: [{ ...node('a'), states: { from: 'v' } }] }), false],
+  ['a state name that is not text', canvas({ nodes: [{ ...node('a', { type: 'status', bindings: { v: { adapter: 'p', ref: '/v' } } }), states: { from: 'v', map: { values: { a: 2 } } } }] }), false],
+  ['a look whose blink is not true or false', canvas({ nodes: [{ ...node('a', { type: 'status', bindings: { v: { adapter: 'p', ref: '/v' } } }), states: { from: 'v', map: { values: { a: 'b' } }, looks: { b: { blink: 'yes' } } } }] }), false],
   ['a canvas view', canvas(), true],
   ['a grid view', grid(), true],
   ['a canvas view with every optional part', canvas({

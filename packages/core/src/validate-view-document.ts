@@ -75,8 +75,8 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
 /** The fields each part of a document has — what `strict` holds a written document to. */
 const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'background', 'nodes', 'connectors', 'decorations'];
 const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'columns', 'items'];
-const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget'];
-const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget'];
+const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget', 'states'];
+const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget', 'states'];
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash', 'arrow'];
 const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'radius', 'dash', 'label', 'labelAt', 'labelSize', 'labelFill'];
@@ -86,6 +86,9 @@ const WIDGET_FIELDS = ['type', 'props', 'bindings'];
 const BINDING_FIELDS = ['adapter', 'ref', 'map'];
 const VALUE_MAP_FIELDS = ['values', 'ranges', 'otherwise'];
 const RANGE_FIELDS = ['min', 'max', 'value'];
+const STATES_FIELDS = ['from', 'map', 'looks'];
+const STATE_LOOK_FIELDS = ['outline', 'blink', 'hidden'];
+const STATES_HINT = 'A state is named from one binding of this widget: { from: "<its binding key>", map: { values, ranges, otherwise }, looks: { "<state>": { outline, blink, hidden } } }.';
 const BACKGROUND_FIELDS = ['image'];
 const IMAGE_FIELDS = ['src', 'width', 'height', 'referencePoints'];
 const ELEMENT_FIELDS = ['render', 'props', 'template', 'script', 'style', 'size', 'resources'];
@@ -169,6 +172,7 @@ function checkGridView(doc: Checker, value: Record<string, unknown>): void {
       doc.expected([...at, 'height'], 'expected a number greater than 0', item.height);
     }
     checkWidget(doc, item, at);
+    if (item.states !== undefined && doc.record(item, [...at, 'states'])) checkStates(doc, item.states as Record<string, unknown>, item.widget, [...at, 'states']);
   });
 }
 
@@ -207,6 +211,7 @@ function checkNode(doc: Checker, node: unknown, at: string[]): void {
   if (typeof node.anchored !== 'boolean') doc.expected([...at, 'anchored'], 'expected true or false', node.anchored);
   doc.optionalString(node, [...at, 'caption']);
   checkWidget(doc, node, at);
+  if (node.states !== undefined && doc.record(node, [...at, 'states'])) checkStates(doc, node.states as Record<string, unknown>, node.widget, [...at, 'states']);
 }
 
 /** The widget of a node or grid item — `at` is the path of the one that carries it. */
@@ -366,6 +371,49 @@ function checkValueMap(doc: Checker, map: Record<string, unknown>, at: string[])
   });
 }
 
+/** A part’s state rule: `from` names one of its widget’s bindings, its map gives state names, each look its fields. */
+function checkStates(doc: Checker, rule: Record<string, unknown>, widget: unknown, at: string[]): void {
+  doc.known(rule, at, STATES_FIELDS, 'states rule', STATES_HINT);
+  const bindings = isRecord(widget) && isRecord(widget.bindings) ? Object.keys(widget.bindings) : [];
+  if (typeof rule.from !== 'string') doc.expected([...at, 'from'], 'expected the key of one of this widget’s bindings', rule.from);
+  else if (!bindings.includes(rule.from)) {
+    doc.fail(
+      [...at, 'from'],
+      bindings.length > 0
+        ? `"${rule.from}" names no binding of this widget — it has: ${bindings.join(', ')}`
+        : `"${rule.from}" names no binding — this widget has no bindings; a state is read from one of them`
+    );
+  }
+  if (doc.record(rule, [...at, 'map'])) {
+    const map = rule.map as Record<string, unknown>;
+    checkValueMap(doc, map, [...at, 'map']);
+    checkStateNames(doc, map, [...at, 'map']);
+  }
+  if (rule.looks === undefined || !doc.record(rule, [...at, 'looks'])) return;
+  for (const [name, look] of Object.entries(rule.looks as Record<string, unknown>)) {
+    const lookAt = [...at, 'looks', name];
+    if (!doc.isRecordAt(look, lookAt)) continue;
+    doc.known(look, lookAt, STATE_LOOK_FIELDS, 'state look');
+    doc.optionalColor(look, [...lookAt, 'outline']);
+    doc.optionalBoolean(look, [...lookAt, 'blink']);
+    doc.optionalBoolean(look, [...lookAt, 'hidden']);
+  }
+}
+
+/** Every value a state rule’s map gives is a state’s name: text, not empty. */
+function checkStateNames(doc: Checker, map: Record<string, unknown>, at: string[]): void {
+  const name = (value: unknown, where: string[]) => {
+    if (typeof value !== 'string' || value === '') doc.expected(where, 'expected a state name (text, not empty)', value);
+  };
+  if (isRecord(map.values)) for (const [key, value] of Object.entries(map.values)) name(value, [...at, 'values', key]);
+  if (Array.isArray(map.ranges)) {
+    map.ranges.forEach((range, i) => {
+      if (isRecord(range) && 'value' in range) name(range.value, [...at, 'ranges', String(i), 'value']);
+    });
+  }
+  if ('otherwise' in map) name(map.otherwise, [...at, 'otherwise']);
+}
+
 function checkShape(doc: Checker, shape: unknown, at: string[]): void {
   if (!doc.isRecordAt(shape, at)) return;
   doc.id(shape, [...at, 'id']);
@@ -510,6 +558,11 @@ class Checker {
 
   optionalNumber(owner: Record<string, unknown>, at: string[]): void {
     if (owner[at[at.length - 1]] !== undefined) this.number(owner, at);
+  }
+
+  optionalBoolean(owner: Record<string, unknown>, at: string[]): void {
+    const value = owner[at[at.length - 1]];
+    if (value !== undefined && typeof value !== 'boolean') this.expected(at, 'expected true or false', value);
   }
 }
 

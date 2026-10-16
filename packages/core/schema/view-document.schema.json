@@ -152,7 +152,8 @@
           "type": "boolean"
         },
         "caption": { "type": "string", "description": "A name drawn under the node's box, outside it — a device's name under its icon." },
-        "widget": { "$ref": "#/$defs/widget" }
+        "widget": { "$ref": "#/$defs/widget" },
+        "states": { "$ref": "#/$defs/stateRule" }
       }
     },
     "gridItem": {
@@ -169,7 +170,8 @@
           "maximum": 6
         },
         "height": { "description": "Its height in pixels. Absent means the widget's own height.", "type": "number", "exclusiveMinimum": 0 },
-        "widget": { "$ref": "#/$defs/widget" }
+        "widget": { "$ref": "#/$defs/widget" },
+        "states": { "$ref": "#/$defs/stateRule" }
       }
     },
     "connector": {
@@ -283,6 +285,41 @@
         "min": { "type": "number" },
         "max": { "type": "number" },
         "value": {}
+      }
+    },
+    "stateRule": {
+      "description": "The states a part can be in, named from the reading of one of its widget's bindings (from: its key) — the source's value before that binding's map, looked up in map (values by text, then ranges, then otherwise). A reading the map names nothing for is no state. looks: how each state is shown, by name.",
+      "type": "object",
+      "required": ["from", "map"],
+      "properties": {
+        "from": { "type": "string" },
+        "map": {
+          "type": "object",
+          "anyOf": [{ "required": ["values"] }, { "required": ["ranges"] }],
+          "properties": {
+            "values": { "type": "object", "additionalProperties": { "type": "string", "minLength": 1 } },
+            "ranges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value"],
+                "anyOf": [{ "required": ["min"] }, { "required": ["max"] }],
+                "properties": { "min": { "type": "number" }, "max": { "type": "number" }, "value": { "type": "string", "minLength": 1 } }
+              }
+            },
+            "otherwise": { "type": "string", "minLength": 1 }
+          }
+        },
+        "looks": { "type": "object", "additionalProperties": { "$ref": "#/$defs/stateLook" } }
+      }
+    },
+    "stateLook": {
+      "description": "How a part is shown while in a state: a ring of colour around it (outline), blinking (blink — not where the reader asks for reduced motion), or not drawn (hidden).",
+      "type": "object",
+      "properties": {
+        "outline": { "type": "string" },
+        "blink": { "type": "boolean" },
+        "hidden": { "type": "boolean" }
       }
     }
   }

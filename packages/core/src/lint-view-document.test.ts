@@ -30,4 +30,14 @@ describe('lintViewDocument', () => {
     const heavy = { render: 'template' as const, template: 'x'.repeat(ELEMENT_SIZE_BUDGET + 1) };
     expect(lintViewDocument(grid({ heavy }, ['element:heavy']))[0]).toMatchObject({ path: '/elements/heavy' });
   });
+
+  it('points at a look for a state its map never names', () => {
+    const doc: GridView = {
+      kind: 'grid',
+      items: [{ id: 'a', widget: { type: 'gauge', bindings: { v: { adapter: 'p', ref: '/v' } } }, states: { from: 'v', map: { values: { F: 'fault' }, ranges: [{ min: 9, value: 'hot' }] }, looks: { fault: { outline: '#dc2626' }, hot: { blink: true }, alarm: { blink: true } } } }],
+    };
+    expect(lintViewDocument(doc)).toEqual([
+      { path: '/items/0/states/looks/alarm', message: 'its map never names "alarm" — it names: fault, hot; rename the look or add the state to the map' },
+    ]);
+  });
 });

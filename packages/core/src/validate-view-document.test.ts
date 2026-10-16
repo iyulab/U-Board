@@ -315,3 +315,38 @@ describe('validateViewDocument', () => {
     });
   });
 });
+
+describe('state rules', () => {
+  const bound = { type: 'status', bindings: { 'data.value': { adapter: 'plant', ref: '/p1' } } };
+  const node = (states: unknown, widget: unknown = bound) => ({ kind: 'canvas', background: {}, connectors: [], nodes: [{ id: 'a', x: 0, y: 0, anchored: false, widget, states }] });
+
+  it('accepts a rule on a node and on a grid item, with looks', () => {
+    const states = { from: 'data.value', map: { values: { Fault: 'fault' }, ranges: [{ min: 80, value: 'hot' }], otherwise: 'ok' }, looks: { fault: { outline: '#dc2626', blink: true }, ok: { hidden: true } } };
+    expect(validateViewDocument(node(states), { strict: true })).toEqual([]);
+    expect(validateViewDocument({ kind: 'grid', items: [{ id: 'a', widget: bound, states }] }, { strict: true })).toEqual([]);
+  });
+
+  it('names the bindings the widget has when from names none of them', () => {
+    expect(validateViewDocument(node({ from: 'value', map: { values: { a: 'b' } } }))).toEqual([
+      { path: '/nodes/0/states/from', message: '"value" names no binding of this widget — it has: data.value' },
+    ]);
+    expect(validateViewDocument(node({ from: 'value', map: { values: { a: 'b' } } }, { type: 'text' }))[0]).toMatchObject({
+      path: '/nodes/0/states/from', message: expect.stringContaining('this widget has no bindings'),
+    });
+  });
+
+  it('wants every name the map gives to be text', () => {
+    const issues = validateViewDocument(node({ from: 'data.value', map: { values: { a: 2 }, ranges: [{ min: 1, value: {} }], otherwise: '' } }));
+    expect(issues.map(i => i.path)).toEqual(['/nodes/0/states/map/values/a', '/nodes/0/states/map/ranges/0/value', '/nodes/0/states/map/otherwise']);
+    expect(issues[0].message).toMatch(/^expected a state name/);
+  });
+
+  it('checks a look’s fields, and with strict the fields a rule and a look have', () => {
+    const issues = validateViewDocument(node({ from: 'data.value', map: { values: { a: 'b' } }, looks: { b: { outline: 3, blink: 'yes', glow: true } }, colour: 'x' }), { strict: true });
+    expect(issues.map(i => i.path).sort()).toEqual(['/nodes/0/states/colour', '/nodes/0/states/looks/b/blink', '/nodes/0/states/looks/b/glow', '/nodes/0/states/looks/b/outline'].sort());
+  });
+
+  it('wants a map', () => {
+    expect(validateViewDocument(node({ from: 'data.value' }))).toEqual([{ path: '/nodes/0/states/map', message: 'expected an object — it is missing' }]);
+  });
+});

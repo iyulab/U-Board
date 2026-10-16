@@ -14,7 +14,8 @@ export interface ViewDocumentAdvice {
  * document being saved or drawn. First, on a canvas board, where parts would be drawn over one another
  * (`lintGeometry`: overlapping nodes, a text under a node or crossed by a connector, texts running together);
  * then an element defined but placed nowhere, more `script` elements than a board draws lightly, an element
- * heavier than one should be. For whoever writes the document — an author, a tool, an AI — to act on.
+ * heavier than one should be, a look for a state its map never names. For whoever writes the document — an author, a
+ * tool, an AI — to act on.
  */
 export function lintViewDocument(doc: ViewDocument): ViewDocumentAdvice[] {
   const advice: ViewDocumentAdvice[] = doc.kind === 'canvas' ? lintGeometry(doc) : [];
@@ -39,5 +40,21 @@ export function lintViewDocument(doc: ViewDocument): ViewDocumentAdvice[] {
   if (scripts > SCRIPT_ELEMENT_BUDGET) {
     advice.push({ path: '', message: `${scripts} script elements are placed — over ${SCRIPT_ELEMENT_BUDGET}, each a frame of its own; draw what needs no code as template elements` });
   }
+
+  const parts = doc.kind === 'canvas' ? 'nodes' : 'items';
+  placedIn(doc).forEach((placed, i) => {
+    const rule = placed.states;
+    if (!rule?.looks) return;
+    const named = new Set<string>([
+      ...Object.values(rule.map.values ?? {}),
+      ...(rule.map.ranges ?? []).map(range => range.value),
+      ...(rule.map.otherwise !== undefined ? [rule.map.otherwise] : []),
+    ]);
+    for (const name of Object.keys(rule.looks)) {
+      if (!named.has(name)) {
+        advice.push({ path: `/${parts}/${i}/states/looks/${name}`, message: `its map never names "${name}" — it names: ${[...named].join(', ')}; rename the look or add the state to the map` });
+      }
+    }
+  });
   return advice;
 }
