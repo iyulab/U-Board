@@ -38,6 +38,12 @@ Within a canvas view, three concerns are kept separate:
   and the renderer hosts it under the element contract: a template in an isolated root of the page,
   a script in a sandboxed frame its server builds, with no network. U-Board hosts elements; it does
   not grow a catalog of widgets of its own ([`concepts.md`](concepts.md) — Element).
+- **Components** — a group of parts a board draws more than once (a frame, its widgets, the lines between them),
+  defined once with declared parameters and placed by instances. The view document keeps the definition and its
+  instances, not copies; one domain function (`expandComponents`) draws each instance as its parts, and everything that
+  reads a board — the renderer, the board state, a share link's list of the reads it may make — reads it as drawn. An
+  instance's values come only from the document, so a viewer never chooses what a board reads
+  ([`concepts.md`](concepts.md) — Component).
 
 ## Data binding and adapters
 
