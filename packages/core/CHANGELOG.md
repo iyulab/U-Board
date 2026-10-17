@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-17
+
 ### Added
 
 - The editor names a part a component instance draws by the instance and the part — a line's end ("Status 1 →

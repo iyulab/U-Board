@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-10-17
+
+### Changed
+
+- Needs `@iyulab/u-board` `^0.23.0`.
+
 ## [0.10.0] - 2026-10-17
 
 ### Added

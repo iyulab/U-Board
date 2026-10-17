@@ -11,12 +11,19 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-17
+
 ### Added
 
 - **Components in the console editor**: an instance's parts are named by the instance in a line's panel and offered to
   triggers; the selected nodes and frames become a component (**Make component**), an instance becomes parts again
   (**Detach into parts**), and a component is edited as a board of its own (**Edit component**) — every instance
   draws the change.
+
+### Fixed
+
+- Console editor: a line that runs over a component instance is picked there too, and a selected instance takes no
+  resize or rotate handles (its size is its component's).
 
 ## [0.12.0] - 2026-10-17
 
