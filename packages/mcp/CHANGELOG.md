@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `edit_board({ board, revision?, commands, dryRun? })`: the edits that change a board in more than one place, as the
+  editor makes them (rename or remove an element, a symbol or a component; remove parts with the lines and triggers
+  that name them; make a component; detach an instance), saved as one JSON Patch on the revision it read. A command that
+  cannot run answers `INVALID_COMMAND` with its index and path, and nothing is saved. The rules point to it.
+
 ### Changed
 
 - `validate` of a board and a patch says nothing is saved yet and the revision to send the patch on (`next`).

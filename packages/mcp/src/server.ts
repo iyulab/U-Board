@@ -1,7 +1,18 @@
 import { createRequire } from 'node:module';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import { applyJsonPatch, getByPointer, JsonPatchError, lintViewDocument, validateViewDocument, type ViewDocument } from '@iyulab/u-board/domain';
+import {
+  applyEditCommands,
+  applyJsonPatch,
+  documentPatch,
+  EditCommandError,
+  getByPointer,
+  JsonPatchError,
+  lintViewDocument,
+  validateViewDocument,
+  type EditCommand,
+  type ViewDocument,
+} from '@iyulab/u-board/domain';
 import { UBoardApiError, type UBoardClient } from './client.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
@@ -29,6 +40,9 @@ function failed(error: unknown): ToolResult {
       error.body.code === 'INVALID_DOCUMENT' ? 'Fix each issue at its path; describe("rules") or describe("canvas") says what goes there.' :
       undefined;
     return { content: [{ type: 'text', text: JSON.stringify({ status: error.status, ...error.body, ...(hint && { hint }) }) }], isError: true };
+  }
+  if (error instanceof EditCommandError) {
+    return { content: [{ type: 'text', text: JSON.stringify({ code: 'INVALID_COMMAND', command: error.index, path: error.path, message: error.message }) }], isError: true };
   }
   if (error instanceof JsonPatchError) return { content: [{ type: 'text', text: JSON.stringify({ code: 'INVALID_PATCH', operation: error.index, message: error.message }) }], isError: true };
   return { content: [{ type: 'text', text: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }) }], isError: true };
@@ -91,6 +105,23 @@ const operation = z.object({
   from: z.string().optional().describe('For move and copy.'),
 });
 const patch = z.array(operation).min(1).describe('A JSON Patch (RFC 6902), applied entirely or not at all.');
+const name = z.string().min(1).max(40);
+const command = z.discriminatedUnion('command', [
+  z.strictObject({ command: z.literal('rename-element'), from: name, to: name }),
+  z.strictObject({ command: z.literal('remove-element'), name }),
+  z.strictObject({ command: z.literal('rename-symbol'), from: name, to: name }),
+  z.strictObject({ command: z.literal('remove-symbol'), name }),
+  z.strictObject({ command: z.literal('remove'), ids: z.array(z.string().min(1)).min(1).describe('Node, connector, decoration or instance ids (a grid: item ids).') }),
+  z.strictObject({
+    command: z.literal('make-component'),
+    ids: z.array(z.string().min(1)).min(1).describe('The board’s own nodes and frames to make one; the lines between them come along.'),
+    name,
+    instance: z.string().min(1).max(100).describe('The id of the instance that then draws them where they were.'),
+  }),
+  z.strictObject({ command: z.literal('detach'), instance: z.string().min(1).max(100) }),
+  z.strictObject({ command: z.literal('rename-component'), from: name, to: name }),
+  z.strictObject({ command: z.literal('remove-component'), name }),
+]);
 // `additionalProperties: true`, not the `{}` a passthrough object is written as: a widely used open-model tool-call
 // parser (vLLM's, serving Qwen) rewrites the values under an empty schema — arrays came back as objects — and the
 // model was told off for what it never sent.
@@ -217,6 +248,33 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
         // The widgets the patch writes, checked where they land — the server does not read a widget's props.
         const added = patch.flatMap(op => ('value' in op ? widgetAdvice(op.value, String(op.path)) : []));
         return { ...saved, advice: [...saved.advice, ...added] };
+      })
+  );
+
+  server.registerTool(
+    'edit_board',
+    {
+      description:
+        'Makes edits that change a board in more than one place, as the editor does, and saves them as one patch: rename or remove an element or a symbol (every use follows), remove parts with the lines and triggers that name them, make a component of nodes and frames, detach an instance into parts, rename or remove a component with its instances. Commands run in order, all or nothing. dryRun answers the patch and the checks without saving.',
+      inputSchema: z.strictObject({ board: boardId, revision, commands: z.array(command).min(1).max(50), dryRun: z.boolean().optional() }),
+    },
+    async ({ board, revision: expected, commands, dryRun }) =>
+      tool(async () => {
+        const current = await client.getBoard(board);
+        if (expected !== undefined && expected !== current.revision) {
+          throw new Error(`the board is at revision ${current.revision}, not ${expected} — get_board again and redo the change`);
+        }
+        const edited = applyEditCommands(current.document as ViewDocument, commands as EditCommand[]);
+        const change = documentPatch(current.document, edited);
+        if (change.length === 0) return { revision: current.revision, operations: 0, advice: [] };
+        if (dryRun) {
+          const issues = validateViewDocument(edited, { strict: true });
+          const advice = issues.length === 0 ? [...lintViewDocument(edited), ...widgetAdvice(edited)] : [];
+          return { valid: issues.length === 0, issues, advice, patch: change, next: `nothing is saved yet — run edit_board again without dryRun, on revision ${current.revision}` };
+        }
+        // Against the revision it was read at: a save in between answers 412 rather than being overwritten.
+        const saved = await client.patchDocument(board, change, current.revision);
+        return { ...saved, operations: change.length };
       })
   );
 

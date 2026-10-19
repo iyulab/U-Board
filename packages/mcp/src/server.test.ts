@@ -87,7 +87,7 @@ describe('u-board-mcp', () => {
   it('offers few tools, each with a strict input', async () => {
     const { tools } = await client.listTools();
     expect(tools.map(t => t.name).sort()).toEqual([
-      'board_state', 'create_board', 'create_source', 'delete_board', 'describe', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'sample_source', 'validate',
+      'board_state', 'create_board', 'create_source', 'delete_board', 'describe', 'edit_board', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'sample_source', 'validate',
     ]);
     for (const tool of tools) expect(tool.inputSchema.additionalProperties, tool.name).toBe(false);
   });
@@ -414,5 +414,52 @@ describe('u-board-mcp', () => {
   it('refuses arguments it does not take', async () => {
     const result = (await client.callTool({ name: 'list_boards', arguments: { all: true } })) as { isError?: boolean };
     expect(result.isError).toBe(true);
+  });
+});
+
+describe('edit_board', () => {
+  const canvas = (): ViewDocument => ({
+    kind: 'canvas',
+    background: {},
+    elements: { dot: { render: 'template', template: '<i></i>' } },
+    nodes: [
+      { id: 'temp', x: 0, y: 0, anchored: false, widget: { type: 'element:dot' } },
+      { id: 'hall', x: 300, y: 0, anchored: false, widget: { type: 'status' } },
+    ],
+    connectors: [{ id: 'feed', fromNodeId: 'temp', toNodeId: 'hall' }],
+  });
+  beforeEach(() => {
+    server.boards.set('b3', { name: 'Hall', revision: 7, document: canvas() });
+  });
+
+  it('runs the commands and saves what they changed as one patch, on the revision it read', async () => {
+    const { value, isError } = await call('edit_board', { board: 'b3', commands: [{ command: 'rename-element', from: 'dot', to: 'marker' }, { command: 'remove', ids: ['hall'] }] });
+    expect(isError).toBe(false);
+    expect(value).toMatchObject({ revision: 8, operations: expect.any(Number) });
+    const saved = server.boards.get('b3')!.document as Extract<ViewDocument, { kind: 'canvas' }>;
+    expect(Object.keys(saved.elements!)).toEqual(['marker']);
+    expect(saved.nodes.map(n => [n.id, n.widget.type])).toEqual([['temp', 'element:marker']]);
+    expect(saved.connectors).toEqual([]);
+    const sent = server.requests.find(r => r.method === 'PATCH')!;
+    expect(sent.headers['If-Match']).toBe('"7"');
+  });
+
+  it('answers the patch and the checks without saving, on dryRun', async () => {
+    const { value } = await call('edit_board', { board: 'b3', commands: [{ command: 'make-component', ids: ['temp'], name: 'card', instance: 'c1' }], dryRun: true });
+    expect(value).toMatchObject({ valid: true, issues: [], patch: expect.any(Array), next: expect.stringContaining('revision 7') });
+    expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
+  });
+
+  it('says which command could not run, where, and saves nothing', async () => {
+    const { value, isError } = await call('edit_board', { board: 'b3', commands: [{ command: 'remove', ids: ['hall'] }, { command: 'remove-element', name: 'dot' }] });
+    expect(isError).toBe(true);
+    expect(value).toEqual({ code: 'INVALID_COMMAND', command: 1, path: '/elements/dot', message: expect.stringContaining('1 widget places it') });
+    expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
+  });
+
+  it('refuses a change made against an older revision', async () => {
+    const { value, isError } = await call('edit_board', { board: 'b3', revision: 5, commands: [{ command: 'remove', ids: ['hall'] }] });
+    expect(isError).toBe(true);
+    expect(value.error).toContain('revision 7, not 5');
   });
 });

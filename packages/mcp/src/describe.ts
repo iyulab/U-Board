@@ -28,10 +28,11 @@ const RULES = `# Writing a U-Board board
 
 ## Workflow
 1. list_boards → pick a board, or create_board({ name, kind }). For live values: describe("data").
-2. get_board({ board, pointer }) — read only the part you need ("/items", "/nodes/3"); note its revision.
-3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Start a board small (its frame, a few parts), then add and fix in patches: validate({ board, patch }) sends only the patch, a whole document is sent again each time.
+2. get_board({ board, pointer }) — read only the part you need ("/nodes/3"); note its revision.
+3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Start small (its frame, a few parts), then add and fix in patches.
    Each save is a new revision; a new board is revision 1, and create_board with a document saves it as revision 2.
-4. Read the answer: the new revision and advice — act on the advice. A 412 means someone saved since — get_board again and redo the patch.
+   Rename or remove an element, symbol or component, remove a node with its lines, make or detach a component: edit_board({ board, commands }) rewrites every use.
+4. Read the answer: the new revision and advice — act on it. A 412: someone saved since — get_board and redo the patch.
 5. validate({ document } | { board, patch }) checks without saving, exactly as saving does.
 6. board_state({ board }) — what each part shows now (state, quality), no picture: the cheap check after a change to states or bindings.
 7. look({ board }) after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands. Fix what you see and what it advises — the board is done when both are empty (its status says so); focus one part to see it up close.
