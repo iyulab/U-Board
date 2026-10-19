@@ -29,6 +29,8 @@ export { elementFrameHtml, elementFrameScripts } from './elements/frame.js';
 export { elementDefinitionHash, elementFrameLabel } from './elements/definition-hash.js';
 export { applyJsonPatch, getByPointer, JsonPatchError } from './json-patch.js';
 export { documentPatch } from './document-patch.js';
+export { applyEditCommands, EditCommandError, EDIT_COMMANDS } from './edit-commands.js';
+export type { EditCommand } from './edit-commands.js';
 export type { JsonPatchOperation } from './json-patch.js';
 export type { ElementFrameMessage } from './elements/frame.js';
 export type { LintOptions, ViewDocumentAdvice } from './lint-view-document.js';

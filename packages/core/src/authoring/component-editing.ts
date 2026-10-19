@@ -2,6 +2,7 @@ import type { CanvasView, ComponentDefinition, ComponentNode, Connector, PropsSc
 import { ELEMENT_NAME } from '../elements/element-type.js';
 import { fillParameters, instancePartId, instanceParts, placeholdersIn } from '../components.js';
 import { triggersWithout, withTriggers } from './trigger-editing.js';
+import { removeParts } from './part-removal.js';
 
 /** A name no component of `doc` has yet: `component-1`, `component-2`, … */
 export function newComponentName(doc: CanvasView): string {
@@ -176,6 +177,26 @@ export function componentPreview(board: CanvasView, values: Readonly<Record<stri
   };
 }
 
+/** `doc` with component `from` called `to`, and every instance of it drawing it by the new name — its place among the
+ *  components kept. The instances' parts keep their ids (`<instance>/<part>`), so nothing that names them changes. */
+export function renameComponent(doc: CanvasView, from: string, to: string): CanvasView {
+  if (from === to || !doc.components?.[from] || doc.components[to]) return doc;
+  const components = Object.fromEntries(Object.entries(doc.components).map(([name, definition]) => [name === from ? to : name, definition]));
+  const instances = doc.instances?.map(instance => (instance.component === from ? { ...instance, component: to } : instance));
+  return { ...doc, components, ...(instances && { instances }) };
+}
+
+/** `doc` without component `name` — and without its instances, which take their parts, and the lines and triggers
+ *  that name those parts, with them (`removeParts`). */
+export function removeComponent(doc: CanvasView, name: string): CanvasView {
+  if (!doc.components?.[name]) return doc;
+  const withoutInstances = removeParts(doc, (doc.instances ?? []).filter(instance => instance.component === name).map(instance => instance.id));
+  const { [name]: _removed, ...components } = withoutInstances.components!;
+  if (Object.keys(components).length > 0) return { ...withoutInstances, components };
+  const { components: _empty, ...rest } = withoutInstances;
+  return rest;
+}
+
 /** `doc` with component `name` taking the parameters `params` declares — none when `undefined`. */
 export function setComponentParams(doc: CanvasView, name: string, params: PropsSchema | undefined): CanvasView {
   const definition = doc.components?.[name];
@@ -191,7 +212,7 @@ function picked(doc: CanvasView, ids: readonly string[]) {
 }
 
 /** Every id the board's parts — its own and those its instances draw — and its instances have. */
-function partIds(doc: CanvasView): Set<string> {
+export function partIds(doc: CanvasView): Set<string> {
   const ids = new Set([...doc.nodes, ...doc.connectors, ...(doc.decorations ?? []), ...(doc.instances ?? [])].map(part => part.id));
   for (const instance of doc.instances ?? []) {
     const definition = doc.components?.[instance.component];

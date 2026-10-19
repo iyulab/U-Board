@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { triggersWithout, triggersOn, withTrigger, replaceTrigger, removeTrigger } from './trigger-editing';
-import { removeParts } from './scene-mapping';
+import { removeParts } from './part-removal';
 import { removeGridItem } from './grid-editing';
 import { validateViewDocument } from '../validate-view-document';
 import type { CanvasView, GridView, Trigger } from '../view-document';

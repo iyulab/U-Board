@@ -14,10 +14,10 @@ import {
   nextDecorationPosition,
   addConnector,
   newConnectorId,
-  removeParts,
   setInstanceParam,
   partOf,
 } from './scene-mapping.js';
+import { removeParts } from './part-removal.js';
 import { resolveDocument } from '../resolve-document.js';
 import { expandComponents } from '../components.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';

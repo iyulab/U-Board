@@ -30,9 +30,9 @@ describe('domain entry', () => {
   // effect — what a 0.x minor release adds or removes is read off this list.
   it('exports exactly these values', () => {
     expect(Object.keys(mod).sort()).toEqual([
-      'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'CONNECTOR_ROUTES', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT',
+      'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'CONNECTOR_ROUTES', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'EDIT_COMMANDS', 'EditCommandError',
       'FiringLimit', 'InvalidViewDocumentError', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS',
-      'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn', 'boardStateOf', 'coordinateOf',
+      'TRIGGER_EVENTS', 'ageText', 'applyEditCommands', 'applyJsonPatch', 'applyValueMap', 'bindingsIn', 'boardStateOf', 'coordinateOf',
       'describeQuality', 'documentPatch', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts', 'elementListeners',
       'emptyViewDocument', 'expandComponents', 'findHttpRefItem', 'firedBy', 'getByPointer', 'instancePartId', 'isHttpRef', 'isTriggerLink', 'linkFor',
       'lintViewDocument', 'nodeSize', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef',

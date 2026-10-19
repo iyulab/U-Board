@@ -871,3 +871,28 @@ distinct `id`, matched by id — removed items from the last, then each kept ite
 end (`/-`); a list without ids, index by index while its length stays. A list whose items changed order (or, without
 ids, its length), and an object whose members would otherwise end up in another order, are replaced whole.
 `applyJsonPatch(before, documentPatch(before, after))` is `after`, member order included.
+
+### Edits that change a board in more than one place — `applyEditCommands(doc, commands)`
+
+```ts
+type EditCommand =
+  | { command: 'rename-element'; from: string; to: string }    // every widget that places it follows
+  | { command: 'remove-element'; name: string }                // only while nothing places it
+  | { command: 'rename-symbol'; from: string; to: string }     // every markup that places it follows
+  | { command: 'remove-symbol'; name: string }                 // only while nothing places it
+  | { command: 'remove'; ids: string[] }                       // with the lines and triggers that name them
+  | { command: 'make-component'; ids: string[]; name: string; instance: string }
+  | { command: 'detach'; instance: string }                    // the instance becomes the board's own parts
+  | { command: 'rename-component'; from: string; to: string }  // its instances follow
+  | { command: 'remove-component'; name: string };             // with its instances
+function applyEditCommands<D extends ViewDocument>(doc: D, commands: readonly EditCommand[]): D;
+class EditCommandError extends Error { readonly index: number; readonly path: string }
+```
+
+The edits the editor makes with one action, for a program to make the same way: `remove` takes a node's connectors
+and the triggers and `focus` actions that name it (on a grid, an item's triggers); `make-component` moves the lines
+between the chosen nodes into the new component and points the board's other lines and triggers at the instance
+(`<instance>/<part>`); `remove-component` removes its instances, and what names their parts, with it. The commands run
+in order on a new document, all or nothing — one that cannot run (a name that is not defined or already taken, an
+element still placed, a part an instance draws) throws `EditCommandError` with its `index`, the `path` it is about and
+what to do instead. To save the result, send `documentPatch(doc, result)` against the revision `doc` came from.

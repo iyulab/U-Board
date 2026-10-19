@@ -8,6 +8,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `applyEditCommands(doc, commands)` (`@iyulab/u-board/domain`): the edits that change a board in more than one
+  place, as the editor makes them — rename or remove an element or a symbol, remove parts with the lines and triggers
+  that name them, make a component, detach an instance, rename or remove a component with its instances. All or
+  nothing; a command that cannot run throws `EditCommandError` with the path it is about.
 - `documentPatch(before, after)` (`@iyulab/u-board/domain`): the JSON Patch that turns one document into another —
   members and id-carrying list items changed where they are, removed from the last, added at the end — so a change
   made on a whole document is sent as the few operations it made.
