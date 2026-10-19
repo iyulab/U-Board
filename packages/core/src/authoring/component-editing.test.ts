@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { canMakeComponent, componentBoard, detachInstance, makeComponent, newComponentName, newInstanceId, setComponentParams, withComponentBoard } from './component-editing';
+import { canMakeComponent, componentBoard, componentPreview, componentPreviewValues, detachInstance, makeComponent, newComponentName, newInstanceId, setComponentParams, withComponentBoard } from './component-editing';
 import { validateViewDocument } from '../validate-view-document';
 import { expandComponents } from '../components';
 import type { CanvasView, Node } from '../view-document';
@@ -129,5 +129,44 @@ describe('editing a component as a board of its own', () => {
     const doc = setComponentParams(made(), 'card', { type: 'object', properties: { name: { type: 'string' } } });
     expect(doc.components?.card.params).toEqual({ type: 'object', properties: { name: { type: 'string' } } });
     expect(setComponentParams(doc, 'card', undefined).components?.card).not.toHaveProperty('params');
+  });
+});
+
+describe('what a component board shows while it is edited', () => {
+  const doc = (): CanvasView => ({
+    kind: 'canvas',
+    background: {},
+    nodes: [],
+    connectors: [],
+    components: {
+      card: {
+        params: { type: 'object', properties: { machine: { type: 'string' }, max: { type: 'number', default: 100 } } },
+        nodes: [{ id: 'temp', x: 0, y: 0, widget: { type: 'gauge', props: { label: 'Temp {{machine}}', max: '{{max}}' } } }],
+        connectors: [{ id: 'self', fromNodeId: 'temp', toNodeId: 'temp', label: '{{machine}}' }],
+      },
+    },
+    instances: [
+      { id: 'press-1', component: 'card', x: 0, y: 0, anchored: false, params: { machine: 'Press 1', max: 250 } },
+      { id: 'press-2', component: 'card', x: 300, y: 0, anchored: false, params: { machine: 'Press 2' } },
+    ],
+  });
+
+  it('fills each placeholder from the parameter’s default, else from the first instance’s value', () => {
+    expect(componentPreviewValues(doc(), 'card')).toEqual({ machine: 'Press 1', max: 100 });
+  });
+
+  it('draws the filled parts but leaves the board being edited as it is', () => {
+    const sub = componentBoard(doc(), 'card')!;
+    const shown = componentPreview(sub, componentPreviewValues(doc(), 'card'));
+    expect(shown.nodes[0]).toMatchObject({ id: 'temp', widget: { type: 'gauge', props: { label: 'Temp Press 1', max: 100 } } });
+    expect(shown.connectors[0]).toMatchObject({ id: 'self', fromNodeId: 'temp', label: 'Press 1' });
+    expect(sub.nodes[0].widget.props).toEqual({ label: 'Temp {{machine}}', max: '{{max}}' });
+  });
+
+  it('leaves a placeholder nothing fills — a component with no default and no instance yet', () => {
+    const lone = { ...doc(), instances: [] };
+    expect(componentPreviewValues(lone, 'card')).toEqual({ max: 100 });
+    const shown = componentPreview(componentBoard(lone, 'card')!, componentPreviewValues(lone, 'card'));
+    expect(shown.nodes[0].widget.props).toEqual({ label: 'Temp {{machine}}', max: 100 });
   });
 });

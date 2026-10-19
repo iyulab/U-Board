@@ -34,7 +34,7 @@ import { DecorationPanel } from './DecorationPanel.js';
 import { ConnectorPanel } from './ConnectorPanel.js';
 import { InstancePanel } from './InstancePanel.js';
 import { partNamer } from './part-names.js';
-import { canMakeComponent, componentBoard, detachInstance, makeComponent, newComponentName, newInstanceId, setComponentParams, withComponentBoard } from './component-editing.js';
+import { canMakeComponent, componentBoard, componentPreview, componentPreviewValues, detachInstance, makeComponent, newComponentName, newInstanceId, setComponentParams, withComponentBoard } from './component-editing.js';
 import { ComponentPanel } from './ComponentPanel.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';
@@ -65,6 +65,7 @@ export function CanvasAuthoring(props: KindEditorProps<CanvasView>) {
   // each edit written back into the board (`withComponentBoard`) — so Undo, Save and the history are the board's.
   const [editing, setEditing] = useState<string | null>(null);
   const board = useMemo(() => (editing ? componentBoard(doc, editing) : null), [doc, editing]);
+  const previewValues = useMemo(() => (editing ? componentPreviewValues(doc, editing) : {}), [doc, editing]);
   // Undone past its making, the component is gone: back to the board.
   useEffect(() => {
     if (editing && !board) setEditing(null);
@@ -84,6 +85,7 @@ export function CanvasAuthoring(props: KindEditorProps<CanvasView>) {
       name: editing,
       params: doc.components?.[editing]?.params,
       instances: (doc.instances ?? []).filter(instance => instance.component === editing).length,
+      previewValues,
       onParamsChange: params => updateDoc(prev => setComponentParams(prev, editing, params)),
       onDone: () => setEditing(null),
     };
@@ -97,6 +99,8 @@ interface ComponentScope {
   name: string;
   params: PropsSchema | undefined;
   instances: number;
+  /** What its parts' placeholders show while it is edited (`componentPreviewValues`) — never written into it. */
+  previewValues: Readonly<Record<string, unknown>>;
   onParamsChange: (params: PropsSchema | undefined) => void;
   onDone: () => void;
 }
@@ -120,6 +124,7 @@ function CanvasEditor({
   component,
   onEditComponent,
 }: KindEditorProps<CanvasView> & { component?: ComponentScope; onEditComponent?: (name: string) => void }) {
+  const previewValues = component?.previewValues;
   // Read when a result is drawn, not watched: a new function on every render must not re-resolve.
   const readClock = useEffectEvent(() => clock());
   // The board as its bindings last resolved, and when — drawn below as a viewer draws it.
@@ -216,13 +221,14 @@ function CanvasEditor({
 
   useEffect(() => {
     let cancelled = false;
-    resolveDocument(doc, adapters).then(result => {
+    // A component's parts are drawn with their placeholders filled, as an instance will draw them.
+    resolveDocument(previewValues ? componentPreview(doc, previewValues) : doc, adapters).then(result => {
       if (!cancelled) setResolved({ doc: result, now: readClock() });
     });
     return () => {
       cancelled = true;
     };
-  }, [doc, adapters]);
+  }, [doc, adapters, previewValues]);
   const attributions = useMemo(() => boardAttributions(doc, adapters), [doc, adapters]);
 
   // A part that leaves the document (undone, imported over) leaves the selection.

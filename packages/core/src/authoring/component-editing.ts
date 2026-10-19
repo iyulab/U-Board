@@ -1,6 +1,6 @@
 import type { CanvasView, ComponentDefinition, ComponentNode, Connector, PropsSchema, Shape, Trigger } from '../view-document.js';
 import { ELEMENT_NAME } from '../elements/element-type.js';
-import { instancePartId, instanceParts } from '../components.js';
+import { fillParameters, instancePartId, instanceParts, placeholdersIn } from '../components.js';
 import { triggersWithout, withTriggers } from './trigger-editing.js';
 
 /** A name no component of `doc` has yet: `component-1`, `component-2`, … */
@@ -141,6 +141,39 @@ export function withComponentBoard(doc: CanvasView, name: string, board: CanvasV
     connectors: gone.size > 0 ? doc.connectors.filter(c => !gone.has(c.fromNodeId) && !gone.has(c.toNodeId)) : doc.connectors,
   };
   return gone.size > 0 ? withTriggers(next, triggersWithout(doc.triggers, gone)) : next;
+}
+
+/**
+ * The values a component board shows while component `name` is edited: each parameter's default, else the first
+ * instance's value — so its parts look as they will on the board, not as `{{param}}` text a widget cannot draw.
+ */
+export function componentPreviewValues(doc: CanvasView, name: string): Record<string, unknown> {
+  const definition = doc.components?.[name];
+  if (!definition) return {};
+  const first = doc.instances?.find(instance => instance.component === name);
+  const values: Record<string, unknown> = { ...first?.params };
+  for (const [param, schema] of Object.entries(definition.params?.properties ?? {})) {
+    if (schema.default !== undefined) values[param] = schema.default;
+  }
+  return values;
+}
+
+/**
+ * `board` (a `componentBoard`) as it is drawn while edited: its parts' text filled from `values`, ids and line ends
+ * as they are. Display only — edits go to `board` itself, placeholders and all. A placeholder `values` has nothing
+ * for stays as it is written.
+ */
+export function componentPreview(board: CanvasView, values: Readonly<Record<string, unknown>>): CanvasView {
+  const known: Record<string, unknown> = {};
+  for (const { name } of placeholdersIn([board.nodes, board.connectors, board.decorations ?? []])) known[name] = `{{${name}}}`;
+  Object.assign(known, values);
+  const fill = <T extends { id: string }>(part: T): T => ({ ...(fillParameters(part, known) as T), id: part.id });
+  return {
+    ...board,
+    nodes: board.nodes.map(fill),
+    connectors: board.connectors.map(connector => ({ ...fill(connector), fromNodeId: connector.fromNodeId, toNodeId: connector.toNodeId })),
+    ...(board.decorations && { decorations: board.decorations.map(fill) }),
+  };
 }
 
 /** `doc` with component `name` taking the parameters `params` declares — none when `undefined`. */

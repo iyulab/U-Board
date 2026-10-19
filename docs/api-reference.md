@@ -628,7 +628,9 @@ instance's origin, each with the id `instancePartId(instance, part)` — `<insta
 `{{name}}` takes the value itself (a number stays a number); inside a longer text the value is written as text. The
 parts follow the board's own, in instance order, and the result has no components left, so expanding it again changes
 nothing. `resolveDocument` and `bindingsIn` expand first, so a renderer, the board state and a share link see the
-parts; an editor edits the component, not the parts an instance draws.
+parts; an editor edits the component, not the parts an instance draws. A stored document's `nodes` and `connectors`
+are only the board's own: a program that walks them directly misses every instance's parts, which stay in
+`components` and `instances` until expanded — walk `expandComponents(doc)` instead.
 
 `validateViewDocument` checks a component as a small canvas of its own — its parts' ids unique among them, its
 connectors joining its own nodes, its texts naming only parameters it declares, no `/` in a part's id — and each

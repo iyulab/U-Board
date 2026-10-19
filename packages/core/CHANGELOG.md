@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Edit component** draws the component's parts as an instance will: each `{{name}}` filled with the parameter's
+  default, else with the first instance's value — a gauge whose
+  `max` is `{{max}}` drew nothing before. The component itself keeps its placeholders; a name nothing fills stays as
+  written.
+
 ## [0.23.0] - 2026-10-17
 
 ### Added
