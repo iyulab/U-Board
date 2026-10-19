@@ -83,6 +83,7 @@ export const KO_LABELS: UBoardLabels = {
   itemHeightAuto: '위젯 기본 높이',
   moveEarlier: '앞으로',
   moveLater: '뒤로',
+  duplicateItem: '항목 복제',
   removeItem: '항목 삭제',
   multipleSelected: '{count}개 선택됨 — 하나를 선택하면 편집할 수 있습니다.',
   propertiesHeading: '속성',

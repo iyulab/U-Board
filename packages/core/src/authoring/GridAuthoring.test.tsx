@@ -86,6 +86,20 @@ describe('AuthoringView with a grid view', () => {
     expect(screen.getByText('Select an item to edit it.')).toBeInTheDocument();
   });
 
+  it('duplicates an item next to it, and selects the copy', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={grid()} adapters={[]} onSave={onSave} />);
+    fireEvent.click(pick(1));
+    fireEvent.click(screen.getByRole('button', { name: 'Duplicate item' }));
+    const items = (await saved(onSave)).items;
+    expect(items).toHaveLength(3);
+    expect(items[1]).toEqual({ ...grid().items[0], id: items[1].id });
+    expect(items[1].id).not.toBe('a');
+    // The copy is the one selected now: removing removes it, not the original.
+    fireEvent.click(screen.getByRole('button', { name: 'Remove item' }));
+    expect((await saved(onSave)).items.map(item => item.id)).toEqual(['a', 'b']);
+  });
+
   it("edits the selected item's widget in the shared property panel", async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<AuthoringView initialDocument={grid()} adapters={[]} onSave={onSave} />);

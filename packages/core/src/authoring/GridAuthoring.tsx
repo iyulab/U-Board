@@ -13,7 +13,7 @@ import { ElementsPanel } from './ElementsPanel.js';
 import { SymbolsPanel } from './SymbolsPanel.js';
 import { GridItemPanel } from './GridItemPanel.js';
 import { seedWidget, widgetTypeName } from './widget-catalog.js';
-import { addGridItem, gridItemIndex, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from '../editing/grid-editing.js';
+import { addGridItem, duplicateGridItem, gridItemIndex, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from '../editing/grid-editing.js';
 import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
 
 /** The widths the editor can lay a grid out at — one inside each of the grid's three bands. */
@@ -98,6 +98,13 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
     const item = { id: newGridItemId(), widget: seedWidget('status', { label: labels.newNodeLabel, value: labels.newNodeValue }) };
     updateDoc(current => addGridItem(current, item, selectedId));
     setSelectedId(item.id);
+  };
+
+  const handleDuplicate = () => {
+    if (!selected) return;
+    const id = newGridItemId();
+    updateDoc(current => duplicateGridItem(current, selected.id, id));
+    setSelectedId(id);
   };
 
   const handleRemove = () => {
@@ -224,6 +231,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 isLast={selectedIndex === doc.items.length - 1}
                 onChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
                 onMove={by => updateDoc(current => moveGridItem(current, selected.id, gridItemIndex(current, selected.id) + by))}
+                onDuplicate={handleDuplicate}
                 onRemove={handleRemove}
                 labels={labels}
               />

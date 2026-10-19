@@ -41,6 +41,14 @@ export function gridItemIndex(doc: GridView, id: string): number {
   return doc.items.findIndex(item => item.id === id);
 }
 
+/** A copy of the item with `id`, under `newId`, right after it — its widget, bindings and layout; the triggers that name
+ *  the original stay with it. */
+export function duplicateGridItem(doc: GridView, id: string, newId: string): GridView {
+  const item = doc.items.find(existing => existing.id === id);
+  if (!item || doc.items.some(existing => existing.id === newId)) return doc;
+  return addGridItem(doc, { ...structuredClone(item), id: newId }, id);
+}
+
 export function removeGridItem(doc: GridView, id: string): GridView {
   return withTriggers({ ...doc, items: doc.items.filter(item => item.id !== id) }, triggersWithout(doc.triggers, new Set([id])));
 }

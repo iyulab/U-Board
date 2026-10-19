@@ -8,6 +8,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- The grid editor duplicates the selected item (**Duplicate item**) right after it — its widget, bindings and layout;
+  the copy is selected.
 - `applyEditCommands(doc, commands)` (`@iyulab/u-board/domain`): the edits that change a board in more than one
   place, as the editor makes them — rename or remove an element or a symbol, remove parts with the lines and triggers
   that name them, make a component, detach an instance, rename or remove a component with its instances. All or

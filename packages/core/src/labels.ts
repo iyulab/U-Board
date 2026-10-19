@@ -128,6 +128,7 @@ export interface UBoardLabels {
   itemHeightAuto: string;
   moveEarlier: string;
   moveLater: string;
+  duplicateItem: string;
   removeItem: string;
   /** Shown instead of a property panel while several items are selected; `{count}` is replaced by
    * how many. */
@@ -470,6 +471,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   itemHeightAuto: 'Widget default',
   moveEarlier: 'Move earlier',
   moveLater: 'Move later',
+  duplicateItem: 'Duplicate item',
   removeItem: 'Remove item',
   multipleSelected: '{count} items selected — select one to edit it.',
   propertiesHeading: 'Properties',

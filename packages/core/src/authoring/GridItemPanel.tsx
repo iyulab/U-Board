@@ -13,6 +13,7 @@ export interface GridItemPanelProps {
   isLast: boolean;
   onChange: (change: Partial<Pick<GridItem, 'span' | 'spanMedium' | 'height'>>) => void;
   onMove: (by: -1 | 1) => void;
+  onDuplicate: () => void;
   onRemove: () => void;
   labels?: UBoardLabels;
 }
@@ -22,7 +23,7 @@ export interface GridItemPanelProps {
  * is in the order. Moving and removing are buttons, so they are a key press as well as a click. A choice left at
  * its default leaves its field out of the document.
  */
-export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onRemove, labels = DEFAULT_LABELS }: GridItemPanelProps) {
+export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDuplicate, onRemove, labels = DEFAULT_LABELS }: GridItemPanelProps) {
   const span = item.span ?? GRID_DEFAULT_SPAN;
   return (
     <div className="ub-panel ub-panel--item">
@@ -33,6 +34,9 @@ export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onRemov
         </button>
         <button type="button" className="ub-action" disabled={isLast} onClick={() => onMove(1)}>
           {labels.moveLater}
+        </button>
+        <button type="button" className="ub-action" onClick={onDuplicate}>
+          {labels.duplicateItem}
         </button>
         <button type="button" className="ub-action" onClick={onRemove}>
           {labels.removeItem}
