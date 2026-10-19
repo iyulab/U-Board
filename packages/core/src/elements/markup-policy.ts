@@ -12,7 +12,7 @@ import { maskTemplateValues } from './template.js';
 export const TEMPLATE_TAGS: ReadonlySet<string> = new Set([
   // HTML text and structure
   'div', 'span', 'p', 'br', 'hr', 'b', 'i', 'u', 's', 'em', 'strong', 'small', 'mark', 'sub', 'sup', 'code', 'pre', 'abbr', 'time',
-  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'section', 'header', 'footer', 'article', 'aside', 'figure', 'figcaption',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'section', 'header', 'footer', 'article', 'aside', 'figure', 'figcaption',
   'table', 'caption', 'colgroup', 'col', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'img', 'label', 'meter', 'progress',
   'details', 'summary',
   // SVG shapes, text, paint servers and filters

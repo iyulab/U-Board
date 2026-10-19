@@ -19,6 +19,10 @@ describe('checkTemplateMarkup', () => {
     expect(messages(template)).toEqual([]);
   });
 
+  it('takes a description list for names and their values', () => {
+    expect(messages('<dl><dt>Gap</dt><dd>{{gap}} mm</dd><dt>Flush</dt><dd>{{flush}} mm</dd></dl>')).toEqual([]);
+  });
+
   it('refuses script, style, frames, links and SVG foreign content, saying what to do instead', () => {
     expect(messages('<script>x()</script>')).toEqual(['<script> is not allowed in a template — a template runs no script — use render: "script" for code']);
     expect(messages('<style>p{}</style>')[0]).toContain("put the CSS in the definition's style");

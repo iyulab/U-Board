@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A `template` element may use a description list — `<dl>`, `<dt>`, `<dd>` — for names and their values.
+
 ### Changed
 
 - A canvas document field written under `/components` (`instances` beside the definitions) is refused with where it
