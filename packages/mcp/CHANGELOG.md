@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-20
+
 ### Added
 
 - `rename_board({ board, name })`: renames a board in place — its id, share links and history stay. Without it, an
@@ -15,6 +17,11 @@ All notable changes to this package are documented here. The format follows
 ### Fixed
 
 - The README's tool table lists `edit_board`.
+
+### Changed
+
+- Takes `@iyulab/u-board` 0.25: a template value's digits (`{{v | fixed:1}}`) and a description list validate as the
+  server does.
 
 ## [0.11.0] - 2026-10-19
 

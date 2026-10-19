@@ -11,6 +11,20 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-20
+
+### Added
+
+- An element's template may give a number its digits — `{{inlet | fixed:1}}` shows 24 as 24.0 — and use a
+  description list (`<dl>`, `<dt>`, `<dd>`) for names and their values.
+
+### Changed
+
+- A board whose document puts a field of its own under `components` (`instances` beside the definitions) is refused
+  with where that field belongs, and a component can no longer be named after a document field (`nodes`,
+  `instances`, …). Upgrading: a board with a component of such a name is refused on its next save — rename the
+  component first.
+
 ## [0.14.0] - 2026-10-19
 
 ### Added

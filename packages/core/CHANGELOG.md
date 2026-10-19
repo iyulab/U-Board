@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-10-20
+
 ### Added
 
 - A `template` element may use a description list — `<dl>`, `<dt>`, `<dd>` — for names and their values.
