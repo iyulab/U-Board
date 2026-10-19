@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-19
+
 ### Added
 
 - The grid editor duplicates the selected item (**Duplicate item**) right after it — its widget, bindings and layout;

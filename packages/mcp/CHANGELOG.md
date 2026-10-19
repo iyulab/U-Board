@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-19
+
 ### Added
 
 - `list_sources` answers each source's description (the paths it answers, as its owner wrote them); `create_source`
@@ -17,6 +19,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- Needs `@iyulab/u-board` `^0.24.0` (`applyEditCommands`, `documentPatch`).
 - `validate` of a board and a patch says nothing is saved yet and the revision to send the patch on (`next`).
 - The data rules say a binding's key is the path inside the props — an element's own prop `"status"`, never
   `"props.status"`.

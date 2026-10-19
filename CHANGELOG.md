@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-19
+
 ### Added
 
 - The console's grid editor duplicates an item (**Duplicate item**) right after it.
