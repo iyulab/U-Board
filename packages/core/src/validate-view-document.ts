@@ -396,6 +396,12 @@ const PART_NAMING_FIELDS = ['id', 'fromNodeId', 'toNodeId'];
 function checkComponents(doc: Checker, components: Record<string, unknown>): void {
   for (const [name, definition] of Object.entries(components)) {
     const at = ['components', name];
+    // A document's own field put one level too deep (instances beside the definitions) reads as a component of that
+    // name: say where it belongs, or the writer sends the same document again (a model did, three times).
+    if (name !== 'components' && CANVAS_FIELDS.includes(name)) {
+      doc.fail(at, `"${name}" is a field of the document, not a component — it goes at /${name}, beside /components`);
+      continue;
+    }
     if (!ELEMENT_NAME.test(name)) doc.fail(at, 'expected a name of lowercase letters, digits and hyphens, starting with a letter (at most 40)');
     if (!doc.isRecordAt(definition, at)) {
       doc.components.set(name, null);

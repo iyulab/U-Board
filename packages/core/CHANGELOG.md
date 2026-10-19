@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- A canvas document field written under `/components` (`instances` beside the definitions) is refused with where it
+  belongs — `/instances`, beside `/components` — instead of «expected an object». A component can no longer be named
+  after a document field (`nodes`, `instances`, …).
+
 ## [0.24.0] - 2026-10-19
 
 ### Added

@@ -237,6 +237,21 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
   );
 
   server.registerTool(
+    'rename_board',
+    {
+      description:
+        'Renames a board. Its id stays, and with it the links it is shared by and its history — rename it rather than making a new board and deleting the old one. The name is not part of the document.',
+      inputSchema: z.strictObject({ board: boardId, name: z.string().trim().min(1).max(200) }),
+      annotations: { idempotentHint: true },
+    },
+    async ({ board, name }) =>
+      tool(async () => {
+        const saved = await client.renameBoard(board, name);
+        return { id: saved.id, name: saved.name, revision: saved.revision };
+      })
+  );
+
+  server.registerTool(
     'patch_board',
     {
       description: "Changes part of a board's document with a JSON Patch, applied entirely or not at all, and saves it. Answers the new revision and advice.",

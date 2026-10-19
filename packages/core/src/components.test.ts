@@ -101,6 +101,14 @@ describe('a component board, validated', () => {
     expect(validateViewDocument(doc, { strict: true }).map(issue => issue.path)).toEqual(['/components/card/decorations/0/fill']);
   });
 
+  it('says where a document field put among the components belongs', () => {
+    const doc = board({ components: { card, instances: [{ id: 'press-3', component: 'card', x: 0, y: 0 }] } as never });
+    expect(validateViewDocument(doc, { strict: true })).toContainEqual({
+      path: '/components/instances',
+      message: '"instances" is a field of the document, not a component — it goes at /instances, beside /components',
+    });
+  });
+
   it('names the instance for what it gives, and the component for what it uses', () => {
     const doc = board({
       instances: [

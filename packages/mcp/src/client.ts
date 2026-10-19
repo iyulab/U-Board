@@ -100,6 +100,11 @@ export class UBoardClient {
     await this.request('DELETE', await this.workspacePath(`/boards/${encodeURIComponent(boardId)}`));
   }
 
+  /** Renames a board; its id, and so its share links and history, stay. */
+  async renameBoard(boardId: string, name: string): Promise<Saved & { name: string }> {
+    return this.request('PUT', await this.workspacePath(`/boards/${encodeURIComponent(boardId)}`), { body: { name } });
+  }
+
   /** Replaces a board's document — on `revision` when given (412 when the board has been saved since). */
   async putDocument(boardId: string, document: unknown, revision?: number): Promise<Saved> {
     return this.request('PUT', await this.workspacePath(`/boards/${encodeURIComponent(boardId)}`), { body: { document }, revision });

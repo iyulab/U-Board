@@ -52,9 +52,11 @@ function fakeServer() {
       boards.delete(id);
       return new Response(null, { status: 204 });
     }
-    board.document = method === 'PATCH' ? applyJsonPatch(board.document, body) : body.document;
+    if (method === 'PATCH') board.document = applyJsonPatch(board.document, body);
+    if (body.document !== undefined) board.document = body.document;
+    if (body.name !== undefined) board.name = body.name;
     board.revision += 1;
-    return json(200, { id, revision: board.revision, advice: [] });
+    return json(200, { id, ...(body.name !== undefined && { name: board.name }), revision: board.revision, advice: [] });
   }) as typeof fetch;
 
   return { boards, requests, fetchImpl };
@@ -87,7 +89,7 @@ describe('u-board-mcp', () => {
   it('offers few tools, each with a strict input', async () => {
     const { tools } = await client.listTools();
     expect(tools.map(t => t.name).sort()).toEqual([
-      'board_state', 'create_board', 'create_source', 'delete_board', 'describe', 'edit_board', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'sample_source', 'validate',
+      'board_state', 'create_board', 'create_source', 'delete_board', 'describe', 'edit_board', 'get_board', 'list_boards', 'list_sources', 'patch_board', 'rename_board', 'sample_source', 'validate',
     ]);
     for (const tool of tools) expect(tool.inputSchema.additionalProperties, tool.name).toBe(false);
   });
@@ -355,6 +357,14 @@ describe('u-board-mcp', () => {
     const again = await call('delete_board', { board: 'b1' });
     expect(again.isError).toBe(true);
     expect(again.value).toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('renames a board in place — the same id, the document untouched', async () => {
+    const before = server.boards.get('b1')!.document;
+    expect((await call('rename_board', { board: 'b1', name: '  Line 1, no inspection ' })).value).toEqual({ id: 'b1', name: 'Line 1, no inspection', revision: 5 });
+    expect(server.boards.get('b1')).toMatchObject({ name: 'Line 1, no inspection', document: before });
+    expect(server.requests.at(-1)).toMatchObject({ method: 'PUT', body: { name: 'Line 1, no inspection' } });
+    expect((await call('rename_board', { board: 'b1', name: '   ' })).isError).toBe(true);
   });
 
   it('validates a document, or a board with a patch, without saving', async () => {
