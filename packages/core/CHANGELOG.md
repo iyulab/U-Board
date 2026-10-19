@@ -22,6 +22,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- Validation reports a component that does not hold at the component only: a connector or a trigger naming a part
+  of one of its instances was reported as naming nothing too, with a hint that a connector joins only `/nodes`.
 - `applyJsonPatch`: a `replace` keeps the member where it stands among the others — it moved it last.
 
 ## [0.23.0] - 2026-10-17

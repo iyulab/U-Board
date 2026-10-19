@@ -6,7 +6,7 @@ import { checkStyle, checkTemplateMarkup, isResourceOrigin } from './elements/ma
 import { checkPropsSchema, checkPropsValue } from './elements/props-schema.js';
 import { VIEW_BOX, symbolReferences } from './elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor } from './css-color.js';
-import { instanceParts, parameterValues, placeholdersIn } from './components.js';
+import { instancePartId, instanceParts, parameterValues, placeholdersIn } from './components.js';
 import type { ComponentDefinition, ComponentInstance } from './view-document.js';
 
 /** One way a value fails to be a `ViewDocument`: where (an RFC 6901 JSON Pointer into the value,
@@ -404,6 +404,7 @@ function checkComponents(doc: Checker, components: Record<string, unknown>): voi
         if (isRecord(node) && typeof node.id === 'string') nodeIds.add(node.id);
       });
     }
+    doc.componentNodeIds.set(name, [...nodeIds]);
     if (definition.connectors !== undefined && doc.array(definition, [...at, 'connectors'])) {
       (definition.connectors as unknown[]).forEach((connector, i) => checkConnector(parts, connector, [...at, 'connectors', String(i)], nodeIds, pointer([...at, 'nodes'])));
     }
@@ -484,7 +485,12 @@ function checkInstance(doc: Checker, instance: unknown, at: string[]): void {
     return;
   }
   const definition = doc.components.get(name);
-  if (!definition || !paramsAreRecord || typeof instance.id !== 'string' || !Number.isFinite(instance.x) || !Number.isFinite(instance.y)) return;
+  if (!definition) {
+    // The component's own issues are reported at it; its parts' ids still stand, so what names them is not wrong too.
+    if (typeof instance.id === 'string') for (const id of doc.componentNodeIds.get(name) ?? []) doc.instanceNodeIds.push(instancePartId(instance.id, id));
+    return;
+  }
+  if (!paramsAreRecord || typeof instance.id !== 'string' || !Number.isFinite(instance.x) || !Number.isFinite(instance.y)) return;
 
   const given = (instance.params ?? {}) as Record<string, unknown>;
   const declared = definition.params?.properties ?? {};
@@ -732,6 +738,9 @@ class Checker {
   readonly components: Map<string, ComponentDefinition | null>;
   /** The ids the nodes of component instances are drawn with — nodes a connector or a trigger may name. */
   readonly instanceNodeIds: string[] = [];
+  /** The ids of each component's nodes, kept even when the component does not hold — so a line or a trigger naming a
+   *  part of one of its instances is not also reported as naming nothing. */
+  readonly componentNodeIds: Map<string, string[]>;
 
   constructor(
     private readonly issues: ViewDocumentIssue[],
@@ -741,6 +750,7 @@ class Checker {
     this.elements = shared?.elements ?? new Map();
     this.symbols = shared?.symbols ?? new Set();
     this.components = shared?.components ?? new Map();
+    this.componentNodeIds = shared?.componentNodeIds ?? new Map();
   }
 
   /** A checker for a component's parts: the same issues, elements and symbols, ids of its own. */

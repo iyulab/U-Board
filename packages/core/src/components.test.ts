@@ -91,6 +91,16 @@ describe('a component board, validated', () => {
     expect(validateViewDocument(doc, { strict: true })).toEqual([]);
   });
 
+  it('reports a component that does not hold at the component only — a line or a trigger to its instances’ parts is not wrong too', () => {
+    const broken: ComponentDefinition = { ...card, decorations: [{ id: 'frame', type: 'rect', x: 0, y: 0, width: 10, height: 10, fill: 'var(--edge)' }] };
+    const doc = board({
+      components: { card: broken },
+      connectors: [{ id: 'feed', fromNodeId: 'hall', toNodeId: 'press-2/temp' }],
+      triggers: [{ on: { event: 'click', node: 'press-1/speed' }, do: [{ action: 'focus', node: 'press-2/temp' }] }],
+    });
+    expect(validateViewDocument(doc, { strict: true }).map(issue => issue.path)).toEqual(['/components/card/decorations/0/fill']);
+  });
+
   it('names the instance for what it gives, and the component for what it uses', () => {
     const doc = board({
       instances: [
