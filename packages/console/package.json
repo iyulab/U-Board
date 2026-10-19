@@ -23,7 +23,7 @@
   "dependencies": {
     "@iyulab/u-board": "*",
     "@iyulab/u-board-samples": "*",
-    "@uplatform/brand": "^0.3.0",
+    "@uplatform/brand": "^0.4.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router": "^8.4.0"

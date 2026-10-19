@@ -11,6 +11,13 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- **Edit component** in the console draws the component's parts with their `{{name}}` filled — the parameter's
+  default, else the first instance's value — instead of the placeholder text; a part added there goes near the
+  component's origin.
+- The console and the introduction site take `@uplatform/brand` 0.4.
+
 ## [0.13.0] - 2026-10-17
 
 ### Added
