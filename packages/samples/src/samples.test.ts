@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coordinateOf, placedIn, resolveDocument, sizedNodes, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
+import { coordinateOf, expandComponents, placedIn, resolveDocument, sizedNodes, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
 import { BIKE_STATIONS } from './packs/gwanghwamun.js';
 import { keepPointers } from './prune.js';
@@ -12,9 +12,12 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     expect(validateViewDocument(pack.document)).toEqual([]);
   });
 
+  // A component's parts bind once in its definition and read once per instance: checked as drawn.
+  const drawn = pack.document.kind === 'canvas' ? expandComponents(pack.document) : pack.document;
+
   it('binds only to its own connectors, each crediting its source', () => {
     const keys = new Set(pack.connectors.map(c => c.key));
-    for (const node of placedIn(pack.document)) {
+    for (const node of placedIn(drawn)) {
       for (const binding of Object.values(node.widget.bindings ?? {})) expect(keys, `${node.id} → ${binding.adapter}`).toContain(binding.adapter);
     }
     for (const connector of pack.connectors) {
@@ -32,7 +35,7 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     }
     // A blank reading is how a source says "no value here" — an entry that reports nothing, picked by mistake.
     const adapters = new Map(snapshotAdapters(pack).map(a => [a.id, a]));
-    for (const node of placedIn(pack.document)) {
+    for (const node of placedIn(drawn)) {
       for (const [prop, binding] of Object.entries(node.widget.bindings ?? {})) {
         const { value } = await adapters.get(binding.adapter)!.resolve(binding.ref);
         expect(value === '' || value === null, `${node.id} ${prop} reads "${String(value)}"`).toBe(false);
@@ -43,7 +46,7 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
   it('says when the source observed each value it gives a time for — before the recording, within the hour or two a source lags', async () => {
     const adapters = new Map(snapshotAdapters(pack).map(a => [a.id, a]));
     const capturedAt = Date.parse(pack.snapshot.capturedAt);
-    for (const node of placedIn(pack.document)) {
+    for (const node of placedIn(drawn)) {
       for (const [prop, binding] of Object.entries(node.widget.bindings ?? {})) {
         if ((binding.ref as { observedAtPath?: string }).observedAtPath === undefined) continue;
         const observedAt = Date.parse((await adapters.get(binding.adapter)!.resolve(binding.ref)).observedAt!);
@@ -53,8 +56,8 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     }
   });
 
-  it.runIf(pack.document.kind === 'canvas')('places every node on its background, none over another', () => {
-    const document = pack.document as CanvasView;
+  it.runIf(pack.document.kind === 'canvas' && pack.document.background.image !== undefined)('places every node on its background, none over another', () => {
+    const document = drawn as CanvasView;
     const { width, height } = document.background.image!;
     const nodes = document.nodes;
     for (const node of nodes) {
@@ -63,6 +66,12 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
       expect(node.x + (node.width ?? 0), node.id).toBeLessThanOrEqual(width);
       expect(node.y + (node.height ?? 0), node.id).toBeLessThanOrEqual(height);
     }
+    for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) expect(overlaps(a, b), `${a.id} × ${b.id}`).toBe(false);
+  });
+
+  it.runIf(pack.document.kind === 'canvas' && pack.document.background.image === undefined)('places nothing over another part when there is no drawing', () => {
+    const nodes = sizedNodes(drawn as CanvasView);
+    for (const node of nodes) expect(Math.min(node.x, node.y), node.id).toBeGreaterThanOrEqual(0);
     for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) expect(overlaps(a, b), `${a.id} × ${b.id}`).toBe(false);
   });
 });

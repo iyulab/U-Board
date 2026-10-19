@@ -8,6 +8,7 @@ export { lineSpc } from './packs/line-spc.js';
 export { waterPumps } from './packs/water-pumps.js';
 export { powerSld } from './packs/power-sld.js';
 export { lineOee } from './packs/line-oee.js';
+export { lineFlow } from './packs/line-flow.js';
 export { pumpStation } from './packs/pump-station.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
@@ -17,8 +18,9 @@ import { lineSpc } from './packs/line-spc.js';
 import { waterPumps } from './packs/water-pumps.js';
 import { powerSld } from './packs/power-sld.js';
 import { lineOee } from './packs/line-oee.js';
+import { lineFlow } from './packs/line-flow.js';
 import { pumpStation } from './packs/pump-station.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, pumpStation];
+export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation];

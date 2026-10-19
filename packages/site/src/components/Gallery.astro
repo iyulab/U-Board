@@ -5,6 +5,7 @@
 import Page from './Page.astro';
 import { COPY, type Locale } from '../copy';
 import { SAMPLE_PACKS, isInstallable } from '@iyulab/u-board-samples';
+import { expandComponents, sizedNodes, type CanvasView } from '@iyulab/u-board/domain';
 
 interface Props {
   locale: Locale;
@@ -17,9 +18,16 @@ const time = (iso: string) =>
   new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-GB', {
     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Seoul', timeZoneName: 'short',
   }).format(new Date(iso));
-// A board drawn over a background keeps its drawing's proportions; a grid has none, and is as tall as its items.
+// A board drawn over a background keeps its drawing's proportions; one with no drawing, those of its parts (with the
+// viewer's margin around them); a grid has none, and is as tall as its items.
+const partsExtent = (document: CanvasView) => {
+  const nodes = sizedNodes(expandComponents(document));
+  const width = Math.max(...nodes.map(n => n.x + n.width)) - Math.min(...nodes.map(n => n.x));
+  const height = Math.max(...nodes.map(n => n.y + n.height)) - Math.min(...nodes.map(n => n.y));
+  return { width: width + 32, height: height + 32 };
+};
 const cards = SAMPLE_PACKS.map(pack => {
-  const image = pack.document.kind === 'canvas' ? (pack.document.background.image ?? { width: 4, height: 3 }) : undefined;
+  const image = pack.document.kind === 'canvas' ? (pack.document.background.image ?? partsExtent(pack.document)) : undefined;
   const recorded = isInstallable(pack) ? g.recorded.replace('{time}', time(pack.snapshot.capturedAt)) : g.example;
   return { pack, aspect: image ? `aspect-ratio: ${image.width} / ${image.height}` : undefined, recorded };
 });
