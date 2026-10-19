@@ -29,7 +29,7 @@ const partsExtent = (document: CanvasView) => {
 const cards = SAMPLE_PACKS.map(pack => {
   const image = pack.document.kind === 'canvas' ? (pack.document.background.image ?? partsExtent(pack.document)) : undefined;
   const recorded = isInstallable(pack) ? g.recorded.replace('{time}', time(pack.snapshot.capturedAt)) : g.example;
-  return { pack, aspect: image ? `aspect-ratio: ${image.width} / ${image.height}` : undefined, recorded };
+  return { pack, aspect: image ? `aspect-ratio: ${image.width} / ${image.height}; --ratio: ${(image.width / image.height).toFixed(3)}` : undefined, recorded };
 });
 ---
 
@@ -90,6 +90,8 @@ const cards = SAMPLE_PACKS.map(pack => {
   }
   .sample {
     margin-block: 0 3rem;
+    /* The board's box takes its height from the card's width (cqi). */
+    container-type: inline-size;
   }
   .sample-head h2 {
     margin: 0 0 0.5rem;
@@ -120,10 +122,11 @@ const cards = SAMPLE_PACKS.map(pack => {
     overflow: hidden;
     background: #ffffff;
   }
-  /* The viewer's toolbar and its credit line sit inside the box with the board, so give them room. */
+  /* The viewer's toolbar and its credit line sit inside the box with the board, so give them room: as tall as the
+     board is at the card's width (its drawing's proportions, or its parts'), plus those two, and never past the screen. */
   .sample-board.live {
     aspect-ratio: auto !important;
-    height: min(80vh, 760px);
+    height: min(80vh, 760px, calc(100cqi / var(--ratio, 1.6) + 76px));
   }
   /* A grid has no drawing to fit: it is as tall as its items, at the width it is given. */
   .sample-board--grid.live {
