@@ -31,9 +31,9 @@ function fakeServer() {
       return json(201, { id: 's2', name: body.name, baseUrl: body.baseUrl, authType: body.authType });
     }
     if (url.pathname === '/api/workspaces/w1/connectors/s1/resolve') {
-      return body.ref.path === '/down'
-        ? json(200, { quality: 'disconnected', reason: 'unreachable', message: 'connect ECONNREFUSED' })
-        : json(200, { quality: 'live', value: { items: [{ id: 'P-101', temp: 61.5 }, { id: 'P-102', temp: 58 }] } });
+      if (body.ref.path === '/down') return json(200, { quality: 'disconnected', reason: 'transport', message: 'connect ECONNREFUSED' });
+      if (body.ref.path === '/nowhere') return json(200, { quality: 'disconnected', reason: 'address' });
+      return json(200, { quality: 'live', value: { items: [{ id: 'P-101', temp: 61.5 }, { id: 'P-102', temp: 58 }] } });
     }
     if (url.pathname === '/api/workspaces/w1/boards' && method === 'POST') {
       boards.set('b2', { name: body.name, revision: 1, document: body.kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', background: {}, nodes: [], connectors: [] } });
@@ -384,7 +384,18 @@ describe('u-board-mcp', () => {
       shape: { values: ['/items: array(2)', '/items/0/id: string "P-101"', '/items/0/temp: number 61.5'], lists: [{ list: '/items', items: 2, keys: ['id', 'temp'] }] },
     });
     expect(server.requests.find(r => r.path.endsWith('/resolve'))!.body).toEqual({ ref: { path: '/readings' } });
-    expect((await call('sample_source', { source: 's1', path: '/down' })).value).toEqual({ read: false, reason: 'unreachable', message: 'connect ECONNREFUSED' });
+    expect((await call('sample_source', { source: 's1', path: '/down' })).value).toEqual({
+      read: false,
+      reason: 'transport',
+      message: 'connect ECONNREFUSED',
+      next: expect.stringContaining('could not be reached'),
+    });
+  });
+
+  it('says, for a path the source has nothing at, to ask for the source’s paths rather than guess them', async () => {
+    const { value } = await call('sample_source', { source: 's1', path: '/nowhere' });
+    expect(value).toEqual({ read: false, reason: 'address', next: expect.stringContaining('ask the person') });
+    expect(value.next).toContain('do not guess');
   });
 
   it('makes a source that needs no credential, and cannot be given one', async () => {

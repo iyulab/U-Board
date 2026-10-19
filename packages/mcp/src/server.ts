@@ -65,6 +65,17 @@ async function tool(run: () => Promise<unknown> | unknown): Promise<ToolResult> 
   }
 }
 
+/** What to do when a source could not be read, by the reason — a reading that failed says where to go next; without
+ *  it, an assistant that cannot find a path keeps guessing new ones. */
+const UNREAD: Record<string, string> = {
+  address:
+    'The source has nothing at this path. Its paths come from its own documentation — ask the person for the request to read (the path and its query); do not guess them.',
+  auth: 'The source refused the credential it was given. Its owner fixes that in the console; a board cannot.',
+  throttled: 'The source asks for fewer requests. Wait before reading it again.',
+  format: 'The source answered, but not with JSON — this path is not one a binding can read.',
+  transport: 'The source could not be reached. Try again later, or ask the person whether it is up.',
+};
+
 const boardId = z.string().min(1).max(100).describe('The board id, from list_boards.');
 const revision = z.number().int().positive().optional().describe('The revision the change was made against (from get_board). A board saved since answers 412.');
 /** Said when a writer nests an object in its own first key — the commonest shape mistake, and one the plain schema
@@ -290,7 +301,7 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
     async ({ source, path }) =>
       tool(async () => {
         const read = await client.resolve(source, { path });
-        if (read.quality === 'disconnected') return { read: false, reason: read.reason, message: read.message };
+        if (read.quality === 'disconnected') return { read: false, reason: read.reason, message: read.message, next: UNREAD[read.reason ?? ''] ?? UNREAD.transport };
         return { read: true, quality: read.quality, shape: shapeOf(read.value) };
       })
   );
