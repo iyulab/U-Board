@@ -85,3 +85,12 @@ describe('getByPointer', () => {
     expect(() => getByPointer({}, '/x')).toThrow('nothing at /x');
   });
 });
+
+describe('applyJsonPatch — replace', () => {
+  it('keeps a member where it stands among the others', () => {
+    const replaced = applyJsonPatch({ a: 1, b: 2, c: 3 }, [{ op: 'replace', path: '/a', value: 9 }]);
+    expect(Object.keys(replaced)).toEqual(['a', 'b', 'c']);
+    expect(replaced).toEqual({ a: 9, b: 2, c: 3 });
+    expect(applyJsonPatch({ l: [1, 2, 3] }, [{ op: 'replace', path: '/l/1', value: 5 }])).toEqual({ l: [1, 5, 3] });
+  });
+});

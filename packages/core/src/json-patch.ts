@@ -58,7 +58,7 @@ function applyOperation(root: unknown, operation: unknown): unknown {
       if (!has('value')) throw new Error('"replace" needs a "value"');
       if (path === '') return structuredClone(value);
       replaceable(root, parsePointer(path));
-      return add(remove(root, parsePointer(path)).root, parsePointer(path), structuredClone(value));
+      return replace(root, parsePointer(path), structuredClone(value));
     case 'move': {
       if (typeof from !== 'string') throw new Error('"move" needs "from", a JSON Pointer');
       if (path !== from && path.startsWith(`${from}/`)) throw new Error('cannot move a value into itself');
@@ -162,6 +162,16 @@ function add(root: unknown, tokens: string[], value: unknown): unknown {
   } else {
     throw new Error(`cannot add under ${pointerOf(tokens.slice(0, -1))} — it is not an object or array`);
   }
+  return root;
+}
+
+/** The value at `tokens` (there — `replaceable` checked) made `value` where it stands: a member keeps its place
+ *  among the others, as the document's text would. */
+function replace(root: unknown, tokens: string[], value: unknown): unknown {
+  const parent = get(root, tokens.slice(0, -1)) as Record<string, unknown> | unknown[];
+  const key = tokens[tokens.length - 1];
+  if (Array.isArray(parent)) parent[Number(key)] = value;
+  else parent[key] = value;
   return root;
 }
 

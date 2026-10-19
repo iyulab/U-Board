@@ -28,6 +28,7 @@ export { lintViewDocument } from './lint-view-document.js';
 export { elementFrameHtml, elementFrameScripts } from './elements/frame.js';
 export { elementDefinitionHash, elementFrameLabel } from './elements/definition-hash.js';
 export { applyJsonPatch, getByPointer, JsonPatchError } from './json-patch.js';
+export { documentPatch } from './document-patch.js';
 export type { JsonPatchOperation } from './json-patch.js';
 export type { ElementFrameMessage } from './elements/frame.js';
 export type { LintOptions, ViewDocumentAdvice } from './lint-view-document.js';

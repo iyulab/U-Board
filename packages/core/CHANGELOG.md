@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `documentPatch(before, after)` (`@iyulab/u-board/domain`): the JSON Patch that turns one document into another —
+  members and id-carrying list items changed where they are, removed from the last, added at the end — so a change
+  made on a whole document is sent as the few operations it made.
+
 ### Changed
 
 - **Edit component** draws the component's parts as an instance will: each `{{name}}` filled with the parameter's
@@ -13,6 +19,10 @@ All notable changes to this package are documented here. The format follows
   placeholders; a name nothing fills stays as written.
 - A node or frame added while a component is edited goes near the component's origin, among its parts — it was
   placed from the visible corner of the view and stood off from every instance.
+
+### Fixed
+
+- `applyJsonPatch`: a `replace` keeps the member where it stands among the others — it moved it last.
 
 ## [0.23.0] - 2026-10-17
 

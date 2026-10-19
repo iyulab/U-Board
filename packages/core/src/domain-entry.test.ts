@@ -33,7 +33,7 @@ describe('domain entry', () => {
       'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'CONNECTOR_ROUTES', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT',
       'FiringLimit', 'InvalidViewDocumentError', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS',
       'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn', 'boardStateOf', 'coordinateOf',
-      'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts', 'elementListeners',
+      'describeQuality', 'documentPatch', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts', 'elementListeners',
       'emptyViewDocument', 'expandComponents', 'findHttpRefItem', 'firedBy', 'getByPointer', 'instancePartId', 'isHttpRef', 'isTriggerLink', 'linkFor',
       'lintViewDocument', 'nodeSize', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef',
       'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading', 'sizedNodes', 'stateChanges',

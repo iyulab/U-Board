@@ -852,3 +852,22 @@ class InvalidViewDocumentError extends Error { readonly issues: ViewDocumentIssu
 Parses JSON **text** (for example a file's contents — not an already-parsed object) and validates
 it. Throws `InvalidViewDocumentError` when the text is not JSON or the result is not a valid
 document; the message names the first problem, and `issues` lists them all.
+
+### Changing a document — `applyJsonPatch(doc, patch)` / `documentPatch(before, after)`
+
+```ts
+function applyJsonPatch<T>(document: T, patch: unknown): T;   // patch: JsonPatchOperation[]
+function documentPatch(before: unknown, after: unknown): JsonPatchOperation[];
+```
+
+A board is changed on the server by a JSON Patch (RFC 6902) against its revision. `applyJsonPatch` applies one —
+entirely or not at all, a new value, `document` untouched; a failing operation throws `JsonPatchError` with its
+`index`. A `replace` keeps a member where it stands among the others.
+
+`documentPatch` is the other way round: the patch that turns `before` into `after`, so a change made on a whole
+document — every use of a renamed element rewritten, a node removed with the lines to it — goes to the server as the
+few operations it made. It goes down to what changed: an object member by member; a list whose items all carry a
+distinct `id`, matched by id — removed items from the last, then each kept item where it now is, then new ones at the
+end (`/-`); a list without ids, index by index while its length stays. A list whose items changed order (or, without
+ids, its length), and an object whose members would otherwise end up in another order, are replaced whole.
+`applyJsonPatch(before, documentPatch(before, after))` is `after`, member order included.
