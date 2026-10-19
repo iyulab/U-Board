@@ -47,3 +47,16 @@ test('a grid view lays its widgets out in cells, in order', async ({ page }) => 
   await page.waitForTimeout(1500);
   await expect(board).toHaveScreenshot('grid.png', { animations: 'disabled', maxDiffPixelRatio: 0.02 });
 });
+
+// Grid authoring on a dark board: the cells, the selected one's outline, each widget's type tag and the badges a
+// stale or empty value wears — all on the dark paper, where a light-only colour would vanish.
+test('grid authoring on a dark board keeps its outlines and tags readable', async ({ page }) => {
+  await page.getByRole('button', { name: 'Author grid', exact: true }).click();
+  await page.locator('.ub-authoring__appearance select').selectOption('dark');
+  await page.locator('.ub-grid [data-item-id]').nth(1).click();
+  const board = page.locator('.ub-authoring__surface');
+  await expect(page.locator('.ub-grid [data-item-id] u-widget').first()).toBeVisible();
+  // The charts draw their lines in over a second on their canvas (see the grid view above).
+  await page.waitForTimeout(1500);
+  await expect(board).toHaveScreenshot('grid-dark-authoring.png', { animations: 'disabled', maxDiffPixelRatio: 0.02 });
+});

@@ -39,6 +39,13 @@ test('a grid board: made as a grid, given items in order, saved, and opened from
   await picks.first().click();
   await expect(page.getByLabel('너비(12열 중)')).toHaveValue('8');
   await expectNoAxeViolations(page, 'grid editor');
+  // On dark paper the cells, the selected one's outline and the tags must stay readable too — and the shared board
+  // below is read dark.
+  await picks.first().click(); // unselected, the panel is the board's
+  await page.locator('.ub-authoring__appearance select').selectOption('dark');
+  await expect(page.locator('.ub-authoring__surface[data-appearance="dark"]')).toBeVisible();
+  await picks.first().click();
+  await expectNoAxeViolations(page, 'grid editor, dark board');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
