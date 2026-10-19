@@ -13,7 +13,7 @@ import {
   removeElement,
   renameElement,
   setElement,
-} from './element-editing.js';
+} from '../editing/element-editing.js';
 
 const FIELD_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column' };
 const CODE_STYLE: React.CSSProperties = { width: '100%', fontFamily: 'monospace', boxSizing: 'border-box' };

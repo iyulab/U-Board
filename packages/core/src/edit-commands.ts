@@ -1,10 +1,10 @@
 import type { CanvasView, ViewDocument } from './view-document.js';
 import { ELEMENT_NAME } from './elements/element-type.js';
-import { elementNameProblem, elementUses, removeElement, renameElement } from './authoring/element-editing.js';
-import { removeSymbol, renameSymbol, symbolNameProblem, symbolUses } from './authoring/symbol-editing.js';
-import { canMakeComponent, detachInstance, makeComponent, partIds, removeComponent, renameComponent } from './authoring/component-editing.js';
-import { removeParts } from './authoring/part-removal.js';
-import { removeGridItem } from './authoring/grid-editing.js';
+import { elementNameProblem, elementUses, removeElement, renameElement } from './editing/element-editing.js';
+import { removeSymbol, renameSymbol, symbolNameProblem, symbolUses } from './editing/symbol-editing.js';
+import { canMakeComponent, detachInstance, makeComponent, partIds, removeComponent, renameComponent } from './editing/component-editing.js';
+import { removeParts } from './editing/part-removal.js';
+import { removeGridItem } from './editing/grid-editing.js';
 
 /**
  * An edit that changes a board in more than one place — what the editor does with one action, written down so a

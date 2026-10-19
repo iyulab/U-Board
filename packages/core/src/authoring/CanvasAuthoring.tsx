@@ -17,7 +17,7 @@ import {
   setInstanceParam,
   partOf,
 } from './scene-mapping.js';
-import { removeParts } from './part-removal.js';
+import { removeParts } from '../editing/part-removal.js';
 import { resolveDocument } from '../resolve-document.js';
 import { expandComponents } from '../components.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
@@ -34,7 +34,7 @@ import { DecorationPanel } from './DecorationPanel.js';
 import { ConnectorPanel } from './ConnectorPanel.js';
 import { InstancePanel } from './InstancePanel.js';
 import { partNamer } from './part-names.js';
-import { canMakeComponent, componentBoard, componentPreview, componentPreviewValues, detachInstance, makeComponent, newComponentName, newInstanceId, setComponentParams, withComponentBoard } from './component-editing.js';
+import { canMakeComponent, componentBoard, componentPreview, componentPreviewValues, detachInstance, makeComponent, newComponentName, newInstanceId, setComponentParams, withComponentBoard } from '../editing/component-editing.js';
 import { ComponentPanel } from './ComponentPanel.js';
 import { forgetMoved, movedAnchors, relocateAnchors, snapshotAnchors, type AnchorSnapshot } from './anchor-snapshot.js';
 import { documentExtent } from '../viewer/document-extent.js';

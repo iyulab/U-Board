@@ -13,7 +13,7 @@ import {
   partOf,
   setInstanceParam,
 } from './scene-mapping';
-import { removeParts } from './part-removal';
+import { removeParts } from '../editing/part-removal';
 import type { CanvasView } from '../view-document';
 
 function doc(overrides: Partial<CanvasView> = {}): CanvasView {

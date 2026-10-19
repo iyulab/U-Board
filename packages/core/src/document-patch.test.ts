@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { documentPatch } from './document-patch';
 import { applyJsonPatch } from './json-patch';
-import { makeComponent } from './authoring/component-editing';
-import { renameElement } from './authoring/element-editing';
-import { removeParts } from './authoring/part-removal';
+import { makeComponent } from './editing/component-editing';
+import { renameElement } from './editing/element-editing';
+import { removeParts } from './editing/part-removal';
 import type { CanvasView } from './view-document';
 
 /** The patch turns `before` into `after` exactly — key order included, since JSON text keeps it. */

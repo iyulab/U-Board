@@ -3,7 +3,7 @@ import { isTriggerLink, placedIn, type Trigger, type TriggerAction, type Trigger
 import { expandComponents } from '../components.js';
 import { partNamer } from './part-names.js';
 import { stateNames } from './StatesEditor.js';
-import { removeTrigger, replaceTrigger, withTrigger } from './trigger-editing.js';
+import { removeTrigger, replaceTrigger, withTrigger } from '../editing/trigger-editing.js';
 import type { UBoardLabels } from '../labels.js';
 import { ERROR_STYLE, FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
 

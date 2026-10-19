@@ -5,7 +5,7 @@ import { bindingsIn } from './document-bindings';
 import { resolveDocument } from './resolve-document';
 import { boardStateOf } from './board-state';
 import { lintViewDocument } from './lint-view-document';
-import { elementUses, removeElement, renameElement } from './authoring/element-editing';
+import { elementUses, removeElement, renameElement } from './editing/element-editing';
 import type { Adapter } from './adapter';
 import type { CanvasView, ComponentDefinition } from './view-document';
 

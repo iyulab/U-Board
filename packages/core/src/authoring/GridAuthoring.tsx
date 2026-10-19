@@ -13,7 +13,7 @@ import { ElementsPanel } from './ElementsPanel.js';
 import { SymbolsPanel } from './SymbolsPanel.js';
 import { GridItemPanel } from './GridItemPanel.js';
 import { seedWidget, widgetTypeName } from './widget-catalog.js';
-import { addGridItem, gridItemIndex, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from './grid-editing.js';
+import { addGridItem, gridItemIndex, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from '../editing/grid-editing.js';
 import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
 
 /** The widths the editor can lay a grid out at — one inside each of the grid's three bands. */

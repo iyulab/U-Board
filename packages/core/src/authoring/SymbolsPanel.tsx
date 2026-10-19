@@ -3,7 +3,7 @@ import type { BoardAppearance, ElementDefinition, SymbolDefinition, ViewDocument
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { ERROR_STYLE, GROUP_STYLE, MUTED_STYLE } from '../ui-style.js';
 import { ElementView } from '../renderer/element-view.js';
-import { NEW_SYMBOL, newSymbolName, removeSymbol, renameSymbol, setSymbol, symbolIssues, symbolNameProblem, symbolUses } from './symbol-editing.js';
+import { NEW_SYMBOL, newSymbolName, removeSymbol, renameSymbol, setSymbol, symbolIssues, symbolNameProblem, symbolUses } from '../editing/symbol-editing.js';
 
 const FIELD_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column' };
 const CODE_STYLE: React.CSSProperties = { width: '100%', fontFamily: 'monospace', boxSizing: 'border-box' };
