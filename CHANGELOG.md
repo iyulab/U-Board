@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A data source carries a **description** its owner writes in the console — the paths it answers and what each
+  holds — for whoever binds to it next; an assistant reads it through `list_sources`. Not shown with a shared board.
+  (`description` on the connector API, up to 2,000 characters; blank or `null` clears it.)
+
 ### Changed
 
 - **Edit component** in the console draws the component's parts with their `{{name}}` filled — the parameter's

@@ -106,6 +106,24 @@ describe('ConnectorsPage', () => {
     await waitFor(() => expect(api.updateConnector).toHaveBeenCalledWith('w1', 'c9', expect.objectContaining({ attribution: null })));
   });
 
+  it('stores what a source answers and where, and clears it when the field is emptied on an edit', async () => {
+    const described = { ...CONNECTOR, id: 'c8', name: 'Line', description: 'GET /line-1.json — 라인 수치' };
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [described] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.updateConnector).mockResolvedValue({ ...described, description: undefined });
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Line 수정' }));
+    expect(screen.getByLabelText('설명(선택)')).toHaveValue('GET /line-1.json — 라인 수치');
+    fireEvent.change(screen.getByLabelText('설명(선택)'), { target: { value: '  ' } });
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 수정' }));
+    await waitFor(() => expect(api.updateConnector).toHaveBeenCalledWith('w1', 'c8', expect.objectContaining({ description: null })));
+  });
+
   it('shows an empty state when the workspace has no connectors yet', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });

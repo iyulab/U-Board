@@ -68,6 +68,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [authParamName, setAuthParamName] = useState('');
   const [attributionText, setAttributionText] = useState('');
   const [attributionUrl, setAttributionUrl] = useState('');
+  const [description, setDescription] = useState('');
   const [authValue, setAuthValue] = useState('');
   const [oauthTokenUrl, setOauthTokenUrl] = useState('');
   const [oauthClientId, setOauthClientId] = useState('');
@@ -118,6 +119,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setOauthScope('');
     setAttributionText('');
     setAttributionUrl('');
+    setDescription('');
     setOauthClientAuth('basic');
     setTestPath('');
     setTestOutcome(null);
@@ -137,6 +139,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setOauthScope(c.oauthScope ?? '');
     setAttributionText(c.attribution?.text ?? '');
     setAttributionUrl(c.attribution?.url ?? '');
+    setDescription(c.description ?? '');
     setOauthClientAuth(c.oauthClientAuth ?? 'basic');
     setTestOutcome(null);
   }
@@ -152,6 +155,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       attribution: attributionText.trim()
         ? { text: attributionText.trim(), ...(attributionUrl.trim() ? { url: attributionUrl.trim() } : {}) }
         : connectors.find(c => c.id === editingId)?.attribution ? null : undefined,
+      description: description.trim() ? description.trim() : connectors.find(c => c.id === editingId)?.description ? null : undefined,
       authValue: authType === 'none' ? undefined : authValue || undefined,
       ...(isOAuth ? { oauthTokenUrl, oauthClientId, oauthScope, oauthClientAuth } : {}),
     };
@@ -309,6 +313,16 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
             </FormField>
           )}
           <p className="ub-connector-hint">출처는 이 데이터소스를 쓰는 보드 아래와 공유 링크에 표시됩니다. 공공누리·CC BY 같은 이용 조건이 요구하는 경우 적으세요.</p>
+          <FormField label="설명(선택)">
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder="예: GET /line-1.json — 라인 수치, 공정은 /stations 아래 공정마다 id"
+            />
+          </FormField>
+          <p className="ub-connector-hint">이 데이터소스가 어떤 경로에서 무엇을 주는지 적어 두면, 보드를 만드는 사람과 AI 비서가 경로를 짐작하지 않고 바인딩합니다. 공유 링크에는 나가지 않습니다.</p>
           <FormField label={isOAuth ? '시험할 경로(선택 — 비우면 토큰만)' : '시험할 경로'}>
             <input value={testPath} onChange={e => setTestPath(e.target.value)} placeholder="/assets" />
           </FormField>

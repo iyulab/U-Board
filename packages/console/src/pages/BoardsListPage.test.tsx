@@ -215,7 +215,7 @@ describe('BoardsListPage', () => {
   it('starts a board from an open-data sample: makes its data source, points the bindings at it, opens the editor', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
-    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: `new-${input.name}`, type: 'http', updatedAt: 't', ...input, attribution: input.attribution ?? undefined }));
+    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: `new-${input.name}`, type: 'http', updatedAt: 't', ...input, attribution: input.attribution ?? undefined, description: input.description ?? undefined }));
     vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', kind: 'canvas', updatedAt: 't' });
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't', revision: 2 });
     renderPage();

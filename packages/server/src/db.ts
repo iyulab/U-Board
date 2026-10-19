@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS connectors (
   auth_param_name TEXT,
   attribution_text TEXT,
   attribution_url TEXT,
+  description TEXT,
   auth_value TEXT,
   oauth_token_url TEXT,
   oauth_client_id TEXT,
@@ -96,6 +97,7 @@ ALTER TABLE connectors ADD COLUMN IF NOT EXISTS oauth_client_auth TEXT CHECK (oa
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS auth_param_name TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS attribution_text TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS attribution_url TEXT;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS description TEXT;
 DO $$
 BEGIN
   IF NOT EXISTS (

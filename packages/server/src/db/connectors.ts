@@ -38,6 +38,9 @@ export interface Connector extends ConnectorOAuthSettings {
   authValue?: string;
   /** How the source is credited under a board that shows its data. */
   attribution?: Attribution;
+  /** What the source answers and where — its paths and what each holds, written by its owner for whoever binds to it
+   *  (a person, or an assistant that cannot guess a path). */
+  description?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,10 +54,12 @@ export interface ConnectorSummary extends ConnectorOAuthSettings {
   authHeaderName?: string;
   authParamName?: string;
   attribution?: Attribution;
+  description?: string;
   updatedAt: string;
 }
 
 interface OAuthColumns {
+  description: string | null;
   attribution_text: string | null;
   attribution_url: string | null;
   oauth_token_url: string | null;
@@ -113,6 +118,7 @@ function rowToConnector(row: ConnectorRow, secrets: SecretBox): Connector {
     authParamName: row.auth_param_name ?? undefined,
     authValue: row.auth_value === null ? undefined : secrets.open(row.auth_value),
     attribution: attributionFromRow(row),
+    description: row.description ?? undefined,
     ...oauthSettingsFromRow(row),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -130,6 +136,7 @@ export async function createConnector(
     authParamName?: string;
     authValue?: string;
     attribution?: Attribution;
+    description?: string;
     actorUserId: string;
   } & ConnectorOAuthSettings,
   secrets: SecretBox = UNSEALED
@@ -146,6 +153,7 @@ export async function createConnector(
     authParamName: input.authParamName,
     authValue: input.authValue,
     attribution: input.attribution,
+    description: input.description,
     oauthTokenUrl: input.oauthTokenUrl,
     oauthClientId: input.oauthClientId,
     oauthScope: input.oauthScope,
@@ -157,14 +165,14 @@ export async function createConnector(
     await tx.query(
       `INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_header_name, auth_value,
          oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, created_at, updated_at, auth_param_name,
-         attribution_text, attribution_url)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+         attribution_text, attribution_url, description)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
       [
         connector.id, connector.workspaceId, connector.name, connector.type, connector.baseUrl,
         connector.authType, connector.authHeaderName ?? null, connector.authValue === undefined ? null : secrets.seal(connector.authValue),
         connector.oauthTokenUrl ?? null, connector.oauthClientId ?? null, connector.oauthScope ?? null,
         connector.oauthClientAuth ?? null, connector.createdAt, connector.updatedAt, connector.authParamName ?? null,
-        connector.attribution?.text ?? null, connector.attribution?.url ?? null,
+        connector.attribution?.text ?? null, connector.attribution?.url ?? null, connector.description ?? null,
       ]
     );
     await recordAuditEvent(tx, {
@@ -179,7 +187,7 @@ export async function createConnector(
 
 export async function listConnectorsForWorkspace(db: DbClient, workspaceId: string): Promise<ConnectorSummary[]> {
   const { rows } = await db.query<ConnectorSummaryRow>(
-    `SELECT id, name, type, base_url, auth_type, auth_header_name, auth_param_name, attribution_text, attribution_url,
+    `SELECT id, name, type, base_url, auth_type, auth_header_name, auth_param_name, attribution_text, attribution_url, description,
             oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, updated_at
      FROM connectors WHERE workspace_id = $1`,
     [workspaceId]
@@ -193,6 +201,7 @@ export async function listConnectorsForWorkspace(db: DbClient, workspaceId: stri
     authHeaderName: r.auth_header_name ?? undefined,
     authParamName: r.auth_param_name ?? undefined,
     attribution: attributionFromRow(r),
+    description: r.description ?? undefined,
     ...oauthSettingsFromRow(r),
     updatedAt: r.updated_at,
   }));
@@ -255,6 +264,8 @@ export interface ConnectorChanges {
   authValue?: string | null;
   /** `undefined` leaves it alone; `null` clears it. */
   attribution?: Attribution | null;
+  /** `undefined` leaves it alone; `null` clears it. */
+  description?: string | null;
   /** `undefined` leaves the stored OAuth settings alone; `null` clears them (the connector is
    * leaving OAuth); an object replaces them as a set. */
   oauth?: ConnectorOAuthSettings | null;
@@ -272,6 +283,7 @@ export function applyConnectorChanges(existing: Connector, changes: ConnectorCha
     authHeaderName: changes.authHeaderName === undefined ? existing.authHeaderName : (changes.authHeaderName ?? undefined),
     authParamName: changes.authParamName === undefined ? existing.authParamName : (changes.authParamName ?? undefined),
     attribution: changes.attribution === undefined ? existing.attribution : (changes.attribution ?? undefined),
+    description: changes.description === undefined ? existing.description : (changes.description ?? undefined),
     authValue: changes.authValue === undefined ? existing.authValue : (changes.authValue ?? undefined),
     oauthTokenUrl: oauthSource.oauthTokenUrl,
     oauthClientId: oauthSource.oauthClientId,
@@ -298,6 +310,7 @@ function changedSettings(before: Connector, after: Connector): string {
   if (after.name !== before.name) changed.push('name');
   if (after.baseUrl !== before.baseUrl) changed.push('base_url');
   if (JSON.stringify(after.attribution) !== JSON.stringify(before.attribution)) changed.push('attribution');
+  if (after.description !== before.description) changed.push('description');
   const auth = (c: Connector) =>
     [c.authType, c.authHeaderName, c.authParamName, c.authValue, c.oauthTokenUrl, c.oauthClientId, c.oauthScope, c.oauthClientAuth].join('\u0000');
   if (auth(after) !== auth(before)) changed.push('auth');
@@ -322,13 +335,13 @@ async function updateConnectorIn(
   await db.query(
     `UPDATE connectors SET name = $1, base_url = $2, auth_type = $3, auth_header_name = $4, auth_value = $5,
        oauth_token_url = $6, oauth_client_id = $7, oauth_scope = $8, oauth_client_auth = $9, updated_at = $10,
-       auth_param_name = $13, attribution_text = $14, attribution_url = $15
+       auth_param_name = $13, attribution_text = $14, attribution_url = $15, description = $16
      WHERE id = $11 AND workspace_id = $12`,
     [
       updated.name, updated.baseUrl, updated.authType, updated.authHeaderName ?? null, updated.authValue === undefined ? null : secrets.seal(updated.authValue),
       updated.oauthTokenUrl ?? null, updated.oauthClientId ?? null, updated.oauthScope ?? null, updated.oauthClientAuth ?? null,
       updated.updatedAt, connectorId, workspaceId, updated.authParamName ?? null,
-      updated.attribution?.text ?? null, updated.attribution?.url ?? null,
+      updated.attribution?.text ?? null, updated.attribution?.url ?? null, updated.description ?? null,
     ]
   );
   const detail = changedSettings(existing, updated);

@@ -39,6 +39,8 @@ export interface SourceSummary {
   baseUrl: string;
   authType: string;
   attribution?: { text: string; url?: string };
+  /** The paths it answers and what each holds, as its owner wrote them. */
+  description?: string;
 }
 
 /** What reading a data source came to: its value (the whole response, when no `valuePath` narrows it) and how
@@ -117,7 +119,7 @@ export class UBoardClient {
   }
 
   /** Makes a data source that needs no credential. One that does is made by a person in the console. */
-  async createSource(input: { name: string; baseUrl: string; attribution?: { text: string; url?: string } }): Promise<SourceSummary> {
+  async createSource(input: { name: string; baseUrl: string; attribution?: { text: string; url?: string }; description?: string }): Promise<SourceSummary> {
     return this.request('POST', await this.workspacePath('/connectors'), { body: { ...input, authType: 'none' } });
   }
 

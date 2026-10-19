@@ -83,7 +83,7 @@ async function tool(run: () => Promise<unknown> | unknown): Promise<ToolResult> 
  *  it, an assistant that cannot find a path keeps guessing new ones. */
 const UNREAD: Record<string, string> = {
   address:
-    'The source has nothing at this path. Its paths come from its own documentation — ask the person for the request to read (the path and its query); do not guess them.',
+    'The source has nothing at this path. Its paths are in its description (list_sources) or its own documentation — read that, or ask the person for the request (the path and its query); do not guess them.',
   auth: 'The source refused the credential it was given. Its owner fixes that in the console; a board cannot.',
   throttled: 'The source asks for fewer requests. Wait before reading it again.',
   format: 'The source answered, but not with JSON — this path is not one a binding can read.',
@@ -346,7 +346,7 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
   server.registerTool(
     'list_sources',
     {
-      description: "The workspace's data sources: id (a binding's adapter), name, base URL, how it authenticates. Never a credential.",
+      description: "The workspace's data sources: id (a binding's adapter), name, base URL, how it authenticates, and the description its owner wrote — the paths it answers and what each holds. Never a credential.",
       inputSchema: z.strictObject({}),
     },
     async () => tool(async () => ({ sources: await client.listSources() }))
@@ -379,9 +379,10 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
         name: z.string().min(1).max(200),
         baseUrl: z.string().url().max(2000).describe('Where the requests go, e.g. "https://api.example.com".'),
         attribution: z.strictObject({ text: z.string().min(1).max(200), url: z.string().url().optional() }).optional().describe('How the source asks to be credited, shown under a board that uses it.'),
+        description: z.string().min(1).max(2000).optional().describe('The paths it answers and what each holds, for whoever binds to it next: "GET /readings?line=N — one row per machine, by id".'),
       }),
     },
-    async ({ name, baseUrl, attribution }) => tool(async () => ({ source: await client.createSource({ name, baseUrl, attribution }) }))
+    async ({ name, baseUrl, attribution, description }) => tool(async () => ({ source: await client.createSource({ name, baseUrl, attribution, description }) }))
   );
 
   return server;

@@ -8,6 +8,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `list_sources` answers each source's description (the paths it answers, as its owner wrote them); `create_source`
+  takes one. `sample_source` that finds nothing at a path points to it.
 - `edit_board({ board, revision?, commands, dryRun? })`: the edits that change a board in more than one place, as the
   editor makes them (rename or remove an element, a symbol or a component; remove parts with the lines and triggers
   that name them; make a component; detach an instance), saved as one JSON Patch on the revision it read. A command that

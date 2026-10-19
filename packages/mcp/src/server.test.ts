@@ -411,6 +411,12 @@ describe('u-board-mcp', () => {
     expect(withKey.isError).toBe(true);
   });
 
+  it('makes a source with the description of its paths, for whoever binds to it next', async () => {
+    await call('create_source', { name: 'Line', baseUrl: 'https://mes.example.com', description: 'GET /line-1.json — the line, its stations by id' });
+    const sent = server.requests.find(r => r.method === 'POST' && r.path.endsWith('/connectors'))!;
+    expect(sent.body).toEqual({ name: 'Line', baseUrl: 'https://mes.example.com', description: 'GET /line-1.json — the line, its stations by id', authType: 'none' });
+  });
+
   it('refuses arguments it does not take', async () => {
     const result = (await client.callTool({ name: 'list_boards', arguments: { all: true } })) as { isError?: boolean };
     expect(result.isError).toBe(true);

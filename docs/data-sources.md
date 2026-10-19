@@ -46,6 +46,10 @@ eighth of that age. There is no push: a board is a status display, and polling i
    board shows the source as "rate limited" rather than unreachable.
 9. **A read-only credential** for the board's server, scoped to what the views read. Prefer short-lived
    tokens (client credentials) to a key that never expires.
+10. **Paths written down where the source is set up.** A data source carries a description (up to 2,000
+    characters) its owner writes — the requests it answers and what each holds (`GET /line-1.json — the
+    line; its stations under /stations, by "id"`). Whoever binds to it next reads it instead of guessing paths:
+    a person in the console, or an assistant through `list_sources`. It is not shown with a shared board.
 
 What a board does with the answer — the reasons it gives when a value is not current, and the types a
 custom adapter returns instead of the HTTP connector — is in [`api-reference.md`](api-reference.md)

@@ -44,6 +44,17 @@ function parseBaseUrl(value: unknown): URL | null {
 /** The longest credit a connector may carry — a line under a board, not a paragraph. */
 const ATTRIBUTION_MAX_LENGTH = 200;
 
+/** The longest description a connector may carry — its paths and what each holds, not its documentation. */
+export const DESCRIPTION_MAX_LENGTH = 2000;
+
+/** A request's `description`: `undefined` when absent (leave it), `null` (or blank) to clear it, the text to store, or
+ *  `false` when it is not text or too long. */
+function parseDescription(value: unknown): string | null | undefined | false {
+  if (value === undefined || value === null) return value;
+  if (typeof value !== 'string' || value.trim().length > DESCRIPTION_MAX_LENGTH) return false;
+  return value.trim() === '' ? null : value.trim();
+}
+
 /** A request's `attribution`: `undefined` when absent (leave it), `null` to clear it, the credit to store,
  *  or `false` when it is not one — text required, and a link, if any, an absolute http(s) URL. */
 function parseAttribution(value: unknown): Attribution | null | undefined | false {
@@ -131,9 +142,12 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
   if (!keyPlaceMatches(body.authType, body.baseUrl)) return 'INVALID_INPUT';
   const attribution = parseAttribution(body.attribution);
   if (attribution === false) return 'INVALID_INPUT';
+  const description = parseDescription(body.description);
+  if (description === false) return 'INVALID_INPUT';
   return {
     baseUrl: body.baseUrl,
     attribution: attribution ?? undefined,
+    description: description ?? undefined,
     authType: body.authType,
     authHeaderName: body.authType === 'header' ? body.authHeaderName : undefined,
     authParamName: body.authType === 'query' ? body.authParamName.trim() : undefined,
@@ -156,7 +170,9 @@ function connectorChanges(body: any, existing: Connector): ConnectorChanges | st
   if (body.baseUrl !== undefined && !parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
   const attribution = parseAttribution(body.attribution);
   if (attribution === false) return 'INVALID_INPUT';
-  const changes: ConnectorChanges = { name: body.name, baseUrl: body.baseUrl, attribution };
+  const description = parseDescription(body.description);
+  if (description === false) return 'INVALID_INPUT';
+  const changes: ConnectorChanges = { name: body.name, baseUrl: body.baseUrl, attribution, description };
   if (body.authType === undefined) return pathKeyKept(changes, existing);
   const authError = validateAuthFields(body, existing);
   if (authError) return authError;
