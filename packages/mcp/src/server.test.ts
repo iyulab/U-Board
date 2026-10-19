@@ -362,7 +362,13 @@ describe('u-board-mcp', () => {
     expect(bad.value.valid).toBe(false);
     expect(bad.value.issues[0]).toEqual({ path: '/items/0/widget/type', message: 'no element "pump" is defined — add it under /elements' });
     const dryRun = await call('validate', { board: 'b1', patch: [{ op: 'add', path: '/elements', value: { dot: { render: 'template', template: '<b/>' } } }] });
-    expect(dryRun.value).toEqual({ valid: true, issues: [], advice: [{ path: '/elements/dot', message: expect.any(String) }] });
+    // It says the change is not saved, and on which revision to send it.
+    expect(dryRun.value).toEqual({
+      valid: true,
+      issues: [],
+      advice: [{ path: '/elements/dot', message: expect.any(String) }],
+      next: expect.stringMatching(/^nothing is saved yet — send this patch with patch_board, on revision \d+$/),
+    });
     expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
   });
 

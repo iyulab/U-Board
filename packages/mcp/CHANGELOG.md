@@ -8,6 +8,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- `validate` of a board and a patch says nothing is saved yet and the revision to send the patch on (`next`).
+- The data rules say a binding's key is the path inside the props — an element's own prop `"status"`, never
+  `"props.status"`.
 - `sample_source` that could not read a source says what to do next (`next`), by the reason: for a path the source
   has nothing at, ask the person for the source's paths rather than guess them; for a refused credential, the
   source's owner fixes it in the console; for an answer that is not JSON, the path is not one a binding can read.

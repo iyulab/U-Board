@@ -22,6 +22,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- Validation refuses an element placement's binding key that starts with `props.` (`"props.status"`) when the element
+  declares no prop `props` — it wrote into `props.props` and the element never drew the value; the key is the path
+  inside the props (`"status"`).
 - Validation reports a component that does not hold at the component only: a connector or a trigger naming a part
   of one of its instances was reported as naming nothing too, with a hint that a connector joins only `/nodes`.
 - `applyJsonPatch`: a `replace` keeps the member where it stands among the others — it moved it last.

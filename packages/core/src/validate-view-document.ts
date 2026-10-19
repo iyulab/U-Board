@@ -371,7 +371,15 @@ function checkElementUse(doc: Checker, widget: Record<string, unknown>, at: stri
   }
   const definition = doc.elements.get(name);
   if (!props || !definition?.props) return;
-  const filled = new Set(Object.keys((widget.bindings as Record<string, unknown> | undefined) ?? {}).map(key => key.split('.')[0]));
+  const keys = Object.keys((widget.bindings as Record<string, unknown> | undefined) ?? {});
+  // A key that starts with "props." writes into props.props — the element never sees it.
+  const declared = definition.props.properties ?? {};
+  for (const key of keys) {
+    if (key.startsWith('props.') && !('props' in declared)) {
+      doc.fail([...at, 'widget', 'bindings', key], `a binding's key is the path inside the element's props — "${key.slice('props.'.length)}", not "${key}"${context}`);
+    }
+  }
+  const filled = new Set(keys.map(key => key.split('.')[0]));
   for (const issue of checkPropsValue(definition.props, widget.props ?? {}, filled)) doc.fail([...at, 'widget', 'props', ...issue.at], issue.message + context);
 }
 

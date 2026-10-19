@@ -229,13 +229,19 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
     async ({ document, board, patch }) =>
       tool(async () => {
         let candidate: unknown = document;
+        let revision: number | undefined;
         if (candidate === undefined) {
           if (!board || !patch) throw new Error('give a document, or a board and a patch');
-          candidate = applyJsonPatch((await client.getBoard(board)).document, patch);
+          const current = await client.getBoard(board);
+          revision = current.revision;
+          candidate = applyJsonPatch(current.document, patch);
         }
         const issues = validateViewDocument(candidate, { strict: true });
         const advice = issues.length === 0 ? [...lintViewDocument(candidate as ViewDocument), ...widgetAdvice(candidate)] : [];
-        return { valid: issues.length === 0, issues, advice };
+        // A check of a change to a board saves nothing: say so, with the revision the change is to be sent on — a
+        // writer that took the check for the save sends the next patch on a revision the board never reached.
+        const unsaved = revision !== undefined && issues.length === 0 && { next: `nothing is saved yet — send this patch with patch_board, on revision ${revision}` };
+        return { valid: issues.length === 0, issues, advice, ...unsaved };
       })
   );
 

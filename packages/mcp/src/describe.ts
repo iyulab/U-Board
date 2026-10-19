@@ -92,7 +92,7 @@ const DATA = `# Data sources and bindings
 
 - list_sources gives each source's id — a binding's adapter. sample_source({ source, path }) reads one request and answers the shape of the response: each value's JSON Pointer, its type and an example, and the fields that tell a list's items apart.
 - A connector binds its label and style the same way (describe("canvas")).
-- A binding replaces one prop with a live value: widget.bindings = { "<dotted path into props>": { adapter: "<source id>", ref: { path: "/request?query", valuePath: "/json/pointer" } } } — e.g. "data.value".
+- A binding replaces one prop with a live value: widget.bindings = { "<dotted path inside props>": { adapter: "<source id>", ref: { path: "/request?query", valuePath: "/json/pointer" } } } — e.g. "data.value", or an element's own prop "status"; never "props.status".
 - An item of a list, by its fields rather than its place (lists reorder): ref: { path, item: { list: "/items", where: { "id": "P-101" } }, valuePath: "/temp" } — valuePath is then inside the item. Use a field sample_source lists among the list's keys.
 - Without valuePath a binding takes the whole response (or the whole item) — give it to a widget that takes rows (a table, a chart's data).
 - A value in the source's own words maps to a prop with map: { values: { "Fault": "error" }, ranges: [{ min: 80, value: "warning" }], otherwise: "ok" }.

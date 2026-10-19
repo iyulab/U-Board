@@ -34,6 +34,13 @@ describe('validateViewDocument — elements', () => {
     ]);
   });
 
+  it('says a binding’s key is the path inside the props, not "props.<name>" — which the element never sees', () => {
+    const widget = { type: 'element:pump', props: { state: 'run' }, bindings: { 'props.rpm': { adapter: 'http', ref: { path: '/s' } } } };
+    expect(validateViewDocument(canvas({ pump }, [widget]))).toEqual([
+      { path: '/nodes/0/widget/bindings/props.rpm', message: 'a binding\'s key is the path inside the element\'s props — "rpm", not "props.rpm"' },
+    ]);
+  });
+
   it('takes a required prop a binding fills', () => {
     const widget = { type: 'element:pump', bindings: { state: { adapter: 'http', ref: { path: '/s' } } } };
     expect(validateViewDocument(canvas({ pump }, [widget]))).toEqual([]);
