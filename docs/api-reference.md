@@ -869,8 +869,8 @@ document — every use of a renamed element rewritten, a node removed with the l
 few operations it made. It goes down to what changed: an object member by member; a list whose items all carry a
 distinct `id`, matched by id — removed items from the last, then each kept item where it now is, then new ones at the
 end (`/-`); a list without ids, index by index while its length stays. A list whose items changed order (or, without
-ids, its length), and an object whose members would otherwise end up in another order, are replaced whole.
-`applyJsonPatch(before, documentPatch(before, after))` is `after`, member order included.
+ids, its length) is replaced whole. `applyJsonPatch(before, documentPatch(before, after))` equals `after` as JSON —
+object members have no order there, so members written in another order send nothing, and an added one comes last.
 
 ### Edits that change a board in more than one place — `applyEditCommands(doc, commands)`
 

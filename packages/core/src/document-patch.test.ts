@@ -6,10 +6,10 @@ import { renameElement } from './editing/element-editing';
 import { removeParts } from './editing/part-removal';
 import type { CanvasView } from './view-document';
 
-/** The patch turns `before` into `after` exactly — key order included, since JSON text keeps it. */
+/** The patch turns `before` into a document equal to `after`. */
 function roundTrip(before: unknown, after: unknown) {
   const patch = documentPatch(before, after);
-  expect(JSON.stringify(applyJsonPatch(before, patch))).toBe(JSON.stringify(after));
+  expect(applyJsonPatch(before, patch)).toEqual(after);
   return patch;
 }
 
@@ -60,11 +60,12 @@ describe('documentPatch', () => {
     expect(roundTrip({ a: [1, 2, 3] }, { a: [1, 5, 3] })).toEqual([{ op: 'replace', path: '/a/1', value: 5 }]);
   });
 
-  it('adds and removes members, and keeps their order', () => {
+  it('adds and removes members, whatever their order', () => {
     expect(roundTrip({ a: 1, b: 2 }, { a: 1, b: 2, c: 3 })).toEqual([{ op: 'add', path: '/c', value: 3 }]);
     expect(roundTrip({ a: 1, b: 2 }, { b: 2 })).toEqual([{ op: 'remove', path: '/a' }]);
-    // A member renamed in place would land last if removed and added: the object is replaced to keep its order.
-    expect(roundTrip({ a: 1, b: 2 }, { x: 1, b: 2 })).toEqual([{ op: 'replace', path: '', value: { x: 1, b: 2 } }]);
+    expect(roundTrip({ a: 1, b: 2 }, { x: 1, b: 2 })).toEqual([{ op: 'remove', path: '/a' }, { op: 'add', path: '/x', value: 1 }]);
+    // Members in another order are the same object — an edit that writes a field again last sends nothing for it.
+    expect(roundTrip({ a: 1, b: { c: 2, d: 3 } }, { b: { d: 3, c: 2 }, a: 1 })).toEqual([]);
   });
 
   it('escapes the pointer of a key with "/" or "~"', () => {
@@ -75,5 +76,17 @@ describe('documentPatch', () => {
     roundTrip(board(), renameElement(board(), 'dot', 'marker'));
     roundTrip(board(), removeParts(board(), ['speed']));
     roundTrip(board(), makeComponent(board(), ['temp', 'speed', 'frame'], 'card', 'c1'));
+  });
+});
+
+describe('documentPatch — an edit that writes its fields again in another order', () => {
+  it('sends only what changed, not the whole document', () => {
+    const before = board();
+    // triggers written again, last — as an edit's withTriggers does
+    const { triggers, ...rest } = before;
+    const after = { triggers, ...rest, nodes: rest.nodes.slice(0, 2) };
+    after.nodes[1] = { ...after.nodes[1], x: 99 };
+    const patch = roundTrip(before, after);
+    expect(patch.map(o => `${o.op} ${o.path}`)).toEqual(['remove /nodes/2', 'replace /nodes/1/x']);
   });
 });
