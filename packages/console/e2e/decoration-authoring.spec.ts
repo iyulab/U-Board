@@ -38,10 +38,13 @@ test('draws a rect and a text decoration, selects each by clicking its interior,
   await page.getByRole('button', { name: '실행 취소' }).click();
   await expect(page.getByLabel('라벨', { exact: true })).toHaveCount(0);
   await page.keyboard.press('Control+Shift+Z');
-  // Redone — nothing is left to redo — before the click, or under load the click lands where the text is not yet drawn.
+  // Redone — nothing is left to redo — before the click. The canvas draws the text back a moment later, and under load
+  // a click before that lands on nothing: click until it selects it.
   await expect(page.getByRole('button', { name: '다시 실행' })).toBeDisabled();
-  await clickEditorAt(page, { x: 85, y: 72 });
-  await expect(page.getByLabel('라벨')).toHaveValue('라벨');
+  await expect(async () => {
+    await clickEditorAt(page, { x: 85, y: 72 });
+    await expect(page.getByLabel('라벨')).toHaveValue('라벨', { timeout: 1000 });
+  }).toPass({ timeout: 10_000 });
 
   await page.getByLabel('라벨').fill('Zone A');
   await page.getByRole('button', { name: '저장', exact: true }).click();
