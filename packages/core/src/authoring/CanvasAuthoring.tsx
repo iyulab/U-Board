@@ -213,8 +213,11 @@ function CanvasEditor({
   }, [fitPending, doc, fitTo]);
 
 
-  // The scene point at the top-left of the editor's view — where a newly added item is offset from.
-  const visibleOrigin = () => {
+  // Where a newly added item is offset from: the scene point at the top-left of the editor's view — but in a
+  // component, its own origin, which every instance moves to its place; from the visible corner a new part would
+  // stand off from every instance.
+  const newPartOrigin = () => {
+    if (component) return { x: 0, y: 0 };
     const origin = viewToScene(transform, { x: 0, y: 0 });
     return { x: Math.round(origin.x), y: Math.round(origin.y) };
   };
@@ -310,14 +313,14 @@ function CanvasEditor({
   const handleAddNode = () => {
     const widget = seedWidget('status', { label: labels.newNodeLabel, value: labels.newNodeValue });
     const id = newNodeId();
-    updateDoc(prev => addNode(prev, id, nextNodePosition(prev, visibleOrigin()), widget));
+    updateDoc(prev => addNode(prev, id, nextNodePosition(prev, newPartOrigin()), widget));
     setPendingSelect(id);
     onFileError(null);
   };
 
   const handleAddDecoration = (type: Shape['type']) => {
     const id = newDecorationId();
-    updateDoc(prev => addDecoration(prev, id, type, nextDecorationPosition(prev, visibleOrigin()), labels.newTextDecoration));
+    updateDoc(prev => addDecoration(prev, id, type, nextDecorationPosition(prev, newPartOrigin()), labels.newTextDecoration));
     setPendingSelect(id);
     onFileError(null);
   };

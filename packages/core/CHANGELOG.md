@@ -9,9 +9,10 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - **Edit component** draws the component's parts as an instance will: each `{{name}}` filled with the parameter's
-  default, else with the first instance's value — a gauge whose
-  `max` is `{{max}}` drew nothing before. The component itself keeps its placeholders; a name nothing fills stays as
-  written.
+  default, else with the first instance's value — it drew the `{{name}}` text itself. The component keeps its
+  placeholders; a name nothing fills stays as written.
+- A node or frame added while a component is edited goes near the component's origin, among its parts — it was
+  placed from the visible corner of the view and stood off from every instance.
 
 ## [0.23.0] - 2026-10-17
 
