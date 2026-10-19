@@ -42,7 +42,7 @@ const stationCard: ElementDefinition = {
   size: { width: 200, height: 112 },
   template:
     '<div class="card" data-state="{{state}}"><span class="name">{{name}}</span><span class="state"><span class="dot"></span>{{stateText}}</span>' +
-    '<span class="ct">{{cycleTime}}<small> 초</small></span><span class="target">목표 {{target}}초</span></div>',
+    '<span class="ct">{{cycleTime | fixed:1}}<small> 초</small></span><span class="target">목표 {{target}}초</span></div>',
   style:
     ':host{display:flex} .card{width:100%;height:100%;box-sizing:border-box;border:1px solid var(--u-widget-border);border-radius:10px;' +
     'background:var(--u-widget-surface);padding:10px 14px;font-family:var(--u-widget-font-family);display:grid;grid-template-columns:1fr auto;' +

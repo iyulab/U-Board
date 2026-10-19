@@ -3,18 +3,21 @@
  * `{{name}}` (a value, escaped), `{{#name}}…{{/name}}` (a section: repeated for each item of a list, shown
  * once for any other truthy value), `{{^name}}…{{/name}}` (shown when the value is empty or false) and
  * `{{! comment}}`. A name is a dotted path into the props (`reading.value`), or `.` for the current item.
+ * A value may name how a number is shown: `{{inlet | fixed:1}}` — that many digits after the point (0–6), so 24 and
+ * 24.25 read as 24.0 and 24.3 beside each other; anything that is not a number shows as it is.
  *
  * Left out on purpose: unescaped output (`{{{…}}}`, `{{&…}}`), partials (`{{>…}}`) and delimiter changes
  * (`{{=…=}}`) — each would let a value become markup, or a template depend on something outside itself.
  */
 export type TemplateNode =
   | { kind: 'text'; text: string }
-  | { kind: 'value'; path: string }
+  | { kind: 'value'; path: string; fixed?: number }
   | { kind: 'section'; path: string; inverted: boolean; children: TemplateNode[] };
 
 export type ParsedTemplate = { ok: true; nodes: TemplateNode[] } | { ok: false; error: string; offset: number };
 
 const PATH = /^(?:\.|[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)$/;
+const FIXED = /^fixed\s*:\s*([0-6])$/;
 
 export function parseTemplate(source: string): ParsedTemplate {
   const root: TemplateNode[] = [];
@@ -41,7 +44,15 @@ export function parseTemplate(source: string): ParsedTemplate {
     if (sigil === '!') continue;
 
     const isSection = sigil === '#' || sigil === '^' || sigil === '/';
-    const path = (isSection ? tag.slice(1) : tag).trim();
+    const [name, format, ...rest] = (isSection ? tag.slice(1) : tag).split('|');
+    const path = name.trim();
+    let fixed: number | undefined;
+    if (format !== undefined) {
+      if (isSection) return fail(`a section "{{${tag}}}" takes no format — formats are for values`, start);
+      const digits = rest.length === 0 ? FIXED.exec(format.trim()) : null;
+      if (!digits) return fail(`"${format.trim()}" is not a format — use "fixed:N", N digits after the point (0–6): {{${path} | fixed:1}}`, start);
+      fixed = Number(digits[1]);
+    }
     if (!PATH.test(path)) return fail(`"${path}" is not a value name — use a prop name, a dotted path to one, or "."`, start);
 
     if (sigil === '#' || sigil === '^') {
@@ -52,7 +63,7 @@ export function parseTemplate(source: string): ParsedTemplate {
       if (section.path !== path) return fail(`"{{/${path}}}" closes the section "${section.path}" opened earlier`, start);
       into().push({ kind: 'section', path: section.path, inverted: section.inverted, children: section.children });
     } else {
-      into().push({ kind: 'value', path });
+      into().push(fixed === undefined ? { kind: 'value', path } : { kind: 'value', path, fixed });
     }
   }
 

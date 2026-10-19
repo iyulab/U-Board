@@ -121,7 +121,7 @@ symbols    = { "<name>": { viewBox?, markup } } — top level: SVG drawings any 
 - Markup: HTML text/structure tags, img, and SVG (shapes, text, gradients, patterns, symbol/use, markers, filters).
 - Not allowed: script, style, iframe, a, form, foreignObject, event handler attributes (on*), srcset, @import.
 - URLs (href, src, CSS url()): only "#id", "data:image/…", or an origin listed in resources.
-- Values: {{name}} / {{a.b}} (escaped), {{#list}}…{{/list}} (each item of a list; {{.}} is the item; any other value shows it once), {{^flag}}…{{/flag}} (shown when empty), {{! comment}}. Empty = absent, null, false, "" or []; 0 is not empty. No unescaped output, no partials.
+- Values: {{name}} / {{a.b}} (escaped), {{#list}}…{{/list}} (each item; {{.}} is the item; any other value once), {{^flag}}…{{/flag}} (shown when empty), {{! comment}}, {{v | fixed:1}} (1 decimal, 0–6). Empty = absent, null, false, "" or [] (not 0). No unescaped output, no partials.
 - The markup draws in an isolated root: its CSS reaches only itself, and :host is the element's box. A grid item without a height takes size.height.
 - Example:
   { "render": "template",

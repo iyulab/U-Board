@@ -9,6 +9,8 @@ All notable changes to this package are documented here. The format follows
 ### Added
 
 - A `template` element may use a description list — `<dl>`, `<dt>`, `<dd>` — for names and their values.
+- A template value may say how many digits a number shows after the point: `{{inlet | fixed:1}}` (0–6) — `24` and
+  `24.25` read as `24.0` and `24.3` side by side. Anything that is not a number shows as it is.
 
 ### Changed
 

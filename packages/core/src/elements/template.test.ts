@@ -36,6 +36,20 @@ describe('parseTemplate', () => {
     if (!parsed.ok) expect(parsed.error).toContain(message);
   });
 
+  it('reads a value with its digits, and refuses a format it does not know or one on a section', () => {
+    expect(parseTemplate('{{ inlet | fixed:1 }}°C')).toEqual({ ok: true, nodes: [{ kind: 'value', path: 'inlet', fixed: 1 }, { kind: 'text', text: '°C' }] });
+    for (const [template, message] of [
+      ['{{inlet | fixed:7}}', 'use "fixed:N"'],
+      ['{{inlet | round}}', '"round" is not a format'],
+      ['{{inlet | fixed:1 | fixed:2}}', 'is not a format'],
+      ['{{#rows | fixed:1}}{{/rows}}', 'takes no format'],
+    ] as const) {
+      const parsed = parseTemplate(template);
+      expect(parsed.ok, template).toBe(false);
+      if (!parsed.ok) expect(parsed.error, template).toContain(message);
+    }
+  });
+
   it('says where the problem is', () => {
     expect(parseTemplate('abc{{#a}}')).toMatchObject({ ok: false, offset: 3 });
   });

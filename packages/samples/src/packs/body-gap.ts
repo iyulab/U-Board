@@ -62,7 +62,7 @@ const card: ElementDefinition = {
   },
   template: `<div class="card {{band}}">
   <b>{{name}}</b>
-  <dl><dt>간극</dt><dd>{{gap}} mm</dd><dt>단차</dt><dd>{{flush}} mm</dd></dl>
+  <dl><dt>간극</dt><dd>{{gap | fixed:2}} mm</dd><dt>단차</dt><dd>{{flush | fixed:2}} mm</dd></dl>
   <span class="usage">공차 {{usage}}%</span>
 </div>`,
   style: `.card{box-sizing:border-box;height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:2px;padding:8px 12px;border:1px solid var(--u-widget-border);

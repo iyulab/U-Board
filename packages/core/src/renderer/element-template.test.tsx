@@ -94,6 +94,10 @@ describe('fillTemplate', () => {
     expect(filled('{{^rows}}none{{/rows}}', { rows: [] })).toBe('none');
   });
 
+  it('shows a number with the digits its value asks for — text that reads as one too — and anything else as it is', () => {
+    expect(filled('{{a | fixed:1}} {{b | fixed:1}} {{c | fixed:0}} {{d | fixed:2}} {{e | fixed:1}}', { a: 24, b: 24.25, c: '7.6', d: '—', e: null })).toBe('24.0 24.3 8 — ');
+  });
+
   it('reads a dotted path, and shows nothing for a missing value or an object', () => {
     expect(filled('{{a.b}}|{{a.c}}|{{a}}|{{n}}', { a: { b: 3 }, n: null })).toBe('3|||');
   });

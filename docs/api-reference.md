@@ -484,7 +484,9 @@ elements: {
 - **Template values** — logic-less: `{{name}}` (a dotted path into the props, every value escaped),
   `{{#list}}…{{/list}}` (repeated for each item, or shown once for any other truthy value; inside it
   a name is looked up in the item first and `{{.}}` is the item itself), `{{^flag}}…{{/flag}}` (shown
-  when empty or false), `{{! comment}}`. There is no unescaped output and no partial. Numbers become
+  when empty or false), `{{! comment}}`. `{{inlet | fixed:1}}` shows a number — or text that reads as
+  one — with that many digits after the point (0–6), so `24` and `24.25` read as `24.0` and `24.3`;
+  anything else shows as it is. There is no unescaped output and no partial. Numbers become
   a drawing through CSS: `style="--level: {{level}}"` and `height: calc(var(--level) * 1%)`.
 - **Markup policy** — HTML text and structure tags, `img`, and SVG shapes, text, gradients, patterns,
   symbols and filters. No `script`, `style`, `iframe`, `a`, form or `foreignObject`; no event handler

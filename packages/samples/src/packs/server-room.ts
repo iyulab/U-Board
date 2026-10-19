@@ -51,8 +51,8 @@ const rack: ElementDefinition = {
   },
   template: `<div class="rack {{band}}" style="--kw: {{kw}}; --budget: {{budget}}" role="img" aria-label="{{name}} 흡기 {{inlet}}°C, {{kw}} kW">
   <b>{{name}}</b>
-  <span class="inlet">{{inlet}}<small>°C</small></span>
-  <span class="kw">{{kw}} kW</span>
+  <span class="inlet">{{inlet | fixed:1}}<small>°C</small></span>
+  <span class="kw">{{kw | fixed:1}} kW</span>
   <span class="bar"><span></span></span>
 </div>`,
   style: `.rack{box-sizing:border-box;height:100%;display:grid;grid-template-rows:auto 1fr auto auto;justify-items:center;gap:2px;padding:7px 6px 8px;

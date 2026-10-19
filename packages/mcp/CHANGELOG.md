@@ -10,6 +10,7 @@ All notable changes to this package are documented here. The format follows
 
 - `rename_board({ board, name })`: renames a board in place — its id, share links and history stay. Without it, an
   assistant asked to rename a board made a new one with the same document and deleted the old one. The rules point to it.
+- `describe("elements")` names a template value's digits, `{{v | fixed:1}}`.
 
 ### Fixed
 
