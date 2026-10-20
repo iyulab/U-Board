@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { checkSpec } from '@iyulab/u-widgets/tools';
 import { coordinateOf, expandComponents, isSourceErrorField, placedIn, resolveDocument, sizedNodes, sourceErrorIn, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
 import { BIKE_STATIONS } from './packs/gwanghwamun.js';
@@ -57,6 +58,17 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
         const { value } = await adapters.get(binding.adapter)!.resolve(binding.ref);
         expect(value === '' || value === null, `${node.id} ${prop} reads "${String(value)}"`).toBe(false);
       }
+    }
+  });
+
+  it('writes every prepared widget as the widget library reads it — no option it does not have, none of the wrong type', async () => {
+    // The library ignores what it does not know, so a misnamed option (`stacked` for `stack`) drew a different chart
+    // with no error anywhere. Checked on the values the board shows, read from its recording.
+    const resolved = await resolveDocument(pack.document, snapshotAdapters(pack));
+    for (const node of placedIn(resolved)) {
+      if (node.widget.type.startsWith('element:')) continue;
+      const { valid, errors, warnings } = checkSpec({ widget: node.widget.type, ...node.widget.props });
+      expect({ valid, errors, warnings }, node.id).toEqual({ valid: true, errors: [], warnings: [] });
     }
   });
 
