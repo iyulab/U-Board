@@ -1,5 +1,5 @@
-import type { ViewDocument, CanvasView, GridView, Placed, Node, GridItem, Connector, ConnectorArrow, StrokeDash } from './view-document.js';
-import { CONNECTOR_ARROWS, STROKE_DASHES } from './view-document.js';
+import type { ViewDocument, CanvasView, GridView, Placed, Node, GridWidgetItem, GridCanvasItem, CellCanvas, Connector, ConnectorArrow, StrokeDash } from './view-document.js';
+import { CONNECTOR_ARROWS, STROKE_DASHES, isCanvasItem } from './view-document.js';
 import type { Adapter, ConnectionQuality, ResolvedWidget } from './adapter.js';
 import { resolveBindings, resolveWidgetReadings } from './adapter.js';
 import { stateOf } from './states.js';
@@ -13,8 +13,17 @@ export type Resolved<T extends Placed> = Omit<T, 'widget'> & { widget: ResolvedW
 /** A canvas view's node, resolved. */
 export type ResolvedNode = Resolved<Node>;
 
-/** A grid view's item, resolved. */
-export type ResolvedGridItem = Resolved<GridItem>;
+/** A grid view's item, resolved: a widget item's widget, or every node and connector of a canvas cell. */
+export type ResolvedGridItem = Resolved<GridWidgetItem> | ResolvedCanvasItem;
+
+/** A grid view's canvas cell, its canvas resolved. */
+export type ResolvedCanvasItem = Omit<GridCanvasItem, 'canvas'> & { canvas: ResolvedCellCanvas };
+
+/** A canvas cell with every node's widget and every connector's bindings resolved. */
+export interface ResolvedCellCanvas extends Omit<CellCanvas, 'nodes' | 'connectors'> {
+  nodes: ResolvedNode[];
+  connectors: ResolvedConnector[];
+}
 
 /** A connector with its bound label and style read: the static values replaced where a binding read a value, and how
  *  each binding read, per path. A connector without bindings has an empty `quality`. */
@@ -56,9 +65,16 @@ export async function resolveDocument(saved: ViewDocument, adapters: readonly Ad
         return { ...p, widget, ...(state !== undefined && { state }) };
       })
     );
-  return doc.kind === 'canvas'
-    ? { ...doc, nodes: await resolve(doc.nodes), connectors: await Promise.all(doc.connectors.map(c => resolveConnector(c, adapters))) }
-    : { ...doc, items: await resolve(doc.items) };
+  const connectors = (list: readonly Connector[]) => Promise.all(list.map(c => resolveConnector(c, adapters)));
+  if (doc.kind === 'canvas') return { ...doc, nodes: await resolve(doc.nodes), connectors: await connectors(doc.connectors) };
+  const items = await Promise.all(
+    doc.items.map(async (item): Promise<ResolvedGridItem> =>
+      isCanvasItem(item)
+        ? { ...item, canvas: { ...item.canvas, nodes: await resolve(item.canvas.nodes), connectors: await connectors(item.canvas.connectors) } }
+        : (await resolve([item]))[0]
+    )
+  );
+  return { ...doc, items };
 }
 
 /**

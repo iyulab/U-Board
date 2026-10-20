@@ -1,22 +1,29 @@
-import { placedIn } from './view-document.js';
+import { isCanvasItem, placedAt } from './view-document.js';
 import type { Binding, ViewDocument } from './view-document.js';
 import { instanceParts } from './components.js';
 
 /**
- * Every binding a document declares, wherever it sits — each placed widget's, and on a canvas board each connector's
- * and each component instance's — with the JSON Pointer of what it fills. The one walk for whatever needs to know what
+ * Every binding a document declares, wherever it sits — each placed widget's, each connector's (of a canvas board or of
+ * a grid's canvas cell), and on a canvas board each component instance's — with the JSON Pointer of what it fills. The one walk for whatever needs to know what
  * a board reads: which data sources it uses and how they ask to be credited, which reads a share link may make.
  *
  * An instance's bindings are yielded as it reads them, its parameters filled in, with the pointer of the binding in the
  * component and the instance's id: a share link reads what the definition's instances name, nothing a viewer chooses.
  */
 export function* bindingsIn(doc: ViewDocument): Generator<{ binding: Binding; at: string; instance?: string }> {
-  const placed = placedIn(doc);
-  const kind = doc.kind === 'canvas' ? 'nodes' : 'items';
-  for (let i = 0; i < placed.length; i++) {
-    for (const [path, binding] of Object.entries(placed[i].widget?.bindings ?? {})) yield { binding, at: `/${kind}/${i}/widget/bindings/${path}` };
+  for (const { placed, at } of placedAt(doc)) {
+    for (const [path, binding] of Object.entries(placed.widget?.bindings ?? {})) yield { binding, at: `${at}/widget/bindings/${path}` };
   }
-  if (doc.kind !== 'canvas') return;
+  if (doc.kind !== 'canvas') {
+    for (let i = 0; i < doc.items.length; i++) {
+      const item = doc.items[i];
+      if (!isCanvasItem(item)) continue;
+      for (let j = 0; j < item.canvas.connectors.length; j++) {
+        for (const [path, binding] of Object.entries(item.canvas.connectors[j].bindings ?? {})) yield { binding, at: `/items/${i}/canvas/connectors/${j}/bindings/${path}` };
+      }
+    }
+    return;
+  }
   for (let i = 0; i < doc.connectors.length; i++) {
     for (const [path, binding] of Object.entries(doc.connectors[i].bindings ?? {})) yield { binding, at: `/connectors/${i}/bindings/${path}` };
   }

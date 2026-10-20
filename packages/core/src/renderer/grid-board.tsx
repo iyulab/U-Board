@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { ResolvedGridItem, ResolvedGridView } from '../resolve-document.js';
-import { GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN } from '../view-document.js';
+import { GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, isCanvasItem } from '../view-document.js';
 import type { QualityText } from '../quality-text.js';
 import { NodeFrame } from './node-frame.js';
 import { elementNameOf } from '../elements/element-type.js';
@@ -70,6 +70,7 @@ export interface GridBoardProps {
 /** The height an item placing an element takes when it gives none: the element's own. A prepared widget has its own
  *  height already; an element's isolated root has none to offer the row, so its definition says it. */
 function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | undefined {
+  if (isCanvasItem(item)) return undefined;
   const name = elementNameOf(item.widget.type);
   return name === undefined ? undefined : doc.elements?.[name]?.size?.height;
 }
@@ -89,7 +90,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} elementEvents={listened?.get(item.id)} />,
+                isCanvasItem(item) ? null : <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} elementEvents={listened?.get(item.id)} />,
                 index
               )}
             </div>

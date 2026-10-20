@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import type { GridView } from '../view-document.js';
+import { placedIn, type GridView } from '../view-document.js';
 import { ElementsPanel } from './ElementsPanel.js';
 
 const start: GridView = {
@@ -76,7 +76,7 @@ describe('ElementsPanel', () => {
     fireEvent.change(name, { target: { value: 'vessel' } });
     fireEvent.blur(name);
     expect(Object.keys(seen.doc.elements!)).toEqual(['vessel', 'spare']);
-    expect(seen.doc.items[0].widget.type).toBe('element:vessel');
+    expect(placedIn(seen.doc)[0].widget.type).toBe('element:vessel');
     expect(screen.getByRole('heading', { name: 'vessel' })).toBeInTheDocument();
   });
 

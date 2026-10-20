@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { resolveDocument, type ResolvedGridView } from '../resolve-document.js';
+import { resolveDocument, type ResolvedCellCanvas, type ResolvedGridView } from '../resolve-document.js';
 import type { ResolvedWidget } from '../adapter.js';
-import type { GridView, Widget } from '../view-document.js';
+import { isCanvasItem, type CellCanvas, type GridView, type Widget } from '../view-document.js';
 import { GridBoard, GRID_MEDIUM_MIN_WIDTH, GRID_WIDE_MIN_WIDTH } from '../renderer/grid-board.js';
 import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
 import { focusPart, useTriggers } from '../viewer/use-triggers.js';
@@ -46,6 +46,19 @@ const TAG_STYLE: CSSProperties = { position: 'absolute', right: 0, bottom: '100%
 
 /** A widget not resolved yet — its own props, no quality — so a new or changed item shows at once. */
 const unresolved = (widget: Widget): ResolvedWidget => ({ type: widget.type, props: widget.props ?? {}, quality: {} });
+/** A canvas cell as edited now, each node showing what its widget read when it was last resolved — as a widget item
+ *  does — and its connectors as written. */
+function shownCanvas(canvas: CellCanvas, resolved: ResolvedCellCanvas | undefined): ResolvedCellCanvas {
+  const read = new Map(resolved?.nodes.map(node => [node.id, node.widget]));
+  return {
+    ...canvas,
+    nodes: canvas.nodes.map(node => {
+      const widget = read.get(node.id);
+      return { ...node, widget: widget && widget.type === node.widget.type ? widget : unresolved(node.widget) };
+    }),
+    connectors: canvas.connectors.map(connector => ({ ...connector, quality: {} })),
+  };
+}
 
 /**
  * The editor of a grid view: its items in order, laid out as the viewer lays them out, beside a panel for the
@@ -81,11 +94,13 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
   // Where each item is, how much room it takes and which widget it is come from the document as edited now; only
   // what a widget shows waits for its bindings, so a moved or resized item does not lag behind a slow source.
   const shown = useMemo<ResolvedGridView>(() => {
-    const resolved = new Map(preview?.doc.items.map(item => [item.id, item.widget]));
+    const resolved = new Map(preview?.doc.items.map(item => [item.id, item]));
     return {
       ...doc,
       items: doc.items.map(item => {
-        const widget = resolved.get(item.id);
+        const before = resolved.get(item.id);
+        if (isCanvasItem(item)) return { ...item, canvas: shownCanvas(item.canvas, before && isCanvasItem(before) ? before.canvas : undefined) };
+        const widget = before && !isCanvasItem(before) ? before.widget : undefined;
         return { ...item, widget: widget && widget.type === item.widget.type ? widget : unresolved(item.widget) };
       }),
     };
@@ -154,7 +169,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 now={preview?.now ?? 0}
                 locale={labels.locale}
                 renderCell={(item, frame, index) => {
-                  const name = widgetTypeName(item.widget.type, labels.locale);
+                  const name = isCanvasItem(item) ? labels.canvasCell : widgetTypeName(item.widget.type, labels.locale);
                   const picked = item.id === selectedId;
                   return (
                     <div className="ub-authoring__node" style={CELL_STYLE}>
@@ -235,17 +250,19 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 onRemove={handleRemove}
                 labels={labels}
               />
-              <PropertyPanel
-                node={selected}
-                adapters={adapters}
-                connectorLabels={connectorLabels}
-                onChange={widget => updateDoc(current => updateGridItem(current, selected.id, { widget }))}
-                onPartChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
-                triggers={triggerEditing(doc, updateDoc)}
-                elements={doc.elements}
-                labels={labels}
-                clock={clock}
-              />
+              {!isCanvasItem(selected) && (
+                <PropertyPanel
+                  node={selected}
+                  adapters={adapters}
+                  connectorLabels={connectorLabels}
+                  onChange={widget => updateDoc(current => updateGridItem(current, selected.id, { widget }))}
+                  onPartChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
+                  triggers={triggerEditing(doc, updateDoc)}
+                  elements={doc.elements}
+                  labels={labels}
+                  clock={clock}
+                />
+              )}
             </>
           ) : (
             <BoardPanel

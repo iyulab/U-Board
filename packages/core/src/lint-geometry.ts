@@ -33,9 +33,10 @@ export function textBox(text: TextShape): Box {
  *
  * The board is judged as drawn, its component instances' parts with it. What lies within one instance is said at the
  * component — that is where it is fixed — once for all the instances it holds for; what involves an instance and
- * another part of the board is said at the instance, which moves.
+ * another part of the board is said at the instance, which moves. `base` is where the canvas sits in its document —
+ * `/items/2/canvas` for a grid's canvas cell; the paths found, and those named in the messages, start there.
  */
-export function lintGeometry(saved: CanvasView, limit = GEOMETRY_ADVICE_LIMIT): ViewDocumentAdvice[] {
+export function lintGeometry(saved: CanvasView, limit = GEOMETRY_ADVICE_LIMIT, base = ''): ViewDocumentAdvice[] {
   const doc = expandComponents(saved);
   const sized = sizedNodes(doc);
   const nodes = sized.map((node, i) => ({ id: node.id, at: ref('nodes', i), box: boxOf(node) }));
@@ -85,7 +86,7 @@ export function lintGeometry(saved: CanvasView, limit = GEOMETRY_ADVICE_LIMIT): 
     }
   }
 
-  const said = inDocument(saved, found);
+  const said = inDocument(saved, found, base);
   const shown = said.slice(0, limit).map(({ path, message }) => ({ path, message }));
   if (said.length <= limit) return shown;
   const rest = new Map<string, number>();
@@ -121,13 +122,13 @@ interface Finding {
  * instances it holds for, naming them unless it holds for every one. One between an instance's part and another part
  * of the board is said at the instance, which moves, naming the part.
  */
-function inDocument(saved: CanvasView, found: readonly Finding[]): Array<ViewDocumentAdvice & { kind: string }> {
+function inDocument(saved: CanvasView, found: readonly Finding[], base: string): Array<ViewDocumentAdvice & { kind: string }> {
   const drawnFrom = origins(saved);
   const drawn = expandComponents(saved);
   const drawnAs = (r: Ref) => (drawn[r.list] ?? [])[r.index]?.id ?? '';
   const where = (r: Ref) => {
     const origin = drawnFrom[r.list][r.index];
-    if (!origin) return { own: `/${r.list}/${r.index}${r.suffix}`, drawnAs: drawnAs(r) };
+    if (!origin) return { own: `${base}/${r.list}/${r.index}${r.suffix}`, drawnAs: drawnAs(r) };
     const instance = saved.instances![origin.instance];
     const component = saved.components![instance.component];
     return {

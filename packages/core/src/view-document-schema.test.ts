@@ -44,6 +44,10 @@ const AGREED: [string, unknown, boolean][] = [
   }), true],
   ['a connector with its label placed, a style and arrowheads, bound', canvas({ nodes: [node('a'), node('b')], connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: '3 kW', labelAt: 0.25, style: { stroke: '#2563eb', strokeWidth: 2, dash: 'dashed', arrow: 'end' }, bindings: { 'style.arrow': { adapter: 'ems', ref: '/flow', map: { ranges: [{ max: 0, value: 'start' }, { min: 0, value: 'end' }] } } } }] }), true],
   ['a grid item with its room', grid({ items: [{ id: 'a', span: 6, spanMedium: 3, height: 120, widget: { type: 'gauge' } }] }), true],
+  ['a grid cell holding a canvas', grid({ items: [{ id: 'a', widget: { type: 'gauge' } }, { id: 'c', span: 8, height: 300, canvas: { background: {}, nodes: [node('n')], connectors: [{ id: 'l', fromNodeId: 'n', toNodeId: 'n' }], decorations: [] } }] }), true],
+  ['a grid cell holding a widget and a canvas', grid({ items: [{ id: 'c', widget: { type: 'gauge' }, canvas: { background: {}, nodes: [], connectors: [] } }] }), false],
+  ['a canvas cell without its nodes', grid({ items: [{ id: 'c', canvas: { background: {}, connectors: [] } }] }), false],
+  ['a canvas cell node without anchored', grid({ items: [{ id: 'c', canvas: { background: {}, nodes: [{ id: 'n', x: 0, y: 0, widget: { type: 'gauge' } }], connectors: [] } }] }), false],
   ['a binding with a value map', canvas({ nodes: [node('a', { type: 'gauge', bindings: { value: { adapter: 'http', ref: {}, map: { values: { on: 1 }, ranges: [{ min: 0, max: 1, value: 'low' }] } } } })] }), true],
   ['elements of both renders, placed', canvas({ elements: { dot, chart: { render: 'script', script: 'x', resources: ['https://cdn.example.com'], size: { width: 2, height: 1 } } }, nodes: [node('a', { type: 'element:dot', props: { on: true } }), node('b', { type: 'element:chart' })] }), true],
   ['no kind', { nodes: [] }, false],
@@ -122,10 +126,12 @@ describe('view-document.schema.json', () => {
   });
 
   it('bounds a grid the way the validator does', () => {
-    const { gridView, gridItem } = schema.$defs;
+    const { gridView, gridWidgetItem, gridCanvasItem } = schema.$defs;
     expect(gridView.properties.columns.const).toBe(GRID_COLUMNS);
-    expect(gridItem.properties.span).toMatchObject({ type: 'integer', minimum: 1, maximum: GRID_COLUMNS });
-    expect(gridItem.properties.spanMedium).toMatchObject({ type: 'integer', minimum: 1, maximum: GRID_COLUMNS_MEDIUM });
+    for (const item of [gridWidgetItem, gridCanvasItem]) {
+      expect(item.properties.span).toMatchObject({ type: 'integer', minimum: 1, maximum: GRID_COLUMNS });
+      expect(item.properties.spanMedium).toMatchObject({ type: 'integer', minimum: 1, maximum: GRID_COLUMNS_MEDIUM });
+    }
     expect(schema.$defs.appearance.enum).toEqual(['light', 'dark']);
   });
 

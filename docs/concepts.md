@@ -8,7 +8,8 @@ what it can contain and how it's authored.
 
 **Kind** — the authoring/rendering mode a view is created as: a **canvas view** places widgets by
 position over a background, a **grid view** lays them out in order. Different kinds have different
-capabilities; a view does not mix kinds. Both carry widgets the same way — an id and a widget — so
+capabilities; a view is of one kind — a grid's cell may hold a canvas (see **Composition**), but the
+view is still a grid. Both carry widgets the same way — an id and a widget — so
 bindings, data quality and the property panel are shared; only how a widget is placed differs. The
 viewer shows both kinds and the editor edits both: a canvas by dragging nodes over the background, a
 grid as its items in order — added after the one selected, moved earlier or later, each given its
@@ -22,6 +23,14 @@ The width that counts is the board's own — the container it is shown in, not t
 per row below 600 pixels, 6 columns (each item's medium span) below 1024, 12 above. A row is as
 tall as its tallest item, and each item sits on a cell of its own with its data quality marked as
 a canvas node's is. A grid has no pan or zoom; it scrolls when it is taller than its container.
+
+**Composition** — a grid item may hold a **canvas** instead of a widget: a background, nodes on it,
+connectors between them and decorations — the spatial panel of a mixed board, with the cards around it
+laid out by the grid. The canvas lives in the same document (one share link, one revision), and only
+its spatial layer does: the board's elements, symbols and triggers stay on the board, and every id —
+of an item, or of a node, connector or decoration in any cell — is unique in the document, so a
+trigger names a cell's node as it names an item. A connector joins two nodes of the same cell. The
+canvas is drawn fitted to its cell; without a `height` the cell keeps the canvas's proportions.
 
 **Background** — the media (an image, or none) a canvas view is drawn over. The system does not
 attach domain meaning to a background — what it depicts is left to the author's and viewer's

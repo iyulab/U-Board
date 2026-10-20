@@ -15,6 +15,8 @@ export interface UBoardLabels {
   addNode: string;
   /** A grid view's "add": the new item goes after the selected one, or at the end. */
   addItem: string;
+  /** What a grid cell holding a canvas is called — its tag in the editor. */
+  canvasCell: string;
   /** The width a grid view is laid out at while editing it — to see it as a narrow or medium screen will: the
    *  group's name and its three choices. */
   layoutWidth: string;
@@ -398,6 +400,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   locale: 'en',
   addNode: 'Add node',
   addItem: 'Add item',
+  canvasCell: 'Canvas',
   layoutWidth: 'Layout width',
   layoutWide: 'Wide',
   layoutMedium: 'Medium',

@@ -75,7 +75,7 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
   } else doc.expected(['kind'], 'expected "canvas" or "grid"', value.kind);
 
   if ((value.kind === 'canvas' || value.kind === 'grid') && value.triggers !== undefined && doc.array(value, ['triggers'])) {
-    checkTriggers(doc, value.triggers as unknown[], value.kind, [...partIds(value[value.kind === 'canvas' ? 'nodes' : 'items']), ...doc.instanceNodeIds]);
+    checkTriggers(doc, value.triggers as unknown[], value.kind, [...(value.kind === 'canvas' ? partIds(value.nodes) : gridPartIds(value.items)), ...doc.instanceNodeIds]);
   }
 
   return issues;
@@ -86,6 +86,10 @@ const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'b
 const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'columns', 'items', 'triggers'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget', 'states'];
 const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget', 'states'];
+// `widget` is known so that holding both is said once, as that — not also as a field a canvas cell lacks.
+const GRID_CANVAS_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'canvas', 'widget'];
+const CELL_CANVAS_FIELDS = ['background', 'nodes', 'connectors', 'decorations'];
+const CELL_CANVAS_HINT = `A canvas cell is { id, canvas: { background, nodes, connectors, decorations }, span, spanMedium, height } — the board's elements, symbols and triggers stay on the board.`;
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash', 'arrow', 'route'];
 const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'radius', 'dash', 'label', 'labelAt', 'labelSize', 'labelFill'];
@@ -106,38 +110,44 @@ const COMPONENT_NODE_FIELDS = NODE_FIELDS.filter(field => field !== 'anchored');
 const INSTANCE_FIELDS = ['id', 'component', 'x', 'y', 'anchored', 'params'];
 const COMPONENT_HINT = 'A component is { params, nodes, connectors, decorations } — its parts placed from its own origin; an instance { id, component, x, y, anchored, params } draws it.';
 
-function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
-  if (doc.record(value, ['background'])) {
+/** A canvas view's spatial layer — or, at `at`, a grid's canvas cell, which has only that layer: its components are
+ *  the board's, and a cell has none. */
+function checkCanvasView(doc: Checker, value: Record<string, unknown>, at: string[] = []): void {
+  if (doc.record(value, [...at, 'background'])) {
     const background = value.background as Record<string, unknown>;
-    doc.known(background, ['background'], BACKGROUND_FIELDS, 'background');
-    if (background.image !== undefined && doc.record(background, ['background', 'image'])) {
+    const bg = [...at, 'background'];
+    doc.known(background, bg, BACKGROUND_FIELDS, 'background');
+    if (background.image !== undefined && doc.record(background, [...bg, 'image'])) {
       const image = background.image as Record<string, unknown>;
-      doc.known(image, ['background', 'image'], IMAGE_FIELDS, 'background image');
-      doc.string(image, ['background', 'image', 'src']);
-      doc.number(image, ['background', 'image', 'width']);
-      doc.number(image, ['background', 'image', 'height']);
-      if (image.referencePoints !== undefined) checkReferencePoints(doc, image.referencePoints, ['background', 'image', 'referencePoints']);
+      doc.known(image, [...bg, 'image'], IMAGE_FIELDS, 'background image');
+      doc.string(image, [...bg, 'image', 'src']);
+      doc.number(image, [...bg, 'image', 'width']);
+      doc.number(image, [...bg, 'image', 'height']);
+      if (image.referencePoints !== undefined) checkReferencePoints(doc, image.referencePoints, [...bg, 'image', 'referencePoints']);
     }
   }
 
   const nodeIds = new Set<string>();
-  if (doc.array(value, ['nodes'])) {
+  if (doc.array(value, [...at, 'nodes'])) {
     (value.nodes as unknown[]).forEach((node, i) => {
-      checkNode(doc, node, ['nodes', String(i)]);
+      checkNode(doc, node, [...at, 'nodes', String(i)]);
       if (isRecord(node) && typeof node.id === 'string') nodeIds.add(node.id);
     });
   }
-  if (value.components !== undefined && doc.record(value, ['components'])) checkComponents(doc, value.components as Record<string, unknown>);
-  if (value.instances !== undefined && doc.array(value, ['instances'])) {
-    (value.instances as unknown[]).forEach((instance, i) => checkInstance(doc, instance, ['instances', String(i)]));
+  const cell = at.length > 0;
+  if (!cell) {
+    if (value.components !== undefined && doc.record(value, ['components'])) checkComponents(doc, value.components as Record<string, unknown>);
+    if (value.instances !== undefined && doc.array(value, ['instances'])) {
+      (value.instances as unknown[]).forEach((instance, i) => checkInstance(doc, instance, ['instances', String(i)]));
+    }
+    for (const id of doc.instanceNodeIds) nodeIds.add(id);
   }
-  for (const id of doc.instanceNodeIds) nodeIds.add(id);
-  if (doc.array(value, ['connectors'])) {
-    const where = doc.instanceNodeIds.length > 0 ? '/nodes or of an instance (<instance id>/<part id>)' : '/nodes';
-    (value.connectors as unknown[]).forEach((connector, i) => checkConnector(doc, connector, ['connectors', String(i)], nodeIds, where));
+  if (doc.array(value, [...at, 'connectors'])) {
+    const where = cell ? `${pointer([...at, 'nodes'])} — the same cell` : doc.instanceNodeIds.length > 0 ? '/nodes or of an instance (<instance id>/<part id>)' : '/nodes';
+    (value.connectors as unknown[]).forEach((connector, i) => checkConnector(doc, connector, [...at, 'connectors', String(i)], nodeIds, where));
   }
-  if (value.decorations !== undefined && doc.array(value, ['decorations'])) {
-    (value.decorations as unknown[]).forEach((shape, i) => checkShape(doc, shape, ['decorations', String(i)]));
+  if (value.decorations !== undefined && doc.array(value, [...at, 'decorations'])) {
+    (value.decorations as unknown[]).forEach((shape, i) => checkShape(doc, shape, [...at, 'decorations', String(i)]));
   }
 }
 
@@ -195,12 +205,23 @@ function checkGridView(doc: Checker, value: Record<string, unknown>): void {
   (value.items as unknown[]).forEach((item, i) => {
     const at = ['items', String(i)];
     if (!doc.isRecordAt(item, at)) return;
-    doc.known(item, at, GRID_ITEM_FIELDS, 'grid item');
+    const holdsCanvas = item.canvas !== undefined;
+    doc.known(item, at, holdsCanvas ? GRID_CANVAS_ITEM_FIELDS : GRID_ITEM_FIELDS, holdsCanvas ? 'grid canvas cell' : 'grid item', holdsCanvas ? CELL_CANVAS_HINT : undefined);
     doc.id(item, [...at, 'id']);
     doc.optionalSpan(item, [...at, 'span'], GRID_COLUMNS);
     doc.optionalSpan(item, [...at, 'spanMedium'], GRID_COLUMNS_MEDIUM);
     if (item.height !== undefined && !(Number.isFinite(item.height) && (item.height as number) > 0)) {
       doc.expected([...at, 'height'], 'expected a number greater than 0', item.height);
+    }
+    if (holdsCanvas) {
+      // A cell holds a widget or a canvas — not both.
+      if (item.widget !== undefined) doc.fail([...at, 'widget'], 'a grid item holds a widget or a canvas, not both — move the widget into the canvas as a node, or into an item of its own');
+      if (doc.record(item, [...at, 'canvas'])) {
+        const canvas = item.canvas as Record<string, unknown>;
+        doc.known(canvas, [...at, 'canvas'], CELL_CANVAS_FIELDS, 'canvas cell', CELL_CANVAS_HINT);
+        checkCanvasView(doc, canvas, [...at, 'canvas']);
+      }
+      return;
     }
     checkWidget(doc, item, at);
     if (item.states !== undefined && doc.record(item, [...at, 'states'])) checkStates(doc, item.states as Record<string, unknown>, item.widget, [...at, 'states']);
@@ -602,6 +623,12 @@ const TRIGGER_ACTION_FIELDS: Record<string, string[]> = {
 const TRIGGER_HINT = 'A trigger is { on: { event, node? }, when?: { node, state }, do: [{ action, … }] }.';
 
 /** The ids of the parts a document places — those that are text. */
+/** The parts of a grid a trigger can name: its widget items, and the nodes of its canvas cells. */
+function gridPartIds(items: unknown): string[] {
+  if (!Array.isArray(items)) return [];
+  return items.flatMap(item => (isRecord(item) && isRecord(item.canvas) ? partIds(item.canvas.nodes) : partIds([item])));
+}
+
 function partIds(parts: unknown): string[] {
   return Array.isArray(parts) ? parts.flatMap(part => (isRecord(part) && typeof part.id === 'string' ? [part.id] : [])) : [];
 }

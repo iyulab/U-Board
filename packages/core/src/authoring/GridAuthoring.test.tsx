@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { AuthoringView } from './AuthoringView';
-import type { CanvasView, GridView, ViewDocument } from '../view-document';
+import { placedIn, type CanvasView, type GridView, type ViewDocument } from '../view-document';
 import { KO_LABELS } from '../labels-ko';
 
 // The canvas editor's engine is not drawn here; a grid view never reaches it, and the canvas editor this file
@@ -64,12 +64,12 @@ describe('AuthoringView with a grid view', () => {
     fireEvent.change(screen.getByLabelText('Width (of 12 columns)'), { target: { value: '6' } });
     fireEvent.change(screen.getByLabelText('Width at medium size (of 6)'), { target: { value: '6' } });
     fireEvent.change(screen.getByLabelText('Height (px)'), { target: { value: '240' } });
-    expect((await saved(onSave)).items[0]).toEqual({ id: 'a', widget: grid().items[0].widget, span: 6, spanMedium: 6, height: 240 });
+    expect((await saved(onSave)).items[0]).toEqual({ id: 'a', widget: placedIn(grid())[0].widget, span: 6, spanMedium: 6, height: 240 });
 
     fireEvent.change(screen.getByLabelText('Width (of 12 columns)'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Width at medium size (of 6)'), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('Height (px)'), { target: { value: '' } });
-    expect((await saved(onSave)).items[0]).toEqual({ id: 'a', widget: grid().items[0].widget });
+    expect((await saved(onSave)).items[0]).toEqual({ id: 'a', widget: placedIn(grid())[0].widget });
   });
 
   it('moves an item in the order, and removes it, from buttons', async () => {
@@ -105,7 +105,7 @@ describe('AuthoringView with a grid view', () => {
     render(<AuthoringView initialDocument={grid()} adapters={[]} onSave={onSave} />);
     fireEvent.click(pick(2));
     fireEvent.change(screen.getByLabelText('Widget type'), { target: { value: 'gauge' } });
-    expect((await saved(onSave)).items[1].widget.type).toBe('gauge');
+    expect(placedIn(await saved(onSave))[1].widget.type).toBe('gauge');
   });
 
   it('lays the grid out at a medium or narrow width while editing, and shows it as a link does in View', async () => {

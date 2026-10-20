@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { CanvasView, GridView } from '../view-document.js';
+import { placedIn, type CanvasView, type GridView } from '../view-document.js';
 import { validateViewDocument } from '../validate-view-document.js';
 import {
   NEW_ELEMENT,
@@ -54,7 +54,7 @@ describe('element editing', () => {
   it('renames an element and every widget placing it, in either kind, keeping the registry order', () => {
     const renamed = renameElement(grid, 'tank', 'level-tank');
     expect(Object.keys(renamed.elements!)).toEqual(['level-tank', 'unused']);
-    expect(renamed.items.map(i => i.widget.type)).toEqual(['element:level-tank', 'gauge', 'element:level-tank', 'element:gone']);
+    expect(placedIn(renamed).map(i => i.widget.type)).toEqual(['element:level-tank', 'gauge', 'element:level-tank', 'element:gone']);
     expect(renameElement(canvas, 'tank', 'vessel').nodes[0].widget.type).toBe('element:vessel');
     expect(renameElement(grid, 'tank', 'unused')).toBe(grid);
     expect(renameElement(grid, 'tank', 'Bad Name')).toBe(grid);

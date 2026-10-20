@@ -120,14 +120,46 @@ export interface GridView {
   triggers?: Trigger[];
 }
 
-/** A widget in a grid view and the room it takes. */
-export interface GridItem extends Placed {
+/** What a grid view holds in a cell, and the room it takes: a widget (`GridWidgetItem`), or a canvas of its own
+ *  (`GridCanvasItem`) — the spatial panel of a mixed board, with the cards around it laid out by the grid. */
+export type GridItem = GridWidgetItem | GridCanvasItem;
+
+/** The room a grid item takes. */
+export interface GridLayout {
   /** Columns it spans at full width, 1–12. Absent means 4. */
   span?: number;
   /** Columns it spans at medium width, where the grid has 6 — 1–6. Absent means half of `span`, rounded up. */
   spanMedium?: number;
-  /** Its height in pixels. Absent means the widget's own height. */
+  /** Its height in pixels. Absent means the widget's own height — for a canvas, the height that keeps its proportions. */
   height?: number;
+}
+
+/** A widget in a grid view and the room it takes. */
+export interface GridWidgetItem extends Placed, GridLayout {}
+
+/** A canvas in a grid view's cell and the room it takes (docs/concepts.md — "Composition"). */
+export interface GridCanvasItem extends GridLayout {
+  /** Unique in the document, like every id in it. */
+  id: string;
+  canvas: CellCanvas;
+}
+
+/**
+ * A canvas inside a grid cell: the spatial layer of a canvas view — a background, the nodes placed on it, connectors
+ * between them and decorations — drawn fitted to its cell. What the board defines once stays on the board: the cell's
+ * nodes place the board's elements and symbols, the board's triggers name them by id, and they take its appearance
+ * and accent. A connector joins two nodes of the same cell.
+ */
+export interface CellCanvas {
+  background: Background;
+  nodes: Node[];
+  connectors: Connector[];
+  decorations?: Shape[];
+}
+
+/** Whether a grid item holds a canvas rather than a widget. */
+export function isCanvasItem<I extends { id: string }>(item: I): item is Extract<I, { canvas: unknown }> {
+  return 'canvas' in item && (item as { canvas?: unknown }).canvas !== undefined;
 }
 
 /** The number of columns a grid view has at full width and at medium width. */
@@ -141,18 +173,35 @@ export function emptyViewDocument(kind: ViewKind): ViewDocument {
   return kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', background: {}, nodes: [], connectors: [] };
 }
 
-/** Every widget a document places, in document order — a canvas view's nodes or a grid view's items. The one walk
- *  over a document's widgets, so code that looks at every binding does not depend on which kind it reads. Takes a
- *  resolved document as well. */
+/** Every widget a document places, in document order — a canvas view's nodes, or a grid view's widget items and the
+ *  nodes of its canvas cells. The one walk over a document's widgets, so code that looks at every binding does not
+ *  depend on which kind it reads. Takes a resolved document as well. */
 export function placedIn<D extends PlacingView>(doc: D): readonly PlacedOf<D>[] {
-  return (doc.kind === 'canvas' ? doc.nodes : doc.items) as readonly PlacedOf<D>[];
+  return placedAt(doc).map(({ placed }) => placed);
+}
+
+/** `placedIn`, each with the JSON Pointer of where it sits in the document (`/nodes/0`, `/items/2`,
+ *  `/items/3/canvas/nodes/1`) — for what has to name the place: a binding's path, an issue's. */
+export function placedAt<D extends PlacingView>(doc: D): readonly { placed: PlacedOf<D>; at: string }[] {
+  if (doc.kind === 'canvas') return doc.nodes.map((node, i) => ({ placed: node as PlacedOf<D>, at: `/nodes/${i}` }));
+  return doc.items.flatMap((item, i) =>
+    isCanvasItem(item)
+      ? (item as { canvas: { nodes: readonly { id: string }[] } }).canvas.nodes.map((node, j) => ({ placed: node as PlacedOf<D>, at: `/items/${i}/canvas/nodes/${j}` }))
+      : [{ placed: item as PlacedOf<D>, at: `/items/${i}` }]
+  );
 }
 
 /** A view of either kind, resolved or not — what `placedIn` walks. */
-type PlacingView = { kind: 'canvas'; nodes: readonly { id: string }[] } | { kind: 'grid'; items: readonly { id: string }[] };
+type PlacingView =
+  | { kind: 'canvas'; nodes: readonly { id: string }[] }
+  | { kind: 'grid'; items: readonly ({ id: string } | { id: string; canvas: { nodes: readonly { id: string }[] } })[] };
 
-/** What a view of type `D` places: a canvas view's node type, a grid view's item type. */
-type PlacedOf<D> = D extends { kind: 'canvas'; nodes: readonly (infer N)[] } ? N : D extends { kind: 'grid'; items: readonly (infer I)[] } ? I : never;
+/** What a view of type `D` places: a canvas view's node type; a grid view's widget item type and its cells' node type. */
+type PlacedOf<D> = D extends { kind: 'canvas'; nodes: readonly (infer N)[] }
+  ? N
+  : D extends { kind: 'grid'; items: readonly (infer I)[] }
+    ? Exclude<I, { canvas: unknown }> | (Extract<I, { canvas: unknown }> extends { canvas: { nodes: readonly (infer N)[] } } ? N : never)
+    : never;
 
 export type BoardAppearance = 'light' | 'dark';
 

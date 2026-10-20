@@ -191,9 +191,10 @@ describe('resolveDocument', () => {
     expect(resolved.kind).toBe('grid');
     expect(resolved.appearance).toBe('dark');
     expect(resolved.items.map(item => [item.id, item.span])).toEqual([['a', 6], ['b', undefined]]);
-    expect(resolved.items[0].widget.props.value).toBe('running');
-    expect(resolved.items[0].widget.quality).toEqual({ value: 'live' });
-    expect(resolved.items[1].widget.props).toEqual({ content: 'note' });
+    const [a, b] = placedIn(resolved);
+    expect(a.widget.props.value).toBe('running');
+    expect(a.widget.quality).toEqual({ value: 'live' });
+    expect(b.widget.props).toEqual({ content: 'note' });
   });
 
   it('names each part’s state from the source’s reading — before the prop’s own map — on both kinds', async () => {
@@ -219,7 +220,7 @@ describe('resolveDocument', () => {
     expect('state' in resolved.nodes[2]).toBe(false);
 
     const grid: GridView = { kind: 'grid', items: [part('a', 'p1')] };
-    expect((await resolveDocument(grid, [pumps])).items[0].state).toBe('fault');
+    expect(placedIn(await resolveDocument(grid, [pumps]))[0].state).toBe('fault');
   });
 });
 

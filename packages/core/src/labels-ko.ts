@@ -11,6 +11,7 @@ export const KO_LABELS: UBoardLabels = {
   locale: 'ko-KR',
   addNode: '노드 추가',
   addItem: '항목 추가',
+  canvasCell: '캔버스',
   layoutWidth: '배치 폭',
   layoutWide: '넓게',
   layoutMedium: '중간',

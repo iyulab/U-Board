@@ -6,6 +6,18 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Breaking: a grid cell can hold a canvas** — `GridItem` is `GridWidgetItem | GridCanvasItem`. A canvas cell
+  (`{ id, canvas: { background, nodes, connectors, decorations }, span, spanMedium, height }`) is the spatial panel of
+  a mixed board; the board's elements, symbols and triggers stay on the board, and ids are unique across every cell.
+  The validator, the JSON Schema, `resolveDocument` (`ResolvedCanvasItem`), `bindingsIn` and `lintViewDocument` (at
+  `/items/<i>/canvas/…`) know it. `placedIn` walks a cell's nodes with the grid's widget items, and `placedAt` gives
+  each with its JSON Pointer; `isCanvasItem` tells the two items apart. Code that read `item.widget` on a grid item
+  narrows first: `if (!isCanvasItem(item)) item.widget`, or walks `placedIn(doc)`.
+- `UBoardLabels.canvasCell` — the tag a canvas cell carries in the grid editor. A host writing its own labels in full
+  needs it.
+
 ## [0.28.0] - 2026-10-20
 
 ### Changed

@@ -1,4 +1,4 @@
-import type { GridItem, GridView } from '../view-document.js';
+import { isCanvasItem, placedIn, type CellCanvas, type GridCanvasItem, type GridItem, type GridLayout, type GridView, type GridWidgetItem } from '../view-document.js';
 import { triggersWithout, withTriggers } from './trigger-editing.js';
 
 /** An id for a new grid item. */
@@ -11,9 +11,12 @@ export function addGridItem(doc: GridView, item: GridItem, afterId?: string | nu
   return { ...doc, items: [...doc.items.slice(0, index), item, ...doc.items.slice(index)] };
 }
 
+/** What can change on a grid item: its room, and its widget and states or its canvas — whichever it holds. */
+export type GridItemChange = Partial<GridLayout & Pick<GridWidgetItem, 'widget' | 'states'> & Pick<GridCanvasItem, 'canvas'>>;
+
 /** The item with `id` changed by `change` — a field set to `undefined` is left out, so the document says only what
  *  differs from the default. */
-export function updateGridItem(doc: GridView, id: string, change: Partial<Omit<GridItem, 'id'>>): GridView {
+export function updateGridItem(doc: GridView, id: string, change: GridItemChange): GridView {
   return {
     ...doc,
     items: doc.items.map(item => {
@@ -41,14 +44,48 @@ export function gridItemIndex(doc: GridView, id: string): number {
   return doc.items.findIndex(item => item.id === id);
 }
 
-/** A copy of the item with `id`, under `newId`, right after it — its widget, bindings and layout; the triggers that name
- *  the original stay with it. */
+/** A copy of the item with `id`, under `newId`, right after it — its widget, bindings and layout, or its canvas with
+ *  every node, connector and decoration under an id of its own (ids are unique in the document); the triggers that
+ *  name the original stay with it. */
 export function duplicateGridItem(doc: GridView, id: string, newId: string): GridView {
   const item = doc.items.find(existing => existing.id === id);
-  if (!item || doc.items.some(existing => existing.id === newId)) return doc;
-  return addGridItem(doc, { ...structuredClone(item), id: newId }, id);
+  if (!item || idsIn(doc).has(newId)) return doc;
+  const copy = { ...structuredClone(item), id: newId };
+  return addGridItem(doc, isCanvasItem(copy) ? { ...copy, canvas: withFreshIds(copy.canvas, idsIn(doc)) } : copy, id);
 }
 
+/** Removes the item with `id` — and, for a canvas, the triggers that name its nodes along with those naming it. */
 export function removeGridItem(doc: GridView, id: string): GridView {
-  return withTriggers({ ...doc, items: doc.items.filter(item => item.id !== id) }, triggersWithout(doc.triggers, new Set([id])));
+  const item = doc.items.find(existing => existing.id === id);
+  const gone = new Set([id, ...(item && isCanvasItem(item) ? item.canvas.nodes.map(node => node.id) : [])]);
+  return withTriggers({ ...doc, items: doc.items.filter(existing => existing.id !== id) }, triggersWithout(doc.triggers, gone));
+}
+
+/** Every id a grid view uses — its items' and its canvas cells' nodes, connectors and decorations. */
+export function idsIn(doc: GridView): Set<string> {
+  const ids = new Set(doc.items.map(item => item.id));
+  for (const placed of placedIn(doc)) ids.add(placed.id);
+  for (const item of doc.items) {
+    if (!isCanvasItem(item)) continue;
+    for (const part of [...item.canvas.connectors, ...(item.canvas.decorations ?? [])]) ids.add(part.id);
+  }
+  return ids;
+}
+
+/** `canvas` with every id replaced by the first of `<id>-2`, `<id>-3`, … that `taken` does not have — its connectors
+ *  following their nodes. */
+function withFreshIds(canvas: CellCanvas, taken: Set<string>): CellCanvas {
+  const renamed = new Map<string, string>();
+  const fresh = (id: string) => {
+    let n = 2;
+    while (taken.has(`${id}-${n}`)) n++;
+    const next = `${id}-${n}`;
+    taken.add(next);
+    renamed.set(id, next);
+    return next;
+  };
+  const nodes = canvas.nodes.map(node => ({ ...node, id: fresh(node.id) }));
+  const connectors = canvas.connectors.map(c => ({ ...c, id: fresh(c.id), fromNodeId: renamed.get(c.fromNodeId) ?? c.fromNodeId, toNodeId: renamed.get(c.toNodeId) ?? c.toNodeId }));
+  const decorations = canvas.decorations?.map(shape => ({ ...shape, id: fresh(shape.id) }));
+  return { ...canvas, nodes, connectors, ...(decorations && { decorations }) };
 }

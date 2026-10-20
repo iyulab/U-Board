@@ -1,4 +1,4 @@
-import { placedIn, type ElementDefinition, type ViewDocument, type Widget } from '../view-document.js';
+import { isCanvasItem, placedIn, type ElementDefinition, type ViewDocument, type Widget } from '../view-document.js';
 import { ELEMENT_NAME, ELEMENT_TYPE_PREFIX, elementNameOf } from '../elements/element-type.js';
 import { validateViewDocument, type ViewDocumentIssue } from '../validate-view-document.js';
 import { componentWidgets } from '../components.js';
@@ -42,9 +42,14 @@ export function elementNameProblem(doc: ViewDocument, name: string, current?: st
 }
 
 /** Every placed widget of `doc`, changed by `change` — a canvas view's nodes, and its components' nodes, or a grid
- *  view's items. */
+ *  view's widget items and the nodes of its canvas cells. */
 function mapWidgets<D extends ViewDocument>(doc: D, change: (widget: Widget) => Widget): D {
-  if (doc.kind === 'grid') return { ...doc, items: doc.items.map(item => ({ ...item, widget: change(item.widget) })) };
+  if (doc.kind === 'grid') {
+    const items = doc.items.map(item =>
+      isCanvasItem(item) ? { ...item, canvas: { ...item.canvas, nodes: item.canvas.nodes.map(node => ({ ...node, widget: change(node.widget) })) } } : { ...item, widget: change(item.widget) }
+    );
+    return { ...doc, items };
+  }
   const nodes = doc.nodes.map(node => ({ ...node, widget: change(node.widget) }));
   if (!doc.components) return { ...doc, nodes };
   const components = Object.fromEntries(

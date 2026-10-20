@@ -1,4 +1,4 @@
-import { placedIn } from './view-document.js';
+import { isCanvasItem, placedAt, placedIn } from './view-document.js';
 import { componentWidgets, expandComponents, instancePartId } from './components.js';
 import type { StateRule, ViewDocument } from './view-document.js';
 import { ELEMENT_SIZE_BUDGET, SCRIPT_ELEMENT_BUDGET, elementNameOf } from './elements/element-type.js';
@@ -22,14 +22,17 @@ export interface LintOptions {
 
 /**
  * What a valid document (`validateViewDocument` found nothing) could do better — none of it stops the
- * document being saved or drawn. First, on a canvas board, where parts would be drawn over one another
+ * document being saved or drawn. First, on a canvas board or a grid's canvas cell, where parts would be drawn over one another
  * (`lintGeometry`: overlapping nodes, a text under a node or crossed by a connector, texts running together);
  * then an element defined but placed nowhere, more `script` elements than a board draws lightly, an element
  * heavier than one should be, a look for a state its map never names, a trigger waiting for a state a part never
  * enters. For whoever writes the document — an author, a tool, an AI — to act on.
  */
 export function lintViewDocument(doc: ViewDocument, options: LintOptions = {}): ViewDocumentAdvice[] {
-  const advice: ViewDocumentAdvice[] = doc.kind === 'canvas' ? lintGeometry(doc, options.geometryLimit) : [];
+  const advice: ViewDocumentAdvice[] =
+    doc.kind === 'canvas'
+      ? lintGeometry(doc, options.geometryLimit)
+      : doc.items.flatMap((item, i) => (isCanvasItem(item) ? lintGeometry({ kind: 'canvas', elements: doc.elements, ...item.canvas }, options.geometryLimit, `/items/${i}/canvas`) : []));
   const elements = doc.elements ?? {};
   const placed = new Map<string, number>();
   // A component's node places its element once for each instance that draws it.
@@ -54,7 +57,6 @@ export function lintViewDocument(doc: ViewDocument, options: LintOptions = {}): 
     advice.push({ path: '', message: `${scripts} script elements are placed — over ${SCRIPT_ELEMENT_BUDGET}, each a frame of its own; draw what needs no code as template elements` });
   }
 
-  const parts = doc.kind === 'canvas' ? 'nodes' : 'items';
   // The states a part's map names, and advice for a look of one it never names — at the part's path, or at the
   // component node's for a part an instance draws (each node once).
   const namedStates = (rule: StateRule | undefined, at: string) => {
@@ -75,7 +77,7 @@ export function lintViewDocument(doc: ViewDocument, options: LintOptions = {}): 
     return named;
   };
   const statesOf = new Map<string, Set<string>>();
-  placedIn(doc).forEach((placed, i) => statesOf.set(placed.id, namedStates(placed.states, `/${parts}/${i}`)));
+  for (const { placed, at } of placedAt(doc)) statesOf.set(placed.id, namedStates(placed.states, at));
   if (doc.kind === 'canvas') {
     const byComponent = new Map<string, Set<string>[]>();
     for (const [name, component] of Object.entries(doc.components ?? {})) {

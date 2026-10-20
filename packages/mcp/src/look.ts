@@ -1,5 +1,5 @@
 import type { Browser, Page } from 'playwright-core';
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, expandComponents, getByPointer, instancePartId, nodeSize, type ViewDocument } from '@iyulab/u-board/domain';
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, expandComponents, getByPointer, instancePartId, nodeSize, placedAt, type ViewDocument } from '@iyulab/u-board/domain';
 import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
 
 /** How a picture is taken: animations stopped at their start, so a blinking state is drawn on — a picture taken mid-blink
@@ -180,10 +180,11 @@ async function problems(page: Page, doc: ViewDocument): Promise<LookReport['prob
   return (await page.evaluate(findProblems, placedParts(doc))).map(problem => inDocument(doc, problem));
 }
 
-/** Each node or grid item the viewer draws, with where it is and the attribute its frame carries on the page — a part a
- *  component instance draws at `/instances/<i>/<part id>`, which `inDocument` turns into a place in the document. */
+/** Each node or grid item the viewer draws, with where it is and the attribute its frame carries on the page — a grid's
+ *  canvas cell's nodes as nodes, a part a component instance draws at `/instances/<i>/<part id>`, which `inDocument`
+ *  turns into a place in the document. */
 export function placedParts(doc: ViewDocument): Array<{ id: string; path: string; attr: string }> {
-  if (doc.kind !== 'canvas') return doc.items.map((n, i) => ({ id: n.id, path: `/items/${i}`, attr: 'data-item-id' }));
+  if (doc.kind !== 'canvas') return placedAt(doc).map(({ placed, at }) => ({ id: placed.id, path: at, attr: at.includes('/canvas/') ? 'data-node-id' : 'data-item-id' }));
   const own = doc.nodes.map((n, i) => ({ id: n.id, path: `/nodes/${i}`, attr: 'data-node-id' }));
   const drawn = (doc.instances ?? []).flatMap((instance, i) =>
     (doc.components?.[instance.component]?.nodes ?? []).map(node => ({ id: instancePartId(instance.id, node.id), path: `/instances/${i}/${node.id}`, attr: 'data-node-id' }))

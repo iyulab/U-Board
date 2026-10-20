@@ -8,7 +8,7 @@ import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { GridBoard } from '../renderer/grid-board.js';
 import type { Adapter, ResolvedWidget } from '../adapter.js';
-import type { ViewDocument } from '../view-document.js';
+import { isCanvasItem, type ViewDocument } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import type { ResolvedGridView, ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
@@ -199,7 +199,8 @@ function asLastKnown(doc: ResolvedViewDocument): ResolvedViewDocument {
       ),
     },
   });
-  return doc.kind === 'canvas' ? { ...doc, nodes: doc.nodes.map(lastKnown) } : { ...doc, items: doc.items.map(lastKnown) };
+  if (doc.kind === 'canvas') return { ...doc, nodes: doc.nodes.map(lastKnown) };
+  return { ...doc, items: doc.items.map(item => (isCanvasItem(item) ? { ...item, canvas: { ...item.canvas, nodes: item.canvas.nodes.map(lastKnown) } } : lastKnown(item))) };
 }
 
 /** When the values on screen were last updated, and — distinctly, announced — when they have stopped

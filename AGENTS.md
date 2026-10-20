@@ -58,9 +58,10 @@ which depends on it. Before a release that changes the entry points or dependenc
 - The grid view kind (see `docs/concepts.md`) has its document format, validation, binding
   resolution, JSON Schema, viewer (`renderer/grid-board.tsx`, sharing `renderer/node-frame.tsx` with the
   canvas renderer) and editor (`authoring/GridAuthoring.tsx`; `AuthoringView` holds what both kinds share and
-  hands the document to the editor of its kind); the console asks the kind of a new board. Next is composition — a
-  canvas in a grid cell — which is not built yet. Code that reads a `ViewDocument`
-  narrows on `kind`, and code that walks every widget uses `placedIn`. No other kind is planned.
+  hands the document to the editor of its kind); the console asks the kind of a new board. Composition — a canvas in a
+  grid cell (`GridCanvasItem`) — has its document format, validation, resolution and binding walk; drawing and editing
+  it come next. Code that reads a `ViewDocument` narrows on `kind`, a grid item on `isCanvasItem`, and code that walks
+  every widget uses `placedIn` (`placedAt` for its path). No other kind is planned.
 - How the authoring tool is packaged/distributed is not decided. Do not assume a specific
   runtime (browser-only vs. a desktop shell) without checking current guidance.
 
