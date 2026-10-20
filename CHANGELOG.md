@@ -11,6 +11,12 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A gallery sample laid out as an infographic: a day of the blood supply read like a poster — a headline, the stock in
+  days and the level it sets, the five steps from donation to hospital as large numbers joined by arrows, and the stock
+  by blood type against five days. A canvas with no plan behind it, on example data.
+
 ## [0.19.0] - 2026-10-20
 
 ### Added
