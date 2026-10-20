@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-10-20
+
+### Changed
+
+- Widgets come from `@iyulab/u-widgets` 0.37 — a `form` writes a toggle in formdown as `c[switch]`, and its parser
+  no longer brings a YAML reader (about 30 KB lighter). Needs `@canvas-kit/viewer` `^0.6.0`.
+
 ### Added
 
 - **Breaking: a grid cell can hold a canvas** — `GridItem` is `GridWidgetItem | GridCanvasItem`. A canvas cell

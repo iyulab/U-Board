@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-20
+
 ### Added
 
 - A grid board can hold a canvas in a cell — a plan or map among cards. The editor adds one (**Add canvas**) and

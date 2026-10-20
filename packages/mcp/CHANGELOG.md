@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-20
+
+### Changed
+
+- Needs `@iyulab/u-board` `^0.29.0`.
+
 ### Added
 
 - A grid's cell can hold a canvas (a mixed board — a plan or map in one cell, cards around it). `describe` teaches it,
