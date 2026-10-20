@@ -229,6 +229,12 @@
           "minimum": 1,
           "maximum": 6
         },
+        "rowSpan": {
+          "description": "Rows it spans at medium and full width — a map or large panel beside a column of smaller cards, which the items after it fill in order. Absent means 1; a narrow grid ignores it.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
         "height": { "description": "Its height in pixels. Absent means the widget's own height.", "type": "number", "exclusiveMinimum": 0 },
         "widget": { "$ref": "#/$defs/widget" },
         "states": { "$ref": "#/$defs/stateRule" }
@@ -243,6 +249,12 @@
         "span": { "description": "Columns it spans at full width. Absent means 4.", "type": "integer", "minimum": 1, "maximum": 12 },
         "spanMedium": {
           "description": "Columns it spans at medium width, where the grid has 6. Absent means half of span, rounded up.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "rowSpan": {
+          "description": "Rows it spans at medium and full width — a map or large panel beside a column of smaller cards, which the items after it fill in order. Absent means 1; a narrow grid ignores it.",
           "type": "integer",
           "minimum": 1,
           "maximum": 6

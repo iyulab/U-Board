@@ -134,6 +134,8 @@ export interface UBoardLabels {
   itemSpan: string;
   itemSpanMedium: string;
   itemSpanMediumAuto: string;
+  /** The rows an item spans beside the ones after it (from medium width up). */
+  itemRowSpan: string;
   itemHeight: string;
   itemHeightAuto: string;
   /** The same, for a canvas cell — whose height left out keeps the canvas's proportions. */
@@ -484,6 +486,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   itemSpan: 'Width (of {columns} columns)',
   itemSpanMedium: 'Width at medium size (of {columns})',
   itemSpanMediumAuto: 'Half the full width',
+  itemRowSpan: 'Rows it spans',
   itemHeight: 'Height (px)',
   itemHeightAuto: 'Widget default',
   canvasHeightAuto: 'The canvas’s proportions',

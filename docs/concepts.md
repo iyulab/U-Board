@@ -17,7 +17,9 @@ widths and height — with the layout seen at a wide, medium or narrow width.
 
 **Grid view** — widgets in order, left to right and then top to bottom, in rows of 12 columns. Each
 **grid item** takes a span of columns (4 when left out), optionally a different span where the
-board is narrower, and optionally a fixed height — otherwise the widget's own. There is no position:
+board is narrower, optionally a number of rows it spans (`rowSpan` — a map or large panel beside a column of
+smaller cards, which the items after it fill in order; from medium width up), and optionally a fixed height —
+otherwise the widget's own. There is no position:
 the same document reads at any width, and where an item goes follows from the ones before it.
 The width that counts is the board's own — the container it is shown in, not the window: one item
 per row below 600 pixels, 6 columns (each item's medium span) below 1024, 12 above. A row is as

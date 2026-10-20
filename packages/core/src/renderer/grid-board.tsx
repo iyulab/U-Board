@@ -15,7 +15,8 @@ export const GRID_WIDE_MIN_WIDTH = 1024;
 
 // Rules a style attribute cannot carry — the container queries — so the component brings them itself (React
 // hoists and dedupes a `<style>` with `href` and `precedence`), and a grid lays out with or without the
-// package stylesheet. Narrow: one item per row, in order. Medium: 6 columns, `spanMedium`. Wide: 12, `span`.
+// package stylesheet. Narrow: one item per row, in order. Medium: 6 columns, `spanMedium`. Wide: 12, `span`. From
+// medium up an item spans `rowSpan` rows, and the items after it fill the rows beside it in order.
 // Each item sits on a cell — a faint surface, translucent so it reads on light and dark paper alike — so an item
 // in its normal state, which has no frame (ISA-101: normal is unmarked), still reads as one; and a cell keeps a
 // height of its own, so a widget with nothing to show yet does not fold away with its quality mark. The row gap
@@ -30,7 +31,7 @@ const GRID_CSS = `
 .ub-grid[data-appearance="dark"] .ub-grid__item { background: var(--ub-grid-cell-bg-dark, rgb(255 255 255 / 6%)); }
 @container (min-width: ${GRID_MEDIUM_MIN_WIDTH}px) {
   .ub-grid__items { grid-template-columns: repeat(${GRID_COLUMNS_MEDIUM}, minmax(0, 1fr)); }
-  .ub-grid__item { grid-column: span var(--_ub-span-medium); }
+  .ub-grid__item { grid-column: span var(--_ub-span-medium); grid-row: span var(--_ub-row-span, 1); }
 }
 @container (min-width: ${GRID_WIDE_MIN_WIDTH}px) {
   .ub-grid__items { grid-template-columns: repeat(12, minmax(0, 1fr)); }
@@ -92,7 +93,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, re
       <div className="ub-grid__items">
         {doc.items.map((item, index) => {
           const { span, spanMedium } = gridSpans(item);
-          const style = { '--_ub-span': span, '--_ub-span-medium': spanMedium, height: item.height ?? elementHeight(doc, item) } as CSSProperties;
+          const style = { '--_ub-span': span, '--_ub-span-medium': spanMedium, ...(item.rowSpan !== undefined && { '--_ub-row-span': item.rowSpan }), height: item.height ?? elementHeight(doc, item) } as CSSProperties;
           return (
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(

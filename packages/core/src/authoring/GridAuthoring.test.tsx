@@ -88,11 +88,13 @@ describe('AuthoringView with a grid view', () => {
     fireEvent.click(pick(1));
     fireEvent.change(screen.getByLabelText('Width (of 12 columns)'), { target: { value: '6' } });
     fireEvent.change(screen.getByLabelText('Width at medium size (of 6)'), { target: { value: '6' } });
+    fireEvent.change(screen.getByLabelText('Rows it spans'), { target: { value: '2' } });
     fireEvent.change(screen.getByLabelText('Height (px)'), { target: { value: '240' } });
-    expect((await saved(onSave)).items[0]).toEqual({ id: 'a', widget: placedIn(grid())[0].widget, span: 6, spanMedium: 6, height: 240 });
+    expect((await saved(onSave)).items[0]).toEqual({ id: 'a', widget: placedIn(grid())[0].widget, span: 6, spanMedium: 6, rowSpan: 2, height: 240 });
 
     fireEvent.change(screen.getByLabelText('Width (of 12 columns)'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Width at medium size (of 6)'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Rows it spans'), { target: { value: '1' } });
     fireEvent.change(screen.getByLabelText('Height (px)'), { target: { value: '' } });
     expect((await saved(onSave)).items[0]).toEqual({ id: 'a', widget: placedIn(grid())[0].widget });
   });

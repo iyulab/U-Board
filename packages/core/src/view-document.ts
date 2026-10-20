@@ -130,6 +130,9 @@ export interface GridLayout {
   span?: number;
   /** Columns it spans at medium width, where the grid has 6 — 1–6. Absent means half of `span`, rounded up. */
   spanMedium?: number;
+  /** Rows it spans at medium and full width, 1–6 — a map or a large panel beside a column of smaller cards, which
+   *  the items after it fill in order. Absent means 1; a narrow grid, one item per row, ignores it. */
+  rowSpan?: number;
   /** Its height in pixels. Absent means the widget's own height — for a canvas, the height that keeps its proportions. */
   height?: number;
 }
@@ -167,6 +170,8 @@ export const GRID_COLUMNS = 12;
 export const GRID_COLUMNS_MEDIUM = 6;
 /** The span an item takes when it names none. */
 export const GRID_DEFAULT_SPAN = 4;
+/** The most rows an item can span. */
+export const GRID_MAX_ROW_SPAN = 6;
 
 /** A document of `kind` with nothing on it yet — what a new board starts as. */
 export function emptyViewDocument(kind: ViewKind): ViewDocument {

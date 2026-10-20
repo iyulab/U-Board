@@ -1,4 +1,4 @@
-import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, CONNECTOR_ROUTES, PLACEMENTS, STROKE_DASHES, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, TRIGGER_ACTIONS, TRIGGER_EVENTS, isTriggerLink, type ConnectorArrow, type ConnectorRoute, type Placement, type StrokeDash } from './view-document.js';
+import { CONNECTOR_ARROWS, CONNECTOR_BINDABLE, CONNECTOR_ROUTES, PLACEMENTS, STROKE_DASHES, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_MAX_ROW_SPAN, TRIGGER_ACTIONS, TRIGGER_EVENTS, isTriggerLink, type ConnectorArrow, type ConnectorRoute, type Placement, type StrokeDash } from './view-document.js';
 import type { ElementDefinition, PropsSchema } from './view-document.js';
 import { ELEMENT_NAME, elementNameOf } from './elements/element-type.js';
 import { parseTemplate } from './elements/template.js';
@@ -85,11 +85,11 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
 const CANVAS_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'background', 'nodes', 'connectors', 'decorations', 'triggers', 'components', 'instances'];
 const GRID_FIELDS = ['kind', 'appearance', 'accent', 'elements', 'symbols', 'columns', 'items', 'triggers'];
 const NODE_FIELDS = ['id', 'x', 'y', 'width', 'height', 'anchored', 'caption', 'widget', 'states'];
-const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'widget', 'states'];
+const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'rowSpan', 'height', 'widget', 'states'];
 // `widget` is known so that holding both is said once, as that — not also as a field a canvas cell lacks.
-const GRID_CANVAS_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'height', 'canvas', 'widget'];
+const GRID_CANVAS_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'rowSpan', 'height', 'canvas', 'widget'];
 const CELL_CANVAS_FIELDS = ['background', 'nodes', 'connectors', 'decorations'];
-const CELL_CANVAS_HINT = `A canvas cell is { id, canvas: { background, nodes, connectors, decorations }, span, spanMedium, height } — the board's elements, symbols and triggers stay on the board.`;
+const CELL_CANVAS_HINT = `A canvas cell is { id, canvas: { background, nodes, connectors, decorations }, span, spanMedium, rowSpan, height } — the board's elements, symbols and triggers stay on the board.`;
 const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash', 'arrow', 'route'];
 const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'radius', 'dash', 'label', 'labelAt', 'labelSize', 'labelFill'];
@@ -210,6 +210,7 @@ function checkGridView(doc: Checker, value: Record<string, unknown>): void {
     doc.id(item, [...at, 'id']);
     doc.optionalSpan(item, [...at, 'span'], GRID_COLUMNS);
     doc.optionalSpan(item, [...at, 'spanMedium'], GRID_COLUMNS_MEDIUM);
+    doc.optionalSpan(item, [...at, 'rowSpan'], GRID_MAX_ROW_SPAN);
     if (item.height !== undefined && !(Number.isFinite(item.height) && (item.height as number) > 0)) {
       doc.expected([...at, 'height'], 'expected a number greater than 0', item.height);
     }

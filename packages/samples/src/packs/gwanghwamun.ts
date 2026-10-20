@@ -143,24 +143,24 @@ function carPark(): Node {
 /** A widget among the cards around the plan, in the room it takes. */
 const card = (id: string, span: number, spanMedium: number, widget: Widget): GridItem => ({ id, span, spanMedium, widget });
 
-/** Across the top: how crowded it is, and the roads. */
+/** Beside the plan, in a column: how crowded it is, and the roads. */
 const TOP: GridItem[] = [
-  card('crowd', 3, 3, {
+  card('crowd', 4, 3, {
     type: 'status',
     props: { data: { label: '지금 혼잡도', value: '', level: 'neutral' } },
     bindings: { 'data.value': bind(PEOPLE, '/AREA_CONGEST_LVL'), 'data.level': bind(PEOPLE, '/AREA_CONGEST_LVL', CROWD_LEVEL) },
   }),
-  card('people', 3, 3, {
+  card('people', 4, 3, {
     type: 'metric',
     props: { data: { label: '추정 인구(최대)', value: 0, unit: '명' } },
     bindings: { 'data.value': bind(PEOPLE, '/AREA_PPLTN_MAX') },
   }),
-  card('traffic', 3, 3, {
+  card('traffic', 4, 3, {
     type: 'status',
     props: { data: { label: '도로 소통', value: '', level: 'neutral' } },
     bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_IDX'), 'data.level': bind(ROADS, '/ROAD_TRAFFIC_IDX', TRAFFIC_LEVEL) },
   }),
-  card('speed', 3, 3, {
+  card('speed', 4, 3, {
     type: 'metric',
     props: { data: { label: '평균 속도', value: 0, unit: 'km/h' } },
     bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_SPD') },
@@ -168,7 +168,7 @@ const TOP: GridItem[] = [
 ];
 
 /** Beside the plan: the crowd to come. */
-const FORECAST: GridItem = card('forecast', 4, 6, {
+const FORECAST: GridItem = card('forecast', 4, 3, {
   type: 'chart.line',
   props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' }, options: { xFormat: { type: 'time' } } },
   bindings: { data: bind(PEOPLE, '/FCST_PPLTN') },
@@ -262,12 +262,13 @@ ${station(37.5758, 126.9735, '경복궁역')}
   return svgDataUrl(svg);
 }
 
-/** The plan, as a canvas in a wide cell — in its own proportions, so the stations read at its size — the forecast
- *  beside it. */
+/** The plan, as a canvas in a wide cell — in its own proportions, so the stations read at its size — spanning the rows
+ *  of the column of cards beside it. */
 const PLAN: GridItem = {
   id: 'plan',
   span: 8,
   spanMedium: 6,
+  rowSpan: 5,
   canvas: {
     background: { image: { ...BACKGROUND.image!, src: drawing() } },
     nodes: [...BIKE_STATIONS.map(bikeStation), carPark()],
@@ -275,7 +276,7 @@ const PLAN: GridItem = {
   },
 };
 
-const document: GridView = { kind: 'grid', items: [...TOP, PLAN, FORECAST, ...WEATHER_CARDS] };
+const document: GridView = { kind: 'grid', items: [PLAN, ...TOP, FORECAST, ...WEATHER_CARDS] };
 
 export const gwanghwamun: SamplePack = {
   id: 'gwanghwamun',
@@ -283,8 +284,8 @@ export const gwanghwamun: SamplePack = {
   field: { ko: '도시·인파', en: 'City & crowds' },
   kind: { ko: '지역 약도 + 카드(혼합)', en: 'Area plan among cards (mixed)' },
   summary: {
-    ko: '도시 상황판처럼 — 위에 혼잡도와 도로 소통, 가운데 지역 약도에 대여소마다 남은 따릉이와 공영주차장의 주차 대수를 서 있는 자리에, 옆에 인구 예측, 아래 날씨. 약도는 그리드 칸 안의 캔버스입니다.',
-    en: 'Laid out like a city’s situation room — the crowd and the roads across the top; the area’s plan in the middle, the bikes left at each station and the cars in the public car park where they stand; the crowd forecast beside it; the weather below. The plan is a canvas in a grid cell.',
+    ko: '도시 상황판처럼 — 지역 약도에 대여소마다 남은 따릉이와 공영주차장의 주차 대수를 서 있는 자리에, 옆 열에 혼잡도·인구·도로 소통과 인구 예측, 아래 날씨. 약도는 여러 줄에 걸친 그리드 칸 안의 캔버스입니다.',
+    en: 'Laid out like a city’s situation room — the area’s plan with the bikes left at each station and the cars in the public car park where they stand; beside it a column of the crowd, the roads and the crowd forecast; the weather below. The plan is a canvas in a grid cell spanning the column’s rows.',
   },
   connectors: [SEOUL_CITY_DATA],
   document,

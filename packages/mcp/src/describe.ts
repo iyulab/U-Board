@@ -64,7 +64,7 @@ const RULES = `# Writing a U-Board board
 
 const MIXED = `# Mixed boards — a canvas in a grid cell
 
-- A grid item holds a widget or a canvas: { id, span?, spanMedium?, height?, canvas: { background, nodes, connectors, decorations? } }. Use it when a board is a plan, map or diagram with cards around it: the plan in a wide cell (span 8), the cards in the cells beside and below.
+- A grid item holds a widget or a canvas: { id, span?, spanMedium?, rowSpan?, height?, canvas: { background, nodes, connectors, decorations? } }. Use it when a board is a plan, map or diagram with cards around it: the plan in a wide cell (span 8, rowSpan 3), then the cards — the next ones fill the rows beside it in order (span 4 each), the rest go below.
 - The canvas's nodes, connectors and decorations are written as a canvas board's (describe("canvas")) and it is drawn fitted to its cell. Without height the cell keeps the canvas's proportions; give height to make it a fixed size.
 - What a board defines once stays at the top level: elements, symbols, triggers, appearance, accent. A cell's nodes place the board's elements, and a trigger names a cell's node by its id.
 - Every id is unique in the whole document — items and every cell's nodes, connectors and decorations. A connector joins two nodes of the same cell.

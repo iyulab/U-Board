@@ -382,7 +382,7 @@ describe('ViewerPage with a grid view', () => {
       appearance: 'dark',
       items: [
         { id: 'pump', span: 6, widget: { type: 'uw-status', bindings: { value: { adapter: 'cmms', ref: 'k' } } } },
-        { id: 'note', span: 3, spanMedium: 6, height: 120, widget: { type: 'markdown', props: { content: 'x' } } },
+        { id: 'note', span: 3, spanMedium: 6, rowSpan: 2, height: 120, widget: { type: 'markdown', props: { content: 'x' } } },
         { id: 'plain', widget: { type: 'gauge' } },
       ],
     };
@@ -405,6 +405,8 @@ describe('ViewerPage with a grid view', () => {
     expect([style('pump').getPropertyValue('--_ub-span'), style('pump').getPropertyValue('--_ub-span-medium')]).toEqual(['6', '3']);
     expect([style('note').getPropertyValue('--_ub-span'), style('note').getPropertyValue('--_ub-span-medium'), style('note').height]).toEqual(['3', '6', '120px']);
     expect([style('plain').getPropertyValue('--_ub-span'), style('plain').getPropertyValue('--_ub-span-medium'), style('plain').height]).toEqual(['4', '2', '']);
+    // Rows: only an item that spans more than one says so; the rule falls back to 1.
+    expect([style('note').getPropertyValue('--_ub-row-span'), style('plain').getPropertyValue('--_ub-row-span')]).toEqual(['2', '']);
   });
 
   it('shows each item with its quality, as a canvas node does, and keeps updating it', async () => {

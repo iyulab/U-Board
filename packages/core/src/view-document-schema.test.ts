@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import Ajv2020 from 'ajv/dist/2020.js';
-import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM } from './view-document';
+import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_MAX_ROW_SPAN } from './view-document';
 import { validateViewDocument } from './validate-view-document';
 
 // The published JSON Schema says the same rules as `validateViewDocument` for readers that only have the schema — an AI
@@ -45,6 +45,8 @@ const AGREED: [string, unknown, boolean][] = [
   ['a connector with its label placed, a style and arrowheads, bound', canvas({ nodes: [node('a'), node('b')], connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: '3 kW', labelAt: 0.25, style: { stroke: '#2563eb', strokeWidth: 2, dash: 'dashed', arrow: 'end' }, bindings: { 'style.arrow': { adapter: 'ems', ref: '/flow', map: { ranges: [{ max: 0, value: 'start' }, { min: 0, value: 'end' }] } } } }] }), true],
   ['a grid item with its room', grid({ items: [{ id: 'a', span: 6, spanMedium: 3, height: 120, widget: { type: 'gauge' } }] }), true],
   ['a grid cell holding a canvas', grid({ items: [{ id: 'a', widget: { type: 'gauge' } }, { id: 'c', span: 8, height: 300, canvas: { background: {}, nodes: [node('n')], connectors: [{ id: 'l', fromNodeId: 'n', toNodeId: 'n' }], decorations: [] } }] }), true],
+  ['a grid item spanning rows', grid({ items: [{ id: 'a', rowSpan: 3, widget: { type: 'gauge' } }] }), true],
+  ['a grid item spanning more rows than it can', grid({ items: [{ id: 'a', rowSpan: 7, widget: { type: 'gauge' } }] }), false],
   ['a grid cell holding a widget and a canvas', grid({ items: [{ id: 'c', widget: { type: 'gauge' }, canvas: { background: {}, nodes: [], connectors: [] } }] }), false],
   ['a canvas cell without its nodes', grid({ items: [{ id: 'c', canvas: { background: {}, connectors: [] } }] }), false],
   ['a canvas cell node without anchored', grid({ items: [{ id: 'c', canvas: { background: {}, nodes: [{ id: 'n', x: 0, y: 0, widget: { type: 'gauge' } }], connectors: [] } }] }), false],
@@ -131,6 +133,7 @@ describe('view-document.schema.json', () => {
     for (const item of [gridWidgetItem, gridCanvasItem]) {
       expect(item.properties.span).toMatchObject({ type: 'integer', minimum: 1, maximum: GRID_COLUMNS });
       expect(item.properties.spanMedium).toMatchObject({ type: 'integer', minimum: 1, maximum: GRID_COLUMNS_MEDIUM });
+      expect(item.properties.rowSpan).toMatchObject({ type: 'integer', minimum: 1, maximum: GRID_MAX_ROW_SPAN });
     }
     expect(schema.$defs.appearance.enum).toEqual(['light', 'dark']);
   });

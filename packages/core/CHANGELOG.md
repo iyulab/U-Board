@@ -19,6 +19,8 @@ All notable changes to this package are documented here. The format follows
   buttons; the grid scrolls over it, and Ctrl/⌘ + wheel zooms it. The grid editor adds one (**Add canvas**) and
   edits its canvas in the canvas editor (**Edit canvas**, back with **← Grid**), in the grid's own history. The
   `remove` edit command takes a canvas cell's nodes, connectors and decorations.
+- A grid item can span rows: `rowSpan` (1–6, from medium width up) — a map or a large panel beside a column of
+  smaller cards, the items after it filling the rows beside it in order. The grid editor sets it (`UBoardLabels.itemRowSpan`).
 - `UBoardLabels.canvasCell` (a canvas cell's name — its tag in the grid editor, its region's in the viewer),
   `wheelZoomHint` (the line a canvas cell shows when the wheel scrolls past it), `addCanvas`, `editCanvas`,
   `backToGrid` and `canvasHeightAuto`. A host writing its own labels in full needs them.

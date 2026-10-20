@@ -1,5 +1,5 @@
 import type { GridItem } from '../view-document.js';
-import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, isCanvasItem } from '../view-document.js';
+import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, GRID_MAX_ROW_SPAN, isCanvasItem } from '../view-document.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
 
@@ -11,7 +11,7 @@ export interface GridItemPanelProps {
   /** Whether it can move earlier or later — not at the start or the end of the order. */
   isFirst: boolean;
   isLast: boolean;
-  onChange: (change: Partial<Pick<GridItem, 'span' | 'spanMedium' | 'height'>>) => void;
+  onChange: (change: Partial<Pick<GridItem, 'span' | 'spanMedium' | 'rowSpan' | 'height'>>) => void;
   onMove: (by: -1 | 1) => void;
   onDuplicate: () => void;
   onRemove: () => void;
@@ -63,6 +63,16 @@ export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDupli
         <select value={item.spanMedium ?? ''} onChange={e => onChange({ spanMedium: e.target.value === '' ? undefined : Number(e.target.value) })}>
           <option value="">{labels.itemSpanMediumAuto}</option>
           {columns(GRID_COLUMNS_MEDIUM).map(n => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="ub-panel__field">
+        {labels.itemRowSpan}
+        <select value={item.rowSpan ?? 1} onChange={e => onChange({ rowSpan: Number(e.target.value) === 1 ? undefined : Number(e.target.value) })}>
+          {columns(GRID_MAX_ROW_SPAN).map(n => (
             <option key={n} value={n}>
               {n}
             </option>
