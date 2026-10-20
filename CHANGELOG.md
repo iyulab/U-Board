@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-20
+
 ### Added
 
 - A data source can say where its source writes an error it answers with success (HTTP 200) — the status, the
@@ -28,6 +30,8 @@ do when upgrading. Each release's notes carry its section.
   taken out should the source echo it.
 - A failed read tells signed-in members and API tokens what went wrong in words, beside its reason; a share link
   still says only the reason.
+
+Upgrading: nothing to set — the new data source setting is optional, and its column is added when the server starts.
 
 ## [0.16.0] - 2026-10-20
 

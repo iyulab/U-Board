@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-10-20
+
 ### Added
 
 - `QualityReason` `source`: the source answered with success but said in its answer that it could not serve the

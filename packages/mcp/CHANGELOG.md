@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-20
+
+### Changed
+
+- Needs `@iyulab/u-board` 0.27 — it checks a board with the same rules the server saves by.
+
 ### Added
 
 - `create_source` takes `sourceError` — where a source that answers an error with success says so — and
