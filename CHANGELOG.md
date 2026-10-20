@@ -22,6 +22,9 @@ do when upgrading. Each release's notes carry its section.
   has unsaved edits, and the editor keeps its mode (Edit or View) as it shows each change.
 - The site's home page shows the chat panel at work: a film of it drawing a dispatch board from two requests, sped
   up, with the poster alone where less motion is asked for.
+- A gallery sample in the style of a city situation room's wall: a festival's operations on a fireworks night — a winged
+  title bar, bracketed panels in three columns, and the venue map in the middle with each area glowing by people per
+  square metre; the crowd, the gates, the shuttles, the safety desk and the launch conditions around it. On example data.
 - A gallery sample drawn in flat isometric: a smart farm seen from above at an angle — four glasshouses with their crop
   rows showing through the glass and the buildings beside them, a tag pinned to each roof with the temperature inside
   and what the house is doing now, and on the side the weather the vents answer to and each house's temperature

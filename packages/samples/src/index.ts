@@ -26,6 +26,7 @@ export { telecomNoc } from './packs/telecom-noc.js';
 export { railNetwork } from './packs/rail-network.js';
 export { airportDepartures } from './packs/airport-departures.js';
 export { smartFarm } from './packs/smart-farm.js';
+export { festivalOps } from './packs/festival-ops.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -52,7 +53,8 @@ import { telecomNoc } from './packs/telecom-noc.js';
 import { railNetwork } from './packs/rail-network.js';
 import { airportDepartures } from './packs/airport-departures.js';
 import { smartFarm } from './packs/smart-farm.js';
+import { festivalOps } from './packs/festival-ops.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
