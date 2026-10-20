@@ -20,6 +20,8 @@ do when upgrading. Each release's notes carry its section.
   key are kept in that browser only, and the model is called from the browser: the server neither holds a key nor
   calls a model. The endpoint must accept requests from the console's address (CORS). Sending waits while the editor
   has unsaved edits, and the editor keeps its mode (Edit or View) as it shows each change.
+- The site's home page shows the chat panel at work: a film of it drawing a dispatch board from two requests, sped
+  up, with the poster alone where less motion is asked for.
 - A gallery sample drawn in flat isometric: a smart farm seen from above at an angle — four glasshouses with their crop
   rows showing through the glass and the buildings beside them, a tag pinned to each roof with the temperature inside
   and what the house is doing now, and on the side the weather the vents answer to and each house's temperature

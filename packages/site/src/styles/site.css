@@ -148,6 +148,44 @@ main,
   background: #e2e7e6;
 }
 
+/* The chat panel at work: a few words, then the film of it drawing a board at the page's full width — a screen
+   recording read any smaller loses its words. */
+.assistant {
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 2rem);
+  padding: clamp(2.5rem, 6vw, 4rem) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.assistant-text {
+  max-width: var(--measure);
+}
+
+.assistant-text p {
+  margin-top: 0.75rem;
+  color: var(--muted);
+}
+
+.assistant-film {
+  margin: 0;
+}
+
+.assistant-film video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 6px;
+  background: var(--sheet);
+  box-shadow: 0 0 0 1px var(--rule), 0 12px 32px rgba(23, 37, 43, 0.12);
+}
+
+.assistant-film figcaption {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
 /* Three facts, side by side and unboxed — they are of equal weight. */
 .facts {
   display: grid;

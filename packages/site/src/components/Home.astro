@@ -25,6 +25,20 @@ const c = COPY[locale];
     <PlantFigure figure={c.figure} />
   </section>
 
+  <section class="assistant" aria-labelledby="assistant-heading" data-claim={c.assistant.claim}>
+    <div class="assistant-text">
+      <h2 id="assistant-heading">{c.assistant.heading}</h2>
+      <p>{c.assistant.body}</p>
+    </div>
+    <figure class="assistant-film">
+      <video data-assistant-film autoplay muted loop playsinline preload="metadata" poster="/media/chat-builder-poster.jpg" width="1600" height="900" aria-label={c.assistant.video}>
+        <source src="/media/chat-builder.webm" type="video/webm" />
+        <source src="/media/chat-builder.mp4" type="video/mp4" />
+      </video>
+      <figcaption>{c.assistant.caption}</figcaption>
+    </figure>
+  </section>
+
   <section class="facts">
     {
       c.sections.map(s => (
@@ -68,3 +82,13 @@ const c = COPY[locale];
     <p>{c.license.body}</p>
   </section>
 </Page>
+
+<script>
+  // Asked for less motion: the film stays on its poster, with controls to play it.
+  const film = document.querySelector<HTMLVideoElement>('[data-assistant-film]');
+  if (film && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    film.removeAttribute('autoplay');
+    film.pause();
+    film.controls = true;
+  }
+</script>

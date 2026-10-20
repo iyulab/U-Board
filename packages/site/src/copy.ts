@@ -46,6 +46,8 @@ export interface Copy {
     nodes: { pump: string; running: string; load: string; temp: string; pressure: string; conveyor: string };
   };
   sections: Section[];
+  /** The chat panel, shown as a sped-up recording of it drawing a board. */
+  assistant: Section & { caption: string; video: string };
   delivery: { heading: string; items: Section[] };
   notHeading: string;
   not: Section[];
@@ -123,6 +125,13 @@ export const COPY: Record<Locale, Copy> = {
         body: '공유 링크 하나로 보드를 로그인 없이 읽기 전용으로 엽니다. 다른 앱의 페이지에 iframe으로 넣을 수 있고, 링크마다 유효 기간을 정하거나 언제든 회수할 수 있습니다.',
       },
     ],
+    assistant: {
+      claim: 'assistant',
+      heading: '말로 그리는 보드',
+      body: '편집기 옆 AI 비서에게 무엇을 보여 줄지 말하면, 비서가 열린 보드에 바로 그리고 그린 결과를 스스로 확인해 고칩니다. 외부 AI 비서가 MCP 서버로 쓰는 것과 같은 도구로 그리고, 모델은 쓰는 사람이 고릅니다 — OpenAI 호환 엔드포인트의 주소와 키를 넣으면 되고, 키는 그 브라우저에만 남습니다.',
+      caption: '오픈 모델 qwen3.8-27b가 두 번의 요청으로 물류센터 출고 현황판을 그리는 과정. 약 4분을 10배속으로 줄였고, 값은 예시입니다.',
+      video: 'AI 비서가 채팅 요청을 받아 다크 테마 대시보드를 단계별로 그리고, 두 번째 요청에 지연 구역을 붉게 강조하는 녹화',
+    },
     delivery: {
       heading: '쓰는 방식',
       items: [
@@ -245,6 +254,13 @@ export const COPY: Record<Locale, Copy> = {
         body: 'A share link opens a board read-only without signing in. Embed it in another application’s page with an iframe, give each link an expiry, or revoke it at any time.',
       },
     ],
+    assistant: {
+      claim: 'assistant',
+      heading: 'Boards drawn from a conversation',
+      body: 'Tell the AI assistant beside the editor what the board should show: it draws on the open board, then checks what it drew and fixes it. It draws with the same tools an outside assistant uses through the MCP server, and each person picks the model — the address and key of an OpenAI-compatible endpoint, kept in that browser only.',
+      caption: 'The open model qwen3.8-27b drawing a fulfilment centre’s dispatch board from two requests — about four minutes, shown ten times faster. The values are examples.',
+      video: 'A recording of the AI assistant drawing a dark dashboard step by step from a chat request, then highlighting delayed zones in red on a second request',
+    },
     delivery: {
       heading: 'Ways to run it',
       items: [
