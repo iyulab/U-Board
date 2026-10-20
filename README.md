@@ -67,7 +67,8 @@ Save, when it has one), and a read-only viewer mode are implemented and browser-
 the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
 or keyboard.
 Besides the canvas view there is a grid view — widgets in order on a 12-column grid, laid out to the
-viewer's width — edited, saved and shared the same way. A board can define its own **elements** for what no
+viewer's width — edited, saved and shared the same way. A grid cell can hold a canvas, and an item can span
+rows: a plan or map beside a column of cards, the mixed board of a situation room. A board can define its own **elements** for what no
 prepared widget draws: markup and CSS drawn in an isolated root, or a script run in a sandboxed frame with no
 network, which is stopped when it stops answering. They are placed like widgets, their props get controls from
 their schema in the property panel, and their definitions are listed and edited in the editor with a template
