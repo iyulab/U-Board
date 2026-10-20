@@ -121,16 +121,16 @@ symbols    = { "<name>": { viewBox?, markup } } — top level: SVG drawings any 
 - Prefer render "template": HTML/SVG + CSS, no script. Numbers become drawing through CSS: style="--level: {{level}}", height: calc(var(--level) * 1%).
 - Use the theme variables, never fixed colours: --u-widget-bg, -surface, -text, -text-secondary, -border, -primary, -positive, -negative, -warning, -font-family, -font-mono. To match a brand colour, set the board's accent (it sets -primary), not a fixed colour.
 - Tell states apart by shape as well as colour (filled running, outlined stopped), with a graphic contrast of 3:1 against its background (WCAG 1.4.11) — never mark a state with the faintest token (--u-widget-border). Colour only what needs attention.
-- Choose by a value with an attribute and CSS: data-state="{{state}}" + [data-state="fault"] { … }, or a symbol per value (above). Sections test only empty/non-empty.
-- Draw repeated shapes once (a document symbol, <symbol>/<use>, a {{#list}} section). Keep an element under 32 KB.
+- Choose by a value with an attribute and CSS: data-state="{{state}}" + [data-state="fault"] { … }, or a symbol per value. Sections test only empty/non-empty.
+- Draw repeated shapes once (a symbol, <symbol>/<use>, a {{#list}} section). Keep an element under 32 KB.
 - A props schema (type, enum, const, properties, required, items, minimum, maximum, minLength, maxLength, title, description, default) says what an element takes; placed props are checked against it. A default only seeds the editor — it is not applied when drawing, so give every prop the markup uses.
-- render "script" only when a template cannot. More than 30 placed script elements is too many.
+- render "script" only when a template cannot. Over 30 placed script elements is too many.
 
 ## template
 - Markup: HTML text/structure tags, img, and SVG (shapes, text, gradients, patterns, symbol/use, markers, filters).
 - Not allowed: script, style, iframe, a, form, foreignObject, event handler attributes (on*), srcset, @import.
 - URLs (href, src, CSS url()): only "#id", "data:image/…", or an origin listed in resources.
-- Values: {{name}} / {{a.b}} (escaped), {{#list}}…{{/list}} (each item; {{.}} is the item; any other value once), {{^flag}}…{{/flag}} (shown when empty), {{! comment}}, {{v | fixed:1}} (1 decimal, 0–6). Empty = absent, null, false, "" or [] (not 0). No unescaped output, no partials.
+- Values: {{name}} / {{a.b}} (escaped), {{#list}}…{{/list}} (each item; {{.}} is the item; any other value once), {{^flag}}…{{/flag}} (shown when empty), {{! comment}}, {{v | fixed:1}} (decimals 0–6), {{v | grouped:0}} (and commas). Empty = absent, null, false, "" or [] (not 0). No unescaped output or partials.
 - The markup draws in an isolated root: its CSS reaches only itself, :host is its box, sizes are border-box. A grid item without a height takes size.height.
 - Example:
   { "render": "template",
@@ -142,7 +142,7 @@ symbols    = { "<name>": { viewBox?, markup } } — top level: SVG drawings any 
 ## script
 - Runs in <iframe sandbox="allow-scripts"> served by the board's server: an origin of its own, no cookies, no page access, no network (connect-src 'none').
 - ub.onProps((props, appearance) => draw(props)) — called with the latest props and on every change; ub.reportError(error) shows on its box.
-- Code must return: a loop running 1 s throws; other endless work gets its frame removed.
+- Code must return: a loop running 1 s throws; other endless work loses its frame.
 - A library is loaded from an origin in resources (e.g. a <script src> it adds, or import()), and only where the installation allows that origin.
 - The frame is drawn from the saved board — save before checking it.`;
 

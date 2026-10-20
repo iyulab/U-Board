@@ -38,8 +38,10 @@ describe('parseTemplate', () => {
 
   it('reads a value with its digits, and refuses a format it does not know or one on a section', () => {
     expect(parseTemplate('{{ inlet | fixed:1 }}°C')).toEqual({ ok: true, nodes: [{ kind: 'value', path: 'inlet', fixed: 1 }, { kind: 'text', text: '°C' }] });
+    expect(parseTemplate('{{orders | grouped:0}}')).toEqual({ ok: true, nodes: [{ kind: 'value', path: 'orders', fixed: 0, grouped: true }] });
     for (const [template, message] of [
       ['{{inlet | fixed:7}}', 'use "fixed:N"'],
+      ['{{inlet | grouped}}', 'or "grouped:N"'],
       ['{{inlet | round}}', '"round" is not a format'],
       ['{{inlet | fixed:1 | fixed:2}}', 'is not a format'],
       ['{{#rows | fixed:1}}{{/rows}}', 'takes no format'],

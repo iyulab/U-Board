@@ -1,6 +1,6 @@
 import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
 import { symbolSheet, symbolsUsed } from '../elements/symbols.js';
-import { parseTemplate, type TemplateNode } from '../elements/template.js';
+import { formatValue, parseTemplate, type TemplateNode } from '../elements/template.js';
 import { TEMPLATE_TAGS, attributeProblem, checkStyle, isResourceOrigin } from '../elements/markup-policy.js';
 import { THEME_PALETTE } from '../theme-colors.js';
 
@@ -93,18 +93,11 @@ export function fillTemplate(nodes: readonly TemplateNode[], props: unknown): st
   return fill(nodes, [props]);
 }
 
-/** A number — or text that reads as one, as a source often sends it — shown with `fixed` digits after the point. */
-function withDigits(value: unknown, fixed: number | undefined): unknown {
-  if (fixed === undefined) return value;
-  const number = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
-  return Number.isFinite(number) ? number.toFixed(fixed) : value;
-}
-
 function fill(nodes: readonly TemplateNode[], stack: unknown[]): string {
   let out = '';
   for (const node of nodes) {
     if (node.kind === 'text') out += node.text;
-    else if (node.kind === 'value') out += escapeHtml(display(withDigits(lookup(stack, node.path), node.fixed)));
+    else if (node.kind === 'value') out += escapeHtml(display(formatValue(lookup(stack, node.path), node)));
     else {
       const value = lookup(stack, node.path);
       const empty = value === undefined || value === null || value === false || value === '' || (Array.isArray(value) && value.length === 0);

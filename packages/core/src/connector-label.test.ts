@@ -5,6 +5,9 @@ describe('connector label patterns', () => {
   it('fills {{value}}, with fixed digits for a number or text that reads as one, and a dash for no value', () => {
     expect(fillLabel('{{value | fixed:2}} Gbps', 1.2)).toBe('1.20 Gbps');
     expect(fillLabel('{{value | fixed:0}} %', '87.6')).toBe('88 %');
+    expect(fillLabel('{{value | grouped:0}} TEU', 12450.4)).toBe('12,450 TEU');
+    expect(fillLabel('{{value | grouped:2}}', '-1234567.891')).toBe('-1,234,567.89');
+    expect(fillLabel('{{value | grouped:0}}', 999)).toBe('999');
     expect(fillLabel('{{value | fixed:1}}', 'down')).toBe('down');
     expect(fillLabel('{{value}} / {{value}}', 3)).toBe('3 / 3');
     expect(fillLabel('{{value}} Mbps', undefined)).toBe('— Mbps');

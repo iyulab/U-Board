@@ -1,4 +1,4 @@
-import { parseTemplate } from './elements/template.js';
+import { formatValue, parseTemplate } from './elements/template.js';
 
 /**
  * A bound connector label's text around its value: when `label` is bound and its text names `{{value}}`, the value
@@ -44,10 +44,8 @@ export function fillLabel(label: string, value: unknown): string {
       if (node.kind === 'text') return node.text;
       if (node.kind === 'section') return '';
       if (value === undefined || value === null || value === '') return MISSING_LABEL_VALUE;
-      if (node.fixed !== undefined) {
-        const number = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
-        if (Number.isFinite(number)) return number.toFixed(node.fixed);
-      }
+      const formatted = formatValue(value, node);
+      if (formatted !== value) return String(formatted);
       return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? String(value) : MISSING_LABEL_VALUE;
     })
     .join('');

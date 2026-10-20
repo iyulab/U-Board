@@ -519,7 +519,7 @@ elements: {
   a name is looked up in the item first and `{{.}}` is the item itself), `{{^flag}}…{{/flag}}` (shown
   when empty or false), `{{! comment}}`. `{{inlet | fixed:1}}` shows a number — or text that reads as
   one — with that many digits after the point (0–6), so `24` and `24.25` read as `24.0` and `24.3`;
-  anything else shows as it is. There is no unescaped output and no partial. Numbers become
+  `{{orders | grouped:0}}` the same with a comma every three digits (`61,700`); anything else shows as it is. There is no unescaped output and no partial. Numbers become
   a drawing through CSS: `style="--level: {{level}}"` and `height: calc(var(--level) * 1%)`.
 - **Markup policy** — HTML text and structure tags, `img`, and SVG shapes, text, gradients, patterns,
   symbols and filters. No `script`, `style`, `iframe`, `a`, form or `foreignObject`; no event handler
@@ -631,7 +631,7 @@ draws — a label as text (a number as it reads), a width as a positive number, 
 arrow as one of `CONNECTOR_ARROWS`, a colour as text — otherwise the static value stays, as for a disconnected
 binding. A bound label whose text names `{{value}}` is a pattern: the value fills that place and the rest stays —
 `label: "{{value | fixed:1}} Mbps"` reads `820.4 Mbps`, with the template element's `fixed:N` (0–6 digits after the
-point) — and `—` takes the value's place while there is none (and in the editor). In a component, its parameters fill
+point) or `grouped:N` (the same with a comma every three digits) — and `—` takes the value's place while there is none (and in the editor). In a component, its parameters fill
 their `{{name}}` first and `{{value}}` stays for the binding. A resolved connector carries `quality` per
 bound path.
 

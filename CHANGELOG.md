@@ -19,6 +19,9 @@ do when upgrading. Each release's notes carry its section.
 - A grid item can span rows — a map beside a column of cards.
 - A gallery sample of a dark control room: a container terminal — the day's figures in big numbers, the ships at their
   berths with their progress, the yard filling up, the berth schedule, the cranes' rates and the alarms (example data).
+- A gallery sample of a bright sales room: an online shop on a sale day — revenue on a ring against its target, the figures
+  against yesterday, the funnel, a category treemap, a channel donut, an hourly comparison, a weekday × hour heatmap and the
+  orders arriving now (example data).
 
 ### Changed
 

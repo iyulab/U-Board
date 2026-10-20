@@ -46,11 +46,12 @@ const stat: ElementDefinition = {
       unit: { type: 'string' },
       note: { type: 'string', description: 'A line under the number — the target, the trend.' },
       tone: { enum: ['normal', 'warn'], description: 'warn draws it in the warning colour.' },
+      decimal: { type: 'boolean', description: 'Shown with one digit after the point; otherwise whole, grouped by thousands.' },
     },
   },
   template: `<div class="stat {{tone}}">
   <span class="label">{{label}}</span>
-  <b class="value">{{value}}<small>{{unit}}</small></b>
+  <b class="value">{{#decimal}}{{value | grouped:1}}{{/decimal}}{{^decimal}}{{value | grouped:0}}{{/decimal}}<small>{{unit}}</small></b>
   {{#note}}<span class="note">{{note}}</span>{{/note}}
 </div>`,
   style: `.stat{--c:var(--u-widget-primary);height:100%;box-sizing:border-box;display:grid;align-content:center;gap:2px;padding:10px 14px;border-top:2px solid var(--c);background:linear-gradient(180deg,color-mix(in srgb,var(--c) 14%,transparent),transparent 70%);font-family:var(--u-widget-font-family)}
@@ -84,7 +85,7 @@ const berth: ElementDefinition = {
   <header><span class="tag">{{berth}}</span><span class="state"><i></i>{{stateText}}</span></header>
   <b class="vessel">{{vessel}}</b>
   <div class="bar" role="img" aria-label="{{progress}}%"><span></span></div>
-  <footer><span>{{done}} / {{total}} moves · 크레인 {{cranes}}</span><span>{{etd}}</span></footer>
+  <footer><span>{{done | grouped:0}} / {{total | grouped:0}} moves · 크레인 {{cranes}}</span><span>{{etd}}</span></footer>
 </article>`,
   style: `.berth{--c:var(--u-widget-primary);height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr auto auto;gap:6px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);border-radius:10px;background:color-mix(in srgb,var(--u-widget-bg) 82%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--c) 22%,transparent);font-family:var(--u-widget-font-family)}
 .waiting{--c:var(--u-widget-warning)}
@@ -266,13 +267,13 @@ const TERMINAL: CellCanvas = {
 
 // ── The board ───────────────────────────────────────────────────────────────────────────────────────────────────
 
-const statItem = (id: string, label: string, valuePath: string, unit: string, note?: string): GridItem => ({
+const statItem = (id: string, label: string, valuePath: string, unit: string, note?: string, decimal = false): GridItem => ({
   id,
   span: 2,
   spanMedium: 2,
   widget: {
     type: 'element:stat',
-    props: { label, value: 0, unit, ...(note && { note }) },
+    props: { label, value: 0, unit, ...(note && { note }), ...(decimal && { decimal }) },
     bindings: { value: bind('/terminal/summary', valuePath) },
   },
 });
@@ -287,9 +288,9 @@ const card = (id: string, span: number, spanMedium: number, widget: Widget, heig
 
 const items: GridItem[] = [
   statItem('teu', '오늘 처리량', '/teuToday', 'TEU', '목표 9,000'),
-  statItem('occupancy', '선석 점유율', '/berthOccupancy', '%'),
-  statItem('gmph', '크레인 생산성', '/gmph', 'GMPH', '목표 30'),
-  statItem('yard', '장치율', '/yardUtilization', '%'),
+  statItem('occupancy', '선석 점유율', '/berthOccupancy', '%', undefined, true),
+  statItem('gmph', '크레인 생산성', '/gmph', 'GMPH', '목표 30', true),
+  statItem('yard', '장치율', '/yardUtilization', '%', undefined, true),
   // The queue at the gate turns to the warning colour past forty trucks.
   card('queue', 2, 2, {
     type: 'element:stat',

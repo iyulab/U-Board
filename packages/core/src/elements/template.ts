@@ -4,20 +4,21 @@
  * once for any other truthy value), `{{^name}}…{{/name}}` (shown when the value is empty or false) and
  * `{{! comment}}`. A name is a dotted path into the props (`reading.value`), or `.` for the current item.
  * A value may name how a number is shown: `{{inlet | fixed:1}}` — that many digits after the point (0–6), so 24 and
- * 24.25 read as 24.0 and 24.3 beside each other; anything that is not a number shows as it is.
+ * 24.25 read as 24.0 and 24.3 beside each other; `{{orders | grouped:0}}` the same with a comma every three digits
+ * (61,700). Anything that is not a number shows as it is.
  *
  * Left out on purpose: unescaped output (`{{{…}}}`, `{{&…}}`), partials (`{{>…}}`) and delimiter changes
  * (`{{=…=}}`) — each would let a value become markup, or a template depend on something outside itself.
  */
 export type TemplateNode =
   | { kind: 'text'; text: string }
-  | { kind: 'value'; path: string; fixed?: number }
+  | { kind: 'value'; path: string; fixed?: number; grouped?: true }
   | { kind: 'section'; path: string; inverted: boolean; children: TemplateNode[] };
 
 export type ParsedTemplate = { ok: true; nodes: TemplateNode[] } | { ok: false; error: string; offset: number };
 
 const PATH = /^(?:\.|[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)$/;
-const FIXED = /^fixed\s*:\s*([0-6])$/;
+const FORMAT = /^(fixed|grouped)\s*:\s*([0-6])$/;
 
 export function parseTemplate(source: string): ParsedTemplate {
   const root: TemplateNode[] = [];
@@ -47,11 +48,13 @@ export function parseTemplate(source: string): ParsedTemplate {
     const [name, format, ...rest] = (isSection ? tag.slice(1) : tag).split('|');
     const path = name.trim();
     let fixed: number | undefined;
+    let grouped = false;
     if (format !== undefined) {
       if (isSection) return fail(`a section "{{${tag}}}" takes no format — formats are for values`, start);
-      const digits = rest.length === 0 ? FIXED.exec(format.trim()) : null;
-      if (!digits) return fail(`"${format.trim()}" is not a format — use "fixed:N", N digits after the point (0–6): {{${path} | fixed:1}}`, start);
-      fixed = Number(digits[1]);
+      const digits = rest.length === 0 ? FORMAT.exec(format.trim()) : null;
+      if (!digits) return fail(`"${format.trim()}" is not a format — use "fixed:N" (N digits after the point, 0–6: {{${path} | fixed:1}}) or "grouped:N" (the same with a comma every three digits: {{${path} | grouped:0}})`, start);
+      fixed = Number(digits[2]);
+      grouped = digits[1] === 'grouped';
     }
     if (!PATH.test(path)) return fail(`"${path}" is not a value name — use a prop name, a dotted path to one, or "."`, start);
 
@@ -63,7 +66,7 @@ export function parseTemplate(source: string): ParsedTemplate {
       if (section.path !== path) return fail(`"{{/${path}}}" closes the section "${section.path}" opened earlier`, start);
       into().push({ kind: 'section', path: section.path, inverted: section.inverted, children: section.children });
     } else {
-      into().push(fixed === undefined ? { kind: 'value', path } : { kind: 'value', path, fixed });
+      into().push(fixed === undefined ? { kind: 'value', path } : { kind: 'value', path, fixed, ...(grouped && { grouped: true as const }) });
     }
   }
 
@@ -79,4 +82,18 @@ export function parseTemplate(source: string): ParsedTemplate {
 /** The text of every `{{…}}` tag replaced by `mark`, so markup can be read without the values in it. */
 export function maskTemplateValues(source: string, mark: string): string {
   return source.replace(/\{\{[\s\S]*?\}\}/g, mark);
+}
+
+/** A value in the form its node names: a number — or text that reads as one, as a source often sends it — with `fixed`
+ *  digits after the point, and a comma every three digits when `grouped`. Anything else is returned as it is. */
+export function formatValue(value: unknown, node: { fixed?: number; grouped?: true }): unknown {
+  if (node.fixed === undefined) return value;
+  const number = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+  if (!Number.isFinite(number)) return value;
+  const text = number.toFixed(node.fixed);
+  if (!node.grouped) return text;
+  const [whole, part] = text.split('.');
+  const sign = whole.startsWith('-') ? '-' : '';
+  const digits = sign ? whole.slice(1) : whole;
+  return `${sign}${digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${part !== undefined ? `.${part}` : ''}`;
 }
