@@ -6,17 +6,17 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
-### Fixed
-
-- `look` takes its picture with animations stopped at their start, so a blinking state's ring is always drawn on —
-  a picture taken mid-blink showed the ring as missing, and an assistant rebuilt it inside its element instead.
-
 ### Changed
 
 - The connector rules show a bound label keeping its unit: `"{{value | fixed:1}} Mbps"`.
 - The element rules say an element's sizes include padding and border.
 - The colour rules name the theme colours a board can use instead of a hex value: `positive`, `warning`, `negative`,
   `accent`.
+
+### Fixed
+
+- `look` takes its picture with animations stopped at their start, so a blinking state's ring is always drawn on —
+  a picture taken mid-blink showed the ring as missing, and an assistant rebuilt it inside its element instead.
 
 ## [0.12.0] - 2026-10-20
 
