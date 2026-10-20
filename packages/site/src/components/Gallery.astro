@@ -40,6 +40,18 @@ const cards = SAMPLE_PACKS.map(pack => {
       <h1>{g.heading}</h1>
       <p>{g.intro}</p>
     </div>
+    <nav class="gallery-index" aria-label={g.index}>
+      <ol>
+        {
+          cards.map(({ pack }) => (
+            <li>
+              <a href={`#${pack.id}`}>{pack.title[locale]}</a>
+              <span>{pack.field[locale]} · {pack.kind[locale]}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </nav>
     {
       cards.map(({ pack, aspect, recorded }) => (
         <article class="sample" id={pack.id}>
@@ -89,8 +101,38 @@ const cards = SAMPLE_PACKS.map(pack => {
     line-height: 1.65;
     word-break: keep-all;
   }
+  .gallery-index {
+    margin: 0 0 2.5rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--line, #d6dedb);
+    border-radius: 8px;
+  }
+  .gallery-index ol {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: 0.6rem 1.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .gallery-index li {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  .gallery-index a {
+    font-weight: 600;
+    word-break: keep-all;
+  }
+  .gallery-index span {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    word-break: keep-all;
+  }
   .sample {
     margin-block: 0 3rem;
+    /* A jump from the index lands the board's heading under the page's top edge, not behind it. */
+    scroll-margin-top: 1.5rem;
     /* The board's box takes its height from the card's width (cqi). */
     container-type: inline-size;
   }
@@ -128,6 +170,10 @@ const cards = SAMPLE_PACKS.map(pack => {
   .sample-board.live {
     aspect-ratio: auto !important;
     height: min(80vh, 760px, calc(100cqi / var(--ratio, 1.6) + 76px));
+  }
+  /* A grid not drawn yet holds room for itself, so the page does not jump as the boards above it are drawn. */
+  .sample-board--grid:not(.live) {
+    min-height: 32rem;
   }
   /* A grid has no drawing to fit: it is as tall as its items, at the width it is given. */
   .sample-board--grid.live {

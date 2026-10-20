@@ -70,6 +70,8 @@ export interface Copy {
     description: string;
     heading: string;
     intro: string;
+    /** The name of the list of boards at the top of the page. */
+    index: string;
     field: string;
     kind: string;
     /** `{time}` — when the source's answers shown were recorded. */
@@ -195,7 +197,8 @@ export const COPY: Record<Locale, Copy> = {
       title: 'U-Board — 보드 갤러리',
       description: 'U-Board로 그린 보드. 장소를 그린 약도·배치도 위, 값이 그 자리에 놓인 모습을 분야별로 봅니다.',
       heading: 'U-Board로 그린 보드',
-      intro: '배경은 장소를 그린 약도나 배치도이고, 값은 그 값이 가리키는 자리에 놓입니다. 도면이 없는 일반 대시보드는 위젯을 순서대로 칸에 늘어놓아 화면 폭에 맞춰 줄을 바꿉니다. 공공기관이 개방한 실시간 데이터에 연결한 보드는 녹화한 원천 응답을 보여 주며, 설치한 U-Board에서는 같은 보드가 원천을 직접 읽어 30초마다 갱신합니다. 공장처럼 공개 원천이 없는 분야는 예시 데이터로 그렸습니다.',
+      intro: '배경은 장소를 그린 약도나 배치도, 또는 흐름도·노선도 같은 도식이고, 값은 그 값이 가리키는 자리에 놓입니다. 도면이 없는 일반 대시보드는 위젯을 순서대로 칸에 늘어놓아 화면 폭에 맞춰 줄을 바꿉니다. 공공기관이 개방한 실시간 데이터에 연결한 보드는 녹화한 원천 응답을 보여 주며, 설치한 U-Board에서는 같은 보드가 원천을 직접 읽어 30초마다 갱신합니다. 공장처럼 공개 원천이 없는 분야는 예시 데이터로 그렸습니다.',
+      index: '보드 목록',
       field: '분야',
       kind: '배경',
       recorded: '{time}에 녹화한 원천 응답입니다.',
@@ -316,7 +319,8 @@ export const COPY: Record<Locale, Copy> = {
       title: 'U-Board — Board gallery',
       description: 'Boards drawn with U-Board: values placed where they belong on a plan or layout of the place, by field.',
       heading: 'Boards drawn with U-Board',
-      intro: 'The background is a plan or layout of the place, and each value sits where it belongs; an ordinary dashboard with no drawing lays its widgets out in order and rewraps to the screen’s width. Boards bound to live data that public bodies open to everyone show recorded answers from the sources; in an installed U-Board the same board reads the source itself and updates every 30 seconds. Fields with no public source, such as a plant, are drawn on example data.',
+      intro: 'The background is a plan or layout of the place, or a schematic such as a flow or a network map, and each value sits where it belongs; an ordinary dashboard with no drawing lays its widgets out in order and rewraps to the screen’s width. Boards bound to live data that public bodies open to everyone show recorded answers from the sources; in an installed U-Board the same board reads the source itself and updates every 30 seconds. Fields with no public source, such as a plant, are drawn on example data.',
+      index: 'Boards',
       field: 'Field',
       kind: 'Background',
       recorded: 'Answers from the source recorded at {time}.',
