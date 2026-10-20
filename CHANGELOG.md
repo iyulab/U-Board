@@ -11,6 +11,13 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A gallery sample drawn in flat isometric: a smart farm seen from above at an angle — four glasshouses with their crop
+  rows showing through the glass and the buildings beside them, a tag pinned to each roof with the temperature inside
+  and what the house is doing now, and on the side the weather the vents answer to and each house's temperature
+  against the heat alarm. On example data.
+
 ## [0.20.0] - 2026-10-20
 
 ### Added
