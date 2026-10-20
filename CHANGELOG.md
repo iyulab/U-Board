@@ -11,6 +11,14 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- A slow data source no longer leaves a board empty. A board's refresh waits up to 5 seconds for a source; a slower
+  read goes on in the background for up to 25 seconds (it was cut at 5) and its answer serves the next refresh. Until
+  then the board shows the last answer, as current while it is still the freshest the source can give, and the first
+  time it reads the source, "still reading" (reason `pending`) instead of "disconnected — unreachable". A connection
+  test waits up to 25 seconds too.
+
 ## [0.17.0] - 2026-10-20
 
 ### Added

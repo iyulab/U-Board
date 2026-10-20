@@ -297,7 +297,7 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
         return;
       }
     }
-    res.status(200).json(await testConnector(candidate, target, resolveState.fetch));
+    res.status(200).json(await testConnector(candidate, target, resolveState.fetch, resolveState.readTimeoutMs));
   });
 
   router.put('/:connectorId', requireWorkspaceOwner(db), async (req: AuthedRequest<{ connectorId: string }>, res) => {

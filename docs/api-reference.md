@@ -162,7 +162,7 @@ source" itself.
 ### `QualityReason`
 
 ```ts
-type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'source' | 'throttled' | 'lagging';
+type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'source' | 'throttled' | 'lagging' | 'pending';
 ```
 
 Why a binding is not `live`, reported by the adapter when it can tell. Each names a different fix,
@@ -183,6 +183,8 @@ so an operator reading "disconnected" knows where to look:
 - `lagging` — the source answered, but its latest value is older than the binding expects of it (the
   HTTP connector's `maxAgeSeconds`): the source has stopped or fallen behind updating — neither the
   network nor the binding needs attention.
+- `pending` — the source is being read and has not answered yet, with no earlier answer to show meanwhile: a slow
+  source, the first time a board reads it. Nothing needs fixing; the next refresh shows the value.
 
 A reason annotates `quality`; it never changes it. A binding with no matching adapter, or whose
 adapter rejected, carries no reason — the core cannot tell a misconfiguration from a host that

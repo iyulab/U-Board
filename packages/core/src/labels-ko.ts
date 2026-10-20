@@ -303,6 +303,7 @@ export const KO_LABELS: UBoardLabels = {
       source: '원천이 응답에 오류를 알림',
       throttled: '요청 한도 초과',
       lagging: '원천이 기대만큼 갱신하지 않음',
+      pending: '원천 응답이 느려 아직 읽는 중',
     },
     age: ageText('ko'),
     brief: {
@@ -315,6 +316,7 @@ export const KO_LABELS: UBoardLabels = {
         source: '원천 오류',
         throttled: '요청 한도',
         lagging: '원천 갱신 늦음',
+        pending: '읽는 중',
       },
     },
   },

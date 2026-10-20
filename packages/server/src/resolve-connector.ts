@@ -44,7 +44,32 @@ export interface ResolveState {
    * value is too old to stand in for the current one. Unset: no limit, the last value is served however
    * old (its `observedAt` says how old). */
   staleMaxAgeMs?: number;
+  /** The last successful read per connector and URL (same key as `reads`), kept past its reuse window for as long as
+   * it is still the freshest answer that can exist (`LastRead.keepMs`): what a resolve answers with while a new read
+   * of a slow source is still out (stale-while-revalidate, RFC 5861). */
+  lastReads: Map<string, LastRead>;
+  /** How long a resolve waits for an upstream read before it answers without it (milliseconds) — the read itself goes
+   * on to `readTimeoutMs` and serves the next resolve. Default `DEFAULT_RESOLVE_WAIT_MS`. */
+  waitMs?: number;
+  /** How long an upstream read, and a connection test, may take before it is given up (milliseconds). Default
+   * `DEFAULT_READ_TIMEOUT_MS`. */
+  readTimeoutMs?: number;
 }
+
+/** A successful read kept after its reuse window: its body, when it was read, and how long after that it may still
+ * answer — its reuse window plus the read time limit, the latest a read started when the window closed can finish. */
+export interface LastRead {
+  body: unknown;
+  readAt: number;
+  keepMs: number;
+}
+
+/** How long a resolve waits for its upstream read by default — a viewer's whole board waits on its slowest binding. */
+export const DEFAULT_RESOLVE_WAIT_MS = 5_000;
+
+/** How long an upstream read may take by default — under the 30 s a client gives a request, so a connection test
+ * answers with what the source did rather than the client's own timeout. */
+export const DEFAULT_READ_TIMEOUT_MS = 25_000;
 
 /** One read of a data source URL: its parsed body and when it was read (epoch ms) — the time a
  * value taken from it was observed, however much later a resolve reuses it. `settledAt` is set
@@ -69,13 +94,31 @@ function sweepExpiredReads(state: ResolveState): void {
   for (const [key, read] of state.reads) {
     if (read.settledAt !== undefined && now - read.settledAt >= read.keepMs) state.reads.delete(key);
   }
+  for (const [key, last] of state.lastReads) {
+    if (now - last.readAt > last.keepMs) state.lastReads.delete(key);
+  }
+}
+
+/** Whether `promise` settles — either way — within `ms`; the timer is cleared as soon as it does. */
+async function settledWithin(promise: Promise<unknown>, ms: number): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<boolean>(done => {
+    timer = setTimeout(() => done(false), ms);
+  });
+  try {
+    return await Promise.race([promise.then(() => true, () => true), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /** Drops everything the resolve proxy holds for `connectorId` — reads being reused, last-known values
  * served as `stale`, logged failures, its access token. Call it when the connector's settings change
  * or it is deleted: what was read with the old address or credentials must not answer for the new. */
 export function forgetConnector(state: ResolveState, connectorId: string): void {
-  for (const key of state.reads.keys()) if (key.startsWith(`${connectorId} `)) state.reads.delete(key);
+  for (const reads of [state.reads, state.lastReads]) {
+    for (const key of reads.keys()) if (key.startsWith(`${connectorId} `)) reads.delete(key);
+  }
   for (const map of [state.values, state.failures]) {
     for (const key of map.keys()) if (key.startsWith(`${connectorId}:`)) map.delete(key);
   }
@@ -294,7 +337,13 @@ function requestUrl(connector: Connector, target: URL): URL {
 /** Fetches and parses `target` with `connector`'s auth headers. An OAuth connector whose token is
  * rejected (401) gets one fresh token and one retry — the authorization server may revoke a token
  * before the expiry it advertised. */
-async function fetchBody(connector: Connector, target: URL, tokens: ClientCredentialsTokens, fetchFn: typeof fetch): Promise<unknown> {
+async function fetchBody(
+  connector: Connector,
+  target: URL,
+  tokens: ClientCredentialsTokens,
+  fetchFn: typeof fetch,
+  timeoutMs: number
+): Promise<unknown> {
   // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
   // compromised upstream must not be able to bounce the credentialed request to a host of its
   // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
@@ -303,7 +352,7 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
     stage = 'token';
     const headers = await authHeaders(connector, tokens);
     stage = 'request';
-    return fetchFn(requestUrl(connector, target), { headers, redirect: 'manual', signal: AbortSignal.timeout(5000) });
+    return fetchFn(requestUrl(connector, target), { headers, redirect: 'manual', signal: AbortSignal.timeout(timeoutMs) });
   };
   try {
     let response = await send();
@@ -356,14 +405,16 @@ export async function resolveConnectorValue(
     // Each entry holds a whole response body, so finished reads past their window go whenever a new
     // read starts: what stays is at most the reads of the last window (and the ones still open).
     sweepExpiredReads(state);
+    const readTimeoutMs = state.readTimeoutMs ?? DEFAULT_READ_TIMEOUT_MS;
     const started: UpstreamRead = {
-      result: fetchBody(connector, target, state.tokens, state.fetch).then(body => ({ body, readAt: Date.now() })),
+      result: fetchBody(connector, target, state.tokens, state.fetch, readTimeoutMs).then(body => ({ body, readAt: Date.now() })),
       keepMs: windowMs,
     };
     state.reads.set(requestKey, started);
     // A failed read is never reused — the next resolve asks the data source again.
     started.result.then(
-      () => {
+      ({ body, readAt }) => {
+        state.lastReads.set(requestKey, { body, readAt, keepMs: started.keepMs + readTimeoutMs });
         if (started.keepMs > 0) started.settledAt = Date.now();
         else if (state.reads.get(requestKey) === started) state.reads.delete(requestKey);
       },
@@ -377,16 +428,27 @@ export async function resolveConnectorValue(
   try {
     let body: unknown;
     let readAt: number;
-    try {
-      ({ body, readAt } = await read.result);
-    } catch (err) {
-      throw err instanceof StageError ? err : new StageError('request', err);
+    let fromLast = false;
+    if (read.settledAt === undefined && !(await settledWithin(read.result, state.waitMs ?? DEFAULT_RESOLVE_WAIT_MS))) {
+      // The source is slow: answer now with the last read while this one goes on and serves the next resolve. It is
+      // not a failure — nothing is logged, and nothing recovers when the read lands.
+      const last = state.lastReads.get(requestKey);
+      if (last === undefined || Date.now() - last.readAt > last.keepMs) return stillReading(state.values.get(cacheKey), state);
+      ({ body, readAt } = last);
+      fromLast = true;
+    } else {
+      try {
+        ({ body, readAt } = await read.result);
+      } catch (err) {
+        throw err instanceof StageError ? err : new StageError('request', err);
+      }
     }
     const reading = readHttpRef(body, ref, readAt, Date.now());
     if (!reading.ok) throw new StageError('response', new Error(reading.message), reading.reason);
     const result = resolvedReading(reading);
     state.values.set(cacheKey, { value: result.value, observedAt: result.observedAt!, readAt });
-    if (state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
+    // An answer from the last read says nothing about whether the source works again.
+    if (!fromLast && state.failures.delete(cacheKey)) console.warn(`${where}: recovered`);
     // The source answered with its latest — shown as `stale` (`lagging`) when older than the binding expects.
     return result;
   } catch (err) {
@@ -411,6 +473,15 @@ export async function resolveConnectorValue(
   }
 }
 
+/** What a resolve answers while the first read of a slow source is still out: the last value it served, as `stale`
+ *  — a read is under way, nothing has failed — or, with none (or one past the stale age limit), `pending`. */
+function stillReading(cached: CachedValue | undefined, state: ResolveState): ResolvedBinding {
+  const tooOld = cached !== undefined && state.staleMaxAgeMs !== undefined && Date.now() - cached.readAt > state.staleMaxAgeMs;
+  return cached !== undefined && !tooOld
+    ? { value: cached.value, quality: 'stale', observedAt: cached.observedAt }
+    : { value: undefined, quality: 'disconnected', reason: 'pending' };
+}
+
 /** The outcome of trying a connector's settings: `ok`, or where it failed (`stage`), what that
  *  means for whoever fixes it (`reason`), the status the upstream answered with, and a message
  *  that names the failure — never the request, whose headers carry the credentials. */
@@ -421,13 +492,18 @@ export type ConnectorTestResult =
 /** Tries `connector` as a binding would use it: obtains an OAuth access token, then, given a
  *  target, requests it once. A token cache of its own, so a token already obtained with the stored
  *  settings cannot vouch for the ones being tried; nothing is cached or logged for bindings. */
-export async function testConnector(connector: Connector, target: URL | null, fetchFn: typeof fetch): Promise<ConnectorTestResult> {
+export async function testConnector(
+  connector: Connector,
+  target: URL | null,
+  fetchFn: typeof fetch,
+  timeoutMs = DEFAULT_READ_TIMEOUT_MS
+): Promise<ConnectorTestResult> {
   const tokens = new ClientCredentialsTokens(Date.now, fetchFn);
   try {
     if (target) {
       // The start of what came back, so the owner sees whether it is the data or an error the source
       // answered with success (some report a bad key or an empty query in a 200 body).
-      return { ok: true, excerpt: withoutSecret(connector, excerptOf(await fetchBody(connector, target, tokens, fetchFn))) };
+      return { ok: true, excerpt: withoutSecret(connector, excerptOf(await fetchBody(connector, target, tokens, fetchFn, timeoutMs))) };
     } else if (connector.authType === 'oauth2-client-credentials') {
       try {
         await tokens.get(clientCredentialsOf(connector));

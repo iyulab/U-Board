@@ -8,8 +8,10 @@ what it shows. Nothing here is specific to one product; a board reads any source
 ## What the HTTP connector reads
 
 - **A `GET` that answers JSON.** Another format is shown as not connected, with the reason "the source
-  answered in a form that cannot be read". A request that takes over 5 seconds is a failed read; a redirect
-  is not followed.
+  answered in a form that cannot be read". A redirect is not followed.
+- **A slow source.** A board waits up to 5 seconds for a read; a slower source is read on in the background, for up
+  to 25 seconds, and its answer serves the next refresh. Meanwhile the board shows the last answer — or, the first
+  time, "still reading" (reason `pending`). A request that takes over 25 seconds is a failed read.
 - **Credentials** a server can hold: none, a bearer token, a header of your choice, a key in the query or
   in the path, or OAuth 2.0 client credentials (RFC 6749 §4.4 — form body or HTTP Basic; the token is
   reused until it expires and requested again once on a `401`).

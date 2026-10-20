@@ -107,6 +107,7 @@ export function createApp(config: AppConfig): express.Express {
     fetch: connectorFetch,
     failures: new Map(),
     reads: new Map(),
+    lastReads: new Map(),
     reuseMs: config.upstreamReuseMs ?? DEFAULT_UPSTREAM_REUSE_MS,
     staleMaxAgeMs: config.staleMaxAgeMs,
   };

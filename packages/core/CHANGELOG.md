@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Breaking: `QualityReason` has `pending`** — the source is being read and has not answered yet, with no earlier
+  answer to show meanwhile (a slow source, the first time a board reads it). `REASON_LABEL`, the default `QualityText`
+  and the Korean labels have text for it. A `QualityText` or a `Record<QualityReason, string>` written out in full
+  needs a `pending` entry.
+
 ## [0.27.0] - 2026-10-20
 
 ### Added

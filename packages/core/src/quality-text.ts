@@ -22,6 +22,7 @@ export const REASON_LABEL: Record<QualityReason, string> = {
   source: 'the source reported an error in its answer',
   throttled: 'rate limited',
   lagging: 'the source has not updated it as often as expected',
+  pending: 'the source is slow to answer — still reading',
 };
 
 /** The words `describeQuality` builds its text from — pass your own to describe quality in another
@@ -74,6 +75,7 @@ export const DEFAULT_QUALITY_TEXT: QualityText = {
       source: 'Source reported error',
       throttled: 'Rate limited',
       lagging: 'Source behind',
+      pending: 'Still reading',
     },
   },
 };

@@ -55,8 +55,10 @@ export type ConnectionQuality = 'live' | 'stale' | 'disconnected';
  * request (a key it does not accept, a query it rejects, a quota): what it said is the fix, read it.
  * `throttled` — requests are being rate limited. `lagging` — the source answered, but its latest
  * value is older than the binding expects of it: the source has stopped or fallen behind updating, not the
- * network or the binding. It annotates `quality` and never changes it. */
-export type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'source' | 'throttled' | 'lagging';
+ * network or the binding. It annotates `quality` and never changes it. `pending` — the source is being read and has
+ * not answered yet, with no earlier answer to show meanwhile (a slow source, the first time a board reads it): wait,
+ * nothing needs fixing. */
+export type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'source' | 'throttled' | 'lagging' | 'pending';
 
 export interface ResolvedBinding {
   value: unknown;
