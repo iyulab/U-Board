@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-20
+
+### Changed
+
+- Needs `@iyulab/u-board` `^0.30.0` (widgets from `@iyulab/u-widgets` 0.38 — `describe("widget:metric")` shows a
+  sparkline, and the advice of the tools that write and check a board names a misspelt field of a reference line or a
+  series).
+
 ### Fixed
 
 - `look` no longer reports a widget's content running past its box when only a line's text reaches a few pixels below

@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-20
+
 ### Added
 
 - A gallery sample laid out as an infographic: a day of the blood supply read like a poster — a headline, the stock in
@@ -32,6 +34,9 @@ do when upgrading. Each release's notes carry its section.
   screen rather than every board when the page opens — at the top of the page, two boards and ten widgets instead of
   all 23 boards and some 200 widgets.
 - The container terminal sample draws its crane target as a dashed line, as it meant to.
+- Widgets come from `@iyulab/u-widgets` 0.38: a metric can draw its recent values as a small line under it
+  (`data.sparkline`); a horizontal bar chart labels a reference line at its top, clear of the value axis; an area
+  chart's reference lines are accepted by the checks.
 
 ## [0.19.0] - 2026-10-20
 

@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-10-20
+
+### Changed
+
+- Widgets come from `@iyulab/u-widgets` 0.38 — `metric` and `stat-group` draw `data.sparkline` (the recent values, as a
+  small line under the value), a misspelt field of a reference line or a series is named by the widget checks, an area
+  chart takes reference lines, and a horizontal bar chart labels one at its top. Needs `@iyulab/u-widgets` `^0.38.0`.
+
 ## [0.29.0] - 2026-10-20
 
 ### Changed
