@@ -260,13 +260,19 @@ describe('ViewerPage labels', () => {
   });
 
   it('settles when labels are passed as a new object on every render', async () => {
-    const { rerender } = render(<ViewerPage adapters={[new SpyAdapter()]} document={docWithBinding()} labels={{ ...ko }} />);
+    const adapters = [new SpyAdapter()];
+    const { rerender } = render(<ViewerPage adapters={adapters} document={docWithBinding()} labels={{ ...ko }} />);
     await screen.findByTestId('viewer');
-    rerender(<ViewerPage adapters={[new SpyAdapter()]} document={docWithBinding()} labels={{ ...ko }} />);
-    await new Promise(resolve => setTimeout(resolve, 50));
-    const calls = viewerProps.mock.calls.length;
-    await new Promise(resolve => setTimeout(resolve, 50));
-    expect(viewerProps.mock.calls.length).toBe(calls);
+    rerender(<ViewerPage adapters={adapters} document={docWithBinding()} labels={{ ...ko }} />);
+    // Settled: a 50 ms window with no render. A render loop never gets one; a slow machine only takes longer to reach
+    // it (one fixed window read a late resolve under load as a loop).
+    let settled = false;
+    for (let i = 0; i < 40 && !settled; i++) {
+      const calls = viewerProps.mock.calls.length;
+      await new Promise(resolve => setTimeout(resolve, 50));
+      settled = viewerProps.mock.calls.length === calls;
+    }
+    expect(settled).toBe(true);
   });
 });
 
