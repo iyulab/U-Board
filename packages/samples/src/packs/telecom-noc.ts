@@ -66,18 +66,20 @@ const matrix: ElementDefinition = {
     <tbody>{{#regions}}<tr><th>{{name}}</th>{{#cells}}<td class="{{state}}">{{availability | fixed:2}}</td>{{/cells}}</tr>{{/regions}}</tbody>
   </table>
 </section>`,
-  style: `.matrix{height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;gap:8px;padding:12px 14px;border:1px solid var(--u-widget-border);border-radius:6px;background:var(--u-widget-bg);color:var(--u-widget-text);font-family:${MONO}}
+  style: `.matrix{container-type:inline-size;height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;gap:8px;padding:12px 14px;border:1px solid var(--u-widget-border);border-radius:6px;background:var(--u-widget-bg);color:var(--u-widget-text);font-family:${MONO}}
 header{display:flex;justify-content:space-between;align-items:center;font-size:13px}
 .key{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--u-widget-text-secondary)}
 .key i{width:9px;height:9px;border-radius:2px;margin-left:6px}
 table{width:100%;height:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed}
 th{font-size:11px;font-weight:600;color:var(--u-widget-text-secondary);text-align:center;white-space:nowrap}
 tbody th{text-align:left}
-td{font-size:12px;text-align:center;border-radius:3px;font-variant-numeric:tabular-nums}
+td{font-size:12px;text-align:center;border-radius:3px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .ok{background:#14532d;color:#bbf7d0}
 .warn{background:#713f12;color:#fde68a}
 .down{background:#7f1d1d;color:#fecaca;box-shadow:0 0 0 1px #ef4444 inset}
-.key .ok{background:#22c55e}.key .warn{background:#eab308}.key .down{background:#ef4444}`,
+.key .ok{background:#22c55e}.key .warn{background:#eab308}.key .down{background:#ef4444}
+/* On a phone the matrix is a few hundred px wide: the figures and the names shrink with it rather than wrap. */
+@container (max-width: 420px){td{font-size:min(12px,3.1cqi)}th{font-size:min(11px,2.9cqi);overflow:hidden;text-overflow:ellipsis}tbody th{font-size:min(11px,3.6cqi)}table{border-spacing:2px}.key{display:none}}`,
   size: { width: 640, height: 330 },
 };
 

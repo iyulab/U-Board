@@ -61,7 +61,7 @@ const departures: ElementDefinition = {
   },
   template: `<section class="board">
   <header><b>출발 <span>DEPARTURES</span></b></header>
-  <table>
+  <div class="rows"><table>
     <thead><tr><th>시각<i>TIME</i></th><th>편명<i>FLIGHT</i></th><th>목적지<i>DESTINATION</i></th><th>게이트<i>GATE</i></th><th>현황<i>REMARKS</i></th></tr></thead>
     <tbody>{{#flights}}<tr class="{{status}}">
       <td><span class="flap">{{time}}</span></td>
@@ -70,9 +70,9 @@ const departures: ElementDefinition = {
       <td><span class="flap">{{gate}}</span></td>
       <td class="remark">{{remark}}<small>{{remarkEn}}</small></td>
     </tr>{{/flights}}</tbody>
-  </table>
+  </table></div>
 </section>`,
-  style: `.board{height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;gap:10px;padding:16px 20px;border-radius:6px;background:#0a0a0a;color:${AMBER};font-family:var(--u-widget-font-family)}
+  style: `.board{container-type:inline-size;height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;gap:10px;padding:16px 20px;border-radius:6px;background:#0a0a0a;color:${AMBER};font-family:var(--u-widget-font-family)}
 header b{font-size:26px;letter-spacing:.04em;color:#fff}
 header span{font-family:${MONO};font-size:15px;color:${AMBER};letter-spacing:.2em;margin-left:8px}
 table{width:100%;border-collapse:collapse}
@@ -88,7 +88,12 @@ td small{display:block;font-size:11px;color:#a3a3a3;margin-top:2px}
 .delayed .remark{color:#fb923c}
 .cancelled .remark{color:#f87171}
 .cancelled .dest,.cancelled .flap{text-decoration:line-through;text-decoration-color:#f87171}
-.departed{opacity:.45}`,
+.departed{opacity:.45}
+.rows{min-width:0;overflow-x:auto;scrollbar-color:#404040 transparent}
+th{white-space:nowrap}
+/* On a phone: smaller tiles, the English lines and the airline left out — and what still does not fit scrolls across. */
+@container (max-width: 640px){.board{padding:12px}td{padding:5px 4px;font-size:14px}th{padding:0 4px 6px}.flap{font-size:15px}td small,th i{display:none}}
+@container (max-width: 360px){td{padding:4px 3px;font-size:13px}th{padding:0 3px 6px;font-size:12px}.flap{font-size:13px}header b{font-size:22px}.board{padding:10px 8px}.dest{white-space:normal;word-break:keep-all}}`,
   size: { width: 860, height: 640 },
 };
 
