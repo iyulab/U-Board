@@ -1,14 +1,10 @@
-import { createRequire } from 'node:module';
-import { readFileSync } from 'node:fs';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, getByPointer } from '@iyulab/u-board/domain';
 import { help } from '@iyulab/u-widgets/tools';
+// Imported rather than read from disk, so `describe` runs where there is no file system — a browser's chat panel.
+import schema from '@iyulab/u-board/view-document.schema.json' with { type: 'json' };
 
-const require = createRequire(import.meta.url);
-
-/** The published JSON Schema of a board document, read once. */
-let schema: unknown;
+/** The published JSON Schema of a board document. */
 function documentSchema(): unknown {
-  schema ??= JSON.parse(readFileSync(require.resolve('@iyulab/u-board/view-document.schema.json'), 'utf8'));
   return schema;
 }
 

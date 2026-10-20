@@ -5,6 +5,14 @@
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./tools": {
+      "types": "./dist/tools-entry.d.ts",
+      "import": "./dist/tools-entry.js"
+    },
+    "./package.json": "./package.json"
+  },
   "bin": {
     "u-board-mcp": "dist/index.js"
   },
@@ -15,6 +23,7 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "build:lib": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",

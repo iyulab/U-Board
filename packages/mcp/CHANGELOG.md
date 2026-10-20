@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `@iyulab/u-board-mcp/tools`: the board tools without the MCP server, for a host that offers them to a model itself —
+  `boardTools(client)` gives each tool's name, description, input and handler, and `functionTool(tool)` lists it as an
+  OpenAI-compatible chat completions function, with the same input schema the MCP server lists. Nothing it imports
+  needs Node. `UBoardClient` also takes a workspace instead of a token, for a page signed in to the console: its
+  requests carry the session cookie.
+
 ## [0.17.0] - 2026-10-20
 
 ### Changed

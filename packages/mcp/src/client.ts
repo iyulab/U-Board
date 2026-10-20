@@ -68,19 +68,31 @@ export interface Saved {
   advice: ViewDocumentAdvice[];
 }
 
+/** Who the client acts as when it holds no token: a person signed in to the console, in one of their workspaces — the
+ *  browser's session cookie goes with each request instead of a token. */
+export interface SessionAuth {
+  workspace: { id: string; name: string };
+}
+
 /**
  * A U-Board server's API, as a workspace API token reaches it: `baseUrl` is where the server is
  * (`https://board.example.com`), `token` the `ubt_…` text made in the console. The token names the workspace — it is
- * read once from `GET /api/token`.
+ * read once from `GET /api/token`. In the console itself, `auth` is the workspace the signed-in person is in, and the
+ * session they are signed in with is what the server checks.
  */
 export class UBoardClient {
   private info?: Promise<TokenInfo>;
+  private readonly token?: string;
 
   constructor(
     private readonly baseUrl: string,
-    private readonly token: string,
-    private readonly fetchImpl: typeof fetch = fetch
-  ) {}
+    auth: string | SessionAuth,
+    private readonly fetchImpl: typeof fetch = (...args) => fetch(...args)
+  ) {
+    if (typeof auth === 'string') this.token = auth;
+    // A session's own role is the workspace's business; what it may do, the server decides on each request.
+    else this.info = Promise.resolve({ workspace: auth.workspace, scope: 'write', role: 'member' });
+  }
 
   tokenInfo(): Promise<TokenInfo> {
     this.info ??= this.request<TokenInfo>('GET', '/api/token');
@@ -154,13 +166,14 @@ export class UBoardClient {
   }
 
   private async request<T>(method: string, path: string, options: { body?: unknown; revision?: number; contentType?: string } = {}): Promise<T> {
-    const headers: Record<string, string> = { Authorization: `Bearer ${this.token}`, Accept: 'application/json' };
+    const headers: Record<string, string> = { Accept: 'application/json', ...(this.token && { Authorization: `Bearer ${this.token}` }) };
     if (options.body !== undefined) headers['Content-Type'] = options.contentType ?? 'application/json';
     if (options.revision !== undefined) headers['If-Match'] = `"${options.revision}"`;
     const response = await this.fetchImpl(new URL(path, this.baseUrl), {
       method,
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      ...(this.token === undefined && { credentials: 'same-origin' as const }),
     });
     const text = await response.text();
     const body = text ? JSON.parse(text) : {};
