@@ -321,6 +321,16 @@ describe('validateViewDocument', () => {
       }
     });
 
+    it('takes a theme colour’s name wherever a part is coloured, and says it among the forms — never as the board’s accent', () => {
+      for (const colour of ['positive', 'warning', 'negative', 'accent', 'Negative']) {
+        expect(strict(broken(d => { d.decorations[0].stroke = colour; d.connectors[0].style = { stroke: colour }; })), colour).toEqual([]);
+      }
+      expect(strict(broken(d => { d.decorations[0].stroke = 'var(--u-widget-positive)'; }))[0].message).toContain('or a theme colour: "positive", "warning", "negative", "accent"');
+      expect(strict(broken(d => { d.accent = 'accent'; })).map(i => `${i.path} ${i.message}`)).toEqual([
+        "/accent the board's accent is a colour itself — a theme name (positive, warning, negative, accent) goes where a part is coloured",
+      ]);
+    });
+
     it('refuses a colour a canvas cannot read, and says which forms it takes', () => {
       for (const colour of ['var(--u-widget-border)', 'dashed', '#12345', 'rgb(1, 2)', 'currentColor', 'oklch(0.7 0.1 200)']) {
         const issues = strict(broken(d => { d.decorations[0].stroke = colour; }));

@@ -9,6 +9,8 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - The connector rules show a bound label keeping its unit: `"{{value | fixed:1}} Mbps"`.
+- The colour rules name the theme colours a board can use instead of a hex value: `positive`, `warning`, `negative`,
+  `accent`.
 
 ## [0.12.0] - 2026-10-20
 

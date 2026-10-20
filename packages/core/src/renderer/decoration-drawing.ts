@@ -1,6 +1,7 @@
 import type { DrawingObject } from '@canvas-kit/core';
 import type { BoardAppearance, Shape, StrokeDash, TextShape } from '../view-document.js';
 import { TEXT_BACKGROUND_PAD, frameLabelPoint, placementParts, type Column, type Row } from '../decoration-geometry.js';
+import { drawingColor } from '../theme-colors.js';
 
 /** Text drawn on a dark board with no colour of its own — light enough to read on its paper. */
 const DARK_BOARD_TEXT = '#e5e7eb';
@@ -18,14 +19,16 @@ const ALIGN: Record<Column, 'left' | 'center' | 'right'> = { start: 'left', cent
  * A colour of `none` paints nothing — the same as leaving it out — so it is left out here (a canvas would otherwise
  * ignore the word and paint in whatever colour it last used). A text the author gave no colour is drawn in the
  * canvas's default dark ink, which disappears on a dark board, so there it takes a light one. A colour the author
- * chose is theirs, on either board. A frame's name takes its `labelFill`, else the frame's stroke colour.
+ * chose is theirs, on either board. A frame's name takes its `labelFill`, else the frame's stroke colour. A theme
+ * colour's name (`positive`, `accent`, …) is drawn as its value on a board of this tone and `accent`.
  */
-export function decorationObjects(shape: Shape, appearance: BoardAppearance = 'light'): DrawingObject[] {
-  if (shape.type === 'text') return [textObject(shape, appearance)];
+export function decorationObjects(shape: Shape, appearance: BoardAppearance = 'light', accent?: string): DrawingObject[] {
+  const paint = (colour: string | undefined) => painted(colour, appearance, accent);
+  if (shape.type === 'text') return [textObject(shape, appearance, paint)];
 
   const { id, x, y, width, height, strokeWidth, radius, dash } = shape;
-  const fill = painted(shape.fill);
-  const stroke = painted(shape.stroke);
+  const fill = paint(shape.fill);
+  const stroke = paint(shape.stroke);
   const pattern = dash ? DASH_PATTERNS[dash] : [];
   const rect: DrawingObject = {
     id, type: 'rect', x, y, width, height,
@@ -38,14 +41,14 @@ export function decorationObjects(shape: Shape, appearance: BoardAppearance = 'l
   if (!shape.label?.trim()) return [rect];
   const at = frameLabelPoint(shape);
   const ink = shape.labelFill ?? stroke;
-  const label = textObject({ id: `${id}#label`, type: 'text', x: at.x, y: at.y, text: shape.label, fontSize: at.size, ...(ink !== undefined && { fill: ink }) }, appearance, at.row, at.column);
+  const label = textObject({ id: `${id}#label`, type: 'text', x: at.x, y: at.y, text: shape.label, fontSize: at.size, ...(ink !== undefined && { fill: ink }) }, appearance, paint, at.row, at.column);
   return [rect, label];
 }
 
-function textObject(text: TextShape, appearance: BoardAppearance, row?: Row, column?: Column): DrawingObject {
+function textObject(text: TextShape, appearance: BoardAppearance, paint: (colour: string | undefined) => string | undefined, row?: Row, column?: Column): DrawingObject {
   const parts = row && column ? { row, column } : placementParts(text.anchor ?? 'top-start');
-  const ink = text.fill?.trim().toLowerCase() === 'none' ? 'transparent' : text.fill ?? (appearance === 'dark' ? DARK_BOARD_TEXT : undefined);
-  const background = painted(text.background);
+  const ink = text.fill?.trim().toLowerCase() === 'none' ? 'transparent' : text.fill !== undefined ? paint(text.fill) : appearance === 'dark' ? DARK_BOARD_TEXT : undefined;
+  const background = paint(text.background);
   return {
     id: text.id, type: 'text', x: text.x, y: text.y, text: text.text,
     ...(text.fontSize !== undefined && { fontSize: text.fontSize }),
@@ -56,7 +59,7 @@ function textObject(text: TextShape, appearance: BoardAppearance, row?: Row, col
   };
 }
 
-/** A colour as painted: `none` (in any case) is no colour. */
-function painted(colour: string | undefined): string | undefined {
-  return colour === undefined || colour.trim().toLowerCase() === 'none' ? undefined : colour;
+/** A colour as painted: `none` (in any case) is no colour, a theme colour's name its value on this board. */
+function painted(colour: string | undefined, appearance: BoardAppearance, accent: string | undefined): string | undefined {
+  return colour === undefined || colour.trim().toLowerCase() === 'none' ? undefined : drawingColor(colour, appearance, accent);
 }

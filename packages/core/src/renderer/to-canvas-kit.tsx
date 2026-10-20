@@ -70,10 +70,10 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
   }
 
   for (const shape of doc.decorations ?? []) {
-    for (const object of decorationObjects(shape, doc.appearance)) scene.add(object);
+    for (const object of decorationObjects(shape, doc.appearance, doc.accent)) scene.add(object);
   }
 
-  for (const object of connectorObjects(nodes, doc.connectors, doc.appearance)) scene.add(object);
+  for (const object of connectorObjects(nodes, doc.connectors, doc.appearance, {}, doc.accent)) scene.add(object);
   for (const object of captionObjects(nodes, doc.appearance)) scene.add(object);
 
   const at = now ?? Date.now();

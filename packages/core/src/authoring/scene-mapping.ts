@@ -64,7 +64,7 @@ export function documentToScene(saved: CanvasView): Scene {
   }
 
   for (const shape of doc.decorations ?? []) {
-    const [drawn, ...name] = decorationObjects(shape, doc.appearance);
+    const [drawn, ...name] = decorationObjects(shape, doc.appearance, doc.accent);
     if (drawn.type === 'rect') {
       // Konva's Text hit-tests its full bounding box regardless of fill, so a text decoration is
       // added as drawn below; a rect decoration needs the designer-only placeholder fill above to
@@ -88,7 +88,7 @@ export function documentToScene(saved: CanvasView): Scene {
 
   // Follows its two nodes: selected to be edited, never dragged — moving a line or its label would move nothing.
   const nodes = sizedNodes(doc);
-  for (const object of connectorObjects(nodes, doc.connectors, doc.appearance, { fixed: true })) add(object);
+  for (const object of connectorObjects(nodes, doc.connectors, doc.appearance, { fixed: true }, doc.accent)) add(object);
   for (const object of captionObjects(nodes, doc.appearance, true)) add(object);
 
   for (const node of nodes) {

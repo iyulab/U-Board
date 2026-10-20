@@ -7,6 +7,7 @@ import type { ConnectionQuality } from '../adapter.js';
 import { worstQuality } from '../quality-text.js';
 import { DASH_PATTERNS } from './decoration-drawing.js';
 import { shownLabel } from '../connector-label.js';
+import { drawingColor } from '../theme-colors.js';
 
 /** A connector's look when its style leaves it out. */
 export const CONNECTOR_STROKE = '#94a3b8';
@@ -37,14 +38,15 @@ export function placeOnCanvas<C extends Connector>(nodes: readonly SizedNode[], 
  * line edge to edge with its arrowheads in the line's colour, connectors of the same two nodes side by side, and a label
  * on a chip along its line, over every line. `extra` goes on each line; `locked` (drawn only) or `fixed` (selected,
  * never moved — an editor's lines) on its heads and chip too, and a label's text is then locked, so a press on it
- * reaches the chip.
+ * reaches the chip. A line's colour may be a theme colour's name, drawn as its value on this board (`accent` its own).
  */
-export function connectorObjects(nodes: readonly SizedNode[], connectors: ReadonlyArray<Connector & { quality?: Record<string, ConnectionQuality> }>, appearance: BoardAppearance = 'light', extra: Partial<Line> = {}): DrawingObject[] {
+export function connectorObjects(nodes: readonly SizedNode[], connectors: ReadonlyArray<Connector & { quality?: Record<string, ConnectionQuality> }>, appearance: BoardAppearance = 'light', extra: Partial<Line> = {}, accent?: string): DrawingObject[] {
   const lines: DrawingObject[] = [];
   const labels: DrawingObject[] = [];
   const held = { ...(extra.locked && { locked: true }), ...(extra.fixed && { fixed: true }) };
   for (const { connector, points, label, arrows = [] } of placeOnCanvas(nodes, connectors)) {
-    const { stroke = CONNECTOR_STROKE, strokeWidth = CONNECTOR_WIDTH, dash = 'solid' } = connector.style ?? {};
+    const { strokeWidth = CONNECTOR_WIDTH, dash = 'solid' } = connector.style ?? {};
+    const stroke = drawingColor(connector.style?.stroke ?? CONNECTOR_STROKE, appearance, accent);
     lines.push({ type: 'line', id: connector.id, x: 0, y: 0, points, stroke, strokeWidth, ...(DASH_PATTERNS[dash].length > 0 && { dash: DASH_PATTERNS[dash] }), ...extra });
     // A head is filled, not stroked — a dashed line's head stays whole.
     arrows.forEach((points, i) => lines.push({ type: 'path', id: `${connector.id}#arrow${i}`, x: 0, y: 0, points, closed: true, fill: stroke, ...held }));

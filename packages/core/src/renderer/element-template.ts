@@ -2,6 +2,7 @@ import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../vi
 import { symbolSheet, symbolsUsed } from '../elements/symbols.js';
 import { parseTemplate, type TemplateNode } from '../elements/template.js';
 import { TEMPLATE_TAGS, attributeProblem, checkStyle, isResourceOrigin } from '../elements/markup-policy.js';
+import { THEME_PALETTE } from '../theme-colors.js';
 
 /**
  * The colours and type an element draws with, by the board's tone — the same values the prepared widgets use
@@ -15,10 +16,10 @@ export const ELEMENT_THEME: Record<BoardAppearance, Record<string, string>> = {
     '--u-widget-text': '#1a1a2e',
     '--u-widget-text-secondary': '#5b6777',
     '--u-widget-border': '#e2e8f0',
-    '--u-widget-primary': '#4f46e5',
-    '--u-widget-positive': '#15803d',
-    '--u-widget-negative': '#dc2626',
-    '--u-widget-warning': '#d97706',
+    '--u-widget-primary': THEME_PALETTE.light.primary,
+    '--u-widget-positive': THEME_PALETTE.light.positive,
+    '--u-widget-negative': THEME_PALETTE.light.negative,
+    '--u-widget-warning': THEME_PALETTE.light.warning,
     '--u-widget-font-family': 'system-ui, -apple-system, sans-serif',
     '--u-widget-font-mono': "ui-monospace, 'Cascadia Code', Consolas, monospace",
   },
@@ -28,10 +29,10 @@ export const ELEMENT_THEME: Record<BoardAppearance, Record<string, string>> = {
     '--u-widget-text': '#e2e8f0',
     '--u-widget-text-secondary': '#94a3b8',
     '--u-widget-border': '#374151',
-    '--u-widget-primary': '#818cf8',
-    '--u-widget-positive': '#4ade80',
-    '--u-widget-negative': '#f87171',
-    '--u-widget-warning': '#fbbf24',
+    '--u-widget-primary': THEME_PALETTE.dark.primary,
+    '--u-widget-positive': THEME_PALETTE.dark.positive,
+    '--u-widget-negative': THEME_PALETTE.dark.negative,
+    '--u-widget-warning': THEME_PALETTE.dark.warning,
     '--u-widget-font-family': 'system-ui, -apple-system, sans-serif',
     '--u-widget-font-mono': "ui-monospace, 'Cascadia Code', Consolas, monospace",
   },

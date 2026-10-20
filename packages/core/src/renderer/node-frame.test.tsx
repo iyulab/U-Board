@@ -28,6 +28,15 @@ describe('NodeFrame states', () => {
     expect(frame({ state: 'off', looks }).props.style.visibility).toBe('hidden');
   });
 
+  it('draws a ring in a theme colour as the board’s tone has it — and accent as the board’s own', () => {
+    const looks = { fault: { outline: 'negative' }, ok: { outline: 'Positive' }, mine: { outline: 'accent' } };
+    expect(frame({ state: 'fault', looks }).props.style.boxShadow).toBe('0 0 0 3px #dc2626');
+    expect(frame({ state: 'fault', looks, appearance: 'dark' }).props.style.boxShadow).toBe('0 0 0 3px #f87171');
+    expect(frame({ state: 'ok', looks, appearance: 'dark' }).props.style.boxShadow).toBe('0 0 0 3px #4ade80');
+    expect(frame({ state: 'mine', looks }).props.style.boxShadow).toBe('0 0 0 3px #4f46e5');
+    expect(frame({ state: 'mine', looks, accent: '#0f766e' }).props.style.boxShadow).toBe('0 0 0 3px #0f766e');
+  });
+
   it('puts the state ahead of what the quality says', () => {
     const stale: ResolvedWidget = { ...widget, quality: { 'data.value': 'stale' } };
     const el = frame({ widget: stale, state: 'fault' });

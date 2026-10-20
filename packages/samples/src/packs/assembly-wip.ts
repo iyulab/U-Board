@@ -104,7 +104,7 @@ const stationNode = ({ id, x, y }: (typeof STATIONS)[number]): Node => ({
 
 /** A buffer's colour: grey while it holds some, amber when full (it blocks the station before it) or empty (it
  *  starves the one after). */
-const BUFFER_COLOUR = { values: { full: '#d97706', empty: '#d97706' }, otherwise: '#8a96a0' };
+const BUFFER_COLOUR = { values: { full: 'warning', empty: 'warning' }, otherwise: '#8a96a0' };
 /** A buffer's line grows with what waits in it. */
 const BUFFER_WIDTH = { ranges: [{ min: 6, value: 6 }, { min: 3, value: 4 }, { min: 1, value: 2.5 }], otherwise: 1.5 };
 

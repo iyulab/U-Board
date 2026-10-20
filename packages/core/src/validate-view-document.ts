@@ -6,6 +6,7 @@ import { checkStyle, checkTemplateMarkup, isResourceOrigin } from './elements/ma
 import { checkPropsSchema, checkPropsValue } from './elements/props-schema.js';
 import { VIEW_BOX, symbolReferences } from './elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor } from './css-color.js';
+import { THEME_COLORS, isThemeColor } from './theme-colors.js';
 import { isLabelPattern, labelNamesValue, labelPatternError } from './connector-label.js';
 import { instancePartId, instanceParts, parameterValues, placeholdersIn } from './components.js';
 import type { ComponentDefinition, ComponentInstance } from './view-document.js';
@@ -57,6 +58,7 @@ export function validateViewDocument(value: unknown, options: ValidateOptions = 
     doc.expected(['appearance'], 'expected "light" or "dark"', value.appearance);
   }
   doc.optionalColor(value, ['accent']);
+  if (doc.strict && isThemeColor(value.accent)) doc.fail(['accent'], `the board's accent is a colour itself — a theme name (${THEME_COLORS.join(', ')}) goes where a part is coloured`);
   // Before the elements: a template's `<use href="#…">` is checked against the symbols the board defines.
   if (value.symbols !== undefined && doc.record(value, ['symbols'])) checkSymbols(doc, value.symbols as Record<string, unknown>);
   if (value.elements !== undefined && doc.record(value, ['elements'])) checkElements(doc, value.elements as Record<string, unknown>);
@@ -814,7 +816,9 @@ class Checker {
     const value = owner[at[at.length - 1]];
     if (value === undefined) return;
     if (typeof value !== 'string') this.expected(at, 'expected a string', value);
-    else if (this.strict && !isDrawingColor(value)) this.fail(at, `"${value}" is not a colour a canvas reads — use ${DRAWING_COLOR_FORMS}`);
+    else if (this.strict && !isDrawingColor(value) && !isThemeColor(value)) {
+      this.fail(at, `"${value}" is not a colour a canvas reads — use ${DRAWING_COLOR_FORMS}, or a theme colour: ${THEME_COLORS.map(name => `"${name}"`).join(', ')}`);
+    }
   }
 
   get issueCount(): number {

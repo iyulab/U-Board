@@ -6,6 +6,7 @@ import type { BoardAppearance, ElementDefinition, StateLook, SymbolDefinition } 
 import { elementNameOf } from '../elements/element-type.js';
 import { ElementView } from './element-view.js';
 import { accentTokens } from './element-template.js';
+import { drawingColor } from '../theme-colors.js';
 import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
 
@@ -124,7 +125,7 @@ export function NodeFrame({ widget, appearance, accent, symbols, qualityText = D
       className={look?.blink ? (look.outline ? 'ub-state-blink ub-state-blink--ring' : 'ub-state-blink') : undefined}
       style={{
         position: 'relative', width: '100%', height: '100%', ...frameStyle,
-        ...(look?.outline && { boxShadow: `0 0 0 3px ${look.outline}` }),
+        ...(look?.outline && { boxShadow: `0 0 0 3px ${drawingColor(look.outline, appearance ?? 'light', accent)}` }),
         ...(look?.hidden && { visibility: 'hidden' as const }),
         ...(onActivate && { cursor: 'pointer' }),
       }}

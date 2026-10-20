@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { StateLook, StateRule, ValueMap, Widget } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import { FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { ValueMapFields, draftMap, invalidRanges, mapFromDraft, type MapDraft } from './ValueMapFields.js';
+import { THEME_COLORS } from '../theme-colors.js';
 
 export interface StatesEditorProps {
   /** The part's widget — its bindings are what a state can be read from. */
@@ -39,6 +40,7 @@ const isEmptyLook = (look: StateLook) => !look.outline && !look.blink && !look.h
  */
 export function StatesEditor({ widget, states, onChange, labels }: StatesEditorProps) {
   const keys = Object.keys(widget.bindings ?? {});
+  const themeColorsId = useId();
   const [from, setFrom] = useState(states?.from ?? '');
   const [draft, setDraft] = useState<MapDraft>(() => draftMap(states?.map));
   const [looks, setLooks] = useState<Record<string, StateLook>>(states?.looks ?? {});
@@ -122,11 +124,19 @@ export function StatesEditor({ widget, states, onChange, labels }: StatesEditorP
           {names.length > 0 && (
             <fieldset className="ub-panel__state-looks" style={{ minWidth: 0 }}>
               <legend>{labels.statesLooks}</legend>
+              {/* The theme's colours, offered as the ring's. Outside the labels: its options' text would otherwise become part of a field's name. */}
+              <datalist id={themeColorsId}>
+                {THEME_COLORS.map(name => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </datalist>
               {names.map(name => (
                 <div key={name} className="ub-panel__state-look" style={GROUP_STYLE}>
                   <label style={FIELD_STYLE}>
                     {labels.stateOutline.replace('{state}', name)}
-                    <input value={looks[name]?.outline ?? ''} onChange={e => setLook(name, { outline: e.target.value || undefined })} placeholder="#dc2626" />
+                    <input value={looks[name]?.outline ?? ''} onChange={e => setLook(name, { outline: e.target.value || undefined })} placeholder="negative, #dc2626" list={themeColorsId} />
                   </label>
                   <label>
                     <input type="checkbox" checked={!!looks[name]?.blink} onChange={e => setLook(name, { blink: e.target.checked || undefined })} />

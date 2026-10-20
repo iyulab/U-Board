@@ -53,6 +53,14 @@ describe('decorationObjects', () => {
     expect(decorationObjects(frame)[1]).toMatchObject({ fill: '#22313b' });
   });
 
+  it('draws a theme colour’s name as its value on the board — frame, its name, text and its background', () => {
+    const frame = { id: 'f', type: 'rect' as const, x: 0, y: 0, width: 300, height: 100, stroke: 'warning', fill: 'none', label: 'Zone' };
+    expect(decorationObjects(frame, 'light')).toMatchObject([{ stroke: '#d97706' }, { fill: '#d97706' }]);
+    expect(decorationObjects(frame, 'dark')).toMatchObject([{ stroke: '#fbbf24' }, { fill: '#fbbf24' }]);
+    expect(decorationObjects({ ...frame, labelFill: 'accent' }, 'light', '#0f766e')[1]).toMatchObject({ fill: '#0f766e' });
+    expect(decorationObjects({ id: 't', type: 'text', x: 0, y: 0, text: 'Fault', fill: 'negative', background: 'positive' }, 'dark')[0]).toMatchObject({ fill: '#f87171', background: '#4ade80' });
+  });
+
   it('gives a frame’s name with no stroke colour the board’s ink', () => {
     const frame = { id: 'f', type: 'rect' as const, x: 0, y: 0, width: 300, height: 100, stroke: 'none', label: 'Zone' };
     expect(decorationObjects(frame, 'light')[1]).not.toHaveProperty('fill');

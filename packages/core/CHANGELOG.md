@@ -8,6 +8,11 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A drawing colour can be a theme colour's name — `positive`, `warning`, `negative`, `accent` — wherever a board
+  colours a part: a state's ring, a connector, a frame, a text. It is drawn in the widgets' palette for the board's
+  `appearance` (`accent` is the board's own, else the theme's primary), so a ring and a gauge mean the same green and
+  a dark board needs no second set of colours. The states editor offers the names. The board's `accent` itself still
+  takes a colour.
 - A bound connector label can keep its unit: when its text names `{{value}}`, the bound value fills that place —
   `"{{value | fixed:1}} Mbps"` reads `820.4 Mbps` — and `—` stands in while there is no value. Text without `{{` is
   replaced by the value, as before. Strict validation refuses a pattern that names anything else, or one with no

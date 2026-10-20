@@ -334,7 +334,7 @@ interface StateRule {
   looks?: Record<string, StateLook>;
 }
 interface StateLook {
-  outline?: string; // a ring of this colour around the part
+  outline?: string; // a ring of this colour around the part — a theme name ('negative') follows the board's tone
   blink?: boolean; // the ring (or the part, without one) blinks — not under prefers-reduced-motion
   hidden?: boolean; // the part is not drawn; connectors to it are
 }
@@ -343,7 +343,7 @@ interface StateLook {
 states: {
   from: 'data.value',
   map: { values: { Fault: 'fault', Running: 'running' }, ranges: [{ min: 80, value: 'hot' }] },
-  looks: { fault: { outline: '#dc2626', blink: true } },
+  looks: { fault: { outline: 'negative', blink: true } },
 }
 ```
 
@@ -821,7 +821,10 @@ validateViewDocument({
 `validate`. It also refuses what this version would keep but never draw: a field the format does not have — the
 issue names the fields that place has — and a decoration colour outside the forms every canvas reads: hex
 (`#1f6feb`, `#1f6feb33`), `rgb()`/`rgba()`, `hsl()`/`hsla()`, a CSS colour name, `transparent`, or `none` (paint
-nothing, the same as leaving the field out). A CSS variable is refused — a canvas has no stylesheet to resolve it.
+nothing, the same as leaving the field out) — or a theme colour's name: `positive`, `warning`, `negative`, or
+`accent` (the board's `accent`, else the theme's primary colour), drawn in the widgets' palette for the board's
+`appearance`, so a state's ring and a gauge mean the same green and a dark board needs no second set of colours. The
+board's `accent` itself takes a colour, not a name. A CSS variable is refused — a canvas has no stylesheet to resolve it.
 
 ```ts
 validateViewDocument(doc, { strict: true });

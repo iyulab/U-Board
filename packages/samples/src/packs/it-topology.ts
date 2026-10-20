@@ -115,7 +115,7 @@ const serverNode = ({ id, x, y }: (typeof SERVERS)[number]): Node => ({
 });
 
 /** A link's colour: grey while it carries its traffic, amber when busy, red when down. */
-const LINK_COLOUR = { values: { ok: '#8a96a0', busy: '#d97706', down: '#dc2626' }, otherwise: '#8a96a0' };
+const LINK_COLOUR = { values: { ok: '#8a96a0', busy: 'warning', down: 'negative' }, otherwise: '#8a96a0' };
 /** A link's width by how much of its capacity it uses. */
 const LINK_WIDTH = { ranges: [{ min: 85, value: 5 }, { min: 60, value: 3.5 }], otherwise: 2 };
 

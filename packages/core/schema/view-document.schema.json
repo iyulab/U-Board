@@ -415,7 +415,7 @@
       "description": "How a part is shown while in a state: a ring of colour around it (outline), blinking (blink — not where the reader asks for reduced motion), or not drawn (hidden).",
       "type": "object",
       "properties": {
-        "outline": { "type": "string" },
+        "outline": { "type": "string", "description": "A ring around the part: a colour, or a theme colour's name (positive, warning, negative, accent) drawn in the board's tone." },
         "blink": { "type": "boolean" },
         "hidden": { "type": "boolean" }
       }

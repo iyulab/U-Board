@@ -72,22 +72,22 @@ const CANVAS = `# Canvas boards
 
 ## Connectors
 - { id, fromNodeId, toNodeId, label?, labelAt?, style?: { stroke?, strokeWidth?, dash?: "solid"|"dashed"|"dotted", arrow?: "none"|"end"|"start"|"both", route?: "straight"|"orthogonal" } } — a line from the edge of one node's box to the other's, 2 px grey. route "orthogonal": right angles as pipes and wiring — out of the side facing the other node, one turn mid-gap. Both ends must be nodes of /nodes.
-- label: text on a chip of the paper (a link's "26.78Kbps"; bound, "{{value | fixed:1}} Mbps" keeps the unit), at the middle or at labelAt: 0 (the fromNodeId end) to 1. Connectors joining the same two nodes are drawn side by side — one per link, no merging.
-- arrow: "end" points at toNodeId, "start" at fromNodeId — a flow's direction. The head's tip touches the box.
+- label: text on a chip of the paper (a link's "26.78Kbps"; bound, "{{value | fixed:1}} Mbps" keeps the unit), at the middle or at labelAt: 0 (the fromNodeId end) to 1. Connectors joining the same two nodes are drawn side by side — one per link.
+- arrow: "end" points at toNodeId, "start" at fromNodeId — a flow's direction.
 - bindings: live values for "label", "style.stroke", "style.strokeWidth", "style.dash", "style.arrow" — the same binding shape as a widget's (describe("data")); a map turns a source's numbers or words into a width, a colour or a direction (a flow that changes sign: "style.arrow" with map { ranges: [{ max: 0, value: "start" }, { min: 0, value: "end" }] }). A label not showing a current value is rimmed (amber stale, grey disconnected).
 - A line stops at the edge of the box: with the name in caption, it meets the icon itself.
 
 ## Decorations (drawn under connectors and nodes, first one lowest)
 - rect: { id, type: "rect", x, y, width, height, fill?, stroke?, strokeWidth?, radius?, dash?: "solid"|"dashed"|"dotted", label?, labelAt?, labelSize?: 13, labelFill? } — no fill: transparent; stroke needs strokeWidth; radius rounds the corners.
-- A frame's name is its label: drawn inside it, 8 px in from the edges labelAt names (default "top-start"), in the stroke's colour (or labelFill). No separate text needed.
+- A frame's name is its label: drawn inside it, 8 px in from the edges labelAt names (default "top-start"), in the stroke's colour (or labelFill) — no separate text.
 - text: { id, type: "text", x, y, text, fontSize?: 16, fill?, anchor?, background? } — one line, about 0.6 × fontSize px per character. anchor says which point of the text x, y is (default "top-start" = its top-left; "center" centres it on x, y). background fills a box 4 px around it — give fill too, so the text reads on it (a tag on a frame's edge: background in the frame's colour, a light fill).
 - labelAt and anchor take: "top-start", "top", "top-end", "start", "center", "end", "bottom-start", "bottom", "bottom-end" (start = left, end = right).
-- Colours: "#1f6feb", "#1f6feb33" (with alpha), rgb()/rgba(), hsl()/hsla(), a CSS name, "transparent", "none". Not var(--…): decorations draw on a canvas, which has no stylesheet.
+- Colours: "#1f6feb", "#1f6feb33" (with alpha), rgb()/rgba(), hsl()/hsla(), a CSS name, "transparent", "none" — or a theme name: "positive", "warning", "negative", "accent". Not var(--…): a canvas has no stylesheet.
 
 ## Order and appearance
 - Drawn from the bottom: background image, decorations (in order), connectors, nodes. Nodes are always on top.
 - Saving answers advice where parts would be drawn over one another (overlapping nodes, a text under a node or on a line) — fix it.
-- appearance "dark": dark paper; a text decoration with no fill takes a light ink. Pick decoration colours that read on that paper.`;
+- appearance "dark": dark paper; a text with no fill takes a light ink, a theme colour name its dark value. Pick others that read on it.`;
 
 const DATA = `# Data sources and bindings
 

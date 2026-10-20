@@ -423,7 +423,8 @@ export interface StateRule {
 /** How a part is shown while it is in a state. Separate from how it shows its connection quality (the frame’s border):
  *  a look draws around the frame, so the two never take each other’s place. */
 export interface StateLook {
-  /** A ring around the part in this colour — the forms a decoration colour takes. */
+  /** A ring around the part in this colour — the forms a decoration colour takes, a theme colour's name (`negative`)
+   *  among them. */
   outline?: string;
   /** The ring (or the part, without one) blinks — for a state that asks for attention. Not where a reader asks for
    *  reduced motion. Needs the default stylesheet; without it the part does not blink. */
