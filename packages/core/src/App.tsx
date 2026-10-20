@@ -137,14 +137,24 @@ const demoGrid: GridView = {
   items: demoDocument.nodes.map((node, i) => ({ id: node.id, span: i < 2 ? 6 : 4, widget: node.widget })),
 };
 
+/** A mixed board: the floor plan as a canvas in one cell, the trends beside it as cards the grid lays out. */
+const demoMixed: GridView = {
+  kind: 'grid',
+  items: [
+    { id: 'plan', span: 8, spanMedium: 6, canvas: { background: demoDocument.background, nodes: demoDocument.nodes.filter(node => node.id.startsWith('pump-')), connectors: demoDocument.connectors } },
+    ...demoDocument.nodes.filter(node => !node.id.startsWith('pump-')).map(node => ({ id: node.id, span: 4, widget: node.widget })),
+  ],
+  triggers: demoDocument.triggers,
+};
+
 export function App() {
   const adapters = useMemo(() => [new FixtureAdapter()], []);
-  const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author' | 'elements' | 'elements-author'>('author');
+  const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author' | 'mixed' | 'mixed-author' | 'elements' | 'elements-author'>('author');
   const [boardEvent, setBoardEvent] = useState<string | null>(null);
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : mode === 'elements-author' ? 'elements authoring' : 'grid authoring'}</h1>
+      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : mode === 'elements-author' ? 'elements authoring' : mode === 'mixed' ? 'mixed board' : mode === 'mixed-author' ? 'mixed board authoring' : 'grid authoring'}</h1>
       <div style={{ marginBottom: 12 }}>
         <button onClick={() => setMode('author')} disabled={mode === 'author'}>
           Author
@@ -157,6 +167,12 @@ export function App() {
         </button>{' '}
         <button onClick={() => setMode('grid-author')} disabled={mode === 'grid-author'}>
           Author grid
+        </button>{' '}
+        <button onClick={() => setMode('mixed')} disabled={mode === 'mixed'}>
+          Mixed
+        </button>{' '}
+        <button onClick={() => setMode('mixed-author')} disabled={mode === 'mixed-author'}>
+          Author mixed
         </button>{' '}
         <button onClick={() => setMode('elements')} disabled={mode === 'elements'}>
           Elements
@@ -185,6 +201,20 @@ export function App() {
         <div style={{ height: 720 }}>
           <AuthoringView initialDocument={demoGrid} adapters={adapters} showDocumentSource />
         </div>
+      ) : mode === 'mixed-author' ? (
+        <div style={{ height: 720 }}>
+          <AuthoringView initialDocument={demoMixed} adapters={adapters} showDocumentSource />
+        </div>
+      ) : mode === 'mixed' ? (
+        <>
+          <p style={{ color: '#64748b', maxWidth: 640 }}>
+            A grid whose first cell holds a canvas — the floor plan with its nodes and line, fitted to the cell — and the
+            other widgets as cards around it. The page scrolls over the canvas; Ctrl (⌘) + wheel zooms it.
+          </p>
+          <div style={{ height: 720, maxWidth: 1200, resize: 'horizontal', overflow: 'auto' }}>
+            <ViewerPage document={demoMixed} adapters={adapters} />
+          </div>
+        </>
       ) : mode === 'elements-author' ? (
         <div style={{ height: 720 }}>
           <AuthoringView initialDocument={elementsDemo} adapters={adapters} showDocumentSource />

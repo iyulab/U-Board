@@ -17,6 +17,9 @@ export interface UBoardLabels {
   addItem: string;
   /** What a grid cell holding a canvas is called — its tag in the editor. */
   canvasCell: string;
+  /** The line a grid's canvas cell shows when the wheel scrolls past it — there the wheel zooms only with Ctrl or ⌘
+   *  held. */
+  wheelZoomHint: string;
   /** The width a grid view is laid out at while editing it — to see it as a narrow or medium screen will: the
    *  group's name and its three choices. */
   layoutWidth: string;
@@ -401,6 +404,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   addNode: 'Add node',
   addItem: 'Add item',
   canvasCell: 'Canvas',
+  wheelZoomHint: 'Ctrl (⌘) + scroll to zoom',
   layoutWidth: 'Layout width',
   layoutWide: 'Wide',
   layoutMedium: 'Medium',

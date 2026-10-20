@@ -3,7 +3,8 @@ import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { ViewerPage } from './ViewerPage';
-import type { CanvasView, GridView } from '../view-document';
+import type { CanvasView, GridCanvasItem, GridView } from '../view-document';
+import { cellAspectRatio } from '../renderer/canvas-cell';
 import type { Adapter, ResolvedBinding } from '../adapter';
 import { NodeFrame, type NodeFrameProps } from '../renderer/node-frame';
 
@@ -413,6 +414,33 @@ describe('ViewerPage with a grid view', () => {
     const region = await screen.findByRole('region');
     await waitFor(() => expect(region.querySelector('[data-item-id="pump"] [title]')).toHaveAttribute('title', expect.stringMatching(/^disconnected/)));
     expect(region.ownerDocument.querySelector('.ub-freshness')).toBeInTheDocument();
+  });
+
+  it('draws a canvas cell as a canvas board — its nodes resolved, fitted to the cell, the wheel left to the page', async () => {
+    const mixed: GridView = {
+      kind: 'grid',
+      items: [
+        { id: 'kpi', span: 3, widget: { type: 'gauge' } },
+        {
+          id: 'plan',
+          span: 9,
+          canvas: { background: { image: { src: 'plan.svg', width: 800, height: 400 } }, nodes: [{ id: 'pump', x: 10, y: 10, anchored: false, widget: { type: 'uw-status', bindings: { value: { adapter: 'cmms', ref: 'k' } } } }], connectors: [] },
+        },
+      ],
+    };
+    render(<ViewerPage document={mixed} adapters={[new SpyAdapter()]} />);
+    await waitFor(() => expect(viewerProps).toHaveBeenCalled());
+    const props = lastViewerProps();
+    expect(props).toMatchObject({ wheel: 'modified', ariaLabel: 'Canvas' });
+    expect(props.width).toBeUndefined();
+    expect(props.overlays.map((o: { id: string }) => o.id)).toEqual(['pump']);
+    await waitFor(() => expect((lastViewerProps().overlays[0].content as React.ReactElement<NodeFrameProps>).props.widget.quality).toEqual({ value: 'live' }));
+    // No height of its own: the cell keeps the canvas's proportions (800 × 400 and the fit's padding around it) —
+    // `cellAspectRatio`; jsdom does not keep `aspect-ratio` in a style.
+    const plan = mixed.items[1] as GridCanvasItem;
+    expect(cellAspectRatio({ kind: 'canvas', ...plan.canvas, nodes: [], connectors: [] })).toBeCloseTo(832 / 432);
+    expect(cellAspectRatio({ kind: 'canvas', background: {}, nodes: [], connectors: [] })).toBe(2);
+    expect(screen.getByRole('button', { name: 'Fit to view' })).toBeInTheDocument();
   });
 });
 

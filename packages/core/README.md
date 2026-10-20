@@ -241,6 +241,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-viewer`, `ub-viewer__toolbar`, `ub-viewer__surface` | The viewer, its toolbar and the frame the board draws in |
 | `ub-viewer__status` | "Resolving", before the board's values first arrive |
 | `ub-grid`, `ub-grid__items`, `ub-grid__item` | A grid view in the viewer (it carries `data-appearance`), the grid of its items, and one item's cell (`data-item-id`) |
+| `ub-grid__canvas` | A grid cell's canvas — its viewer and zoom buttons, sized to the cell |
 | `ub-viewer__attribution` | The line under a board naming where its data comes from (`Adapter.attribution`) — in `ViewerPage` and in `AuthoringView`'s view mode |
 | `ub-view-controls` | The zoom out / zoom in / fit buttons |
 | `ub-freshness`, `ub-freshness__time`, `ub-freshness__alert` | When the values were last updated, and the "not updating" notice |

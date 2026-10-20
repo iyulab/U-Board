@@ -33,10 +33,11 @@ export interface FittedView {
 
 /**
  * Owns a view transform that keeps a target rect fitted (shrunk to fit, never magnified —
- * `DOCUMENT_FIT_OPTIONS`) as the viewport resizes — a window resized, a tablet rotated, a panel
+ * `DOCUMENT_FIT_OPTIONS` — unless `magnify`, for a view whose box is sized to the rect: a grid's canvas cell) as the
+ * viewport resizes — a window resized, a tablet rotated, a panel
  * dragged — until the user pans or zooms; from then on the view is theirs until the next fit.
  */
-export function useFittedView(): FittedView {
+export function useFittedView({ magnify = false }: { magnify?: boolean } = {}): FittedView {
   const [transform, setTransform] = useState<Transform>(IDENTITY);
   const viewportRef = useRef<Size | null>(null);
   const targetRef = useRef<DocumentRect | null>(null);
@@ -45,8 +46,8 @@ export function useFittedView(): FittedView {
     const viewport = viewportRef.current;
     const target = targetRef.current;
     if (!viewport || !target) return;
-    setTransform(fitTransform(viewport, target, { ...DOCUMENT_FIT_OPTIONS, minScale: MIN_SCALE }));
-  }, []);
+    setTransform(fitTransform(viewport, target, { ...DOCUMENT_FIT_OPTIONS, minScale: MIN_SCALE, ...(magnify && { maxScale: MAX_SCALE }) }));
+  }, [magnify]);
 
   const fitTo = useCallback((rect: DocumentRect | null) => {
     targetRef.current = rect;

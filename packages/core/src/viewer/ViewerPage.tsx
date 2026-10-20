@@ -172,6 +172,7 @@ export function ViewerPage({
                 qualityText={labels.qualityText}
                 now={drawn.now}
                 locale={labels.locale}
+                labels={labels}
                 activatable={activatable}
                 onItemActivate={activate}
                 onElementEvent={elementEvent}

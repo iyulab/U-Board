@@ -12,6 +12,7 @@ export const KO_LABELS: UBoardLabels = {
   addNode: '노드 추가',
   addItem: '항목 추가',
   canvasCell: '캔버스',
+  wheelZoomHint: 'Ctrl (⌘) + 스크롤로 확대·축소',
   layoutWidth: '배치 폭',
   layoutWide: '넓게',
   layoutMedium: '중간',

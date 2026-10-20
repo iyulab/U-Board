@@ -115,6 +115,8 @@ export function focusPart(doc: ResolvedViewDocument | null, node: string, focusO
     const box = sizedNodes(doc).find(n => n.id === node);
     if (box) focusOn({ x: box.x, y: box.y, width: box.width, height: box.height });
   } else {
-    surface?.querySelector(`[data-item-id="${CSS.escape(node)}"]`)?.scrollIntoView({ block: 'nearest' });
+    // An item, or a node of a canvas cell — whose cell is brought into view.
+    const part = surface?.querySelector(`[data-item-id="${CSS.escape(node)}"]`) ?? surface?.querySelector(`[data-node-id="${CSS.escape(node)}"]`)?.closest('[data-item-id]');
+    part?.scrollIntoView({ block: 'nearest' });
   }
 }

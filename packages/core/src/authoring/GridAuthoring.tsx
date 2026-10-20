@@ -168,6 +168,8 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 qualityText={labels.qualityText}
                 now={preview?.now ?? 0}
                 locale={labels.locale}
+                labels={labels}
+                canvasControls={false}
                 renderCell={(item, frame, index) => {
                   const name = isCanvasItem(item) ? labels.canvasCell : widgetTypeName(item.widget.type, labels.locale);
                   const picked = item.id === selectedId;

@@ -3,6 +3,8 @@ import type { ResolvedGridItem, ResolvedGridView } from '../resolve-document.js'
 import { GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, isCanvasItem } from '../view-document.js';
 import type { QualityText } from '../quality-text.js';
 import { NodeFrame } from './node-frame.js';
+import { CanvasCell } from './canvas-cell.js';
+import type { UBoardLabels } from '../labels.js';
 import { elementNameOf } from '../elements/element-type.js';
 import { elementListeners } from '../triggers.js';
 
@@ -52,9 +54,13 @@ export interface GridBoardProps {
   now: number;
   /** The language the widgets speak (BCP 47). */
   locale?: string;
+  /** Words for a canvas cell's zoom buttons, its name and the line its wheel shows (English by default). */
+  labels?: Pick<UBoardLabels, 'zoomIn' | 'zoomOut' | 'fitToView' | 'canvasCell' | 'wheelZoomHint'>;
   /** What each cell holds, given the item and its frame — the frame by default. The editor wraps it to make the item
    *  selectable; a viewer has no reason to. */
   renderCell?: (item: ResolvedGridItem, frame: ReactNode, index: number) => ReactNode;
+  /** Whether a canvas cell has its zoom buttons — off where the grid is shown, not used (an editor). Default true. */
+  canvasControls?: boolean;
   /** The items a click does something on (`Triggers.activatable`), and what it does. */
   activatable?: ReadonlySet<string>;
   onItemActivate?: (item: string) => void;
@@ -64,8 +70,9 @@ export interface GridBoardProps {
 
 /**
  * A grid view as a board shows it: its items in order, each in a cell as wide as its span, rows as tall as
- * their tallest item — an item without a height takes its widget's own, and the others in its row stretch
- * to match. No pan or zoom: a grid reads at any width, and scrolls when it is taller than its container.
+ * their tallest item — an item without a height takes its widget's own (a canvas cell, its canvas's proportions), and
+ * the others in its row stretch to match. The grid has no pan or zoom: it reads at any width, and scrolls when it is
+ * taller than its container. A canvas cell pans and zooms within itself (`CanvasCell`).
  */
 /** The height an item placing an element takes when it gives none: the element's own. A prepared widget has its own
  *  height already; an element's isolated root has none to offer the row, so its definition says it. */
@@ -75,7 +82,7 @@ function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | 
   return name === undefined ? undefined : doc.elements?.[name]?.size?.height;
 }
 
-export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell, activatable, onItemActivate, onElementEvent }: GridBoardProps) {
+export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, renderCell, canvasControls, activatable, onItemActivate, onElementEvent }: GridBoardProps) {
   const listened = onElementEvent ? elementListeners(doc.triggers) : undefined;
   return (
     <div className="ub-grid" role="region" aria-label={ariaLabel} data-appearance={doc.appearance ?? 'light'}>
@@ -90,7 +97,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, renderCell
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                isCanvasItem(item) ? null : <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} elementEvents={listened?.get(item.id)} />,
+                isCanvasItem(item) ? <CanvasCell doc={doc} item={item} qualityText={qualityText} now={now} locale={locale} labels={labels} activatable={activatable} onNodeActivate={onItemActivate} onElementEvent={onElementEvent} controls={canvasControls} /> : <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} elementEvents={listened?.get(item.id)} />,
                 index
               )}
             </div>
