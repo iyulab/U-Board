@@ -3,7 +3,7 @@ import { test, expect, type Route } from '@playwright/test';
 
 // The chat panel against a model endpoint the test answers itself: a chat completions stream that reads the rules,
 // draws one card on the open board, looks at it, and answers — the panel's whole path but the model.
-const ENDPOINT = 'https://models.example.test/v1';
+const ENDPOINT = 'https://models.example.com/v1';
 
 const sse = (...deltas: Array<Record<string, unknown>>) =>
   deltas.map(delta => `data: ${JSON.stringify({ choices: [{ delta }] })}\n\n`).join('') + 'data: [DONE]\n\n';
