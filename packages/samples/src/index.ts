@@ -19,6 +19,7 @@ export { utilityRegions } from './packs/utility-regions.js';
 export { bodyGap } from './packs/body-gap.js';
 export { itTopology } from './packs/it-topology.js';
 export { assemblyWip } from './packs/assembly-wip.js';
+export { portTerminal } from './packs/port-terminal.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -38,7 +39,8 @@ import { utilityRegions } from './packs/utility-regions.js';
 import { bodyGap } from './packs/body-gap.js';
 import { itTopology } from './packs/it-topology.js';
 import { assemblyWip } from './packs/assembly-wip.js';
+import { portTerminal } from './packs/port-terminal.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];

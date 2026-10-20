@@ -24,6 +24,9 @@ export function cellAspectRatio(view: ResolvedCanvasView): number {
 }
 
 const CONTROLS_STYLE: CSSProperties = { position: 'absolute', top: 4, right: 4, zIndex: 1 };
+const CELL_STYLE: CSSProperties = { position: 'relative', height: '100%' };
+// The cell is its frame: the viewer's own border would draw a second one inside it.
+const VIEWER_STYLE = { position: 'absolute', inset: 0, '--ck-viewer-border': 'none' } as CSSProperties;
 
 export interface CanvasCellProps {
   doc: ResolvedGridView;
@@ -56,25 +59,29 @@ export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAU
   const extentKey = JSON.stringify(documentExtent(view));
   const extent = useMemo(() => JSON.parse(extentKey) as ReturnType<typeof documentExtent>, [extentKey]);
   useEffect(() => fitTo(extent), [fitTo, extent]);
-  const style: CSSProperties = item.height !== undefined ? { position: 'relative', height: '100%' } : { position: 'relative', width: '100%', aspectRatio: cellAspectRatio(view) };
 
+  // The canvas fills its cell. Without a height of its own, an in-flow sizer in the canvas's proportions gives the cell
+  // its height — the least it takes; a row made taller by its neighbours, or rows it spans, stretch it further.
   return (
-    <div className="ub-grid__canvas" style={style}>
+    <div className="ub-grid__canvas" style={CELL_STYLE}>
+      {item.height === undefined && <div aria-hidden="true" style={{ width: '100%', aspectRatio: cellAspectRatio(view) }} />}
       {controls && (
         <span style={CONTROLS_STYLE}>
           <ViewControls view={fitted} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />
         </span>
       )}
-      <Viewer
-        scene={drawn.scene}
-        overlays={drawn.overlays}
-        transform={fitted.transform}
-        onTransformChange={fitted.onUserTransform}
-        onViewportResize={fitted.onViewportResize}
-        ariaLabel={labels.canvasCell}
-        wheel="modified"
-        wheelHint={labels.wheelZoomHint}
-      />
+      <div style={VIEWER_STYLE}>
+        <Viewer
+          scene={drawn.scene}
+          overlays={drawn.overlays}
+          transform={fitted.transform}
+          onTransformChange={fitted.onUserTransform}
+          onViewportResize={fitted.onViewportResize}
+          ariaLabel={labels.canvasCell}
+          wheel="modified"
+          wheelHint={labels.wheelZoomHint}
+        />
+      </div>
     </div>
   );
 }

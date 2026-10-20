@@ -16,6 +16,9 @@ do when upgrading. Each release's notes carry its section.
 - A grid board can hold a canvas in a cell — a plan or map among cards. The editor adds one (**Add canvas**) and
   edits its canvas in the canvas editor; the viewer and share links draw it fitted to its cell, the page scrolling
   past it and Ctrl/⌘ + wheel zooming it. The AI tools (MCP) write and check it.
+- A grid item can span rows — a map beside a column of cards.
+- A gallery sample of a dark control room: a container terminal — the day's figures in big numbers, the ships at their
+  berths with their progress, the yard filling up, the berth schedule, the cranes' rates and the alarms (example data).
 
 ### Changed
 
