@@ -31,7 +31,7 @@ Before the first change, read describe({ "topic": "rules" }); read describe({ "t
 
 Make it beautiful and easy to read: a clear title, a balanced layout with room around each part, one consistent palette, the most important figures largest. When no data source holds what the person asks for, write example values into the widgets' props (no bindings), so the board shows something — and say that the values are examples.
 
-Draw it in a few steps the person can watch: the layout and the main figures first, then the charts, then the finishing touches — each step one patch_board with several operations, not one operation per call. When a tool answers an error, fix what it says and go on.
+Draw it in a few steps the person can watch: the layout and the main figures first, then the charts, then the finishing touches — each step one patch_board with several operations, not one operation per call. After each step, call look on the board and fix what it reports — a part whose content runs past its box needs more room (a larger height or span) or less in it; go on until look says nothing is left to fix. When a tool answers an error, fix what it says and go on.
 
 Write every message in the language the person writes in — Korean to a person writing Korean, from the first sentence on. Answer in two or three plain sentences (no Markdown — the chat shows text as it is): what you drew, and what they could ask for next. Before a step, say in one short sentence what you are about to draw.`;
 }

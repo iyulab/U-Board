@@ -1,8 +1,9 @@
 /// <reference lib="dom" />
 // Runs inside the page `look` draws (passed to Playwright's `page.evaluate`) — it reads the drawn board's DOM.
 
-/** Elements that failed or were held back, and widgets whose content runs past their box. */
-export function findProblems(placed: Array<{ id: string; path: string; attr: string }>): Array<{ path?: string; message: string }> {
+/** Elements that failed or were held back, and widgets whose content runs past their box — of the board drawn in
+ *  `root` (the page, when left out: a host that draws the board beside other things gives the box it drew it in). */
+export function findProblems(placed: Array<{ id: string; path: string; attr: string }>, root: ParentNode = document): Array<{ path?: string; message: string }> {
   // Everything this function uses is inside it: the page runs it from its source alone.
   /** How far anything drawn inside `root` reaches past `host`'s box, in px (0 when it stays inside). */
   function spillOf(host: HTMLElement, root: ShadowRoot): number {
@@ -33,7 +34,7 @@ export function findProblems(placed: Array<{ id: string; path: string; attr: str
 
   const out: Array<{ path?: string; message: string }> = [];
   for (const { id, path, attr } of placed) {
-    const frame = document.querySelector(`[${attr}="${CSS.escape(id)}"]`);
+    const frame = root.querySelector(`[${attr}="${CSS.escape(id)}"]`);
     if (!frame) continue;
     for (const notice of frame.querySelectorAll('[data-element-error],[data-element-notice]')) {
       out.push({ path, message: (notice.getAttribute('title') || notice.textContent || '').trim() });
@@ -59,9 +60,10 @@ export function findProblems(placed: Array<{ id: string; path: string; attr: str
 }
 
 /** How many parts — nodes, grid items, connectors — show each quality short of live (`stale`, `disconnected`). */
-export function countQualityMarks(): Record<string, number> {
+// `void` in the type too: Playwright calls it with no argument (`page.evaluate(countQualityMarks)`).
+export function countQualityMarks(root?: ParentNode | void): Record<string, number> {
   const counts: Record<string, number> = {};
-  for (const part of document.querySelectorAll('[data-quality]')) {
+  for (const part of ((root as ParentNode | undefined) ?? document).querySelectorAll('[data-quality]')) {
     const quality = part.getAttribute('data-quality') || 'marked';
     counts[quality] = (counts[quality] ?? 0) + 1;
   }

@@ -5,6 +5,7 @@ import { FormField } from '../design-system/FormField.js';
 import { panelTools, runTurn, systemPrompt, type OpenBoard, type TurnEvent } from './assistant-loop.js';
 import type { ChatMessage, ModelSettings } from './chat-model.js';
 import { clearModelSettings, loadModelSettings, saveModelSettings } from './settings.js';
+import { InPageLooker, type LookSetting } from './in-page-looker.js';
 import './AssistantPanel.css';
 
 /** What the conversation shows: the person's words, the model's, and each tool it ran. */
@@ -28,6 +29,8 @@ function toolLabel(name: string, args: unknown): string {
       return `보드 편집 · 명령 ${a.commands?.length ?? 0}개`;
     case 'validate':
       return '변경 검사';
+    case 'look':
+      return '그려 보고 확인';
     case 'rename_board':
       return `보드 이름 바꾸기 · ${a.name ?? ''}`;
     case 'list_boards':
@@ -55,12 +58,14 @@ export interface AssistantPanelProps {
   board: OpenBoard;
   /** Why a message cannot be sent now — unsaved edits the model's changes would be lost under. */
   blocked?: string;
+  /** What `look` draws the board with — the editor's data sources and settings. */
+  lookSetting: LookSetting;
   /** The board was changed by a tool: read it again into the editor. */
   onBoardChanged(): Promise<void> | void;
   onClose(): void;
 }
 
-export function AssistantPanel({ workspaceId, board, blocked, onBoardChanged, onClose }: AssistantPanelProps) {
+export function AssistantPanel({ workspaceId, board, blocked, lookSetting, onBoardChanged, onClose }: AssistantPanelProps) {
   const [settings, setSettings] = useState<ModelSettings | null>(() => loadModelSettings());
   const [editingSettings, setEditingSettings] = useState(() => loadModelSettings() === null);
   const [items, setItems] = useState<Item[]>([]);
@@ -71,8 +76,20 @@ export function AssistantPanel({ workspaceId, board, blocked, onBoardChanged, on
   const abort = useRef<AbortController | null>(null);
   const log = useRef<HTMLDivElement>(null);
 
+  // `look` draws with what the editor has now — its data sources arrive after the panel opens.
+  const setting = useRef(lookSetting);
+  setting.current = lookSetting;
   // The tools reach this server as the signed-in person: their session, in the workspace they are in.
-  const tools = useMemo(() => panelTools(boardTools(new UBoardClient(window.location.origin, { workspace: { id: workspaceId, name: '' } }), { boardState: false })), [workspaceId]);
+  const tools = useMemo(
+    () =>
+      panelTools(
+        boardTools(new UBoardClient(window.location.origin, { workspace: { id: workspaceId, name: '' } }), {
+          boardState: false,
+          looker: new InPageLooker(() => setting.current),
+        })
+      ),
+    [workspaceId]
+  );
 
   // The newest line stays in view as the conversation grows.
   useEffect(() => {

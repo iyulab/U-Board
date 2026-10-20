@@ -1,6 +1,9 @@
 import type { Browser, Page } from 'playwright-core';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, expandComponents, getByPointer, instancePartId, nodeSize, placedAt, type ViewDocument } from '@iyulab/u-board/domain';
 import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
+import { inDocument, placedParts } from './look-parts.js';
+
+export { inDocument, placedParts } from './look-parts.js';
 
 /** How a picture is taken: animations stopped at their start, so a blinking state is drawn on — a picture taken mid-blink
  *  would show a ring as missing, and the reader would build it again by other means. */
@@ -19,8 +22,8 @@ export interface LookRequest {
 
 /** What `look` answers: the picture, and what the page reported while drawing it. */
 export interface LookResult {
-  /** A PNG, base64. */
-  image: string;
+  /** A PNG, base64 — none from a looker that draws without taking a picture (`Looker.picture` false). */
+  image?: string;
   report: LookReport;
 }
 
@@ -40,6 +43,9 @@ export interface LookReport {
 
 export interface Looker {
   look(request: LookRequest, document: ViewDocument): Promise<LookResult>;
+  /** Whether it answers a picture. False for one that draws the board in a page it cannot photograph (a browser tab's
+   *  own) and answers the report alone. True when left out. */
+  readonly picture?: boolean;
 }
 
 /** Waits after the page settles so charts finish their drawing animation before the picture is taken. */
@@ -178,30 +184,6 @@ async function unionBox(parts: ReturnType<Page['locator']>): Promise<{ x: number
 /** Elements that failed or were held back, and widgets whose content runs past their box. */
 async function problems(page: Page, doc: ViewDocument): Promise<LookReport['problems']> {
   return (await page.evaluate(findProblems, placedParts(doc))).map(problem => inDocument(doc, problem));
-}
-
-/** Each node or grid item the viewer draws, with where it is and the attribute its frame carries on the page — a grid's
- *  canvas cell's nodes as nodes, a part a component instance draws at `/instances/<i>/<part id>`, which `inDocument`
- *  turns into a place in the document. */
-export function placedParts(doc: ViewDocument): Array<{ id: string; path: string; attr: string }> {
-  if (doc.kind !== 'canvas') return placedAt(doc).map(({ placed, at }) => ({ id: placed.id, path: at, attr: at.includes('/canvas/') ? 'data-node-id' : 'data-item-id' }));
-  const own = doc.nodes.map((n, i) => ({ id: n.id, path: `/nodes/${i}`, attr: 'data-node-id' }));
-  const drawn = (doc.instances ?? []).flatMap((instance, i) =>
-    (doc.components?.[instance.component]?.nodes ?? []).map(node => ({ id: instancePartId(instance.id, node.id), path: `/instances/${i}/${node.id}`, attr: 'data-node-id' }))
-  );
-  return [...own, ...drawn];
-}
-
-/** A problem with a part an instance draws, at the part's node in the component — what to change to fix it — naming
- *  the instance it was seen in. */
-export function inDocument<P extends { path?: string; message: string }>(doc: ViewDocument, problem: P): P {
-  const drawn = /^\/instances\/(\d+)\/(.+)$/.exec(problem.path ?? '');
-  if (!drawn || doc.kind !== 'canvas') return problem;
-  const instance = doc.instances?.[Number(drawn[1])];
-  const nodes = instance ? doc.components?.[instance.component]?.nodes : undefined;
-  if (!instance || !nodes) return problem;
-  const component = instance.component.replace(/~/g, '~0').replace(/\//g, '~1');
-  return { ...problem, path: `/components/${component}/nodes/${nodes.findIndex(n => n.id === drawn[2])}`, message: `${problem.message} — in the instance "${instance.id}" (/instances/${drawn[1]})` };
 }
 
 async function quality(page: Page): Promise<Record<string, number>> {

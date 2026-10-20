@@ -13,6 +13,10 @@ All notable changes to this package are documented here. The format follows
   OpenAI-compatible chat completions function, with the same input schema the MCP server lists. Nothing it imports
   needs Node. `UBoardClient` also takes a workspace instead of a token, for a page signed in to the console: its
   requests carry the session cookie.
+- `look` from a looker that draws the board without taking a picture (`Looker.picture: false` — a host drawing it in its
+  own page) answers the report alone, and its description says so. The checks it runs on the drawn page —
+  `findProblems`, `countQualityMarks` (both now taking the box the board is drawn in), `placedParts`, `inDocument` — are
+  exported from `@iyulab/u-board-mcp/tools`.
 
 ## [0.17.0] - 2026-10-20
 

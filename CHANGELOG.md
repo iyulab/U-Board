@@ -14,7 +14,8 @@ do when upgrading. Each release's notes carry its section.
 ### Added
 
 - An AI chat panel beside the board editor (✦ AI 비서): say what the board should show, and a model draws it on the open
-  board, each change appearing as it is saved. It calls the same board tools as the MCP server, as the signed-in person,
+  board, each change appearing as it is saved, and checks its own drawing as it goes: `look` draws the saved board out of
+  sight in the page and reports what runs past its box or failed to draw. It calls the same board tools as the MCP server, as the signed-in person,
   against a chat completions endpoint (OpenAI-compatible) that each person sets in the panel — its address, model and
   key are kept in that browser only, and the model is called from the browser: the server neither holds a key nor
   calls a model. The endpoint must accept requests from the console's address (CORS). Sending waits while the editor

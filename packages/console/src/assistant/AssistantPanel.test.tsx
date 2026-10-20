@@ -14,7 +14,7 @@ describe('the assistant panel', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('asks for the model first, and keeps it in this browser', async () => {
-    render(<AssistantPanel workspaceId="w1" board={BOARD} onBoardChanged={() => {}} onClose={() => {}} />);
+    render(<AssistantPanel workspaceId="w1" board={BOARD} lookSetting={{ adapters: [] }} onBoardChanged={() => {}} onClose={() => {}} />);
     expect(screen.getByText(/U-Board 서버를 거치지 않음/)).toBeInTheDocument();
     const save = screen.getByRole('button', { name: '저장' });
     expect(save).toBeDisabled();
@@ -42,7 +42,7 @@ describe('the assistant panel', () => {
       return new Response(JSON.stringify({ id: 'b1', revision: 4, advice: [] }), { headers: { 'Content-Type': 'application/json' } });
     });
     const onBoardChanged = vi.fn();
-    render(<AssistantPanel workspaceId="w1" board={BOARD} onBoardChanged={onBoardChanged} onClose={() => {}} />);
+    render(<AssistantPanel workspaceId="w1" board={BOARD} lookSetting={{ adapters: [] }} onBoardChanged={onBoardChanged} onClose={() => {}} />);
     await userEvent.type(screen.getByRole('textbox', { name: '비서에게 보낼 말' }), '카드 하나 그려줘{Enter}');
 
     expect(await screen.findByText('숫자 카드를 하나 그렸습니다.')).toBeInTheDocument();
@@ -54,7 +54,7 @@ describe('the assistant panel', () => {
 
   it('holds the message while the author has unsaved edits', () => {
     localStorage.setItem('ub-assistant-model', JSON.stringify(SETTINGS));
-    render(<AssistantPanel workspaceId="w1" board={BOARD} blocked="먼저 저장하세요" onBoardChanged={() => {}} onClose={() => {}} />);
+    render(<AssistantPanel workspaceId="w1" board={BOARD} blocked="먼저 저장하세요" lookSetting={{ adapters: [] }} onBoardChanged={() => {}} onClose={() => {}} />);
     expect(screen.getByText('먼저 저장하세요')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: '비서에게 보낼 말' })).toBeDisabled();
     for (const starter of screen.getAllByRole('button').filter(b => b.textContent?.includes('그려줘'))) expect(starter).toBeDisabled();
@@ -65,7 +65,7 @@ describe('the assistant panel', () => {
     vi.stubGlobal('fetch', async () => {
       throw new TypeError('Failed to fetch');
     });
-    render(<AssistantPanel workspaceId="w1" board={BOARD} onBoardChanged={() => {}} onClose={() => {}} />);
+    render(<AssistantPanel workspaceId="w1" board={BOARD} lookSetting={{ adapters: [] }} onBoardChanged={() => {}} onClose={() => {}} />);
     await userEvent.type(screen.getByRole('textbox', { name: '비서에게 보낼 말' }), '그려줘{Enter}');
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/CORS/));
   });

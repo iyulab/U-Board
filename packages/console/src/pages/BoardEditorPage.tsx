@@ -301,6 +301,12 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           workspaceId={workspaceId}
           board={{ id: boardId!, name: boardName, kind: document.kind }}
           blocked={hasUnsavedChanges ? '저장하지 않은 편집이 있습니다 — 먼저 저장하면 비서가 그 위에 이어서 그립니다.' : undefined}
+          lookSetting={{
+            adapters,
+            clock: apiClock.now,
+            elementOrigins,
+            elementFrames: scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`),
+          }}
           onBoardChanged={reloadSaved}
           onClose={() => setIsAssistantOpen(false)}
         />

@@ -6,6 +6,10 @@ import type { BoardTool } from './tools.js';
 export { boardTools, type BoardTool, type BoardToolsOptions, type ToolResult } from './tools.js';
 export { UBoardClient, UBoardApiError, type SessionAuth } from './client.js';
 export { TOPICS } from './describe.js';
+// What `look` checks on the page a board is drawn in, for a host that draws it itself (the console's chat panel).
+export { findProblems, countQualityMarks } from './look-page.js';
+export { placedParts, inDocument } from './look-parts.js';
+export type { Looker, LookRequest, LookResult, LookReport } from './look.js';
 
 /** A tool as an OpenAI-compatible chat completions request lists it: its name, its description, and its input as JSON
  *  Schema — what the MCP server lists, in the other wire's shape. */

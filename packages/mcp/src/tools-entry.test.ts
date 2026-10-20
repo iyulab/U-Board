@@ -35,6 +35,25 @@ describe('the board tools outside the MCP server', () => {
   });
 });
 
+describe('look without a picture', () => {
+  it('answers the report alone, and says so — for a host that draws the board in a page it cannot photograph', async () => {
+    const api = new UBoardClient('https://board.example.com', { workspace: { id: 'w1', name: 'W' } }, async () =>
+      new Response(JSON.stringify({ id: 'b1', name: 'B', revision: 2, updatedAt: 't', document: { kind: 'grid', items: [{ id: 'a', widget: { type: 'metric', props: {} } }] } }))
+    );
+    const looker = {
+      picture: false,
+      look: async () => ({ report: { picture: { width: 1600, height: 900 }, problems: [{ path: '/items/0', message: 'its content runs past its box' }], quality: {}, console: [] } }),
+    };
+    const look = boardTools(api, { looker }).find(t => t.name === 'look')!;
+    expect(look.description).toContain('no picture');
+    const answer = await look.run({ board: 'b1' } as never);
+    expect(answer.content.map(c => c.type)).toEqual(['text']);
+    const report = JSON.parse((answer.content[0] as { text: string }).text);
+    expect(report.status).toMatch(/^not done — 1 problem/);
+    expect(report.problems).toEqual([{ path: '/items/0', message: 'its content runs past its box' }]);
+  });
+});
+
 describe('a client on a console session', () => {
   it('sends the session cookie instead of a token, in the workspace it is given, without asking the server whose token it is', async () => {
     const requests: { url: string; init?: RequestInit }[] = [];
