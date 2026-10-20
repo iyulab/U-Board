@@ -76,7 +76,8 @@ previewed as it is typed. A board's **symbols** — SVG drawings defined once �
 elements, and edited beside them. An AI assistant reads and draws a workspace's boards from outside, through the MCP
 server [`@iyulab/u-board-mcp`](packages/mcp/README.md) and a workspace API token: JSON Patch on a board's
 revision, a data source's response summarized by its shape, advice on what would be drawn over what, a picture of
-the board as its viewers see it (`look`), and compact answers ([`docs/mcp.md`](docs/mcp.md)).
+the board as its viewers see it (`look`), and compact answers ([`docs/mcp.md`](docs/mcp.md)). The console's board
+editor has a chat panel that draws with the same tools, against a model endpoint each person sets in it.
 Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
 adapter (with SSRF-safe origin pinning, and either a static credential — a bearer token, a header, or a key in the address (a query parameter or a
 path segment, put in only when the request is sent) — or OAuth 2.0

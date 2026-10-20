@@ -1,6 +1,6 @@
 # Drawing boards with an AI assistant (MCP)
 
-U-Board has no AI in it. It is the engine an assistant draws with: an assistant that speaks the
+U-Board runs no model. It is the engine an assistant draws with: an assistant that speaks the
 [Model Context Protocol](https://modelcontextprotocol.io) reads and changes a workspace's boards and
 data sources through [`@iyulab/u-board-mcp`](../packages/mcp/README.md) on npm, a small MCP server that talks to a
 U-Board server with a workspace API token.
@@ -20,6 +20,19 @@ U-Board server with a workspace API token.
 
 The token acts as you, in that one workspace. It never carries a data source's credential: a source that
 needs a key, a token or OAuth is set up by a person in the console, and the assistant uses it by its id.
+
+## Or in the console: the chat panel
+
+The board editor has an assistant of its own — **✦ AI 비서**, beside the board. Say what the board should show, and
+it draws on the open board with the same tools, each change appearing as it is saved; it looks at what it drew and
+fixes what runs past its box or fails to draw before it answers. It acts as the person signed in, on that board only
+(it does not make or delete boards), and sending waits while the editor has unsaved edits.
+
+The panel calls a model you choose: in **모델**, give the address of an OpenAI-compatible chat completions endpoint
+(`https://api.openai.com/v1`, a gateway, or a server running an open model), the model's name and its key. They are
+kept in that browser only, and the requests go from the browser to that endpoint — the U-Board server neither holds
+the key nor calls a model. So the endpoint must accept requests from the console's address (CORS). The panel's
+`look` draws the board in the page itself, so it answers what it found without a picture.
 
 ## What the assistant can do
 
