@@ -19,6 +19,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a dense dark operations wall: a carrier's network at night — six figures with the last hours
   under each, every region against every service in one matrix, the backbone links' load, and the alarms by region
   and still open. A grid with no map, on example data.
+- A gallery sample drawn as a transit map: a high-speed rail network nationwide — each section in its line's colour,
+  as thick as the trains on it and dashed with its delay where late, stations ringed red where trains are held, and
+  punctuality by line beside it. One canvas over a wide area, on example data.
 - The container terminal sample draws its crane target as a dashed line, as it meant to.
 
 ## [0.19.0] - 2026-10-20
