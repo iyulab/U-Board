@@ -11,8 +11,13 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-20
+
 ### Changed
 
+- Widgets come from `@iyulab/u-widgets` 0.36. A `form` written in formdown (`formdown`) is read by formdown itself:
+  attributes are separated by spaces (`R[min=0 max=100]`), a multiselect is `s[multiple]`, and a toggle needs a
+  `fields` array. A `form` takes `fieldStates` — values suggested for its fields, picked with a click.
 - A slow data source no longer leaves a board empty. A board's refresh waits up to 5 seconds for a source; a slower
   read goes on in the background for up to 25 seconds (it was cut at 5) and its answer serves the next refresh. Until
   then the board shows the last answer, as current while it is still the freshest the source can give, and the first

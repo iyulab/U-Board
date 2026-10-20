@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-10-20
+
+### Changed
+
+- Widgets come from `@iyulab/u-widgets` 0.36. A `form` written in formdown (`formdown`) is read by formdown itself:
+  attributes are separated by spaces (`R[min=0 max=100]`), a multiselect is `s[multiple]`, and a toggle needs a
+  `fields` array. A `form` takes `fieldStates` — values suggested for its fields, picked with a click.
+
 ### Added
 
 - **Breaking: `QualityReason` has `pending`** — the source is being read and has not answered yet, with no earlier
