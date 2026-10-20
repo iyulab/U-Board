@@ -24,7 +24,8 @@
     "swopenapi.seoul.go.kr",
     "apis.data.go.kr",
     "www.data.go.kr",
-    "www.airkorea.or.kr"
+    "www.airkorea.or.kr",
+    "api.openai.com"
   ],
   "githubRepos": [
     "iyulab/U-Board",
