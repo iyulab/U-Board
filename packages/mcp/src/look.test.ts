@@ -25,6 +25,20 @@ describe('what look checks on a drawn board', () => {
     ]);
   });
 
+  it('checks a grid’s widget items and the nodes of its canvas cells, each by the attribute its frame carries', () => {
+    const grid: ViewDocument = {
+      kind: 'grid',
+      items: [
+        { id: 'kpi', widget: { type: 'gauge' } },
+        { id: 'plan', canvas: { background: {}, nodes: [{ id: 'pump', x: 0, y: 0, anchored: false, widget: { type: 'status' } }], connectors: [] } },
+      ],
+    };
+    expect(placedParts(grid)).toEqual([
+      { id: 'kpi', path: '/items/0', attr: 'data-item-id' },
+      { id: 'pump', path: '/items/1/canvas/nodes/0', attr: 'data-node-id' },
+    ]);
+  });
+
   it('reports a drawn part’s problem at its node in the component, naming the instance — a focus on the instance finds it', () => {
     expect(inDocument(board, { path: '/instances/1/speed', message: 'its content runs past its box' })).toEqual({
       path: '/components/card/nodes/1',

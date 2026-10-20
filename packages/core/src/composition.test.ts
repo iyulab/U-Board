@@ -4,6 +4,7 @@ import { validateViewDocument } from './validate-view-document';
 import { bindingsIn } from './document-bindings';
 import { resolveDocument } from './resolve-document';
 import { lintViewDocument } from './lint-view-document';
+import { applyEditCommands } from './edit-commands';
 import type { Adapter, ResolvedBinding } from './adapter';
 import { cellAsCanvas, duplicateGridItem, idsIn, removeGridItem, withCellCanvas } from './editing/grid-editing';
 
@@ -111,4 +112,17 @@ describe('a grid cell holding a canvas', () => {
     expect('triggers' in edited).toBe(false);
     expect(edited.items[0]).toEqual(mixed().items[0]);
   });
+
+  it('takes a cell’s parts in the remove command — a node with its lines and the triggers naming it', () => {
+    const after = applyEditCommands(mixed(), [{ command: 'remove', ids: ['pump', 'hall'] }]);
+    const cell = after.items[1];
+    if (after.kind !== 'grid' || !isCanvasItem(cell)) throw new Error('expected the grid and its canvas cell');
+    expect(cell.canvas.nodes.map(n => n.id)).toEqual(['tank']);
+    expect(cell.canvas.connectors).toEqual([]);
+    expect(cell.canvas.decorations).toEqual([]);
+    expect(after.triggers).toBeUndefined();
+    expect(validateViewDocument(after, { strict: true })).toEqual([]);
+    expect(() => applyEditCommands(mixed(), [{ command: 'remove', ids: ['nope'] }])).toThrow('no item, and no node, connector or decoration of a canvas cell, has the id "nope"');
+  });
 });
+

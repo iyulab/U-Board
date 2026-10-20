@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A grid's cell can hold a canvas (a mixed board — a plan or map in one cell, cards around it). `describe` teaches it,
+  `edit_board`'s `remove` takes a canvas cell's nodes, connectors and decorations, and `look` checks a cell's nodes and
+  focuses them — `describe("mixed")` is its topic.
+
 ## [0.15.0] - 2026-10-20
 
 ### Changed

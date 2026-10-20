@@ -113,7 +113,7 @@ const command = z.discriminatedUnion('command', [
   z.strictObject({ command: z.literal('remove-element'), name }),
   z.strictObject({ command: z.literal('rename-symbol'), from: name, to: name }),
   z.strictObject({ command: z.literal('remove-symbol'), name }),
-  z.strictObject({ command: z.literal('remove'), ids: z.array(z.string().min(1)).min(1).describe('Node, connector, decoration or instance ids (a grid: item ids).') }),
+  z.strictObject({ command: z.literal('remove'), ids: z.array(z.string().min(1)).min(1).describe('Node, connector, decoration or instance ids (a grid: item ids, and node, connector or decoration ids of its canvas cells).') }),
   z.strictObject({
     command: z.literal('make-component'),
     ids: z.array(z.string().min(1)).min(1).describe('The board’s own nodes and frames to make one; the lines between them come along.'),

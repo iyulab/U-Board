@@ -241,6 +241,35 @@ describe('public share routes', () => {
     expect(res.body.results).toEqual([{ value: '26.78Kbps', quality: 'live', observedAt: expect.any(String) }]);
   });
 
+  it('reads what a grid’s canvas cell declares — its nodes’ and its connectors’ bindings', async () => {
+    const plant = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Plant', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const flow = { path: '/flow', valuePath: 'rate' };
+    const pump = { path: '/pump', valuePath: 'state' };
+    const node = (id: string, bindings?: Record<string, { adapter: string; ref: unknown }>) => ({ id, x: 0, y: 0, anchored: false, widget: { type: 'status', ...(bindings && { bindings }) } });
+    const doc = {
+      kind: 'grid' as const,
+      items: [{
+        id: 'plan',
+        canvas: {
+          background: {},
+          nodes: [node('a', { 'data.value': { adapter: plant.id, ref: pump } }), node('b')],
+          connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: 'N/A', bindings: { label: { adapter: plant.id, ref: flow } } }],
+        },
+      }],
+    };
+    await updateBoard(db, workspaceId, boardId, { document: doc });
+    const token = await createShareToken();
+    (fetch as any).mockImplementation(async (url: unknown) => jsonResponse(String(url).endsWith('/flow') ? { rate: 12 } : { state: 'Running' }));
+
+    const board = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
+    expect(board.body.connectorIds).toEqual([plant.id]);
+    const res = await request(app)
+      .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
+      .send({ bindings: [{ connectorId: plant.id, ref: pump }, { connectorId: plant.id, ref: flow }] });
+    expect(res.body.results.map((r: { value: unknown; quality: string }) => [r.value, r.quality])).toEqual([['Running', 'live'], [12, 'live']]);
+  });
+
   it('says why a read failed, but never what went wrong in words — a share link is public', async () => {
     const source = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Open data', baseUrl: 'https://open.example.com', authType: 'none',

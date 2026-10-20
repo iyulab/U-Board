@@ -1,10 +1,10 @@
-import type { CanvasView, ViewDocument } from './view-document.js';
+import { isCanvasItem, type CanvasView, type ViewDocument } from './view-document.js';
 import { ELEMENT_NAME } from './elements/element-type.js';
 import { elementNameProblem, elementUses, removeElement, renameElement } from './editing/element-editing.js';
 import { removeSymbol, renameSymbol, symbolNameProblem, symbolUses } from './editing/symbol-editing.js';
 import { canMakeComponent, detachInstance, makeComponent, partIds, removeComponent, renameComponent } from './editing/component-editing.js';
 import { removeParts } from './editing/part-removal.js';
-import { removeGridItem } from './editing/grid-editing.js';
+import { cellAsCanvas, removeGridItem, withCellCanvas } from './editing/grid-editing.js';
 
 /**
  * An edit that changes a board in more than one place — what the editor does with one action, written down so a
@@ -18,7 +18,8 @@ export type EditCommand =
   | { command: 'remove-element'; name: string }
   | { command: 'rename-symbol'; from: string; to: string }
   | { command: 'remove-symbol'; name: string }
-  /** Nodes, connectors, decorations or component instances of a canvas; items of a grid. */
+  /** Nodes, connectors, decorations or component instances of a canvas; items of a grid, and the nodes, connectors and
+   *  decorations of its canvas cells. */
   | { command: 'remove'; ids: string[] }
   | { command: 'make-component'; ids: string[]; name: string; instance: string }
   | { command: 'detach'; instance: string }
@@ -94,8 +95,10 @@ function run(doc: ViewDocument, command: EditCommand, fail: Fail): ViewDocument 
       if (command.ids.length === 0) fail('', 'expected the ids of the parts to remove');
       if (doc.kind === 'grid') {
         return command.ids.reduce((grid, id) => {
-          if (!grid.items.some(item => item.id === id)) fail('/items', `no item has the id "${id}"`);
-          return removeGridItem(grid, id);
+          if (grid.items.some(item => item.id === id)) return removeGridItem(grid, id);
+          const cell = grid.items.find(item => isCanvasItem(item) && [...item.canvas.nodes, ...item.canvas.connectors, ...(item.canvas.decorations ?? [])].some(part => part.id === id));
+          if (!cell) fail('/items', `no item, and no node, connector or decoration of a canvas cell, has the id "${id}"`);
+          return withCellCanvas(grid, cell.id, removeParts(cellAsCanvas(grid, cell.id)!, [id]));
         }, doc);
       }
       const own = new Set([...doc.nodes, ...doc.connectors, ...(doc.decorations ?? []), ...(doc.instances ?? [])].map(part => part.id));

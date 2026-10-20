@@ -18,6 +18,7 @@ export const TOPICS: Record<string, string> = {
   canvas: 'A canvas board: coordinates and sizes, connectors, decorations (frames, labels), colours, what draws over what.',
   data: 'Live values: data sources, bindings, picking an item of a list, mapping a source’s words to a prop.',
   elements: 'Elements — what a board draws when no widget does: template (HTML/SVG + CSS) or script (sandboxed frame).',
+  mixed: 'A grid with a canvas in a cell — a plan or map among KPI cards: its shape and what stays on the board.',
   components: 'Components — a group of canvas parts (frame, widgets, lines) defined once and drawn per instance with its own values.',
   widgets: 'The prepared widgets, one line each by category; pass `query` ("list of messages") for only the ones that match.',
   'widget:<type>': 'One prepared widget in full, its examples in board form — e.g. "widget:gauge".',
@@ -30,12 +31,12 @@ const RULES = `# Writing a U-Board board
 1. list_boards → pick a board (rename_board renames it), or create_board({ name, kind }). For live values: describe("data").
 2. get_board({ board, pointer }) — read only the part you need ("/nodes/3"); note its revision.
 3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Start small (its frame, a few parts), then add and fix in patches.
-   Each save is a new revision; a new board is revision 1, and create_board with a document saves it as revision 2.
+   Each save is a new revision; a new board is revision 1, create_board with a document saves revision 2.
    Rename or remove an element, symbol or component, remove a node with its lines, make or detach a component: edit_board rewrites every use.
-4. Read the answer: the new revision and advice — act on it. A 412: someone saved since — get_board, redo the patch.
+4. Read the answer: the new revision and advice — act on it. A 412: someone saved since — get_board, patch again.
 5. validate({ document } | { board, patch }) checks without saving, exactly as saving does.
 6. board_state({ board }) — what each part shows now (state, quality), no picture: the cheap check after a change to states or bindings.
-7. look({ board }) after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands. Fix what you see and what it advises — the board is done when both are empty (its status says so); focus one part to see it up close.
+7. look({ board }) after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands. Fix both — the board is done when both are empty (its status says so); focus a part to see it up close.
 
 ## JSON Patch
 - \`add\` sets an object member whether or not it exists, and inserts into an array ("/items/-" appends, "/items/0" prepends).
@@ -43,7 +44,7 @@ const RULES = `# Writing a U-Board board
 - Escape "/" in a key as "~1" and "~" as "~0". A patch applies entirely or not at all; an error names the operation.
 
 ## Kinds
-- grid: { kind: "grid", items: [{ id, span?: 1-12 (4), spanMedium?: 1-6, height?: px, widget }] } — an ordinary dashboard, laid out in order to the screen's width.
+- grid: { kind: "grid", items: [{ id, span?: 1-12 (4), spanMedium?: 1-6, height?: px, widget | canvas }] } — a dashboard in order, to its width; a canvas item: a plan among cards (describe("mixed")).
 - canvas: { kind: "canvas", background: { image? }, nodes: [{ id, x, y, width?, height?, anchored, widget }], connectors: [], decorations?, components?, instances? } — placed by coordinates, over a drawing or plan. describe("canvas") before drawing one; describe("components") when the same group of parts repeats.
 - Every id is unique in the document. appearance: "light" (default) | "dark". accent: a colour — the board's primary colour (a gauge's arc, the first series, a tank's fill, --u-widget-primary in an element) in place of the theme's; set it to match the reference instead of fixing colours in widgets or elements.
 - The format is closed: a field it does not have is refused, and the issue lists the fields that place takes.
@@ -60,6 +61,14 @@ const RULES = `# Writing a U-Board board
 - when: { node, state: "fault" | ["fault", "hot"] } — only while that part is in one of those states.
 - do: { action: "open-link", url } (https:// or a /path; fills only {{node}}, {{state}}, {{board}}) | { action: "focus", node } | { action: "emit", name } (tells the page the board is on) | { action: "go-to-board", board } (that page decides).
 - Triggers show, move and tell — they never write to a source. A part with a click trigger becomes a button named by its caption (else its id).`;
+
+const MIXED = `# Mixed boards — a canvas in a grid cell
+
+- A grid item holds a widget or a canvas: { id, span?, spanMedium?, height?, canvas: { background, nodes, connectors, decorations? } }. Use it when a board is a plan, map or diagram with cards around it: the plan in a wide cell (span 8), the cards in the cells beside and below.
+- The canvas's nodes, connectors and decorations are written as a canvas board's (describe("canvas")) and it is drawn fitted to its cell. Without height the cell keeps the canvas's proportions; give height to make it a fixed size.
+- What a board defines once stays at the top level: elements, symbols, triggers, appearance, accent. A cell's nodes place the board's elements, and a trigger names a cell's node by its id.
+- Every id is unique in the whole document — items and every cell's nodes, connectors and decorations. A connector joins two nodes of the same cell.
+- Patch a cell at "/items/<i>/canvas/nodes/-"; edit_board's remove takes a cell's node, connector or decoration ids; look checks and focuses a cell's nodes.`;
 
 const CANVAS = `# Canvas boards
 
@@ -203,6 +212,7 @@ export function describeTopic(topic: string | undefined, pointer: string | undef
   if (topic === 'data') return DATA;
   if (topic === 'elements') return ELEMENTS;
   if (topic === 'components') return COMPONENTS;
+  if (topic === 'mixed') return MIXED;
   if (topic === 'schema') return pointer ? schemaPart(pointer) : documentSchema();
   if (topic === 'widgets') return widgetCatalog(query);
   if (topic.startsWith('widget:')) return widgetDetail(topic.slice('widget:'.length));
