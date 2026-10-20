@@ -30,7 +30,7 @@ function fakeTool(name: string, answer: (args: Record<string, unknown>) => { tex
   return {
     name,
     description: `the ${name} tool`,
-    inputSchema: z.strictObject({ board: z.string().optional(), patch: z.array(z.unknown()).optional() }),
+    inputSchema: z.strictObject({ board: z.string().optional(), patch: z.array(z.unknown()).optional(), focus: z.string().optional() }),
     run: (async (args: Record<string, unknown>) => {
       calls.push(args);
       const { text, isError } = answer(args);
@@ -117,6 +117,37 @@ describe('a turn', () => {
     await runTurn(SETTINGS, [], [fakeTool('patch_board', () => ({ text: '{"status":412}', isError: true }))], board, e => events.push(e), undefined, fetchImpl);
     expect(events.find(e => e.type === 'tool-end')).toMatchObject({ ok: false });
     expect(events.some(e => e.type === 'board-changed')).toBe(false);
+  });
+
+  it('sends a model that answers with problems left back to fix them, and stops sending it back after two tries', async () => {
+    const look = (status: string) => [{ tool_calls: [{ index: 0, id: `l-${status}`, function: { name: 'look', arguments: '{"board":"b1"}' } }] }];
+    const { requests, fetchImpl } = endpoint([look('a'), [{ content: 'done?' }], look('b'), [{ content: 'done?' }], look('c'), [{ content: 'gave up' }]]);
+    const events: TurnEvent[] = [];
+    const lookTool = fakeTool('look', () => ({ text: '{"status":"not done — 1 problem to fix"}' }));
+    await runTurn(SETTINGS, [], [lookTool], board, e => events.push(e), undefined, fetchImpl);
+    expect(events.filter(e => e.type === 'follow-up')).toEqual([{ type: 'follow-up', reason: 'problems' }, { type: 'follow-up', reason: 'problems' }]);
+    expect(requests).toHaveLength(6);
+    expect(requests[2].body.messages.at(-1)).toMatchObject({ role: 'user', content: expect.stringContaining('not done') });
+  });
+
+  it('asks for a look when the board changed after the last one, and lets a clean look end the turn', async () => {
+    const { requests, fetchImpl } = endpoint([
+      [{ tool_calls: [{ index: 0, id: 'p', function: { name: 'patch_board', arguments: '{"board":"b1"}' } }] }],
+      [{ content: 'done' }],
+      [{ tool_calls: [{ index: 0, id: 'l', function: { name: 'look', arguments: '{"board":"b1"}' } }] }],
+      [{ content: 'done, checked' }],
+    ]);
+    const events: TurnEvent[] = [];
+    const tools = [fakeTool('patch_board', () => ({ text: '{}' })), fakeTool('look', () => ({ text: '{"status":"done — nothing to fix"}' }))];
+    await runTurn(SETTINGS, [], tools, board, e => events.push(e), undefined, fetchImpl);
+    expect(events.filter(e => e.type === 'follow-up')).toEqual([{ type: 'follow-up', reason: 'unchecked' }]);
+    expect(requests).toHaveLength(4);
+  });
+
+  it('never sends a model back when the panel has no look to check with', async () => {
+    const { requests, fetchImpl } = endpoint([[{ tool_calls: [{ index: 0, id: 'p', function: { name: 'patch_board', arguments: '{"board":"b1"}' } }] }], [{ content: 'done' }]]);
+    await runTurn(SETTINGS, [], [fakeTool('patch_board', () => ({ text: '{}' }))], board, () => {}, undefined, fetchImpl);
+    expect(requests).toHaveLength(2);
   });
 
   it('offers the tools that draw the open board, not the ones that make or delete boards', () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { boardTools, UBoardClient } from '@iyulab/u-board-mcp/tools';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
@@ -13,7 +13,8 @@ type Item =
   | { kind: 'user'; text: string }
   | { kind: 'assistant'; text: string }
   | { kind: 'tool'; id: string; name: string; args: unknown; status: 'running' | 'ok' | 'error'; answer?: string }
-  | { kind: 'error'; text: string };
+  | { kind: 'error'; text: string }
+  | { kind: 'note'; text: string };
 
 /** What each tool's row says, in the panel's words. */
 function toolLabel(name: string, args: unknown): string {
@@ -78,18 +79,9 @@ export function AssistantPanel({ workspaceId, board, blocked, lookSetting, onBoa
 
   // `look` draws with what the editor has now — its data sources arrive after the panel opens.
   const setting = useRef(lookSetting);
-  setting.current = lookSetting;
-  // The tools reach this server as the signed-in person: their session, in the workspace they are in.
-  const tools = useMemo(
-    () =>
-      panelTools(
-        boardTools(new UBoardClient(window.location.origin, { workspace: { id: workspaceId, name: '' } }), {
-          boardState: false,
-          looker: new InPageLooker(() => setting.current),
-        })
-      ),
-    [workspaceId]
-  );
+  useEffect(() => {
+    setting.current = lookSetting;
+  });
 
   // The newest line stays in view as the conversation grows.
   useEffect(() => {
@@ -102,6 +94,11 @@ export function AssistantPanel({ workspaceId, board, blocked, lookSetting, onBoa
     if (event.type === 'thinking') return setThinking(true);
     if (event.type === 'board-changed') {
       void onBoardChanged();
+      return;
+    }
+    if (event.type === 'follow-up') {
+      const text = event.reason === 'problems' ? '확인 결과 고칠 것이 남아 이어서 고칩니다' : '마지막 변경을 그려 보고 확인합니다';
+      setItems(current => [...current, { kind: 'note', text }]);
       return;
     }
     setThinking(false);
@@ -133,6 +130,9 @@ export function AssistantPanel({ workspaceId, board, blocked, lookSetting, onBoa
     setBusy(true);
     setThinking(true);
     try {
+      // The tools reach this server as the signed-in person: their session, in the workspace they are in.
+      const client = new UBoardClient(window.location.origin, { workspace: { id: workspaceId, name: '' } });
+      const tools = panelTools(boardTools(client, { boardState: false, looker: new InPageLooker(() => setting.current) }));
       await runTurn(settings, history.current, tools, board, update, controller.signal);
     } catch (error) {
       if ((error as { name?: string }).name !== 'AbortError') {
@@ -222,6 +222,10 @@ export function AssistantPanel({ workspaceId, board, blocked, lookSetting, onBoa
                   </span>
                   <span>{toolLabel(item.name, item.args)}</span>
                   {item.status === 'error' && <span className="ub-assistant__tool-note">고치는 중</span>}
+                </div>
+              ) : item.kind === 'note' ? (
+                <div key={i} className="ub-assistant__note">
+                  {item.text}
                 </div>
               ) : item.kind === 'error' ? (
                 <div key={i} className="ub-assistant__error" role="alert">

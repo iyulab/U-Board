@@ -10,6 +10,8 @@ const LEFT_OUT = new Set(['create_board', 'delete_board']);
 
 /** A turn may call this many tools before the panel stops it — a model caught in a loop of failing patches. */
 export const MAX_TOOL_CALLS = 40;
+/** How many times a turn is sent back to a model that answered while the board was not done. */
+export const MAX_FOLLOW_UPS = 2;
 
 export interface OpenBoard {
   id: string;
@@ -29,7 +31,7 @@ The board open in the editor: id "${board.id}", named "${board.name}", a ${board
 
 Before the first change, read describe({ "topic": "rules" }); read describe({ "topic": "${board.kind === 'canvas' ? 'canvas' : 'widgets'}" }) too, and describe({ "topic": "widget:<type>" }) for a widget you have not used.
 
-Make it beautiful and easy to read: a clear title, a balanced layout with room around each part, one consistent palette, the most important figures largest. When no data source holds what the person asks for, write example values into the widgets' props (no bindings), so the board shows something — and say that the values are examples.
+Make it beautiful and easy to read: a clear title, a balanced layout with room around each part, one consistent palette, the most important figures largest, a title on every chart. The board's own look is at the top of its document: "appearance" ("light" or "dark" — set "dark" for a dark board, not dark colours on each part) and "accent" (one colour). When no data source holds what the person asks for, write example values into the widgets' props (no bindings), so the board shows something — and say that the values are examples.
 
 Draw it in a few steps the person can watch: the layout and the main figures first, then the charts, then the finishing touches — each step one patch_board with several operations, not one operation per call. After each step, call look on the board and fix what it reports — a part whose content runs past its box needs more room (a larger height or span) or less in it; go on until look says nothing is left to fix. When a tool answers an error, fix what it says and go on.
 
@@ -41,7 +43,10 @@ export type TurnEvent =
   | { type: 'thinking' }
   | { type: 'tool-start'; id: string; name: string; args: unknown }
   | { type: 'tool-end'; id: string; name: string; ok: boolean; answer: string }
-  | { type: 'board-changed' };
+  | { type: 'board-changed' }
+  /** The model answered while the board was not done — looked at with problems left, or changed since its last look —
+   *  and the panel sent it back to finish. */
+  | { type: 'follow-up'; reason: 'problems' | 'unchecked' };
 
 /**
  * Runs one turn on `history` (which it extends with what the model says and what the tools answer) and resolves when
@@ -59,6 +64,11 @@ export async function runTurn(
   const byName = new Map(tools.map(t => [t.name, t]));
   const functions = tools.map(functionTool);
   let calls = 0;
+  let followUps = 0;
+  // What the last look said, and whether the board was changed after it — a turn is not done while either says so.
+  let lookedNotDone = false;
+  let changedSinceLook = false;
+  const looks = byName.has('look');
   for (;;) {
     const { content, toolCalls } = await streamChat(
       settings,
@@ -69,7 +79,20 @@ export async function runTurn(
       fetchImpl
     );
     history.push({ role: 'assistant', content: content || null, ...(toolCalls.length > 0 && { tool_calls: toolCalls }) });
-    if (toolCalls.length === 0) return;
+    if (toolCalls.length === 0) {
+      const reason = !looks || followUps >= MAX_FOLLOW_UPS ? undefined : lookedNotDone ? 'problems' : changedSinceLook ? 'unchecked' : undefined;
+      if (!reason) return;
+      followUps += 1;
+      onEvent({ type: 'follow-up', reason });
+      history.push({
+        role: 'user',
+        content:
+          reason === 'problems'
+            ? '(The editor checked: your last look still reports problems — the board is not done. Fix each one, look again, and answer only when look says nothing is left to fix.)'
+            : '(The editor checked: you changed the board after your last look. Look at it, fix what it reports, then answer.)',
+      });
+      continue;
+    }
     for (const call of toolCalls) {
       signal?.throwIfAborted();
       calls += 1;
@@ -78,9 +101,25 @@ export async function runTurn(
       const { ok, answer } = await runTool(byName.get(call.function.name), call.function.name, args);
       history.push({ role: 'tool', tool_call_id: call.id, content: answer });
       onEvent({ type: 'tool-end', id: call.id, name: call.function.name, ok, answer });
-      if (ok && BOARD_WRITES.has(call.function.name) && (args as { board?: unknown } | undefined)?.board === board.id) onEvent({ type: 'board-changed' });
+      if (ok && BOARD_WRITES.has(call.function.name) && (args as { board?: unknown } | undefined)?.board === board.id) {
+        changedSinceLook = true;
+        onEvent({ type: 'board-changed' });
+      }
+      if (ok && call.function.name === 'look' && !(args as { focus?: unknown } | undefined)?.focus) {
+        changedSinceLook = false;
+        lookedNotDone = lookSaysNotDone(answer);
+      }
     }
     if (calls >= MAX_TOOL_CALLS) throw new ModelError(`도구를 ${MAX_TOOL_CALLS}번 부른 뒤 멈췄습니다 — 보드는 거기까지 저장돼 있습니다. 이어서 하려면 다시 요청하세요.`);
+  }
+}
+
+/** Whether a look's answer says the board is not done (its `status`, `lookStatus` in the MCP tools). */
+function lookSaysNotDone(answer: string): boolean {
+  try {
+    return String((JSON.parse(answer) as { status?: unknown }).status ?? '').startsWith('not done');
+  } catch {
+    return false;
   }
 }
 

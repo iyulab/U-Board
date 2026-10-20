@@ -45,7 +45,9 @@ describe('the assistant panel', () => {
     render(<AssistantPanel workspaceId="w1" board={BOARD} lookSetting={{ adapters: [] }} onBoardChanged={onBoardChanged} onClose={() => {}} />);
     await userEvent.type(screen.getByRole('textbox', { name: '비서에게 보낼 말' }), '카드 하나 그려줘{Enter}');
 
-    expect(await screen.findByText('숫자 카드를 하나 그렸습니다.')).toBeInTheDocument();
+    // It answered without looking at the board it changed: the panel sends it back to look, twice at most.
+    await waitFor(() => expect(screen.getAllByText('숫자 카드를 하나 그렸습니다.')).toHaveLength(3), { timeout: 3000 });
+    expect(screen.getAllByText('마지막 변경을 그려 보고 확인합니다')).toHaveLength(2);
     expect(screen.getByText('카드 하나 그려줘')).toBeInTheDocument();
     expect(screen.getByText('보드에 그리기 · 변경 1개')).toBeInTheDocument();
     expect(onBoardChanged).toHaveBeenCalledTimes(1);

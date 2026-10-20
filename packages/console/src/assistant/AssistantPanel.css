@@ -152,6 +152,12 @@
   color: var(--ub-warning);
 }
 
+.ub-assistant__note {
+  font-size: var(--ub-font-size-sm);
+  color: var(--ub-brand);
+  font-weight: 600;
+}
+
 .ub-assistant__error {
   padding: var(--ub-space-2) var(--ub-space-3);
   border: 1px solid var(--ub-error-border);
