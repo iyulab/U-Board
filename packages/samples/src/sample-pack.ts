@@ -1,4 +1,4 @@
-import type { Attribution, ViewDocument } from '@iyulab/u-board/domain';
+import type { Attribution, SourceErrorField, ViewDocument } from '@iyulab/u-board/domain';
 
 /** Text in each language the site and the console speak. */
 export interface Localized {
@@ -22,6 +22,9 @@ export interface LiveSampleConnector {
   /** Set instead of `authValue` when the source publishes no key to try with: each installation registers
    *  for its own and gives it when it creates the sample. */
   ownKey?: OwnKey;
+  /** Where the source says, in an answer it gives with success, that it failed — set on the data source an
+   *  installation creates, and checked by the recording script, so an error is never recorded as data. */
+  sourceError?: SourceErrorField;
   attribution: Attribution;
 }
 

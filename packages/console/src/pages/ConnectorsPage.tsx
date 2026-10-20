@@ -11,6 +11,7 @@ import {
   type ConnectorAuthType,
   type ConnectorOAuthClientAuth,
   type ConnectorTestResult,
+  type ConnectorSourceError,
 } from '../api-client.js';
 import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
@@ -41,6 +42,7 @@ const TEST_REASONS: Record<Extract<ConnectorTestResult, { ok: false }>['reason']
   auth: '자격 증명이 거부됐습니다 — 시크릿·클라이언트 ID를 확인하세요',
   address: '주소를 찾을 수 없습니다 — Base URL·경로를 확인하세요',
   format: '응답이 JSON이 아닙니다 — JSON으로 답하게 하는 파라미터(예: returnType=json, _type=json)를 경로에 넣으세요',
+  source: '원천이 응답에 오류를 알렸습니다',
   throttled: '요청이 너무 많다고 거절됐습니다 — 잠시 뒤 다시 시도하세요',
   transport: '연결하지 못했습니다 — 주소에 닿을 수 있는지 확인하세요',
 };
@@ -49,6 +51,8 @@ const TEST_REASONS: Record<Extract<ConnectorTestResult, { ok: false }>['reason']
 export function describeTestResult(result: ConnectorTestResult, path: string): string {
   if (result.ok) return path ? `연결됨 — ${path}가 응답했습니다.` : '연결됨 — 토큰을 발급받았습니다.';
   const status = result.status !== undefined ? ` (HTTP ${result.status})` : '';
+  // The source's own words say what to fix — a key, a query, a quota.
+  if (result.reason === 'source') return `${TEST_STAGES[result.stage]} 단계 실패: ${TEST_REASONS.source} — “${result.message}”`;
   return `${TEST_STAGES[result.stage]} 단계 실패${status}: ${TEST_REASONS[result.reason]}.`;
 }
 
@@ -69,6 +73,9 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [attributionText, setAttributionText] = useState('');
   const [attributionUrl, setAttributionUrl] = useState('');
   const [description, setDescription] = useState('');
+  const [errorPath, setErrorPath] = useState('');
+  const [errorOk, setErrorOk] = useState('');
+  const [errorMessagePath, setErrorMessagePath] = useState('');
   const [authValue, setAuthValue] = useState('');
   const [oauthTokenUrl, setOauthTokenUrl] = useState('');
   const [oauthClientId, setOauthClientId] = useState('');
@@ -120,6 +127,9 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setAttributionText('');
     setAttributionUrl('');
     setDescription('');
+    setErrorPath('');
+    setErrorOk('');
+    setErrorMessagePath('');
     setOauthClientAuth('basic');
     setTestPath('');
     setTestOutcome(null);
@@ -140,6 +150,9 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setAttributionText(c.attribution?.text ?? '');
     setAttributionUrl(c.attribution?.url ?? '');
     setDescription(c.description ?? '');
+    setErrorPath(c.sourceError?.path ?? '');
+    setErrorOk(c.sourceError?.ok?.join(', ') ?? '');
+    setErrorMessagePath(c.sourceError?.messagePath ?? '');
     setOauthClientAuth(c.oauthClientAuth ?? 'basic');
     setTestOutcome(null);
   }
@@ -156,8 +169,20 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
         ? { text: attributionText.trim(), ...(attributionUrl.trim() ? { url: attributionUrl.trim() } : {}) }
         : connectors.find(c => c.id === editingId)?.attribution ? null : undefined,
       description: description.trim() ? description.trim() : connectors.find(c => c.id === editingId)?.description ? null : undefined,
+      sourceError: formSourceError(),
       authValue: authType === 'none' ? undefined : authValue || undefined,
       ...(isOAuth ? { oauthTokenUrl, oauthClientId, oauthScope, oauthClientAuth } : {}),
+    };
+  }
+
+  /** Where the source reports errors, as the form holds it: blank clears a setting the connector has. */
+  function formSourceError(): ConnectorSourceError | null | undefined {
+    if (!errorPath.trim()) return connectors.find(c => c.id === editingId)?.sourceError ? null : undefined;
+    const ok = errorOk.split(',').map(v => v.trim()).filter(v => v !== '');
+    return {
+      path: errorPath.trim(),
+      ...(ok.length > 0 ? { ok } : {}),
+      ...(errorMessagePath.trim() ? { messagePath: errorMessagePath.trim() } : {}),
     };
   }
 
@@ -323,6 +348,22 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
             />
           </FormField>
           <p className="ub-connector-hint">이 데이터소스가 어떤 경로에서 무엇을 주는지 적어 두면, 보드를 만드는 사람과 AI 비서가 경로를 짐작하지 않고 바인딩합니다. 공유 링크에는 나가지 않습니다.</p>
+          <details className="ub-connector-source-error" open={errorPath.trim() !== ''}>
+            <summary>응답 속 오류 위치(선택)</summary>
+            <p className="ub-connector-hint">
+              키가 틀리거나 요청이 잘못돼도 성공(HTTP 200)으로 답하고 본문에 오류를 적는 원천이 있습니다. 그 위치를 적으면 값이 «없음»
+              대신 원천이 한 말로 실패합니다. 위치는 JSON Pointer(예: /code, /response/header/resultCode)입니다.
+            </p>
+            <FormField label="상태 위치">
+              <input value={errorPath} onChange={e => setErrorPath(e.target.value)} pattern="/.+" placeholder="/code" />
+            </FormField>
+            <FormField label="정상을 뜻하는 값(쉼표로 — 비우면 그 위치에 값이 있기만 해도 오류)">
+              <input value={errorOk} onChange={e => setErrorOk(e.target.value)} placeholder="00" />
+            </FormField>
+            <FormField label="오류 문구 위치(선택)">
+              <input value={errorMessagePath} onChange={e => setErrorMessagePath(e.target.value)} pattern="/.+" placeholder="/message" />
+            </FormField>
+          </details>
           <FormField label={isOAuth ? '시험할 경로(선택 — 비우면 토큰만)' : '시험할 경로'}>
             <input value={testPath} onChange={e => setTestPath(e.target.value)} placeholder="/assets" />
           </FormField>

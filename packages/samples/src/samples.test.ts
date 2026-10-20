@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { coordinateOf, expandComponents, placedIn, resolveDocument, sizedNodes, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
+import { coordinateOf, expandComponents, isSourceErrorField, placedIn, resolveDocument, sizedNodes, sourceErrorIn, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
 import { BIKE_STATIONS } from './packs/gwanghwamun.js';
 import { keepPointers } from './prune.js';
@@ -27,6 +27,13 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
       // A source asked with a key carries either the key it publishes to try with or where to get one — never both.
       if (isLiveConnector(connector) && connector.authType !== 'none') {
         expect([connector.authValue, connector.ownKey].filter(v => v !== undefined), connector.key).toHaveLength(1);
+      }
+      // Where the source reports errors is a setting a data source accepts, and no recorded answer is one.
+      if (isLiveConnector(connector) && connector.sourceError) {
+        expect(isSourceErrorField(connector.sourceError), connector.key).toBe(true);
+        for (const [path, answer] of Object.entries(pack.snapshot.responses[connector.key] ?? {})) {
+          expect(sourceErrorIn(answer, connector.sourceError), `${connector.key} ${path}`).toBeUndefined();
+        }
       }
       if (isLiveConnector(connector) && connector.ownKey) {
         expect(connector.ownKey.signUpUrl, connector.key).toMatch(/^https:\/\//);

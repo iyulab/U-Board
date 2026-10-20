@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `create_source` takes `sourceError` — where a source that answers an error with success says so — and
+  `sample_source` says, for such an error, what the source said and who fixes it.
+
 ## [0.13.0] - 2026-10-20
 
 ### Changed

@@ -219,7 +219,7 @@ describe('BoardsListPage', () => {
   it('starts a board from an open-data sample: makes its data source, points the bindings at it, opens the editor', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
-    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: `new-${input.name}`, type: 'http', updatedAt: 't', ...input, attribution: input.attribution ?? undefined, description: input.description ?? undefined }));
+    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: `new-${input.name}`, type: 'http', updatedAt: 't', ...input, attribution: input.attribution ?? undefined, description: input.description ?? undefined, sourceError: input.sourceError ?? undefined }));
     vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', kind: 'canvas', updatedAt: 't' });
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: '서울 도심 미세먼지', updatedAt: 't', revision: 2 });
     renderPage();
@@ -236,7 +236,7 @@ describe('BoardsListPage', () => {
 
   it('asks for the key of a source that issues each user one, and refuses to start without it', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
-    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: 'new-subway', type: 'http', updatedAt: 't', ...input, attribution: undefined, description: undefined }));
+    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: 'new-subway', type: 'http', updatedAt: 't', ...input, attribution: undefined, description: undefined, sourceError: undefined }));
     vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: 'x', kind: 'canvas', updatedAt: 't' });
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't', revision: 2 });
     renderPage();
@@ -253,7 +253,7 @@ describe('BoardsListPage', () => {
     await userEvent.type(within(card).getByLabelText('서울시 지하철 실시간 도착정보 키'), 'my-key');
     await userEvent.click(start);
     expect(await screen.findByText('editor page')).toBeInTheDocument();
-    expect(api.createConnector).toHaveBeenCalledWith('w1', expect.objectContaining({ authType: 'path', authValue: 'my-key' }));
+    expect(api.createConnector).toHaveBeenCalledWith('w1', expect.objectContaining({ authType: 'path', authValue: 'my-key', sourceError: { path: '/code', messagePath: '/message' } }));
   });
 
   it('asks no key for a source the workspace already has a data source for', async () => {

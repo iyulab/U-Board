@@ -6,6 +6,15 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `QualityReason` `source`: the source answered with success but said in its answer that it could not serve the
+  request. A host that keeps its own words for each reason (`QualityText`, `UBoardLabels.qualityText`) needs one for
+  it — a `Record<QualityReason, string>` without it no longer compiles.
+- `ResolvedBinding.message` — what went wrong, in words for whoever can fix the binding or its data source.
+- `SourceErrorField`, `sourceErrorIn(body, field)` and `isSourceErrorField(field)` in `@iyulab/u-board/domain`: where a
+  source that answers an error with success writes its status, and the error such an answer reports.
+
 ## [0.26.0] - 2026-10-20
 
 ### Added

@@ -246,7 +246,18 @@ export interface ConnectorSummary extends ConnectorOAuthSettings {
   attribution?: { text: string; url?: string };
   /** What the source answers and where — for whoever binds to it. */
   description?: string;
+  /** Where the source says, in an answer it gives with success, that it failed. */
+  sourceError?: ConnectorSourceError;
   updatedAt: string;
+}
+
+/** Where a source that answers an error with success (HTTP 200) says so in its answer: the status it writes
+ *  (`path`, a JSON Pointer), the statuses that mean success (`ok` — absent: any status there is an error), and its
+ *  words for the error (`messagePath`). */
+export interface ConnectorSourceError {
+  path: string;
+  ok?: string[];
+  messagePath?: string;
 }
 
 export function listConnectors(workspaceId: string) {
@@ -255,7 +266,7 @@ export function listConnectors(workspaceId: string) {
 
 export function createConnector(
   workspaceId: string,
-  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null; description?: string | null } & ConnectorOAuthSettings
+  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null; description?: string | null; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors`, {
     method: 'POST',
@@ -271,7 +282,7 @@ export type ConnectorTestResult =
   | {
       ok: false;
       stage: 'token' | 'request' | 'response';
-      reason: 'transport' | 'auth' | 'address' | 'format' | 'throttled';
+      reason: 'transport' | 'auth' | 'address' | 'format' | 'source' | 'throttled';
       status?: number;
       message: string;
       /** The start of the body the source answered with, when it could not be read. */
@@ -283,7 +294,7 @@ export type ConnectorTestResult =
  *  the stored one. Fails with `PATH_REQUIRED` when there is nothing to call without a path. */
 export function testConnector(
   workspaceId: string,
-  input: { connectorId?: string; path?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string } & ConnectorOAuthSettings
+  input: { connectorId?: string; path?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
 ) {
   return request<ConnectorTestResult>(`/workspaces/${workspaceId}/connectors/test`, {
     method: 'POST',
@@ -294,7 +305,7 @@ export function testConnector(
 export function updateConnector(
   workspaceId: string,
   connectorId: string,
-  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null; description?: string | null } & ConnectorOAuthSettings
+  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null; description?: string | null; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors/${connectorId}`, {
     method: 'PUT',

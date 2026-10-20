@@ -11,6 +11,21 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A data source can say where its source writes an error it answers with success (HTTP 200) — the status, the
+  statuses that mean success, and its words for the error («응답 속 오류 위치» in the data source form). Its bindings
+  then fail with what the source said (a key it does not accept, no data for the request) instead of reading as a
+  value missing from the answer, and the connection test shows those words.
+- A sample on a source that issues each user a key of their own — subway arrivals around Seoul City Hall, on a line
+  diagram — asks for that key when it is created; a data source the workspace already has for that address is used
+  as it is.
+
+### Changed
+
+- A failed read tells signed-in members and API tokens what went wrong in words, beside its reason; a share link
+  still says only the reason.
+
 ## [0.16.0] - 2026-10-20
 
 ### Added

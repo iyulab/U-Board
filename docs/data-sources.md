@@ -50,6 +50,10 @@ eighth of that age. There is no push: a board is a status display, and polling i
     characters) its owner writes — the requests it answers and what each holds (`GET /line-1.json — the
     line; its stations under /stations, by "id"`). Whoever binds to it next reads it instead of guessing paths:
     a person in the console, or an assistant through `list_sources`. It is not shown with a shared board.
+11. **Errors as errors** — a refused key, a rejected query or a spent quota answered with `401`, `400` or `429`,
+    not with `200`. A source that answers them with `200` and a status in the body can still be read: its data
+    source says where that status is (the console's «응답 속 오류 위치», `sourceError` through the API), and its
+    bindings then fail with what the source said instead of reading as a value missing from the answer.
 
 What a board does with the answer — the reasons it gives when a value is not current, and the types a
 custom adapter returns instead of the HTTP connector — is in [`api-reference.md`](api-reference.md)

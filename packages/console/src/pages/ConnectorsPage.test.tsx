@@ -124,6 +124,34 @@ describe('ConnectorsPage', () => {
     await waitFor(() => expect(api.updateConnector).toHaveBeenCalledWith('w1', 'c8', expect.objectContaining({ description: null })));
   });
 
+  it('stores where a source reports errors in an answer it gives with success, and clears it when emptied', async () => {
+    const portal = { ...CONNECTOR, id: 'c7', name: 'Portal', sourceError: { path: '/response/header/resultCode', ok: ['00'], messagePath: '/response/header/resultMsg' } };
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [portal] });
+    vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
+    vi.mocked(api.updateConnector).mockResolvedValue(portal);
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Portal 수정' }));
+    expect(screen.getByLabelText('상태 위치')).toHaveValue('/response/header/resultCode');
+    expect(screen.getByLabelText(/정상을 뜻하는 값/)).toHaveValue('00');
+    fireEvent.change(screen.getByLabelText(/정상을 뜻하는 값/), { target: { value: '00, 0' } });
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 수정' }));
+    await waitFor(() =>
+      expect(api.updateConnector).toHaveBeenCalledWith('w1', 'c7', expect.objectContaining({
+        sourceError: { path: '/response/header/resultCode', ok: ['00', '0'], messagePath: '/response/header/resultMsg' },
+      }))
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Portal 수정' }));
+    fireEvent.change(screen.getByLabelText('상태 위치'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 수정' }));
+    await waitFor(() => expect(api.updateConnector).toHaveBeenLastCalledWith('w1', 'c7', expect.objectContaining({ sourceError: null })));
+  });
+
   it('shows an empty state when the workspace has no connectors yet', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
@@ -384,6 +412,20 @@ describe('ConnectorsPage', () => {
 
       expect(await screen.findByRole('status')).toHaveTextContent('응답 읽기 단계 실패: 응답이 JSON이 아닙니다 — JSON으로 답하게 하는 파라미터');
       expect(screen.getByText('<RESULT><CODE>ERROR-335</CODE></RESULT>')).toBeInTheDocument();
+    });
+
+    it('says in the source’s own words what it reported in an answer it gave with success', async () => {
+      vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [BEARER] });
+      vi.mocked(api.listMembers).mockResolvedValue(OWNER);
+      vi.mocked(api.testConnector).mockResolvedValue({
+        ok: false, stage: 'response', reason: 'source', message: '인증키가 유효하지 않습니다. (INFO-100)', excerpt: '{"status":500,"code":"INFO-100"}',
+      });
+      renderPage();
+      await userEvent.click(await screen.findByRole('button', { name: 'Bearer API 수정' }));
+      await userEvent.type(screen.getByLabelText('시험할 경로'), '/arrivals');
+      await userEvent.click(screen.getByRole('button', { name: '연결 테스트' }));
+
+      expect(await screen.findByRole('status')).toHaveTextContent('응답 읽기 단계 실패: 원천이 응답에 오류를 알렸습니다 — “인증키가 유효하지 않습니다. (INFO-100)”');
     });
 
     it('tries an edit with the stored secret and the given path, and says it connected', async () => {

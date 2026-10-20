@@ -32,6 +32,16 @@
   color: var(--ub-text-muted);
 }
 
+.ub-connector-source-error {
+  display: grid;
+  gap: var(--ub-space-2);
+}
+
+.ub-connector-source-error summary {
+  cursor: pointer;
+  font-size: var(--ub-font-size-sm);
+}
+
 .ub-connector-excerpt {
   margin: 0;
   font-size: var(--ub-font-size-sm);

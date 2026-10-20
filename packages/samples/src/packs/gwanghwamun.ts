@@ -20,6 +20,9 @@ export const SEOUL_CITY_DATA: SampleConnector = {
   baseUrl: 'http://openapi.seoul.go.kr:8088/{key}',
   authType: 'path',
   authValue: 'sample',
+  // An error comes as `{ RESULT: { CODE: 'ERROR-500', MESSAGE } }` at the top; a service's own answer carries its
+  // status inside itself (or, for city data, under keys named `RESULT.CODE`), never at `/RESULT/CODE`.
+  sourceError: { path: '/RESULT/CODE', ok: ['INFO-000'], messagePath: '/RESULT/MESSAGE' },
   attribution: { text: '서울특별시 서울 열린데이터광장 (공공누리 제1유형)', url: 'https://data.seoul.go.kr' },
 };
 

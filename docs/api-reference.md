@@ -125,6 +125,7 @@ interface ResolvedBinding {
   value: unknown;
   quality: ConnectionQuality;
   reason?: QualityReason;
+  message?: string;
   observedAt?: string; // ISO 8601
 }
 ```
@@ -135,7 +136,9 @@ the adapter knows it, is when `value` was obtained from the source: the time of 
 `live`, of the last successful one for `stale` — what tells a last-known value of seconds ago from
 one of days ago. It is ignored on a `disconnected` reading. The hosted HTTP connector reports it —
 the time the source gives when the binding's reference names one ([`HttpRef`](#httpref)), else the
-time it read the source.
+time it read the source. `message`, on a reading that is not `live`, says what went wrong in words for
+whoever can fix the binding or its data source — for `source`, what the source itself said. The hosted
+server sends it to signed-in members and to API tokens, never through a share link.
 
 ### `ConnectionQuality`
 
@@ -159,7 +162,7 @@ source" itself.
 ### `QualityReason`
 
 ```ts
-type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled' | 'lagging';
+type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'source' | 'throttled' | 'lagging';
 ```
 
 Why a binding is not `live`, reported by the adapter when it can tell. Each names a different fix,
@@ -172,6 +175,10 @@ so an operator reading "disconnected" knows where to look:
 - `format` — the source answered in a form the binding cannot read: XML or HTML where JSON was needed,
   or a value path into plain text. How the source is asked needs attention (many APIs answer JSON only
   when asked, with a parameter such as `returnType=json`).
+- `source` — the source answered with success (HTTP 200) but said in its answer that it could not serve
+  the request: a key it does not accept, a query it rejects, a spent quota. What it said (`message`) is
+  the fix. The HTTP connector reports it for a data source whose owner said where the source writes such
+  a status ([`sourceErrorIn`](#sourceerrorin)).
 - `throttled` — requests are being rate limited.
 - `lagging` — the source answered, but its latest value is older than the binding expects of it (the
   HTTP connector's `maxAgeSeconds`): the source has stopped or fallen behind updating — neither the
@@ -404,6 +411,30 @@ it has it in a form the reference cannot read). `resolvedReading(reading)` turns
 value into the binding's result — `live`, or `stale` with reason `lagging` — so every reader of a reference
 reports it alike. `isHttpRef(ref)` checks the shape, and `parseSourceTime(raw, timeZone?)` reads one time.
 All are exported from `@iyulab/u-board/domain`.
+
+#### `sourceErrorIn`
+
+```ts
+interface SourceErrorField {
+  path: string;
+  ok?: string[];
+  messagePath?: string;
+}
+function sourceErrorIn(body: unknown, field: SourceErrorField): string | undefined;
+```
+
+Some sources answer a key they do not accept, a query they reject or a spent quota with success (HTTP 200)
+and a status of their own in the body. Read as data, that answer only says the bound value is missing. A data
+source's owner says where such a source writes its status, as a setting of the data source (the same for every
+request): `path`, a JSON Pointer to the status; `ok`, the statuses that mean success — absent when the source
+writes a status there only when it fails (`{ "path": "/code", "messagePath": "/message" }`), present when it
+always writes one (`{ "path": "/response/header/resultCode", "ok": ["00"], "messagePath": "/response/header/resultMsg" }`);
+and `messagePath`, a JSON Pointer to its words for the error. `sourceErrorIn` answers those words with the
+status (`"The key is not valid. (INFO-100)"`), or the status alone when the source gives no words, or
+`undefined` when the answer reports no error — an absent or `null` status says nothing, and statuses compare as
+text. The hosted HTTP connector checks every answer of such a data source this way and fails its bindings with
+reason `source` and that `message`. `isSourceErrorField(field)` checks the shape. Both are exported from
+`@iyulab/u-board/domain`.
 
 ### `Widget`
 

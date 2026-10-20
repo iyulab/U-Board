@@ -17,6 +17,9 @@ export const SEOUL_SUBWAY: SampleConnector = {
   baseUrl: 'http://swopenapi.seoul.go.kr/api/subway/{key}',
   authType: 'path',
   ownKey: { signUpUrl: 'https://data.seoul.go.kr', env: 'SEOUL_SUBWAY_KEY' },
+  // A key it does not accept, or no train to report, comes as `{ status, code, message }` at the top — its answer
+  // otherwise keeps its status under `errorMessage`.
+  sourceError: { path: '/code', messagePath: '/message' },
   attribution: { text: '서울특별시 서울 열린데이터광장 (공공누리 제1유형)', url: 'https://data.seoul.go.kr' },
 };
 

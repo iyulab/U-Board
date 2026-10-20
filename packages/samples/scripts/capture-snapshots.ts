@@ -5,7 +5,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { findHttpRefItem, placedIn, type HttpRef } from '@iyulab/u-board/domain';
+import { findHttpRefItem, placedIn, sourceErrorIn, type HttpRef } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS } from '../src/index.js';
 import { keepPointers } from '../src/prune.js';
 import { isInstallable, isLiveConnector, type LiveSampleConnector, type SamplePack } from '../src/sample-pack.js';
@@ -73,6 +73,8 @@ for (const pack of SAMPLE_PACKS.filter(pack => isInstallable(pack) && (only.size
         throw new Error(`${pack.id}: ${path} answered ${res.status} ${res.headers.get('content-type')}`);
       }
       const body = await res.json();
+      const said = connector.sourceError ? sourceErrorIn(body, connector.sourceError) : undefined;
+      if (said !== undefined) throw new Error(`${pack.id}: ${path} — the source reported an error: ${said}`);
       responses[key][path] = keepPointers(body, refs.flatMap(ref => pointersOf(body, ref)));
     }
   }
