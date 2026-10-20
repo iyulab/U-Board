@@ -408,6 +408,12 @@ describe('u-board-mcp', () => {
     });
   });
 
+  it('reads a source named by its name, as people name it, and answers the id a binding takes', async () => {
+    const { value } = await call('sample_source', { source: ' plant api', path: '/readings' });
+    expect(value).toMatchObject({ source: 's1', note: expect.stringContaining('takes its id'), read: true, quality: 'live' });
+    expect((await call('sample_source', { source: 'Nobody', path: '/readings' })).value).toMatchObject({ status: 404, hint: expect.stringContaining('list_sources') });
+  });
+
   it('says, for a path the source has nothing at, to ask for the source’s paths rather than guess them', async () => {
     const { value } = await call('sample_source', { source: 's1', path: '/nowhere' });
     expect(value).toEqual({ read: false, reason: 'address', next: expect.stringContaining('ask the person') });

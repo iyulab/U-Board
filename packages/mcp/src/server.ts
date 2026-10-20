@@ -373,17 +373,34 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
       description:
         "Reads a request from a data source and answers what the response looks like — each value's JSON Pointer, type and an example, and for each list of objects the fields that tell its items apart — not the response itself. Use it to choose a binding's ref.",
       inputSchema: z.strictObject({
-        source: z.string().min(1).max(100).describe('The data source id, from list_sources.'),
+        source: z.string().min(1).max(100).describe('The data source id, from list_sources — or its name, when no other source has it.'),
         path: z.string().min(1).max(2000).describe('The request, relative to the source’s base URL: "/api/readings?line=1".'),
       }),
     },
     async ({ source, path }) =>
       tool(async () => {
-        const read = await client.resolve(source, { path });
-        if (read.quality === 'disconnected') return { read: false, reason: read.reason, message: read.message, next: UNREAD[read.reason ?? ''] ?? UNREAD.transport };
-        return { read: true, quality: read.quality, shape: shapeOf(read.value) };
+        const { id, read } = await readSource(source, path);
+        // Named by its name: the answer gives the id, which is what a binding's adapter takes.
+        const named = id !== source ? { source: id, note: `"${source}" is this source's name; a binding's adapter takes its id` } : {};
+        if (read.quality === 'disconnected') return { ...named, read: false, reason: read.reason, message: read.message, next: UNREAD[read.reason ?? ''] ?? UNREAD.transport };
+        return { ...named, read: true, quality: read.quality, shape: shapeOf(read.value) };
       })
   );
+
+  /** A request read from a source named as people name it — by its id, or else by its name (case and spaces aside) when
+   *  only that one source has it. Two of the same name are not guessed between: their ids are said instead. */
+  async function readSource(source: string, path: string): Promise<{ id: string; read: Awaited<ReturnType<UBoardClient['resolve']>> }> {
+    try {
+      return { id: source, read: await client.resolve(source, { path }) };
+    } catch (error) {
+      if (!(error instanceof UBoardApiError && error.status === 404)) throw error;
+      const key = source.trim().toLowerCase();
+      const named = (await client.listSources()).filter(s => s.name.trim().toLowerCase() === key);
+      if (named.length > 1) throw new UBoardApiError(404, { code: 'NOT_FOUND', message: `${named.length} sources are named "${source}" — use one's id: ${named.map(s => s.id).join(', ')}` });
+      if (named.length === 0) throw error;
+      return { id: named[0].id, read: await client.resolve(named[0].id, { path }) };
+    }
+  }
 
   server.registerTool(
     'create_source',

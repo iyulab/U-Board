@@ -8,6 +8,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- `sample_source` takes a source's name as well as its id, when no other source has that name — people name their
+  sources, and an assistant uses their words. The answer then gives the id, which a binding's adapter takes.
 - The connector rules show a bound label keeping its unit: `"{{value | fixed:1}} Mbps"`.
 - The element rules say an element's sizes include padding and border.
 - The colour rules name the theme colours a board can use instead of a hex value: `positive`, `warning`, `negative`,
