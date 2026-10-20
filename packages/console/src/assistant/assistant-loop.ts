@@ -33,7 +33,7 @@ Make it beautiful and easy to read: a clear title, a balanced layout with room a
 
 Draw it in a few steps the person can watch: the layout and the main figures first, then the charts, then the finishing touches — each step one patch_board with several operations, not one operation per call. When a tool answers an error, fix what it says and go on.
 
-Answer in the person's language, in two or three plain sentences (no Markdown — the chat shows text as it is): what you drew, and what they could ask for next. Before a step, say in one short sentence what you are about to draw.`;
+Write every message in the language the person writes in — Korean to a person writing Korean, from the first sentence on. Answer in two or three plain sentences (no Markdown — the chat shows text as it is): what you drew, and what they could ask for next. Before a step, say in one short sentence what you are about to draw.`;
 }
 
 export type TurnEvent =
