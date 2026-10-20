@@ -11,6 +11,23 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-20
+
+### Added
+
+- A colour on a board can be a theme colour's name — `positive`, `warning`, `negative`, `accent` — wherever a part
+  is coloured (a state's ring, a connector, a frame, a text), drawn in the widgets' palette for the board's light or
+  dark appearance. The states editor offers the names.
+- A connector's bound label can keep its unit and digits: `{{value | fixed:1}} Mbps` reads `820.4 Mbps`, and `—`
+  while there is no value.
+
+### Changed
+
+- Every size inside an element now includes its padding and border (`box-sizing: border-box`), so an element whose
+  root is `height: 100%` with padding fits its box instead of being cut off at the bottom. Upgrading: an element
+  that relied on the old sizing (a fixed width plus padding) draws its content slightly smaller — say
+  `box-sizing: content-box` in its CSS to keep it.
+
 ## [0.15.0] - 2026-10-20
 
 ### Added

@@ -6,8 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-20
+
 ### Changed
 
+- Needs `@iyulab/u-board` 0.26 — it checks a board with the same rules the server saves by.
 - `sample_source` takes a source's name as well as its id, when no other source has that name — people name their
   sources, and an assistant uses their words. The answer then gives the id, which a binding's adapter takes.
 - The connector rules show a bound label keeping its unit: `"{{value | fixed:1}} Mbps"`.

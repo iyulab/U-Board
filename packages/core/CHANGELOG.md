@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-10-20
+
 ### Added
 
 - A drawing colour can be a theme colour's name — `positive`, `warning`, `negative`, `accent` — wherever a board
