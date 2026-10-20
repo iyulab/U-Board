@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "postinstall": "npm run build:lib --workspace=packages/core",
+    "postinstall": "npm run build:lib --workspace=packages/core --workspace=packages/mcp",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "oxlint packages scripts test-support",
     "test": "npm run test --workspaces --if-present",

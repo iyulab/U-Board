@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-10-21
+
+### Changed
+
+- Widgets from `@iyulab/u-widgets` 0.38.1: a pie's legend sits where an `echarts` passthrough places it, a metric with a
+  sparkline keeps inside a short box, and a reference line's label reads plainly on a dark board.
+
 ### Fixed
 
 - In View, a grid board's canvas cells label their zoom and fit buttons in the editor's language — they were English

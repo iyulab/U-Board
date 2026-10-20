@@ -11,6 +11,10 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-21
+
+Built on `@iyulab/u-board` 0.31.0 and `@iyulab/u-board-mcp` 0.18.0.
+
 ### Added
 
 - An AI chat panel beside the board editor (✦ AI 비서): say what the board should show, and a model draws it on the open

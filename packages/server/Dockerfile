@@ -12,7 +12,9 @@ COPY packages/console packages/console
 COPY packages/share packages/share
 # Sample boards the console offers to start from — read as source by its build.
 COPY packages/samples packages/samples
-# The root postinstall builds the core library the other three compile against.
+# The board tools the console's chat panel offers a model — built, as the core library is, for the console to bundle.
+COPY packages/mcp packages/mcp
+# The root postinstall builds the core library and the board tools the others compile against.
 RUN npm ci
 RUN npm run build --workspace=packages/console \
  && npm run build --workspace=packages/share \

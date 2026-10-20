@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-21
+
+### Changed
+
+- Needs `@iyulab/u-board` `^0.31.0`.
+
 ### Added
 
 - `@iyulab/u-board-mcp/tools`: the board tools without the MCP server, for a host that offers them to a model itself —
