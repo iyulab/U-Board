@@ -13,6 +13,7 @@ export { lineOee } from './packs/line-oee.js';
 export { lineFlow } from './packs/line-flow.js';
 export { pumpStation } from './packs/pump-station.js';
 export { serverRoom } from './packs/server-room.js';
+export { buildingFloor } from './packs/building-floor.js';
 export { bodyGap } from './packs/body-gap.js';
 export { itTopology } from './packs/it-topology.js';
 export { assemblyWip } from './packs/assembly-wip.js';
@@ -29,10 +30,11 @@ import { lineOee } from './packs/line-oee.js';
 import { lineFlow } from './packs/line-flow.js';
 import { pumpStation } from './packs/pump-station.js';
 import { serverRoom } from './packs/server-room.js';
+import { buildingFloor } from './packs/building-floor.js';
 import { bodyGap } from './packs/body-gap.js';
 import { itTopology } from './packs/it-topology.js';
 import { assemblyWip } from './packs/assembly-wip.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, serverRoom, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, serverRoom, buildingFloor, bodyGap, itTopology, assemblyWip];
