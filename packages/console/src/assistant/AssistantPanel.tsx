@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { boardTools, UBoardClient } from '@iyulab/u-board-mcp/tools';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
-import { panelTools, runTurn, systemPrompt, type OpenBoard, type TurnEvent } from './assistant-loop.js';
+import { panelTools, readPrimer, runTurn, systemPrompt, type OpenBoard, type TurnEvent } from './assistant-loop.js';
 import type { ChatMessage, ModelSettings } from './chat-model.js';
 import { clearModelSettings, loadModelSettings, saveModelSettings } from './settings.js';
 import { InPageLooker, type LookSetting } from './in-page-looker.js';
@@ -124,8 +124,6 @@ export function AssistantPanel({ workspaceId, board, blocked, lookSetting, onBoa
     if (!words || busy || blocked || !settings) return;
     setInput('');
     setItems(current => [...current, { kind: 'user', text: words }]);
-    if (history.current.length === 0) history.current.push({ role: 'system', content: systemPrompt(board) });
-    history.current.push({ role: 'user', content: words });
     const controller = new AbortController();
     abort.current = controller;
     setBusy(true);
@@ -134,6 +132,8 @@ export function AssistantPanel({ workspaceId, board, blocked, lookSetting, onBoa
       // The tools reach this server as the signed-in person: their session, in the workspace they are in.
       const client = new UBoardClient(window.location.origin, { workspace: { id: workspaceId, name: '' } });
       const tools = panelTools(boardTools(client, { boardState: false, looker: new InPageLooker(() => setting.current) }));
+      if (history.current.length === 0) history.current.push({ role: 'system', content: systemPrompt(board, await readPrimer(tools)) });
+      history.current.push({ role: 'user', content: words });
       await runTurn(settings, history.current, tools, board, update, controller.signal);
     } catch (error) {
       if ((error as { name?: string }).name !== 'AbortError') {

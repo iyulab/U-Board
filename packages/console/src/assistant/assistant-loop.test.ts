@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import type { BoardTool } from '@iyulab/u-board-mcp/tools';
-import { panelTools, runTurn, systemPrompt, type TurnEvent } from './assistant-loop.js';
+import { panelTools, readPrimer, runTurn, systemPrompt, type TurnEvent } from './assistant-loop.js';
 import { chatCompletionsUrl, streamChat, type ChatMessage } from './chat-model.js';
 
 const SETTINGS = { baseUrl: 'https://models.example.com/v1/', model: 'm', apiKey: 'k' };
@@ -148,6 +148,17 @@ describe('a turn', () => {
     const { requests, fetchImpl } = endpoint([[{ tool_calls: [{ index: 0, id: 'p', function: { name: 'patch_board', arguments: '{"board":"b1"}' } }] }], [{ content: 'done' }]]);
     await runTurn(SETTINGS, [], [fakeTool('patch_board', () => ({ text: '{}' }))], board, () => {}, undefined, fetchImpl);
     expect(requests).toHaveLength(2);
+  });
+
+  it('starts the model with the rules and the widget list the panel read itself, so it need not ask for them', async () => {
+    const describe = fakeTool('describe', args => ({ text: `the ${String((args as { topic?: string }).topic)} text` }));
+    const primer = await readPrimer([describe]);
+    expect(primer).toEqual({ rules: 'the rules text', widgets: 'the widgets text' });
+    const prompt = systemPrompt(board, { rules: 'RULES', widgets: 'WIDGETS' });
+    expect(prompt).toContain('do not read them again');
+    expect(prompt).toMatch(/# The rules\s+RULES\s+# The widgets\s+WIDGETS/);
+    expect(systemPrompt(board)).toContain('Before the first change, read describe');
+    expect(await readPrimer([])).toBeUndefined();
   });
 
   it('offers the tools that draw the open board, not the ones that make or delete boards', () => {

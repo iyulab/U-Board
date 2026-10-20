@@ -23,21 +23,56 @@ export function panelTools(tools: BoardTool[]): BoardTool[] {
   return tools.filter(t => !LEFT_OUT.has(t.name));
 }
 
+/** What `describe` answers for the rules and the widget list — read by the panel before the first turn, so the model
+ *  starts drawing without asking for them. */
+export interface Primer {
+  rules: string;
+  widgets: string;
+}
+
 /** What the model is told before the conversation: the board it draws and how to draw it well. */
-export function systemPrompt(board: OpenBoard): string {
+export function systemPrompt(board: OpenBoard, primer?: Primer): string {
   return `Write every message in the language the person writes in.
 
 You are the drawing assistant in U-Board's board editor. The person sees the board you draw beside this chat, and each change you save appears there at once.
 
 The board open in the editor: id "${board.id}", named "${board.name}", a ${board.kind} board. Draw on this board only — read it with get_board, change it with patch_board (edit_board for renames and removals), check a change with validate when unsure. Its kind stays ${board.kind}.${board.kind === 'grid' ? ' Charts, lists and figures go in grid items; a canvas cell is only for a plan, a map or a diagram that places things.' : ''}
 
-Before the first change, read describe({ "topic": "rules" }); read describe({ "topic": "${board.kind === 'canvas' ? 'canvas' : 'widgets'}" }) too, and describe({ "topic": "widget:<type>" }) for a widget you have not used.
+${
+    primer
+      ? `The rules — what describe({ "topic": "rules" }) answers — and the widget list are at the end of these instructions: do not read them again. ${board.kind === 'canvas' ? 'Read describe({ "topic": "canvas" }) before the first change, and ' : 'Read '}describe({ "topic": "widget:<type>" }) for a widget you have not used.`
+      : `Before the first change, read describe({ "topic": "rules" }); read describe({ "topic": "${board.kind === 'canvas' ? 'canvas' : 'widgets'}" }) too, and describe({ "topic": "widget:<type>" }) for a widget you have not used.`
+  }
 
 Make it beautiful and easy to read: a clear title, a balanced layout with room around each part, one consistent palette, the most important figures largest, a title on every chart. The board's own look is at the top of its document: "appearance" ("light" or "dark" — set "dark" for a dark board, not dark colours on each part) and "accent" (one colour). When no data source holds what the person asks for, write example values into the widgets' props (no bindings), so the board shows something — and say that the values are examples.
 
 Draw it in a few steps the person can watch: the layout and the main figures first, then the charts, then the finishing touches — each step one patch_board with several operations, not one operation per call. After each step, call look on the board and fix what it reports — a part whose content runs past its box needs more room (a larger height or span) or less in it; go on until look says nothing is left to fix. When a tool answers an error, fix what it says and go on.
 
-Write every message in the language the person writes in — Korean to a person writing Korean, from the first sentence on. Answer in two or three plain sentences (no Markdown — the chat shows text as it is): what you drew, and what they could ask for next. Before a step, say in one short sentence — in the person's language — what you are about to draw.`;
+Write every message in the language the person writes in — Korean to a person writing Korean, from the first sentence on. Answer in two or three plain sentences (no Markdown — the chat shows text as it is): what you drew, and what they could ask for next. Before a step, say in one short sentence — in the person's language — what you are about to draw.${primer ? `
+
+# The rules
+
+${primer.rules}
+
+# The widgets
+
+${primer.widgets}
+
+# Last: your language
+
+Every message you write — before a step, between steps, and the answer — is in the language the person writes in, not the language of the rules above.` : ''}`;
+}
+
+/** Reads the rules and the widget list with the panel's own `describe`, for `systemPrompt` — none when it cannot. */
+export async function readPrimer(tools: BoardTool[]): Promise<Primer | undefined> {
+  const describe = tools.find(t => t.name === 'describe');
+  if (!describe) return undefined;
+  const text = async (topic: string) => {
+    const answer = await describe.run({ topic } as never);
+    return answer.isError ? undefined : answer.content.map(part => (part.type === 'text' ? part.text : '')).join('\n');
+  };
+  const [rules, widgets] = await Promise.all([text('rules'), text('widgets')]);
+  return rules && widgets ? { rules, widgets } : undefined;
 }
 
 export type TurnEvent =
