@@ -1,0 +1,293 @@
+/* The chat beside the editor: a column of the window's height, the conversation scrolling inside it and the composer
+   at its foot. */
+.ub-assistant {
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  flex: none;
+  min-height: 0;
+  border: 1px solid var(--ub-border);
+  border-radius: var(--ub-radius-lg);
+  background: var(--ub-bg-surface);
+  box-shadow: var(--ub-shadow-sm);
+  overflow: hidden;
+}
+
+.ub-assistant__header {
+  display: flex;
+  align-items: center;
+  gap: var(--ub-space-2);
+  padding: var(--ub-space-2) var(--ub-space-2) var(--ub-space-2) var(--ub-space-4);
+  border-bottom: 1px solid var(--ub-border);
+}
+
+.ub-assistant__mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--ub-brand-gradient);
+  color: var(--ub-text-inverse);
+  font-size: 13px;
+}
+
+.ub-assistant__title {
+  margin: 0;
+  font-size: var(--ub-font-size-lg);
+  font-weight: 700;
+  color: var(--ub-text-strong);
+}
+
+.ub-assistant__header-actions {
+  display: flex;
+  margin-left: auto;
+}
+
+.ub-assistant__log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ub-space-2);
+  padding: var(--ub-space-4);
+}
+
+.ub-assistant__empty p {
+  margin: 0 0 var(--ub-space-3);
+  font-size: var(--ub-font-size-base);
+  line-height: 1.55;
+  color: var(--ub-text-muted);
+}
+
+.ub-assistant__empty ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--ub-space-2);
+}
+
+.ub-assistant__empty button {
+  width: 100%;
+  text-align: left;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border: 1px solid var(--ub-border);
+  border-radius: var(--ub-radius-md);
+  background: var(--ub-bg-subtle);
+  color: var(--ub-text-normal);
+  font: inherit;
+  font-size: var(--ub-font-size-md);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.ub-assistant__empty button:hover:not(:disabled) {
+  border-color: var(--ub-brand);
+  color: var(--ub-text-strong);
+}
+
+.ub-assistant__message {
+  max-width: 92%;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border-radius: var(--ub-radius-md);
+  font-size: var(--ub-font-size-base);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ub-assistant__message--user {
+  align-self: flex-end;
+  background: var(--ub-brand-solid);
+  color: var(--ub-text-inverse);
+  border-bottom-right-radius: 4px;
+}
+
+.ub-assistant__message--assistant {
+  align-self: flex-start;
+  background: var(--ub-bg-subtle);
+  color: var(--ub-text-strong);
+  border-bottom-left-radius: 4px;
+}
+
+/* A tool the model ran: one quiet line, so the conversation stays the words. */
+.ub-assistant__tool {
+  display: flex;
+  align-items: center;
+  gap: var(--ub-space-2);
+  font-size: var(--ub-font-size-sm);
+  color: var(--ub-text-muted);
+}
+
+.ub-assistant__tool-icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ub-assistant__tool--ok .ub-assistant__tool-icon {
+  background: var(--ub-success-bg);
+  color: var(--ub-success);
+}
+
+.ub-assistant__tool--error .ub-assistant__tool-icon {
+  background: var(--ub-warning-bg);
+  color: var(--ub-warning);
+}
+
+.ub-assistant__tool--running .ub-assistant__tool-icon {
+  border: 2px solid var(--ub-border-strong);
+  border-top-color: var(--ub-brand);
+  animation: ub-assistant-spin 0.8s linear infinite;
+}
+
+.ub-assistant__tool-note {
+  color: var(--ub-warning);
+}
+
+.ub-assistant__error {
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border: 1px solid var(--ub-error-border);
+  border-radius: var(--ub-radius-md);
+  background: var(--ub-error-bg);
+  color: var(--ub-error);
+  font-size: var(--ub-font-size-md);
+  line-height: 1.5;
+}
+
+.ub-assistant__thinking {
+  display: flex;
+  gap: 4px;
+  padding: var(--ub-space-2) 0;
+}
+
+.ub-assistant__thinking i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ub-brand);
+  opacity: 0.35;
+  animation: ub-assistant-dot 1.2s ease-in-out infinite;
+}
+
+.ub-assistant__thinking i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.ub-assistant__thinking i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+.ub-assistant__composer {
+  display: grid;
+  gap: var(--ub-space-2);
+  padding: var(--ub-space-3);
+  border-top: 1px solid var(--ub-border);
+}
+
+.ub-assistant__composer textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  padding: var(--ub-space-2) var(--ub-space-3);
+  border: 1px solid var(--ub-border-strong);
+  border-radius: var(--ub-radius-md);
+  background: var(--ub-bg-surface);
+  color: var(--ub-text-strong);
+  font: inherit;
+  font-size: var(--ub-font-size-base);
+  line-height: 1.5;
+}
+
+.ub-assistant__composer textarea:focus {
+  outline: none;
+  border-color: var(--ub-focus-color);
+  box-shadow: var(--ub-focus-shadow);
+}
+
+.ub-assistant__composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ub-space-2);
+}
+
+.ub-assistant__model {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--ub-font-size-xs);
+  color: var(--ub-text-muted);
+}
+
+.ub-assistant__blocked {
+  margin: 0;
+  font-size: var(--ub-font-size-sm);
+  color: var(--ub-warning);
+}
+
+.ub-assistant__settings {
+  display: grid;
+  gap: var(--ub-space-3);
+  padding: var(--ub-space-4);
+  overflow-y: auto;
+}
+
+.ub-assistant__settings p {
+  margin: 0;
+  font-size: var(--ub-font-size-md);
+  line-height: 1.55;
+  color: var(--ub-text-muted);
+}
+
+.ub-assistant__settings input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ub-assistant__settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ub-space-2);
+}
+
+@keyframes ub-assistant-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ub-assistant-dot {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ub-assistant__tool--running .ub-assistant__tool-icon,
+  .ub-assistant__thinking i {
+    animation: none;
+  }
+}
+
+/* A narrow window: the chat goes under the editor rather than squeezing it. */
+@media (max-width: 960px) {
+  .ub-assistant {
+    width: auto;
+    height: 60dvh;
+  }
+}

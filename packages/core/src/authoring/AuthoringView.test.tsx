@@ -534,6 +534,17 @@ describe('AuthoringView viewport', () => {
     expect(screen.getByRole('button', { name: 'Zoom out' })).toBeEnabled();
   });
 
+  it('opens in the mode it is given and says when the author switches — so a host opening it again keeps them there', async () => {
+    const onModeChange = vi.fn();
+    render(<AuthoringView initialDocument={doc()} adapters={[]} initialMode="view" onModeChange={onModeChange} />);
+    expect(screen.getByRole('button', { name: 'View' })).toHaveAttribute('aria-pressed', 'true');
+    await screen.findByTestId('viewer');
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(onModeChange).toHaveBeenLastCalledWith('edit');
+    fireEvent.click(screen.getByRole('button', { name: 'View' }));
+    expect(onModeChange).toHaveBeenLastCalledWith('view');
+  });
+
   it('keeps the pan/zoom when switching between edit and view, whichever mode moved it', async () => {
     render(<AuthoringView initialDocument={doc()} adapters={[]} />);
     expect(screen.getByRole('button', { name: 'Edit' })).toHaveAttribute('aria-pressed', 'true');

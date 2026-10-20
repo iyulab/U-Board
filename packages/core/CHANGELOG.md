@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `AuthoringView` takes `initialMode` (`'edit'` or `'view'`) and `onModeChange`: a host that opens the board again —
+  after a change saved elsewhere — gives the mode the author was in, so one watching the board in View stays in View.
+
 ## [0.30.0] - 2026-10-20
 
 ### Changed

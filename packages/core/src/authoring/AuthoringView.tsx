@@ -50,6 +50,11 @@ export interface AuthoringViewProps {
   onTrigger?: ViewerPageProps['onTrigger'];
   onNavigate?: ViewerPageProps['onNavigate'];
   linkOrigins?: readonly string[];
+  /** The mode it opens in — Edit when left out. A host that opens the board again (after a change saved elsewhere)
+   *  gives the mode the author was in, from `onModeChange`, so they stay where they were. */
+  initialMode?: AuthoringMode;
+  /** The author switched between Edit and View. */
+  onModeChange?: (mode: AuthoringMode) => void;
 }
 
 /**
@@ -64,13 +69,17 @@ export interface AuthoringViewProps {
  * has unsaved changes, Save, Export, Import, the mode. Importing a document of the other kind opens it in that kind's
  * editor.
  */
-export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins }: AuthoringViewProps) {
+export function AuthoringView({ initialDocument, adapters, width, height, connectorLabels, onSave, onDirtyChange, labels: labelsProp, showDocumentSource = false, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: AuthoringViewProps) {
   const labels = useLabels(labelsProp);
   // The document with the edits that led to it, since it was opened.
   const [history, setHistory] = useState<DocumentHistory<ViewDocument>>(() => startHistory(initialDocument));
   const doc = history.present;
   // One board, in one of two modes: edited, or viewed exactly as a shared board shows it.
-  const [mode, setMode] = useState<AuthoringMode>('edit');
+  const [mode, setModeState] = useState<AuthoringMode>(initialMode);
+  const setMode = (next: AuthoringMode) => {
+    setModeState(next);
+    onModeChange?.(next);
+  };
   const [fileError, setFileError] = useState<string | null>(null);
   // Each document opened (the initial one, or an import) gets an editor of its own — its selection, its view
   // and what it was holding belong to the document it was opened with.

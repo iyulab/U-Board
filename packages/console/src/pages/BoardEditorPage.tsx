@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { AuthoringView, KO_LABELS, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { AuthoringView, KO_LABELS, type AuthoringMode, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, apiClock, ApiError,
@@ -12,6 +12,7 @@ import { Alert } from '../design-system/Alert.js';
 import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
 import { ShareDialog } from './ShareDialog.js';
+import { AssistantPanel } from '../assistant/AssistantPanel.js';
 
 // The editor's words, plus where a workspace without a data source goes next: the console's own
 // screens, which the library's generic wording cannot name.
@@ -56,6 +57,11 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   const [isOwner, setIsOwner] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  // The chat that draws this board with a model the person chooses (demo chat builder).
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  // Edit or View, kept across the editor being opened again on a saved change — one watching the assistant draw in
+  // View stays in View.
+  const [editorMode, setEditorMode] = useState<AuthoringMode>('edit');
   useEffect(() => {
     // A board opened after another must not be overwritten by the first one's late answer.
     let cancelled = false;
@@ -201,6 +207,21 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     }
   }
 
+  // The assistant saved a change: the editor shows the board as it is saved now. Sending is held while there are
+  // unsaved edits, so nothing of the author's is dropped here.
+  async function reloadSaved() {
+    try {
+      const board = await getBoard(workspaceId, boardId!);
+      setDocument(board.document);
+      revision.current = board.revision;
+      setBoardName(board.name);
+      setSavedAt(new Date());
+      setEditorGeneration(g => g + 1);
+    } catch {
+      setSaveError('보드를 불러오지 못했습니다');
+    }
+  }
+
   function handleDirtyChange(dirty: boolean) {
     setHasUnsavedChanges(dirty);
     // A fresh edit makes the last "저장됨" stale — only an edit re-dirties the document (a
@@ -219,11 +240,16 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     <div className="ub-editor">
       {header(
         saveStatus,
-        isOwner && (
-          <Button variant="ghost" onClick={() => setIsShareOpen(true)}>
-            공유
+        <>
+          <Button variant={isAssistantOpen ? 'solid' : 'ghost'} onClick={() => setIsAssistantOpen(open => !open)} aria-pressed={isAssistantOpen}>
+            ✦ AI 비서
           </Button>
-        )
+          {isOwner && (
+            <Button variant="ghost" onClick={() => setIsShareOpen(true)}>
+              공유
+            </Button>
+          )}
+        </>
       )}
       {connectorsError && <Alert>{connectorsError}</Alert>}
       {membersError && <Alert>{membersError}</Alert>}
@@ -249,10 +275,13 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         </Alert>
       )}
       {overwriteArmed && <Alert>저장하면 다른 사람이 그사이 저장한 내용을 내 변경으로 덮어씁니다.</Alert>}
+      <div className="ub-editor-body">
       <div className="ub-editor-canvas">
         <AuthoringView
           key={`${boardId}:${editorGeneration}`}
           initialDocument={document}
+          initialMode={editorMode}
+          onModeChange={setEditorMode}
           adapters={adapters}
           connectorLabels={connectorLabels}
           onDirtyChange={handleDirtyChange}
@@ -266,6 +295,16 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           // with scripts off, so no element code runs.
           elementFrames={scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`)}
         />
+      </div>
+      {isAssistantOpen && (
+        <AssistantPanel
+          workspaceId={workspaceId}
+          board={{ id: boardId!, name: boardName, kind: document.kind }}
+          blocked={hasUnsavedChanges ? '저장하지 않은 편집이 있습니다 — 먼저 저장하면 비서가 그 위에 이어서 그립니다.' : undefined}
+          onBoardChanged={reloadSaved}
+          onClose={() => setIsAssistantOpen(false)}
+        />
+      )}
       </div>
       {isOwner && (
         <ShareDialog

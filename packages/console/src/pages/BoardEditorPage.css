@@ -65,5 +65,20 @@
 
 .ub-editor-canvas {
   flex: 1;
+  min-width: 0;
   min-height: 480px;
+}
+
+/* The editor and, when open, the assistant beside it. */
+.ub-editor-body {
+  display: flex;
+  flex: 1;
+  gap: var(--ub-space-4);
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .ub-editor-body {
+    flex-direction: column;
+  }
 }

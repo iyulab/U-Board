@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@iyulab/u-board": "*",
+    "@iyulab/u-board-mcp": "*",
     "@iyulab/u-board-samples": "*",
     "@uplatform/brand": "^0.4.0",
     "react": "^19.2.7",
