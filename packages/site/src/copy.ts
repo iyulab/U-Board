@@ -76,6 +76,8 @@ export interface Copy {
     recorded: string;
     /** Under a board on example data, in place of `recorded`: there is no source to have recorded. */
     example: string;
+    /** After `recorded`, for a board whose source issues each user a key — `{host}`: where it is issued. */
+    ownKey: string;
   };
 }
 
@@ -198,6 +200,7 @@ export const COPY: Record<Locale, Copy> = {
       kind: '배경',
       recorded: '{time}에 녹화한 원천 응답입니다.',
       example: '예시 데이터입니다 — 실제 설비나 원천의 값이 아닙니다.',
+      ownKey: '이 원천은 이용자마다 키를 발급합니다 — 설치한 U-Board에서 만들려면 {host}에서 받은 키가 필요합니다.',
     },
   },
   en: {
@@ -318,6 +321,7 @@ export const COPY: Record<Locale, Copy> = {
       kind: 'Background',
       recorded: 'Answers from the source recorded at {time}.',
       example: 'Example data — not the values of a real plant or source.',
+      ownKey: 'This source issues each user a key — creating the board in an installed U-Board needs one from {host}.',
     },
   },
 };

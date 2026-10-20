@@ -234,6 +234,40 @@ describe('BoardsListPage', () => {
     expect([...adapters]).toEqual(['new-서울시 실시간 대기환경']);
   });
 
+  it('asks for the key of a source that issues each user one, and refuses to start without it', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
+    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: 'new-subway', type: 'http', updatedAt: 't', ...input, attribution: undefined, description: undefined }));
+    vi.mocked(api.createBoard).mockResolvedValue({ id: 'b9', name: 'x', kind: 'canvas', updatedAt: 't' });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b9', name: 'x', updatedAt: 't', revision: 2 });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '첫 보드 만들기' }));
+    const start = await screen.findByRole('button', { name: '시청 일대 지하철 실시간 도착 샘플로 만들기' });
+    const card = start.closest('li')!;
+    expect(within(card).getByText('발급 키 필요')).toBeInTheDocument();
+    expect(within(card).getByRole('link', { name: 'data.seoul.go.kr' })).toHaveAttribute('href', 'https://data.seoul.go.kr');
+
+    await userEvent.click(start);
+    expect(await screen.findByRole('alert')).toHaveTextContent('‘서울시 지하철 실시간 도착정보’ 키를 입력하세요');
+    expect(api.createConnector).not.toHaveBeenCalled();
+
+    await userEvent.type(within(card).getByLabelText('서울시 지하철 실시간 도착정보 키'), 'my-key');
+    await userEvent.click(start);
+    expect(await screen.findByText('editor page')).toBeInTheDocument();
+    expect(api.createConnector).toHaveBeenCalledWith('w1', expect.objectContaining({ authType: 'path', authValue: 'my-key' }));
+  });
+
+  it('asks no key for a source the workspace already has a data source for', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
+    vi.mocked(api.listConnectors).mockResolvedValue({
+      connectors: [{ id: 'mine', name: '내 키', type: 'http', baseUrl: 'http://swopenapi.seoul.go.kr/api/subway/{key}', authType: 'path', updatedAt: 't' }],
+    });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: '첫 보드 만들기' }));
+    const card = (await screen.findByRole('button', { name: '시청 일대 지하철 실시간 도착 샘플로 만들기' })).closest('li')!;
+    await waitFor(() => expect(within(card).queryByText('발급 키 필요')).not.toBeInTheDocument());
+    expect(within(card).queryByLabelText('서울시 지하철 실시간 도착정보 키')).not.toBeInTheDocument();
+  });
+
   it('reuses a data source the workspace already has for the same address', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [] });
     vi.mocked(api.listConnectors).mockResolvedValue({

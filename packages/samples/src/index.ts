@@ -3,6 +3,7 @@ export { isInstallable, isLiveConnector, ownKeyConnectors } from './sample-pack.
 export { SnapshotAdapter, snapshotAdapters } from './snapshot-adapter.js';
 export { gwanghwamun } from './packs/gwanghwamun.js';
 export { seoulAir } from './packs/seoul-air.js';
+export { seoulSubway } from './packs/seoul-subway.js';
 export { factoryFloor } from './packs/factory-floor.js';
 export { lineSpc } from './packs/line-spc.js';
 export { waterPumps } from './packs/water-pumps.js';
@@ -17,6 +18,7 @@ export { assemblyWip } from './packs/assembly-wip.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
+import { seoulSubway } from './packs/seoul-subway.js';
 import { factoryFloor } from './packs/factory-floor.js';
 import { lineSpc } from './packs/line-spc.js';
 import { waterPumps } from './packs/water-pumps.js';
@@ -31,4 +33,4 @@ import { assemblyWip } from './packs/assembly-wip.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, serverRoom, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, serverRoom, bodyGap, itTopology, assemblyWip];

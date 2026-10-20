@@ -4,7 +4,7 @@
 // for a board on example data, that they are an example.
 import Page from './Page.astro';
 import { COPY, type Locale } from '../copy';
-import { SAMPLE_PACKS, isInstallable } from '@iyulab/u-board-samples';
+import { SAMPLE_PACKS, isInstallable, ownKeyConnectors } from '@iyulab/u-board-samples';
 import { expandComponents, sizedNodes, type CanvasView } from '@iyulab/u-board/domain';
 
 interface Props {
@@ -28,7 +28,8 @@ const partsExtent = (document: CanvasView) => {
 };
 const cards = SAMPLE_PACKS.map(pack => {
   const image = pack.document.kind === 'canvas' ? (pack.document.background.image ?? partsExtent(pack.document)) : undefined;
-  const recorded = isInstallable(pack) ? g.recorded.replace('{time}', time(pack.snapshot.capturedAt)) : g.example;
+  const ownKeys = ownKeyConnectors(pack).map(c => g.ownKey.replace('{host}', new URL(c.ownKey!.signUpUrl).host));
+  const recorded = isInstallable(pack) ? [g.recorded.replace('{time}', time(pack.snapshot.capturedAt)), ...ownKeys].join(' ') : g.example;
   return { pack, aspect: image ? `aspect-ratio: ${image.width} / ${image.height}; --ratio: ${(image.width / image.height).toFixed(3)}` : undefined, recorded };
 });
 ---

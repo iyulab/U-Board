@@ -127,6 +127,6 @@ describe('example data', () => {
       expect(pack.summary.ko, pack.id).toContain('예시 데이터');
       expect(pack.summary.en, pack.id).toContain('Example data');
     }
-    expect(SAMPLE_PACKS.filter(isInstallable).map(p => p.id)).toEqual(['gwanghwamun', 'seoul-air']);
+    expect(SAMPLE_PACKS.filter(isInstallable).map(p => p.id)).toEqual(['gwanghwamun', 'seoul-air', 'seoul-subway']);
   });
 });
