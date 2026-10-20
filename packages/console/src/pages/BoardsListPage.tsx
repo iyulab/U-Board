@@ -216,7 +216,7 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
                         <a href={connector.ownKey!.signUpUrl} target="_blank" rel="noreferrer">
                           {new URL(connector.ownKey!.signUpUrl).host}
                         </a>
-                        에서 받은 키를 넣으면 데이터소스에 저장됩니다.
+                        에서 받은 키를 넣으면 데이터소스에 저장됩니다.{connector.ownKey!.hint && ` ${connector.ownKey!.hint}`}
                       </p>
                     </div>
                   ))}

@@ -52,6 +52,8 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     const adapters = new Map(snapshotAdapters(pack).map(a => [a.id, a]));
     for (const node of placedIn(drawn)) {
       for (const [prop, binding] of Object.entries(node.widget.bindings ?? {})) {
+        // Unless the binding means to show "none" — a map whose `otherwise` draws it (a station under maintenance has no grade).
+        if (binding.map?.otherwise !== undefined) continue;
         const { value } = await adapters.get(binding.adapter)!.resolve(binding.ref);
         expect(value === '' || value === null, `${node.id} ${prop} reads "${String(value)}"`).toBe(false);
       }
@@ -134,6 +136,6 @@ describe('example data', () => {
       expect(pack.summary.ko, pack.id).toContain('예시 데이터');
       expect(pack.summary.en, pack.id).toContain('Example data');
     }
-    expect(SAMPLE_PACKS.filter(isInstallable).map(p => p.id)).toEqual(['gwanghwamun', 'seoul-air', 'seoul-subway']);
+    expect(SAMPLE_PACKS.filter(isInstallable).map(p => p.id)).toEqual(['gwanghwamun', 'seoul-air', 'seoul-districts-air', 'seoul-subway']);
   });
 });

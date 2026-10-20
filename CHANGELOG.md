@@ -19,7 +19,7 @@ do when upgrading. Each release's notes carry its section.
   value missing from the answer, and the connection test shows those words.
 - A sample on a source that issues each user a key of their own — subway arrivals around Seoul City Hall, on a line
   diagram — asks for that key when it is created; a data source the workspace already has for that address is used
-  as it is.
+  as it is. Fine dust in all 25 districts of Seoul, on a tile map whose tiles take their grade's colour, is another.
 
 ### Changed
 

@@ -34,6 +34,8 @@ export interface OwnKey {
   signUpUrl: string;
   /** The environment variable the recording script reads a key from (`npm run capture`). */
   env: string;
+  /** What to know when getting one — which of the keys the operator issues to give. */
+  hint?: string;
 }
 
 /**
