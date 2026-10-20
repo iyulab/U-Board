@@ -1,0 +1,68 @@
+import AxeBuilder from '@axe-core/playwright';
+import { test, expect, type Route } from '@playwright/test';
+
+// The chat panel against a model endpoint the test answers itself: a chat completions stream that reads the rules,
+// draws one card on the open board, looks at it, and answers — the panel's whole path but the model.
+const ENDPOINT = 'https://models.example.test/v1';
+
+const sse = (...deltas: Array<Record<string, unknown>>) =>
+  deltas.map(delta => `data: ${JSON.stringify({ choices: [{ delta }] })}\n\n`).join('') + 'data: [DONE]\n\n';
+
+const call = (id: string, name: string, args: unknown) => ({ tool_calls: [{ index: 0, id, function: { name, arguments: JSON.stringify(args) } }] });
+
+test('the chat panel draws on the open board with a model the person sets, and the editor shows it', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('이메일').fill('e2e-assistant@test.com');
+  await page.getByLabel('비밀번호').fill('p4ssword!');
+  await page.getByLabel('이름').fill('E2E Assistant');
+  await page.getByRole('button', { name: '가입' }).click();
+  await expect(page.getByRole('heading', { name: '보드' })).toBeVisible();
+
+  await page.getByRole('button', { name: '새 보드' }).click();
+  await page.getByLabel('보드 이름').fill('AI Board');
+  await page.getByRole('radio', { name: /^그리드/ }).check();
+  await page.getByRole('button', { name: '생성' }).click();
+  await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
+
+  const requests: Array<{ authorization?: string; messages: Array<{ role: string; content: string | null }> }> = [];
+  await page.route(`${ENDPOINT}/chat/completions`, async (route: Route) => {
+    if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' } });
+    const body = route.request().postDataJSON() as { messages: Array<{ role: string; content: string | null }> };
+    requests.push({ authorization: route.request().headers()['authorization'], messages: body.messages });
+    // The board's id, as the panel tells the model in its instructions.
+    const board = /id "([^"]+)"/.exec(body.messages[0].content ?? '')![1];
+    const answers = [
+      sse({ content: '규칙을 읽겠습니다.' }, call('c1', 'describe', { topic: 'rules' })),
+      sse(call('c2', 'patch_board', { board, patch: [{ op: 'add', path: '/items/-', value: { id: 'sales', span: 4, widget: { type: 'metric', props: { data: { label: '오늘 매출', value: 1280, unit: '만원' } } } } }] })),
+      sse(call('c3', 'look', { board })),
+      sse({ content: '오늘 매출 카드를 그렸습니다.' }),
+    ];
+    await route.fulfill({ status: 200, headers: { 'Content-Type': 'text/event-stream', 'Access-Control-Allow-Origin': '*' }, body: answers[requests.length - 1] ?? sse({ content: '끝' }) });
+  });
+
+  await page.getByRole('button', { name: /AI 비서/ }).click();
+  const panel = page.getByRole('complementary', { name: 'AI 보드 비서' });
+  // First the model: kept in this browser, called from it.
+  await panel.getByRole('textbox', { name: '엔드포인트 주소' }).fill(ENDPOINT);
+  await panel.getByRole('textbox', { name: '모델' }).fill('test-model');
+  await panel.getByLabel('API 키').fill('test-key');
+  await panel.getByRole('button', { name: '저장' }).click();
+  const a11y = await new AxeBuilder({ page }).include('.ub-assistant').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+  expect(a11y.violations.map(v => `${v.id}: ${v.help}`)).toEqual([]);
+
+  await panel.getByRole('textbox', { name: '비서에게 보낼 말' }).fill('오늘 매출 카드 하나 그려줘');
+  await panel.getByRole('button', { name: '보내기', exact: true }).click();
+
+  await expect(panel.getByText('오늘 매출 카드를 그렸습니다.')).toBeVisible({ timeout: 30_000 });
+  await expect(panel.getByText('보드에 그리기 · 변경 1개')).toBeVisible();
+  await expect(panel.getByText('그려 보고 확인')).toBeVisible();
+  // The editor read the board again: the card the model drew is there, and saved.
+  await expect(page.getByRole('region', { name: '편집기' }).locator('.ub-authoring__pick')).toHaveCount(1);
+  await expect(page.getByText('저장됨')).toBeVisible();
+
+  expect(requests[0].authorization).toBe('Bearer test-key');
+  // What look answered went back to the model: the board drawn, nothing left to fix.
+  const lookAnswer = requests[3].messages.at(-1)!;
+  expect(lookAnswer.role).toBe('tool');
+  expect(JSON.parse(lookAnswer.content!).status).toBe('done — nothing to fix');
+});
