@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A bound connector label can keep its unit: when its text names `{{value}}`, the bound value fills that place —
+  `"{{value | fixed:1}} Mbps"` reads `820.4 Mbps` — and `—` stands in while there is no value. Text without `{{` is
+  replaced by the value, as before. Strict validation refuses a pattern that names anything else, or one with no
+  `label` binding.
+
 ## [0.25.0] - 2026-10-20
 
 ### Added

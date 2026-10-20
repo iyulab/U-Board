@@ -596,7 +596,10 @@ A connector binds its `label` and `style` (`CONNECTOR_BINDABLE`: `label`, `style
 `style.dash`, `style.arrow`) with the same binding shape as a widget's. A value is taken only in the form its path
 draws — a label as text (a number as it reads), a width as a positive number, a dash as one of `STROKE_DASHES`, an
 arrow as one of `CONNECTOR_ARROWS`, a colour as text — otherwise the static value stays, as for a disconnected
-binding. A resolved connector carries `quality` per
+binding. A bound label whose text names `{{value}}` is a pattern: the value fills that place and the rest stays —
+`label: "{{value | fixed:1}} Mbps"` reads `820.4 Mbps`, with the template element's `fixed:N` (0–6 digits after the
+point) — and `—` takes the value's place while there is none (and in the editor). In a component, its parameters fill
+their `{{name}}` first and `{{value}}` stays for the binding. A resolved connector carries `quality` per
 bound path.
 
 `bindingsIn(doc)` yields every binding a document declares, widgets' and connectors', with the JSON Pointer of what

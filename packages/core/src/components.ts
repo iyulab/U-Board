@@ -51,7 +51,14 @@ export function instanceParts(definition: ComponentDefinition, instance: Compone
   const id = (part: string) => instancePartId(instance.id, part);
   return {
     nodes: (definition.nodes ?? []).map(node => ({ ...fill(node), id: id(node.id), x: instance.x + node.x, y: instance.y + node.y, anchored: instance.anchored })),
-    connectors: (definition.connectors ?? []).map(connector => ({ ...fill(connector), id: id(connector.id), fromNodeId: id(connector.fromNodeId), toNodeId: id(connector.toNodeId) })),
+    connectors: (definition.connectors ?? []).map(connector => ({
+      ...fill(connector),
+      // A bound label's {{value}} is the binding's, filled when it is read — unless the component has a parameter of that name.
+      ...(connector.bindings?.label && typeof connector.label === 'string' && !('value' in values) && { label: fillParameters(connector.label, { ...values, value: '{{value}}' }) as string }),
+      id: id(connector.id),
+      fromNodeId: id(connector.fromNodeId),
+      toNodeId: id(connector.toNodeId),
+    })),
     decorations: (definition.decorations ?? []).map(shape => ({ ...fill(shape), id: id(shape.id), x: instance.x + shape.x, y: instance.y + shape.y })),
   };
 }

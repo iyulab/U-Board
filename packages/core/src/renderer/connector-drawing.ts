@@ -6,6 +6,7 @@ import type { SizedNode } from '../node-size.js';
 import type { ConnectionQuality } from '../adapter.js';
 import { worstQuality } from '../quality-text.js';
 import { DASH_PATTERNS } from './decoration-drawing.js';
+import { shownLabel } from '../connector-label.js';
 
 /** A connector's look when its style leaves it out. */
 export const CONNECTOR_STROKE = '#94a3b8';
@@ -52,7 +53,7 @@ export function connectorObjects(nodes: readonly SizedNode[], connectors: Readon
       const rim = worst ? QUALITY_RIM[worst] : undefined;
       labels.push(
         { type: 'rect', id: `${connector.id}#chip`, ...chipOf(label), fill: LABEL_CHIP[appearance].fill, ...(rim && { stroke: rim, strokeWidth: 1.5 }), ...held },
-        { type: 'text', id: `${connector.id}#label`, x: label.x, y: label.y, text: connector.label!, fontSize: LABEL_SIZE, fill: LABEL_CHIP[appearance].ink, ...((extra.locked || extra.fixed) && { locked: true }) }
+        { type: 'text', id: `${connector.id}#label`, x: label.x, y: label.y, text: shownLabel(connector.label!), fontSize: LABEL_SIZE, fill: LABEL_CHIP[appearance].ink, ...((extra.locked || extra.fixed) && { locked: true }) }
       );
     }
   }

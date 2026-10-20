@@ -4,6 +4,7 @@ import type { Adapter, ConnectionQuality, ResolvedWidget } from './adapter.js';
 import { resolveBindings, resolveWidgetReadings } from './adapter.js';
 import { stateOf } from './states.js';
 import { expandComponents } from './components.js';
+import { fillLabel, isLabelPattern } from './connector-label.js';
 
 /** A placed widget resolved against a set of adapters — everything a renderer needs to paint it without
  *  itself knowing how bindings are resolved — and, when it has states, the one it is in now (`stateOf`). */
@@ -64,15 +65,17 @@ export async function resolveDocument(saved: ViewDocument, adapters: readonly Ad
  * A connector's bindings read into its label and style. A value is taken only in the form its path draws — a label
  * as text (a number shown as it reads), a width as a positive number, a dash or an arrow as one of its words, a colour
  * as text (an unreadable colour paints the default) — otherwise the static value stays, as for a disconnected binding.
+ * A label whose text names `{{value}}` is a pattern: the value fills that place, and `—` does while there is none.
  */
 export async function resolveConnector(connector: Connector, adapters: readonly Adapter[]): Promise<ResolvedConnector> {
   if (!connector.bindings || Object.keys(connector.bindings).length === 0) return { ...connector, quality: {} };
+  const pattern = connector.bindings.label && isLabelPattern(connector.label) ? connector.label : undefined;
   const { values, quality } = await resolveBindings(
     { label: connector.label, style: { ...connector.style } },
     connector.bindings,
     adapters,
     (path, value) => {
-      if (path === 'label') return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
+      if (path === 'label') return typeof value === 'string' || typeof value === 'number' ? (pattern ? fillLabel(pattern, value) : String(value)) : undefined;
       if (path === 'style.strokeWidth') return typeof value === 'number' && value > 0 ? value : undefined;
       if (path === 'style.dash') return STROKE_DASHES.includes(value as StrokeDash) ? value : undefined;
       if (path === 'style.arrow') return CONNECTOR_ARROWS.includes(value as ConnectorArrow) ? value : undefined;
@@ -80,6 +83,8 @@ export async function resolveConnector(connector: Connector, adapters: readonly 
       return undefined;
     }
   );
-  const { label, style } = values as Pick<Connector, 'label' | 'style'>;
+  const { style } = values as Pick<Connector, 'label' | 'style'>;
+  // A pattern whose value did not come keeps its text around a dash, never its `{{value}}`.
+  const label = pattern && (values as Pick<Connector, 'label'>).label === pattern ? fillLabel(pattern, undefined) : (values as Pick<Connector, 'label'>).label;
   return { ...connector, ...(label !== undefined && { label }), ...(style && Object.keys(style).length > 0 && { style }), quality };
 }

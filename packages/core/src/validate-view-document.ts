@@ -6,6 +6,7 @@ import { checkStyle, checkTemplateMarkup, isResourceOrigin } from './elements/ma
 import { checkPropsSchema, checkPropsValue } from './elements/props-schema.js';
 import { VIEW_BOX, symbolReferences } from './elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor } from './css-color.js';
+import { isLabelPattern, labelNamesValue, labelPatternError } from './connector-label.js';
 import { instancePartId, instanceParts, parameterValues, placeholdersIn } from './components.js';
 import type { ComponentDefinition, ComponentInstance } from './view-document.js';
 
@@ -139,7 +140,7 @@ function checkCanvasView(doc: Checker, value: Record<string, unknown>): void {
 }
 
 /** A connector — of the board, or of a component (`nodeIds` the nodes it may join, `nodesWhere` where they are). */
-function checkConnector(doc: Checker, connector: unknown, at: string[], nodeIds: ReadonlySet<string>, nodesWhere: string): void {
+function checkConnector(doc: Checker, connector: unknown, at: string[], nodeIds: ReadonlySet<string>, nodesWhere: string, params: ReadonlySet<string> = new Set()): void {
   if (!doc.isRecordAt(connector, at)) return;
   doc.known(connector, at, CONNECTOR_FIELDS, 'connector', CONNECTOR_HINT);
   doc.id(connector, [...at, 'id']);
@@ -148,6 +149,13 @@ function checkConnector(doc: Checker, connector: unknown, at: string[], nodeIds:
     else if (!nodeIds.has(connector[end] as string)) doc.fail([...at, end], `no node has the id "${connector[end] as string}" — a connector joins two nodes of ${nodesWhere}`);
   }
   doc.optionalString(connector, [...at, 'label']);
+  if (doc.strict && isLabelPattern(connector.label as string | undefined)) {
+    const error = labelPatternError(connector.label as string, params);
+    if (error) doc.fail([...at, 'label'], error);
+    else if (labelNamesValue(connector.label as string, params) && !(isRecord(connector.bindings) && connector.bindings.label !== undefined)) {
+      doc.fail([...at, 'label'], '{{value}} is filled by a binding of label — add bindings.label, or write the label without it');
+    }
+  }
   if (connector.labelAt !== undefined && !(typeof connector.labelAt === 'number' && connector.labelAt >= 0 && connector.labelAt <= 1)) {
     doc.expected([...at, 'labelAt'], 'expected a number from 0 (the fromNodeId end) to 1 (the toNodeId end)', connector.labelAt);
   }
@@ -390,6 +398,11 @@ const PARAM_NAME = /^[A-Za-z][A-Za-z0-9_]*$/;
 /** The fields that name a part, which a parameter never fills. */
 const PART_NAMING_FIELDS = ['id', 'fromNodeId', 'toNodeId'];
 
+/** `{{value}}` in a component connector's bound label — the binding's value, not a parameter (unless one is named so). */
+function isBoundLabelValue(list: string, part: unknown, use: { name: string; at: string[] }, partDepth: number, params: ReadonlySet<string>): boolean {
+  return list === 'connectors' && use.name === 'value' && !params.has('value') && use.at.length === partDepth + 1 && use.at[partDepth] === 'label' && isRecord(part) && isRecord(part.bindings) && part.bindings.label !== undefined;
+}
+
 /** The components a board defines: each a small canvas of its own — its parts' ids unique among them, its connectors
  *  joining its own nodes — whose texts use only the parameters it declares. A definition that holds is kept for checking
  *  its instances; one that does not is still known by name. */
@@ -420,7 +433,7 @@ function checkComponents(doc: Checker, components: Record<string, unknown>): voi
     }
     doc.componentNodeIds.set(name, [...nodeIds]);
     if (definition.connectors !== undefined && doc.array(definition, [...at, 'connectors'])) {
-      (definition.connectors as unknown[]).forEach((connector, i) => checkConnector(parts, connector, [...at, 'connectors', String(i)], nodeIds, pointer([...at, 'nodes'])));
+      (definition.connectors as unknown[]).forEach((connector, i) => checkConnector(parts, connector, [...at, 'connectors', String(i)], nodeIds, pointer([...at, 'nodes']), params));
     }
     if (definition.decorations !== undefined && doc.array(definition, [...at, 'decorations'])) {
       (definition.decorations as unknown[]).forEach((shape, i) => checkShape(parts, shape, [...at, 'decorations', String(i)]));
@@ -435,7 +448,7 @@ function checkComponents(doc: Checker, components: Record<string, unknown>): voi
           doc.fail([...partAt, 'id'], 'expected an id without "/" or {{…}} — each instance names its parts <instance id>/<part id>');
         }
         for (const use of placeholdersIn(part, partAt)) {
-          if (PART_NAMING_FIELDS.includes(use.at[use.at.length - 1])) continue;
+          if (PART_NAMING_FIELDS.includes(use.at[use.at.length - 1]) || isBoundLabelValue(list, part, use, partAt.length, params)) continue;
           if (!params.has(use.name)) {
             doc.fail(use.at, `{{${use.name}}}: the component declares no parameter "${use.name}" — ${params.size > 0 ? `it has: ${[...params].join(', ')}` : 'declare it in params'}`);
           }
@@ -523,7 +536,7 @@ function checkInstance(doc: Checker, instance: unknown, at: string[]): void {
   for (const list of COMPONENT_PARTS) {
     ((definition[list] ?? []) as unknown[]).forEach((part, i) => {
       for (const use of placeholdersIn(part, ['components', name, list, String(i)])) {
-        if (reported.has(use.name) || PART_NAMING_FIELDS.includes(use.at[use.at.length - 1])) continue;
+        if (reported.has(use.name) || PART_NAMING_FIELDS.includes(use.at[use.at.length - 1]) || isBoundLabelValue(list, part, use, 4, new Set(Object.keys(definition.params?.properties ?? {})))) continue;
         const value = values[use.name];
         if (value === undefined && !required.has(use.name)) {
           doc.fail([...at, 'params', use.name], `expected a value — the component "${name}" uses {{${use.name}}} and gives it no default`);
@@ -758,7 +771,7 @@ class Checker {
 
   constructor(
     private readonly issues: ViewDocumentIssue[],
-    private readonly strict: boolean,
+    readonly strict: boolean,
     shared?: Checker
   ) {
     this.elements = shared?.elements ?? new Map();

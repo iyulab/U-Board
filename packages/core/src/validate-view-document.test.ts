@@ -299,6 +299,17 @@ describe('validateViewDocument', () => {
       ]);
     });
 
+    it('takes a bound label’s {{value}} pattern, and refuses one that names something else or has no label binding', () => {
+      const bound = { label: { adapter: 's', ref: { path: '/bps' } } };
+      expect(strict(broken(d => { d.connectors[0].label = '{{value | fixed:1}} Mbps'; d.connectors[0].bindings = bound; }))).toEqual([]);
+      const messages = (label: string, bindings?: object) => strict(broken(d => { d.connectors[0].label = label; if (bindings) d.connectors[0].bindings = bindings; })).map(i => `${i.path} ${i.message}`);
+      expect(messages('{{bps}} Mbps', bound)).toEqual(['/connectors/0/label "{{bps}}" names nothing — a connector label names its bound value as {{value}}']);
+      expect(messages('{{value | round}}', bound)[0]).toContain('is not a format — use "fixed:N"');
+      expect(messages('{{#value}}x{{/value}}', bound)[0]).toContain('takes no sections');
+      expect(messages('{{value}} Mbps')).toEqual(['/connectors/0/label {{value}} is filled by a binding of label — add bindings.label, or write the label without it']);
+      expect(validateViewDocument(broken(d => { d.connectors[0].label = '{{bps}}'; }))).toEqual([]);
+    });
+
     it('takes a node’s caption, as text', () => {
       expect(strict(broken(d => { d.nodes[0].caption = 'Pump A'; }))).toEqual([]);
       expect(strict(broken(d => { d.nodes[0].caption = 3; })).map(i => i.path)).toEqual(['/nodes/0/caption']);

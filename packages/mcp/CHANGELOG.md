@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The connector rules show a bound label keeping its unit: `"{{value | fixed:1}} Mbps"`.
+
 ## [0.12.0] - 2026-10-20
 
 ### Added

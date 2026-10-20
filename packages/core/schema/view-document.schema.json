@@ -238,7 +238,7 @@
         "id": { "type": "string" },
         "fromNodeId": { "type": "string" },
         "toNodeId": { "type": "string" },
-        "label": { "type": "string", "description": "Text on the line, on a chip of the board's paper." },
+        "label": { "type": "string", "description": "Text on the line, on a chip of the board's paper. With a label binding, {{value}} (or {{value | fixed:N}}) in it is where the bound value goes: \"{{value | fixed:1}} Mbps\"." },
         "labelAt": { "type": "number", "minimum": 0, "maximum": 1, "description": "Where along the line the label sits, from 0 (the fromNodeId end) to 1 (the toNodeId end); the middle when left out." },
         "style": {
           "description": "How the line is drawn; each part left out takes the board's connector look.",

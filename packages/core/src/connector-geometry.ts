@@ -1,4 +1,5 @@
 import { estimateTextWidth } from './caption-geometry.js';
+import { shownLabel } from './connector-label.js';
 import type { Connector, ConnectorArrow, Node } from './view-document.js';
 import type { BoxSize } from './node-size.js';
 
@@ -65,7 +66,7 @@ export function placeConnectors(nodes: ReadonlyArray<Pick<Node, 'id' | 'x' | 'y'
         (connector.style?.route === 'orthogonal' ? elbow(from, to, offset) : undefined) ?? edgeToEdge(from, to, offset, connector.fromNodeId < connector.toNodeId);
       if (!points) return;
       // Side-by-side lines are closer than a label is tall: their labels take turns along the line instead.
-      const label = connector.label ? labelBox(connector.label, points, connector.labelAt ?? (i + 1) / (group.length + 1), measure) : undefined;
+      const label = connector.label ? labelBox(shownLabel(connector.label), points, connector.labelAt ?? (i + 1) / (group.length + 1), measure) : undefined;
       const heads = arrowheads(points, connector.style?.arrow, connector.style?.strokeWidth ?? CONNECTOR_WIDTH);
       placed.push({ connector, index, points: heads?.points ?? points, ...(label && { label }), ...(heads && { arrows: heads.arrows }) });
     });
