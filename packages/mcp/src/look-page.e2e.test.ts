@@ -66,6 +66,23 @@ describe('findProblems', () => {
     ]);
   });
 
+  it('reports rows running past the bottom, inside a widget’s own shadow root too — and not a line whose font is taller than its line height', async () => {
+    await show(`
+      <div data-node-id="a"><u-widget style="display:block;width:200px;height:60px">
+        <template shadowrootmode="open"><uw-list style="display:block;height:60px;overflow:hidden">
+          <template shadowrootmode="open"><div style="height:40px">one</div><div style="height:40px">two</div></template>
+        </uw-list></template>
+      </u-widget></div>
+      <div data-node-id="b"><u-widget style="display:block;width:200px">
+        <template shadowrootmode="open"><uw-metric style="display:flex;flex-direction:column">
+          <template shadowrootmode="open"><div><div style="font:32px 'Segoe UI',system-ui,sans-serif;line-height:1">4210</div></div></template>
+        </uw-metric></template>
+      </u-widget></div>`);
+    expect(await page.evaluate(findProblems, [node('a'), node('b')])).toEqual([
+      { path: '/nodes/a', message: 'its content runs past its box (200×80 in 200×60) — it scrolls or is cut off; give it more room' },
+    ]);
+  });
+
   it('skips a part that is not on the page', async () => {
     await show('<div data-node-id="a"></div>');
     expect(await page.evaluate(findProblems, [node('a'), node('gone')])).toEqual([]);

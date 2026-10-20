@@ -17,6 +17,20 @@ export function findProblems(placed: Array<{ id: string; path: string; attr: str
     return spill;
   }
 
+  /** How far down the boxes drawn inside `root` reach, shadow roots within it included — the bottom of the content.
+   *  Boxes, not the scroll height: a line's text may reach a few px past its line box (a font's own height over a
+   *  tight line height), which scrolls nothing and cuts nothing off. */
+  function contentBottom(root: ShadowRoot | Element): number {
+    let bottom = -Infinity;
+    for (const part of root.querySelectorAll('*')) {
+      if (part instanceof HTMLStyleElement) continue;
+      const r = part.getBoundingClientRect();
+      if (r.width > 0 || r.height > 0) bottom = Math.max(bottom, r.bottom);
+      if (part.shadowRoot) bottom = Math.max(bottom, contentBottom(part.shadowRoot));
+    }
+    return bottom;
+  }
+
   const out: Array<{ path?: string; message: string }> = [];
   for (const { id, path, attr } of placed) {
     const frame = document.querySelector(`[${attr}="${CSS.escape(id)}"]`);
@@ -29,8 +43,14 @@ export function findProblems(placed: Array<{ id: string; path: string; attr: str
     if (spill > 1) out.push({ path, message: `its element draws up to ${Math.round(spill)} px past its box — over its neighbours; give the node more room or draw smaller` });
     const widget = frame.querySelector('u-widget') as HTMLElement | null;
     const inner = (widget?.shadowRoot?.firstElementChild ?? widget) as HTMLElement | null;
-    if (inner && (inner.scrollWidth > inner.clientWidth + 1 || inner.scrollHeight > inner.clientHeight + 1)) {
-      out.push({ path, message: `its content runs past its box (${inner.scrollWidth}×${inner.scrollHeight} in ${inner.clientWidth}×${inner.clientHeight}) — it scrolls or is cut off; give it more room` });
+    if (inner) {
+      // Across, what runs past is a line too long for the width — the scroll width says it. Down, it is rows, items
+      // and charts — boxes; their bottom says it.
+      const box = inner.getBoundingClientRect();
+      const height = Math.max(inner.clientHeight, Math.round(contentBottom(inner.shadowRoot ?? inner) - box.top));
+      if (inner.scrollWidth > inner.clientWidth + 1 || height > inner.clientHeight + 1) {
+        out.push({ path, message: `its content runs past its box (${inner.scrollWidth}×${height} in ${inner.clientWidth}×${inner.clientHeight}) — it scrolls or is cut off; give it more room` });
+      }
     }
     const text = widget?.shadowRoot?.textContent ?? '';
     if (/Invalid widget spec|잘못된 위젯 명세/i.test(text)) out.push({ path, message: 'the widget draws its "invalid spec" card — validate the board and read its advice' });

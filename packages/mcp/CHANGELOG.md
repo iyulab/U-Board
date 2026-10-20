@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- `look` no longer reports a widget's content running past its box when only a line's text reaches a few pixels below
+  it — a font taller than a tight line height, as a metric's large value draws on its own in a grid cell with no
+  height. What runs past downward is measured by the boxes drawn, shadow roots within the widget included.
+
 ## [0.16.0] - 2026-10-20
 
 ### Changed
