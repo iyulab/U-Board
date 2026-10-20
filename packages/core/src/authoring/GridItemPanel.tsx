@@ -1,5 +1,5 @@
 import type { GridItem } from '../view-document.js';
-import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN } from '../view-document.js';
+import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, isCanvasItem } from '../view-document.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
 
@@ -76,7 +76,7 @@ export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDupli
           min={1}
           step={1}
           inputMode="numeric"
-          placeholder={labels.itemHeightAuto}
+          placeholder={isCanvasItem(item) ? labels.canvasHeightAuto : labels.itemHeightAuto}
           value={item.height ?? ''}
           onChange={e => {
             const value = e.target.valueAsNumber;

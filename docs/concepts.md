@@ -32,7 +32,8 @@ of an item, or of a node, connector or decoration in any cell — is unique in t
 trigger names a cell's node as it names an item. A connector joins two nodes of the same cell. The
 canvas is drawn fitted to its cell; without a `height` the cell keeps the canvas's proportions. It pans
 and zooms within its cell — drag, the keys and its zoom buttons — while the wheel scrolls the grid past
-it, zooming only with Ctrl (⌘) held.
+it, zooming only with Ctrl (⌘) held. In the editor, **Add canvas** adds one and **Edit canvas** opens
+it in the canvas editor — what the board defines once is edited there for the whole board.
 
 **Background** — the media (an image, or none) a canvas view is drawn over. The system does not
 attach domain meaning to a background — what it depicts is left to the author's and viewer's

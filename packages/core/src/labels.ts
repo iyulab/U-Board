@@ -17,6 +17,11 @@ export interface UBoardLabels {
   addItem: string;
   /** What a grid cell holding a canvas is called — its tag in the editor. */
   canvasCell: string;
+  /** A grid view's "add a canvas": a cell holding a canvas, after the selected item or at the end. */
+  addCanvas: string;
+  /** On a selected canvas cell: open its canvas in the canvas editor — and, there, back to the grid. */
+  editCanvas: string;
+  backToGrid: string;
   /** The line a grid's canvas cell shows when the wheel scrolls past it — there the wheel zooms only with Ctrl or ⌘
    *  held. */
   wheelZoomHint: string;
@@ -131,6 +136,8 @@ export interface UBoardLabels {
   itemSpanMediumAuto: string;
   itemHeight: string;
   itemHeightAuto: string;
+  /** The same, for a canvas cell — whose height left out keeps the canvas's proportions. */
+  canvasHeightAuto: string;
   moveEarlier: string;
   moveLater: string;
   duplicateItem: string;
@@ -404,6 +411,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   addNode: 'Add node',
   addItem: 'Add item',
   canvasCell: 'Canvas',
+  addCanvas: 'Add canvas',
+  editCanvas: 'Edit canvas',
+  backToGrid: '← Grid',
   wheelZoomHint: 'Ctrl (⌘) + scroll to zoom',
   layoutWidth: 'Layout width',
   layoutWide: 'Wide',
@@ -476,6 +486,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   itemSpanMediumAuto: 'Half the full width',
   itemHeight: 'Height (px)',
   itemHeightAuto: 'Widget default',
+  canvasHeightAuto: 'The canvas’s proportions',
   moveEarlier: 'Move earlier',
   moveLater: 'Move later',
   duplicateItem: 'Duplicate item',

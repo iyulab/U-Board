@@ -6,6 +6,7 @@ import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
+import { cellAsCanvas, withCellCanvas } from '../editing/grid-editing.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
 import { ElementHost } from '../renderer/element-view.js';
@@ -222,6 +223,15 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
     </>
   );
 
+  // The canvas cell being edited, if one is: the canvas editor on the cell as a board of its own (`cellAsCanvas`), each
+  // edit written back into the grid (`withCellCanvas`) — so Undo, Save and the history are the grid's.
+  const [cell, setCell] = useState<string | null>(null);
+  const cellBoard = doc.kind === 'grid' && cell ? cellAsCanvas(doc, cell) : null;
+  // Undone past its adding, or a grid imported over it: the cell is gone, and the editor is the grid's again.
+  useEffect(() => {
+    if (cell && !cellBoard) setCell(null);
+  }, [cell, cellBoard]);
+
   const shared = {
     mode,
     onModeChange: setMode,
@@ -240,7 +250,30 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>
       <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }} ref={rootRef}>
-        {doc.kind === 'canvas' ? (
+        {cell && cellBoard ? (
+          <CanvasAuthoring
+            key={`${opened}:${cell}`}
+            doc={cellBoard}
+            updateDoc={update =>
+              edit(current => {
+                const board = current.kind === 'grid' ? cellAsCanvas(current, cell) : null;
+                return board && current.kind === 'grid' ? withCellCanvas(current, cell, update(board)) : current;
+              })
+            }
+            {...shared}
+            documentActions={
+              <>
+                <div className="ub-authoring__group" style={GROUP_STYLE}>
+                  <button type="button" className="ub-action" onClick={() => setCell(null)}>
+                    {labels.backToGrid}
+                  </button>
+                </div>
+                {documentActions}
+              </>
+            }
+            inCell
+          />
+        ) : doc.kind === 'canvas' ? (
           <CanvasAuthoring
             key={opened}
             doc={doc}
@@ -253,6 +286,7 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
             doc={doc}
             updateDoc={update => edit(current => (current.kind === 'grid' ? update(current) : current))}
             {...shared}
+            onEditCanvas={setCell}
           />
         )}
         {showDocumentSource && (

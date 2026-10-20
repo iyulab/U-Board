@@ -59,7 +59,12 @@ import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
  * and stays fitted as it resizes until the author pans or zooms; "Fit to view" restores that, and a
  * new node or decoration is placed in view.
  */
-export function CanvasAuthoring(props: KindEditorProps<CanvasView>) {
+export interface CanvasAuthoringProps extends KindEditorProps<CanvasView> {
+  /** It edits a grid's canvas cell — which has no components of its own, so none is made here. */
+  inCell?: boolean;
+}
+
+export function CanvasAuthoring(props: CanvasAuthoringProps) {
   const { doc, updateDoc } = props;
   // The component being edited, if one is: the same editor, on the component as a board of its own (`componentBoard`),
   // each edit written back into the board (`withComponentBoard`) — so Undo, Save and the history are the board's.
@@ -123,7 +128,8 @@ function CanvasEditor({
   triggerHosting,
   component,
   onEditComponent,
-}: KindEditorProps<CanvasView> & { component?: ComponentScope; onEditComponent?: (name: string) => void }) {
+  inCell = false,
+}: CanvasAuthoringProps & { component?: ComponentScope; onEditComponent?: (name: string) => void }) {
   const previewValues = component?.previewValues;
   // Read when a result is drawn, not watched: a new function on every render must not re-resolve.
   const readClock = useEffectEvent(() => clock());
@@ -448,7 +454,7 @@ function CanvasEditor({
           <button type="button" className="ub-action" onClick={handleConnect} disabled={!pair} title={pair ? undefined : labels.connectHint}>
             {labels.addConnector}
           </button>
-          {!component && (
+          {!component && !inCell && (
             <button type="button" className="ub-action" onClick={handleMakeComponent} disabled={!canMake} title={canMake ? undefined : labels.makeComponentHint}>
               {labels.makeComponent}
             </button>

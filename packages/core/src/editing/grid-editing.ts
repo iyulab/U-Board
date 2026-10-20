@@ -1,4 +1,4 @@
-import { isCanvasItem, placedIn, type CellCanvas, type GridCanvasItem, type GridItem, type GridLayout, type GridView, type GridWidgetItem } from '../view-document.js';
+import { isCanvasItem, placedIn, type CanvasView, type CellCanvas, type GridCanvasItem, type GridItem, type GridLayout, type GridView, type GridWidgetItem } from '../view-document.js';
 import { triggersWithout, withTriggers } from './trigger-editing.js';
 
 /** An id for a new grid item. */
@@ -88,4 +88,38 @@ function withFreshIds(canvas: CellCanvas, taken: Set<string>): CellCanvas {
   const connectors = canvas.connectors.map(c => ({ ...c, id: fresh(c.id), fromNodeId: renamed.get(c.fromNodeId) ?? c.fromNodeId, toNodeId: renamed.get(c.toNodeId) ?? c.toNodeId }));
   const decorations = canvas.decorations?.map(shape => ({ ...shape, id: fresh(shape.id) }));
   return { ...canvas, nodes, connectors, ...(decorations && { decorations }) };
+}
+
+/** A new canvas cell under `id`: no background, nothing on it yet, two thirds of the width. */
+export function newCanvasItem(id: string): GridCanvasItem {
+  return { id, span: 8, canvas: { background: {}, nodes: [], connectors: [] } };
+}
+
+/** The canvas cell with `id` as a canvas board of its own — its spatial layer with what the board defines once —
+ *  for the canvas editor to edit; `withCellCanvas` writes what it made back. */
+export function cellAsCanvas(doc: GridView, id: string): CanvasView | null {
+  const item = doc.items.find(existing => existing.id === id);
+  if (!item || !isCanvasItem(item)) return null;
+  const board = Object.fromEntries(Object.entries(boardOf(doc)).filter(([, value]) => value !== undefined));
+  return { kind: 'canvas', ...item.canvas, ...board };
+}
+
+/** `doc` with the canvas cell `id` made `canvas`: the spatial layer goes to the cell, and what the board defines once
+ *  — its elements, symbols, triggers, appearance and accent — to the board. Components stay with canvas boards. */
+export function withCellCanvas(doc: GridView, id: string, canvas: CanvasView): GridView {
+  const { background, nodes, connectors, decorations } = canvas;
+  const cell: CellCanvas = { background, nodes, connectors, ...(decorations && { decorations }) };
+  const items = doc.items.map(item => (item.id === id && isCanvasItem(item) ? { ...item, canvas: cell } : item));
+  const next: Record<string, unknown> = { ...doc, items };
+  for (const [key, value] of Object.entries(boardOf(canvas))) {
+    if (value === undefined) delete next[key];
+    else next[key] = value;
+  }
+  return next as unknown as GridView;
+}
+
+/** What a board defines once, whichever its kind. */
+function boardOf(doc: GridView | CanvasView): Pick<GridView, 'appearance' | 'accent' | 'elements' | 'symbols' | 'triggers'> {
+  const { appearance, accent, elements, symbols, triggers } = doc;
+  return { appearance, accent, elements, symbols, triggers };
 }

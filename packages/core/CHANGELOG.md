@@ -16,10 +16,11 @@ All notable changes to this package are documented here. The format follows
   each with its JSON Pointer; `isCanvasItem` tells the two items apart. Code that read `item.widget` on a grid item
   narrows first: `if (!isCanvasItem(item)) item.widget`, or walks `placedIn(doc)`. The viewer draws a canvas cell as
   a canvas board, fitted to its cell (without a `height`, the cell keeps the canvas's proportions) with its own zoom
-  buttons; the grid scrolls over it, and Ctrl/⌘ + wheel zooms it.
-- `UBoardLabels.canvasCell` (a canvas cell's name — its tag in the grid editor, its region's in the viewer) and
-  `wheelZoomHint` (the line a canvas cell shows when the wheel scrolls past it). A host writing its own labels in full
-  needs them.
+  buttons; the grid scrolls over it, and Ctrl/⌘ + wheel zooms it. The grid editor adds one (**Add canvas**) and
+  edits its canvas in the canvas editor (**Edit canvas**, back with **← Grid**), in the grid's own history.
+- `UBoardLabels.canvasCell` (a canvas cell's name — its tag in the grid editor, its region's in the viewer),
+  `wheelZoomHint` (the line a canvas cell shows when the wheel scrolls past it), `addCanvas`, `editCanvas`,
+  `backToGrid` and `canvasHeightAuto`. A host writing its own labels in full needs them.
 
 ## [0.28.0] - 2026-10-20
 

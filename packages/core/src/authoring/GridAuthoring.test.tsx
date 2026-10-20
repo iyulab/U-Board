@@ -57,6 +57,31 @@ describe('AuthoringView with a grid view', () => {
     expect(doc.items[1]).toEqual({ id: expect.stringMatching(/^item-/), widget: expect.objectContaining({ type: 'status' }) });
   });
 
+  it('adds a canvas cell, and edits its canvas in the canvas editor — back to the grid, with one history', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<AuthoringView initialDocument={grid()} adapters={[]} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add canvas' }));
+    expect(picks().map(button => button.getAttribute('aria-label'))).toEqual(['1. Gauge', '2. Status', '3. Canvas']);
+    expect(screen.queryByRole('button', { name: 'Widget type' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit canvas' }));
+    expect(screen.getByTestId('konva-designer')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Make component' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add node' }));
+    fireEvent.click(screen.getByRole('button', { name: '← Grid' }));
+    expect(screen.queryByTestId('konva-designer')).not.toBeInTheDocument();
+
+    const doc = await saved(onSave);
+    const cell = doc.items[2];
+    expect(cell).toMatchObject({ id: expect.stringMatching(/^item-/), span: 8, canvas: { background: {}, connectors: [] } });
+    expect('canvas' in cell && cell.canvas.nodes).toHaveLength(1);
+
+    // Undo walks back through the canvas edit and the adding, in the grid's history.
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(picks().map(button => button.getAttribute('aria-label'))).toEqual(['1. Gauge', '2. Status']);
+  });
+
   it('sets the room an item takes, leaving defaults out of the document', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<AuthoringView initialDocument={grid()} adapters={[]} onSave={onSave} />);

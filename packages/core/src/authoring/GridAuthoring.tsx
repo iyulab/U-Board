@@ -13,7 +13,7 @@ import { ElementsPanel } from './ElementsPanel.js';
 import { SymbolsPanel } from './SymbolsPanel.js';
 import { GridItemPanel } from './GridItemPanel.js';
 import { seedWidget, widgetTypeName } from './widget-catalog.js';
-import { addGridItem, duplicateGridItem, gridItemIndex, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from '../editing/grid-editing.js';
+import { addGridItem, duplicateGridItem, gridItemIndex, moveGridItem, newCanvasItem, newGridItemId, removeGridItem, updateGridItem } from '../editing/grid-editing.js';
 import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
 
 /** The widths the editor can lay a grid out at — one inside each of the grid's three bands. */
@@ -66,7 +66,12 @@ function shownCanvas(canvas: CellCanvas, resolved: ResolvedCellCanvas | undefine
  * item" puts a new item after the selected one. The layout width lays the grid out as a medium or a narrow screen
  * will, so the author sees each.
  */
-export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, adapters, width, height, connectorLabels, labels, clock, triggerHosting }: KindEditorProps<GridView>) {
+export interface GridAuthoringProps extends KindEditorProps<GridView> {
+  /** Opens a canvas cell's canvas in the canvas editor. */
+  onEditCanvas?: (id: string) => void;
+}
+
+export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, adapters, width, height, connectorLabels, labels, clock, triggerHosting, onEditCanvas }: GridAuthoringProps) {
   const readClock = useEffectEvent(() => clock());
   const [preview, setPreview] = useState<{ doc: ResolvedGridView; now: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -115,6 +120,12 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
     setSelectedId(item.id);
   };
 
+  const handleAddCanvas = () => {
+    const item = newCanvasItem(newGridItemId());
+    updateDoc(current => addGridItem(current, item, selectedId));
+    setSelectedId(item.id);
+  };
+
   const handleDuplicate = () => {
     if (!selected) return;
     const id = newGridItemId();
@@ -143,6 +154,9 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
         <div className="ub-authoring__group" style={GROUP_STYLE}>
           <button type="button" className="ub-action" onClick={handleAddItem}>
             {labels.addItem}
+          </button>
+          <button type="button" className="ub-action" onClick={handleAddCanvas}>
+            {labels.addCanvas}
           </button>
         </div>
         {documentActions}
@@ -252,6 +266,11 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 onRemove={handleRemove}
                 labels={labels}
               />
+              {isCanvasItem(selected) && onEditCanvas && (
+                <button type="button" className="ub-action ub-action--primary" onClick={() => onEditCanvas(selected.id)}>
+                  {labels.editCanvas}
+                </button>
+              )}
               {!isCanvasItem(selected) && (
                 <PropertyPanel
                   node={selected}

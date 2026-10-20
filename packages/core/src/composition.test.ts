@@ -5,7 +5,7 @@ import { bindingsIn } from './document-bindings';
 import { resolveDocument } from './resolve-document';
 import { lintViewDocument } from './lint-view-document';
 import type { Adapter, ResolvedBinding } from './adapter';
-import { duplicateGridItem, idsIn, removeGridItem } from './editing/grid-editing';
+import { cellAsCanvas, duplicateGridItem, idsIn, removeGridItem, withCellCanvas } from './editing/grid-editing';
 
 // A grid whose cell holds a canvas — a mixed board: the spatial panel in one cell, cards around it.
 const bound = (ref: string) => ({ type: 'status', bindings: { 'data.value': { adapter: 'plant', ref } } });
@@ -97,5 +97,18 @@ describe('a grid cell holding a canvas', () => {
     const removed = removeGridItem(mixed(), 'plan');
     expect(removed.items.map(item => item.id)).toEqual(['kpi']);
     expect(removed.triggers).toBeUndefined();
+  });
+
+  it('is edited as a canvas board of its own: the spatial layer back to the cell, what the board defines to the board', () => {
+    const board = cellAsCanvas(mixed(), 'plan')!;
+    expect(board).toMatchObject({ kind: 'canvas', nodes: [{ id: 'pump' }, { id: 'tank' }], triggers: mixed().triggers });
+    expect(cellAsCanvas(mixed(), 'kpi')).toBeNull();
+    const edited = withCellCanvas(mixed(), 'plan', { ...board, nodes: board.nodes.slice(0, 1), connectors: [], appearance: 'dark', triggers: undefined });
+    const cell = edited.items[1];
+    if (!isCanvasItem(cell)) throw new Error('expected the canvas cell');
+    expect(cell.canvas).toEqual({ background: {}, nodes: [board.nodes[0]], connectors: [], decorations: board.decorations });
+    expect(edited.appearance).toBe('dark');
+    expect('triggers' in edited).toBe(false);
+    expect(edited.items[0]).toEqual(mixed().items[0]);
   });
 });
