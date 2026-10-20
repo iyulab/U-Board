@@ -135,6 +135,14 @@ describe('AuthoringView with a grid view', () => {
     expect(placedIn(await saved(onSave))[1].widget.type).toBe('gauge');
   });
 
+  it('labels a canvas cell’s view controls in the editor’s language in View, as in Edit', async () => {
+    const node = { id: 'n', x: 0, y: 0, width: 120, height: 60, anchored: false, widget: { type: 'gauge', props: { value: 1 } } };
+    const doc: GridView = { kind: 'grid', items: [{ id: 'plan', span: 12, canvas: { background: {}, nodes: [node], connectors: [] } }] };
+    render(<AuthoringView initialDocument={doc} adapters={[]} labels={KO_LABELS} initialMode="view" />);
+    expect(await screen.findByRole('button', { name: KO_LABELS.fitToView })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Fit to view' })).not.toBeInTheDocument();
+  });
+
   it('lays the grid out at a medium or narrow width while editing, and shows it as a link does in View', async () => {
     render(<AuthoringView initialDocument={grid()} adapters={[]} />);
     const surface = () => screen.getByRole('region', { name: /Editor|Board view/ }).closest('.ub-authoring__surface') as HTMLElement;

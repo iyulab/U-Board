@@ -243,6 +243,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 qualityText={labels.qualityText}
                 now={preview.now}
                 locale={labels.locale}
+                labels={labels}
                 activatable={activatable}
                 onItemActivate={activate}
                 onElementEvent={elementEvent}

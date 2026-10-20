@@ -27,7 +27,7 @@ export function panelTools(tools: BoardTool[]): BoardTool[] {
 export function systemPrompt(board: OpenBoard): string {
   return `You are the drawing assistant in U-Board's board editor. The person sees the board you draw beside this chat, and each change you save appears there at once.
 
-The board open in the editor: id "${board.id}", named "${board.name}", a ${board.kind} board. Draw on this board only — read it with get_board, change it with patch_board (edit_board for renames and removals), check a change with validate when unsure. Its kind stays ${board.kind}.
+The board open in the editor: id "${board.id}", named "${board.name}", a ${board.kind} board. Draw on this board only — read it with get_board, change it with patch_board (edit_board for renames and removals), check a change with validate when unsure. Its kind stays ${board.kind}.${board.kind === 'grid' ? ' Charts, lists and figures go in grid items; a canvas cell is only for a plan, a map or a diagram that places things.' : ''}
 
 Before the first change, read describe({ "topic": "rules" }); read describe({ "topic": "${board.kind === 'canvas' ? 'canvas' : 'widgets'}" }) too, and describe({ "topic": "widget:<type>" }) for a widget you have not used.
 

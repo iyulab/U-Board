@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- In View, a grid board's canvas cells label their zoom and fit buttons in the editor's language — they were English
+  whatever `labels` the editor was given.
+
 ### Added
 
 - `AuthoringView` takes `initialMode` (`'edit'` or `'view'`) and `onModeChange`: a host that opens the board again —
