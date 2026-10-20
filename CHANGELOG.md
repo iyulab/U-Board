@@ -11,6 +11,18 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A grid board can hold a canvas in a cell — a plan or map among cards. The editor adds one (**Add canvas**) and
+  edits its canvas in the canvas editor; the viewer and share links draw it fitted to its cell, the page scrolling
+  past it and Ctrl/⌘ + wheel zooming it. The AI tools (MCP) write and check it.
+
+### Changed
+
+- The Gwanghwamun sample is a mixed board now: the crowd and the roads across the top, the area's plan in a wide cell
+  with the bike stations and the car park where they stand, the forecast beside it, the weather below. A board
+  created from it before keeps its form.
+
 ## [0.18.0] - 2026-10-20
 
 ### Changed

@@ -1,18 +1,18 @@
-import { placeAt, type Background, type Binding, type Node, type Shape, type CanvasView } from '@iyulab/u-board/domain';
+import { placeAt, type Background, type Binding, type GridItem, type GridView, type Node, type Widget } from '@iyulab/u-board/domain';
 import type { SampleConnector, SamplePack } from '../sample-pack.js';
 import { escapeXml, project, referencePoints, svgDataUrl, type AreaFrame } from '../frame.js';
 import { snapshot } from '../snapshots/gwanghwamun.js';
 
-// Gwanghwamun and Deoksugung as Seoul's real-time city data describes them every few minutes: how crowded
-// the area is and will be, the weather, the traffic — and, placed where they stand, the public bikes
-// docked at each station and the cars in the public car park. The sample key the source publishes reads
-// this one place, which is enough for the board to be real.
+// Gwanghwamun and Deoksugung as Seoul's real-time city data describes them every few minutes — a mixed board,
+// the way a city's situation room lays one out: how crowded the area is and the traffic across the top, the area's
+// plan in a wide cell with the public bikes docked at each station and the cars in the public car park where they
+// stand, the crowd forecast beside it, the weather below. The plan is a canvas in a grid cell; the figures around it
+// are the grid's cards, laid out to the screen's width. The sample key the source publishes reads this one place,
+// which is enough for the board to be real.
 
-const WIDTH = 1240;
-const HEIGHT = 920;
-const MAP: AreaFrame = { x: 20, y: 70, width: 680, height: 820, north: 37.5775, south: 37.563, west: 126.9692, east: 126.9844 };
-/** The drawing's size and what its map part stands for; its `src` is drawn below. */
-const BACKGROUND: Background = { image: { src: '', width: WIDTH, height: HEIGHT, referencePoints: referencePoints(MAP) } };
+const MAP: AreaFrame = { x: 0, y: 0, width: 680, height: 820, north: 37.5775, south: 37.563, west: 126.9692, east: 126.9844 };
+/** The plan's size and what it stands for; its `src` is drawn below. */
+const BACKGROUND: Background = { image: { src: '', width: MAP.width, height: MAP.height, referencePoints: referencePoints(MAP) } };
 
 export const SEOUL_CITY_DATA: SampleConnector = {
   key: 'seoul-city-data',
@@ -140,69 +140,63 @@ function carPark(): Node {
   };
 }
 
-const PANEL_X = 744;
+/** A widget among the cards around the plan, in the room it takes. */
+const card = (id: string, span: number, spanMedium: number, widget: Widget): GridItem => ({ id, span, spanMedium, widget });
 
-function panel(): Node[] {
-  const node = (id: string, x: number, y: number, width: number, height: number, widget: Node['widget']): Node => ({
-    id, x, y, width, height, anchored: false, widget,
-  });
-  return [
-    node('crowd', PANEL_X, 104, 220, 60, {
-      type: 'status',
-      props: { data: { label: '지금 혼잡도', value: '', level: 'neutral' } },
-      bindings: { 'data.value': bind(PEOPLE, '/AREA_CONGEST_LVL'), 'data.level': bind(PEOPLE, '/AREA_CONGEST_LVL', CROWD_LEVEL) },
-    }),
-    node('people', PANEL_X + 240, 96, 220, 80, {
-      type: 'metric',
-      props: { data: { label: '추정 인구(최대)', value: 0, unit: '명' } },
-      bindings: { 'data.value': bind(PEOPLE, '/AREA_PPLTN_MAX') },
-    }),
-    node('forecast', PANEL_X, 190, 460, 210, {
-      type: 'chart.line',
-      props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' }, options: { xFormat: { type: 'time' } } },
-      bindings: { data: bind(PEOPLE, '/FCST_PPLTN') },
-    }),
-    node('temperature', PANEL_X, 424, 140, 80, {
-      type: 'metric',
-      props: { data: { label: '기온', value: 0, unit: '°C' } },
-      bindings: { 'data.value': bind(WEATHER, '/TEMP') },
-    }),
-    node('humidity', PANEL_X + 160, 424, 140, 80, {
-      type: 'metric',
-      props: { data: { label: '습도', value: 0, unit: '%' } },
-      bindings: { 'data.value': bind(WEATHER, '/HUMIDITY') },
-    }),
-    node('fine-dust', PANEL_X + 320, 432, 140, 60, {
-      type: 'status',
-      props: { data: { label: '미세먼지', value: '', level: 'neutral' } },
-      bindings: { 'data.value': bind(WEATHER, '/PM10_INDEX'), 'data.level': bind(WEATHER, '/PM10_INDEX', AIR_LEVEL) },
-    }),
-    node('temperature-forecast', PANEL_X, 524, 460, 200, {
-      type: 'chart.line',
-      // The source writes each hour as digits (`202610092100`); the axis shows it as a date and time.
-      props: { title: '24시간 기온 예보(°C)', data: [], mapping: { x: 'FCST_DT', y: 'TEMP' }, options: { xFormat: { type: 'time' } } },
-      bindings: { data: bind(WEATHER, '/FCST24HOURS') },
-    }),
-    node('traffic', PANEL_X, 752, 220, 60, {
-      type: 'status',
-      props: { data: { label: '도로 소통', value: '', level: 'neutral' } },
-      bindings: {
-        'data.value': bind(ROADS, '/ROAD_TRAFFIC_IDX'),
-        'data.level': bind(ROADS, '/ROAD_TRAFFIC_IDX', TRAFFIC_LEVEL),
-      },
-    }),
-    node('speed', PANEL_X + 240, 744, 220, 80, {
-      type: 'metric',
-      props: { data: { label: '평균 속도', value: 0, unit: 'km/h' } },
-      bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_SPD') },
-    }),
-  ];
-}
+/** Across the top: how crowded it is, and the roads. */
+const TOP: GridItem[] = [
+  card('crowd', 3, 3, {
+    type: 'status',
+    props: { data: { label: '지금 혼잡도', value: '', level: 'neutral' } },
+    bindings: { 'data.value': bind(PEOPLE, '/AREA_CONGEST_LVL'), 'data.level': bind(PEOPLE, '/AREA_CONGEST_LVL', CROWD_LEVEL) },
+  }),
+  card('people', 3, 3, {
+    type: 'metric',
+    props: { data: { label: '추정 인구(최대)', value: 0, unit: '명' } },
+    bindings: { 'data.value': bind(PEOPLE, '/AREA_PPLTN_MAX') },
+  }),
+  card('traffic', 3, 3, {
+    type: 'status',
+    props: { data: { label: '도로 소통', value: '', level: 'neutral' } },
+    bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_IDX'), 'data.level': bind(ROADS, '/ROAD_TRAFFIC_IDX', TRAFFIC_LEVEL) },
+  }),
+  card('speed', 3, 3, {
+    type: 'metric',
+    props: { data: { label: '평균 속도', value: 0, unit: 'km/h' } },
+    bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_SPD') },
+  }),
+];
 
-const DECORATIONS: Shape[] = [
-  { id: 'title', type: 'text', x: 20, y: 18, text: '광화문·덕수궁 — 지금', fontSize: 24, fill: '#17252b' },
-  { id: 'map-note', type: 'text', x: 20, y: 50, text: '따릉이 대여소의 남은 자전거와 공영주차장의 주차 대수 — 서 있는 자리에', fontSize: 13, fill: '#5b6b70' },
-  { id: 'panel-title', type: 'text', x: PANEL_X, y: 74, text: '지역 전체', fontSize: 15, fill: '#17252b' },
+/** Beside the plan: the crowd to come. */
+const FORECAST: GridItem = card('forecast', 4, 6, {
+  type: 'chart.line',
+  props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' }, options: { xFormat: { type: 'time' } } },
+  bindings: { data: bind(PEOPLE, '/FCST_PPLTN') },
+});
+
+/** Below: the weather now and the day's temperature. */
+const WEATHER_CARDS: GridItem[] = [
+  card('temperature', 4, 2, {
+    type: 'metric',
+    props: { data: { label: '기온', value: 0, unit: '°C' } },
+    bindings: { 'data.value': bind(WEATHER, '/TEMP') },
+  }),
+  card('humidity', 4, 2, {
+    type: 'metric',
+    props: { data: { label: '습도', value: 0, unit: '%' } },
+    bindings: { 'data.value': bind(WEATHER, '/HUMIDITY') },
+  }),
+  card('fine-dust', 4, 2, {
+    type: 'status',
+    props: { data: { label: '미세먼지', value: '', level: 'neutral' } },
+    bindings: { 'data.value': bind(WEATHER, '/PM10_INDEX'), 'data.level': bind(WEATHER, '/PM10_INDEX', AIR_LEVEL) },
+  }),
+  card('temperature-forecast', 12, 6, {
+    type: 'chart.line',
+    // The source writes each hour as digits (`202610092100`); the axis shows it as a date and time.
+    props: { title: '24시간 기온 예보(°C)', data: [], mapping: { x: 'FCST_DT', y: 'TEMP' }, options: { xFormat: { type: 'time' } } },
+    bindings: { data: bind(WEATHER, '/FCST24HOURS') },
+  }),
 ];
 
 /** The drawing under the map: the main roads, the stream, the palaces and the square, as a site plan. */
@@ -234,10 +228,8 @@ function drawing(): string {
     [[37.5661, 126.9778], [37.5661, 126.9844]], // 을지로
   ];
   const scale = (200 / 1610) * MAP.height; // 200 m
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
-<rect width="${WIDTH}" height="${HEIGHT}" fill="#f6f8f7"/>
-<rect x="${MAP.x}" y="${MAP.y}" width="${MAP.width}" height="${MAP.height}" rx="8" fill="#eef2f0" stroke="#d6dedb"/>
-<rect x="${PANEL_X - 16}" y="${MAP.y - 6}" width="${WIDTH - PANEL_X}" height="${MAP.height + 6}" rx="8" fill="#ffffff" stroke="#d6dedb"/>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${MAP.width}" height="${MAP.height}" viewBox="0 0 ${MAP.width} ${MAP.height}">
+<rect width="${MAP.width}" height="${MAP.height}" fill="#eef2f0"/>
 <rect ${box(37.5775, 126.974, 37.5763, 126.98)} fill="#e3e8d8"/>
 <rect ${box(37.5668, 126.9732, 37.5648, 126.976)} rx="4" fill="#e3e8d8"/>
 <rect ${box(37.5755, 126.9763, 37.5715, 126.9772)} rx="3" fill="#cfe3c7"/>
@@ -270,22 +262,29 @@ ${station(37.5758, 126.9735, '경복궁역')}
   return svgDataUrl(svg);
 }
 
-const document: CanvasView = {
-  kind: 'canvas',
-  background: { image: { ...BACKGROUND.image!, src: drawing() } },
-  nodes: [...BIKE_STATIONS.map(bikeStation), carPark(), ...panel()],
-  connectors: [],
-  decorations: DECORATIONS,
+/** The plan, as a canvas in a wide cell — in its own proportions, so the stations read at its size — the forecast
+ *  beside it. */
+const PLAN: GridItem = {
+  id: 'plan',
+  span: 8,
+  spanMedium: 6,
+  canvas: {
+    background: { image: { ...BACKGROUND.image!, src: drawing() } },
+    nodes: [...BIKE_STATIONS.map(bikeStation), carPark()],
+    connectors: [],
+  },
 };
+
+const document: GridView = { kind: 'grid', items: [...TOP, PLAN, FORECAST, ...WEATHER_CARDS] };
 
 export const gwanghwamun: SamplePack = {
   id: 'gwanghwamun',
   title: { ko: '광화문·덕수궁 실시간', en: 'Gwanghwamun, live' },
   field: { ko: '도시·인파', en: 'City & crowds' },
-  kind: { ko: '지역 약도', en: 'Area plan' },
+  kind: { ko: '지역 약도 + 카드(혼합)', en: 'Area plan among cards (mixed)' },
   summary: {
-    ko: '혼잡도·인구 예측·날씨·도로 소통, 그리고 대여소마다 남은 따릉이와 공영주차장의 주차 대수를 서 있는 자리에.',
-    en: 'How crowded the area is and will be, the weather and traffic — and, where they stand, the bikes left at each station and the cars in the public car park.',
+    ko: '도시 상황판처럼 — 위에 혼잡도와 도로 소통, 가운데 지역 약도에 대여소마다 남은 따릉이와 공영주차장의 주차 대수를 서 있는 자리에, 옆에 인구 예측, 아래 날씨. 약도는 그리드 칸 안의 캔버스입니다.',
+    en: 'Laid out like a city’s situation room — the crowd and the roads across the top; the area’s plan in the middle, the bikes left at each station and the cars in the public car park where they stand; the crowd forecast beside it; the weather below. The plan is a canvas in a grid cell.',
   },
   connectors: [SEOUL_CITY_DATA],
   document,

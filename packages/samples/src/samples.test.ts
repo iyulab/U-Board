@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { checkSpec } from '@iyulab/u-widgets/tools';
-import { coordinateOf, expandComponents, isSourceErrorField, placedIn, resolveDocument, sizedNodes, sourceErrorIn, validateViewDocument, type CanvasView, type Node } from '@iyulab/u-board/domain';
+import { coordinateOf, expandComponents, isCanvasItem, isSourceErrorField, placedIn, resolveDocument, sizedNodes, sourceErrorIn, validateViewDocument, type CanvasView, type GridView, type Node } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
 import { BIKE_STATIONS } from './packs/gwanghwamun.js';
 import { keepPointers } from './prune.js';
@@ -85,17 +85,21 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     }
   });
 
-  it.runIf(pack.document.kind === 'canvas' && pack.document.background.image !== undefined)('places every node on its background, none over another', () => {
-    const document = drawn as CanvasView;
-    const { width, height } = document.background.image!;
-    const nodes = document.nodes;
-    for (const node of nodes) {
-      expect(node.x, node.id).toBeGreaterThanOrEqual(0);
-      expect(node.y, node.id).toBeGreaterThanOrEqual(0);
-      expect(node.x + (node.width ?? 0), node.id).toBeLessThanOrEqual(width);
-      expect(node.y + (node.height ?? 0), node.id).toBeLessThanOrEqual(height);
+  // A canvas board, or each canvas cell of a grid — drawn over its own background.
+  const canvases: CanvasView[] =
+    pack.document.kind === 'canvas' ? [drawn as CanvasView] : pack.document.items.filter(isCanvasItem).map(item => ({ kind: 'canvas', ...item.canvas }));
+  it.runIf(canvases.some(canvas => canvas.background.image !== undefined))('places every node on its background, none over another', () => {
+    for (const document of canvases.filter(canvas => canvas.background.image !== undefined)) {
+      const { width, height } = document.background.image!;
+      const nodes = document.nodes;
+      for (const node of nodes) {
+        expect(node.x, node.id).toBeGreaterThanOrEqual(0);
+        expect(node.y, node.id).toBeGreaterThanOrEqual(0);
+        expect(node.x + (node.width ?? 0), node.id).toBeLessThanOrEqual(width);
+        expect(node.y + (node.height ?? 0), node.id).toBeLessThanOrEqual(height);
+      }
+      for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) expect(overlaps(a, b), `${a.id} × ${b.id}`).toBe(false);
     }
-    for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) expect(overlaps(a, b), `${a.id} × ${b.id}`).toBe(false);
   });
 
   it.runIf(pack.document.kind === 'canvas' && pack.document.background.image === undefined)('places nothing over another part when there is no drawing', () => {
@@ -122,8 +126,10 @@ describe('a list item bound by its fields', () => {
 describe('a map whose anchors are coordinates', () => {
   it('reads each bike station back at its longitude and latitude, within the rounding of its place on the drawing', () => {
     const pack = SAMPLE_PACKS.find(p => p.id === 'gwanghwamun')!;
+    // The plan is a canvas in a grid cell — its anchors read against the cell's own drawing.
+    const plan = (pack.document as GridView).items.find(isCanvasItem)!;
     for (const { id, lat, lng } of BIKE_STATIONS) {
-      const document = pack.document as CanvasView;
+      const document: CanvasView = { kind: 'canvas', ...plan.canvas };
       const node = sizedNodes(document).find(n => n.id === `bike-${id}`)!;
       expect(node.anchored, id).toBe(true);
       const coordinate = coordinateOf(document.background, node)!;
