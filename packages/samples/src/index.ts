@@ -22,6 +22,7 @@ export { assemblyWip } from './packs/assembly-wip.js';
 export { portTerminal } from './packs/port-terminal.js';
 export { commerceLive } from './packs/commerce-live.js';
 export { bloodJourney } from './packs/blood-journey.js';
+export { telecomNoc } from './packs/telecom-noc.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -44,7 +45,8 @@ import { assemblyWip } from './packs/assembly-wip.js';
 import { portTerminal } from './packs/port-terminal.js';
 import { commerceLive } from './packs/commerce-live.js';
 import { bloodJourney } from './packs/blood-journey.js';
+import { telecomNoc } from './packs/telecom-noc.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
