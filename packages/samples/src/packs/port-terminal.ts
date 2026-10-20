@@ -318,7 +318,7 @@ const items: GridItem[] = [
       title: '안벽 크레인 시간당 작업(mph)',
       data: [],
       mapping: { x: 'crane', y: 'mph' },
-      options: { series: [{ label: 'mph' }], referenceLines: [{ value: 30, label: '목표', lineStyle: 'dashed' }] },
+      options: { series: [{ label: 'mph' }], referenceLines: [{ value: 30, label: '목표', style: 'dashed' }] },
     },
     bindings: { data: bind('/terminal/cranes', '/value') },
   }, 220),
