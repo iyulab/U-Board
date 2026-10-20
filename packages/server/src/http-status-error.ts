@@ -3,7 +3,7 @@
 export class HttpStatusError extends Error {
   /** `body` is the parsed error body when the caller read one (JSON only), for a finer diagnosis
    * than the status alone allows. */
-  constructor(readonly status: number, message: string, readonly body?: unknown) {
+  constructor(readonly status: number, message: string, readonly body?: unknown, readonly excerpt?: string) {
     super(message);
     this.name = 'HttpStatusError';
   }

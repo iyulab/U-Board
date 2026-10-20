@@ -99,5 +99,16 @@ describe('a connection test', () => {
       .send({ baseUrl: 'http://open.example.com/api/{key}', authType: 'path', authValue: KEY, sourceError: SETTING, path: '/arrivals/x' });
     expect(body).toMatchObject({ ok: false, stage: 'response', reason: 'source', message: 'The key … is not valid. (INFO-100)' });
     expect(body.excerpt).toContain('INFO-100');
+    expect(body.excerpt, 'the key the source echoed is taken out').not.toContain(KEY);
+  });
+
+  it('shows the start of what a source answered with when it refused the request — its reason is often there', async () => {
+    answer = () => new Response(JSON.stringify({ result: { status: 403, message: 'This API needs an application before use.' } }), {
+      status: 403, headers: { 'Content-Type': 'application/json' },
+    });
+    const { body } = await request(app()).post(`${base()}/test`).set('Cookie', ownerCookie)
+      .send({ baseUrl: 'http://open.example.com/api/{key}', authType: 'path', authValue: KEY, path: '/stations' });
+    expect(body).toMatchObject({ ok: false, stage: 'request', reason: 'auth', status: 403 });
+    expect(body.excerpt).toContain('This API needs an application before use.');
   });
 });

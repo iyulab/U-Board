@@ -23,6 +23,9 @@ do when upgrading. Each release's notes carry its section.
 
 ### Changed
 
+- The connection test shows the start of what a source answered with when it refused the request (`401`, `403`,
+  `504` …) — its reason is often there, such as a key not yet registered for that API — with the data source's key
+  taken out should the source echo it.
 - A failed read tells signed-in members and API tokens what went wrong in words, beside its reason; a share link
   still says only the reason.
 

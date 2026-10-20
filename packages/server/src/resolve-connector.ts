@@ -177,7 +177,10 @@ class StageError extends Error {
   constructor(readonly stage: ResolveStage, cause: unknown, reason?: QualityReason) {
     super(describeFailure(cause));
     this.reason = reason ?? reasonFor(stage, cause);
-    if (cause instanceof HttpStatusError) this.status = cause.status;
+    if (cause instanceof HttpStatusError) {
+      this.status = cause.status;
+      this.excerpt = cause.excerpt;
+    }
   }
 }
 
@@ -201,7 +204,7 @@ function unreadable(contentType: string, text: string): StageError {
 /** An answer the source gave with success but in which it says it failed (`Connector.sourceError`) — its words,
  *  with the connector's secret taken out should the source echo the request back. */
 function sourceReported(connector: Connector, said: string, body: unknown): StageError {
-  const words = connector.authValue ? said.split(connector.authValue).join('…') : said;
+  const words = withoutSecret(connector, said);
   const error = new StageError('response', new Error(words), 'source');
   error.excerpt = excerptOf(body);
   return error;
@@ -234,14 +237,21 @@ function isODataError(body: unknown): boolean {
   return typeof error === 'object' && error !== null && typeof (error as { code?: unknown }).code === 'string' && 'message' in error;
 }
 
-/** A failed response's body, if it is JSON — read only to diagnose the failure, so any problem
- * reading it just means "no body". */
-async function errorBody(response: Response): Promise<unknown> {
-  if (!(response.headers.get('content-type') ?? '').toLowerCase().includes('json')) return undefined;
+/** A failed response's body — as text, whose start a connection test shows (a source says why it refused: a key
+ *  not yet registered for this API, a gateway timeout), and parsed when it is JSON, for a finer diagnosis than the
+ *  status alone (`reasonFor`). Read only to diagnose the failure, so any problem reading it just means "no body". */
+async function errorBody(response: Response): Promise<{ body: unknown; text: string }> {
+  let text: string;
   try {
-    return await response.json();
+    text = await response.text();
   } catch {
-    return undefined;
+    return { body: undefined, text: '' };
+  }
+  if (!(response.headers.get('content-type') ?? '').toLowerCase().includes('json')) return { body: undefined, text };
+  try {
+    return { body: JSON.parse(text), text };
+  } catch {
+    return { body: undefined, text };
   }
 }
 
@@ -302,8 +312,8 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
       response = await send();
     }
     if (!response.ok) {
-      const body = response.status === 400 ? await errorBody(response) : undefined;
-      throw new HttpStatusError(response.status, `upstream responded ${response.status}`, body);
+      const { body, text } = await errorBody(response);
+      throw new HttpStatusError(response.status, `upstream responded ${response.status}`, body, text === '' ? undefined : excerptOf(text));
     }
     stage = 'response';
     const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
@@ -417,7 +427,7 @@ export async function testConnector(connector: Connector, target: URL | null, fe
     if (target) {
       // The start of what came back, so the owner sees whether it is the data or an error the source
       // answered with success (some report a bad key or an empty query in a 200 body).
-      return { ok: true, excerpt: excerptOf(await fetchBody(connector, target, tokens, fetchFn)) };
+      return { ok: true, excerpt: withoutSecret(connector, excerptOf(await fetchBody(connector, target, tokens, fetchFn))) };
     } else if (connector.authType === 'oauth2-client-credentials') {
       try {
         await tokens.get(clientCredentialsOf(connector));
@@ -434,7 +444,12 @@ export async function testConnector(connector: Connector, target: URL | null, fe
       reason: failure.reason,
       ...(failure.status !== undefined && { status: failure.status }),
       message: failure.message,
-      ...(failure.excerpt !== undefined && { excerpt: failure.excerpt }),
+      ...(failure.excerpt !== undefined && { excerpt: withoutSecret(connector, failure.excerpt) }),
     };
   }
+}
+
+/** `text` with the connector's secret taken out, should the source echo the request back in what a test shows. */
+function withoutSecret(connector: Connector, text: string): string {
+  return connector.authValue ? text.split(connector.authValue).join('…') : text;
 }
