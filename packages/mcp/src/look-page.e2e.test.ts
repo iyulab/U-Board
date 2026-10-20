@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from 'playwright-core';
 import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
-import { launch } from './look.js';
+import { PICTURE, launch } from './look.js';
 
 // The page functions `look` runs inside the drawn board, run here against small hand-made pages in a real browser —
 // layout, shadow roots and the picture are what they read, and none of that exists under jsdom.
@@ -88,6 +88,30 @@ describe('countQualityMarks', () => {
   it('is empty on a board with no marks', async () => {
     await show('<div data-node-id="a">42</div>');
     expect(await page.evaluate(countQualityMarks)).toEqual({});
+  });
+});
+
+describe('PICTURE', () => {
+  it('takes a blinking ring on, whenever the picture is taken', async () => {
+    await show(`<style>@keyframes blink{50%{box-shadow:none}} .ring{animation:blink 0.2s step-end infinite}</style>
+      <div class="ring" style="position:absolute;left:40px;top:40px;width:40px;height:40px;box-shadow:0 0 0 10px rgb(255,0,0)"></div>`);
+    const red = async () => {
+      const picture = `data:image/png;base64,${(await page.screenshot(PICTURE)).toString('base64')}`;
+      return page.evaluate(async src => {
+        const image = new Image();
+        image.src = src;
+        await image.decode();
+        const canvas = Object.assign(document.createElement('canvas'), { width: image.width, height: image.height });
+        const context = canvas.getContext('2d')!;
+        context.drawImage(image, 0, 0);
+        const [r, g, b] = context.getImageData(35, 60, 1, 1).data; // inside the ring, left of the box
+        return r > 200 && g < 60 && b < 60;
+      }, picture);
+    };
+    for (let i = 0; i < 4; i++) {
+      expect(await red()).toBe(true);
+      await page.waitForTimeout(70);
+    }
   });
 });
 

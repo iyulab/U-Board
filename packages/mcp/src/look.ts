@@ -2,6 +2,10 @@ import type { Browser, Page } from 'playwright-core';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, expandComponents, getByPointer, instancePartId, nodeSize, type ViewDocument } from '@iyulab/u-board/domain';
 import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
 
+/** How a picture is taken: animations stopped at their start, so a blinking state is drawn on — a picture taken mid-blink
+ *  would show a ring as missing, and the reader would build it again by other means. */
+export const PICTURE = { type: 'png', animations: 'disabled' } as const;
+
 /** What `look` is asked for: a saved board, optionally one part of it, optionally on the other paper. */
 export interface LookRequest {
   board: string;
@@ -79,8 +83,8 @@ export class BrowserLooker implements Looker {
       const scale = await sceneScale(page, document);
       const clip = request.focus ? await focusClip(page, document, request.focus, scale) : undefined;
       // The whole view is taken in any case: the contrast check reads what is drawn behind each text off it.
-      const whole = await page.screenshot({ type: 'png' });
-      const png = clip ? await page.screenshot({ type: 'png', clip }) : whole;
+      const whole = await page.screenshot(PICTURE);
+      const png = clip ? await page.screenshot({ ...PICTURE, clip }) : whole;
       const lowContrast = await page.evaluate(findLowContrast, {
         picture: `data:image/png;base64,${whole.toString('base64')}`,
         ratio: request.focus ? 2 : 1,
