@@ -8,7 +8,11 @@ import * as api from '../api-client.js';
 import { formatDateTime } from '../format-time.js';
 
 vi.mock('../api-client.js');
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  // The create dialog reads the workspace's data sources to tell which sample keys it still needs.
+  vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+});
 
 function renderPage() {
   return render(

@@ -204,7 +204,7 @@ viewer load nothing from other origins — no fonts, scripts or stylesheets from
 installation runs on a closed network. The exceptions are a board's background image, which a
 page shows from the address its author gave (on a closed network, give it one that is reachable
 there), and the origins `UBOARD_ELEMENT_ORIGINS` opens to a board's elements — none unless it is set. The sample boards the console offers to start from read public open-data sources: picking one
-creates data sources for those addresses, and on a closed network their values read as disconnected.
+creates data sources for those addresses, and on a closed network their values read as disconnected. A sample on a source that issues each user a key of their own asks for that key when it is picked; a data source the workspace already has for the same address is used as it is, with the key it holds.
 
 Getting the image is the one step that needs a connection, and a release covers it: each one
 carries the image as an archive, `u-board-<version>-linux-amd64.tar.gz`, with its SHA-256 beside it.

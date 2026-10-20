@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router';
-import { listBoards, createBoard, deleteBoard, ApiError } from '../api-client.js';
-import { createBoardFromSample, loadSamplePacks, sampleHosts } from '../sample-boards.js';
+import { listBoards, createBoard, deleteBoard, listConnectors, ApiError, type ConnectorSummary } from '../api-client.js';
+import { createBoardFromSample, keysToAsk, loadSamplePacks, MissingSampleKeyError, sampleHosts } from '../sample-boards.js';
 import type { SamplePack } from '@iyulab/u-board-samples';
 import type { ViewKind } from '@iyulab/u-board';
 import { Alert } from '../design-system/Alert.js';
+import { Badge } from '../design-system/Badge.js';
 import { Button } from '../design-system/Button.js';
 import { FormField } from '../design-system/FormField.js';
 import { Modal } from '../design-system/Modal.js';
@@ -35,6 +36,10 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
   const [query, setQuery] = useState('');
   const [samples, setSamples] = useState<readonly SamplePack[]>([]);
   const [creatingSample, setCreatingSample] = useState<string | null>(null);
+  // The workspace's data sources, to tell which keys a sample still needs: one it already has keeps its key.
+  const [workspaceConnectors, setWorkspaceConnectors] = useState<readonly ConnectorSummary[]>([]);
+  // The keys typed per sample, by the sample's connector key.
+  const [sampleKeys, setSampleKeys] = useState<Record<string, Record<string, string>>>({});
   const navigate = useNavigate();
 
   const filteredBoards = useMemo(
@@ -61,18 +66,28 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
     setIsCreateOpen(true);
     // Offered once they arrive; the dialog works without them.
     loadSamplePacks().then(setSamples, () => setSamples([]));
+    setSampleKeys({});
+    Promise.resolve()
+      .then(() => listConnectors(workspaceId))
+      .then(res => setWorkspaceConnectors(res.connectors), () => setWorkspaceConnectors([]));
+  }
+
+  function setSampleKey(packId: string, connectorKey: string, value: string) {
+    setSampleKeys(prev => ({ ...prev, [packId]: { ...prev[packId], [connectorKey]: value } }));
   }
 
   async function handleSample(pack: SamplePack) {
     setCreateError(null);
     setCreatingSample(pack.id);
     try {
-      const boardId = await createBoardFromSample(workspaceId, pack, newBoardName.trim() || pack.title.ko);
+      const boardId = await createBoardFromSample(workspaceId, pack, newBoardName.trim() || pack.title.ko, sampleKeys[pack.id]);
       setIsCreateOpen(false);
       navigate(`/boards/${boardId}/edit`);
     } catch (err) {
       setCreateError(
-        err instanceof ApiError && err.status === 403
+        err instanceof MissingSampleKeyError
+          ? `‘${err.connector.name}’ 키를 입력하세요 — 이 원천은 샘플 키를 주지 않아, 이용자마다 발급받은 키로 읽습니다`
+          : err instanceof ApiError && err.status === 403
           ? '샘플은 데이터소스를 함께 만들기 때문에 워크스페이스 소유자만 추가할 수 있습니다'
           : '샘플로 보드를 만들지 못했습니다'
       );
@@ -179,12 +194,32 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
                 <li key={pack.id} className="ub-samples__item">
                   <div className="ub-samples__title">
                     <strong>{pack.title.ko}</strong>
+                    {keysToAsk(pack, workspaceConnectors).length > 0 && <Badge variant="warning">발급 키 필요</Badge>}
                     <span>
                       {pack.field.ko} · {pack.kind.ko}
                     </span>
                   </div>
                   <p>{pack.summary.ko}</p>
                   <p className="ub-samples__meta">연결: {sampleHosts(pack).join(', ')}</p>
+                  {keysToAsk(pack, workspaceConnectors).map(connector => (
+                    <div key={connector.key} className="ub-samples__key">
+                      <FormField label={`${connector.name} 키`}>
+                        <input
+                          type="password"
+                          autoComplete="off"
+                          value={sampleKeys[pack.id]?.[connector.key] ?? ''}
+                          onChange={e => setSampleKey(pack.id, connector.key, e.target.value)}
+                        />
+                      </FormField>
+                      <p className="ub-samples__meta">
+                        이 원천은 이용자마다 키를 발급합니다 —{' '}
+                        <a href={connector.ownKey!.signUpUrl} target="_blank" rel="noreferrer">
+                          {new URL(connector.ownKey!.signUpUrl).host}
+                        </a>
+                        에서 받은 키를 넣으면 데이터소스에 저장됩니다.
+                      </p>
+                    </div>
+                  ))}
                   <Button
                     type="button"
                     variant="ghost"

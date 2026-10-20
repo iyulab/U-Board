@@ -19,7 +19,18 @@ export interface LiveSampleConnector {
   authParamName?: string;
   /** A key the source publishes for anyone to try with — never a private one. */
   authValue?: string;
+  /** Set instead of `authValue` when the source publishes no key to try with: each installation registers
+   *  for its own and gives it when it creates the sample. */
+  ownKey?: OwnKey;
   attribution: Attribution;
+}
+
+/** Where a key is issued, for a source that asks each user to register for one. */
+export interface OwnKey {
+  /** The page of the source's operator where a key is issued. */
+  signUpUrl: string;
+  /** The environment variable the recording script reads a key from (`npm run capture`). */
+  env: string;
 }
 
 /**
@@ -38,6 +49,10 @@ export interface ExampleSampleConnector {
 export type SampleConnector = LiveSampleConnector | ExampleSampleConnector;
 
 export const isLiveConnector = (connector: SampleConnector): connector is LiveSampleConnector => !('example' in connector);
+
+/** The sources of `pack` that an installation needs its own key for. */
+export const ownKeyConnectors = (pack: SamplePack): LiveSampleConnector[] =>
+  pack.connectors.filter((c): c is LiveSampleConnector => isLiveConnector(c) && c.ownKey !== undefined);
 
 /** Whether an installation can create `pack` — every source it reads is a live one to connect to. */
 export const isInstallable = (pack: SamplePack): boolean => pack.connectors.every(isLiveConnector);

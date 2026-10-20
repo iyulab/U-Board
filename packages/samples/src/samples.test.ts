@@ -24,6 +24,14 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
       expect(connector.attribution.text.trim()).not.toBe('');
       if (!isLiveConnector(connector)) expect(connector.attribution.text, connector.key).toContain('예시 데이터');
       else if (connector.authType === 'path') expect(connector.baseUrl.split('{key}')).toHaveLength(2);
+      // A source asked with a key carries either the key it publishes to try with or where to get one — never both.
+      if (isLiveConnector(connector) && connector.authType !== 'none') {
+        expect([connector.authValue, connector.ownKey].filter(v => v !== undefined), connector.key).toHaveLength(1);
+      }
+      if (isLiveConnector(connector) && connector.ownKey) {
+        expect(connector.ownKey.signUpUrl, connector.key).toMatch(/^https:\/\//);
+        expect(connector.ownKey.env, connector.key).toMatch(/^[A-Z][A-Z0-9_]*$/);
+      }
     }
   });
 

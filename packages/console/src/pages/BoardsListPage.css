@@ -89,6 +89,10 @@
   color: var(--ub-text-muted);
 }
 
+.ub-samples__key {
+  margin: var(--ub-space-2) 0;
+}
+
 .ub-kind-choice {
   border: 0;
   padding: 0;

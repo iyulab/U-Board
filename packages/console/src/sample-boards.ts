@@ -21,10 +21,19 @@ function existingFor(connectors: readonly ConnectorSummary[], sample: LiveSample
 }
 
 /**
- * Creates a board from `pack` in the workspace: its data sources (or the workspace's existing ones for the
- * same address), then the board with its bindings pointed at them. Returns the new board's id.
+ * The sources of `pack` this workspace has to give its own key for: those whose source publishes no key to try
+ * with, and that the workspace has no data source for yet (an existing one keeps the key it holds).
  */
-export async function createBoardFromSample(workspaceId: string, pack: SamplePack, name: string): Promise<string> {
+export function keysToAsk(pack: SamplePack, connectors: readonly ConnectorSummary[]): LiveSampleConnector[] {
+  return liveConnectors(pack).filter(sample => sample.ownKey !== undefined && !existingFor(connectors, sample));
+}
+
+/**
+ * Creates a board from `pack` in the workspace: its data sources (or the workspace's existing ones for the
+ * same address), then the board with its bindings pointed at them. A source that asks for the workspace's own
+ * key is created with the one `keys` gives under its connector key (see `keysToAsk`). Returns the new board's id.
+ */
+export async function createBoardFromSample(workspaceId: string, pack: SamplePack, name: string, keys: Readonly<Record<string, string>> = {}): Promise<string> {
   const { connectors } = await listConnectors(workspaceId);
   const ids = new Map<string, string>();
   for (const sample of liveConnectors(pack)) {
@@ -33,8 +42,10 @@ export async function createBoardFromSample(workspaceId: string, pack: SamplePac
       ids.set(sample.key, existing.id);
       continue;
     }
-    const { key: _key, ...settings } = sample;
-    ids.set(sample.key, (await createConnector(workspaceId, settings)).id);
+    const { key: _key, ownKey, authValue, ...settings } = sample;
+    const value = ownKey ? keys[sample.key]?.trim() : authValue;
+    if (ownKey && !value) throw new MissingSampleKeyError(sample);
+    ids.set(sample.key, (await createConnector(workspaceId, { ...settings, ...(value !== undefined ? { authValue: value } : {}) })).id);
   }
   const document = structuredClone(pack.document);
   for (const placed of placedIn(document)) {
@@ -43,6 +54,14 @@ export async function createBoardFromSample(workspaceId: string, pack: SamplePac
   const board = await createBoard(workspaceId, name);
   await updateBoard(workspaceId, board.id, { document });
   return board.id;
+}
+
+/** A sample was to be created without the workspace's own key for a source that asks for one. */
+export class MissingSampleKeyError extends Error {
+  constructor(readonly connector: LiveSampleConnector) {
+    super(`a key is needed for ${connector.name}`);
+    this.name = 'MissingSampleKeyError';
+  }
 }
 
 /** The hosts a sample reads, to name where its data sources will connect. */
