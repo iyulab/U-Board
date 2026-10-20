@@ -1,0 +1,30 @@
+{
+  "about": "Date and time text as data sources write it, and the instant each names when a time without an offset is read as UTC wall-clock time — null when the text is not a date. The same table is kept in each library that reads such text, and each tests its reader against it, so the same text reads the same in both.",
+  "cases": [
+    { "text": "2026-10-09T19:00:00Z", "utc": "2026-10-09T19:00:00.000Z" },
+    { "text": "2026-10-09t19:00:00z", "utc": "2026-10-09T19:00:00.000Z" },
+    { "text": "  2026-10-09T19:00Z  ", "utc": "2026-10-09T19:00:00.000Z" },
+    { "text": "2026-10-09T19:00:00+09:00", "utc": "2026-10-09T10:00:00.000Z" },
+    { "text": "2026-10-09T19:00+0900", "utc": "2026-10-09T10:00:00.000Z" },
+    { "text": "2026-10-09T19:00:00+09", "utc": "2026-10-09T10:00:00.000Z" },
+    { "text": "2026-10-09T01:30:00-05:30", "utc": "2026-10-09T07:00:00.000Z" },
+    { "text": "2026-10-09T19:00:00.250Z", "utc": "2026-10-09T19:00:00.250Z" },
+    { "text": "2026-10-09 19:00", "utc": "2026-10-09T19:00:00.000Z" },
+    { "text": "2026/10/09 19:00:30", "utc": "2026-10-09T19:00:30.000Z" },
+    { "text": "2026.10.09", "utc": "2026-10-09T00:00:00.000Z" },
+    { "text": "2026-10-09", "utc": "2026-10-09T00:00:00.000Z" },
+    { "text": "20261009", "utc": "2026-10-09T00:00:00.000Z" },
+    { "text": "202610091900", "utc": "2026-10-09T19:00:00.000Z" },
+    { "text": "20261009 190030", "utc": "2026-10-09T19:00:30.000Z" },
+    { "text": "20261009T1900", "utc": "2026-10-09T19:00:00.000Z" },
+    { "text": "2026-02-30", "utc": null },
+    { "text": "2026-13-01", "utc": null },
+    { "text": "2026-10-09T24:00", "utc": null },
+    { "text": "2026-10-09T19:60", "utc": null },
+    { "text": "2026-10-09T19:00:60Z", "utc": null },
+    { "text": "20261332", "utc": null },
+    { "text": "P-101", "utc": null },
+    { "text": "1250", "utc": null },
+    { "text": "", "utc": null }
+  ]
+}
