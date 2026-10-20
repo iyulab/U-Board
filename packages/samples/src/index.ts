@@ -12,6 +12,7 @@ export { lineFlow } from './packs/line-flow.js';
 export { pumpStation } from './packs/pump-station.js';
 export { serverRoom } from './packs/server-room.js';
 export { bodyGap } from './packs/body-gap.js';
+export { itTopology } from './packs/it-topology.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -24,7 +25,8 @@ import { lineFlow } from './packs/line-flow.js';
 import { pumpStation } from './packs/pump-station.js';
 import { serverRoom } from './packs/server-room.js';
 import { bodyGap } from './packs/body-gap.js';
+import { itTopology } from './packs/it-topology.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, serverRoom, bodyGap];
+export const SAMPLE_PACKS: readonly SamplePack[] = [gwanghwamun, seoulAir, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, serverRoom, bodyGap, itTopology];
