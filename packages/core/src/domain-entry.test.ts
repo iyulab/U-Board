@@ -34,9 +34,9 @@ describe('domain entry', () => {
       'FiringLimit', 'InvalidViewDocumentError', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS',
       'TRIGGER_EVENTS', 'ageText', 'applyEditCommands', 'applyJsonPatch', 'applyValueMap', 'bindingsIn', 'boardStateOf', 'coordinateOf',
       'describeQuality', 'documentPatch', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts', 'elementListeners',
-      'emptyViewDocument', 'expandComponents', 'findHttpRefItem', 'firedBy', 'getByPointer', 'instancePartId', 'isHttpRef', 'isTriggerLink', 'linkFor',
+      'emptyViewDocument', 'expandComponents', 'findHttpRefItem', 'firedBy', 'getByPointer', 'instancePartId', 'isHttpRef', 'isSourceErrorField', 'isTriggerLink', 'linkFor',
       'lintViewDocument', 'nodeSize', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedIn', 'readHttpRef',
-      'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading', 'sizedNodes', 'stateChanges',
+      'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading', 'sizedNodes', 'sourceErrorIn', 'stateChanges',
       'validateViewDocument', 'worstQuality',
     ]);
     expect(Object.keys(viewer).sort()).toEqual([

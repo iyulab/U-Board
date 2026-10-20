@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isHttpRef, parseSourceTime, readHttpRef, valueAtPath, findHttpRefItem } from './http-ref.js';
+import { isHttpRef, isSourceErrorField, parseSourceTime, readHttpRef, sourceErrorIn, valueAtPath, findHttpRefItem } from './http-ref.js';
 
 const READ_AT = Date.parse('2026-10-09T14:30:00Z');
 
@@ -180,6 +180,43 @@ describe('parseSourceTime', () => {
   it('names no time for text that is not one, or a date that does not exist', () => {
     for (const raw of ['north', '', '2026-13-01', '2026-02-30', '2026-10-09 25:00', '24시간', '202609', true, null, {}, -5, Number.NaN]) {
       expect(parseSourceTime(raw)).toBeNull();
+    }
+  });
+});
+
+describe('an error a source answers with success', () => {
+  // A source that writes a status only when it fails, at the top of its answer; its data answer nests one elsewhere.
+  const onlyOnError = { path: '/code', messagePath: '/message' };
+  // A source that always writes a status, and one value of it means success.
+  const always = { path: '/response/header/resultCode', ok: ['00'], messagePath: '/response/header/resultMsg' };
+
+  it('is found where the source writes it, in its own words with its status', () => {
+    expect(sourceErrorIn({ status: 500, code: 'INFO-100', message: '인증키가 유효하지 않습니다.' }, onlyOnError)).toBe('인증키가 유효하지 않습니다. (INFO-100)');
+    expect(sourceErrorIn({ response: { header: { resultCode: '03', resultMsg: 'NODATA_ERROR' } } }, always)).toBe('NODATA_ERROR (03)');
+  });
+
+  it('is not found in an answer that succeeded', () => {
+    expect(sourceErrorIn({ errorMessage: { code: 'INFO-000', message: '정상 처리되었습니다.' }, rows: [] }, onlyOnError)).toBeUndefined();
+    expect(sourceErrorIn({ response: { header: { resultCode: '00', resultMsg: 'NORMAL SERVICE.' } } }, always)).toBeUndefined();
+    expect(sourceErrorIn({ code: null }, onlyOnError), 'null says nothing').toBeUndefined();
+    expect(sourceErrorIn({ code: { nested: true } }, onlyOnError), 'an object is not a status').toBeUndefined();
+  });
+
+  it('compares statuses as text, and falls back to the status when the source gives no words', () => {
+    expect(sourceErrorIn({ response: { header: { resultCode: 0 } } }, { path: '/response/header/resultCode', ok: ['0'] })).toBeUndefined();
+    expect(sourceErrorIn({ code: 'E1', message: ' ' }, onlyOnError)).toBe('E1');
+    expect(sourceErrorIn({ code: 42 }, { path: '/code' })).toBe('42');
+  });
+
+  it('keeps a long message short', () => {
+    expect(sourceErrorIn({ code: 'x'.repeat(500) }, { path: '/code' })!.length).toBe(301);
+  });
+
+  it('is a setting only in its known shape', () => {
+    expect(isSourceErrorField(onlyOnError)).toBe(true);
+    expect(isSourceErrorField(always)).toBe(true);
+    for (const bad of [null, [], { path: '' }, { path: 'code' }, { path: '/code', ok: [] }, { path: '/code', ok: [0] }, { path: '/code', messagePath: 'm' }, { path: '/code', extra: 1 }]) {
+      expect(isSourceErrorField(bad), JSON.stringify(bad)).toBe(false);
     }
   });
 });

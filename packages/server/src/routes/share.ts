@@ -151,7 +151,9 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       const connector = await connectorOf(connectorId);
       const target = connector && buildResolveTarget(connector, ref);
       if (!connector || !target) return DISCONNECTED;
-      return resolveConnectorValue(connector, target, ref, resolveState);
+      // What went wrong is for whoever can fix the data source; a share link is public.
+      const { message: _message, ...served } = await resolveConnectorValue(connector, target, ref, resolveState);
+      return served;
     };
   };
 

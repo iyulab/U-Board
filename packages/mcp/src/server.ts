@@ -87,6 +87,8 @@ const UNREAD: Record<string, string> = {
   auth: 'The source refused the credential it was given. Its owner fixes that in the console; a board cannot.',
   throttled: 'The source asks for fewer requests. Wait before reading it again.',
   format: 'The source answered, but not with JSON — this path is not one a binding can read.',
+  source:
+    'The source answered, but said in its answer that it could not serve the request — its words are in message (a key it does not accept, a query it rejects, a spent quota). A key is fixed by the source’s owner in the console; a query, by the path.',
   transport: 'The source could not be reached. Try again later, or ask the person whether it is up.',
 };
 
@@ -412,9 +414,18 @@ export function createServer(client: UBoardClient, looker?: Looker): McpServer {
         baseUrl: z.string().url().max(2000).describe('Where the requests go, e.g. "https://api.example.com".'),
         attribution: z.strictObject({ text: z.string().min(1).max(200), url: z.string().url().optional() }).optional().describe('How the source asks to be credited, shown under a board that uses it.'),
         description: z.string().min(1).max(2000).optional().describe('The paths it answers and what each holds, for whoever binds to it next: "GET /readings?line=N — one row per machine, by id".'),
+        sourceError: z
+          .strictObject({
+            path: z.string().regex(/^\/./).describe('A JSON Pointer to the status the source writes in its answer: "/code", "/response/header/resultCode".'),
+            ok: z.array(z.string().min(1)).min(1).optional().describe('The statuses that mean success ("00"). Absent: the source writes a status there only when it fails.'),
+            messagePath: z.string().regex(/^\/./).optional().describe('A JSON Pointer to its words for the error: "/message".'),
+          })
+          .optional()
+          .describe('For a source that answers an error with success (HTTP 200) and a status in the body — where it says so, so a read fails with its words instead of a missing value.'),
       }),
     },
-    async ({ name, baseUrl, attribution, description }) => tool(async () => ({ source: await client.createSource({ name, baseUrl, attribution, description }) }))
+    async ({ name, baseUrl, attribution, description, sourceError }) =>
+      tool(async () => ({ source: await client.createSource({ name, baseUrl, attribution, description, sourceError }) }))
   );
 
   return server;

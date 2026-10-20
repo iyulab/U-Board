@@ -19,6 +19,7 @@ export const REASON_LABEL: Record<QualityReason, string> = {
   auth: 'credentials refused',
   address: 'bound value not found at the source',
   format: 'the source answered in a form that cannot be read',
+  source: 'the source reported an error in its answer',
   throttled: 'rate limited',
   lagging: 'the source has not updated it as often as expected',
 };
@@ -70,6 +71,7 @@ export const DEFAULT_QUALITY_TEXT: QualityText = {
       auth: 'Access refused',
       address: 'Value not found',
       format: 'Unreadable reply',
+      source: 'Source reported error',
       throttled: 'Rate limited',
       lagging: 'Source behind',
     },

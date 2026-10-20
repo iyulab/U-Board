@@ -16,7 +16,7 @@ import {
   type ConnectorSummary,
   PATH_KEY_PLACEHOLDER,
 } from '../db/connectors.js';
-import type { Attribution } from '@iyulab/u-board/domain';
+import { isSourceErrorField, type Attribution, type SourceErrorField } from '@iyulab/u-board/domain';
 import { isValidRef, buildResolveTarget, resolveConnectorValue, testConnector, forgetConnector, type ResolveState } from '../resolve-connector.js';
 
 const OAUTH = 'oauth2-client-credentials';
@@ -53,6 +53,13 @@ function parseDescription(value: unknown): string | null | undefined | false {
   if (value === undefined || value === null) return value;
   if (typeof value !== 'string' || value.trim().length > DESCRIPTION_MAX_LENGTH) return false;
   return value.trim() === '' ? null : value.trim();
+}
+
+/** A request's `sourceError`: `undefined` when absent (leave it), `null` to clear it, the setting to store, or `false`
+ *  when it is not one (`isSourceErrorField`). */
+function parseSourceError(value: unknown): SourceErrorField | null | undefined | false {
+  if (value === undefined || value === null) return value;
+  return isSourceErrorField(value) ? value : false;
 }
 
 /** A request's `attribution`: `undefined` when absent (leave it), `null` to clear it, the credit to store,
@@ -144,10 +151,13 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
   if (attribution === false) return 'INVALID_INPUT';
   const description = parseDescription(body.description);
   if (description === false) return 'INVALID_INPUT';
+  const sourceError = parseSourceError(body.sourceError);
+  if (sourceError === false) return 'INVALID_INPUT';
   return {
     baseUrl: body.baseUrl,
     attribution: attribution ?? undefined,
     description: description ?? undefined,
+    sourceError: sourceError ?? undefined,
     authType: body.authType,
     authHeaderName: body.authType === 'header' ? body.authHeaderName : undefined,
     authParamName: body.authType === 'query' ? body.authParamName.trim() : undefined,
@@ -172,7 +182,9 @@ function connectorChanges(body: any, existing: Connector): ConnectorChanges | st
   if (attribution === false) return 'INVALID_INPUT';
   const description = parseDescription(body.description);
   if (description === false) return 'INVALID_INPUT';
-  const changes: ConnectorChanges = { name: body.name, baseUrl: body.baseUrl, attribution, description };
+  const sourceError = parseSourceError(body.sourceError);
+  if (sourceError === false) return 'INVALID_INPUT';
+  const changes: ConnectorChanges = { name: body.name, baseUrl: body.baseUrl, attribution, description, sourceError };
   if (body.authType === undefined) return pathKeyKept(changes, existing);
   const authError = validateAuthFields(body, existing);
   if (authError) return authError;

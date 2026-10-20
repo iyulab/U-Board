@@ -58,20 +58,20 @@ describe('a binding that names where the source says when it observed the value'
     // Fifty minutes after the read — eighty after the source's time, past the limit if counted from it.
     vi.spyOn(Date, 'now').mockReturnValue(NOW + 50 * 60_000);
     answer = async () => { throw new Error('network error'); };
-    expect((await resolve(north)).body).toEqual({ value: 36, quality: 'stale', reason: 'transport', observedAt: '2026-10-09T14:00:00.000Z' });
+    expect((await resolve(north)).body).toMatchObject({ value: 36, quality: 'stale', reason: 'transport', observedAt: '2026-10-09T14:00:00.000Z' });
   });
 
   it('says the time zone is wrong when the source’s time would be later than the read', async () => {
     const resolve = await setup();
     vi.spyOn(Date, 'now').mockReturnValue(NOW);
     const { body } = await resolve({ ...north, timeZone: undefined });
-    expect(body).toEqual({ quality: 'disconnected', reason: 'format' });
+    expect(body).toMatchObject({ quality: 'disconnected', reason: 'format' });
     expect(console.warn).toHaveBeenLastCalledWith(expect.stringContaining('check the reference\'s timeZone'));
   });
 
   it('says the binding’s address is wrong when the response has no such field', async () => {
     const resolve = await setup();
-    expect((await resolve({ ...north, observedAtPath: '/updatedAt' })).body).toEqual({ quality: 'disconnected', reason: 'address' });
+    expect((await resolve({ ...north, observedAtPath: '/updatedAt' })).body).toMatchObject({ quality: 'disconnected', reason: 'address' });
   });
 
   it('shows the source’s latest value as stale, lagging, once it is older than the binding’s max age', async () => {

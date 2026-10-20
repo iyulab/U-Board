@@ -87,9 +87,9 @@ describe('worstQuality', () => {
 describe('describeQuality with other words', () => {
   const text = {
     quality: { stale: 'S', disconnected: 'D' },
-    reason: { transport: 'T', auth: 'A', address: 'AD', format: 'F', throttled: 'TH', lagging: 'L' },
+    reason: { transport: 'T', auth: 'A', address: 'AD', format: 'F', source: 'S', throttled: 'TH', lagging: 'L' },
     age: (ms: number) => `${ms}ms`,
-    brief: { quality: { stale: 's', disconnected: 'd' }, reason: { transport: 't', auth: 'a', address: 'ad', format: 'f', throttled: 'th', lagging: 'l' } },
+    brief: { quality: { stale: 's', disconnected: 'd' }, reason: { transport: 't', auth: 'a', address: 'ad', format: 'f', source: 's', throttled: 'th', lagging: 'l' } },
   };
 
   it('builds the line from the given text', () => {

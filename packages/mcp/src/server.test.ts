@@ -33,6 +33,7 @@ function fakeServer() {
     if (url.pathname === '/api/workspaces/w1/connectors/s1/resolve') {
       if (body.ref.path === '/down') return json(200, { quality: 'disconnected', reason: 'transport', message: 'connect ECONNREFUSED' });
       if (body.ref.path === '/nowhere') return json(200, { quality: 'disconnected', reason: 'address' });
+      if (body.ref.path === '/refused') return json(200, { quality: 'disconnected', reason: 'source', message: 'The key is not valid. (INFO-100)' });
       return json(200, { quality: 'live', value: { items: [{ id: 'P-101', temp: 61.5 }, { id: 'P-102', temp: 58 }] } });
     }
     if (url.pathname === '/api/workspaces/w1/boards' && method === 'POST') {
@@ -425,6 +426,20 @@ describe('u-board-mcp', () => {
     expect(value).toEqual({ source: { id: 's2', name: 'Open data', baseUrl: 'https://open.example.com', authType: 'none' } });
     const withKey = (await client.callTool({ name: 'create_source', arguments: { name: 'x', baseUrl: 'https://x.example.com', authValue: 'k' } })) as { isError?: boolean };
     expect(withKey.isError).toBe(true);
+  });
+
+  it('says what the source said when it answered an error with success, and who fixes it', async () => {
+    const { value } = await call('sample_source', { source: 's1', path: '/refused' });
+    expect(value).toEqual({ read: false, reason: 'source', message: 'The key is not valid. (INFO-100)', next: expect.stringContaining('its words are in message') });
+  });
+
+  it('makes a source with where it reports errors in an answer it gives with success', async () => {
+    const sourceError = { path: '/response/header/resultCode', ok: ['00'], messagePath: '/response/header/resultMsg' };
+    await call('create_source', { name: 'Portal', baseUrl: 'https://portal.example.com', sourceError });
+    const sent = server.requests.find(r => r.method === 'POST' && r.path.endsWith('/connectors'))!;
+    expect(sent.body).toMatchObject({ sourceError });
+    const bad = (await client.callTool({ name: 'create_source', arguments: { name: 'x', baseUrl: 'https://x.example.com', sourceError: { path: 'code' } } })) as { isError?: boolean };
+    expect(bad.isError).toBe(true);
   });
 
   it('makes a source with the description of its paths, for whoever binds to it next', async () => {

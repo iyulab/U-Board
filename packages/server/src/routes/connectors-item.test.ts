@@ -56,12 +56,12 @@ describe('a binding to a list item by its fields', () => {
   });
 
   it('says the item is not at the source when none matches — not another item’s value', async () => {
-    expect((await resolve(byId('ST-9'))).body).toEqual({ quality: 'disconnected', reason: 'address' });
+    expect((await resolve(byId('ST-9'))).body).toMatchObject({ quality: 'disconnected', reason: 'address' });
   });
 
   it('matches only fields the item has, never inherited ones', async () => {
     const { body } = await resolve({ path: '/stations', item: { list: '/data/stations', where: { constructor: 'function Object() { [native code] }' } } });
-    expect(body).toEqual({ quality: 'disconnected', reason: 'address' });
+    expect(body).toMatchObject({ quality: 'disconnected', reason: 'address' });
   });
 
   it('refuses an item that is not a list pointer and fields to match', async () => {

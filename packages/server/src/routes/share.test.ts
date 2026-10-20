@@ -241,6 +241,27 @@ describe('public share routes', () => {
     expect(res.body.results).toEqual([{ value: '26.78Kbps', quality: 'live', observedAt: expect.any(String) }]);
   });
 
+  it('says why a read failed, but never what went wrong in words — a share link is public', async () => {
+    const source = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Open data', baseUrl: 'https://open.example.com', authType: 'none',
+      sourceError: { path: '/code', messagePath: '/message' } });
+    const ref = { path: '/air', valuePath: '/pm10' };
+    const doc = {
+      kind: 'canvas' as const, background: {},
+      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: source.id, ref } } } }],
+      connectors: [],
+    };
+    await updateBoard(db, workspaceId, boardId, { document: doc });
+    const token = await createShareToken();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    (fetch as any).mockImplementation(async () => jsonResponse({ code: 'INFO-100', message: 'The key is not valid.' }));
+
+    const res = await request(app)
+      .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
+      .send({ bindings: [{ connectorId: source.id, ref }] });
+    expect(res.body.results).toEqual([{ quality: 'disconnected', reason: 'source' }]);
+  });
+
   it('answers disconnected for a batch entry the document does not declare, without calling its upstream', async () => {
     const connector = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });

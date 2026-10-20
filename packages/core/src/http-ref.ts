@@ -63,6 +63,50 @@ export function isHttpRef(ref: unknown): ref is HttpRef {
   );
 }
 
+/**
+ * Where a source that answers an error with success (HTTP 200) says so in its answer — a data source's
+ * setting, not a binding's: the same for every request to it. Some public APIs answer a key they do not
+ * accept, a query they reject or a spent quota with 200 and a status of their own in the body; read as data,
+ * that answer only says the bound value is missing, and what the source said is lost.
+ */
+export interface SourceErrorField {
+  /** A JSON Pointer to the status the source writes in its answer. */
+  path: string;
+  /** The values there that mean success. Absent: the source writes a status there only when it fails, so any
+   *  value there is an error. */
+  ok?: string[];
+  /** A JSON Pointer to the source's words for the error. Absent: the status at `path` is the message. */
+  messagePath?: string;
+}
+
+const SOURCE_ERROR_MESSAGE_LENGTH = 300;
+
+/** Whether `field` is a well-formed `SourceErrorField`. */
+export function isSourceErrorField(field: unknown): field is SourceErrorField {
+  if (!field || typeof field !== 'object' || Array.isArray(field)) return false;
+  const { path, ok, messagePath, ...rest } = field as Record<string, unknown>;
+  return (
+    Object.keys(rest).length === 0 &&
+    isPointer(path) &&
+    path !== '' &&
+    (ok === undefined || (Array.isArray(ok) && ok.length > 0 && ok.every(v => typeof v === 'string'))) &&
+    (messagePath === undefined || (isPointer(messagePath) && messagePath !== ''))
+  );
+}
+
+/** What the source said went wrong in `body`, if `field` finds an error there — its message, or its status
+ *  when it gives no message — else `undefined`. A status counts when it is a value: absent or `null` says
+ *  nothing. Compared as text, so `0` and `"0"` are the same status. */
+export function sourceErrorIn(body: unknown, field: SourceErrorField): string | undefined {
+  const status = valueAtPath(body, field.path);
+  if (!status.found || status.value === null || typeof status.value === 'object') return undefined;
+  if (field.ok?.includes(String(status.value))) return undefined;
+  const message = field.messagePath === undefined ? undefined : valueAtPath(body, field.messagePath);
+  const words = message?.found && message.value !== null && typeof message.value !== 'object' ? String(message.value) : '';
+  const text = words.trim() === '' ? String(status.value) : `${words.trim()} (${String(status.value)})`;
+  return text.length > SOURCE_ERROR_MESSAGE_LENGTH ? `${text.slice(0, SOURCE_ERROR_MESSAGE_LENGTH)}…` : text;
+}
+
 function isPointer(path: unknown): path is string {
   return typeof path === 'string' && (path === '' || path.startsWith('/'));
 }

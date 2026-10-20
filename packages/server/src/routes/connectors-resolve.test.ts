@@ -75,7 +75,7 @@ describe('connector resolve proxy', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a' } });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'transport' });
+    expect(res.body).toMatchObject({ quality: 'disconnected', reason: 'transport' });
   });
 
   it('returns stale quality with the last-known value on failure after a prior success', async () => {
@@ -93,7 +93,7 @@ describe('connector resolve proxy', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'transport', observedAt: expect.any(String) });
+    expect(res.body).toMatchObject({ value: 'running', quality: 'stale', reason: 'transport', observedAt: expect.any(String) });
     // The stale value says when it was last read — the earlier live reading, not now.
     expect(res.body.observedAt).toBe(live.body.observedAt);
   });
@@ -105,7 +105,7 @@ describe('connector resolve proxy', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/assets', valuePath: 'value.0.Status' } });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'address' });
+    expect(res.body).toMatchObject({ quality: 'disconnected', reason: 'address' });
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('valuePath "value.0.Status" not found'));
   });
 
@@ -121,7 +121,7 @@ describe('connector resolve proxy', () => {
       .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
-    expect(res.body).toEqual({ value: 'running', quality: 'stale', reason: 'address', observedAt: expect.any(String) });
+    expect(res.body).toMatchObject({ value: 'running', quality: 'stale', reason: 'address', observedAt: expect.any(String) });
   });
 
   it('stops serving a last-known value as stale once it is older than the configured limit', async () => {
@@ -138,11 +138,11 @@ describe('connector resolve proxy', () => {
 
     (fetch as any).mockRejectedValueOnce(new Error('network error'));
     vi.spyOn(Date, 'now').mockReturnValue(readAt + 59_000);
-    expect(await resolve()).toEqual({ value: 'running', quality: 'stale', reason: 'transport', observedAt: live.observedAt });
+    expect(await resolve()).toMatchObject({ value: 'running', quality: 'stale', reason: 'transport', observedAt: live.observedAt });
 
     (fetch as any).mockRejectedValueOnce(new Error('network error'));
     vi.spyOn(Date, 'now').mockReturnValue(readAt + 61_000);
-    expect(await resolve()).toEqual({ value: undefined, quality: 'disconnected', reason: 'transport' });
+    expect(await resolve()).toMatchObject({ quality: 'disconnected', reason: 'transport' });
     expect(console.warn).toHaveBeenLastCalledWith(
       `[resolve] connector ${connectorId} /pumps/a: request failed: network error — the last value is past the stale age limit`
     );
@@ -163,7 +163,7 @@ describe('connector resolve proxy', () => {
       .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a', valuePath: 'status' } });
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'format' });
+    expect(res.body).toMatchObject({ quality: 'disconnected', reason: 'format' });
   });
 
   it('shares one upstream request among concurrent resolves of the same URL, each reading its own valuePath', async () => {
@@ -264,7 +264,7 @@ describe('connector resolve proxy', () => {
         .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
         .set('Cookie', memberCookie)
         .send({ ref: { path: `/status-${status}` } });
-      expect(res.body, `upstream ${status}`).toEqual({ quality: 'disconnected', reason });
+      expect(res.body, `upstream ${status}`).toMatchObject({ quality: 'disconnected', reason });
     }
   });
 
@@ -299,7 +299,7 @@ describe('connector resolve proxy', () => {
         .post(`/api/workspaces/${workspaceId}/connectors/${connectorId}/resolve`)
         .set('Cookie', memberCookie)
         .send({ ref: { path: `/missing${valuePath}`, valuePath } });
-      expect(res.body, valuePath).toEqual({ quality: 'disconnected', reason: 'address' });
+      expect(res.body, valuePath).toMatchObject({ quality: 'disconnected', reason: 'address' });
     }
   });
 
@@ -438,7 +438,7 @@ describe('connector resolve proxy with an oauth2-client-credentials connector', 
     (fetch as any).mockResolvedValueOnce({ ok: false, status: 401, json: async () => ({ error: 'invalid_client' }) });
     const res = await resolve();
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'auth' });
+    expect(res.body).toMatchObject({ quality: 'disconnected', reason: 'auth' });
     expect(fetch).toHaveBeenCalledTimes(1); // the data source is never called without a token
     expect((console.warn as any).mock.calls.map((c: unknown[]) => String(c[0]))).toEqual([
       `[resolve] connector ${oauthConnectorId} /assets/7: token failed: token endpoint responded 401 — no value to serve`,

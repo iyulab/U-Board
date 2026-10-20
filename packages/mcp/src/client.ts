@@ -41,6 +41,15 @@ export interface SourceSummary {
   attribution?: { text: string; url?: string };
   /** The paths it answers and what each holds, as its owner wrote them. */
   description?: string;
+  /** Where it says, in an answer it gives with success, that it failed. */
+  sourceError?: SourceError;
+}
+
+/** Where a source that answers an error with success says so in its answer. */
+export interface SourceError {
+  path: string;
+  ok?: string[];
+  messagePath?: string;
 }
 
 /** What reading a data source came to: its value (the whole response, when no `valuePath` narrows it) and how
@@ -124,7 +133,13 @@ export class UBoardClient {
   }
 
   /** Makes a data source that needs no credential. One that does is made by a person in the console. */
-  async createSource(input: { name: string; baseUrl: string; attribution?: { text: string; url?: string }; description?: string }): Promise<SourceSummary> {
+  async createSource(input: {
+    name: string;
+    baseUrl: string;
+    attribution?: { text: string; url?: string };
+    description?: string;
+    sourceError?: SourceError;
+  }): Promise<SourceSummary> {
     return this.request('POST', await this.workspacePath('/connectors'), { body: { ...input, authType: 'none' } });
   }
 

@@ -139,7 +139,7 @@ describe('POST /workspaces/:id/connectors/test', () => {
       .set('Cookie', memberCookie)
       .send({ ref: { path: '/pumps/a' } });
 
-    expect(resolve.body).toEqual({ value: undefined, quality: 'disconnected', reason: 'transport' });
+    expect(resolve.body).toMatchObject({ quality: 'disconnected', reason: 'transport' });
   });
 
   it('needs a path for anything but an OAuth token, and refuses one that leaves the connector', async () => {

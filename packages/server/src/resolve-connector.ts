@@ -1,6 +1,6 @@
 import { PATH_KEY_PLACEHOLDER, type Connector } from './db/connectors.js';
 import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
-import { isHttpRef, readHttpRef, resolvedReading, type HttpRef, type QualityReason, type ResolvedBinding } from '@iyulab/u-board/domain';
+import { isHttpRef, readHttpRef, resolvedReading, sourceErrorIn, type HttpRef, type QualityReason, type ResolvedBinding } from '@iyulab/u-board/domain';
 import { HttpStatusError } from './http-status-error.js';
 import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
 
@@ -198,6 +198,15 @@ function unreadable(contentType: string, text: string): StageError {
   return error;
 }
 
+/** An answer the source gave with success but in which it says it failed (`Connector.sourceError`) — its words,
+ *  with the connector's secret taken out should the source echo the request back. */
+function sourceReported(connector: Connector, said: string, body: unknown): StageError {
+  const words = connector.authValue ? said.split(connector.authValue).join('…') : said;
+  const error = new StageError('response', new Error(words), 'source');
+  error.excerpt = excerptOf(body);
+  return error;
+}
+
 /** What an upstream failure means for whoever has to fix it. A status the data source or token
  * endpoint answered with says it; anything else (network, timeout, 5xx, a redirect not followed,
  * an unparseable body) means the source could not be used at all. */
@@ -298,7 +307,12 @@ async function fetchBody(connector: Connector, target: URL, tokens: ClientCreden
     }
     stage = 'response';
     const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
-    if (contentType.includes('json')) return await response.json();
+    if (contentType.includes('json')) {
+      const body: unknown = await response.json();
+      const said = connector.sourceError ? sourceErrorIn(body, connector.sourceError) : undefined;
+      if (said !== undefined) throw sourceReported(connector, said, body);
+      return body;
+    }
     const text = await response.text();
     if (contentType !== '' && !contentType.startsWith('text/plain')) throw unreadable(contentType, text);
     return text;
@@ -382,8 +396,8 @@ export async function resolveConnectorValue(
       console.warn(`${where}: ${failure}`);
     }
     return servable
-      ? { value: cached.value, quality: 'stale', reason, observedAt: cached.observedAt }
-      : { value: undefined, quality: 'disconnected', reason };
+      ? { value: cached.value, quality: 'stale', reason, message, observedAt: cached.observedAt }
+      : { value: undefined, quality: 'disconnected', reason, message };
   }
 }
 

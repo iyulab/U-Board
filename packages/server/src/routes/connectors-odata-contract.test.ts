@@ -177,21 +177,21 @@ describe('generic HTTP connector against an OData v4 source behind OAuth 2.0 cli
 
   it('reads an entity by key, and reports an unknown key as a binding that points nowhere', async () => {
     expect(await resolve({ path: "/Assets('P-101')", valuePath: 'Status' })).toEqual({ value: 'Running', quality: 'live', observedAt: expect.any(String) });
-    expect(await resolve({ path: "/Assets('P-999')", valuePath: 'Status' })).toEqual({ quality: 'disconnected', reason: 'address' });
+    expect(await resolve({ path: "/Assets('P-999')", valuePath: 'Status' })).toMatchObject({ quality: 'disconnected', reason: 'address' });
   });
 
   it('reports a property the source does not have (a renamed field) as a binding that points nowhere', async () => {
     expect(await resolve({ path: '/Assets?$select=AssetNo,Statuss', valuePath: '/value/0/Statuss' }))
-      .toEqual({ quality: 'disconnected', reason: 'address' });
+      .toMatchObject({ quality: 'disconnected', reason: 'address' });
   });
 
   it('keeps a 400 that is not an OData error a transport failure', async () => {
-    expect(await resolve({ path: '/Broken', valuePath: '/x' })).toEqual({ quality: 'disconnected', reason: 'transport' });
+    expect(await resolve({ path: '/Broken', valuePath: '/x' })).toMatchObject({ quality: 'disconnected', reason: 'transport' });
   });
 
   it('reports a $filter that matches nothing as a binding that points nowhere, not as a live empty value', async () => {
     expect(await resolve({ path: "/Assets?$filter=AssetNo eq 'P-999'", valuePath: 'value.0.Status' }))
-      .toEqual({ quality: 'disconnected', reason: 'address' });
+      .toMatchObject({ quality: 'disconnected', reason: 'address' });
   });
 
   it('reads a count through a JSON Pointer, whose key contains a dot', async () => {
@@ -219,6 +219,6 @@ describe('generic HTTP connector against an OData v4 source behind OAuth 2.0 cli
   });
 
   it('reports rate limiting by the source as throttled', async () => {
-    expect(await resolve({ path: '/Busy' })).toEqual({ quality: 'disconnected', reason: 'throttled' });
+    expect(await resolve({ path: '/Busy' })).toMatchObject({ quality: 'disconnected', reason: 'throttled' });
   });
 });

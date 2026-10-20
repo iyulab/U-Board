@@ -51,16 +51,22 @@ export type ConnectionQuality = 'live' | 'stale' | 'disconnected';
  * source answered, but not with what the binding points at (unknown path, empty result, renamed
  * field): the binding, not the network, needs attention. `format` — the source answered in a form the
  * binding cannot read (XML or HTML where JSON was needed): how it is asked, not what it points at, needs
- * attention. `throttled` — requests are being rate limited. `lagging` — the source answered, but its latest
+ * attention. `source` — the source answered with success but said in its answer that it could not serve the
+ * request (a key it does not accept, a query it rejects, a quota): what it said is the fix, read it.
+ * `throttled` — requests are being rate limited. `lagging` — the source answered, but its latest
  * value is older than the binding expects of it: the source has stopped or fallen behind updating, not the
  * network or the binding. It annotates `quality` and never changes it. */
-export type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'throttled' | 'lagging';
+export type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'source' | 'throttled' | 'lagging';
 
 export interface ResolvedBinding {
   value: unknown;
   quality: ConnectionQuality;
   /** Why `quality` is not `live`, if the adapter knows. Ignored on a `live` reading. */
   reason?: QualityReason;
+  /** What went wrong, in words for whoever fixes it — for `source`, what the source itself said. Only for
+   *  someone who can change the binding or its data source: an adapter serving the public leaves it out.
+   *  Ignored on a `live` reading. */
+  message?: string;
   /** When `value` was observed (ISO 8601), if the adapter knows — the time the source says it
    * observed the value when it says so (an HTTP reference's `observedAtPath`), else the time it was
    * read; for `stale`, that of the last successful reading. It tells a last-known value of seconds

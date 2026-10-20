@@ -77,6 +77,7 @@ CREATE TABLE IF NOT EXISTS connectors (
   attribution_text TEXT,
   attribution_url TEXT,
   description TEXT,
+  source_error JSONB,
   auth_value TEXT,
   oauth_token_url TEXT,
   oauth_client_id TEXT,
@@ -98,6 +99,7 @@ ALTER TABLE connectors ADD COLUMN IF NOT EXISTS auth_param_name TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS attribution_text TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS attribution_url TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS source_error JSONB;
 DO $$
 BEGIN
   IF NOT EXISTS (

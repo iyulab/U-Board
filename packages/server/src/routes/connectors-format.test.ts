@@ -76,7 +76,7 @@ describe('a binding', () => {
     const id = await connector();
     const { body } = await request(app()).post(`/api/workspaces/${workspaceId}/connectors/${id}/resolve`).set('Cookie', ownerCookie)
       .send({ ref: { path: '/sample/xml/RealtimeCityAir/1/2/', valuePath: '/RealtimeCityAir/row/0/PM' } });
-    expect(body).toEqual({ quality: 'disconnected', reason: 'format' });
+    expect(body).toMatchObject({ quality: 'disconnected', reason: 'format' });
     expect(JSON.stringify(warn.mock.calls)).not.toContain('ERROR-335');
     warn.mockRestore();
   });
@@ -86,6 +86,6 @@ describe('a binding', () => {
     const id = await connector();
     const resolve = (ref: unknown) => request(app()).post(`/api/workspaces/${workspaceId}/connectors/${id}/resolve`).set('Cookie', ownerCookie).send({ ref });
     expect((await resolve({ path: '/pump/state' })).body).toMatchObject({ value: 'running', quality: 'live' });
-    expect((await resolve({ path: '/pump/state', valuePath: '/status' })).body).toEqual({ quality: 'disconnected', reason: 'format' });
+    expect((await resolve({ path: '/pump/state', valuePath: '/status' })).body).toMatchObject({ quality: 'disconnected', reason: 'format' });
   });
 });
