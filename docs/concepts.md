@@ -70,7 +70,9 @@ tank's level. The board defines it once, by name, and places it on any number of
 items as a widget of type `element:<name>`, each with its own props — bound like any widget's. A
 **template element** is HTML or SVG markup with `{{prop}}` values and its own CSS, drawn in an
 isolated part of the page: its CSS reaches only its own markup, the page's does not reach in, and
-only the board's theme passes through (`--u-widget-*` CSS variables — the colours the prepared widgets use).
+only the board's theme passes through (`--u-widget-*` CSS variables — the colours the prepared widgets use). Its
+root fills the element's box, and every size in it includes its padding and border (`box-sizing: border-box`), so
+`height: 100%` with padding still fits.
 A board's **symbols** — SVG drawings it defines once, by name — reach every template element that places
 one with `<use href="#name">`, so a plant's symbol set is drawn the same everywhere — its parts' own look written in
 the symbol (`fill="none"`, `stroke="currentColor"`): a `<use>` draws its symbol in a tree of its own, which the

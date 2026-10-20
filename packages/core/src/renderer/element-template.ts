@@ -81,8 +81,11 @@ function parseRgb(colour: string): [number, number, number] | undefined {
   return rgb ? [Number(rgb[1]), Number(rgb[2]), Number(rgb[3])] : undefined;
 }
 
-/** What every element's root starts from: it fills its box, in the board's ink and type, and nothing spills out. */
-const BASE_CSS = ':host{display:block;width:100%;height:100%;overflow:hidden;color:var(--u-widget-text);font-family:var(--u-widget-font-family)}';
+/** What every element's root starts from: it fills its box, in the board's ink and type, and nothing spills out — and
+ *  a size includes its padding and border (`border-box`), so `height: 100%` with padding still fits the box. */
+const BASE_CSS =
+  ':host{display:block;width:100%;height:100%;overflow:hidden;color:var(--u-widget-text);font-family:var(--u-widget-font-family)}' +
+  '*,*::before,*::after{box-sizing:border-box}';
 
 /** Fills a template's values from `props`, every value escaped. A name is looked up in the innermost section's item
  *  first, then outwards; a value that is not text, a number or a boolean shows as nothing. */

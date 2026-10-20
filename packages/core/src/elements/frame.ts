@@ -73,8 +73,10 @@ export const ELEMENT_FRAME_RUNTIME = `(function () {
   send({ type: 'ub:ready', heartbeat: true });
 })();`;
 
+/** A script element's page starts as a template's root does — filling its frame, sizes including padding and border. */
 const FRAME_BASE_CSS =
-  'html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;color:var(--u-widget-text);font-family:var(--u-widget-font-family)}';
+  'html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;color:var(--u-widget-text);font-family:var(--u-widget-font-family)}' +
+  '*,*::before,*::after{box-sizing:border-box}';
 
 /** The scripts and the document of a `script` element's frame. Its server answers the document with a policy that
  *  allows exactly these scripts (by hash) — `elementFrameScripts` returns them as they appear in it. */

@@ -18,6 +18,12 @@ All notable changes to this package are documented here. The format follows
   replaced by the value, as before. Strict validation refuses a pattern that names anything else, or one with no
   `label` binding.
 
+### Changed
+
+- Every size inside an element includes its padding and border (`box-sizing: border-box`, for a template's markup
+  and a script element's page alike), so a root of `height: 100%` with padding fits its box instead of being cut off
+  at the bottom. An element that relied on the old sizing can say `box-sizing: content-box` in its own CSS.
+
 ## [0.25.0] - 2026-10-20
 
 ### Added

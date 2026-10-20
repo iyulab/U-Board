@@ -8,6 +8,9 @@ describe('elementFrameHtml', () => {
     expect(html.indexOf(ELEMENT_FRAME_RUNTIME)).toBeGreaterThan(0);
     expect(html.indexOf('<script>draw()</script>')).toBeGreaterThan(html.indexOf(ELEMENT_FRAME_RUNTIME));
     expect(html).toContain('<style>b{color:red}</style>');
+    // Sizes include padding and border, as in a template's root — before the element's own CSS, which may say otherwise.
+    expect(html.indexOf('*,*::before,*::after{box-sizing:border-box}')).toBeLessThan(html.indexOf('<style>b{color:red}</style>'));
+    expect(html.indexOf('*,*::before,*::after{box-sizing:border-box}')).toBeGreaterThan(0);
   });
 
   it('keeps an element’s code and CSS inside their own tags', () => {

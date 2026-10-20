@@ -135,6 +135,12 @@ describe('renderTemplateElement', () => {
     expect(style('.a{fill:red}')).toMatch(/^:host\{.*\}\.a\{fill:red\}$/);
     expect(style('@import "x.css";')).not.toContain('@import');
   });
+
+  it('sizes every box of an element with its padding and border — height: 100% with padding fits — and lets the element say otherwise', () => {
+    const box = document.createElement('div');
+    box.append(renderTemplateElement({ render: 'template', template: '', style: '.c{box-sizing:content-box}' }, {}, document));
+    expect(box.querySelector('style')!.textContent).toMatch(/\*,\*::before,\*::after\{box-sizing:border-box\}\.c\{box-sizing:content-box\}$/);
+  });
 });
 
 describe('ElementView', () => {
