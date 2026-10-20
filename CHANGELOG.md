@@ -22,6 +22,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample drawn as a transit map: a high-speed rail network nationwide — each section in its line's colour,
   as thick as the trains on it and dashed with its delay where late, stations ringed red where trains are held, and
   punctuality by line beside it. One canvas over a wide area, on example data.
+- A gallery sample of signage: an airport's departures board — time, flight and gate on split-flap tiles, the
+  destination in Korean and English, each flight boarding, delayed, closed or cancelled, with the clock, punctuality
+  and the security wait beside it. On example data.
 
 ### Changed
 
