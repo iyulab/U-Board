@@ -1,3 +1,4 @@
+import './zod-jitless.js';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { boardTools, UBoardClient } from '@iyulab/u-board-mcp/tools';
 import { Button } from '../design-system/Button.js';
