@@ -24,6 +24,7 @@
     "@iyulab/u-board": "*",
     "@iyulab/u-board-mcp": "*",
     "@iyulab/u-board-samples": "*",
+    "@iyulab/u-widgets": "^0.38.0",
     "@uplatform/brand": "^0.4.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

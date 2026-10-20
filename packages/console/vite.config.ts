@@ -10,6 +10,10 @@ export default defineConfig(({ command, mode }) => {
   }
   return {
     plugins: [react()],
+    // One copy of the widget library in the console, however many packages bring one: the editor (through the
+    // library) and the chat panel's tools (through the MCP package) each have their own install, and two copies keep
+    // two registries — the Korean field names registered in one were read from the other as English.
+    resolve: { dedupe: ['@iyulab/u-widgets'] },
     server: {
       proxy: { '/api': 'http://localhost:4000' },
     },
