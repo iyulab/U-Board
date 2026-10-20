@@ -351,6 +351,23 @@ describe('PropertyPanel bindings', () => {
     ).toBeInTheDocument());
   });
 
+  it('says, beside the cause, what the source said when it reported an error in its answer', async () => {
+    const refused: Adapter = {
+      id: 'connector-1',
+      resolve: async () => ({ value: undefined, quality: 'disconnected', reason: 'source', message: 'The key is not valid. (INFO-100)' }),
+    };
+    render(<PropertyPanel node={statusNode()} adapters={[refused]} onChange={vi.fn()} />);
+
+    fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/arrivals' } });
+    fireEvent.click(screen.getByText('Preview'));
+    await waitFor(() => expect(screen.getByText(`${QUALITY_LABEL.disconnected} (${REASON_LABEL.source})`)).toBeInTheDocument());
+    expect(screen.getByText('The key is not valid. (INFO-100)')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Explore'));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Exploring the response failed — The key is not valid. (INFO-100)'));
+  });
+
   it('says how long ago a stale preview value was obtained', async () => {
     render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
 

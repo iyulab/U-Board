@@ -328,7 +328,8 @@ export function BindingEditor({
     try {
       const resolved = await selectedAdapter.resolve({ path: draft.path });
       if (resolved.quality === 'disconnected') {
-        setExploreError(labels.exploreFailed);
+        // What went wrong, when the adapter says — a source's own words name the fix (a key, a query).
+        setExploreError(resolved.message ? `${labels.exploreFailed} — ${resolved.message}` : labels.exploreFailed);
         setExploreResult(null);
         return;
       }
@@ -562,6 +563,7 @@ export function BindingEditor({
                     {previewLabel}
                   </span>
                 )}
+                {preview.quality !== 'live' && preview.message && <span className="ub-panel__hint">{preview.message}</span>}
               </p>
             )}
           </div>
