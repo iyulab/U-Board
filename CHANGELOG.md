@@ -30,6 +30,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a wholesale produce market's dawn auction set as a newspaper front page: the halls boxed on a
   halftone plan with their progress, the prices by item with a triangle for each change, and the cabbage price over a
   week (example data).
+- A gallery sample of a health centre's vaccination line in Art Nouveau: the four stages as arched panels along an
+  S-shaped path with the waiting between them, the rooms' states told by signs, and the vaccines in stock counted in
+  leaves (example data).
 
 ## [0.25.0] - 2026-10-21
 
