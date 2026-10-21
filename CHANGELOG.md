@@ -72,6 +72,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of an observatory's night set in stained glass: every dome a lancet window with its telescope and
   target, its state told by the roundel at the top, the sky's readings in a rose window, the night's programme and the
   cloud cover through the night (example data).
+- A gallery sample of a campground's afternoon made in cut paper: every pitch a layered card whose cut tent tells its
+  state, the facilities as paper chips, the day's arrivals and departures, the evening's weather with the campfire rule
+  and the pitches booked through the week (example data).
 
 ### Changed
 
