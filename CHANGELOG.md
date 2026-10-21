@@ -30,6 +30,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a ward's bed board set in the Swiss style — white paper, heavy black type, one red: every bed on
   the ward's plan one component, its state as black, red, grey hatching or an outline, with the census in very large
   figures, the week's occupancy and who is coming up from the emergency room (example data).
+- A gallery sample in an ultrawide format: an intercity bus terminal's departure wall, about four to one, lit as an
+  LED dot-matrix sign — the clock and the day's running, twelve boarding bays as one component with their next
+  departures and seats left, and a line of notices (example data).
 
 - A gallery sample of an earth-observation satellite's mission operations: its ground track across a world of grey dots
   (the orbit just flown solid, the next dashed), the satellite where it is now with a radio link to the station it is
