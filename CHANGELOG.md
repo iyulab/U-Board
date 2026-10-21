@@ -60,6 +60,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of an apiary's autumn worked in cross-stitch: every hive an embroidery hoop with its weight, its
   state told by how full the honeycomb stitched on it is, the year's harvests and the work left before winter, the
   flowers still in bloom and the average hive weight through the week (example data).
+- A gallery sample of a dam's floodgates run from a steampunk engine room: every spillway gate a pressure dial whose
+  needle stands at its opening, its state told by a signal lamp and an engraved plate, the reservoir in a sight glass
+  against its marks, the operator's log on telegraph tape and the discharge by the hour (example data).
 
 ### Changed
 

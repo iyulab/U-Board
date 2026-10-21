@@ -66,6 +66,7 @@ export { offshoreWindChart } from './packs/offshore-wind-chart.js';
 export { aquariumLabels } from './packs/aquarium-labels.js';
 export { vetComic } from './packs/vet-comic.js';
 export { apiaryStitch } from './packs/apiary-stitch.js';
+export { damSteampunk } from './packs/dam-steampunk.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -132,7 +133,8 @@ import { offshoreWindChart } from './packs/offshore-wind-chart.js';
 import { aquariumLabels } from './packs/aquarium-labels.js';
 import { vetComic } from './packs/vet-comic.js';
 import { apiaryStitch } from './packs/apiary-stitch.js';
+import { damSteampunk } from './packs/dam-steampunk.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. A pack added here is added to `./lazy.ts` too, which loads each on its own. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, laundromatDesktop, kitchenTickets, offshoreWindChart, aquariumLabels, vetComic, apiaryStitch, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, laundromatDesktop, kitchenTickets, offshoreWindChart, aquariumLabels, vetComic, apiaryStitch, damSteampunk, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
