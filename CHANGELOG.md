@@ -19,6 +19,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a bank branch's floor in a Scandinavian minimal style: six teller windows, three consultation
   rooms and four cash machines, each state told by a mark as well as a colour, and the waiting line by service
   (example data).
+- A gallery sample of a city's bike-share stations in the Isotype manner: a bike pictogram for every bike in a rack and
+  an outline for every free dock, the trucks moving bikes from full racks to empty ones, and the rentals by the hour
+  counted in pictograms (example data).
 
 ## [0.25.0] - 2026-10-21
 
