@@ -18,6 +18,10 @@ do when upgrading. Each release's notes carry its section.
   lifts are, the nursing room and the atrium's event; below it each floor's crowd, the car park and visitors by the
   hour (example data).
 - The editor's connector panel sets a label's size (`labelSize`), for boards drawn large.
+- A gallery sample of a distribution centre's storage hall drawn as a blueprint: six rack rows as one component —
+  bins four levels by twelve bays, filled as full as they are, blocked and held bins marked, and a line to the conveyor
+  as thick as the row is being picked — with the dock doors, the hall's figures, inbound and outbound by the hour and
+  what needs a hand (example data).
 
 - A gallery sample of an earth-observation satellite's mission operations: its ground track across a world of grey dots
   (the orbit just flown solid, the next dashed), the satellite where it is now with a radio link to the station it is
