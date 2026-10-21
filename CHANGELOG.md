@@ -21,6 +21,10 @@ do when upgrading. Each release's notes carry its section.
   lane a curved arc from its suppliers to the plant or from the plant to its markets — its width the containers a
   week, its colour on time, slow or late — with the week's headline, figures, suppliers at risk, lead times and the
   shipments at sea (example data). The map's land is from Natural Earth (public domain).
+- A gallery sample sketched in pencil: a neighbourhood bakery's afternoon on a wobbly-lined shop plan — a card taped by
+  each oven and the proofer, a dashed curve from each oven to the display case saying when the next batch comes out,
+  the trays with what is left and a red line through what has sold out, the takings, sales by the hour and two sticky
+  notes (example data).
 - The editor's connector panel offers a curved line (`@iyulab/u-board`'s new `route: "curved"`).
 
 ### Fixed

@@ -34,6 +34,7 @@ export { breweryScada } from './packs/brewery-scada.js';
 export { homeEink } from './packs/home-eink.js';
 export { tunnelTbm } from './packs/tunnel-tbm.js';
 export { worldSupply } from './packs/world-supply.js';
+export { bakerySketch } from './packs/bakery-sketch.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -68,7 +69,8 @@ import { breweryScada } from './packs/brewery-scada.js';
 import { homeEink } from './packs/home-eink.js';
 import { tunnelTbm } from './packs/tunnel-tbm.js';
 import { worldSupply } from './packs/world-supply.js';
+import { bakerySketch } from './packs/bakery-sketch.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
