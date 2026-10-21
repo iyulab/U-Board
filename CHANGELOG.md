@@ -17,6 +17,11 @@ do when upgrading. Each release's notes carry its section.
   ground in its layers, the lined tunnel behind the machine and the bore ahead, each surface settlement point with a
   leader to its reading, the rings built, the machine's readings and the air at the face; only a reading past its limit
   is shown in reverse (example data).
+- A gallery sample drawn as a newspaper's data page: an electronics maker's supply chain on a world of grey dots, each
+  lane a curved arc from its suppliers to the plant or from the plant to its markets — its width the containers a
+  week, its colour on time, slow or late — with the week's headline, figures, suppliers at risk, lead times and the
+  shipments at sea (example data). The map's land is from Natural Earth (public domain).
+- The editor's connector panel offers a curved line (`@iyulab/u-board`'s new `route: "curved"`).
 
 ### Fixed
 
