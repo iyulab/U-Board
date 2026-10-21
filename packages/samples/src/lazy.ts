@@ -51,6 +51,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'laundromat-desktop': () => import('./packs/laundromat-desktop.js').then(m => m.laundromatDesktop),
   'kitchen-tickets': () => import('./packs/kitchen-tickets.js').then(m => m.kitchenTickets),
   'offshore-wind-chart': () => import('./packs/offshore-wind-chart.js').then(m => m.offshoreWindChart),
+  'aquarium-labels': () => import('./packs/aquarium-labels.js').then(m => m.aquariumLabels),
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),

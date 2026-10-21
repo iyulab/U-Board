@@ -51,6 +51,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of an offshore wind farm drawn as a nautical chart: the turbines in their strings with their output
   and state signs, the submarine cables in magenta whose colour and dash follow their state, the service vessels, the
   weather buoy and the output through the day (example data).
+- A gallery sample of an aquarium's life support set out as museum specimen labels: every tank a pinned card with its
+  species and its water's readings, its state marked as a curator marks a card, the feeding rounds, the figures now and
+  the visitors by the hour (example data).
 
 ### Changed
 
