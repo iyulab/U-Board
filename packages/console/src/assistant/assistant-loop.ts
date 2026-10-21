@@ -30,9 +30,20 @@ export interface Primer {
   widgets: string;
 }
 
-/** What the model is told before the conversation: the board it draws and how to draw it well. */
-export function systemPrompt(board: OpenBoard, primer?: Primer): string {
-  return `Write every message in the language the person writes in.
+/** The language a message is written in, by its script — named to the model, which drifts into the English of the
+ *  rules more often when told only "the person's language". None when the script does not say. */
+export function languageOf(text: string): string | undefined {
+  if (/\p{Script=Hangul}/u.test(text)) return 'Korean';
+  if (/[\p{Script=Hiragana}\p{Script=Katakana}]/u.test(text)) return 'Japanese';
+  if (/\p{Script=Han}/u.test(text)) return 'Chinese';
+  return undefined;
+}
+
+/** What the model is told before the conversation: the board it draws and how to draw it well, in `language` when the
+ *  person's first message says which. */
+export function systemPrompt(board: OpenBoard, primer?: Primer, language?: string): string {
+  const theirs = language ?? 'the language the person writes in';
+  return `Write every message in ${theirs}.
 
 You are the drawing assistant in U-Board's board editor. The person sees the board you draw beside this chat, and each change you save appears there at once.
 
@@ -48,7 +59,7 @@ Make it beautiful and easy to read: a clear title, a balanced layout with room a
 
 Draw it in a few steps the person can watch: the layout and the main figures first, then the charts, then the finishing touches — each step one patch_board with several operations, not one operation per call. After each step, call look on the board and fix what it reports — a part whose content runs past its box needs more room (a larger height or span) or less in it; go on until look says nothing is left to fix. When a tool answers an error, fix what it says and go on.
 
-Write every message in the language the person writes in — Korean to a person writing Korean, from the first sentence on. Answer in two or three plain sentences (no Markdown — the chat shows text as it is): what you drew, and what they could ask for next. Before a step, say in one short sentence — in the person's language — what you are about to draw.${primer ? `
+Write every message in ${theirs}, from the first sentence on. Answer in two or three plain sentences (no Markdown — the chat shows text as it is): what you drew, and what they could ask for next. Before a step, say in one short sentence — in ${theirs} — what you are about to draw.${primer ? `
 
 # The rules
 
@@ -60,7 +71,7 @@ ${primer.widgets}
 
 # Last: your language
 
-Every message you write — before a step, between steps, and the answer — is in the language the person writes in, not the language of the rules above.` : ''}`;
+Every message you write — before a step, between steps, and the answer — is in ${theirs}, not the language of the rules above.` : ''}`;
 }
 
 /** Reads the rules and the widget list with the panel's own `describe`, for `systemPrompt` — none when it cannot. */

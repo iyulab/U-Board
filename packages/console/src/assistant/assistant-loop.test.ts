@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import type { BoardTool } from '@iyulab/u-board-mcp/tools';
-import { panelTools, readPrimer, runTurn, systemPrompt, type TurnEvent } from './assistant-loop.js';
+import { languageOf, panelTools, readPrimer, runTurn, systemPrompt, type TurnEvent } from './assistant-loop.js';
 import { chatCompletionsUrl, streamChat, type ChatMessage } from './chat-model.js';
 
 const SETTINGS = { baseUrl: 'https://models.example.com/v1/', model: 'm', apiKey: 'k' };
@@ -159,6 +159,14 @@ describe('a turn', () => {
     expect(prompt).toMatch(/# The rules\s+RULES\s+# The widgets\s+WIDGETS/);
     expect(systemPrompt(board)).toContain('Before the first change, read describe');
     expect(await readPrimer([])).toBeUndefined();
+  });
+
+  it('names the language of the first message to the model, from its script — the person’s own words otherwise', () => {
+    expect([languageOf('물류센터 현황을 그려줘'), languageOf('倉庫の出荷状況'), languageOf('仓库出货情况'), languageOf('Draw the warehouse')]).toEqual(['Korean', 'Japanese', 'Chinese', undefined]);
+    const prompt = systemPrompt(board, { rules: 'RULES', widgets: 'WIDGETS' }, 'Korean');
+    expect(prompt.startsWith('Write every message in Korean.')).toBe(true);
+    expect(prompt).toMatch(/is in Korean, not the language of the rules above\.$/);
+    expect(systemPrompt(board)).toContain('Write every message in the language the person writes in.');
   });
 
   it('offers the tools that draw the open board, not the ones that make or delete boards', () => {

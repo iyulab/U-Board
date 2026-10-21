@@ -23,6 +23,8 @@ do when upgrading. Each release's notes carry its section.
 ### Changed
 
 - The AI chat panel asks the model to title a chart in the chart's own title, not with a separate heading above it.
+- The AI chat panel names the language of the person's first message to the model (Korean, Japanese or Chinese, read
+  from its script) instead of asking for "the person's language", which models left for English more often.
 
 ## [0.21.0] - 2026-10-21
 
