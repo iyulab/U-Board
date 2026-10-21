@@ -54,6 +54,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of an aquarium's life support set out as museum specimen labels: every tank a pinned card with its
   species and its water's readings, its state marked as a curator marks a card, the feeding rounds, the figures now and
   the visitors by the hour (example data).
+- A gallery sample of an animal hospital's afternoon drawn as a comic book page: each room a panel whose balloon shape
+  tells its state with a sound effect in the corner, the wards as panels of kennels, the waiting room's queue with the
+  emergency first, the figures in starbursts and the registrations by the hour (example data).
 
 ### Changed
 
