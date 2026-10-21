@@ -48,6 +48,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a restaurant kitchen's lunch rush on thermal paper: every order a receipt hanging from the ticket
   rail with the minutes since it printed and its state as a rubber stamp, each station's queue, the day's totals as a
   till receipt and the average cooking time (example data).
+- A gallery sample of an offshore wind farm drawn as a nautical chart: the turbines in their strings with their output
+  and state signs, the submarine cables in magenta whose colour and dash follow their state, the service vessels, the
+  weather buoy and the output through the day (example data).
 
 ## [0.25.0] - 2026-10-21
 
