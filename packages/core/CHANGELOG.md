@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.33.1] - 2026-10-21
+
+### Changed
+
+- Requires `@iyulab/u-widgets` 0.39, whose charts with axes are laid out to their box at every size — the plot fills a
+  chart a few hundred pixels tall instead of about half of it, and the legend sits on top, clear of the axis labels.
+
 ## [0.33.0] - 2026-10-21
 
 ### Fixed

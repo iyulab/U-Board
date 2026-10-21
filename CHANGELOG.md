@@ -11,6 +11,15 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-10-21
+
+Built on `@iyulab/u-board` 0.33.1 and `@iyulab/u-board-mcp` 0.21.1, with widgets from `@iyulab/u-widgets` 0.39.0.
+
+### Changed
+
+- A chart with axes fills its box at every size — a chart a few hundred pixels tall drew its plot in about half of it —
+  and its legend sits on top, clear of the axis labels.
+
 ### Added
 
 - A gallery sample of a race team's pit wall drawn as race broadcast graphics: the timing tower with tyres and sector

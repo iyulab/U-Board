@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-10-21
+
+### Changed
+
+- Requires `@iyulab/u-board` 0.33.1 and `@iyulab/u-widgets` 0.39.
+
 ## [0.21.0] - 2026-10-21
 
 ### Changed
