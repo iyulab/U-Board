@@ -19,6 +19,9 @@ do when upgrading. Each release's notes carry its section.
   and who is next, the test rooms' queues, prescriptions ready, the car park, in very large type (example data).
 - A gallery sample in the print form: a public library's month on one A4 page — a serif masthead, the month in a
   paragraph with its figures in the sentences, numbered sections, a source line at the foot (example data).
+- A gallery sample in the skeuomorphic SCADA style: a brewery's process on a brushed-steel panel — vessels shaded as
+  metal, flanged pipes, screwed nameplates with backlit displays and sight glasses, bezel gauges and an annunciator of
+  lamps (example data).
 
 ### Changed
 

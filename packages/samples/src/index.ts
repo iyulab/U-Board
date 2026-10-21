@@ -30,6 +30,7 @@ export { festivalOps } from './packs/festival-ops.js';
 export { hotelGlass } from './packs/hotel-glass.js';
 export { clinicKiosk } from './packs/clinic-kiosk.js';
 export { libraryReport } from './packs/library-report.js';
+export { breweryScada } from './packs/brewery-scada.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -60,7 +61,8 @@ import { festivalOps } from './packs/festival-ops.js';
 import { hotelGlass } from './packs/hotel-glass.js';
 import { clinicKiosk } from './packs/clinic-kiosk.js';
 import { libraryReport } from './packs/library-report.js';
+import { breweryScada } from './packs/brewery-scada.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
