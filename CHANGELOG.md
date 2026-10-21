@@ -15,6 +15,8 @@ do when upgrading. Each release's notes carry its section.
 
 - A gallery sample in the glass style: a city hotel's day — frosted panes over a dusk gradient, every room's state floor
   by floor, check-ins and check-outs, housekeeping progress, guest requests and the revenue mix (example data).
+- A gallery sample in the portrait kiosk form: a hospital's outpatient hall screen — each clinic's number being called
+  and who is next, the test rooms' queues, prescriptions ready, the car park, in very large type (example data).
 
 ### Changed
 
