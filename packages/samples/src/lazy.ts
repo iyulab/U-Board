@@ -55,6 +55,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'vet-comic': () => import('./packs/vet-comic.js').then(m => m.vetComic),
   'apiary-stitch': () => import('./packs/apiary-stitch.js').then(m => m.apiaryStitch),
   'dam-steampunk': () => import('./packs/dam-steampunk.js').then(m => m.damSteampunk),
+  'pool-mosaic': () => import('./packs/pool-mosaic.js').then(m => m.poolMosaic),
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),

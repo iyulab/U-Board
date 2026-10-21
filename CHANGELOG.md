@@ -63,6 +63,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a dam's floodgates run from a steampunk engine room: every spillway gate a pressure dial whose
   needle stands at its opening, its state told by a signal lamp and an engraved plate, the reservoir in a sight glass
   against its marks, the operator's log on telegraph tape and the discharge by the hour (example data).
+- A gallery sample of an indoor pool's evening laid in mosaic tiles: every lane a strip of white tile with its swimmers
+  counted in tiles, its state told by the sign at its end and the colour of its rope, the water's quality, the evening's
+  classes and the admissions by the hour (example data).
 
 ### Changed
 
