@@ -141,6 +141,17 @@ describe('u-board-mcp', () => {
     expect(JSON.stringify((await call('describe', { topic: 'widgets' })).value).length).toBeLessThan(4000);
   });
 
+  it('gives several widgets in full in one read, each by its type — an unknown one answering why in its place', async () => {
+    const { value: one } = await call('describe', { topic: 'widget:gauge' });
+    const { value: several } = await call('describe', { topic: 'widget:gauge, list,gauge,nope' });
+    expect(Object.keys(several)).toEqual(['gauge', 'list', 'nope']);
+    expect(several.gauge).toEqual(one);
+    expect(several.list.type).toBe('list');
+    expect(several.nope.error).toMatch(/no widget "nope"/);
+    const many = Array.from({ length: 9 }, (_, i) => `w${i}`).join(',');
+    expect((await call('describe', { topic: `widget:${many}` })).isError).toBe(true);
+  });
+
   it('finds widgets by what they should show, and gives examples a board places as they are', async () => {
     const { value: found } = await call('describe', { topic: 'widgets', query: 'list of messages' });
     expect(Object.values(found.matches).flat().some(line => String(line).startsWith('list —'))).toBe(true);

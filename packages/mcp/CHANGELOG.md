@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `describe` reads several widgets in one call: `widget:metric,chart.bar,status` answers each in full by its type (up
+  to 8), an unknown one answering why in its place. An assistant read the widgets of a step one call at a time — a
+  round trip each to the model endpoint.
+
 ### Changed
 
 - `describe("rules")` says a prepared widget's title is its `title` prop, drawn inside its box — a chart is titled there,

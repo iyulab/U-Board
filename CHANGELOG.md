@@ -25,6 +25,7 @@ do when upgrading. Each release's notes carry its section.
 - The home page's film of the AI chat panel is recorded again on example carriers (A–D택배), with the panel's newer
   prompt and the grid's medium-width rows; the caption says how long it took and how much faster it is shown.
 - The AI chat panel asks the model to title a chart in the chart's own title, not with a separate heading above it.
+- The AI chat panel asks the model to read the widgets a step uses in one `describe` call, not one call each.
 - The AI chat panel names the language of the person's first message to the model (Korean, Japanese or Chinese, read
   from its script) instead of asking for "the person's language", which models left for English more often.
 

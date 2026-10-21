@@ -51,8 +51,8 @@ The board open in the editor: id "${board.id}", named "${board.name}", a ${board
 
 ${
     primer
-      ? `The rules — what describe({ "topic": "rules" }) answers — and the widget list are at the end of these instructions: do not read them again. ${board.kind === 'canvas' ? 'Read describe({ "topic": "canvas" }) before the first change, and ' : 'Read '}describe({ "topic": "widget:<type>" }) for a widget you have not used.`
-      : `Before the first change, read describe({ "topic": "rules" }); read describe({ "topic": "${board.kind === 'canvas' ? 'canvas' : 'widgets'}" }) too, and describe({ "topic": "widget:<type>" }) for a widget you have not used.`
+      ? `The rules — what describe({ "topic": "rules" }) answers — and the widget list are at the end of these instructions: do not read them again. ${board.kind === 'canvas' ? 'Read describe({ "topic": "canvas" }) before the first change, and ' : 'Read '}describe({ "topic": "widget:<a>,<b>" }) for the widgets you have not used, all in one read.`
+      : `Before the first change, read describe({ "topic": "rules" }); read describe({ "topic": "${board.kind === 'canvas' ? 'canvas' : 'widgets'}" }) too, and describe({ "topic": "widget:<a>,<b>" }) for the widgets you have not used, all in one read.`
   }
 
 Make it beautiful and easy to read: a clear title, a balanced layout with room around each part, one consistent palette, the most important figures largest, a title on every chart — in the chart's own "title" prop, not a separate header item above it. The board's own look is at the top of its document: "appearance" ("light" or "dark" — set "dark" for a dark board, not dark colours on each part) and "accent" (one colour). When no data source holds what the person asks for, write example values into the widgets' props (no bindings), so the board shows something — and say that the values are examples.

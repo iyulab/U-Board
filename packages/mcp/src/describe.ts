@@ -17,7 +17,7 @@ export const TOPICS: Record<string, string> = {
   mixed: 'A grid with a canvas in a cell — a plan or map among KPI cards: its shape and what stays on the board.',
   components: 'Components — a group of canvas parts (frame, widgets, lines) defined once and drawn per instance with its own values.',
   widgets: 'The prepared widgets, one line each by category; pass `query` ("list of messages") for only the ones that match.',
-  'widget:<type>': 'One prepared widget in full, its examples in board form — e.g. "widget:gauge".',
+  'widget:<type>': 'One prepared widget in full, its examples in board form — e.g. "widget:gauge"; several at once, by commas — "widget:metric,chart.bar,status".',
   schema: 'The board document JSON Schema; pass `pointer` for one part, e.g. "/$defs/elementDefinition".',
 };
 
@@ -47,7 +47,7 @@ const RULES = `# Writing a U-Board board
 
 ## Widgets
 - widget = { type, props?, bindings? }. type is a prepared widget ("gauge", "list", "chart.bar" — describe("widgets", query)) or "element:<name>".
-- A prepared widget's props are its u-widgets spec without "widget": { title?, data, mapping?, options?, … } — describe("widget:<type>") gives examples ready to paste.
+- A prepared widget's props are its u-widgets spec without "widget": { title?, data, mapping?, options?, … } — describe("widget:<a>,<b>") gives examples ready to paste.
 - A widget draws inside its node's box (or grid cell), clipped to it. Title a chart with props.title, not a header item above it.
 - When no widget draws it — a symbol, a schematic part, a custom gauge — define an element once and place it by name: describe("elements").
 
@@ -186,7 +186,28 @@ function widgetCatalog(query: string | undefined): unknown {
     (byCategory[info.category] ??= []).push(line);
   }
   if (words.length > 0 && Object.keys(byCategory).length === 0) return { matches: {}, hint: 'nothing matched — describe({ topic: "widgets" }) without a query lists them all' };
-  return { [words.length > 0 ? 'matches' : 'widgets']: byCategory, next: 'describe({ topic: "widget:<type>" }) for one in full' };
+  return { [words.length > 0 ? 'matches' : 'widgets']: byCategory, next: 'describe({ topic: "widget:<a>,<b>" }) for the ones you use, in full, in one read' };
+}
+
+/** At most this many widgets in one `widget:` answer — the ones a board is about to use, not the catalog. */
+export const MAX_WIDGETS_PER_DESCRIBE = 8;
+
+/** `widget:<type>` in full; `widget:<a>,<b>,…` each of them by type — one read for the widgets a step will use, where a
+ *  model read them one call at a time (each a round trip to a busy model endpoint). A type it does not know answers
+ *  why in its place, so the others still arrive. */
+function widgetDetails(list: string): unknown {
+  const types = [...new Set(list.split(',').map(t => t.trim()).filter(Boolean))];
+  if (types.length <= 1) return widgetDetail(types[0] ?? '');
+  if (types.length > MAX_WIDGETS_PER_DESCRIBE) throw new Error(`${types.length} widgets in one read — ask for at most ${MAX_WIDGETS_PER_DESCRIBE}, the ones this step uses`);
+  return Object.fromEntries(
+    types.map(type => {
+      try {
+        return [type, widgetDetail(type)];
+      } catch (error) {
+        return [type, { error: (error as Error).message }];
+      }
+    })
+  );
 }
 
 /** A prepared widget in full, with its examples as a board places them: { type, props } — props is the spec without "widget". */
@@ -211,6 +232,6 @@ export function describeTopic(topic: string | undefined, pointer: string | undef
   if (topic === 'mixed') return MIXED;
   if (topic === 'schema') return pointer ? schemaPart(pointer) : documentSchema();
   if (topic === 'widgets') return widgetCatalog(query);
-  if (topic.startsWith('widget:')) return widgetDetail(topic.slice('widget:'.length));
+  if (topic.startsWith('widget:')) return widgetDetails(topic.slice('widget:'.length));
   throw new Error(`no topic "${topic}" — one of ${Object.keys(TOPICS).join(', ')}`);
 }

@@ -164,7 +164,7 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
     {
       description: 'What a U-Board board can hold and how to write one. No topic: the list of topics. Start with "rules"; read "canvas" before drawing a canvas board.',
       inputSchema: z.strictObject({
-        topic: z.string().max(100).optional().describe(`One of: ${Object.keys(TOPICS).join(', ')}.`),
+        topic: z.string().max(200).optional().describe(`One of: ${Object.keys(TOPICS).join(', ')}.`),
         pointer: z.string().max(200).optional().describe('With topic "schema": the JSON Pointer of one part, e.g. "/$defs/elementDefinition".'),
         query: z.string().max(200).optional().describe('With topic "widgets": words for what it should show, e.g. "list of messages" — only the widgets that match.'),
       }),
