@@ -57,6 +57,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of an animal hospital's afternoon drawn as a comic book page: each room a panel whose balloon shape
   tells its state with a sound effect in the corner, the wards as panels of kennels, the waiting room's queue with the
   emergency first, the figures in starbursts and the registrations by the hour (example data).
+- A gallery sample of an apiary's autumn worked in cross-stitch: every hive an embroidery hoop with its weight, its
+  state told by how full the honeycomb stitched on it is, the year's harvests and the work left before winter, the
+  flowers still in bloom and the average hive weight through the week (example data).
 
 ### Changed
 
