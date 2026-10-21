@@ -30,7 +30,7 @@ const cards = SAMPLE_PACKS.map(pack => {
   const image = pack.document.kind === 'canvas' ? (pack.document.background.image ?? partsExtent(pack.document)) : undefined;
   const ownKeys = ownKeyConnectors(pack).map(c => g.ownKey.replace('{host}', new URL(c.ownKey!.signUpUrl).host));
   const recorded = isInstallable(pack) ? [g.recorded.replace('{time}', time(pack.snapshot.capturedAt)), ...ownKeys].join(' ') : g.example;
-  return { pack, aspect: image ? `aspect-ratio: ${image.width} / ${image.height}; --ratio: ${(image.width / image.height).toFixed(3)}` : undefined, recorded };
+  return { pack, aspect: image ? `aspect-ratio: ${image.width} / ${image.height}; --ratio: ${(image.width / image.height).toFixed(3)}` : undefined, portrait: !!image && image.height > image.width, recorded };
 });
 ---
 
@@ -53,7 +53,7 @@ const cards = SAMPLE_PACKS.map(pack => {
       </ol>
     </nav>
     {
-      cards.map(({ pack, aspect, recorded }) => (
+      cards.map(({ pack, aspect, portrait, recorded }) => (
         <article class="sample" id={pack.id}>
           <header class="sample-head">
             <h2>{pack.title[locale]}</h2>
@@ -69,7 +69,7 @@ const cards = SAMPLE_PACKS.map(pack => {
             </dl>
             <p class="sample-summary">{pack.summary[locale]}</p>
           </header>
-          <div class:list={['sample-board', { 'sample-board--grid': !aspect }]} style={aspect} data-sample-board={pack.id} data-label={pack.title[locale]}>
+          <div class:list={['sample-board', { 'sample-board--grid': !aspect, 'sample-board--portrait': portrait }]} style={aspect} data-sample-board={pack.id} data-label={pack.title[locale]}>
             <noscript>{pack.summary[locale]}</noscript>
           </div>
           <p class="sample-recorded">{recorded}</p>
@@ -170,6 +170,12 @@ const cards = SAMPLE_PACKS.map(pack => {
   .sample-board.live {
     aspect-ratio: auto !important;
     height: min(80vh, 760px, calc(100cqi / var(--ratio, 1.6) + 76px));
+  }
+  /* A portrait board (a kiosk, a printed page) is as wide as the height it gets allows — not the card's whole width
+     with the board a strip in the middle of it. */
+  .sample-board--portrait {
+    max-width: calc((min(80vh, 760px) - 76px) * var(--ratio) + 2px);
+    margin-inline: auto;
   }
   /* A grid not drawn yet holds room for itself, so the page does not jump as the boards above it are drawn. */
   .sample-board--grid:not(.live) {
