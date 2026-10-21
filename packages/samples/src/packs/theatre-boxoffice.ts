@@ -66,7 +66,7 @@ const at = (r: number, deg: number) => ({ x: CENTRE.x + r * Math.cos((deg * Math
 const round = (n: number) => Math.round(n * 10) / 10;
 
 /** Where the house plan sits on the board: one element draws every block, so the blocks' outlines — fans whose boxes
- *  would overlap — are one node, and each block's fill and seats left are props of it. */
+ *  would overlap — are one node, reading each block's fill and seats left from one bound object. */
 const HOUSE = { x: 80, y: 290, width: 960, height: 510 };
 
 /** Each block's outline and label point, in the house element's own units. */
@@ -112,17 +112,17 @@ ${rays}
 
 const LEVELS = `.open{--c:${OPEN}}.few{--c:${FEW}}.sold{--c:${SOLD}}`;
 
-/** The house plan: every block as its own shape, filled by how much of it is sold (`<id>`), with its name and the seats
- *  left (`<id>Left`). */
+/** The house plan: every block as its own shape, filled by how much of it is sold, with its name and the seats left —
+ *  read from `zones`, the blocks' states by their ids. */
 const house: ElementDefinition = {
   render: 'template',
   props: {
     type: 'object',
-    properties: Object.fromEntries(BLOCKS.flatMap(({ id }) => [[id, { enum: ['open', 'few', 'sold'] }], [`${id}Left`, { type: 'string' }]])),
+    properties: { zones: { type: 'object' } },
   },
   template: `<svg class="hs" viewBox="0 0 ${HOUSE.width} ${HOUSE.height}">${SHAPES.map(
     ({ block, d, tx, ty }) =>
-      `<g class="{{${block.id}}}"><path d="${d}"/><text x="${tx}" y="${ty}"><tspan class="n">${block.name}</tspan><tspan class="v" x="${tx}" dy="22">{{${block.id}Left}}</tspan></text></g>`
+      `<g class="{{zones.${block.id}.level}}"><path d="${d}"/><text x="${tx}" y="${ty}"><tspan class="n">${block.name}</tspan><tspan class="v" x="${tx}" dy="22">{{zones.${block.id}.left}}</tspan></text></g>`
   ).join('')}</svg>`,
   style: `${LEVELS}
 .hs{display:block;width:100%;height:100%}
@@ -204,13 +204,8 @@ const node = (id: string, x: number, y: number, width: number, height: number, w
 const nodes: Node[] = [
   node('house', HOUSE.x, HOUSE.y, HOUSE.width, HOUSE.height, {
     type: 'element:house',
-    props: Object.fromEntries(BLOCKS.flatMap(({ id }) => [[id, 'open'], [`${id}Left`, '']])),
-    bindings: Object.fromEntries(
-      BLOCKS.flatMap(({ id }) => [
-        [id, bind('/theatre/zones', `/${id}/level`)],
-        [`${id}Left`, bind('/theatre/zones', `/${id}/left`)],
-      ])
-    ),
+    props: { zones: {} },
+    bindings: { zones: bind('/theatre/zones', '/value') },
   }),
   node('legend', 330, 930, 460, 30, { type: 'element:legend', props: {} }),
   node('title', 1120, 30, 460, 190, {
