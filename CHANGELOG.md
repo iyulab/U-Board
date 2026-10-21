@@ -31,6 +31,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a national park's trail board painted as a watercolour map: the mountain in washes that bleed at
   their edges, the trails over it in ink by their state, cards at the gates, the falls, the shelter and the summit, with
   the mountain's weather, the day's notices and walkers by the hour (example data).
+- A gallery sample of a theme park's wait times drawn in the Memphis style: pastel zones with zigzag edges and thick
+  black outlines, each ride a badge with its wait in the colour of how long it is, a suggested route through the
+  shortest waits from the gate, with the day's figures, the shows and the average wait by the hour (example data).
 
 ## [0.24.0] - 2026-10-21
 
