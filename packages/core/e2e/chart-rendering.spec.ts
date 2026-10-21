@@ -91,6 +91,8 @@ test('the authoring seed shape for chart.line renders a canvas, not the "Unknown
 
 /** On-screen heights of a node's box and of the widget drawn in it. */
 async function heights(page: Page, nodeId: string) {
+  // The overlay is drawn after the scene: on a loaded machine it is not there yet when the page first answers.
+  await page.locator(`[data-testid="designer-overlay-${nodeId}"] u-widget`).waitFor({ state: 'attached' });
   return page.evaluate(id => {
     const overlay = document.querySelector(`[data-testid="designer-overlay-${id}"]`) as HTMLElement;
     const widget = overlay.querySelector('u-widget') as HTMLElement;

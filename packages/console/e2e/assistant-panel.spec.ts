@@ -61,8 +61,10 @@ test('the chat panel draws on the open board with a model the person sets, and t
   await expect(page.getByText('저장됨')).toBeVisible();
 
   expect(requests[0].authorization).toBe('Bearer test-key');
-  // What look answered went back to the model: the board drawn, nothing left to fix.
-  const lookAnswer = requests[3].messages.at(-1)!;
+  // What look answered went back to the model: the board drawn, nothing left to fix — and after it, read last, the
+  // person's language named again (sent with the request, not kept in the conversation).
+  expect(requests[3].messages.at(-1)).toEqual({ role: 'user', content: '(다음 메시지는 한국어로 쓰세요.)' });
+  const lookAnswer = requests[3].messages.at(-2)!;
   expect(lookAnswer.role).toBe('tool');
   expect(JSON.parse(lookAnswer.content!).status).toBe('done — nothing to fix');
 });
