@@ -15,6 +15,9 @@ do when upgrading. Each release's notes carry its section.
 
 - A gallery sample of a race team's pit wall drawn as race broadcast graphics: the timing tower with tyres and sector
   colours, the circuit with each sector's best, the two cars' tyre strategy and their lap times (example data).
+- A gallery sample of a ski resort's slopes drawn as an 8-bit game's map: the mountain in pixels, the runs in their
+  difficulty's colour and the lifts, with each run's and lift's state as a game's pop-up, the weather, what is open and
+  riders by the hour (example data).
 
 ## [0.24.0] - 2026-10-21
 
