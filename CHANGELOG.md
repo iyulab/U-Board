@@ -11,6 +11,10 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-21
+
+Built on `@iyulab/u-board` 0.32.0 and `@iyulab/u-board-mcp` 0.20.0, with widgets from `@iyulab/u-widgets` 0.38.2.
+
 ### Added
 
 - A gallery sample in an amber monochrome terminal style: a subway tunnel's boring machine on a long section — the

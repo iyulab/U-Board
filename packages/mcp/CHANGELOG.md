@@ -6,8 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-21
+
 ### Changed
 
+- Requires `@iyulab/u-board` 0.32, which draws a connector's `curved` route.
 - `describe("view")` names a connector's `route: "curved"` (a bow to the left of the way it runs, as flows on a map).
 
 ## [0.19.0] - 2026-10-21

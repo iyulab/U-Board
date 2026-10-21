@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-10-21
+
 ### Added
 
 - A connector's `style.route` takes `curved`: the line bows to the left of the way it runs, from `fromNodeId` toward
