@@ -27,6 +27,9 @@ do when upgrading. Each release's notes carry its section.
   use by the hour (example data).
 - A gallery sample of a fire and rescue dispatch board as a Constructivist poster: each station's vehicles with the
   shape of their state, the calls in progress as red discs and the vehicles heading to them (example data).
+- A gallery sample of a wholesale produce market's dawn auction set as a newspaper front page: the halls boxed on a
+  halftone plan with their progress, the prices by item with a triangle for each change, and the cabbage price over a
+  week (example data).
 
 ## [0.25.0] - 2026-10-21
 
