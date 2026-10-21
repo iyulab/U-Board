@@ -45,6 +45,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a coin laundry watched on a nineties desktop: the washers and dryers in bevelled windows, each
   with its state as an icon and the minutes left as a block progress bar, the shop's figures, the uses by the hour and
   a message box about a broken machine (example data).
+- A gallery sample of a restaurant kitchen's lunch rush on thermal paper: every order a receipt hanging from the ticket
+  rail with the minutes since it printed and its state as a rubber stamp, each station's queue, the day's totals as a
+  till receipt and the average cooking time (example data).
 
 ## [0.25.0] - 2026-10-21
 

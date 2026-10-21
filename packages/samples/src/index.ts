@@ -61,6 +61,7 @@ export { parcelHub } from './packs/parcel-hub.js';
 export { schoolChalkboard } from './packs/school-chalkboard.js';
 export { parkingSigns } from './packs/parking-signs.js';
 export { laundromatDesktop } from './packs/laundromat-desktop.js';
+export { kitchenTickets } from './packs/kitchen-tickets.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -122,7 +123,8 @@ import { parcelHub } from './packs/parcel-hub.js';
 import { schoolChalkboard } from './packs/school-chalkboard.js';
 import { parkingSigns } from './packs/parking-signs.js';
 import { laundromatDesktop } from './packs/laundromat-desktop.js';
+import { kitchenTickets } from './packs/kitchen-tickets.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, laundromatDesktop, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, laundromatDesktop, kitchenTickets, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
