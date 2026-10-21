@@ -34,6 +34,10 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a theme park's wait times drawn in the Memphis style: pastel zones with zigzag edges and thick
   black outlines, each ride a badge with its wait in the colour of how long it is, a suggested route through the
   shortest waits from the gate, with the day's figures, the shows and the average wait by the hour (example data).
+- A gallery sample of a by-election's counting hall drawn as a brutalist web page: the hall's plan with the ballot
+  boxes' way through it and each station's boxes done and state, the arrow out of a stopped sorter turning red, with the
+  count's stages, each district's progress as a bar of blocks and the count over the evening — no candidate's or
+  party's figures (example data).
 
 ## [0.24.0] - 2026-10-21
 
