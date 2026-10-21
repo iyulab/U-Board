@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
@@ -8,6 +8,11 @@ import * as api from '../api-client.js';
 import { formatDateTime } from '../format-time.js';
 
 vi.mock('../api-client.js');
+// The page loads the samples lazily, and the first load transforms every pack's source — longer, as the gallery grows,
+// than a query waits for the cards to appear. Loaded once here, the page's own import resolves at once.
+beforeAll(async () => {
+  await import('@iyulab/u-board-samples');
+}, 30_000);
 beforeEach(() => {
   vi.resetAllMocks();
   // The create dialog reads the workspace's data sources to tell which sample keys it still needs.
