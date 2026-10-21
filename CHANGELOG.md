@@ -16,6 +16,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a fishing harbour's dawn auction drawn as an ukiyo-e woodblock print: the boats at sea, on
   their way in with their minutes to the breakwater, unloading and sold, the auction's order and the boxes sold by the
   half hour (example data).
+- A gallery sample of a bank branch's floor in a Scandinavian minimal style: six teller windows, three consultation
+  rooms and four cash machines, each state told by a mark as well as a colour, and the waiting line by service
+  (example data).
 
 ## [0.25.0] - 2026-10-21
 
