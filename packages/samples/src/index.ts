@@ -49,6 +49,7 @@ export { theatreBoxoffice } from './packs/theatre-boxoffice.js';
 export { parkTrails } from './packs/park-trails.js';
 export { themePark } from './packs/theme-park.js';
 export { countHall } from './packs/count-hall.js';
+export { farmersMarket } from './packs/farmers-market.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -98,7 +99,8 @@ import { theatreBoxoffice } from './packs/theatre-boxoffice.js';
 import { parkTrails } from './packs/park-trails.js';
 import { themePark } from './packs/theme-park.js';
 import { countHall } from './packs/count-hall.js';
+import { farmersMarket } from './packs/farmers-market.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];

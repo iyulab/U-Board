@@ -38,6 +38,9 @@ do when upgrading. Each release's notes carry its section.
   boxes' way through it and each station's boxes done and state, the arrow out of a stopped sorter turning red, with the
   count's stages, each district's progress as a bar of blocks and the count over the evening — no candidate's or
   party's figures (example data).
+- A gallery sample of a weekend farmers' market drawn as a risograph print: two inks on off-white stock, the park's
+  plan with its stalls and food trucks, each card saying what it sells and whether it still has it, with the morning's
+  figures, what is on later and visitors by the half hour (example data).
 
 ## [0.24.0] - 2026-10-21
 
