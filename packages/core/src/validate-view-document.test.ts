@@ -248,7 +248,7 @@ describe('validateViewDocument', () => {
       const issues = strict(broken(d => { d.connectors[0].color = 'blue'; }));
       expect(issues).toHaveLength(1);
       expect(issues[0].path).toBe('/connectors/0/color');
-      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId, label, labelAt, style, bindings.');
+      expect(issues[0].message).toContain('A connector has: id, fromNodeId, toNodeId, label, labelAt, labelSize, style, bindings.');
       expect(issues[0].message).toContain('style: { stroke, strokeWidth, dash, arrow, route }');
     });
 
@@ -260,6 +260,8 @@ describe('validateViewDocument', () => {
       expect(strict(broken(d => { d.connectors[0].style = { arrow: 'forward' }; }))[0].message).toBe('expected "none", "end" (pointing at toNodeId), "start" (pointing at fromNodeId) or "both"');
       expect(strict(broken(d => { d.connectors[0].style = { route: 'orthogonal' }; }))).toEqual([]);
       expect(strict(broken(d => { d.connectors[0].style = { route: 'curved' }; }))).toEqual([]);
+      expect(strict(broken(d => { d.connectors[0].label = '도보 2분'; d.connectors[0].labelSize = 28; }))).toEqual([]);
+      expect(strict(broken(d => { d.connectors[0].labelSize = 0; })).map(i => i.path)).toEqual(['/connectors/0/labelSize']);
       expect(strict(broken(d => { d.connectors[0].style = { route: 'elbow' }; }))).toEqual([
         { path: '/connectors/0/style/route', message: 'expected "straight", "orthogonal" (out of the facing side, one turn, into the other) or "curved" (bowing to the left of the way it runs)' },
       ]);

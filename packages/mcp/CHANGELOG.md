@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The `canvas` topic teaches a connector's `labelSize`, and to raise it on a board drawn large.
+
 ## [0.20.0] - 2026-10-21
 
 ### Changed

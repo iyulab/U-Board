@@ -282,6 +282,7 @@ export const KO_LABELS: UBoardLabels = {
   reverseConnector: '방향 바꾸기',
   connectorLabel: '라벨',
   connectorLabelAt: '라벨 위치 (0 = {from} 쪽, 1 = {to} 쪽)',
+  connectorLabelSize: '라벨 글자 크기',
   connectorStroke: '색',
   connectorStrokeWidth: '굵기',
   connectorDash: '선 모양',

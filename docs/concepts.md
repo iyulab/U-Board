@@ -56,7 +56,8 @@ board shows; a widget never spills over a neighbouring node.
 **Connector** — a line drawn between two nodes, used when the relationship between them needs to
 be shown (for example, a network link). It runs from the edge of one node's box to the edge of the other's;
 it may carry a `label` (shown at its middle, or where `labelAt` says from 0 at the `fromNodeId` end to 1 at the
-`toNodeId` end — a link's throughput) and a `style` (`stroke`, `strokeWidth`, `dash`: `solid`, `dashed` or `dotted`,
+`toNodeId` end — a link's throughput; `labelSize` sets its font size in scene units, 11 when left out, for a board
+drawn large such as a kiosk) and a `style` (`stroke`, `strokeWidth`, `dash`: `solid`, `dashed` or `dotted`,
 `arrow`: `none`, `end` — pointing at `toNodeId` —, `start` or `both`; `route`: `straight`, `orthogonal` — out of the
 side facing the other node, one right-angle turn at the middle of the gap, into the other's facing side, as pipes and
 wiring are drawn — or `curved`, bowing to the left of the way it runs from `fromNodeId` toward `toNodeId`, as flows on a

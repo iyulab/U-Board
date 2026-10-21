@@ -75,7 +75,7 @@ export function placeConnectors(nodes: ReadonlyArray<Pick<Node, 'id' | 'x' | 'y'
         edgeToEdge(from, to, offset, connector.fromNodeId < connector.toNodeId);
       if (!points) return;
       // Side-by-side lines are closer than a label is tall: their labels take turns along the line instead.
-      const label = connector.label ? labelBox(shownLabel(connector.label), points, connector.labelAt ?? (i + 1) / (group.length + 1), measure) : undefined;
+      const label = connector.label ? labelBox(shownLabel(connector.label), points, connector.labelAt ?? (i + 1) / (group.length + 1), measure, connector.labelSize ?? LABEL_SIZE) : undefined;
       const heads = arrowheads(points, connector.style?.arrow, connector.style?.strokeWidth ?? CONNECTOR_WIDTH);
       placed.push({ connector, index, points: heads?.points ?? points, ...(label && { label }), ...(heads && { arrows: heads.arrows }) });
     });
@@ -83,19 +83,26 @@ export function placeConnectors(nodes: ReadonlyArray<Pick<Node, 'id' | 'x' | 'y'
   return placed;
 }
 
-/** A label's chip — its text box with the paper around it. */
-export function chipOf(text: Box): Box {
-  return { x: text.x - LABEL_PAD_X, y: text.y - LABEL_PAD_Y, width: text.width + 2 * LABEL_PAD_X, height: text.height + 2 * LABEL_PAD_Y };
+/** A label's chip — its text box with the paper around it, the paper growing with the text by `scale`. */
+export function chipOf(text: Box, scale = 1): Box {
+  const padX = LABEL_PAD_X * scale;
+  const padY = LABEL_PAD_Y * scale;
+  return { x: text.x - padX, y: text.y - padY, width: text.width + 2 * padX, height: text.height + 2 * padY };
+}
+
+/** A connector label's chip — its text box is as tall as its font, so the paper around it keeps the default's proportion. */
+export function labelChipOf(label: Box): Box {
+  return chipOf(label, label.height / LABEL_SIZE);
 }
 
 export function boxOf(node: Pick<Node, 'x' | 'y'> & BoxSize): Box {
   return { x: node.x, y: node.y, width: node.width, height: node.height };
 }
 
-function labelBox(text: string, points: number[], along: number, measure: (text: string, size: number) => number): Box {
-  const width = measure(text, LABEL_SIZE);
+function labelBox(text: string, points: number[], along: number, measure: (text: string, size: number) => number, size: number): Box {
+  const width = measure(text, size);
   const { x, y } = pointAlong(points, along);
-  return { x: x - width / 2, y: y - LABEL_SIZE / 2, width, height: LABEL_SIZE };
+  return { x: x - width / 2, y: y - size / 2, width, height: size };
 }
 
 /** The point `along` (0–1) of a polyline's length from its first point. */

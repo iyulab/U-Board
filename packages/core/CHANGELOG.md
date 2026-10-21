@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`Connector.labelSize`** — the label's font size in scene units, 11 when left out; its chip grows with it in the
+  same proportion. A board drawn large — a 1080 × 1920 kiosk, a wall — sets it so a connector's label reads at the size
+  the board is seen. The validator checks it (a number above 0), the schema carries it, and the editor's connector panel
+  sets it.
+
 ## [0.32.0] - 2026-10-21
 
 ### Added

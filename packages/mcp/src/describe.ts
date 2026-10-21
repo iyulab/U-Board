@@ -76,11 +76,11 @@ const CANVAS = `# Canvas boards
 - background: {} for none, or { image: { src, width, height } } — the drawing is placed at 0, 0 at its own size. src is a URL or a data: URL (an SVG drawn for the board: "data:image/svg+xml,…").
 
 ## Connectors
-- { id, fromNodeId, toNodeId, label?, labelAt?, style?: { stroke?, strokeWidth?, dash?: "solid"|"dashed"|"dotted", arrow?: "none"|"end"|"start"|"both", route?: "straight"|"orthogonal"|"curved" } } — a line from the edge of one node's box to the other's, 2 px grey. route "orthogonal": right angles, one turn mid-gap (pipes, wiring); "curved": bows left of from → to (map flows). Both ends must be nodes of /nodes.
-- label: text on a chip of the paper (a link's "26.78Kbps"; bound, "{{value | fixed:1}} Mbps" keeps the unit), at the middle or at labelAt: 0 (the fromNodeId end) to 1. Connectors joining the same two nodes are drawn side by side — one per link.
+- { id, fromNodeId, toNodeId, label?, labelAt?, labelSize?: 11, style?: { stroke?, strokeWidth?, dash?: "solid"|"dashed"|"dotted", arrow?: "none"|"end"|"start"|"both", route?: "straight"|"orthogonal"|"curved" } } — box edge to box edge, 2 px grey. route "orthogonal": right angles, one turn mid-gap (pipes, wiring); "curved": bows left of from → to (map flows). Both ends must be nodes of /nodes.
+- label: text on a chip of the paper (a link's "26.78Kbps"; bound, "{{value | fixed:1}} Mbps" keeps the unit), at the middle or at labelAt: 0 (the fromNodeId end) to 1; labelSize sizes it — raise it on a large board (a 1080 px kiosk: 24). Connectors joining the same two nodes run side by side.
 - arrow: "end" points at toNodeId, "start" at fromNodeId — a flow's direction.
 - bindings: live values for "label", "style.stroke", "style.strokeWidth", "style.dash", "style.arrow" — the same binding shape as a widget's (describe("data")); a map turns a source's numbers or words into a width, a colour or a direction (a flow that changes sign: "style.arrow" with map { ranges: [{ max: 0, value: "start" }, { min: 0, value: "end" }] }). A label not showing a current value is rimmed (amber stale, grey disconnected).
-- A line stops at the edge of the box: with the name in caption, it meets the icon itself.
+- A line stops at the box's edge: with the name in caption, it meets the icon.
 
 ## Decorations (drawn under connectors and nodes, first one lowest)
 - rect: { id, type: "rect", x, y, width, height, fill?, stroke?, strokeWidth?, radius?, dash?: "solid"|"dashed"|"dotted", label?, labelAt?, labelSize?: 13, labelFill? } — no fill: transparent; stroke needs strokeWidth; radius rounds the corners.
@@ -91,7 +91,7 @@ const CANVAS = `# Canvas boards
 
 ## Order and appearance
 - Drawn from the bottom: background image, decorations (in order), connectors, nodes. Nodes are always on top.
-- Saving answers advice where parts would be drawn over one another (overlapping nodes, a text under a node or on a line) — fix it.
+- Saving answers advice where parts overlap (two nodes, a text under a node or on a line) — fix it.
 - appearance "dark": dark paper; a text with no fill takes a light ink, a theme colour name its dark value. Pick others that read on it.`;
 
 const DATA = `# Data sources and bindings

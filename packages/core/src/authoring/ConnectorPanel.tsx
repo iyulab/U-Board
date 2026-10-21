@@ -37,7 +37,7 @@ export function ConnectorPanel({ connector, nodes, nameOf, onChange, onDelete, a
   const ends = (text: string) => text.replace('{from}', name(connector.fromNodeId)).replace('{to}', name(connector.toNodeId));
 
   // A part left empty goes: the line takes the board's look for it, and the document keeps only what was set.
-  const set = <K extends 'label' | 'labelAt'>(key: K, value: Connector[K] | undefined) => {
+  const set = <K extends 'label' | 'labelAt' | 'labelSize'>(key: K, value: Connector[K] | undefined) => {
     const { [key]: _gone, ...rest } = connector;
     onChange((value === undefined ? rest : { ...rest, [key]: value }) as Connector);
   };
@@ -91,6 +91,21 @@ export function ConnectorPanel({ connector, nodes, nameOf, onChange, onDelete, a
           onBlur={e => {
             const at = number(e.currentTarget.value);
             set('labelAt', at === undefined ? undefined : Math.min(1, Math.max(0, at)));
+          }}
+        />
+      </label>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.connectorLabelSize}
+        <input
+          type="number"
+          min="1"
+          step="1"
+          placeholder="11"
+          key={`${connector.id}=${connector.labelSize ?? ''}`}
+          defaultValue={connector.labelSize ?? ''}
+          onBlur={e => {
+            const size = number(e.currentTarget.value);
+            set('labelSize', size === undefined || size <= 0 ? undefined : size);
           }}
         />
       </label>

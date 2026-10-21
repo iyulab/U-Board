@@ -13,6 +13,12 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
+- A gallery sample of a shopping centre's directory kiosk: a portrait screen over the third floor's plan, with «you are
+  here», a bold way to the restroom that has stalls free and how long the walk is, each restaurant's queue, where the
+  lifts are, the nursing room and the atrium's event; below it each floor's crowd, the car park and visitors by the
+  hour (example data).
+- The editor's connector panel sets a label's size (`labelSize`), for boards drawn large.
+
 - A gallery sample of an earth-observation satellite's mission operations: its ground track across a world of grey dots
   (the orbit just flown solid, the next dashed), the satellite where it is now with a radio link to the station it is
   talking to, the next passes, its state, two orbits of battery and payload telemetry and this pass's commands (example

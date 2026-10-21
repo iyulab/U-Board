@@ -381,6 +381,7 @@ export interface UBoardLabels {
   reverseConnector: string;
   connectorLabel: string;
   connectorLabelAt: string;
+  connectorLabelSize: string;
   connectorStroke: string;
   connectorStrokeWidth: string;
   connectorDash: string;
@@ -686,6 +687,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   reverseConnector: 'Reverse',
   connectorLabel: 'Label',
   connectorLabelAt: 'Label position (0 at {from} – 1 at {to})',
+  connectorLabelSize: 'Label size',
   connectorStroke: 'Colour',
   connectorStrokeWidth: 'Width',
   connectorDash: 'Line style',

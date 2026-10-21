@@ -307,6 +307,27 @@ describe('toCanvasKit', () => {
     expect(left({ fromNodeId: 'b', toNodeId: 'a', labelAt: 0.25 })).toBeGreaterThan(left({ fromNodeId: 'a', toNodeId: 'b' }));
   });
 
+  it('draws a label at its labelSize, the chip growing with it in the same proportion, centred where it was', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const nodes = [
+      { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+      { id: 'b', x: 500, y: 0, width: 100, height: 100, anchored: false, widget },
+    ];
+    const drawn = (labelSize?: number) => {
+      const objects = toCanvasKit(doc({ nodes, connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: '도보 2분', ...(labelSize && { labelSize }) }] })).scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+      return { text: objects.find(o => o.id === 'c#label')!, chip: objects.find(o => o.id === 'c#chip')! };
+    };
+    const plain = drawn();
+    const large = drawn(33);
+    expect(plain.text.fontSize).toBe(11);
+    expect(large.text.fontSize).toBe(33);
+    expect(large.chip.height as number).toBeCloseTo((plain.chip.height as number) * 3);
+    // centred on the line where the plain one is
+    const middle = (chip: Record<string, unknown>) => [(chip.x as number) + (chip.width as number) / 2, (chip.y as number) + (chip.height as number) / 2];
+    expect(middle(large.chip)[0]).toBeCloseTo(middle(plain.chip)[0]);
+    expect(middle(large.chip)[1]).toBeCloseTo(middle(plain.chip)[1]);
+  });
+
   it('draws a node’s caption centred under its box on a chip, over the connectors', () => {
     const widget = { type: 'metric', props: {}, quality: {} };
     const { scene } = toCanvasKit(

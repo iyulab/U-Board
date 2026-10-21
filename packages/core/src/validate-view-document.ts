@@ -90,7 +90,7 @@ const GRID_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'rowSpan', 'height', 'widg
 const GRID_CANVAS_ITEM_FIELDS = ['id', 'span', 'spanMedium', 'rowSpan', 'height', 'canvas', 'widget'];
 const CELL_CANVAS_FIELDS = ['background', 'nodes', 'connectors', 'decorations'];
 const CELL_CANVAS_HINT = `A canvas cell is { id, canvas: { background, nodes, connectors, decorations }, span, spanMedium, rowSpan, height } — the board's elements, symbols and triggers stay on the board.`;
-const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'style', 'bindings'];
+const CONNECTOR_FIELDS = ['id', 'fromNodeId', 'toNodeId', 'label', 'labelAt', 'labelSize', 'style', 'bindings'];
 const CONNECTOR_STYLE_FIELDS = ['stroke', 'strokeWidth', 'dash', 'arrow', 'route'];
 const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke', 'strokeWidth', 'radius', 'dash', 'label', 'labelAt', 'labelSize', 'labelFill'];
 const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill', 'anchor', 'background'];
@@ -170,6 +170,9 @@ function checkConnector(doc: Checker, connector: unknown, at: string[], nodeIds:
   }
   if (connector.labelAt !== undefined && !(typeof connector.labelAt === 'number' && connector.labelAt >= 0 && connector.labelAt <= 1)) {
     doc.expected([...at, 'labelAt'], 'expected a number from 0 (the fromNodeId end) to 1 (the toNodeId end)', connector.labelAt);
+  }
+  if (connector.labelSize !== undefined && !(Number.isFinite(connector.labelSize) && (connector.labelSize as number) > 0)) {
+    doc.expected([...at, 'labelSize'], 'expected a number greater than 0', connector.labelSize);
   }
   if (connector.style !== undefined && doc.record(connector, [...at, 'style'])) {
     const style = connector.style as Record<string, unknown>;
@@ -778,7 +781,7 @@ function checkShape(doc: Checker, shape: unknown, at: string[]): void {
 }
 
 /** What to do instead, for the fields a writer most often reaches for where the format has none. */
-const CONNECTOR_HINT = 'Its text goes in label (labelAt places it along the line), its colour, width, dash, arrowheads and the way it runs in style: { stroke, strokeWidth, dash, arrow, route }.';
+const CONNECTOR_HINT = 'Its text goes in label (labelAt places it along the line, labelSize sizes it), its colour, width, dash, arrowheads and the way it runs in style: { stroke, strokeWidth, dash, arrow, route }.';
 const SHAPE_HINT = 'A frame’s name is its label (labelAt places it inside the frame); a text’s background fills a box behind it.';
 const WIDGET_HINT = 'A prepared widget’s data, mapping and options go inside props.';
 

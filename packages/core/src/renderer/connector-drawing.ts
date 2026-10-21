@@ -1,6 +1,6 @@
 import { measureTextWidth, type DrawingObject } from '@canvas-kit/core';
 import { CAPTION_SIZE, captionBox } from '../caption-geometry.js';
-import { CONNECTOR_WIDTH, LABEL_SIZE, chipOf, placeConnectors, type ConnectorPlacement } from '../connector-geometry.js';
+import { CONNECTOR_WIDTH, chipOf, labelChipOf, placeConnectors, type ConnectorPlacement } from '../connector-geometry.js';
 import type { BoardAppearance, Connector } from '../view-document.js';
 import type { SizedNode } from '../node-size.js';
 import type { ConnectionQuality } from '../adapter.js';
@@ -54,8 +54,8 @@ export function connectorObjects(nodes: readonly SizedNode[], connectors: Readon
       const worst = worstQuality((connector as { quality?: Record<string, ConnectionQuality> }).quality ?? {});
       const rim = worst ? QUALITY_RIM[worst] : undefined;
       labels.push(
-        { type: 'rect', id: `${connector.id}#chip`, ...chipOf(label), fill: LABEL_CHIP[appearance].fill, ...(rim && { stroke: rim, strokeWidth: 1.5 }), ...held },
-        { type: 'text', id: `${connector.id}#label`, x: label.x, y: label.y, text: shownLabel(connector.label!), fontSize: LABEL_SIZE, fill: LABEL_CHIP[appearance].ink, ...((extra.locked || extra.fixed) && { locked: true }) }
+        { type: 'rect', id: `${connector.id}#chip`, ...labelChipOf(label), fill: LABEL_CHIP[appearance].fill, ...(rim && { stroke: rim, strokeWidth: 1.5 }), ...held },
+        { type: 'text', id: `${connector.id}#label`, x: label.x, y: label.y, text: shownLabel(connector.label!), fontSize: label.height, fill: LABEL_CHIP[appearance].ink, ...((extra.locked || extra.fixed) && { locked: true }) }
       );
     }
   }

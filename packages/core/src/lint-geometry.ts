@@ -1,6 +1,6 @@
 import { sizedNodes } from './node-size.js';
 import { captionBox, estimateTextWidth } from './caption-geometry.js';
-import { boxOf, chipOf, placeConnectors, segmentsOf } from './connector-geometry.js';
+import { boxOf, labelChipOf, placeConnectors, segmentsOf } from './connector-geometry.js';
 import type { CanvasView, TextShape } from './view-document.js';
 import { expandComponents } from './components.js';
 import { DEFAULT_TEXT_SIZE, frameLabelBox, textDecorationBox } from './decoration-geometry.js';
@@ -52,7 +52,7 @@ export function lintGeometry(saved: CanvasView, limit = GEOMETRY_ADVICE_LIMIT, b
   const captions = sized.flatMap((node, i) => (node.caption?.trim() ? [{ at: ref('nodes', i, '/caption'), box: captionBox(node), owner: i }] : []));
   const placements = placeConnectors(sized, doc.connectors);
   // A label sits on its chip, which covers the lines under it — so, like a caption, it is judged by its chip.
-  const labels = placements.flatMap(({ label, index }) => (label ? [{ at: ref('connectors', index, '/label'), box: chipOf(label) }] : []));
+  const labels = placements.flatMap(({ label, index }) => (label ? [{ at: ref('connectors', index, '/label'), box: labelChipOf(label) }] : []));
   const texts: Array<{ at: Ref; box: Box; owner?: number }> = [...decorationTexts, ...captions, ...labels];
   const found: Finding[] = [];
 

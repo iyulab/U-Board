@@ -315,6 +315,9 @@ export interface Connector {
   /** Where along the line the label sits, from 0 (the `fromNodeId` end) to 1 (the `toNodeId` end). Left out, it sits at
    *  the middle — connectors joining the same two nodes take turns along their line, so their labels do not stack. */
   labelAt?: number;
+  /** The label's font size in scene units — its chip grows with it. Default 11; a board drawn large (a kiosk, a wall)
+   *  sets it so the label reads at the size the board is seen. */
+  labelSize?: number;
   /** How the line is drawn; each part left out takes the board's connector look. */
   style?: ConnectorStyle;
   /** Live values for `label`, `style.stroke`, `style.strokeWidth`, `style.dash` or `style.arrow` (`CONNECTOR_BINDABLE`) —

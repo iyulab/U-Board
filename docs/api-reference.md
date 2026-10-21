@@ -861,7 +861,7 @@ board's `accent` itself takes a colour, not a name. A CSS variable is refused �
 
 ```ts
 validateViewDocument(doc, { strict: true });
-// → [{ path: '/connectors/0/color', message: 'a connector has no "color" — it would be kept but never drawn. A connector has: id, fromNodeId, toNodeId, label, labelAt, style, bindings. …' }]
+// → [{ path: '/connectors/0/color', message: 'a connector has no "color" — it would be kept but never drawn. A connector has: id, fromNodeId, toNodeId, label, labelAt, labelSize, style, bindings. …' }]
 ```
 
 ### `lintViewDocument(doc, options?)`

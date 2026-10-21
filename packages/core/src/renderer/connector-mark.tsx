@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { ViewerOverlayItem } from '@canvas-kit/viewer';
 import type { ConnectorPlacement } from '../connector-geometry.js';
-import { chipOf } from '../connector-geometry.js';
+import { labelChipOf } from '../connector-geometry.js';
 import type { ConnectionQuality } from '../adapter.js';
 import { describeQuality, worstQuality, type QualityText } from '../quality-text.js';
 
@@ -32,7 +32,7 @@ export function connectorMark({ connector, points, label, arrows = [] }: Placed,
   const xs = [...points.filter((_, i) => i % 2 === 0), ...arrows.flatMap(head => [head[0], head[2], head[4]])];
   const ys = [...points.filter((_, i) => i % 2 === 1), ...arrows.flatMap(head => [head[1], head[3], head[5]])];
   if (label) {
-    const chip = chipOf(label);
+    const chip = labelChipOf(label);
     xs.push(chip.x, chip.x + chip.width);
     ys.push(chip.y, chip.y + chip.height);
   }

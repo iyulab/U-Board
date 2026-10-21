@@ -51,6 +51,17 @@ describe('ConnectorPanel', () => {
     expect(onChange).toHaveBeenLastCalledWith({ id: 'c', fromNodeId: 'pv', toNodeId: 'ess', labelAt: 1 });
   });
 
+  it('writes the label’s size, dropping one cleared or not above zero', () => {
+    const onChange = panel({ id: 'c', fromNodeId: 'pv', toNodeId: 'ess', label: '도보 2분' });
+    const size = screen.getByLabelText('Label size');
+    fireEvent.change(size, { target: { value: '28' } });
+    fireEvent.blur(size);
+    expect(onChange).toHaveBeenLastCalledWith({ id: 'c', fromNodeId: 'pv', toNodeId: 'ess', label: '도보 2분', labelSize: 28 });
+    fireEvent.change(size, { target: { value: '0' } });
+    fireEvent.blur(size);
+    expect(onChange).toHaveBeenLastCalledWith({ id: 'c', fromNodeId: 'pv', toNodeId: 'ess', label: '도보 2분' });
+  });
+
   it('sets the style a part at a time, naming arrowheads by the node they point at, and leaves out what is the default', () => {
     const onChange = panel({ id: 'c', fromNodeId: 'pv', toNodeId: 'ess', style: { dash: 'dashed' } });
     const arrow = screen.getByLabelText('Arrowheads');
