@@ -66,6 +66,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of an indoor pool's evening laid in mosaic tiles: every lane a strip of white tile with its swimmers
   counted in tiles, its state told by the sign at its end and the colour of its rope, the water's quality, the evening's
   classes and the admissions by the hour (example data).
+- A gallery sample of a call centre's afternoon pinned to a corkboard: every agent a paper note whose state is told by
+  how it is fixed and the mark in its corner, the calls waiting on an index card, the day's calls by kind as tally strokes
+  and the calls coming in by the hour on graph paper (example data).
 
 ### Changed
 
