@@ -149,6 +149,18 @@ describe('a recording', () => {
 });
 
 describe('example data', () => {
+  it('dates itself the day it is written as of, with that day’s weekday', () => {
+    const weekdays = '일월화수목금토';
+    for (const pack of SAMPLE_PACKS) {
+      // The day the recording was made, in the time its words are written in (Korea).
+      const day = new Date(Date.parse(pack.snapshot.capturedAt) + 9 * 3600_000);
+      for (const [text, month, date, weekday] of JSON.stringify(pack.snapshot.responses).matchAll(/(\d{1,2})월 (\d{1,2})일 (.)요일/g)) {
+        expect([Number(month), Number(date)], `${pack.id}: ${text}`).toEqual([day.getUTCMonth() + 1, day.getUTCDate()]);
+        expect(weekday, `${pack.id}: ${text}`).toBe(weekdays[day.getUTCDay()]);
+      }
+    }
+  });
+
   it('is never offered to an installation, and every pack on it says so in its summary', () => {
     for (const pack of SAMPLE_PACKS.filter(p => !isInstallable(p))) {
       expect(pack.summary.ko, pack.id).toContain('예시 데이터');
