@@ -11,6 +11,10 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-21
+
+Built on `@iyulab/u-board` 0.31.1 and `@iyulab/u-board-mcp` 0.19.0, with widgets from `@iyulab/u-widgets` 0.38.2.
+
 ### Added
 
 - A gallery sample in the glass style: a city hotel's day — frosted panes over a dusk gradient, every room's state floor

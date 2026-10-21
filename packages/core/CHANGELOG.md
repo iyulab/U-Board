@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-10-21
+
+Widgets from `@iyulab/u-widgets` 0.38.2 (funnel and reference line labels placed clear of the data).
+
 ### Fixed
 
 - A grid item without `spanMedium` now takes its share of the row it sits on at full width, so a row that fills the

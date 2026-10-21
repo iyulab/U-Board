@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-21
+
 ### Added
 
 - `describe` reads several widgets in one call: `widget:metric,chart.bar,status` answers each in full by its type (up
