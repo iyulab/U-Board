@@ -128,7 +128,8 @@ export type GridItem = GridWidgetItem | GridCanvasItem;
 export interface GridLayout {
   /** Columns it spans at full width, 1–12. Absent means 4. */
   span?: number;
-  /** Columns it spans at medium width, where the grid has 6 — 1–6. Absent means half of `span`, rounded up. */
+  /** Columns it spans at medium width, where the grid has 6 — 1–6. Absent means its share of the row it sits on at
+   *  full width, so a row that fills the twelve columns fills the six (`gridSpans`). */
   spanMedium?: number;
   /** Rows it spans at medium and full width, 1–6 — a map or a large panel beside a column of smaller cards, which
    *  the items after it fill in order. Absent means 1; a narrow grid, one item per row, ignores it. */

@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { ResolvedGridItem, ResolvedGridView } from '../resolve-document.js';
-import { GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, isCanvasItem } from '../view-document.js';
+import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, isCanvasItem } from '../view-document.js';
 import type { QualityText } from '../quality-text.js';
 import { NodeFrame } from './node-frame.js';
 import { CanvasCell } from './canvas-cell.js';
@@ -39,10 +39,106 @@ const GRID_CSS = `
 }
 `;
 
-/** The columns an item spans at full width and at medium width. */
-export function gridSpans(item: Pick<ResolvedGridItem, 'span' | 'spanMedium'>): { span: number; spanMedium: number } {
-  const span = item.span ?? GRID_DEFAULT_SPAN;
-  return { span, spanMedium: item.spanMedium ?? Math.min(GRID_COLUMNS_MEDIUM, Math.ceil(span / 2)) };
+type SpanItem = Pick<ResolvedGridItem, 'span' | 'spanMedium' | 'rowSpan'>;
+
+/**
+ * The columns each item spans at full width and at medium width. An item without `spanMedium` takes its share of the
+ * row it sits on at full width, so a row that fills the twelve columns fills the six: halved when every span on the
+ * row is even; split into two medium rows when the row divides at its middle (four 3s → two rows of 3 + 3, 6 + 3 + 3 →
+ * 6, then 3 + 3); otherwise shared out in proportion (7 + 5 → 4 + 2). Beside an item spanning rows, a row shares
+ * what that item leaves. Where an item's own `spanMedium` lays the medium width out otherwise — on its row, or with no
+ * room left beside it — the others take half their span, rounded up.
+ */
+export function gridSpans(items: readonly SpanItem[]): { span: number; spanMedium: number }[] {
+  const spans = items.map(item => Math.min(GRID_COLUMNS, item.span ?? GRID_DEFAULT_SPAN));
+  const medium = items.map((item, i) => item.spanMedium ?? Math.min(GRID_COLUMNS_MEDIUM, Math.ceil(spans[i] / 2)));
+  // Columns an item from a row above still takes on each row, at each width.
+  const heldWide: number[] = [];
+  const heldMedium: number[] = [];
+  wideRows(items, spans).forEach((row, r) => {
+    const room = GRID_COLUMNS_MEDIUM - (heldMedium[r] ?? 0);
+    // An item's own spanMedium, or one above that holds more of the medium row than the full row, lays the medium
+    // width out differently: its rows are not these.
+    if (row.some(i => items[i].spanMedium !== undefined) || room < row.length) {
+      hold(row, r);
+      return;
+    }
+    const total = row.reduce((sum, i) => sum + spans[i], 0);
+    const fills = total === GRID_COLUMNS - (heldWide[r] ?? 0);
+    const shared = shareRow(row.map(i => spans[i]), fills ? room : Math.min(room, Math.round(total / 2)));
+    row.forEach((i, k) => (medium[i] = shared[k]));
+    hold(row, r);
+  });
+  return spans.map((span, i) => ({ span, spanMedium: medium[i] }));
+
+  function hold(row: number[], r: number) {
+    for (const i of row) {
+      for (let below = r + 1; below < r + Math.max(1, items[i].rowSpan ?? 1); below++) {
+        heldWide[below] = (heldWide[below] ?? 0) + spans[i];
+        heldMedium[below] = (heldMedium[below] ?? 0) + medium[i];
+      }
+    }
+  }
+}
+
+/** The items' indexes by the row each starts on at full width — CSS grid's auto-placement, an item spanning `rowSpan`
+ *  rows keeping its columns taken on the rows below it. A row no item starts on is empty. */
+function wideRows(items: readonly SpanItem[], spans: readonly number[]): number[][] {
+  const taken: boolean[][] = [];
+  const free = (row: number, column: number, span: number, rows: number) => {
+    for (let r = row; r < row + rows; r++) for (let c = column; c < column + span; c++) if (taken[r]?.[c]) return false;
+    return true;
+  };
+  const rows: number[][] = [];
+  let row = 0;
+  let column = 0;
+  items.forEach((item, i) => {
+    const span = spans[i];
+    const height = Math.max(1, item.rowSpan ?? 1);
+    for (;;) {
+      if (column + span > GRID_COLUMNS) {
+        row++;
+        column = 0;
+      } else if (free(row, column, span, height)) break;
+      else column++;
+    }
+    for (let r = row; r < row + height; r++) for (let c = column; c < column + span; c++) (taken[r] ??= [])[c] = true;
+    (rows[row] ??= []).push(i);
+    column += span;
+  });
+  return Array.from(rows, row => row ?? []);
+}
+
+/** One full-width row's spans as `columns` medium columns (see `gridSpans`). */
+function shareRow(spans: readonly number[], columns: number): number[] {
+  if (spans.length === 0) return [];
+  const total = spans.reduce((a, b) => a + b, 0);
+  if (spans.every(span => span % 2 === 0) && total / 2 <= columns) return spans.map(span => span / 2);
+  if (spans.length > 1 && total % 2 === 0 && columns === GRID_COLUMNS_MEDIUM) {
+    let sum = 0;
+    const cut = spans.findIndex(span => (sum += span) === total / 2);
+    if (cut >= 0 && cut < spans.length - 1) return [...proportion(spans.slice(0, cut + 1), columns), ...proportion(spans.slice(cut + 1), columns)];
+  }
+  return proportion(spans, Math.max(spans.length, columns));
+}
+
+/** `columns` shared out over `spans` in proportion, each at least one — the largest remainders take what is left,
+ *  the wider item first on a tie. */
+function proportion(spans: readonly number[], columns: number): number[] {
+  const total = spans.reduce((a, b) => a + b, 0);
+  const exact = spans.map(span => (span * columns) / total);
+  const shares = exact.map(value => Math.max(1, Math.floor(value)));
+  let left = columns - shares.reduce((a, b) => a + b, 0);
+  const order = spans.map((_, i) => i).sort((a, b) => exact[b] - Math.floor(exact[b]) - (exact[a] - Math.floor(exact[a])) || spans[b] - spans[a] || a - b);
+  for (let k = 0; left > 0; k = (k + 1) % order.length, left--) shares[order[k]]++;
+  for (let k = order.length - 1; left < 0 && k >= 0; k--) {
+    const i = order[k];
+    if (shares[i] > 1) {
+      shares[i]--;
+      left++;
+    }
+  }
+  return shares;
 }
 
 export interface GridBoardProps {
@@ -85,6 +181,7 @@ function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | 
 
 export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, renderCell, canvasControls, activatable, onItemActivate, onElementEvent }: GridBoardProps) {
   const listened = onElementEvent ? elementListeners(doc.triggers) : undefined;
+  const spans = gridSpans(doc.items);
   return (
     <div className="ub-grid" role="region" aria-label={ariaLabel} data-appearance={doc.appearance ?? 'light'}>
       <style href="u-board-grid" precedence="u-board">
@@ -92,7 +189,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, re
       </style>
       <div className="ub-grid__items">
         {doc.items.map((item, index) => {
-          const { span, spanMedium } = gridSpans(item);
+          const { span, spanMedium } = spans[index];
           const style = { '--_ub-span': span, '--_ub-span-medium': spanMedium, ...(item.rowSpan !== undefined && { '--_ub-row-span': item.rowSpan }), height: item.height ?? elementHeight(doc, item) } as CSSProperties;
           return (
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>

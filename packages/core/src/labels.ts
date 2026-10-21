@@ -485,7 +485,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   itemLayout: 'Layout',
   itemSpan: 'Width (of {columns} columns)',
   itemSpanMedium: 'Width at medium size (of {columns})',
-  itemSpanMediumAuto: 'Half the full width',
+  itemSpanMediumAuto: 'Auto — keeps the full-width row',
   itemRowSpan: 'Rows it spans',
   itemHeight: 'Height (px)',
   itemHeightAuto: 'Widget default',

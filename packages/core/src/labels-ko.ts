@@ -83,7 +83,7 @@ export const KO_LABELS: UBoardLabels = {
   itemLayout: '배치',
   itemSpan: '너비({columns}열 중)',
   itemSpanMedium: '중간 폭에서 너비({columns}열 중)',
-  itemSpanMediumAuto: '전체 폭 너비의 절반',
+  itemSpanMediumAuto: '자동 — 전체 폭의 줄 그대로',
   itemRowSpan: '차지하는 줄 수',
   itemHeight: '높이(px)',
   itemHeightAuto: '위젯 기본 높이',

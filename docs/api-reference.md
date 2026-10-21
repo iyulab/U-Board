@@ -473,8 +473,8 @@ else doc.items;                         // GridView: items in order, each a Grid
 ```
 
 Both kinds place a `Placed` — `{ id, widget }`: a canvas `Node` adds a position, a `GridItem` adds the
-room it takes (`span` 1–12, absent 4; `spanMedium` 1–6 for a medium-width board, absent half of
-`span` rounded up; `height` in pixels, absent the widget's own). `placedIn(doc)` returns every placed
+room it takes (`span` 1–12, absent 4; `spanMedium` 1–6 for a medium-width board, absent its share of
+the row it sits on at full width — a full row stays a full row; `height` in pixels, absent the widget's own). `placedIn(doc)` returns every placed
 widget of either kind, resolved or not — the walk to use for anything that looks at every binding.
 `resolveDocument` returns the same kind it is given (`ResolvedCanvasView`, `ResolvedGridView`).
 `emptyViewDocument(kind)` is a document of either kind with nothing on it yet. `ViewerPage` shows either kind and

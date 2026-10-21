@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A grid item without `spanMedium` now takes its share of the row it sits on at full width, so a row that fills the
+  twelve columns fills the six at medium width. Each item used to take half its span rounded up on its own, which
+  pushed rows of odd spans (7 + 5, 9 + 3, four 3s) past six columns: the last item wrapped and left its row half
+  empty. A row that divides at its middle becomes two medium rows (four 3s → 3 + 3, 3 + 3); one beside an item
+  spanning rows shares what that item leaves.
+
 ## [0.31.0] - 2026-10-21
 
 ### Changed
