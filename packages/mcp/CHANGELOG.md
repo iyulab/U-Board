@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `describe("rules")` says a prepared widget's title is its `title` prop, drawn inside its box — a chart is titled there,
+  not with a header item above it. Other lines of the topic are shortened to keep it within its size.
+
 ## [0.18.0] - 2026-10-21
 
 ### Changed

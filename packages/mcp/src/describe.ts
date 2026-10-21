@@ -26,7 +26,7 @@ const RULES = `# Writing a U-Board board
 ## Workflow
 1. list_boards → pick a board (rename_board renames it), or create_board({ name, kind }). For live values: describe("data").
 2. get_board({ board, pointer }) — read only the part you need ("/nodes/3"); note its revision.
-3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Start small (its frame, a few parts), then add and fix in patches.
+3. Change it with patch_board({ board, revision, patch }) — a JSON Patch (RFC 6902). Start small (its frame, a few parts), then add and fix.
    Each save is a new revision; a new board is revision 1, create_board with a document saves revision 2.
    Rename or remove an element, symbol or component, remove a node with its lines, make or detach a component: edit_board rewrites every use.
 4. Read the answer: the new revision and advice — act on it. A 412: someone saved since — get_board, patch again.
@@ -35,20 +35,20 @@ const RULES = `# Writing a U-Board board
 7. look({ board }) after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands. Fix both — the board is done when both are empty (its status says so); focus a part to see it up close.
 
 ## JSON Patch
-- \`add\` sets an object member whether or not it exists, and inserts into an array ("/items/-" appends, "/items/0" prepends).
+- \`add\` sets an object member, existing or not, and inserts into an array ("/items/-" appends, "/items/0" prepends).
 - \`replace\` and \`remove\` need the member to exist — use \`add\` for a field that may be absent (a grid item's span).
 - Escape "/" in a key as "~1" and "~" as "~0". A patch applies entirely or not at all; an error names the operation.
 
 ## Kinds
 - grid: { kind: "grid", items: [{ id, span?: 1-12 (4), spanMedium?: 1-6, height?: px, widget | canvas }] } — a dashboard in order, to its width; a canvas item: a plan among cards (describe("mixed")).
 - canvas: { kind: "canvas", background: { image? }, nodes: [{ id, x, y, width?, height?, anchored, widget }], connectors: [], decorations?, components?, instances? } — placed by coordinates, over a drawing or plan. describe("canvas") before drawing one; describe("components") when the same group of parts repeats.
-- Every id is unique in the document. appearance: "light" (default) | "dark". accent: a colour — the board's primary colour (a gauge's arc, the first series, a tank's fill, --u-widget-primary in an element) in place of the theme's; set it to match the reference instead of fixing colours in widgets or elements.
-- The format is closed: a field it does not have is refused, and the issue lists the fields that place takes.
+- Every id is unique in the document. appearance: "light" (default) | "dark". accent: the board's primary colour (a gauge's arc, the first series, --u-widget-primary in an element) in place of the theme's; set it to match the reference instead of fixing colours in widgets or elements.
+- The format is closed: an unknown field is refused, and the issue lists the fields that place takes.
 
 ## Widgets
 - widget = { type, props?, bindings? }. type is a prepared widget ("gauge", "list", "chart.bar" — describe("widgets", query)) or "element:<name>".
-- A prepared widget's props are its u-widgets spec without "widget": { data, mapping?, options?, … } — describe("widget:<type>") shows each example ready to paste.
-- A widget draws inside its node's box (or grid cell) and is clipped to it.
+- A prepared widget's props are its u-widgets spec without "widget": { title?, data, mapping?, options?, … } — describe("widget:<type>") gives examples ready to paste.
+- A widget draws inside its node's box (or grid cell), clipped to it. Title a chart with props.title, not a header item above it.
 - When no widget draws it — a symbol, a schematic part, a custom gauge — define an element once and place it by name: describe("elements").
 
 ## Triggers — what a viewer does when something happens
