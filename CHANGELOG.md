@@ -28,6 +28,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a theatre's box office drawn in Art Deco: the seating plan in black and gold, each block of seats a
   shape of its own filled by how much of it is sold, with tonight's sales, the week's performances and the tickets sold
   for tonight over the last fortnight (example data).
+- A gallery sample of a national park's trail board painted as a watercolour map: the mountain in washes that bleed at
+  their edges, the trails over it in ink by their state, cards at the gates, the falls, the shelter and the summit, with
+  the mountain's weather, the day's notices and walkers by the hour (example data).
 
 ## [0.24.0] - 2026-10-21
 
