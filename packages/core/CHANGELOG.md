@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-10-21
+
 ### Fixed
 
 - A grid item placing an element without a `height` takes the element's `size.height` as the least height, not a fixed

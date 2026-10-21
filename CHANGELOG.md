@@ -11,6 +11,10 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-10-21
+
+Built on `@iyulab/u-board` 0.33.0 and `@iyulab/u-board-mcp` 0.21.0, with widgets from `@iyulab/u-widgets` 0.38.2.
+
 ### Fixed
 
 - On a grid board, a card drawn by an element stretches to its row and to the rows it spans, and at phone width is as

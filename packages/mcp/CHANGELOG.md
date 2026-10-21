@@ -6,8 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-21
+
 ### Changed
 
+- Requires `@iyulab/u-board` 0.33, which sizes a connector's label (`labelSize`) and lets a grid item drawn by an
+  element stretch to its row.
+- The `elements` topic says a grid item without a height grows from the element's `size.height`.
 - The `canvas` topic teaches a connector's `labelSize`, and to raise it on a board drawn large.
 
 ## [0.20.0] - 2026-10-21
