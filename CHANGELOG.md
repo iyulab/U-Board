@@ -22,6 +22,8 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample in the skeuomorphic SCADA style: a brewery's process on a brushed-steel panel — vessels shaded as
   metal, flanged pipes, screwed nameplates with backlit displays and sight glasses, bezel gauges and an annunciator of
   lamps (example data).
+- A gallery sample in the minimal style: a home's energy on an e-ink frame — one very large, thin number, a few
+  figures beside it, the day by the hour, the weather and one line of advice, grey on paper (example data).
 
 ### Changed
 
