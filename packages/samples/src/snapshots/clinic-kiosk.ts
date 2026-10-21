@@ -4,13 +4,13 @@
 // up behind an emergency case, and the car park's upper levels are nearly full. The hours are an average Tuesday's.
 import type { SampleSnapshot } from '../sample-pack.js';
 
-const at = '2026-10-21T01:15:00Z';
+const at = '2026-10-20T01:15:00Z';
 
 export const snapshot: SampleSnapshot = {
-  capturedAt: '2026-10-21T01:15:20.000Z',
+  capturedAt: '2026-10-20T01:15:20.000Z',
   responses: {
     clinic: {
-      '/clinic/now': { name: '온새미 종합병원', date: '10월 21일 화요일', time: '10:15', help: '도움이 필요하면 1층 안내데스크', updatedAt: at },
+      '/clinic/now': { name: '온새미 종합병원', date: '10월 20일 화요일', time: '10:15', help: '도움이 필요하면 1층 안내데스크', updatedAt: at },
       '/clinic/queues': {
         internal: { calling: 1042, desk: '3번 진료실', next: [1043, 1045, 1046], waiting: 18, minutes: 35 },
         ortho: { calling: 2117, desk: '1번 진료실', next: [2118, 2120, 2121], waiting: 26, minutes: 55 },

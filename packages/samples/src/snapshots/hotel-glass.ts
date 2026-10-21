@@ -23,7 +23,7 @@ export const snapshot: SampleSnapshot = {
   capturedAt: '2026-10-21T05:30:20.000Z',
   responses: {
     hotel: {
-      '/hotel/now': { name: '루멘 호텔 서울', date: '10월 21일 화요일', time: '14:30', weather: '맑음', temp: 18, updatedAt: at },
+      '/hotel/now': { name: '루멘 호텔 서울', date: '10월 21일 수요일', time: '14:30', weather: '맑음', temp: 18, updatedAt: at },
       '/hotel/kpi': {
         occupancy: { value: 88, delta: '+4%p', trend: 'up', note: '오늘 밤 138 / 157실 · 점검 3실 제외' },
         adr: { value: 186400, delta: '+2.1%', trend: 'up', note: '전주 같은 요일 182,600원' },

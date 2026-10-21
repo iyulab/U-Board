@@ -11,6 +11,18 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A gallery sample in an amber monochrome terminal style: a subway tunnel's boring machine on a long section — the
+  ground in its layers, the lined tunnel behind the machine and the bore ahead, each surface settlement point with a
+  leader to its reading, the rings built, the machine's readings and the air at the face; only a reading past its limit
+  is shown in reverse (example data).
+
+### Fixed
+
+- The gallery samples dated Wednesday 21 October called it a Tuesday (the hotel's and the home's); the outpatient kiosk,
+  written as a Tuesday morning, is now dated the 20th.
+
 ## [0.22.0] - 2026-10-21
 
 Built on `@iyulab/u-board` 0.31.1 and `@iyulab/u-board-mcp` 0.19.0, with widgets from `@iyulab/u-widgets` 0.38.2.

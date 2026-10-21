@@ -1,5 +1,5 @@
 // Example data written for the sample, not recorded from a source — no public source carries one home's meters.
-// Keep it consistent: it is 18:40 on a clear autumn Tuesday in a flat with panels on the balcony rail. The day has used
+// Keep it consistent: it is 18:40 on a clear autumn Wednesday in a flat with panels on the balcony rail. The day has used
 // a little less than yesterday by this hour; the evening peak is just starting; the panels made most of their power
 // around noon, which is why the advice puts the washing in the middle of tomorrow.
 import type { SampleSnapshot } from '../sample-pack.js';
@@ -10,7 +10,7 @@ export const snapshot: SampleSnapshot = {
   capturedAt: '2026-10-21T09:40:00.000Z',
   responses: {
     home: {
-      '/home/now': { home: '우리 집', date: '10월 21일 화요일', time: '18:40', updatedAt: at },
+      '/home/now': { home: '우리 집', date: '10월 21일 수요일', time: '18:40', updatedAt: at },
       '/home/today': { used: 6.2, yesterday: 7.1, change: '13% 적게', advice: '내일 맑음 — 세탁기와 건조기는 낮 12시에서 3시 사이에 돌리면 태양광으로 됩니다.', updatedAt: at },
       '/home/figures': {
         value: [
