@@ -14,6 +14,10 @@ export const CONNECTOR_WIDTH = 2;
 /** An arrowhead's length grows with the line's width, never shorter than this; its base is three quarters of it. */
 const ARROW_MIN_LENGTH = 8;
 const ARROW_PER_WIDTH = 4;
+/** How far a `curved` line bows from the straight line between the two boxes' centres, as a share of its length. */
+const CURVE_BOW = 0.2;
+/** The runs a `curved` line is drawn in — short enough that the eye reads one smooth curve. */
+const CURVE_RUNS = 24;
 
 export interface Box {
   x: number;
@@ -28,7 +32,8 @@ export interface ConnectorPlacement {
   /** Its index in the document's `connectors`. */
   index: number;
   /** The line, `[x1, y1, x2, y2, …]` — from the edge of the `fromNodeId` node's box to the edge of the `toNodeId`
-   *  node's: two points straight, four when `route` is `orthogonal` and it bends. Drawn short of an end that carries
+   *  node's: two points straight, four when `route` is `orthogonal` and it bends, a run of short steps when it is
+   *  `curved`. Drawn short of an end that carries
    *  an arrowhead, so the line stops inside the head instead of poking past its tip. */
   points: number[];
   label?: Box;
@@ -42,7 +47,9 @@ export interface ConnectorPlacement {
  * leaves one box to where it enters the other. An `orthogonal` one leaves the side of one box facing the other (left
  * or right where the boxes are further apart across than down, else top or bottom), turns at the middle of the gap and
  * enters the facing side of the other — straight when the two centres line up, and straight as before when the boxes
- * overlap and leave no gap to turn in. Connectors joining the same two nodes are shifted side by side; a label sits
+ * overlap and leave no gap to turn in. A `curved` one bows to the left of the way it runs (from `fromNodeId` toward
+ * `toNodeId`, as the board is seen), as flows on a map are drawn — two connectors running opposite ways between the
+ * same nodes bow apart — and is straight as before when the boxes overlap. Connectors joining the same two nodes are shifted side by side; a label sits
  * where its `labelAt` says along the line's length, else at its middle, side-by-side labels taking turns along it; an
  * arrowhead's tip touches the box it points at. `measure` gives a text's width (the canvas's own where there is one).
  * A connector naming a node the document does not have is not placed.
@@ -62,8 +69,10 @@ export function placeConnectors(nodes: ReadonlyArray<Pick<Node, 'id' | 'x' | 'y'
       const to = boxes.get(connector.toNodeId);
       if (!from || !to) return;
       const offset = (i - (group.length - 1) / 2) * PARALLEL_GAP;
+      const route = connector.style?.route;
       const points =
-        (connector.style?.route === 'orthogonal' ? elbow(from, to, offset) : undefined) ?? edgeToEdge(from, to, offset, connector.fromNodeId < connector.toNodeId);
+        (route === 'orthogonal' ? elbow(from, to, offset) : route === 'curved' ? arc(from, to, offset, connector.fromNodeId < connector.toNodeId) : undefined) ??
+        edgeToEdge(from, to, offset, connector.fromNodeId < connector.toNodeId);
       if (!points) return;
       // Side-by-side lines are closer than a label is tall: their labels take turns along the line instead.
       const label = connector.label ? labelBox(shownLabel(connector.label), points, connector.labelAt ?? (i + 1) / (group.length + 1), measure) : undefined;
@@ -118,6 +127,7 @@ export function segmentsOf(points: number[]): number[][] {
 function arrowheads(points: number[], arrow: ConnectorArrow | undefined, width: number): { points: number[]; arrows: number[][] } | undefined {
   const ends = arrow === 'both' ? (['start', 'end'] as const) : arrow === 'start' || arrow === 'end' ? [arrow] : [];
   const n = points.length;
+  if (n > 8 && ends.length > 0) return curveHeads(points, ends, width);
   // The run each end finishes, toward its tip.
   const runs = { start: [points[2], points[3], points[0], points[1]], end: [points[n - 4], points[n - 3], points[n - 2], points[n - 1]] };
   if (ends.length === 0 || ends.some(end => Math.hypot(runs[end][2] - runs[end][0], runs[end][3] - runs[end][1]) === 0)) return undefined;
@@ -137,6 +147,98 @@ function arrowheads(points: number[], arrow: ConnectorArrow | undefined, width: 
     return [tx, ty, bx - dy * half, by + dx * half, bx + dy * half, by - dx * half];
   });
   return { points: drawn, arrows };
+}
+
+/**
+ * The heads on a curve, drawn in many short runs: each points from where the curve is a head's length short of its
+ * end to the end, and the curve is cut back to the middle of the head — the runs under the head dropped, so none pokes
+ * past it. A head is never longer than its share of the curve.
+ */
+function curveHeads(points: number[], ends: ReadonlyArray<'start' | 'end'>, width: number): { points: number[]; arrows: number[][] } {
+  const total = segmentsOf(points).reduce((sum, [x1, y1, x2, y2]) => sum + Math.hypot(x2 - x1, y2 - y1), 0);
+  const head = Math.min(Math.max(ARROW_MIN_LENGTH, width * ARROW_PER_WIDTH), total / (ends.length + 1));
+  let drawn = [...points];
+  const arrows = ends.map(end => {
+    // Work from the end the head sits on: the line reversed when it is the start.
+    const line = end === 'end' ? drawn : reversed(drawn);
+    const tip = { x: line[line.length - 2], y: line[line.length - 1] };
+    const base = pointAlong(line, 1 - head / lengthOf(line));
+    const mid = pointAlong(line, 1 - head / 2 / lengthOf(line));
+    const cut = cutAt(line, 1 - head / 2 / lengthOf(line));
+    drawn = end === 'end' ? [...cut, mid.x, mid.y] : reversed([...cut, mid.x, mid.y]);
+    const length = Math.hypot(tip.x - base.x, tip.y - base.y) || 1;
+    const dx = (tip.x - base.x) / length;
+    const dy = (tip.y - base.y) / length;
+    const half = (head * 0.75) / 2;
+    return [tip.x, tip.y, base.x - dy * half, base.y + dx * half, base.x + dy * half, base.y - dx * half];
+  });
+  return { points: drawn, arrows };
+}
+
+function lengthOf(points: number[]): number {
+  return segmentsOf(points).reduce((sum, [x1, y1, x2, y2]) => sum + Math.hypot(x2 - x1, y2 - y1), 0);
+}
+
+function reversed(points: number[]): number[] {
+  const out: number[] = [];
+  for (let i = points.length - 2; i >= 0; i -= 2) out.push(points[i], points[i + 1]);
+  return out;
+}
+
+/** A polyline's points from its start up to (not including) the run where `along` (0–1) of its length falls. */
+function cutAt(points: number[], along: number): number[] {
+  let left = lengthOf(points) * along;
+  const kept = [points[0], points[1]];
+  for (const [x1, y1, x2, y2] of segmentsOf(points)) {
+    const length = Math.hypot(x2 - x1, y2 - y1);
+    if (left <= length) break;
+    kept.push(x2, y2);
+    left -= length;
+  }
+  return kept;
+}
+
+/**
+ * A curved line from `a` to `b`: a quadratic curve between the two boxes' centres bowing to the left of the way it
+ * runs, kept to the part outside both boxes — undefined when the boxes overlap and leave none. Side-by-side siblings
+ * bow by `offset` more or less, so they stay apart.
+ */
+function arc(a: Box, b: Box, offset: number, forward: boolean): number[] | undefined {
+  const [ax, ay, bx, by] = [a.x + a.width / 2, a.y + a.height / 2, b.x + b.width / 2, b.y + b.height / 2];
+  const length = Math.hypot(bx - ax, by - ay);
+  if (length === 0) return undefined;
+  // Left of the way it runs, on screen (y down): the direction turned a quarter anticlockwise.
+  const [lx, ly] = [(by - ay) / length, -(bx - ax) / length];
+  // The siblings' shift is measured one way whichever end each starts at, as for a straight line.
+  const sign = forward ? 1 : -1;
+  const bow = 2 * CURVE_BOW * length;
+  const c = { x: (ax + bx) / 2 + lx * bow - ly * offset * sign * 2, y: (ay + by) / 2 + ly * bow + lx * offset * sign * 2 };
+  const at = (t: number) => ({ x: (1 - t) ** 2 * ax + 2 * (1 - t) * t * c.x + t ** 2 * bx, y: (1 - t) ** 2 * ay + 2 * (1 - t) * t * c.y + t ** 2 * by });
+  const inside = (box: Box, p: { x: number; y: number }) => p.x >= box.x && p.x <= box.x + box.width && p.y >= box.y && p.y <= box.y + box.height;
+  // Where the curve leaves `a` and enters `b`: found on a coarse walk, then narrowed down between a `t` inside the box
+  // and one outside it — the one outside returned.
+  const edge = (box: Box, from: number, to: number) => {
+    let [lo, hi] = [from, to];
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      if (inside(box, at(mid))) lo = mid;
+      else hi = mid;
+    }
+    return hi;
+  };
+  const steps = 64;
+  let t1: number | undefined;
+  let t2: number | undefined;
+  for (let i = 1; i <= steps && t1 === undefined; i++) if (!inside(a, at(i / steps))) t1 = edge(a, (i - 1) / steps, i / steps);
+  for (let i = steps - 1; i >= 0 && t2 === undefined; i--) if (!inside(b, at(i / steps))) t2 = edge(b, (i + 1) / steps, i / steps);
+  if (t1 === undefined || t2 === undefined) return undefined;
+  if (t2 <= t1 || [a, b].some(box => inside(box, at((t1 + t2) / 2)))) return undefined;
+  const points: number[] = [];
+  for (let i = 0; i <= CURVE_RUNS; i++) {
+    const p = at(t1 + ((t2 - t1) * i) / CURVE_RUNS);
+    points.push(p.x, p.y);
+  }
+  return points;
 }
 
 /**

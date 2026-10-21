@@ -63,7 +63,7 @@ export function ConnectorPanel({ connector, nodes, nameOf, onChange, onDelete, a
   const fields: BindingField[] = CONNECTOR_BINDABLE.map(path => ({ path, label: fieldLabel[path] }));
   const dashLabel: Record<StrokeDash, string> = { solid: labels.dashSolid, dashed: labels.dashDashed, dotted: labels.dashDotted };
   const arrowLabel: Record<ConnectorArrow, string> = { none: labels.arrowNone, end: ends(labels.arrowEnd), start: ends(labels.arrowStart), both: labels.arrowBoth };
-  const routeLabel: Record<ConnectorRoute, string> = { straight: labels.routeStraight, orthogonal: labels.routeOrthogonal };
+  const routeLabel: Record<ConnectorRoute, string> = { straight: labels.routeStraight, orthogonal: labels.routeOrthogonal, curved: labels.routeCurved };
 
   return (
     <div className="ub-panel ub-panel--connector">

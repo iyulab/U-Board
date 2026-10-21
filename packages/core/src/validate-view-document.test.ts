@@ -259,8 +259,9 @@ describe('validateViewDocument', () => {
       ]);
       expect(strict(broken(d => { d.connectors[0].style = { arrow: 'forward' }; }))[0].message).toBe('expected "none", "end" (pointing at toNodeId), "start" (pointing at fromNodeId) or "both"');
       expect(strict(broken(d => { d.connectors[0].style = { route: 'orthogonal' }; }))).toEqual([]);
+      expect(strict(broken(d => { d.connectors[0].style = { route: 'curved' }; }))).toEqual([]);
       expect(strict(broken(d => { d.connectors[0].style = { route: 'elbow' }; }))).toEqual([
-        { path: '/connectors/0/style/route', message: 'expected "straight" or "orthogonal" (out of the facing side, one turn, into the other)' },
+        { path: '/connectors/0/style/route', message: 'expected "straight", "orthogonal" (out of the facing side, one turn, into the other) or "curved" (bowing to the left of the way it runs)' },
       ]);
     });
 

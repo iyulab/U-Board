@@ -296,6 +296,7 @@ export const KO_LABELS: UBoardLabels = {
   connectorRoute: '경로',
   routeStraight: '직선',
   routeOrthogonal: '직각으로 꺾기',
+  routeCurved: '곡선',
 
   qualityText: {
     quality: {

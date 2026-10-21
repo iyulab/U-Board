@@ -60,7 +60,7 @@ describe('ConnectorPanel', () => {
     fireEvent.change(screen.getByLabelText('Line style'), { target: { value: 'solid' } });
     expect(onChange).toHaveBeenLastCalledWith({ id: 'c', fromNodeId: 'pv', toNodeId: 'ess' });
     const route = screen.getByLabelText('Route') as HTMLSelectElement;
-    expect([...route.options].map(o => o.text)).toEqual(['Straight', 'Right angles']);
+    expect([...route.options].map(o => o.text)).toEqual(['Straight', 'Right angles', 'Curved']);
     fireEvent.change(route, { target: { value: 'orthogonal' } });
     expect(onChange).toHaveBeenLastCalledWith({ id: 'c', fromNodeId: 'pv', toNodeId: 'ess', style: { dash: 'dashed', route: 'orthogonal' } });
     const width = screen.getByLabelText('Width');

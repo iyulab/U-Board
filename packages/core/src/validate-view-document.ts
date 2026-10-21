@@ -185,7 +185,7 @@ function checkConnector(doc: Checker, connector: unknown, at: string[], nodeIds:
       doc.fail([...at, 'style', 'arrow'], 'expected "none", "end" (pointing at toNodeId), "start" (pointing at fromNodeId) or "both"');
     }
     if (style.route !== undefined && !CONNECTOR_ROUTES.includes(style.route as ConnectorRoute)) {
-      doc.fail([...at, 'style', 'route'], 'expected "straight" or "orthogonal" (out of the facing side, one turn, into the other)');
+      doc.fail([...at, 'style', 'route'], 'expected "straight", "orthogonal" (out of the facing side, one turn, into the other) or "curved" (bowing to the left of the way it runs)');
     }
   }
   if (connector.bindings !== undefined && doc.record(connector, [...at, 'bindings'])) {

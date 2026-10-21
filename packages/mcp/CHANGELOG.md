@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `describe("view")` names a connector's `route: "curved"` (a bow to the left of the way it runs, as flows on a map).
+
 ## [0.19.0] - 2026-10-21
 
 ### Added

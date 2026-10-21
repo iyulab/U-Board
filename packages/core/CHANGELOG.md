@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A connector's `style.route` takes `curved`: the line bows to the left of the way it runs, from `fromNodeId` toward
+  `toNodeId`, as flows on a map are drawn — two connectors running opposite ways between the same nodes bow apart. It
+  leaves and enters the boxes' edges as a straight line does, carries its label and arrowheads along the curve, and is
+  drawn straight when the boxes overlap. The editor's connector panel offers it.
+
 ## [0.31.1] - 2026-10-21
 
 Widgets from `@iyulab/u-widgets` 0.38.2 (funnel and reference line labels placed clear of the data).

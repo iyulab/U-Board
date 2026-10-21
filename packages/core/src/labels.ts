@@ -395,6 +395,7 @@ export interface UBoardLabels {
   connectorRoute: string;
   routeStraight: string;
   routeOrthogonal: string;
+  routeCurved: string;
 
   /** Words for connection quality — the node tooltip, screen-reader announcement and binding
    * preview (`describeQuality`). */
@@ -699,6 +700,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   connectorRoute: 'Route',
   routeStraight: 'Straight',
   routeOrthogonal: 'Right angles',
+  routeCurved: 'Curved',
 
   qualityText: DEFAULT_QUALITY_TEXT,
 };

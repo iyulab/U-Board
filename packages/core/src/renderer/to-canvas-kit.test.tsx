@@ -258,6 +258,42 @@ describe('toCanvasKit', () => {
     expect(two).toEqual([300, 254, 204, 254, 204, 54, 100, 54]);
   });
 
+  it('bows a curved connector to the left of the way it runs, from edge to edge, its head on the box', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const nodes = [
+      { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+      { id: 'b', x: 500, y: 0, width: 100, height: 100, anchored: false, widget },
+    ];
+    const curve = (connectors: Connector[]) => {
+      const objects = toCanvasKit(doc({ nodes, connectors })).scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+      return (id: string) => objects.find(o => o.id === id) as { points: number[] } | undefined;
+    };
+    const ys = (points: number[]) => points.filter((_, i) => i % 2 === 1);
+    const xs = (points: number[]) => points.filter((_, i) => i % 2 === 0);
+    const find = curve([
+      { id: 'east', fromNodeId: 'a', toNodeId: 'b', style: { route: 'curved', arrow: 'end' } },
+      { id: 'west', fromNodeId: 'b', toNodeId: 'a', style: { route: 'curved' } },
+    ]);
+    const east = find('east')!.points;
+    const west = find('west')!.points;
+    // Running east, left is up: the curve rises above the centres' line (y 50) and comes back down; running west it
+    // bows below — the two apart.
+    expect(Math.min(...ys(east))).toBeLessThan(0);
+    expect(Math.max(...ys(west))).toBeGreaterThan(100);
+    // It starts on a's edge and leaves no part inside either box.
+    const [x0, y0] = east;
+    expect(Math.min(Math.abs(x0 - 100), Math.abs(y0))).toBeLessThan(0.01);
+    xs(east).forEach((x, i) => expect(x > 99.99 && x < 500.01 ? true : ys(east)[i] < 0.01).toBe(true));
+    // Its head's tip touches b's box, and the line stops inside the head.
+    const tip = find('east#arrow0')!.points;
+    expect(Math.min(Math.abs(tip[0] - 500), Math.abs(tip[1]))).toBeLessThan(0.01);
+    const last = east.slice(-2);
+    expect(Math.hypot(last[0] - tip[0], last[1] - tip[1])).toBeGreaterThan(2);
+    // Boxes overlapping leave no curve to draw: straight, as a straight connector is.
+    const overlap = toCanvasKit(doc({ nodes: [nodes[0], { ...nodes[1], x: 50, y: 50 }], connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', style: { route: 'curved' } }] })).scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+    expect((overlap.find(o => o.id === 'c') as { points: number[] }).points).toHaveLength(4);
+  });
+
   it('places a label where its labelAt says along the line, from the fromNodeId end', () => {
     const widget = { type: 'metric', props: {}, quality: {} };
     const nodes = [

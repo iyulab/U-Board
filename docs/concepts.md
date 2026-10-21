@@ -57,9 +57,10 @@ board shows; a widget never spills over a neighbouring node.
 be shown (for example, a network link). It runs from the edge of one node's box to the edge of the other's;
 it may carry a `label` (shown at its middle, or where `labelAt` says from 0 at the `fromNodeId` end to 1 at the
 `toNodeId` end — a link's throughput) and a `style` (`stroke`, `strokeWidth`, `dash`: `solid`, `dashed` or `dotted`,
-`arrow`: `none`, `end` — pointing at `toNodeId` —, `start` or `both`; `route`: `straight`, or `orthogonal` — out of the
+`arrow`: `none`, `end` — pointing at `toNodeId` —, `start` or `both`; `route`: `straight`, `orthogonal` — out of the
 side facing the other node, one right-angle turn at the middle of the gap, into the other's facing side, as pipes and
-wiring are drawn). Connectors joining the same two nodes are drawn side by side. Its label and style can be **bound** like a widget's props (`bindings` on `label`, `style.stroke`,
+wiring are drawn — or `curved`, bowing to the left of the way it runs from `fromNodeId` toward `toNodeId`, as flows on a
+map are drawn, so two connectors running opposite ways between the same nodes bow apart). Connectors joining the same two nodes are drawn side by side. Its label and style can be **bound** like a widget's props (`bindings` on `label`, `style.stroke`,
 `style.strokeWidth`, `style.dash`, `style.arrow`) — a link's throughput as its label, its load as its width, which way
 power flows by its sign (a value map from ranges to arrows); a label not showing a current value is rimmed amber
 (stale) or grey (disconnected).
