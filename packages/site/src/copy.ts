@@ -129,8 +129,8 @@ export const COPY: Record<Locale, Copy> = {
       claim: 'assistant',
       heading: '말로 그리는 보드',
       body: '편집기 옆 AI 비서에게 무엇을 보여 줄지 말하면, 비서가 열린 보드에 바로 그리고 그린 결과를 스스로 확인해 고칩니다. 외부 AI 비서가 MCP 서버로 쓰는 것과 같은 도구로 그리고, 모델은 쓰는 사람이 고릅니다 — OpenAI 호환 엔드포인트의 주소와 키를 넣으면 되고, 키는 그 브라우저에만 남습니다.',
-      caption: '오픈 모델 qwen3.8-27b가 두 번의 요청으로 물류센터 출고 현황판을 그리는 과정. 약 4분을 10배속으로 줄였고, 값은 예시입니다.',
-      video: 'AI 비서가 채팅 요청을 받아 다크 테마 대시보드를 단계별로 그리고, 두 번째 요청에 지연 구역을 붉게 강조하는 녹화',
+      caption: '오픈 모델 qwen3.8-27b가 두 번의 요청으로 물류센터 출고 현황판을 그리는 과정. 약 19분(대부분 모델 서버의 응답 대기)을 32배속으로 줄였고, 업체 이름과 값은 예시입니다.',
+      video: 'AI 비서가 채팅 요청을 받아 다크 테마 출고 현황판을 단계별로 그리고, 두 번째 요청에 정시 출고율 지표를 더하고 지연 구역을 붉게 강조하는 녹화',
     },
     delivery: {
       heading: '쓰는 방식',
@@ -258,8 +258,8 @@ export const COPY: Record<Locale, Copy> = {
       claim: 'assistant',
       heading: 'Boards drawn from a conversation',
       body: 'Tell the AI assistant beside the editor what the board should show: it draws on the open board, then checks what it drew and fixes it. It draws with the same tools an outside assistant uses through the MCP server, and each person picks the model — the address and key of an OpenAI-compatible endpoint, kept in that browser only.',
-      caption: 'The open model qwen3.8-27b drawing a fulfilment centre’s dispatch board from two requests — about four minutes, shown ten times faster. The values are examples.',
-      video: 'A recording of the AI assistant drawing a dark dashboard step by step from a chat request, then highlighting delayed zones in red on a second request',
+      caption: 'The open model qwen3.8-27b drawing a fulfilment centre’s dispatch board from two requests — about nineteen minutes, most of it waiting on the model server, shown 32 times faster. The carriers and values are examples.',
+      video: 'A recording of the AI assistant drawing a dark dispatch board step by step from a chat request, then adding an on-time rate and highlighting delayed zones in red on a second request',
     },
     delivery: {
       heading: 'Ways to run it',
