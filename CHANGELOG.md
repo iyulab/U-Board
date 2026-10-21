@@ -69,6 +69,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a call centre's afternoon pinned to a corkboard: every agent a paper note whose state is told by
   how it is fixed and the mark in its corner, the calls waiting on an index card, the day's calls by kind as tally strokes
   and the calls coming in by the hour on graph paper (example data).
+- A gallery sample of an observatory's night set in stained glass: every dome a lancet window with its telescope and
+  target, its state told by the roundel at the top, the sky's readings in a rose window, the night's programme and the
+  cloud cover through the night (example data).
 
 ### Changed
 
