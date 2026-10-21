@@ -1,6 +1,7 @@
 import type { Binding, CanvasView, Connector, ConnectorArrow, ElementDefinition, Node, Widget } from '@iyulab/u-board/domain';
 import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
-import { project, referencePoints, svgDataUrl, type AreaFrame } from '../frame.js';
+import { project, referencePoints, svgDataUrl } from '../frame.js';
+import { landDots, worldFrame } from '../world.js';
 import { snapshot } from '../snapshots/world-supply.js';
 
 // An electronics maker's supply chain on one page, drawn the way a newspaper's data desk draws a story: a headline that
@@ -51,76 +52,15 @@ const TEU_WIDTH = { ranges: [{ min: 25, value: 7 }, { min: 15, value: 5 }, { min
 
 // ── The map ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/**
- * The land, one bit to a 3° cell, 120 cells from 25°W eastward round to 25°W again (split in the Atlantic, so Europe
- * sits at the left, the Americas at the right and the Pacific between Asia and America) and 45 rows from 78°N to 57°S.
- * Rasterised from Natural Earth's 1:110m land (public domain).
- */
-const LAND = [
-  '80000002003c000000000081dc7fff',
-  '800000201fff6100000001c1dc03ff',
-  '8000e001fffffffc001c003cdf83ff',
-  '0007fdfffffffffffc3ffffff8e3f8',
-  '600ef7fffffffffff25fffffeac1e0',
-  '003dfffffffffffdc07fffff8300c0',
-  '002cfffffffffe0400083fff83e000',
-  '0319fffffffffc0c00200ffff3f000',
-  '05bffffffffffe08000003fffbfc00',
-  '00fffffffffffe00000003ffffd400',
-  '00fff7fffffffc00000001ffffe000',
-  '02ebc3fffffff980000001ffff8000',
-  '07953fffffffe100000001ffff0000',
-  '07017fffffffa200000001fffe0000',
-  '03f00fffffff2c00000000fffe0000',
-  '07fdafffffff80000000007ff80000',
-  '07ffff7fffff80000000003f000000',
-  '1ffff7cfffff00000000000f040000',
-  '1ffff7f0fffe8000000000070c0000',
-  '1ffffbf078f0000000080007208000',
-  '1ffff9c070f0800000000001e00000',
-  '1ffffd006078400000000000300000',
-  '1fffff802010000000000000094000',
-  '0fffff80104020000000000007f800',
-  '003fff0000a300000000000001fe00',
-  '001ffe00004700000000000003ff00',
-  '001ffc00002688000000000007ff80',
-  '000ff800001003800000000007fff0',
-  '0007f800000c03800000000003fff8',
-  '0007fc00000000200000000003fff0',
-  '0007fc0000000c000000000001ffe0',
-  '000ffd8000003d800000000000ffe0',
-  '0007f18000007f8000000000007fe0',
-  '0007f1000003ffc000000000007fc0',
-  '0007e1000003ffe000000000007f00',
-  '0003e0000001fff000000000007f00',
-  '0003c0000001ffe00000000000fe00',
-  '00000000000107e00000000000fc00',
-  '00000000000001c00000000000f800',
-  '00000000000000000000000000f000',
-  '00000000000000004000000000e000',
-  '00000000000000008000000001c000',
-  '00000001000000000000000001c000',
-  '000000000000000000000000008000',
-  '000000000000000000000000004000',
-];
-
-const CELL = 10;
-/** The map's box, and the longitudes and latitudes its edges stand for — longitudes past 180 continue eastward. */
-const MAP: AreaFrame = { x: 40, y: 150, width: 120 * CELL, height: 45 * CELL, north: 78, south: -57, west: -25, east: 335 };
+/** The map's box — the world split in the Atlantic, 10 units to a 3° cell (`world.ts`). */
+const MAP = worldFrame(40, 150, 10);
 
 function drawing(): string {
-  const dots: string[] = [];
-  LAND.forEach((row, r) => {
-    const bits = [...row].map(h => parseInt(h, 16).toString(2).padStart(4, '0')).join('');
-    [...bits].forEach((bit, c) => {
-      if (bit === '1') dots.push(`<circle cx="${MAP.x + c * CELL + CELL / 2}" cy="${MAP.y + r * CELL + CELL / 2}" r="3.3"/>`);
-    });
-  });
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
 <rect width="${WIDTH}" height="${HEIGHT}" fill="${PAPER}"/>
 <path d="M 40 138 L 1560 138" stroke="${INK}" stroke-width="2"/>
 <path d="M 1250 150 L 1250 600 M 40 616 L 1560 616" stroke="${RULE}" stroke-width="1"/>
-<g fill="${DOT}">${dots.join('')}</g>
+${landDots(MAP, DOT, 3.3)}
 </svg>`;
   return svgDataUrl(svg);
 }

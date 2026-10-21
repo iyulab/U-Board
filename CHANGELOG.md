@@ -11,6 +11,13 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A gallery sample of an earth-observation satellite's mission operations: its ground track across a world of grey dots
+  (the orbit just flown solid, the next dashed), the satellite where it is now with a radio link to the station it is
+  talking to, the next passes, its state, two orbits of battery and payload telemetry and this pass's commands (example
+  data). The world map is now shared by the samples that draw one.
+
 ## [0.23.0] - 2026-10-21
 
 Built on `@iyulab/u-board` 0.32.0 and `@iyulab/u-board-mcp` 0.20.0, with widgets from `@iyulab/u-widgets` 0.38.2.
