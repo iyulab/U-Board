@@ -32,13 +32,15 @@ The panel calls a model you choose: in **모델**, give the address of an OpenAI
 (`https://api.openai.com/v1`, a gateway, or a server running an open model), the model's name and its key. They are
 kept in that browser only, and the requests go from the browser to that endpoint — the U-Board server neither holds
 the key nor calls a model. So the endpoint must accept requests from the console's address (CORS). The panel's
-`look` draws the board in the page itself, so it answers what it found without a picture.
+`look` draws the board in the page itself, so it answers what it found without a picture. It writes to the model in the language of
+your first message (Korean, Japanese and Chinese are named to it, and named again after each round of tool answers —
+open models drift into the English those answers are written in).
 
 ## What the assistant can do
 
 | Tool | What it does |
 |---|---|
-| `describe` | Explains the board format to the assistant, a topic at a time: `rules` first (with triggers — what a viewer does when a part is clicked, an element raises an event or a state changes), then `canvas` (coordinates, connectors, decorations, colours), `data` (sources and bindings), `elements`, `components` (a group of parts drawn once per instance, each with its own values), `mixed` (a canvas in a grid cell — a plan among cards), the prepared widgets (searchable by what they should show, each example in the form a board places it) and the JSON Schema by pointer. |
+| `describe` | Explains the board format to the assistant, a topic at a time: `rules` first (with triggers — what a viewer does when a part is clicked, an element raises an event or a state changes), then `canvas` (coordinates, connectors, decorations, colours), `data` (sources and bindings), `elements`, `components` (a group of parts drawn once per instance, each with its own values), `mixed` (a canvas in a grid cell — a plan among cards), the prepared widgets (searchable by what they should show, each example in the form a board places it — several in one read, `widget:metric,chart.bar`) and the JSON Schema by pointer. |
 | `list_boards`, `get_board` | Reads boards — one part of a document at a time, by JSON Pointer. |
 | `create_board`, `patch_board`, `delete_board` | Makes a board, changes it with JSON Patch (RFC 6902) on a revision — each answer carries the new revision and advice — and deletes one for good. |
 | `rename_board` | Renames a board; its id — and so the links it is shared by and its history — stays. |
