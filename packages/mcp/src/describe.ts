@@ -114,20 +114,20 @@ symbols    = { "<name>": { viewBox?, markup } } — top level: SVG drawings any 
   CSS selectors (".icon path") do not reach into what a <use> draws — only inherited fill, stroke, color, --vars do: put each part's look in the symbol (fill="none" stroke="currentColor"), colour the <use>.
 
 ## Drawing well
-- Prefer render "template": HTML/SVG + CSS, no script. Numbers become drawing through CSS: style="--level: {{level}}", height: calc(var(--level) * 1%).
-- Use the theme variables, never fixed colours: --u-widget-bg, -surface, -text, -text-secondary, -border, -primary, -positive, -negative, -warning, -font-family, -font-mono. To match a brand colour, set the board's accent (it sets -primary), not a fixed colour.
+- Prefer render "template": HTML/SVG + CSS, no script. Numbers draw through CSS: style="--level: {{level}}", height: calc(var(--level) * 1%).
+- Use the theme variables, never fixed colours: --u-widget-bg, -surface, -text, -text-secondary, -border, -primary, -positive, -negative, -warning, -font-family, -font-mono. For a brand colour set the board's accent (it sets -primary).
 - Tell states apart by shape as well as colour (filled running, outlined stopped), with a graphic contrast of 3:1 against its background (WCAG 1.4.11) — never mark a state with the faintest token (--u-widget-border). Colour only what needs attention.
 - Choose by a value with an attribute and CSS: data-state="{{state}}" + [data-state="fault"] { … }, or a symbol per value. Sections test only empty/non-empty.
-- Draw repeated shapes once (a symbol, <symbol>/<use>, a {{#list}} section). Keep an element under 32 KB.
-- A props schema (type, enum, const, properties, required, items, minimum, maximum, minLength, maxLength, title, description, default) says what an element takes; placed props are checked against it. A default only seeds the editor — it is not applied when drawing, so give every prop the markup uses.
-- render "script" only when a template cannot. Over 30 placed script elements is too many.
+- Draw repeated shapes once (a symbol and <use>, a {{#list}} section). Keep an element under 32 KB.
+- A props schema (type, enum, const, properties, required, items, minimum/maximum, minLength/maxLength, title, description, default) says what an element takes; placed props are checked against it. A default only seeds the editor — it is not applied when drawing, so give every prop the markup uses.
+- render "script" only if a template cannot. Over 30 placed script elements is too many.
 
 ## template
 - Markup: HTML text/structure tags, img, and SVG (shapes, text, gradients, patterns, symbol/use, markers, filters).
-- Not allowed: script, style, iframe, a, form, foreignObject, event handler attributes (on*), srcset, @import.
+- Not allowed: script, style, iframe, a, form, foreignObject, event handlers (on*), srcset, @import.
 - URLs (href, src, CSS url()): only "#id", "data:image/…", or an origin listed in resources.
 - Values: {{name}} / {{a.b}} (escaped), {{#list}}…{{/list}} (each item; {{.}} is the item; any other value once), {{^flag}}…{{/flag}} (shown when empty), {{! comment}}, {{v | fixed:1}} (decimals 0–6), {{v | grouped:0}} (and commas). Empty = absent, null, false, "" or [] (not 0). No unescaped output or partials.
-- The markup draws in an isolated root: its CSS reaches only itself, :host is its box, sizes border-box. A grid item without a height grows from size.height.
+- The markup draws in an isolated root: its CSS reaches only itself, :host is its box, sizes border-box. Nothing draws past the box: leave room for a shadow. A grid item without a height grows from size.height.
 - Example:
   { "render": "template",
     "props": { "type": "object", "required": ["level"], "properties": { "level": { "type": "number", "minimum": 0, "maximum": 100 } } },

@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `describe("elements")` says that nothing an element draws reaches past its box, so a shadow needs room inside it.
+
 ## [0.21.1] - 2026-10-21
 
 ### Changed
