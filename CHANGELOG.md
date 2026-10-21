@@ -28,6 +28,8 @@ do when upgrading. Each release's notes carry its section.
 - The AI chat panel asks the model to read the widgets a step uses in one `describe` call, not one call each.
 - The AI chat panel names the language of the person's first message to the model (Korean, Japanese or Chinese, read
   from its script) instead of asking for "the person's language", which models left for English more often.
+- After the tools answer, the AI chat panel reminds the model of that language, in that language, with the request
+  (not kept in the conversation) — the English of the tools' answers pulled the next message into English.
 
 ## [0.21.0] - 2026-10-21
 

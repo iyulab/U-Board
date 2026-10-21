@@ -85,11 +85,16 @@ describe('a turn', () => {
 
     expect(calls).toEqual([{ board: 'b1', patch: [{ op: 'add' }] }]);
     expect(events.map(e => e.type)).toEqual(['tool-start', 'tool-end', 'board-changed', 'text']);
-    // The second request carries the call and its answer.
-    expect(requests[1].body.messages.slice(-2)).toEqual([
+    // The second request carries the call and its answer — and, read last, the person's language named again.
+    expect(requests[1].body.messages.slice(-3)).toEqual([
       { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'patch_board', arguments: '{"board":"b1","patch":[{"op":"add"}]}' } }] },
       { role: 'tool', tool_call_id: 'c1', content: '{"revision":5}' },
+      { role: 'user', content: '(다음 메시지는 한국어로 쓰세요.)' },
     ]);
+    // Only sent: the history keeps the conversation as it was, so the reminder does not pile up.
+    expect(history.some(m => m.content === '(다음 메시지는 한국어로 쓰세요.)')).toBe(false);
+    // The first request ends with the person's own words: nothing to remind of yet.
+    expect(requests[0].body.messages.at(-1)).toEqual({ role: 'user', content: '그려줘' });
     expect(requests[0].body.tools).toEqual([{ type: 'function', function: { name: 'patch_board', description: 'the patch_board tool', parameters: expect.objectContaining({ type: 'object' }) } }]);
   });
 

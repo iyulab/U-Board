@@ -39,6 +39,14 @@ export function languageOf(text: string): string | undefined {
   return undefined;
 }
 
+/** The reminder sent after the tools' answers, in the language it asks for — words in that language hold the model
+ *  there better than English words naming it. */
+const REMINDERS: Record<string, string> = {
+  Korean: '(다음 메시지는 한국어로 쓰세요.)',
+  Japanese: '(次のメッセージは日本語で書いてください。)',
+  Chinese: '(下一条消息请用中文写。)',
+};
+
 /** What the model is told before the conversation: the board it draws and how to draw it well, in `language` when the
  *  person's first message says which. */
 export function systemPrompt(board: OpenBoard, primer?: Primer, language?: string): string {
@@ -117,10 +125,16 @@ export async function runTurn(
   let lookedNotDone = false;
   let changedSinceLook = false;
   const looks = byName.has('look');
+  // The language the person writes in, named again where the model reads last: after the tools' answers — English
+  // rules, widget specs, look reports — it drifted into English despite the instructions at the top. Sent with each
+  // request, never kept in the history, so it does not pile up.
+  const first = history.find(m => m.role === 'user');
+  const language = typeof first?.content === 'string' ? languageOf(first.content) : undefined;
+  const reminder: ChatMessage | undefined = language ? { role: 'user', content: REMINDERS[language] ?? `(Write your next message to the person in ${language}.)` } : undefined;
   for (;;) {
     const { content, toolCalls } = await streamChat(
       settings,
-      history,
+      reminder && history[history.length - 1]?.role === 'tool' ? [...history, reminder] : history,
       functions,
       { onText: delta => onEvent({ type: 'text', delta }), onThinking: () => onEvent({ type: 'thinking' }) },
       signal,
