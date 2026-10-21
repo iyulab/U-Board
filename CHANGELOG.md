@@ -25,6 +25,8 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a gaming café's seats in the Y2K chrome look: each zone a chrome panel with a gel pill for every
   seat, the states told by glyphs as well as the glow, the kitchen's orders, the games played by genre and the seats in
   use by the hour (example data).
+- A gallery sample of a fire and rescue dispatch board as a Constructivist poster: each station's vehicles with the
+  shape of their state, the calls in progress as red discs and the vehicles heading to them (example data).
 
 ## [0.25.0] - 2026-10-21
 
