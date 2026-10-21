@@ -11,6 +11,15 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A gallery sample in the glass style: a city hotel's day — frosted panes over a dusk gradient, every room's state floor
+  by floor, check-ins and check-outs, housekeeping progress, guest requests and the revenue mix (example data).
+
+### Changed
+
+- The AI chat panel asks the model to title a chart in the chart's own title, not with a separate heading above it.
+
 ## [0.21.0] - 2026-10-21
 
 Built on `@iyulab/u-board` 0.31.0 and `@iyulab/u-board-mcp` 0.18.0.
