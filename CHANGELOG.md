@@ -36,6 +36,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a parcel hub's night sort modelled in soft clay: the dock doors with their trucks, the sorting
   lines with the parcels they move an hour, the rework table and every region's outbound cart filling like a jar
   (example data).
+- A gallery sample of a middle school's day chalked on a blackboard: the floor's classrooms and special rooms with who
+  is in each, a class that moved for a lesson showing as an empty room and a full lab, the rooms' states told by chalk
+  signs, the lunch rota and the day's notes (example data).
 
 ## [0.25.0] - 2026-10-21
 
