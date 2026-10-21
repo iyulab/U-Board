@@ -42,6 +42,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a public car park told in road signs: each floor's free spaces on a green guide sign whose state
   is also its sign's shape, the total on a variable-message panel, the kept bays on blue information signs and the
   occupancy by the hour (example data).
+- A gallery sample of a coin laundry watched on a nineties desktop: the washers and dryers in bevelled windows, each
+  with its state as an icon and the minutes left as a block progress bar, the shop's figures, the uses by the hour and
+  a message box about a broken machine (example data).
 
 ## [0.25.0] - 2026-10-21
 
