@@ -59,6 +59,7 @@ export { produceMarket } from './packs/produce-market.js';
 export { clinicVaccines } from './packs/clinic-vaccines.js';
 export { parcelHub } from './packs/parcel-hub.js';
 export { schoolChalkboard } from './packs/school-chalkboard.js';
+export { parkingSigns } from './packs/parking-signs.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -118,7 +119,8 @@ import { produceMarket } from './packs/produce-market.js';
 import { clinicVaccines } from './packs/clinic-vaccines.js';
 import { parcelHub } from './packs/parcel-hub.js';
 import { schoolChalkboard } from './packs/school-chalkboard.js';
+import { parkingSigns } from './packs/parking-signs.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];

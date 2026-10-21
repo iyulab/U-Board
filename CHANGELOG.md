@@ -39,6 +39,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a middle school's day chalked on a blackboard: the floor's classrooms and special rooms with who
   is in each, a class that moved for a lesson showing as an empty room and a full lab, the rooms' states told by chalk
   signs, the lunch rota and the day's notes (example data).
+- A gallery sample of a public car park told in road signs: each floor's free spaces on a green guide sign whose state
+  is also its sign's shape, the total on a variable-message panel, the kept bays on blue information signs and the
+  occupancy by the hour (example data).
 
 ## [0.25.0] - 2026-10-21
 
