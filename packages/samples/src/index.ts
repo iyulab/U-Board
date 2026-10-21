@@ -41,6 +41,7 @@ export { mallWayfinding } from './packs/mall-wayfinding.js';
 export { warehouseRacks } from './packs/warehouse-racks.js';
 export { wardBeds } from './packs/ward-beds.js';
 export { busTerminal } from './packs/bus-terminal.js';
+export { racePitwall } from './packs/race-pitwall.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -82,7 +83,8 @@ import { mallWayfinding } from './packs/mall-wayfinding.js';
 import { warehouseRacks } from './packs/warehouse-racks.js';
 import { wardBeds } from './packs/ward-beds.js';
 import { busTerminal } from './packs/bus-terminal.js';
+import { racePitwall } from './packs/race-pitwall.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];

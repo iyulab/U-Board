@@ -11,6 +11,11 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A gallery sample of a race team's pit wall drawn as race broadcast graphics: the timing tower with tyres and sector
+  colours, the circuit with each sector's best, the two cars' tyre strategy and their lap times (example data).
+
 ## [0.24.0] - 2026-10-21
 
 Built on `@iyulab/u-board` 0.33.0 and `@iyulab/u-board-mcp` 0.21.0, with widgets from `@iyulab/u-widgets` 0.38.2.
