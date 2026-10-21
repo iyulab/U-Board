@@ -1,0 +1,80 @@
+// Each sample pack as a chunk of its own, loaded when it is asked for — for a page that draws a board only when it
+// scrolls into view and should not carry every pack's drawing and recording up front. Nothing here imports the index,
+// which holds every pack at once. Keyed by pack id, in the gallery's order; a test keeps it the same as `SAMPLE_PACKS`.
+
+import type { SamplePack } from './sample-pack.js';
+
+export { snapshotAdapters } from './snapshot-adapter.js';
+
+const LOADERS: Record<string, () => Promise<SamplePack>> = {
+  'port-terminal': () => import('./packs/port-terminal.js').then(m => m.portTerminal),
+  'commerce-live': () => import('./packs/commerce-live.js').then(m => m.commerceLive),
+  'blood-journey': () => import('./packs/blood-journey.js').then(m => m.bloodJourney),
+  'telecom-noc': () => import('./packs/telecom-noc.js').then(m => m.telecomNoc),
+  'rail-network': () => import('./packs/rail-network.js').then(m => m.railNetwork),
+  'airport-departures': () => import('./packs/airport-departures.js').then(m => m.airportDepartures),
+  'smart-farm': () => import('./packs/smart-farm.js').then(m => m.smartFarm),
+  'festival-ops': () => import('./packs/festival-ops.js').then(m => m.festivalOps),
+  'hotel-glass': () => import('./packs/hotel-glass.js').then(m => m.hotelGlass),
+  'clinic-kiosk': () => import('./packs/clinic-kiosk.js').then(m => m.clinicKiosk),
+  'library-report': () => import('./packs/library-report.js').then(m => m.libraryReport),
+  'brewery-scada': () => import('./packs/brewery-scada.js').then(m => m.breweryScada),
+  'home-eink': () => import('./packs/home-eink.js').then(m => m.homeEink),
+  'tunnel-tbm': () => import('./packs/tunnel-tbm.js').then(m => m.tunnelTbm),
+  'world-supply': () => import('./packs/world-supply.js').then(m => m.worldSupply),
+  'bakery-sketch': () => import('./packs/bakery-sketch.js').then(m => m.bakerySketch),
+  'wafer-maps': () => import('./packs/wafer-maps.js').then(m => m.waferMaps),
+  'ground-station': () => import('./packs/ground-station.js').then(m => m.groundStation),
+  'mall-wayfinding': () => import('./packs/mall-wayfinding.js').then(m => m.mallWayfinding),
+  'warehouse-racks': () => import('./packs/warehouse-racks.js').then(m => m.warehouseRacks),
+  'ward-beds': () => import('./packs/ward-beds.js').then(m => m.wardBeds),
+  'bus-terminal': () => import('./packs/bus-terminal.js').then(m => m.busTerminal),
+  'race-pitwall': () => import('./packs/race-pitwall.js').then(m => m.racePitwall),
+  'ski-resort': () => import('./packs/ski-resort.js').then(m => m.skiResort),
+  'palace-visit': () => import('./packs/palace-visit.js').then(m => m.palaceVisit),
+  'island-ferry': () => import('./packs/island-ferry.js').then(m => m.islandFerry),
+  'theatre-boxoffice': () => import('./packs/theatre-boxoffice.js').then(m => m.theatreBoxoffice),
+  'park-trails': () => import('./packs/park-trails.js').then(m => m.parkTrails),
+  'theme-park': () => import('./packs/theme-park.js').then(m => m.themePark),
+  'count-hall': () => import('./packs/count-hall.js').then(m => m.countHall),
+  'farmers-market': () => import('./packs/farmers-market.js').then(m => m.farmersMarket),
+  'harbor-auction': () => import('./packs/harbor-auction.js').then(m => m.harborAuction),
+  'bank-branch': () => import('./packs/bank-branch.js').then(m => m.bankBranch),
+  'bike-share': () => import('./packs/bike-share.js').then(m => m.bikeShare),
+  'pc-cafe': () => import('./packs/pc-cafe.js').then(m => m.pcCafe),
+  'fire-dispatch': () => import('./packs/fire-dispatch.js').then(m => m.fireDispatch),
+  'produce-market': () => import('./packs/produce-market.js').then(m => m.produceMarket),
+  'clinic-vaccines': () => import('./packs/clinic-vaccines.js').then(m => m.clinicVaccines),
+  'parcel-hub': () => import('./packs/parcel-hub.js').then(m => m.parcelHub),
+  'school-chalkboard': () => import('./packs/school-chalkboard.js').then(m => m.schoolChalkboard),
+  'parking-signs': () => import('./packs/parking-signs.js').then(m => m.parkingSigns),
+  'laundromat-desktop': () => import('./packs/laundromat-desktop.js').then(m => m.laundromatDesktop),
+  'kitchen-tickets': () => import('./packs/kitchen-tickets.js').then(m => m.kitchenTickets),
+  'offshore-wind-chart': () => import('./packs/offshore-wind-chart.js').then(m => m.offshoreWindChart),
+  'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
+  'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
+  'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),
+  'seoul-subway': () => import('./packs/seoul-subway.js').then(m => m.seoulSubway),
+  'factory-floor': () => import('./packs/factory-floor.js').then(m => m.factoryFloor),
+  'line-spc': () => import('./packs/line-spc.js').then(m => m.lineSpc),
+  'water-pumps': () => import('./packs/water-pumps.js').then(m => m.waterPumps),
+  'power-sld': () => import('./packs/power-sld.js').then(m => m.powerSld),
+  'line-oee': () => import('./packs/line-oee.js').then(m => m.lineOee),
+  'line-flow': () => import('./packs/line-flow.js').then(m => m.lineFlow),
+  'pump-station': () => import('./packs/pump-station.js').then(m => m.pumpStation),
+  'utility-regions': () => import('./packs/utility-regions.js').then(m => m.utilityRegions),
+  'server-room': () => import('./packs/server-room.js').then(m => m.serverRoom),
+  'building-floor': () => import('./packs/building-floor.js').then(m => m.buildingFloor),
+  'microgrid': () => import('./packs/microgrid.js').then(m => m.microgrid),
+  'body-gap': () => import('./packs/body-gap.js').then(m => m.bodyGap),
+  'it-topology': () => import('./packs/it-topology.js').then(m => m.itTopology),
+  'assembly-wip': () => import('./packs/assembly-wip.js').then(m => m.assemblyWip),
+};
+
+/** The ids of the packs that can be loaded, in the gallery's order. */
+export const SAMPLE_PACK_IDS: readonly string[] = Object.keys(LOADERS);
+
+/** The pack with this id, loaded on demand — or `undefined` for an id no pack has. */
+export function loadSamplePack(id: string): Promise<SamplePack | undefined> {
+  return LOADERS[id]?.() ?? Promise.resolve(undefined);
+}

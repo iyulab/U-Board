@@ -3,18 +3,19 @@
 //
 // A board is drawn when it comes near the screen, not when the page opens: the gallery holds a few dozen boards and
 // a few hundred widgets, and drawing them all at once is a long wait for the one being looked at. A board once drawn
-// stays drawn.
+// stays drawn. Its pack — drawing, document and recording — is fetched then too, as a chunk of its own, so the page does
+// not open by loading every board in the gallery.
 
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ViewerPage, KO_LABELS } from '@iyulab/u-board/viewer';
 import '@iyulab/u-board/styles.css';
-import { SAMPLE_PACKS, snapshotAdapters } from '@iyulab/u-board-samples';
+import { loadSamplePack, snapshotAdapters } from '@iyulab/u-board-samples/lazy';
 
 const korean = document.documentElement.lang === 'ko';
 
-function draw(host: HTMLElement) {
-  const pack = SAMPLE_PACKS.find(p => p.id === host.dataset.sampleBoard);
+async function draw(host: HTMLElement) {
+  const pack = await loadSamplePack(host.dataset.sampleBoard ?? '');
   if (!pack) return;
   host.replaceChildren();
   host.classList.add('live');
@@ -37,12 +38,12 @@ if ('IntersectionObserver' in window) {
       for (const entry of entries) {
         if (!entry.isIntersecting) continue;
         observer.unobserve(entry.target);
-        draw(entry.target as HTMLElement);
+        void draw(entry.target as HTMLElement);
       }
     },
     { rootMargin: '100% 0px' }
   );
   for (const host of hosts) observer.observe(host);
 } else {
-  for (const host of hosts) draw(host);
+  for (const host of hosts) void draw(host);
 }

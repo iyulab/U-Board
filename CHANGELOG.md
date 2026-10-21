@@ -52,6 +52,11 @@ do when upgrading. Each release's notes carry its section.
   and state signs, the submarine cables in magenta whose colour and dash follow their state, the service vessels, the
   weather buoy and the output through the day (example data).
 
+### Changed
+
+- The gallery loads each board’s sample when the board comes into view, rather than every sample when the page opens,
+  so the page opens the same however many boards it holds.
+
 ## [0.25.0] - 2026-10-21
 
 Built on `@iyulab/u-board` 0.33.1 and `@iyulab/u-board-mcp` 0.21.1, with widgets from `@iyulab/u-widgets` 0.39.0.
