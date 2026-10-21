@@ -18,6 +18,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a ski resort's slopes drawn as an 8-bit game's map: the mountain in pixels, the runs in their
   difficulty's colour and the lifts, with each run's and lift's state as a game's pop-up, the weather, what is open and
   riders by the hour (example data).
+- A gallery sample of a royal palace's visitor board on hanji, in ink and dancheong's colours: the palace's plan
+  drawn with a brush and a card on each hall saying how crowded it is and what is next there, with the day's visitors,
+  the timed tickets left, the guided tours and entries by the hour (example data).
 
 ## [0.24.0] - 2026-10-21
 
