@@ -21,6 +21,10 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a royal palace's visitor board on hanji, in ink and dancheong's colours: the palace's plan
   drawn with a brush and a card on each hall saying how crowded it is and what is next there, with the day's visitors,
   the timed tickets left, the guided tours and entries by the hour (example data).
+- A gallery sample of an island ferry board drawn as a Bauhaus poster: the islands as plain geometric figures and the
+  runs between their piers as bars, each state a primary colour paired with a shape (a blue circle sails, a yellow
+  square is delayed, a red triangle is cancelled), with the sea's state, the next departures and passengers boarded by
+  the hour (example data).
 
 ## [0.24.0] - 2026-10-21
 
