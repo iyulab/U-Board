@@ -22,6 +22,9 @@ do when upgrading. Each release's notes carry its section.
   bins four levels by twelve bays, filled as full as they are, blocked and held bins marked, and a line to the conveyor
   as thick as the row is being picked — with the dock doors, the hall's figures, inbound and outbound by the hour and
   what needs a hand (example data).
+- A gallery sample of a ward's bed board set in the Swiss style — white paper, heavy black type, one red: every bed on
+  the ward's plan one component, its state as black, red, grey hatching or an outline, with the census in very large
+  figures, the week's occupancy and who is coming up from the emergency room (example data).
 
 - A gallery sample of an earth-observation satellite's mission operations: its ground track across a world of grey dots
   (the orbit just flown solid, the next dashed), the satellite where it is now with a radio link to the station it is
