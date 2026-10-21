@@ -25,6 +25,10 @@ do when upgrading. Each release's notes carry its section.
   each oven and the proofer, a dashed curve from each oven to the display case saying when the next batch comes out,
   the trays with what is left and a red line through what has sold out, the takings, sales by the hour and two sticky
   notes (example data).
+- A gallery sample set as a paper's figure: two lots of wafers' bin maps side by side, every wafer the same small map
+  — one component placed for each — its dice coloured by bin in a palette colour-blind readers can tell apart, with
+  the yield and the pattern its failures make, the bins' legend, the engineer's notes, failures by bin and the lots'
+  yield (example data).
 - The editor's connector panel offers a curved line (`@iyulab/u-board`'s new `route: "curved"`).
 
 ### Fixed
