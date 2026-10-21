@@ -19,7 +19,10 @@ widths and height — with the layout seen at a wide, medium or narrow width.
 **grid item** takes a span of columns (4 when left out), optionally a different span where the
 board is narrower, optionally a number of rows it spans (`rowSpan` — a map or large panel beside a column of
 smaller cards, which the items after it fill in order; from medium width up), and optionally a fixed height —
-otherwise the widget's own. There is no position:
+otherwise the widget's own (an element's, its definition's `size.height`, as the least it takes: without a fixed
+height an item stretches to its row and to the rows it spans, and at narrow width, one item per row, it is its own
+height again). Give a height only where a card needs one; a panel beside a column of cards fills it by its `rowSpan`.
+There is no position:
 the same document reads at any width, and where an item goes follows from the ones before it.
 The width that counts is the board's own — the container it is shown in, not the window: one item
 per row below 600 pixels, 6 columns (each item's medium span) below 1024, 12 above. A row is as

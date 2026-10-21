@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- A grid item placing an element without a `height` takes the element's `size.height` as the least height, not a fixed
+  one: it stretches to its row and to the rows it spans as every other item does, and at narrow width — one item per
+  row, `rowSpan` ignored — it is its own height again instead of a wide layout's.
+
 ### Added
 
 - **`Connector.labelSize`** — the label's font size in scene units, 11 when left out; its chip grows with it in the

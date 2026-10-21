@@ -409,6 +409,23 @@ describe('ViewerPage with a grid view', () => {
     expect([style('note').getPropertyValue('--_ub-row-span'), style('plain').getPropertyValue('--_ub-row-span')]).toEqual(['2', '']);
   });
 
+  it('gives an element’s item its definition’s height as a floor, so it still stretches to its row and the rows it spans', async () => {
+    const board: GridView = {
+      kind: 'grid',
+      items: [
+        { id: 'table', span: 8, rowSpan: 2, widget: { type: 'element:table' } },
+        { id: 'fixed', widget: { type: 'element:table' }, height: 90 },
+      ],
+      elements: { table: { render: 'template', template: '<table></table>', size: { width: 400, height: 240 } } },
+    };
+    render(<ViewerPage document={board} adapters={[]} />);
+    const region = await screen.findByRole('region');
+    const style = (id: string) => region.querySelector<HTMLElement>(`[data-item-id="${id}"]`)!.style;
+    expect([style('table').minHeight, style('table').height]).toEqual(['240px', '']);
+    // A height the author gives is kept as given.
+    expect([style('fixed').minHeight, style('fixed').height]).toEqual(['', '90px']);
+  });
+
   it('shows each item with its quality, as a canvas node does, and keeps updating it', async () => {
     const adapter = new SpyAdapter();
     adapter.resolve.mockResolvedValue({ value: undefined, quality: 'disconnected' });

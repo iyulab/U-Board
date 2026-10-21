@@ -161,7 +161,7 @@ const items: GridItem[] = [
       props: { services: [], regions: [] },
       bindings: { services: bind('/noc/matrix', '/services'), regions: bind('/noc/matrix', '/regions') },
     },
-    { rowSpan: 2, height: 340 }
+    { rowSpan: 2 }
   ),
   card('traffic-day', 5, 6, {
     type: 'chart.line',

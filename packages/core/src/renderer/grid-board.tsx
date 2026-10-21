@@ -171,8 +171,9 @@ export interface GridBoardProps {
  * the others in its row stretch to match. The grid has no pan or zoom: it reads at any width, and scrolls when it is
  * taller than its container. A canvas cell pans and zooms within itself (`CanvasCell`).
  */
-/** The height an item placing an element takes when it gives none: the element's own. A prepared widget has its own
- *  height already; an element's isolated root has none to offer the row, so its definition says it. */
+/** The least height an item placing an element takes when it gives none: the element's own. A prepared widget has its
+ *  own height already; an element's isolated root has none to offer the row, so its definition says it. It is a floor,
+ *  not a fixed height, so the item still stretches to its row — and to the rows it spans — as every other item does. */
 function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | undefined {
   if (isCanvasItem(item)) return undefined;
   const name = elementNameOf(item.widget.type);
@@ -190,7 +191,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, re
       <div className="ub-grid__items">
         {doc.items.map((item, index) => {
           const { span, spanMedium } = spans[index];
-          const style = { '--_ub-span': span, '--_ub-span-medium': spanMedium, ...(item.rowSpan !== undefined && { '--_ub-row-span': item.rowSpan }), height: item.height ?? elementHeight(doc, item) } as CSSProperties;
+          const style = { '--_ub-span': span, '--_ub-span-medium': spanMedium, ...(item.rowSpan !== undefined && { '--_ub-row-span': item.rowSpan }), height: item.height, minHeight: item.height === undefined ? elementHeight(doc, item) : undefined } as CSSProperties;
           return (
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(

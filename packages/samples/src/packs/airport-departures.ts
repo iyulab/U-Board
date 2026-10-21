@@ -94,7 +94,7 @@ th{white-space:nowrap}
 /* On a phone: smaller tiles, the English lines and the airline left out — and what still does not fit scrolls across. */
 @container (max-width: 640px){.board{padding:12px}td{padding:5px 4px;font-size:14px}th{padding:0 4px 6px}.flap{font-size:15px}td small,th i{display:none}}
 @container (max-width: 360px){td{padding:4px 3px;font-size:13px}th{padding:0 3px 6px;font-size:12px}.flap{font-size:13px}header b{font-size:22px}.board{padding:10px 8px}.dest{white-space:normal;word-break:keep-all}}`,
-  size: { width: 860, height: 640 },
+  size: { width: 860, height: 440 },
 };
 
 /** The time, the date and the weather outside, as the hall's sign shows them. */
@@ -157,7 +157,7 @@ const items: GridItem[] = [
     9,
     6,
     { type: 'element:departures', props: { flights: [] }, bindings: { flights: bind('/fids/departures', '/value') } },
-    { rowSpan: 4, height: 716 }
+    { rowSpan: 4 }
   ),
   card(
     'clock',

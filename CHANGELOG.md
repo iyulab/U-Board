@@ -11,6 +11,11 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Fixed
+
+- On a grid board, a card drawn by an element stretches to its row and to the rows it spans, and at phone width is as
+  tall as its content: the departures board in the gallery no longer leaves an empty block under its table on a phone.
+
 ### Added
 
 - A gallery sample of a shopping centre's directory kiosk: a portrait screen over the third floor's plan, with «you are
