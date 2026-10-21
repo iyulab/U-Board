@@ -25,6 +25,9 @@ do when upgrading. Each release's notes carry its section.
   runs between their piers as bars, each state a primary colour paired with a shape (a blue circle sails, a yellow
   square is delayed, a red triangle is cancelled), with the sea's state, the next departures and passengers boarded by
   the hour (example data).
+- A gallery sample of a theatre's box office drawn in Art Deco: the seating plan in black and gold, each block of seats a
+  shape of its own filled by how much of it is sold, with tonight's sales, the week's performances and the tickets sold
+  for tonight over the last fortnight (example data).
 
 ## [0.24.0] - 2026-10-21
 
