@@ -17,6 +17,8 @@ do when upgrading. Each release's notes carry its section.
   by floor, check-ins and check-outs, housekeeping progress, guest requests and the revenue mix (example data).
 - A gallery sample in the portrait kiosk form: a hospital's outpatient hall screen — each clinic's number being called
   and who is next, the test rooms' queues, prescriptions ready, the car park, in very large type (example data).
+- A gallery sample in the print form: a public library's month on one A4 page — a serif masthead, the month in a
+  paragraph with its figures in the sentences, numbered sections, a source line at the foot (example data).
 
 ### Changed
 
