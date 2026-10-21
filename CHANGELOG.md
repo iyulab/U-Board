@@ -33,6 +33,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a health centre's vaccination line in Art Nouveau: the four stages as arched panels along an
   S-shaped path with the waiting between them, the rooms' states told by signs, and the vaccines in stock counted in
   leaves (example data).
+- A gallery sample of a parcel hub's night sort modelled in soft clay: the dock doors with their trucks, the sorting
+  lines with the parcels they move an hour, the rework table and every region's outbound cart filling like a jar
+  (example data).
 
 ## [0.25.0] - 2026-10-21
 
