@@ -15,7 +15,7 @@ export const snapshot: SampleSnapshot = {
           v1: { call: '해솔 3호', knots: '4.2', state: 'fishing', word: '조업' },
           v2: { call: '바다별 7호', knots: '9.8', state: 'underway', word: '귀항' },
           v3: { call: '청파 11호', knots: '3.1', state: 'fishing', word: '조업' },
-          v4: { call: '은빛 2호', knots: '6.5', state: 'alarm', word: '금지구역 0.4NM' },
+          v4: { call: '은빛 2호', knots: '6.5', state: 'alarm', word: '금지구역 접근' },
           v5: { call: '대양 5호', knots: '—', state: 'lost', word: '20:52 끊김' },
           v6: { call: '금강 9호', knots: '8.7', state: 'underway', word: '출항' },
           v7: { call: '해돋이 1호', knots: '2.6', state: 'fishing', word: '조업' },
