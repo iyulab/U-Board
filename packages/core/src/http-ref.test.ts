@@ -67,6 +67,9 @@ describe('requestTimeProblem', () => {
     expect(requestTimeProblem('/r?d={{now:yyyy/MM}}')).toMatch(/time places/);
     expect(requestTimeProblem('/r?d={{value}}')).toMatch(/time places/);
     expect(requestTimeProblem('/r?d={{now:ss}}')).toMatch(/time places/);
+    // A `}}` alone is text — JSON in a query closes two objects with it.
+    expect(requestTimeProblem('/q?f={"a":{"b":1}}')).toBeUndefined();
+    expect(isHttpRef({ path: '/q?f={"a":{"b":1}}' })).toBe(true);
   });
 
   it('makes a reference with another place, or a malformed request time, not one', () => {

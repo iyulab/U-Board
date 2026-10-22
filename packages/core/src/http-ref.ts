@@ -87,8 +87,8 @@ const NOW_TOKEN = /yyyy|MM|dd|HH|mm/g;
 
 /** Why `path` cannot be sent — a `{{` that is not a time place (`{{now:yyyyMMdd}}`) — or undefined. */
 export function requestTimeProblem(path: string): string | undefined {
-  const rest = path.replace(NOW_PLACE, '');
-  if (!rest.includes('{{') && !rest.includes('}}')) return undefined;
+  // Only an opening `{{` is a place; a `}}` alone is text a query can hold (`?f={"a":{"b":1}}`).
+  if (!path.replace(NOW_PLACE, '').includes('{{')) return undefined;
   return 'a request path takes only time places such as {{now:yyyyMMdd}} or {{now:HHmm}} (yyyy MM dd HH mm, with - . : _ T between)';
 }
 
