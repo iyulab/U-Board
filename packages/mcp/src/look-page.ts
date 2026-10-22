@@ -11,14 +11,37 @@ export function findProblems(
   { spillTolerancePx = 1 }: { spillTolerancePx?: number } = {},
 ): Array<{ path?: string; message: string }> {
   // Everything this function uses is inside it: the page runs it from its source alone.
-  /** How far anything drawn inside `root` reaches past `host`'s box, in px (0 when it stays inside). */
+  /** The part of `part`'s box that is drawn: its box cut by every box inside the element that clips it — an ancestor
+   *  whose `overflow` is not `visible`, on that axis. An absolutely positioned box is clipped only from its containing
+   *  block up (a static ancestor's overflow does not cut it), a fixed one by none. Undefined when nothing is left. */
+  function drawnRect(part: Element): { left: number; right: number; top: number; bottom: number } | undefined {
+    let { left, right, top, bottom } = part.getBoundingClientRect();
+    let positioning = getComputedStyle(part).position;
+    for (let a = part.parentElement; a; a = a.parentElement) {
+      const style = getComputedStyle(a);
+      const clips = positioning === 'fixed' ? false : positioning === 'absolute' ? style.position !== 'static' : true;
+      if (clips) {
+        const b = a.getBoundingClientRect();
+        if (style.overflowX !== 'visible') [left, right] = [Math.max(left, b.left), Math.min(right, b.right)];
+        if (style.overflowY !== 'visible') [top, bottom] = [Math.max(top, b.top), Math.min(bottom, b.bottom)];
+        // Past its containing block, the box goes where that block goes.
+        if (positioning !== 'fixed') positioning = style.position;
+      }
+    }
+    return right > left && bottom > top ? { left, right, top, bottom } : undefined;
+  }
+
+  /** How far anything drawn inside `root` reaches past `host`'s box, in px (0 when it stays inside) — what is cut off
+   *  inside the element is not drawn, so it does not count. */
   function spillOf(host: HTMLElement, root: ShadowRoot): number {
     const box = host.getBoundingClientRect();
     let spill = 0;
     for (const part of root.querySelectorAll('*')) {
       if (part instanceof HTMLStyleElement) continue;
-      const r = part.getBoundingClientRect();
-      if (r.width === 0 && r.height === 0) continue;
+      const own = part.getBoundingClientRect();
+      if (own.width === 0 && own.height === 0) continue;
+      const r = drawnRect(part);
+      if (!r) continue;
       spill = Math.max(spill, box.left - r.left, r.right - box.right, box.top - r.top, r.bottom - box.bottom);
     }
     return spill;

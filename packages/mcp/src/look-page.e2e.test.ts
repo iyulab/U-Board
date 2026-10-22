@@ -49,6 +49,19 @@ describe('findProblems', () => {
     ]);
   });
 
+  it('does not count what the element cuts off itself — but does count a positioned part its static clip does not cut', async () => {
+    await show(`
+      <div data-node-id="a"><div data-element style="position:relative;width:100px;height:50px">
+        <template shadowrootmode="open"><div style="position:relative;width:100px;height:50px;overflow:hidden"><i style="position:absolute;right:-40px;top:0;width:80px;height:20px;display:block"></i><p style="margin:0;width:300px">a long line, cut</p></div></template>
+      </div></div>
+      <div data-node-id="b"><div data-element style="position:relative;width:100px;height:50px">
+        <template shadowrootmode="open"><div style="position:relative;width:100px;height:50px"><div style="width:100px;height:50px;overflow:hidden"><i style="position:absolute;right:-40px;top:0;width:80px;height:20px;display:block"></i></div></div></template>
+      </div></div>`);
+    expect(await page.evaluate(findProblems, [node('a'), node('b')])).toEqual([
+      { path: '/nodes/b', message: 'its element draws up to 40 px past its box — over its neighbours; give the node more room or draw smaller' },
+    ]);
+  });
+
   it('reports an element drawing past its box only beyond the tolerance it is given', async () => {
     await show(`
       <div data-node-id="a"><div data-element style="position:relative;width:100px;height:50px">

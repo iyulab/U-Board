@@ -19,6 +19,12 @@ All notable changes to this package are documented here. The format follows
 - `describe("data")` says how to bind a source asked for the data of a given time: time places in `path`
   (`{{now:yyyyMMdd}}`) with `timeZone` and `requestTime`.
 
+### Fixed
+
+- `look` no longer reports an element drawing past its box for what the element itself cuts off: a part's box is cut by
+  every box inside the element whose `overflow` clips it (from a positioned part's containing block up), so a
+  decoration clipped at the element's edge is not taken for one drawn over its neighbours.
+
 ## [0.21.1] - 2026-10-21
 
 ### Changed
