@@ -81,6 +81,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a daycare centre's afternoon built from toy bricks: every class a studded plate counting its
   children as filled heads and empty rings, a tile telling what it is doing, the playground, the buses home, the day's
   timetable and the week's attendance (example data).
+- A gallery sample of a makerspace's tool wall as a shadow board: every tool hung over its painted shadow, so a tool
+  lent out shows its shadow and a label tape with who has it and until when (red when overdue, yellow when away for
+  repair), the machines with their jobs, the evening's bookings and the loans by the hour (example data).
 
 ### Changed
 
