@@ -16,6 +16,9 @@ do when upgrading. Each release's notes carry its section.
 - A data source can be asked for the data of a given time: a binding's request writes the time as a place
   (`{{now:yyyyMMdd}}`), filled in on the source's clock each time it is sent — so a source that answers only for
   an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
+- A gallery sample of a riverside night market's food trucks as neon signs on a brick wall: each truck's sign with
+  its wait and line, telling its state by the sign itself — a tube underneath when busy, a «sold out» tube across it,
+  the tubes dark when closed — and the orders by the half hour (example data).
 - A gallery sample of a railway station's lost-and-found office as a desk of typed case files: a manila folder for
   each case with its typed index card and a rubber stamp for where it stands — told by the stamp's word and shape as
   well as its colour — the day's figures on a typed memo, what is kept by kind, and the claims at the counter
