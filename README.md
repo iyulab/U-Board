@@ -8,8 +8,10 @@ network diagram, a map, or a freeform layout — and embed the result anywhere o
 The board above runs live at the top of [board.u-platform.kr](https://board.u-platform.kr/) — the
 library's own viewer, reading a sample source inside the page — and
 [board.u-platform.kr/try/](https://board.u-platform.kr/try/) opens the authoring view on the same
-board, kept in the browser and exported as a file an installation imports. iyulab also operates a demo
-instance at [board-app.u-platform.kr](https://board-app.u-platform.kr/), where invited accounts can
+board, kept in the browser and exported as a file an installation imports. The
+[gallery](https://board.u-platform.kr/gallery/) shows boards drawn with U-Board, each with its definition and data
+as JSON, and the [playground](https://board.u-platform.kr/playground/) draws any of them as that JSON is edited.
+iyulab also operates a demo instance at [board-app.u-platform.kr](https://board-app.u-platform.kr/), where invited accounts can
 try authoring and sharing before installing; to install U-Board on your own network, see
 [docs/self-hosting.md](docs/self-hosting.md).
 

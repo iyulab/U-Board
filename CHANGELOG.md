@@ -13,6 +13,13 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
+- The gallery is a list of cards — each board's picture, title, field and style — filtered by tag (field, style,
+  and what the board is: live open data or example data, a drawing or a grid, connectors, custom elements); a filter
+  can be linked to (`?tag=a,b`). Every board has a page of its own in both languages, with its tags, the board, its
+  definition and data as JSON to read or download (`board.json`, `data.json`), and the boards near it — each page with
+  its own title, description, link preview picture and structured data, all listed in the sitemap.
+- A JSON playground on the introduction site (`/playground/`): load a gallery board, edit its definition and data,
+  and see it drawn as you type, with every problem named by its JSON path.
 - A data source can be asked for the data of a given time: a binding's request writes the time as a place
   (`{{now:yyyyMMdd}}`), filled in on the source's clock each time it is sent — so a source that answers only for
   an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
@@ -150,6 +157,8 @@ do when upgrading. Each release's notes carry its section.
 
 ### Changed
 
+- A gallery board on example data now says it is a board drawn with U-Board whose values are made up, rather than
+  only that its values are not real.
 - The gallery loads each board’s sample when the board comes into view, rather than every sample when the page opens,
   so the page opens the same however many boards it holds.
 
