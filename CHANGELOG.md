@@ -18,6 +18,9 @@ do when upgrading. Each release's notes carry its section.
   an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
   The binding form asks for the time zone and when the source has its data, and shows the request it makes now;
   the console's connection test fills a path's time places on the author's own clock.
+- A gallery sample of a cold-chain warehouse as vaporwave: six temperature zones as glass cards before a sunset
+  grid, each with a thermometer showing its band and where it is now, and its state in a mark, a word and the card's
+  edge, with the zone out of band over the day and the reefer trucks at the docks (example data).
 - A gallery sample of a recycling centre's sorting lines as an instant-photo album: each line's bale bay as full as
   it is, its tonnage and purity in pen on the photo's edge, and its state in a word and in what is stuck on the photo —
   yellow tape, a red pin, crossed tape over a faded photo — with the day's intake by hour and the trucks going out
