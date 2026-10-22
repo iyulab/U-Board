@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useId, useMemo, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Binding } from '../view-document.js';
-import { findHttpRefItem, isTimeZone, parseSourceTime, type HttpRef, type HttpRefItem } from '../http-ref.js';
+import { findHttpRefItem, isTimeZone, parseSourceTime, type HttpRef, type HttpRefItem, type HttpRefRequestTime } from '../http-ref.js';
 import { deviceTimeZone, knownTimeZones, lacksOffset, timeFieldsIn, type TimeField } from './time-fields.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
@@ -53,6 +53,9 @@ interface BindingDraft extends MapDraft {
   timeZone?: string;
   /** `maxAgeSeconds` in minutes, as typed — empty: none. */
   maxAgeMinutes: string;
+  /** When the path's time places (`{{now:yyyyMMdd}}`) are — an HTTP connector reference's `requestTime`, kept as
+   *  loaded; its time is read on `timeZone`'s clock. */
+  requestTime?: HttpRefRequestTime;
   /** The `ref` picked from an adapter that offers its references (`Adapter.references`). */
   listedRef: string;
 }
@@ -165,6 +168,7 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
     observedAtPath: ref.observedAtPath,
     timeZone: ref.timeZone,
     maxAgeMinutes: ref.maxAgeSeconds === undefined ? '' : String(ref.maxAgeSeconds / 60),
+    requestTime: ref.requestTime,
     listedRef: '',
     ...map,
   };
@@ -274,9 +278,11 @@ export function BindingEditor({
           path: draft.path,
           ...(draft.item ? { item: draft.item } : {}),
           valuePath: draft.valuePath || undefined,
-          // A time zone places the observed time; without one named, it has nothing to place.
-          ...(draft.observedAtPath !== undefined ? { observedAtPath: draft.observedAtPath, ...(draft.timeZone ? { timeZone: draft.timeZone } : {}) } : {}),
+          // A time zone places the observed time, and the path's time places; with neither, it has nothing to place.
+          ...(draft.observedAtPath !== undefined ? { observedAtPath: draft.observedAtPath } : {}),
+          ...((draft.observedAtPath !== undefined || draft.path.includes('{{')) && draft.timeZone ? { timeZone: draft.timeZone } : {}),
           ...(typeof maxAgeSeconds(draft) === 'number' ? { maxAgeSeconds: maxAgeSeconds(draft) } : {}),
+          ...(draft.requestTime && draft.path.includes('{{') ? { requestTime: draft.requestTime } : {}),
         };
 
   const handlePreview = async () => {

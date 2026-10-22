@@ -35,7 +35,7 @@ describe('domain entry', () => {
       'TRIGGER_EVENTS', 'ageText', 'applyEditCommands', 'applyJsonPatch', 'applyValueMap', 'bindingsIn', 'boardStateOf', 'coordinateOf',
       'describeQuality', 'documentPatch', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts', 'elementListeners',
       'emptyViewDocument', 'expandComponents', 'findHttpRefItem', 'firedBy', 'getByPointer', 'instancePartId', 'isCanvasItem', 'isHttpRef', 'isSourceErrorField', 'isTriggerLink', 'linkFor',
-      'lintViewDocument', 'nodeSize', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedAt', 'placedIn', 'readHttpRef',
+      'lintViewDocument', 'nodeSize', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedAt', 'placedIn', 'readHttpRef', 'requestPath', 'requestTimeProblem',
       'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading', 'sizedNodes', 'sourceErrorIn', 'stateChanges',
       'validateViewDocument', 'worstQuality',
     ]);

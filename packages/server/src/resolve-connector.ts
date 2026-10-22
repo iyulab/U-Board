@@ -1,6 +1,6 @@
 import { PATH_KEY_PLACEHOLDER, type Connector } from './db/connectors.js';
 import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
-import { isHttpRef, readHttpRef, resolvedReading, sourceErrorIn, type HttpRef, type QualityReason, type ResolvedBinding } from '@iyulab/u-board/domain';
+import { isHttpRef, readHttpRef, requestPath, resolvedReading, sourceErrorIn, type HttpRef, type QualityReason, type ResolvedBinding } from '@iyulab/u-board/domain';
 import { HttpStatusError } from './http-status-error.js';
 import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
 
@@ -153,7 +153,8 @@ export function isValidRef(ref: unknown): ref is HttpRef {
   return isHttpRef(ref);
 }
 
-/** Resolves `ref.path` against `connector.baseUrl`, pinned to the connector's own origin *and*,
+/** Resolves `ref.path` — its time places filled in for a request sent `now` (`requestPath`) — against
+ * `connector.baseUrl`, pinned to the connector's own origin *and*,
  * when the owner configured `baseUrl` with a path prefix, pinned to that prefix too. Returns
  * `null` if the ref can't be turned into a same-prefix request — the caller should treat that as
  * `400 INVALID_INPUT`, not as a resolve outcome, since a malformed request never reaches the
@@ -163,14 +164,18 @@ export function isValidRef(ref: unknown): ref is HttpRef {
  * the origin: `new URL('/../../admin', 'https://plant.example.com/api/v2/')` resolves to
  * `https://plant.example.com/admin` — the origin the owner scoped the connector's credentials to,
  * but not the path prefix the owner scoped the connector's *use* to. */
-export function buildResolveTarget(connector: Connector, ref: { path: string }): URL | null {
+export function buildResolveTarget(
+  connector: Connector,
+  ref: Pick<HttpRef, 'path' | 'timeZone' | 'requestTime'>,
+  now = Date.now()
+): URL | null {
   let target: URL;
   let base: URL;
   try {
     base = new URL(connector.baseUrl);
     // Concatenation (rather than `new URL(path, base)`) so a baseUrl with a path prefix keeps
     // it; the trailing-slash trim keeps the joined URL from doubling the separator.
-    target = new URL(connector.baseUrl.replace(/\/+$/, '') + ref.path);
+    target = new URL(connector.baseUrl.replace(/\/+$/, '') + requestPath(ref, now));
   } catch {
     return null;
   }

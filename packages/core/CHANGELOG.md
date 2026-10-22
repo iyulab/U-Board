@@ -6,6 +6,15 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- An HTTP connector reference can ask a source for the data of a given time rather than for its latest: time places
+  in its `path` (`base_date={{now:yyyyMMdd}}&base_time={{now:HHmm}}`) are filled in each time a request is sent, on
+  `timeZone`'s clock, at the time `requestTime: { delaySeconds?, stepSeconds? }` names — the time of the request,
+  that much earlier, rounded down to that step (`{ delaySeconds: 2400, stepSeconds: 3600 }` for hourly data out forty
+  minutes after the hour). `requestPath(ref, now)` gives the request a reference makes; a path with any other `{{…}}`
+  is not a reference. The binding form keeps both through an edit.
+
 ## [0.33.1] - 2026-10-21
 
 ### Changed

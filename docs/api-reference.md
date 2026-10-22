@@ -373,6 +373,7 @@ interface HttpRef {
   observedAtPath?: string;
   timeZone?: string;
   maxAgeSeconds?: number;
+  requestTime?: { delaySeconds?: number; stepSeconds?: number };
 }
 ```
 
@@ -380,7 +381,10 @@ The reference the hosted HTTP connector reads, and the one the authoring view's 
 for an adapter that lists no references of its own. Implement this shape to have the form fill it in.
 
 - `path` — the request, relative to the connector's base URL: a path starting with a single `/`,
-  with its query.
+  with its query. It may hold time places, `{{now:yyyyMMdd}}` and `{{now:HHmm}}` — a pattern of `yyyy`
+  `MM` `dd` `HH` `mm` with `-` `.` `:` `_` `T` between — for a source asked for the data of a given
+  time rather than for its latest; each request fills them in (see `requestTime`). Any other `{{…}}`
+  makes the reference invalid.
 - `item` — one element of the list at the JSON Pointer `list`: the first whose fields equal every one
   in `where` (`"12"` and `12` match). Sources reorder their lists, so a position would name another
   element.
@@ -390,7 +394,15 @@ for an adapter that lists no references of its own. Implement this shape to have
   observed the value. A source that publishes its readings on a schedule says how old they are this
   way: an hourly measurement fetched at :50 is fifty minutes old. Absent, or the field empty: the
   value counts as observed when it was read.
-- `timeZone` — the IANA time zone (`Asia/Seoul`) a time without an offset is in. Absent: UTC.
+- `timeZone` — the IANA time zone (`Asia/Seoul`) a time without an offset is in, and the clock the
+  path's time places are read on. Absent: UTC.
+- `requestTime` — which time the path's time places name: the time the request is sent,
+  `delaySeconds` earlier — how long after a time the source has its data — rounded down to a multiple
+  of `stepSeconds` — how often it has new data — counted from midnight on `timeZone`'s clock. A source
+  that publishes each hour's observations forty minutes after the hour is
+  `{ delaySeconds: 2400, stepSeconds: 3600 }`: at 13:31 it is asked for 12:00, at 13:41 for 13:00.
+  Absent: the time the request is sent, to the minute. `requestPath(ref, now)` (from
+  `@iyulab/u-board/domain`) gives the request a reference makes at a time.
 - `maxAgeSeconds` — how old the source's value may normally be and still be current, as HTTP's
   `max-age` says of a response. A source that publishes on a schedule, and late, has values that are
   always some minutes old: an hourly measurement published forty minutes after the hour is up to two

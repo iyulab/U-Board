@@ -9,6 +9,8 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - `describe("elements")` says that nothing an element draws reaches past its box, so a shadow needs room inside it.
+- `describe("data")` says how to bind a source asked for the data of a given time: time places in `path`
+  (`{{now:yyyyMMdd}}`) with `timeZone` and `requestTime`.
 
 ## [0.21.1] - 2026-10-21
 

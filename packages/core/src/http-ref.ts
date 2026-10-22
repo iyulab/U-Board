@@ -37,6 +37,21 @@ export interface HttpRef {
    *  next one arrives. A value older than this, by the time the source says it observed it, is `lagging`.
    *  It also bounds how often the source is asked again: no sooner than an eighth of it. Absent: no limit. */
   maxAgeSeconds?: number;
+  /** The time `{{now:…}}` in `path` stands for, for a source that is asked for the data of a given time
+   *  (`base_date={{now:yyyyMMdd}}&base_time={{now:HHmm}}`) rather than for its latest. Each request takes the
+   *  time it is sent, `delaySeconds` earlier — how long after its time the source publishes it — rounded down
+   *  to a multiple of `stepSeconds` — how often it publishes — on `timeZone`'s clock. Absent: the time the
+   *  request is sent, to the minute. See `requestPath`. */
+  requestTime?: HttpRefRequestTime;
+}
+
+/** When a request's `{{now:…}}` is: see `HttpRef.requestTime`. */
+export interface HttpRefRequestTime {
+  /** How long after a time the source has its data (seconds, ≥ 0). Absent: 0. */
+  delaySeconds?: number;
+  /** How often the source has new data (seconds, > 0): the time is rounded down to a multiple of it, counted
+   *  from midnight on `timeZone`'s clock. Absent: 60 — to the minute. */
+  stepSeconds?: number;
 }
 
 /**
@@ -50,17 +65,62 @@ export interface HttpRef {
  */
 export function isHttpRef(ref: unknown): ref is HttpRef {
   if (!ref || typeof ref !== 'object' || Array.isArray(ref)) return false;
-  const { path, item, valuePath, observedAtPath, timeZone, maxAgeSeconds } = ref as Record<string, unknown>;
+  const { path, item, valuePath, observedAtPath, timeZone, maxAgeSeconds, requestTime } = ref as Record<string, unknown>;
   return (
     typeof path === 'string' &&
     path.startsWith('/') &&
     !path.startsWith('//') &&
+    requestTimeProblem(path) === undefined &&
+    (requestTime === undefined || isRequestTime(requestTime)) &&
     (item === undefined || isHttpRefItem(item)) &&
     (valuePath === undefined || typeof valuePath === 'string') &&
     (observedAtPath === undefined || isPointer(observedAtPath)) &&
     (timeZone === undefined || (typeof timeZone === 'string' && isTimeZone(timeZone))) &&
     (maxAgeSeconds === undefined || (typeof maxAgeSeconds === 'number' && Number.isFinite(maxAgeSeconds) && maxAgeSeconds > 0))
   );
+}
+
+/** A place in a request path for its time: `{{now:yyyyMMdd}}`, `{{now:HHmm}}` — the pattern made of `yyyy`
+ *  `MM` `dd` `HH` `mm` and the separators `-` `.` `:` `_` `T`, so what fills it is only digits and those. */
+const NOW_PLACE = /\{\{\s*now:((?:yyyy|MM|dd|HH|mm|[-.:_T])+)\s*\}\}/g;
+const NOW_TOKEN = /yyyy|MM|dd|HH|mm/g;
+
+/** Why `path` cannot be sent — a `{{` that is not a time place (`{{now:yyyyMMdd}}`) — or undefined. */
+export function requestTimeProblem(path: string): string | undefined {
+  const rest = path.replace(NOW_PLACE, '');
+  if (!rest.includes('{{') && !rest.includes('}}')) return undefined;
+  return 'a request path takes only time places such as {{now:yyyyMMdd}} or {{now:HHmm}} (yyyy MM dd HH mm, with - . : _ T between)';
+}
+
+function isRequestTime(time: unknown): time is HttpRefRequestTime {
+  if (!time || typeof time !== 'object' || Array.isArray(time)) return false;
+  const { delaySeconds, stepSeconds, ...rest } = time as Record<string, unknown>;
+  return (
+    Object.keys(rest).length === 0 &&
+    (delaySeconds === undefined || (typeof delaySeconds === 'number' && Number.isFinite(delaySeconds) && delaySeconds >= 0)) &&
+    (stepSeconds === undefined || (typeof stepSeconds === 'number' && Number.isFinite(stepSeconds) && stepSeconds > 0))
+  );
+}
+
+/** The request `ref` makes when sent at `now` (epoch ms): its `path` with each `{{now:…}}` filled in with the
+ *  time `requestTime` names, read on `timeZone`'s clock (UTC when absent). A path without one is itself. */
+export function requestPath(ref: Pick<HttpRef, 'path' | 'timeZone' | 'requestTime'>, now: number): string {
+  if (!ref.path.includes('{{')) return ref.path;
+  const delayMs = (ref.requestTime?.delaySeconds ?? 0) * 1000;
+  const stepMs = (ref.requestTime?.stepSeconds ?? 60) * 1000;
+  const instant = now - delayMs;
+  // The wall clock written as if it were UTC, so a step counts from local midnight.
+  const wall = instant + (ref.timeZone ? zoneOffset(instant, ref.timeZone) : 0);
+  const at = new Date(Math.floor(wall / stepMs) * stepMs);
+  const two = (n: number) => String(n).padStart(2, '0');
+  const field: Record<string, string> = {
+    yyyy: String(at.getUTCFullYear()).padStart(4, '0'),
+    MM: two(at.getUTCMonth() + 1),
+    dd: two(at.getUTCDate()),
+    HH: two(at.getUTCHours()),
+    mm: two(at.getUTCMinutes()),
+  };
+  return ref.path.replace(NOW_PLACE, (_, pattern: string) => pattern.replace(NOW_TOKEN, token => field[token]));
 }
 
 /**

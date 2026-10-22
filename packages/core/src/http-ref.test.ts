@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isHttpRef, isSourceErrorField, parseSourceTime, readHttpRef, sourceErrorIn, valueAtPath, findHttpRefItem } from './http-ref.js';
+import { isHttpRef, isSourceErrorField, parseSourceTime, readHttpRef, requestPath, requestTimeProblem, sourceErrorIn, valueAtPath, findHttpRefItem } from './http-ref.js';
 
 const READ_AT = Date.parse('2026-10-09T14:30:00Z');
 
@@ -29,6 +29,52 @@ describe('isHttpRef', () => {
 
   it('refuses an item with no fields to match', () => {
     expect(isHttpRef({ path: '/r', item: { list: '/rows', where: {} } })).toBe(false);
+  });
+});
+
+describe('requestPath', () => {
+  const KMA = '/getUltraSrtNcst?base_date={{now:yyyyMMdd}}&base_time={{now:HHmm}}&nx=60&ny=127';
+
+  it('is the path itself when it has no time place', () => {
+    expect(requestPath({ path: '/readings?x=1' }, READ_AT)).toBe('/readings?x=1');
+  });
+
+  it('fills each time place with the time of the request on the time zone’s clock, to the minute by default', () => {
+    // 14:30:00Z is 23:30 in Seoul.
+    expect(requestPath({ path: KMA, timeZone: 'Asia/Seoul' }, READ_AT + 59_000)).toBe('/getUltraSrtNcst?base_date=20261009&base_time=2330&nx=60&ny=127');
+    expect(requestPath({ path: '/d/{{now:yyyy-MM-ddTHH:mm}}' }, READ_AT)).toBe('/d/2026-10-09T14:30');
+  });
+
+  it('takes the time the source has published by: the delay earlier, rounded down to its step', () => {
+    const hourly = { path: KMA, timeZone: 'Asia/Seoul', requestTime: { delaySeconds: 40 * 60, stepSeconds: 3600 } };
+    // 23:30 in Seoul: the 23:00 data is not out until 23:40, so 22:00.
+    expect(requestPath(hourly, READ_AT)).toBe('/getUltraSrtNcst?base_date=20261009&base_time=2200&nx=60&ny=127');
+    expect(requestPath(hourly, READ_AT + 10 * 60_000)).toBe('/getUltraSrtNcst?base_date=20261009&base_time=2300&nx=60&ny=127');
+    // 00:20 the next day in Seoul is still the day before's 23:00 — date and time come from one time.
+    expect(requestPath(hourly, READ_AT + 50 * 60_000)).toBe('/getUltraSrtNcst?base_date=20261009&base_time=2300&nx=60&ny=127');
+  });
+
+  it('counts a step from midnight on the time zone’s clock', () => {
+    const daily = { path: '/day/{{now:yyyyMMdd}}', timeZone: 'Asia/Seoul', requestTime: { stepSeconds: 86_400 } };
+    expect(requestPath(daily, READ_AT)).toBe('/day/20261009');
+    expect(requestPath(daily, READ_AT + 31 * 60_000)).toBe('/day/20261010');
+  });
+});
+
+describe('requestTimeProblem', () => {
+  it('takes time places and nothing else in braces', () => {
+    expect(requestTimeProblem('/r?d={{now:yyyyMMdd}}&t={{ now:HHmm }}')).toBeUndefined();
+    expect(requestTimeProblem('/r?d={{now:yyyy/MM}}')).toMatch(/time places/);
+    expect(requestTimeProblem('/r?d={{value}}')).toMatch(/time places/);
+    expect(requestTimeProblem('/r?d={{now:ss}}')).toMatch(/time places/);
+  });
+
+  it('makes a reference with another place, or a malformed request time, not one', () => {
+    expect(isHttpRef({ path: '/r?d={{host}}' })).toBe(false);
+    expect(isHttpRef({ path: '/r?d={{now:yyyyMMdd}}', requestTime: { delaySeconds: 2400, stepSeconds: 3600 } })).toBe(true);
+    for (const requestTime of [{ stepSeconds: 0 }, { delaySeconds: -1 }, { delaySeconds: '60' }, { every: 60 }, []]) {
+      expect(isHttpRef({ path: '/r', requestTime })).toBe(false);
+    }
   });
 });
 

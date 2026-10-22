@@ -667,6 +667,18 @@ describe('PropertyPanel bindings', () => {
       expect(screen.getByLabelText('Normally at most (minutes old)')).toHaveValue(120);
     });
 
+    it('keeps the time places of a path asked for a given time, with their time and zone, through an edit', async () => {
+      const ref = {
+        path: '/air?date={{now:yyyyMMdd}}&time={{now:HHmm}}', valuePath: '/rows/0/level', timeZone: 'Asia/Seoul',
+        requestTime: { delaySeconds: 2400, stepSeconds: 3600 },
+      };
+      const onChange = vi.fn();
+      render(<PropertyPanel node={statusNode({ 'data.value': { adapter: 'connector-1', ref } })} adapters={[new AirAdapter()]} onChange={onChange} />);
+      fireEvent.click(screen.getByText('Edit'));
+      fireEvent.click(screen.getByText('Save binding'));
+      expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual(ref);
+    });
+
     it('saves no time zone when the value counts as observed when it is read', async () => {
       const onChange = await pickNorthLevel();
       fireEvent.change(screen.getByLabelText('Observed time'), { target: { value: '/measured' } });

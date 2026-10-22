@@ -13,6 +13,14 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
+- A data source can be asked for the data of a given time: a binding's request writes the time as a place
+  (`{{now:yyyyMMdd}}`), filled in on the source's clock each time it is sent — so a source that answers only for
+  an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
+- A gallery sample of the weather now in fourteen Korean towns from the national weather service's hourly
+  observations, drawn on its 5 km forecast grid itself — every town a dot at its grid point with a card for its
+  temperature, humidity, wind and anything falling. It can be created in an installation with a key from the
+  public data portal.
+
 - A gallery sample of a fishing harbour's dawn auction drawn as an ukiyo-e woodblock print: the boats at sea, on
   their way in with their minutes to the breakwater, unloading and sold, the auction's order and the boxes sold by the
   half hour (example data).

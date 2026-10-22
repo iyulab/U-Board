@@ -70,6 +70,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),
+  'korea-weather-grid': () => import('./packs/korea-weather-grid.js').then(m => m.koreaWeatherGrid),
   'seoul-subway': () => import('./packs/seoul-subway.js').then(m => m.seoulSubway),
   'factory-floor': () => import('./packs/factory-floor.js').then(m => m.factoryFloor),
   'line-spc': () => import('./packs/line-spc.js').then(m => m.lineSpc),

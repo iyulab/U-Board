@@ -43,9 +43,12 @@ const resolved = await resolveDocument(doc, adapters);
 
 The authoring view's binding form writes one of two reference shapes. An adapter that lists its
 references (`references()`) is bound by picking one, and the reference is that string. Any other adapter
-takes the HTTP connector's reference, `{ path, item?, valuePath?, observedAtPath?, timeZone?, maxAgeSeconds? }`:
+takes the HTTP connector's reference, `{ path, item?, valuePath?, observedAtPath?, timeZone?, maxAgeSeconds?, requestTime? }`:
 
-- `path`: the request.
+- `path`: the request. For a source asked for the data of a given time, it holds time places —
+  `?date={{now:yyyyMMdd}}&time={{now:HHmm}}` — that each request fills in on `timeZone`'s clock, at the
+  time `requestTime: { delaySeconds?, stepSeconds? }` names: the time of the request, that much earlier,
+  rounded down to that step.
 - `valuePath`: an RFC 6901 JSON Pointer into the response.
 - `item: { list, where }`: one element of the list at `list`, named by its fields rather than its
   position — sources reorder their lists. `valuePath` is then read inside that element.

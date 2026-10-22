@@ -5,7 +5,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { findHttpRefItem, placedIn, sourceErrorIn, type HttpRef } from '@iyulab/u-board/domain';
+import { findHttpRefItem, placedIn, requestPath, sourceErrorIn, type HttpRef } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS } from '../src/index.js';
 import { keepPointers } from '../src/prune.js';
 import { isInstallable, isLiveConnector, type LiveSampleConnector, type SamplePack } from '../src/sample-pack.js';
@@ -66,7 +66,8 @@ for (const pack of SAMPLE_PACKS.filter(pack => isInstallable(pack) && (only.size
     responses[key] = {};
     for (const [path, refs] of paths) {
       // A failed request is reported by its path alone: the address carries the key.
-      const res = await fetch(requestUrl(connector, path, keyOf(connector) ?? '')).catch((error: unknown) => {
+      // A path with time places is sent with them filled in, and recorded under the path as written — the binding's.
+      const res = await fetch(requestUrl(connector, requestPath(refs[0], Date.now()), keyOf(connector) ?? '')).catch((error: unknown) => {
         throw new Error(`${pack.id}: ${path} could not be read (${error instanceof Error ? error.name : 'error'})`);
       });
       if (!res.ok || !(res.headers.get('content-type') ?? '').includes('json')) {
