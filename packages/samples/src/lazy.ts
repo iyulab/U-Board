@@ -72,6 +72,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'site-noise-score': () => import('./packs/site-noise-score.js').then(m => m.siteNoiseScore),
   'kiln-porcelain': () => import('./packs/kiln-porcelain.js').then(m => m.kilnPorcelain),
   'museum-najeon': () => import('./packs/museum-najeon.js').then(m => m.museumNajeon),
+  'recycling-polaroid': () => import('./packs/recycling-polaroid.js').then(m => m.recyclingPolaroid),
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),
