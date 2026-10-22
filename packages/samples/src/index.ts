@@ -13,6 +13,7 @@ export { kilnPorcelain } from './packs/kiln-porcelain.js';
 export { museumNajeon } from './packs/museum-najeon.js';
 export { recyclingPolaroid } from './packs/recycling-polaroid.js';
 export { coldchainVapor } from './packs/coldchain-vapor.js';
+export { deliveryBoardgame } from './packs/delivery-boardgame.js';
 export { factoryFloor } from './packs/factory-floor.js';
 export { lineSpc } from './packs/line-spc.js';
 export { waterPumps } from './packs/water-pumps.js';
@@ -100,6 +101,7 @@ import { kilnPorcelain } from './packs/kiln-porcelain.js';
 import { museumNajeon } from './packs/museum-najeon.js';
 import { recyclingPolaroid } from './packs/recycling-polaroid.js';
 import { coldchainVapor } from './packs/coldchain-vapor.js';
+import { deliveryBoardgame } from './packs/delivery-boardgame.js';
 import { factoryFloor } from './packs/factory-floor.js';
 import { lineSpc } from './packs/line-spc.js';
 import { waterPumps } from './packs/water-pumps.js';
@@ -177,4 +179,4 @@ import { droneRoutes } from './packs/drone-routes.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. A pack added here is added to `./lazy.ts` too, which loads each on its own. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, laundromatDesktop, kitchenTickets, offshoreWindChart, aquariumLabels, vetComic, apiaryStitch, damSteampunk, poolMosaic, callcenterCork, observatoryGlass, campsitePapercut, chargingPcb, daycareBricks, makerspaceShadowboard, quakeHelicorder, wineryEngraving, bowlingGoogie, elevatorTui, droneRoutes, lostFoundDossier, nightMarketNeon, siteNoiseScore, kilnPorcelain, museumNajeon, recyclingPolaroid, coldchainVapor, gwanghwamun, seoulAir, seoulDistrictsAir, koreaWeatherGrid, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, laundromatDesktop, kitchenTickets, offshoreWindChart, aquariumLabels, vetComic, apiaryStitch, damSteampunk, poolMosaic, callcenterCork, observatoryGlass, campsitePapercut, chargingPcb, daycareBricks, makerspaceShadowboard, quakeHelicorder, wineryEngraving, bowlingGoogie, elevatorTui, droneRoutes, lostFoundDossier, nightMarketNeon, siteNoiseScore, kilnPorcelain, museumNajeon, recyclingPolaroid, coldchainVapor, deliveryBoardgame, gwanghwamun, seoulAir, seoulDistrictsAir, koreaWeatherGrid, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];

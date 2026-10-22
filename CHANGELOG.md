@@ -18,6 +18,9 @@ do when upgrading. Each release's notes carry its section.
   an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
   The binding form asks for the time zone and when the source has its data, and shows the request it makes now;
   the console's connection test fills a path's time places on the author's own clock.
+- A gallery sample of a parcel depot's delivery rounds as a board game: each driver a lane of twenty spaces with the
+  pawn as far along as the route delivered and the card the driver holds for the state, with the day's tally as dice
+  and the deliveries by hour (example data).
 - A gallery sample of a cold-chain warehouse as vaporwave: six temperature zones as glass cards before a sunset
   grid, each with a thermometer showing its band and where it is now, and its state in a mark, a word and the card's
   edge, with the zone out of band over the day and the reefer trucks at the docks (example data).
