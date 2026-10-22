@@ -18,6 +18,10 @@ do when upgrading. Each release's notes carry its section.
   an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
   The binding form asks for the time zone and when the source has its data, and shows the request it makes now;
   the console's connection test fills a path's time places on the author's own clock.
+- A gallery sample of a district heating network on a 1960s control console: each station's supply and return
+  temperatures in Nixie tubes and its state as the lit one of four engraved lamps, the pipes carrying their flow and
+  drawn dashed where a leak is suspected or a district bypassed, with the heat sent out over the day and an
+  annunciator (example data).
 - A gallery sample of a fishing harbour's night watch on a green-phosphor radar scope: every boat out a blip placed
   where it is, its call sign, speed and state in a mark and a word — amber near a closed area, dimmed when its
   position reports stop — with the boats' roster and the wave height against the advisory level (example data).
