@@ -75,6 +75,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'recycling-polaroid': () => import('./packs/recycling-polaroid.js').then(m => m.recyclingPolaroid),
   'coldchain-vapor': () => import('./packs/coldchain-vapor.js').then(m => m.coldchainVapor),
   'delivery-boardgame': () => import('./packs/delivery-boardgame.js').then(m => m.deliveryBoardgame),
+  'harbor-radar': () => import('./packs/harbor-radar.js').then(m => m.harborRadar),
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),
