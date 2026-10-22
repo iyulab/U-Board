@@ -78,6 +78,7 @@ export { quakeHelicorder } from './packs/quake-helicorder.js';
 export { wineryEngraving } from './packs/winery-engraving.js';
 export { bowlingGoogie } from './packs/bowling-googie.js';
 export { elevatorTui } from './packs/elevator-tui.js';
+export { droneRoutes } from './packs/drone-routes.js';
 
 import { gwanghwamun } from './packs/gwanghwamun.js';
 import { seoulAir } from './packs/seoul-air.js';
@@ -156,7 +157,8 @@ import { quakeHelicorder } from './packs/quake-helicorder.js';
 import { wineryEngraving } from './packs/winery-engraving.js';
 import { bowlingGoogie } from './packs/bowling-googie.js';
 import { elevatorTui } from './packs/elevator-tui.js';
+import { droneRoutes } from './packs/drone-routes.js';
 import type { SamplePack } from './sample-pack.js';
 
 /** Every sample, in the gallery's order. A pack added here is added to `./lazy.ts` too, which loads each on its own. */
-export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, laundromatDesktop, kitchenTickets, offshoreWindChart, aquariumLabels, vetComic, apiaryStitch, damSteampunk, poolMosaic, callcenterCork, observatoryGlass, campsitePapercut, chargingPcb, daycareBricks, makerspaceShadowboard, quakeHelicorder, wineryEngraving, bowlingGoogie, elevatorTui, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];
+export const SAMPLE_PACKS: readonly SamplePack[] = [portTerminal, commerceLive, bloodJourney, telecomNoc, railNetwork, airportDepartures, smartFarm, festivalOps, hotelGlass, clinicKiosk, libraryReport, breweryScada, homeEink, tunnelTbm, worldSupply, bakerySketch, waferMaps, groundStation, mallWayfinding, warehouseRacks, wardBeds, busTerminal, racePitwall, skiResort, palaceVisit, islandFerry, theatreBoxoffice, parkTrails, themePark, countHall, farmersMarket, harborAuction, bankBranch, bikeShare, pcCafe, fireDispatch, produceMarket, clinicVaccines, parcelHub, schoolChalkboard, parkingSigns, laundromatDesktop, kitchenTickets, offshoreWindChart, aquariumLabels, vetComic, apiaryStitch, damSteampunk, poolMosaic, callcenterCork, observatoryGlass, campsitePapercut, chargingPcb, daycareBricks, makerspaceShadowboard, quakeHelicorder, wineryEngraving, bowlingGoogie, elevatorTui, droneRoutes, gwanghwamun, seoulAir, seoulDistrictsAir, seoulSubway, factoryFloor, lineSpc, waterPumps, powerSld, lineOee, lineFlow, pumpStation, utilityRegions, serverRoom, buildingFloor, microgrid, bodyGap, itTopology, assemblyWip];

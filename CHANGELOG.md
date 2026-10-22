@@ -96,6 +96,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of an office tower's lifts on a text-mode console: six shafts with every car drawn at the floor it
   is at, its mark telling travel, waiting, service mode or a trapped alarm, the hall calls, the alarm log and the trips
   by the hour (example data).
+- A gallery sample of an island group's drone deliveries drawn as a vintage airline route map: every route an arc whose
+  colour, dash, width and label follow its flight (in the air, due, held by the wind, done), every stop a luggage label
+  on its island, the fleet's batteries and the drops by the hour (example data).
 
 ### Changed
 
