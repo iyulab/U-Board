@@ -4,7 +4,7 @@
 
 import type { SamplePack } from './sample-pack.js';
 
-export { snapshotAdapters } from './snapshot-adapter.js';
+export { SnapshotAdapter, snapshotAdapters } from './snapshot-adapter.js';
 
 const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'port-terminal': () => import('./packs/port-terminal.js').then(m => m.portTerminal),

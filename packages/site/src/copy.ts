@@ -9,6 +9,7 @@ export const PATHS = {
   home: { ko: '/', en: '/en/' },
   try: { ko: '/try/', en: '/en/try/' },
   gallery: { ko: '/gallery/', en: '/en/gallery/' },
+  playground: { ko: '/playground/', en: '/en/playground/' },
 } as const;
 
 export type PageId = keyof typeof PATHS;
@@ -65,6 +66,24 @@ export interface Copy {
     narrow: string;
     source: string;
     references: Record<string, string>;
+  };
+  /** The JSON playground: a board's definition and data as text, drawn as typed. */
+  playground: {
+    nav: string;
+    title: string;
+    description: string;
+    heading: string;
+    intro: string;
+    board: string;
+    definition: string;
+    data: string;
+    view: string;
+    /** In `problems`: `{n}` — how many. */
+    ok: string;
+    problems: string;
+    loading: string;
+    loadFailed: string;
+    toTry: string;
   };
   gallery: {
     nav: string;
@@ -219,6 +238,22 @@ export const COPY: Record<Locale, Copy> = {
         'conveyor.state': '컨베이어 상태(연결 끊김)',
       },
     },
+    playground: {
+      nav: '플레이그라운드',
+      title: 'U-Board — JSON 플레이그라운드',
+      description: 'U-Board 보드의 정의(view document)와 데이터를 JSON으로 고치면 바로 그려 봅니다. 갤러리의 보드를 불러와 바꿔 볼 수 있습니다.',
+      heading: 'JSON 플레이그라운드',
+      intro: '보드는 JSON 두 개로 그려집니다 — 배경·노드·위젯·바인딩을 적은 정의(view document)와, 바인딩이 읽는 원천의 응답. 왼쪽을 고치면 오른쪽 보드가 바로 다시 그려지고, 잘못된 곳은 JSON 경로로 알려 줍니다. 갤러리의 보드를 불러와 시작해 보세요. 고친 내용은 이 페이지 안에만 있고 어디에도 보내지 않습니다.',
+      board: '갤러리 보드 불러오기',
+      definition: '정의',
+      data: '데이터',
+      view: '보드',
+      ok: '문제 없음 — 보드를 그렸습니다.',
+      problems: '문제 {n}개 — 고치면 다시 그립니다.',
+      loading: '불러오는 중…',
+      loadFailed: '보드를 불러오지 못했습니다.',
+      toTry: '편집 화면으로 만들어 보기',
+    },
     gallery: {
       nav: '갤러리',
       title: 'U-Board — 보드 갤러리',
@@ -361,6 +396,22 @@ export const COPY: Record<Locale, Copy> = {
         'line.pressure': 'Line pressure (stale)',
         'conveyor.state': 'Conveyor state (disconnected)',
       },
+    },
+    playground: {
+      nav: 'Playground',
+      title: 'U-Board — JSON playground',
+      description: 'Edit a U-Board board’s definition (view document) and data as JSON and see it drawn as you type. Start from any board in the gallery.',
+      heading: 'JSON playground',
+      intro: 'A board is drawn from two pieces of JSON — the definition (view document) with its background, nodes, widgets and bindings, and the answers of the sources its bindings read. Edit either on the left and the board on the right is drawn again; anything wrong is named by its JSON path. Start from a board of the gallery. What you edit stays in this page and is sent nowhere.',
+      board: 'Load a gallery board',
+      definition: 'Definition',
+      data: 'Data',
+      view: 'Board',
+      ok: 'No problems — the board is drawn.',
+      problems: '{n} problems — fix them and it is drawn again.',
+      loading: 'Loading…',
+      loadFailed: 'The board could not be loaded.',
+      toTry: 'Build one in the editor instead',
     },
     gallery: {
       nav: 'Gallery',

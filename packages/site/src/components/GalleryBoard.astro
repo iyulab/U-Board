@@ -91,6 +91,7 @@ const jsonLd = [
       {thumb ? <img src={thumb.path} width={thumb.width} height={thumb.height} alt={title} /> : <noscript>{pack.summary[locale]}</noscript>}
     </div>
     <p class="board-recorded">{recorded}</p>
+    <p class="board-actions"><a class="board-open" href={`${PATHS.playground[locale]}?board=${pack.id}`}>{b.openPlayground} →</a></p>
 
     <section class="board-json">
       <details>
@@ -213,6 +214,21 @@ const jsonLd = [
     margin: 0.5rem 0 0;
     font-size: 0.8125rem;
     color: var(--muted);
+  }
+  .board-actions {
+    margin: 1rem 0 0;
+  }
+  .board-open {
+    display: inline-block;
+    padding: 0.45rem 0.9rem;
+    border-radius: 6px;
+    background: var(--ink);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .board-open:hover {
+    text-decoration: underline;
   }
   .board-json {
     display: grid;

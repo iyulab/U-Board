@@ -78,13 +78,16 @@ main,
 
 .bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem 1.5rem;
   padding-top: 1.25rem;
   padding-bottom: 1.25rem;
 }
 
 .mark {
+  white-space: nowrap;
   font-weight: 600;
   font-size: 1.125rem;
   text-decoration: none;
@@ -92,8 +95,14 @@ main,
 
 .bar nav {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
   font-size: 0.9375rem;
+}
+
+/* A link in the bar is a word that moves to the next line whole, never one broken in the middle. */
+.bar nav a {
+  white-space: nowrap;
 }
 
 /* Hero: the claim on the left, the drawing that shows it on the right. */
