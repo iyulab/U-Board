@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `sample_source` takes `timeZone` and `requestTime`, so a request with time places is read for the time the binding
+  will ask for.
+
 ### Changed
 
 - `describe("elements")` says that nothing an element draws reaches past its box, so a shadow needs room inside it.

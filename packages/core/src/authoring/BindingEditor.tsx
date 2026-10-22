@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useId, useMemo, useState } from 'react';
 import { applyValueMap, type Adapter, type AdapterReference, type ResolvedBinding } from '../adapter.js';
 import type { Binding } from '../view-document.js';
-import { findHttpRefItem, isTimeZone, parseSourceTime, type HttpRef, type HttpRefItem, type HttpRefRequestTime } from '../http-ref.js';
+import { findHttpRefItem, isTimeZone, parseSourceTime, requestPath, requestTimeProblem, type HttpRef, type HttpRefItem, type HttpRefRequestTime } from '../http-ref.js';
 import { deviceTimeZone, knownTimeZones, lacksOffset, timeFieldsIn, type TimeField } from './time-fields.js';
 import { JsonTreeExplorer } from './JsonTreeExplorer.js';
 import { QUALITY_FRAME_STYLE } from '../quality-presentation.js';
@@ -53,9 +53,10 @@ interface BindingDraft extends MapDraft {
   timeZone?: string;
   /** `maxAgeSeconds` in minutes, as typed — empty: none. */
   maxAgeMinutes: string;
-  /** When the path's time places (`{{now:yyyyMMdd}}`) are — an HTTP connector reference's `requestTime`, kept as
-   *  loaded; its time is read on `timeZone`'s clock. */
-  requestTime?: HttpRefRequestTime;
+  /** When the path's time places (`{{now:yyyyMMdd}}`) are — an HTTP connector reference's `requestTime` — in
+   *  minutes, as typed (empty: none); its time is read on `timeZone`'s clock. */
+  requestDelayMinutes: string;
+  requestStepMinutes: string;
   /** The `ref` picked from an adapter that offers its references (`Adapter.references`). */
   listedRef: string;
 }
@@ -112,7 +113,7 @@ function itemText(item: ListItem): string {
 }
 
 function emptyDraft(connectorId: string, propPath = ''): BindingDraft {
-  return { propPath, connectorId, path: '', valuePath: '', maxAgeMinutes: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
+  return { propPath, connectorId, path: '', valuePath: '', maxAgeMinutes: '', requestDelayMinutes: '', requestStepMinutes: '', listedRef: '', mappings: [], ranges: [], otherwise: '' };
 }
 
 
@@ -157,7 +158,7 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
   const ref = binding.ref as Partial<HttpRef> | string;
   const map = draftMap(binding.map);
   if (typeof ref === 'string') {
-    return { propPath, connectorId: binding.adapter, path: '', valuePath: '', maxAgeMinutes: '', listedRef: ref, ...map };
+    return { propPath, connectorId: binding.adapter, path: '', valuePath: '', maxAgeMinutes: '', requestDelayMinutes: '', requestStepMinutes: '', listedRef: ref, ...map };
   }
   return {
     propPath,
@@ -168,7 +169,8 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
     observedAtPath: ref.observedAtPath,
     timeZone: ref.timeZone,
     maxAgeMinutes: ref.maxAgeSeconds === undefined ? '' : String(ref.maxAgeSeconds / 60),
-    requestTime: ref.requestTime,
+    requestDelayMinutes: ref.requestTime?.delaySeconds === undefined ? '' : String(ref.requestTime.delaySeconds / 60),
+    requestStepMinutes: ref.requestTime?.stepSeconds === undefined ? '' : String(ref.requestTime.stepSeconds / 60),
     listedRef: '',
     ...map,
   };
@@ -280,9 +282,9 @@ export function BindingEditor({
           valuePath: draft.valuePath || undefined,
           // A time zone places the observed time, and the path's time places; with neither, it has nothing to place.
           ...(draft.observedAtPath !== undefined ? { observedAtPath: draft.observedAtPath } : {}),
-          ...((draft.observedAtPath !== undefined || draft.path.includes('{{')) && draft.timeZone ? { timeZone: draft.timeZone } : {}),
+          ...((draft.observedAtPath !== undefined || hasTimePlaces(draft.path)) && draft.timeZone ? { timeZone: draft.timeZone } : {}),
           ...(typeof maxAgeSeconds(draft) === 'number' ? { maxAgeSeconds: maxAgeSeconds(draft) } : {}),
-          ...(draft.requestTime && draft.path.includes('{{') ? { requestTime: draft.requestTime } : {}),
+          ...(hasTimePlaces(draft.path) && requestTimeOf(draft) ? { requestTime: requestTimeOf(draft) } : {}),
         };
 
   const handlePreview = async () => {
@@ -303,17 +305,23 @@ export function BindingEditor({
   const rangeIssues = invalidRanges(draft);
   // What still keeps the binding from being saved, said next to the button. A broken range row is
   // already named where it is.
-  const zoneInvalid = !listed && draft.observedAtPath !== undefined && !!draft.timeZone && !isTimeZone(draft.timeZone);
+  const zoneInvalid = !listed && (draft.observedAtPath !== undefined || hasTimePlaces(draft.path)) && !!draft.timeZone && !isTimeZone(draft.timeZone);
   const maxAgeInvalid = !listed && maxAgeSeconds(draft) === null;
+  const placeProblem = !listed && draft.path.includes('{{') ? requestTimeProblem(draft.path) : undefined;
+  const requestTimeInvalid = !listed && hasTimePlaces(draft.path) && requestTimeOf(draft) === null;
   const saveHint = !draft.propPath
     ? labels.bindingNeedsPropPath
     : listed && !draft.listedRef
       ? labels.bindingNeedsReference
-      : zoneInvalid
-        ? labels.unknownTimeZone
-        : maxAgeInvalid
-          ? labels.invalidMaxAge
-          : null;
+      : placeProblem
+        ? labels.invalidTimePlace
+        : zoneInvalid
+          ? labels.unknownTimeZone
+          : maxAgeInvalid
+            ? labels.invalidMaxAge
+            : requestTimeInvalid
+              ? labels.invalidRequestTime
+              : null;
   const saveBlocked = saveHint !== null || rangeIssues.length > 0;
 
   // The same wording the canvas frame's tooltip uses for this binding, cause included.
@@ -332,7 +340,11 @@ export function BindingEditor({
     if (!selectedAdapter || listed) return;
     setExploreError(null);
     try {
-      const resolved = await selectedAdapter.resolve({ path: draft.path });
+      // A path asked for a given time is read at that time, on the source's clock.
+      const timed = hasTimePlaces(draft.path);
+      const zone = timed && draft.timeZone && isTimeZone(draft.timeZone) ? { timeZone: draft.timeZone } : {};
+      const time = timed && requestTimeOf(draft) ? { requestTime: requestTimeOf(draft) } : {};
+      const resolved = await selectedAdapter.resolve({ path: draft.path, ...zone, ...time });
       if (resolved.quality === 'disconnected') {
         // What went wrong, when the adapter says — a source's own words name the fix (a key, a query).
         setExploreError(resolved.message ? `${labels.exploreFailed} — ${resolved.message}` : labels.exploreFailed);
@@ -481,6 +493,7 @@ export function BindingEditor({
                   <input value={draft.path} onChange={e => setDraft({ ...draft, path: e.target.value })} placeholder="/pumps/a" />
                 </label>
                 {carriesKey(draft.path) && <p className="ub-panel__hint">{labels.keyInPath}</p>}
+                {hasTimePlaces(draft.path) && <RequestTimeFields draft={draft} setDraft={setDraft} zones={timeZones} labels={labels} clock={clock} />}
                 <label className="ub-panel__field" style={FIELD_STYLE}>
                   {labels.valuePath}
                   <input value={draft.valuePath} onChange={e => setDraft({ ...draft, valuePath: e.target.value })} placeholder="/status" />
@@ -628,7 +641,8 @@ function ObservedTimeFields({
         </select>
       </label>
       {!explored && current === undefined && <p className="ub-panel__hint">{labels.observedAtHint}</p>}
-      {current !== undefined && (
+      {/* A path asked for a given time names its zone with its request time, above. */}
+      {current !== undefined && !hasTimePlaces(draft.path) && (
         <label className="ub-panel__field" style={FIELD_STYLE}>
           {labels.timeZone}
           <input
@@ -678,6 +692,101 @@ function ObservedTimeFields({
         {labels.maxAgeHint}
       </p>
     </>
+  );
+}
+
+/** Whether `path` names the time it asks for (`{{now:yyyyMMdd}}`). */
+function hasTimePlaces(path: string): boolean {
+  return /\{\{\s*now:/.test(path);
+}
+
+/** The draft's request time in seconds: `undefined` when both are left empty, `null` when what is typed is not a
+ *  number of minutes — 0 or more for the delay, above 0 for the step. */
+function requestTimeOf(draft: BindingDraft): HttpRefRequestTime | undefined | null {
+  const delay = draft.requestDelayMinutes.trim();
+  const step = draft.requestStepMinutes.trim();
+  if (delay === '' && step === '') return undefined;
+  const delaySeconds = delay === '' ? undefined : Math.round(Number(delay) * 60);
+  const stepSeconds = step === '' ? undefined : Math.round(Number(step) * 60);
+  if (delaySeconds !== undefined && !(Number.isFinite(delaySeconds) && delaySeconds >= 0)) return null;
+  if (stepSeconds !== undefined && !(Number.isFinite(stepSeconds) && stepSeconds >= 1)) return null;
+  return { ...(delaySeconds !== undefined && { delaySeconds }), ...(stepSeconds !== undefined && { stepSeconds }) };
+}
+
+/** For a path asked for a given time: the zone whose clock reads it, how long after a time the source has its data
+ *  and how often it has new data — and the request it makes now, so a wrong zone or delay shows before saving. */
+function RequestTimeFields({
+  draft,
+  setDraft,
+  zones,
+  labels,
+  clock,
+}: {
+  draft: BindingDraft;
+  setDraft: React.Dispatch<React.SetStateAction<BindingDraft>>;
+  zones: readonly string[];
+  labels: UBoardLabels;
+  clock: () => number;
+}) {
+  const zonesId = useId();
+  const hintId = useId();
+  const time = requestTimeOf(draft);
+  const zone = draft.timeZone && isTimeZone(draft.timeZone) ? draft.timeZone : undefined;
+  const now = time === null || requestTimeProblem(draft.path) ? null : requestPath({ path: draft.path, timeZone: zone, requestTime: time }, clock());
+  return (
+    <fieldset className="ub-panel__group" style={{ border: 0, margin: 0, padding: 0 }}>
+      <legend className="ub-panel__hint">{labels.requestTime}</legend>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.timeZone}
+        <input
+          list={zonesId}
+          value={draft.timeZone ?? ''}
+          onChange={e => setDraft(d => ({ ...d, timeZone: e.target.value.trim() === '' ? undefined : e.target.value.trim() }))}
+          placeholder="UTC"
+          aria-invalid={!!draft.timeZone && !isTimeZone(draft.timeZone)}
+        />
+      </label>
+      {/* Outside the label: its options' text would otherwise become part of the field's name. */}
+      <datalist id={zonesId}>
+        {zones.map(zone => (
+          <option key={zone} value={zone}>
+            {zone}
+          </option>
+        ))}
+      </datalist>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.requestDelay}
+        <input
+          type="number"
+          min="0"
+          step="any"
+          value={draft.requestDelayMinutes}
+          onChange={e => setDraft(d => ({ ...d, requestDelayMinutes: e.target.value }))}
+          aria-invalid={time === null}
+          aria-describedby={hintId}
+        />
+      </label>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.requestStep}
+        <input
+          type="number"
+          min="0"
+          step="any"
+          value={draft.requestStepMinutes}
+          onChange={e => setDraft(d => ({ ...d, requestStepMinutes: e.target.value }))}
+          aria-invalid={time === null}
+          aria-describedby={hintId}
+        />
+      </label>
+      <p id={hintId} className="ub-panel__hint">
+        {labels.requestTimeHint}
+      </p>
+      {now !== null && (
+        <p className="ub-panel__hint">
+          {labels.requestNow} <code>{now}</code>
+        </p>
+      )}
+    </fieldset>
   );
 }
 

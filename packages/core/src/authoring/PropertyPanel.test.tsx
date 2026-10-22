@@ -679,6 +679,40 @@ describe('PropertyPanel bindings', () => {
       expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual(ref);
     });
 
+    it('asks a path with time places for the time its zone, delay and step name — in the preview, the explore and the save', async () => {
+      const asked: unknown[] = [];
+      class TimedAdapter extends AirAdapter {
+        async resolve(ref?: unknown): Promise<ResolvedBinding> {
+          asked.push(ref);
+          return super.resolve();
+        }
+      }
+      const onChange = vi.fn();
+      render(<PropertyPanel node={statusNode()} adapters={[new TimedAdapter()]} onChange={onChange} clock={() => NOW} />);
+      fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+      fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/air?d={{now:yyyyMMdd}}&t={{now:HHmm}}' } });
+      fireEvent.change(screen.getByLabelText('Time zone of the source'), { target: { value: 'Asia/Seoul' } });
+      fireEvent.change(screen.getByLabelText('The source has a time’s data after (minutes)'), { target: { value: '40' } });
+      fireEvent.change(screen.getByLabelText('The source has new data every (minutes)'), { target: { value: '60' } });
+      // 14:30Z is 23:30 in Seoul; the 23:00 data is out at 23:40, so it asks for 22:00.
+      expect(screen.getByText('/air?d=20261009&t=2200')).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Explore'));
+      await waitFor(() => expect(screen.getByText('level: 36')).toBeInTheDocument());
+      const timed = { timeZone: 'Asia/Seoul', requestTime: { delaySeconds: 2400, stepSeconds: 3600 } };
+      expect(asked.at(-1)).toEqual({ path: '/air?d={{now:yyyyMMdd}}&t={{now:HHmm}}', ...timed });
+      fireEvent.change(screen.getByLabelText('Value path'), { target: { value: '/rows/0/level' } });
+      fireEvent.click(screen.getByText('Save binding'));
+      expect(onChange.mock.calls.at(-1)![0].bindings['data.value'].ref).toEqual({ path: '/air?d={{now:yyyyMMdd}}&t={{now:HHmm}}', valuePath: '/rows/0/level', ...timed });
+    });
+
+    it('will not save a path with a place that is not a time', () => {
+      render(<PropertyPanel node={statusNode()} adapters={[new AirAdapter()]} onChange={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.value' } });
+      fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/air?host={{host}}' } });
+      expect(screen.getByText('A path takes only time places such as {{now:yyyyMMdd}} or {{now:HHmm}} between {{ and }}.')).toBeInTheDocument();
+      expect(screen.getByText('Save binding')).toBeDisabled();
+    });
+
     it('saves no time zone when the value counts as observed when it is read', async () => {
       const onChange = await pickNorthLevel();
       fireEvent.change(screen.getByLabelText('Observed time'), { target: { value: '/measured' } });

@@ -395,11 +395,21 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
       inputSchema: z.strictObject({
         source: z.string().min(1).max(100).describe('The data source id, from list_sources — or its name, when no other source has it.'),
         path: z.string().min(1).max(2000).describe('The request, relative to the source’s base URL: "/api/readings?line=1".'),
+        timeZone: z
+          .string()
+          .min(1)
+          .max(64)
+          .optional()
+          .describe('For a path with time places ({{now:yyyyMMdd}}): the IANA zone whose clock they are read on, as the binding will have it.'),
+        requestTime: z
+          .strictObject({ delaySeconds: z.number().min(0).optional(), stepSeconds: z.number().gt(0).optional() })
+          .optional()
+          .describe('For a path with time places: the binding’s requestTime, so the request asks for the time the binding will.'),
       }),
     },
-    async ({ source, path }) =>
+    async ({ source, path, timeZone, requestTime }) =>
       tool(async () => {
-        const { id, read } = await readSource(source, path);
+        const { id, read } = await readSource(source, { path, ...(timeZone && { timeZone }), ...(requestTime && { requestTime }) });
         // Named by its name: the answer gives the id, which is what a binding's adapter takes.
         const named = id !== source ? { source: id, note: `"${source}" is this source's name; a binding's adapter takes its id` } : {};
         if (read.quality === 'disconnected') return { ...named, read: false, reason: read.reason, message: read.message, next: UNREAD[read.reason ?? ''] ?? UNREAD.transport };
@@ -409,16 +419,16 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
 
   /** A request read from a source named as people name it — by its id, or else by its name (case and spaces aside) when
    *  only that one source has it. Two of the same name are not guessed between: their ids are said instead. */
-  async function readSource(source: string, path: string): Promise<{ id: string; read: Awaited<ReturnType<UBoardClient['resolve']>> }> {
+  async function readSource(source: string, ref: Parameters<UBoardClient['resolve']>[1]): Promise<{ id: string; read: Awaited<ReturnType<UBoardClient['resolve']>> }> {
     try {
-      return { id: source, read: await client.resolve(source, { path }) };
+      return { id: source, read: await client.resolve(source, ref) };
     } catch (error) {
       if (!(error instanceof UBoardApiError && error.status === 404)) throw error;
       const key = source.trim().toLowerCase();
       const named = (await client.listSources()).filter(s => s.name.trim().toLowerCase() === key);
       if (named.length > 1) throw new UBoardApiError(404, { code: 'NOT_FOUND', message: `${named.length} sources are named "${source}" — use one's id: ${named.map(s => s.id).join(', ')}` });
       if (named.length === 0) throw error;
-      return { id: named[0].id, read: await client.resolve(named[0].id, { path }) };
+      return { id: named[0].id, read: await client.resolve(named[0].id, ref) };
     }
   }
 

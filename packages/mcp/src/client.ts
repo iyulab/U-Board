@@ -156,7 +156,10 @@ export class UBoardClient {
   }
 
   /** Reads `ref` from data source `sourceId` the way a binding does. */
-  async resolve(sourceId: string, ref: { path: string; valuePath?: string }): Promise<Resolved> {
+  async resolve(
+    sourceId: string,
+    ref: { path: string; valuePath?: string; timeZone?: string; requestTime?: { delaySeconds?: number; stepSeconds?: number } }
+  ): Promise<Resolved> {
     return this.request('POST', await this.workspacePath(`/connectors/${encodeURIComponent(sourceId)}/resolve`), { body: { ref } });
   }
 

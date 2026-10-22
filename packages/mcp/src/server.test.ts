@@ -400,6 +400,13 @@ describe('u-board-mcp', () => {
     expect(value.issues.map((issue: { path: string }) => issue.path)).toEqual(['/decorations/0/rotation', '/decorations/0/fill']);
   });
 
+  it('reads a source asked for a given time with the zone and request time a binding will have', async () => {
+    await call('sample_source', { source: 's1', path: '/obs?date={{now:yyyyMMdd}}', timeZone: 'Asia/Seoul', requestTime: { delaySeconds: 2400, stepSeconds: 3600 } });
+    expect(server.requests.filter(r => r.path.endsWith('/resolve')).at(-1)!.body).toEqual({
+      ref: { path: '/obs?date={{now:yyyyMMdd}}', timeZone: 'Asia/Seoul', requestTime: { delaySeconds: 2400, stepSeconds: 3600 } },
+    });
+  });
+
   it('lists the data sources, never a credential', async () => {
     expect((await call('list_sources')).value).toEqual({ sources: [{ id: 's1', name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer' }] });
   });

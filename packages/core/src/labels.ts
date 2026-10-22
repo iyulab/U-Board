@@ -250,6 +250,16 @@ export interface UBoardLabels {
   maxAge: string;
   maxAgeHint: string;
   invalidMaxAge: string;
+  /** For a path with time places (`{{now:yyyyMMdd}}`): the group's name, how long after a time the source has its
+   *  data and how often it has new data (minutes, `requestTime`), what they do, the request it makes now, and why
+   *  it cannot be saved — a place that is not a time, or a number that is not one. */
+  requestTime: string;
+  requestDelay: string;
+  requestStep: string;
+  requestTimeHint: string;
+  requestNow: string;
+  invalidTimePlace: string;
+  invalidRequestTime: string;
   explore: string;
   exploreFailed: string;
   /** In the response explorer: the whole response, when it is itself the value to pick. */
@@ -573,6 +583,13 @@ export const DEFAULT_LABELS: UBoardLabels = {
   unknownTimeZone: 'Enter a time zone such as Asia/Seoul or UTC.',
   observedAtReads: 'Reads as {time} — {age}',
   observedAtLater: 'This is later than now — check the time zone.',
+  requestTime: 'The time it asks for',
+  requestDelay: 'The source has a time’s data after (minutes)',
+  requestStep: 'The source has new data every (minutes)',
+  requestTimeHint: 'Each request asks for the time it is sent, that much earlier, rounded down to the step — on the time zone’s clock.',
+  requestNow: 'Asks now:',
+  invalidTimePlace: 'A path takes only time places such as {{now:yyyyMMdd}} or {{now:HHmm}} between {{ and }}.',
+  invalidRequestTime: 'Enter a number of minutes — 0 or more after, above 0 every — or leave it empty.',
   maxAge: 'Normally at most (minutes old)',
   maxAgeHint: "Older than this by the source's time, the value is marked 'Source behind'. The source is asked again no sooner than an eighth of it.",
   invalidMaxAge: 'Enter a number of minutes above 0, or leave it empty.',

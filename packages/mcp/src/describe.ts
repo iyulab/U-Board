@@ -104,7 +104,7 @@ const DATA = `# Data sources and bindings
 - A value in the source's own words maps to a prop with map: { values: { "Fault": "error" }, ranges: [{ min: 80, value: "warning" }], otherwise: "ok" }.
 - A part can be in named states, read from one of its widget’s bindings: states: { from: "<that binding’s key>", map: { values: { "Fault": "fault" }, ranges: [{ min: 80, value: "hot" }], otherwise: "ok" }, looks: { "fault": { outline: "<colour>", blink: true }, "off": { hidden: true } } } — on the node or grid item, beside widget. map reads the source’s value before the binding’s own map; a value it names nothing for is no state. A state is named from the current reading only — no delay, no latch. Looks draw around the part (its border stays the connection quality); a state without a look is still named. board_state answers each part’s state.
 - A source that publishes on a schedule says how old its value may be: maxAgeSeconds (an hourly feed: 5400); its time: observedAtPath.
-- A source asked for a given time rather than its latest writes the time as a place in path: "?date={{now:yyyyMMdd}}&time={{now:HHmm}}", with timeZone and requestTime: { delaySeconds (how long after a time its data is out), stepSeconds (how often: 3600) }.
+- A source asked for a given time rather than its latest writes the time as a place in path: "?date={{now:yyyyMMdd}}&time={{now:HHmm}}", with timeZone and requestTime: { delaySeconds (how long after a time its data is out), stepSeconds (how often: 3600) } — give sample_source the same two.
 - create_source makes a source that needs no credential. One that needs a key, token or OAuth is made by a person in the console — ask them for its id. Credentials never pass through you.`;
 
 const ELEMENTS = `# Elements

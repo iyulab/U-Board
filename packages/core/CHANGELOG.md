@@ -13,7 +13,8 @@ All notable changes to this package are documented here. The format follows
   `timeZone`'s clock, at the time `requestTime: { delaySeconds?, stepSeconds? }` names — the time of the request,
   that much earlier, rounded down to that step (`{ delaySeconds: 2400, stepSeconds: 3600 }` for hourly data out forty
   minutes after the hour). `requestPath(ref, now)` gives the request a reference makes; a path with any other `{{…}}`
-  is not a reference. The binding form keeps both through an edit.
+  is not a reference. The binding form asks for the zone, the delay and the step when a path has time places, shows
+  the request it makes now, and explores the source with them.
 
 ## [0.33.1] - 2026-10-21
 
