@@ -64,5 +64,7 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
     },
   ],
-  use: { baseURL: 'http://localhost:5175' },
+  // A failure keeps its trace (requests, route changes, timings): the rare one that passes again on a re-run leaves
+  // its evidence behind instead of a bare timeout.
+  use: { baseURL: 'http://localhost:5175', trace: 'retain-on-failure' },
 });
