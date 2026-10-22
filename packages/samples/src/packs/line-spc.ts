@@ -207,6 +207,8 @@ export const lineSpc: SamplePack = {
   title: { ko: '가공 라인 SPC 상황판', en: 'Machining line SPC' },
   field: { ko: '제조·품질', en: 'Manufacturing & quality' },
   kind: { ko: '공정 흐름도', en: 'Process flow' },
+  domain: 'manufacturing',
+  styles: ['operations'],
   summary: {
     ko: '라인을 흐르는 순서대로 검사 지점마다 관리 상태·최근 측정값·관리도·Cpk를 그 공정 아래에, 라인의 부적합은 아래에. 관리 판정과 Cpk는 원천이 계산한 값입니다. 예시 데이터입니다.',
     en: 'Each inspection point’s control state, latest measurement, control chart and Cpk under its step in the line’s flow, and the line’s nonconformities below. The source judges control and computes Cpk. Example data.',

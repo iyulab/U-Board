@@ -227,6 +227,8 @@ export const libraryReport: SamplePack = {
   title: { ko: '도서관 월간 이용 리포트 — 인쇄 한 장', en: 'A library’s monthly report — one printed page' },
   field: { ko: '문화·공공 서비스', en: 'Culture & public services' },
   kind: { ko: '인쇄 지면(A4 한 장)', en: 'A printed page (one A4 sheet)' },
+  domain: 'public',
+  styles: ['print'],
   summary: {
     ko: '운영위원회에 내고 안내데스크 옆에 붙이는 공공도서관의 한 달 — 명조 제호와 이중 괘선, 번호 붙은 절, 검은 잉크에 차분한 강조색 하나, 아래에 출처. 한 문단 요약(수치가 문장 안에), 네 가지 지표, 올해와 지난해 월별 대출, 많이 빌린 분야 표, 연령대별 이용자, 이달의 프로그램. 화면과 종이에서 같게 읽히는 지면. 예시 데이터입니다.',
     en: 'A public library’s month on one printed page, for the trustees and the notice board by the desk — a serif masthead over a double rule, numbered sections, black ink and one muted accent, the source at the foot. The month in a paragraph with its figures in the sentences, four figures, loans this year against last, the subjects borrowed most, visitors by age, and the month’s programmes. A page that reads the same on paper as on screen. Example data.',

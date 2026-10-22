@@ -297,6 +297,8 @@ export const chargingPcb: SamplePack = {
   title: { ko: '전기차 충전 허브 — 인쇄회로기판', en: 'An EV charging hub — a printed circuit board' },
   field: { ko: '전기차 충전', en: 'EV charging' },
   kind: { ko: '충전기 상태·전력·대기 차량', en: 'Chargers, power and the cars waiting' },
+  domain: 'energy',
+  styles: ['drawing'],
   summary: {
     ko: '전기차 충전 허브를 인쇄회로기판으로 — 초록 솔더 마스크, 고정 구멍과 기준 마크가 있는 기판 테두리, 흰 실크스크린, 그리고 가운데를 내려가는 구리 전력 간선(위의 수전반과 ESS가 먹인다). 충전기 여덟 대는 기판 위의 칩이고, 칩마다 간선의 비아에서 짧은 구리 트레이스로 전력을 받는다. 트레이스는 그 충전기가 지금 끄는 전력을 싣는다 — 굵기와 kW, 충전 중이면 밝은 구리, 멈춰 있으면 흐린 구리, 고장이면 빨간 끊긴 선. 칩 상태는 색과 함께 상태 LED와 기호로: 켜진 삼각형 충전 중, 빈 고리 비어 있음, 반쪽 고리 완충된 차가 아직 꽂혀 있음, ✕ 고장. 오른쪽에 기판 표제란, 지금 수치, 범례, 대기 차량, 오늘 시간별 충전량. 충전 허브는 지어낸 것이라 예시 데이터입니다.',
     en: 'An EV charging hub drawn as a printed circuit board — green solder mask, a board outline with mounting holes and fiducials, white silkscreen, and a copper power trunk down the middle, fed by the grid intake and the battery at the top. The eight chargers are chips on the board, and each takes its power from a via on the trunk through a short copper trace. The trace carries what its charger draws now — its width and its kilowatts, bright copper while it charges, dull copper while it stands, red and broken when it is faulted. A chip tells its state by its status LED and a sign as well as by colour: a lit triangle charging, an empty ring free, a half ring when a full car is still plugged in, a cross when it is down. On the right the board’s title block, the figures now, the key, the cars waiting and the energy through the day. The hub is made up. Example data.',

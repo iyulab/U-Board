@@ -238,6 +238,8 @@ export const telecomNoc: SamplePack = {
   title: { ko: '전국 통신망 관제 NOC', en: 'Nationwide network operations centre' },
   field: { ko: '통신·네트워크', en: 'Telecom & networks' },
   kind: { ko: '없음 — 그리드(밀집, 다크)', en: 'None — grid (dense, dark)' },
+  domain: 'it',
+  styles: ['control-room'],
   summary: {
     ko: '야간 근무자가 보는 밀집 다크 상황판 — 지난 6시간 추이선이 붙은 여섯 지표, 권역 × 서비스 가용률 격자, 지난주와 견준 최근 24시간 트래픽, 권역별·등급별 경보, 미해결 경보 목록, 백본 회선 사용률과 지연. 지도 없이 밀도로 읽는 화면. 예시 데이터입니다.',
     en: 'A dense dark wall for the night shift — six figures with the last six hours under each, a matrix of every region against every service, the last 24 hours of traffic over last week’s, alarms by region and severity, the alarms still open, and the backbone links’ load and round-trip time. No map: it reads by density. Example data.',

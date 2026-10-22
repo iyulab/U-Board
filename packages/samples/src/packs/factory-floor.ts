@@ -209,6 +209,8 @@ export const factoryFloor: SamplePack = {
   title: { ko: '공장 설비 상태판', en: 'Plant floor' },
   field: { ko: '제조·설비보전', en: 'Manufacturing & maintenance' },
   kind: { ko: '공장 배치도', en: 'Plant layout' },
+  domain: 'manufacturing',
+  styles: ['operations'],
   summary: {
     ko: '세 라인의 설비마다 가동 상태와 미결 작업을 설비가 선 자리에, 라인마다 OEE와 생산 실적을, 오른쪽은 공장 전체 가동률과 시간대별 생산량. 예시 데이터입니다.',
     en: 'Each machine’s state and open work orders where it stands on three lines, each line’s OEE and output beside it, and the plant’s availability and hourly output on the side. Example data.',

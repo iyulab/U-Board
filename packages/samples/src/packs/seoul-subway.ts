@@ -175,6 +175,8 @@ export const seoulSubway: SamplePack = {
   title: { ko: '시청 일대 지하철 실시간 도착', en: 'Subway arrivals around Seoul City Hall' },
   field: { ko: '교통', en: 'Transport' },
   kind: { ko: '노선도', en: 'Line diagram' },
+  domain: 'transport',
+  styles: ['operations'],
   summary: {
     ko: '1·2호선이 만나는 시청과 이웃한 네 역에서, 노선·방향마다 다음 열차가 있는 곳. 원천이 이용자마다 키를 발급해, 설치본에서 만들 때 발급받은 키가 필요합니다.',
     en: 'Where the next train is, each line and way, at City Hall — where lines 1 and 2 cross — and four stations beside it. The source issues each user a key, so creating it in an installation needs one.',

@@ -183,6 +183,8 @@ export const coldchainVapor: SamplePack = {
   title: { ko: '콜드체인 물류센터 — 베이퍼웨이브', en: 'A cold-chain warehouse — vaporwave' },
   field: { ko: '콜드체인·냉장 물류', en: 'Cold-chain logistics' },
   kind: { ko: '온도 구역별 상태', en: 'Temperature zones' },
+  domain: 'logistics',
+  styles: ['retro'],
   summary: {
     ko: '콜드체인 물류센터를 베이퍼웨이브로 — 파스텔 노을과 자홍 원근 격자 앞에 온도 구역 여섯이 서리 유리 카드로 한 줄: 크롬 글씨의 온도, −80~+25 ℃ 온도계 위에 구역의 설정 띠와 지금 표지, 적재와 문 열림 횟수, 그리고 상태가 기호·낱말·카드 테로 — ● 정상(민트), ❄ 제상 중(청록 — 잠깐 오르는 것은 정상), ▮ 문 열림(노란 점선), ▲ 온도 이탈(핫핑크). 아래에 이탈한 구역의 지난 24시간 온도와 상한, 도크의 냉동 탑차. 물류센터는 지어낸 것이라 예시 데이터입니다.',
     en: 'A cold-chain warehouse drawn as vaporwave — in front of a pastel sunset and a magenta perspective grid, the six temperature zones as frosted glass cards in a row: each zone’s temperature in chrome, a thermometer from −80 to +25 ℃ with the zone’s band and a marker where it is now, its load and door count, and its state in a mark, a word and the card’s edge — ● steady (mint), ❄ defrosting (cyan — the brief rise is expected), ▮ door held open (dashed yellow), ▲ out of band (hot pink). Below, the zone out of band over the last day against its limit, and the reefer trucks at the docks. The warehouse is made up. Example data.',

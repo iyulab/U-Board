@@ -247,6 +247,8 @@ export const droneRoutes: SamplePack = {
   title: { ko: '섬 드론 배송 — 옛 항공 노선도', en: 'Island drone deliveries — a vintage airline route map' },
   field: { ko: '드론 배송·물류', en: 'Drone delivery' },
   kind: { ko: '항로·배송지·기체 현황', en: 'Routes, stops and the fleet' },
+  domain: 'logistics',
+  styles: ['print'],
   summary: {
     ko: '섬 지역 드론 배송을 옛 항공 노선도 포스터로 — 물결 무늬의 옅은 바다, 빗금 언덕이 있는 크림색 섬, 나침도, 그리고 본부에서 배송지마다 그은 호. 호는 옛 노선도가 운항을 싣듯 비행을 싣는다: 드론이 떠 있으면 빨간 실선과 도착까지 분, 출발 예정이면 남색 파선과 출발 시각, 바람으로 보류되면 주황 점선, 배송이 끝나면 가는 회색 선. 배송지는 수하물 꼬리표 — 오늘 받는 것과 상태 도장. 오른쪽에 노선 포스터 머리, 지금 수치, 범례, 기체 현황(배터리), 시간별 배송. 섬과 배송망은 지어낸 것이라 예시 데이터입니다.',
     en: 'An island group’s drone deliveries drawn as a vintage airline route map — a pale sea with wave strokes, cream islands with hatched hills, a compass rose, and an arc from the base to every stop. An arc carries its flight as an old route map carried its services: a solid red arc with the minutes to arrival while a drone is on it, a dashed navy arc with the departure time when one is due, a dotted orange arc when the wind holds it, a thin grey arc once the drop is made. Every stop is a luggage label with what it gets today and a stamp for its state. On the right the service’s poster banner, the figures now, the key, the drones with their batteries and the drops through the day. The islands and the service are made up. Example data.',

@@ -249,6 +249,8 @@ export const vetComic: SamplePack = {
   title: { ko: '동물병원의 오후 — 만화책 지면', en: 'An animal hospital’s afternoon — a comic book page' },
   field: { ko: '동물병원·반려동물', en: 'Veterinary care & pets' },
   kind: { ko: '진료실·입원장·대기실·접수', en: 'Rooms, kennels, the waiting room and registrations' },
+  domain: 'health',
+  styles: ['print'],
   summary: {
     ko: '동물병원의 오후를 만화책 한 쪽처럼 — 망점이 찍힌 신문 종이에 진료실·수술실·처치실이 굵은 검은 테의 칸으로, 노란 해설 상자가 방 이름을, 말풍선이 그 방의 한마디를 싣습니다. 방의 상태는 색과 함께 만화가 장면을 말하는 방식으로: 진료 중이면 말풍선, 비어 있으면 점선 생각 풍선, 응급이면 붉게 터지는 풍선, 소독 중이면 구름 — 칸 모서리에는 의성어. 입원실 두 칸은 입원장마다 상자 하나로, 집중 관찰은 빗금, 빈 장은 점선. 아래에는 대기실 순서, 오른쪽에 제호, 별 모양 수치, 범례, 시간별 접수. 동물병원은 지어낸 것이라 예시 데이터입니다.',
     en: 'An animal hospital’s afternoon drawn as a comic book page — newsprint dotted with halftone, the consulting, surgery and treatment rooms as panels with heavy black borders, a yellow caption box naming each and the room’s line in a balloon. A room tells its state the way a comic tells a scene, as well as by colour: a speech balloon while a patient is seen, a dotted thought balloon when it stands empty, a red burst for an emergency, a cloud while it is cleaned — and a sound effect in the corner. The two wards are panels of kennels, hatched when a patient is watched closely and dashed when free. Below, the waiting room’s queue; on the right the masthead, the figures in starbursts, the key and the patients registered by the hour. The hospital is made up. Example data.',

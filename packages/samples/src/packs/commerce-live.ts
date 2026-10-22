@@ -187,6 +187,8 @@ export const commerceLive: SamplePack = {
   title: { ko: '쇼핑몰 라이브 매출 워룸', en: 'Online shop live sales room' },
   field: { ko: '유통·이커머스', en: 'Retail & e-commerce' },
   kind: { ko: '없음 — 그리드(브랜드 컬러)', en: 'None — grid (brand colour)' },
+  domain: 'logistics',
+  styles: ['control-room'],
   summary: {
     ko: '세일 날 큰 화면에 띄우는 밝은 워룸 — 목표 대비 오늘 매출 링, 어제와 견준 주문·객단가·전환율·방문자, 구매 깔때기, 카테고리 트리맵, 채널 도넛, 오늘과 어제의 시간대 곡선, 요일×시간 히트맵, 방금 들어온 주문. 예시 데이터입니다.',
     en: 'A bright war room for the big screen on a sale day — today’s revenue on a ring against its target; orders, basket size, conversion and visitors against yesterday; the purchase funnel; categories as a treemap; channels as a donut; today’s hours over yesterday’s; a weekday × hour heatmap; the orders arriving now. Example data.',

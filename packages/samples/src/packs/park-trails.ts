@@ -276,6 +276,8 @@ export const parkTrails: SamplePack = {
   title: { ko: '국립공원 탐방로 — 수채 지도', en: 'A national park’s trails — a watercolour map' },
   field: { ko: '자연·탐방', en: 'Parks & outdoors' },
   kind: { ko: '수채로 그린 산 지도', en: 'A mountain painted in watercolour' },
+  domain: 'environment',
+  styles: ['drawing'],
   summary: {
     ko: '국립공원 탐방지원센터의 탐방로 안내판을 수채 지도로 — 가장자리가 번지는 초록·회청 물감으로 산을, 푸른 물감으로 계곡을, 옅은 세피아 등고선과 종이 결 위에. 탐방로는 그 위에 잉크로: 남색 열림, 황토 혼잡, 진홍 점선 통제 — 구간마다 길이와 상태. 탐방지원센터·계곡 입구·폭포·대피소·정상에 카드(주차 잔여, 대피소 자리, 정상 바람과 입산 마감), 오른쪽에 산의 날씨(정상 기온·능선 바람·일몰), 오늘의 안내, 시간대별 입산. 공원은 지어낸 것이라 예시 데이터입니다.',
     en: 'A national park’s trail board painted as a watercolour map — the mountain in sap green and slate washes that bleed at their edges, the stream in a blue wash, faint sepia contours on grained paper. The trails over it in ink: indigo open, ochre crowded, carmine and dashed closed, each with its length and state. Cards at the gates, the falls, the shelter and the summit (parking left, seats at the shelter, the summit’s wind and entry cut-off), and on the right the mountain’s weather (the summit’s temperature, the ridge’s wind, sunset), the day’s notices and walkers by the hour. The park is made up. Example data.',

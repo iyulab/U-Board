@@ -360,6 +360,8 @@ export const mallWayfinding: SamplePack = {
   title: { ko: '쇼핑몰 층별 안내 — 세로 길찾기 키오스크', en: 'A shopping centre’s floor directory — a portrait wayfinding kiosk' },
   field: { ko: '유통·리테일', en: 'Retail' },
   kind: { ko: '세로 화면(9:16 키오스크) × 층 평면도', en: 'Portrait screen (a 9:16 kiosk) over a floor plan' },
+  domain: 'logistics',
+  styles: ['signage'],
   summary: {
     ko: '쇼핑몰 3층 에스컬레이터 옆에 세워 둔 안내 키오스크 — 화면 대부분을 차지하는 층 평면도 위에 «현재 위치»와 지금의 일: 빈 칸이 있는 화장실까지 굵은 길(도보 시간), 식당가 가게마다 대기 시간·팀, 엘리베이터 세 대가 있는 층과 방향, 수유실 사용 여부, 아트리움 행사. 아래에 층마다 붐비는 정도(이 층 표시), 주차장 층별 빈자리, 시간대별 방문객. 예시 데이터입니다.',
     en: 'The directory kiosk by the escalators on a shopping centre’s third floor — the floor’s plan filling most of the screen, with «you are here» and what is happening now: a bold way to the restroom that has stalls free (and how long the walk is), each restaurant’s wait in minutes and parties, the floor and direction of the three lifts, whether the nursing room is in use, and the event in the atrium. Below, how crowded each floor is (this one marked), free spaces in the car park level by level, and visitors by the hour. Example data.',

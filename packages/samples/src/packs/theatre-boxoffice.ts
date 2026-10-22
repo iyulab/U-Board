@@ -237,6 +237,8 @@ export const theatreBoxoffice: SamplePack = {
   title: { ko: '공연장 예매 현황 — 아르데코', en: 'A theatre’s box office — in Art Deco' },
   field: { ko: '공연·예매', en: 'Performing arts & ticketing' },
   kind: { ko: '구역마다 칠한 객석 배치도', en: 'A seating plan, each block filled by its sales' },
+  domain: 'leisure',
+  styles: ['art'],
   summary: {
     ko: '극장 매표소의 오늘 저녁 공연 판매 현황을 아르데코로 — 검정과 금, 무대 안의 햇살 무늬, 계단식 모서리, 넓게 띄운 제목 글꼴. 객석 배치도(1층 두 겹 여섯 구역, 2층 세 구역, 양쪽 벽 박스석 넷)의 구역마다 제 모양의 면을 판매 정도로 칠함: 에메랄드 여유, 구리색 얼마 남지 않음, 진홍 매진 — 금색은 장식에만. 오른쪽에 오늘 판매·현장 대기·취소표 알림, 이번 주 공연별 판매, 오늘 회차의 2주 누적 판매. 극장은 지어낸 것이라 예시 데이터입니다.',
     en: 'A theatre’s box-office board for tonight’s performance in Art Deco — black and gold, a sunburst in the stage, stepped corners, a display face set wide. On the seating plan (the stalls’ six blocks in two rings, the balcony’s three, two boxes on each side wall) each block is a shape of its own, filled by how much of it is sold: emerald with seats to spare, copper with a few left, crimson sold out — gold is kept for the ornament. On the right tonight’s sales, the queue for returns and the waiting list, the week’s performances with how much of each is sold, and tonight’s tickets sold over the last fortnight. The theatre is made up. Example data.',

@@ -300,6 +300,8 @@ export const warehouseRacks: SamplePack = {
   title: { ko: '물류센터 랙 점유와 피킹 — 청사진 도면', en: 'A distribution centre’s racks and picking — a blueprint' },
   field: { ko: '물류·창고', en: 'Logistics & warehousing' },
   kind: { ko: '창고 평면(컴포넌트 반복)', en: 'A warehouse plan (one component, repeated)' },
+  domain: 'logistics',
+  styles: ['drawing'],
   summary: {
     ko: '물류센터 보관동을 청사진처럼 — 파란 종이에 흰 선, 기둥 열 번호, 치수선, 구석의 표제란. 랙 줄 여섯이 같은 컴포넌트 하나: 4단 × 12열 빈을 찬 만큼 채우고(막힌 빈은 빗금, 품질 보류는 빨간 테), 컨베이어 레인까지 피킹 선이 시간당 피킹만큼 굵어지며, 레인에 작업자와 대기 줄. 아래 입고·출고 도크 여덟(트럭·적재 진행), 오른쪽에 점유율·빈 로케이션·출고 진행·정확도, 시간대별 입출고, 조치 필요 목록. 예시 데이터입니다.',
     en: 'A distribution centre’s storage hall drawn as a blueprint — white lines on blue paper, the column grid’s bubbles, a dimension line and a title block in the corner. The six rack rows are one component: four levels by twelve bays of bins, each filled as full as it is (blocked bins hatched, bins on quality hold rimmed red), a line to its conveyor lane as thick as the row is being picked, and at the lane who is picking and how many order lines wait. Along the bottom the eight dock doors with their trucks and loading; on the right the hall’s fill, free locations, outbound progress and accuracy, inbound and outbound by the hour, and what needs a hand. Example data.',

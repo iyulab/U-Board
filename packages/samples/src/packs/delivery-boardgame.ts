@@ -155,6 +155,8 @@ export const deliveryBoardgame: SamplePack = {
   title: { ko: '택배 배송 기사 순회 — 보드게임 판', en: 'A parcel depot’s delivery rounds — a board game' },
   field: { ko: '택배·근거리 배송', en: 'Parcel delivery' },
   kind: { ko: '기사별 배송 진행', en: 'Delivery progress by driver' },
+  domain: 'logistics',
+  styles: ['craft'],
   summary: {
     ko: '택배 영업소의 배송 기사 여섯을 보드게임 판으로 — 기사마다 출발에서 도착까지 스무 칸 길 하나, 기사의 말이 배송을 마친 만큼 나아가 서 있고, 길 끝에 기사가 든 카드가 상태를 말한다 — GO(초록) 순조, 한 턴 쉬기(노랑·점선) 지연, 문제 카드(빨강·기운 카드에 !) 부재·주소 오류가 쌓임, 완주(금색) 배송 끝. 오른쪽에 주사위로 오늘의 점수와 시간대별 배송 완료. 영업소·기사·동네는 지어낸 것이라 예시 데이터입니다.',
     en: 'A parcel depot’s six delivery drivers played out as a board game — a lane of twenty spaces from start to finish for every driver, the driver’s pawn standing as far along as the share of the route delivered, and at the lane’s end the card the driver holds for the state — GO (green) on schedule, “skip a turn” (yellow, dashed) running late, a problem card (red, tilted, with a !) when parcels pile up undelivered, a gold card when the route is done. On the right the day’s tally as dice and the deliveries by hour. The depot, its drivers and its neighbourhoods are made up. Example data.',

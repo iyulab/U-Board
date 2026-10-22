@@ -206,6 +206,8 @@ export const bowlingGoogie: SamplePack = {
   title: { ko: '볼링장의 목요일 밤 — 구기 양식', en: 'A bowling alley’s Thursday night — Googie' },
   field: { ko: '볼링·실내 레저', en: 'Bowling & indoor leisure' },
   kind: { ko: '레인 상태·남은 핀·대기 명단', en: 'Lanes, pins standing and the waiting list' },
+  domain: 'leisure',
+  styles: ['retro'],
   summary: {
     ko: '볼링장의 목요일 밤을 1950년대 길가의 구기(Googie) 양식으로 — 크림 바탕에 청록과 원자 시대 주황, 부메랑과 별 폭발, 모텔 간판 같은 표지판. 레인마다 위에서 본 단풍나무 바닥 한 줄과 그 끝의 핀 열 개 — 지금 굴리는 프레임에서 서 있는 핀은 지금 선 그대로. 레인 상태는 색과 함께 번호의 등으로: 게임 중이면 켜진 별, 빈 레인은 점선 고리, 예약은 시계, 오일 작업 중이면 빗금 바닥에 톱니. 오른쪽에 볼링장 간판, 지금 수치, 범례, 대기 명단, 시간별 사용 레인. 볼링장은 지어낸 것이라 예시 데이터입니다.',
     en: 'A bowling alley’s Thursday night in the Googie style of the 1950s roadside — turquoise and atomic orange on cream, boomerangs and starbursts, a sign like a motel’s. Every lane is a strip of maple seen from above with its ten pins at the far end — the pins still standing in the frame being bowled, as they stand now. A lane tells its state by the lamp on its number as well as by colour: a lit starburst while a party bowls, a dashed ring when it is free, a clock when it is booked, a gear over hatched wood while the oiling machine runs. On the right the alley’s sign, the figures now, the key, the parties waiting and the lanes in use by the hour. The alley is made up. Example data.',

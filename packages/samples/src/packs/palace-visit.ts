@@ -226,6 +226,8 @@ export const palaceVisit: SamplePack = {
   title: { ko: '궁궐 관람 현황 — 한지와 단청', en: 'A royal palace’s visitors — on hanji, in dancheong colours' },
   field: { ko: '문화유산·관광', en: 'Cultural heritage & tourism' },
   kind: { ko: '붓으로 그린 궁궐 배치도', en: 'A palace plan drawn with a brush' },
+  domain: 'leisure',
+  styles: ['korean'],
   summary: {
     ko: '궁궐 매표소 앞 관람 안내판을 한지에 먹과 단청 오방색으로 — 남북 축을 따라 붓으로 그린 배치도(정문·정전 마당·편전·침전·동궁·후원 연못과 정자) 위에 전각마다 카드: 혼잡도(청 여유·황 보통·적 붐빔), 지금 관람객, 다음 해설, 오늘만 개방. 오른쪽에 붉은 낙관을 찍은 제목, 오늘 관람객·후원 시간제 입장 잔여·한복 관람객, 해설 일정(언어·남은 자리), 시간대별 입장(평소 수요일과 비교), 안내 사항. 궁궐은 지어낸 것이라 예시 데이터입니다.',
     en: 'The visitor board at a royal palace’s ticket gate, on hanji in ink with dancheong’s five colours — the palace’s plan drawn with a brush along its north–south axis (the gate, the throne hall’s courtyard, the council and living halls, the crown prince’s quarters, the rear garden’s pond and pavilion), with a card on each hall: how crowded it is (blue calm, yellow busy, red crowded), visitors there now, the next guided tour and what is open only today. On the right a title sealed in red, the day’s visitors, timed tickets left for the rear garden and visitors in hanbok, the tours with their languages and places left, entries by the hour against a usual Wednesday, and notices. The palace is made up. Example data.',

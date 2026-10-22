@@ -146,6 +146,8 @@ export const siteNoiseScore: SamplePack = {
   title: { ko: '공사장 소음 — 악보로 쓴 오후', en: 'A building site’s noise — an afternoon as a score' },
   field: { ko: '건설·소음 관리', en: 'Construction noise' },
   kind: { ko: '측정점별 시간 흐름', en: 'Readings over time by point' },
+  domain: 'construction',
+  styles: ['print'],
   summary: {
     ko: '공사 현장의 소음 측정을 악보로 — 측정점마다 오선 하나, 10분마다 잰 소리가 그 크기만큼 높이 놓인 음표(아래 줄 40 dB, 위 줄 90 dB), 주간 기준 65 dB는 오선을 가로지르는 붉은 선. 오후가 오르내리는 선율로 읽히고, 기준을 넘은 음표는 붉고 악센트(>)가, 가까운 음표는 황색 — 표시와 색 둘. 오선 왼쪽에 측정점의 지금 크기와 뜻, 오른쪽에 악보의 속표지(기준·가장 큰 소리·넘은 횟수)와 측정점별 넘은 횟수, 읽는 법. 현장과 측정값은 지어낸 것이라 예시 데이터입니다.',
     en: 'A building site’s noise readings written as a score — a staff for every measuring point, every ten-minute reading a note set as high as it is loud (40 dB on the bottom line, 90 on the top), the daytime limit of 65 dB a red line across the staff. The afternoon reads as a tune that rises and falls; a note over the limit is red with an accent (>), one near it amber — a mark as well as a colour. Left of each staff the point’s level now and what it means; on the right the score’s title page (the limit, the loudest reading, the readings over it), the readings over the limit by point, and how to read a note. The site and its readings are made up. Example data.',

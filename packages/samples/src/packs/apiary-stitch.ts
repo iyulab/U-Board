@@ -226,6 +226,8 @@ export const apiaryStitch: SamplePack = {
   title: { ko: '양봉장의 가을 — 십자수', en: 'An apiary’s autumn — cross-stitch' },
   field: { ko: '양봉·농촌', en: 'Beekeeping & farming' },
   kind: { ko: '벌통 상태·채밀·밀원·무게', en: 'Hives, harvests, forage and weight' },
+  domain: 'agrifood',
+  styles: ['craft'],
   summary: {
     ko: '양봉장의 가을을 십자수로 — 올이 보이는 크림색 아이다 천에 벌통마다 나무 수틀 하나, 그 안에 번호와 무게가 수놓입니다. 벌통 상태는 색과 함께 수틀 위에 놓은 벌집 한 칸으로: 군세가 좋으면 십자 땀으로 꽉 찬 벌집, 먹이가 모자라거나 응애가 늘면 반만 찬 벌집, 여왕이 없으면 빈 벌집에 붉은 ✕. 아래에는 올해 채밀과 겨울 전 남은 일을 자수 견본처럼, 그 옆에 벌이 닿는 꽃, 오른쪽에 수놓은 테두리 속 양봉장 이름, 지금 수치, 범례, 이번 주 벌통 평균 무게. 양봉장은 지어낸 것이라 예시 데이터입니다.',
     en: 'An apiary’s autumn worked in cross-stitch — cream Aida cloth with its weave showing, every hive an embroidery hoop with its number and weight stitched inside. A hive tells its state by the honeycomb stitched at the top of its hoop, as well as by colour: a comb filled with cross stitches when the colony is sound, half filled when it is short of food or its mites are rising, an empty comb crossed in red when its queen is missing. Below, a sampler of the year’s harvests and the work left before winter, and the flowers the bees can still reach; on the right the apiary’s name in a stitched border, the figures now, the key and the average hive weight through the week. The apiary is made up. Example data.',

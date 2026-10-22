@@ -162,6 +162,8 @@ export const seoulAir: SamplePack = {
   title: { ko: '서울 도심 미세먼지', en: 'Fine dust in central Seoul' },
   field: { ko: '환경·대기', en: 'Environment & air' },
   kind: { ko: '구 약도', en: 'District map' },
+  domain: 'environment',
+  styles: ['operations'],
   summary: {
     ko: '도심 5개 구의 PM10을 구가 놓인 자리에, 통합대기환경지수 단계 색으로. 오른쪽은 다섯 구를 나란히.',
     en: 'Each district’s PM10 where the district lies, in the colours of Korea’s air quality index — and the five side by side.',

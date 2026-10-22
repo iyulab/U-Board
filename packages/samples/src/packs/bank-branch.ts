@@ -214,6 +214,8 @@ export const bankBranch: SamplePack = {
   title: { ko: '은행 지점 창구 — 스칸디나비안 미니멀', en: 'A bank branch’s floor — Scandinavian minimal' },
   field: { ko: '금융·은행', en: 'Banking & finance' },
   kind: { ko: '지점 창구·상담실·ATM 현황', en: 'A branch’s windows, rooms and cash machines' },
+  domain: 'services',
+  styles: ['minimal'],
   summary: {
     ko: '은행 지점의 객장 현황을 스칸디나비안 미니멀로 — 미색 바닥, 자작나무 빛 카운터와 소파, 부드러운 회색 벽, 세이지 초록과 탁한 파랑 한 가지씩, 손이 필요한 곳에만 쓰는 테라코타, 가는 선과 둥근 모서리, 넉넉한 여백과 화분 몇. 창구 여섯·상담실 셋·ATM 넷이 저마다 지금 무엇을 하는지 카드로 — 상태는 색과 함께 기호로: 꽉 찬 점 응대·사용 중, 반 점 자리 비움·현금 부족, 빈 원 비어 있음·점검, 줄표 운영 전. 오른쪽에 업무별 대기 인원·예상 시간·지금 번호, 오늘 내점·평균 대기·상담 예약, 시간대별 내점 고객. 지점은 지어낸 것이라 예시 데이터입니다.',
     en: 'A bank branch’s floor in a Scandinavian minimal style — an off-white floor, birch counters and sofas, soft grey walls, one sage green and one dusty blue, a terracotta kept for what needs a hand, thin lines, rounded corners, wide margins and a few plants. Six teller windows, three consultation rooms and four cash machines each say on a card what they are doing now, the state told by a mark as well as a colour: a full dot serving or working, a half dot away or low on cash, a ring free or out for service, a dash not open yet. On the right the waiting line by service with the expected wait and the number being served, the day’s visitors, the average wait and the appointments, and the visitors by the hour. The branch is made up. Example data.',

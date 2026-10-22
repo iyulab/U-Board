@@ -182,6 +182,8 @@ export const busTerminal: SamplePack = {
   title: { ko: '고속버스 터미널 출발 안내 벽 — 울트라와이드 LED', en: 'An intercity bus terminal’s departure wall — an ultrawide LED sign' },
   field: { ko: '대중교통', en: 'Public transport' },
   kind: { ko: '울트라와이드 벽면(약 4:1, 컴포넌트 반복)', en: 'An ultrawide wall (about 4:1, one component repeated)' },
+  domain: 'transport',
+  styles: ['signage'],
   summary: {
     ko: '고속버스 터미널 승차홈 위에 길게 건 출발 안내 벽 — 화면 네 개를 이은 것보다 넓은 띠를 LED 도트 매트릭스처럼: 검은 바탕에 점이 보이고, 시각은 호박색, 탑승 중은 초록, 지연·매진은 빨강. 왼쪽에 터미널 이름과 아주 큰 시계·오늘 운행 현황, 이어서 승차홈 열둘이 같은 컴포넌트 하나(노선 계열 색 띠, 다음 출발 넷의 시각·행선지·남은 좌석·상태), 아래 안내 문구 띠. 예시 데이터입니다.',
     en: 'The departure wall hung along the boarding bays of an intercity bus terminal — a strip wider than four screens side by side, lit like an LED dot-matrix sign: black with the dots showing, times in amber, boarding in green, late and sold out in red. On the left the terminal’s name, a very large clock and the day’s running; then twelve bays as one component (its routes’ colour band, the next four departures with time, destination, seats left and state); and a line of notices along the bottom. Example data.',

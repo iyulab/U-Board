@@ -358,6 +358,8 @@ export const festivalOps: SamplePack = {
   title: { ko: '축제 종합 상황판 — 대형 상황판', en: 'Festival operations wall — a situation room screen' },
   field: { ko: '문화·관광 행사', en: 'Events & tourism' },
   kind: { ko: '행사장 약도(16:9 대형 상황판)', en: 'Venue map (a 16:9 situation room wall)' },
+  domain: 'leisure',
+  styles: ['control-room'],
   summary: {
     ko: '불꽃축제 밤 시청 상황실에 거는 대형 화면 — 날개 달린 제목 띠, 모서리 꺾쇠 패널 세 단, 가운데 행사장 약도의 구역마다 ㎡당 인원으로 빛나는 태그. 왼쪽은 지금 관람객과 수용 한도·시간대별 입장·퇴장·관람객 구성, 오른쪽은 셔틀버스·안전 상황·발사 조건, 약도 아래는 출입구별 통행. 예시 데이터입니다.',
     en: 'The big screen a city’s situation room hangs for a fireworks night — a winged title bar, three columns of bracketed panels, and in the middle the venue map with each area’s tag glowing by people per square metre. On the left the crowd now against the limit, the evening’s flow in and out and who came; on the right the shuttles, the safety desk and the launch conditions; under the map each gate’s flow. Example data.',

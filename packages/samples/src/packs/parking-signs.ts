@@ -216,6 +216,8 @@ export const parkingSigns: SamplePack = {
   title: { ko: '공영주차장 층별 빈 면 — 도로 표지판', en: 'A public car park’s free spaces by floor — road signs' },
   field: { ko: '주차·도시 교통', en: 'Parking & city traffic' },
   kind: { ko: '층별 빈 면·전용 구획·시간대별 점유율', en: 'Free spaces by floor, kept bays and occupancy by the hour' },
+  domain: 'transport',
+  styles: ['signage'],
   summary: {
     ko: '공영주차장을 운전자에게 길이 말하는 방식으로 — 차선이 그어진 아스팔트와 문형 지주 아래, 모든 칸이 도로 표지판입니다. 흰 테를 두른 초록 안내 표지에 이름과 층마다 빈 면, 검은 가변 전광판에 호박색 숫자로 전체 빈 면, 파란 안내 표지에 전기차·장애인·경차 전용 구획, 노란 주의 표지에 운전자 안내. 층의 상태는 도로 표지처럼 모양으로도 말합니다: 파란 네모 P 여유, 노란 세모 혼잡, 빨간 원 만차, 주황 마름모 폐쇄. 오른쪽에 오늘 수치와 시간대별 점유율. 주차장은 지어낸 것이라 예시 데이터입니다.',
     en: 'A public car park told the way a road tells a driver — on lane-marked asphalt under a gantry, every part is a road sign. Green guide signs with a white rim carry the name and each floor’s free spaces, a black variable-message panel the total in amber, blue information signs the bays kept for electric cars, disabled drivers and small cars, and a yellow board the notices to drivers. A floor tells its state by the shape of its sign, as road signs do, as well as by colour — a blue square P free, a yellow triangle filling, a red ring full, an orange diamond closed. On the right the day’s figures and how full it has been hour by hour. The car park is made up. Example data.',

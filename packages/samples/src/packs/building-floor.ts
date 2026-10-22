@@ -213,6 +213,8 @@ export const buildingFloor: SamplePack = {
   title: { ko: '건물 층별 에너지·환경', en: 'Building floor energy and air' },
   field: { ko: '건물·에너지', en: 'Buildings & energy' },
   kind: { ko: '층 평면도', en: 'Floor plan' },
+  domain: 'energy',
+  styles: ['operations'],
   summary: {
     ko: '사무동 3층의 구역마다 실내 온도(쾌적 20~26 °C 밖이면 구역째 색)와 전력·CO₂(1,000 ppm 넘으면 표시)를 구역이 선 자리에, 옆에는 지금 수요 전력과 계약 전력, 오늘 사용량, 외기 온도, 층별 사용량. 예시 데이터입니다.',
     en: 'Each zone of an office floor painted by its air where it lies — quiet within the 20–26 °C comfort range, coloured outside it — with its power and CO₂ (marked past 1,000 ppm); beside it the building’s demand against its contracted peak, today’s energy, the air outside and each floor’s use. Example data.',

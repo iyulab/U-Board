@@ -184,6 +184,8 @@ export const harborRadar: SamplePack = {
   title: { ko: '어항 야간 출입항 관제 — 녹색 인광 레이더', en: 'A fishing harbour’s night watch — a green-phosphor radar scope' },
   field: { ko: '어항·어선 안전', en: 'Fishing harbours and vessel safety' },
   kind: { ko: '선박 위치와 상태', en: 'Vessel positions and states' },
+  domain: 'agrifood',
+  styles: ['retro'],
   summary: {
     ko: '어항의 야간 관제를 녹색 인광 레이더 화면으로 — 거리 고리·방위 눈금·지나가는 빛줄기와 해안선 위에, 오늘 밤 나간 배마다 지금 자리에 놓인 점 하나: 호출부호·속력·상태가 표지 모양과 낱말로 — ● 조업 중, ▶ 항해 중, ▲ 금지구역 가까움(호박색), ✕ 위치 보고 끊김(흐리게). 오른쪽에 출어 선박 명단과 근해 파고·풍랑주의보 기준. 어항과 어선은 지어낸 것이라 예시 데이터입니다.',
     en: 'A fishing harbour’s night watch on an old green-phosphor radar scope — over the range rings, bearing ticks, the sweep and the coast, a blip placed where it is for every boat out tonight: its call sign, speed and state in a mark and a word — ● fishing, ▶ under way, ▲ near a closed area (amber), ✕ its position reports stopped (dimmed). On the right the boats’ roster and the sea’s wave height against the advisory level. The harbour and its boats are made up. Example data.',

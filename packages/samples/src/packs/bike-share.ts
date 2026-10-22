@@ -256,6 +256,8 @@ export const bikeShare: SamplePack = {
   title: { ko: '공공자전거 대여소 — 아이소타입', en: 'A city’s bike-share stations — Isotype' },
   field: { ko: '공공자전거·도시 교통', en: 'Bike share & city transport' },
   kind: { ko: '대여소별 자전거와 빈 거치대', en: 'Bikes and free docks at each station' },
+  domain: 'transport',
+  styles: ['print'],
   summary: {
     ko: '도시 공공자전거 대여소 현황을 1930년대 아이소타입 그림 통계로 — 크림 바탕의 평평한 색, 강·공원·큰길만 남긴 지도, 양은 같은 기호를 세어서. 대여소마다 거치된 자전거 한 대에 자전거 기호 하나, 빈 거치대마다 빈 윤곽 하나라 숫자를 읽기 전에 꽉 찬 곳과 빈 곳이 보입니다 — 빌릴 자전거가 없으면 빨간 꼬리표와 빨간 자전거, 반납할 칸이 없으면 파란 꼬리표, 거치대 점검은 회색. 꽉 찬 곳에서 빈 곳으로 자전거를 옮기는 트럭 둘은 점선으로. 오른쪽에 지금 달리는 자전거·오늘 대여·재배치, 시간대별 대여(기호 하나 = 20건, 모자란 끝은 기호를 잘라), 트럭 작업. 도시는 지어낸 것이라 예시 데이터입니다.',
     en: 'A city’s bike-share stations as 1930s Isotype picture statistics — flat colour on cream, a map kept to the river, the parks and the main roads, and quantities shown by counting one symbol. Each station shows a bike for every bike in its rack and an empty outline for every free dock, so full racks and empty ones are seen before any number is read: a red tag and red bikes where there is none to rent, a blue tag where there is no dock to return to, grey where docks are out for repair. Two trucks moving bikes from full racks to empty ones follow dashed lines. On the right the bikes out now, the day’s rentals and the trucks running, the rentals by the hour (one bike for twenty, the last one cut where the count falls short) and the trucks’ jobs. The city is made up. Example data.',

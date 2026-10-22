@@ -202,6 +202,8 @@ export const countHall: SamplePack = {
   title: { ko: '개표소 진행 — 웹 브루탈리즘', en: 'A counting hall — in web brutalism' },
   field: { ko: '선거·행정', en: 'Elections & public administration' },
   kind: { ko: '투표함이 흐르는 개표소 평면', en: 'A counting hall’s plan, with the ballot boxes’ way through it' },
+  domain: 'public',
+  styles: ['art'],
   summary: {
     ko: '보궐선거 개표소의 진행판을 웹 브루탈리즘으로 — 날 회색 바닥, 굵은 검은 선, 고정폭 글꼴, 움직이는 것엔 형광 노랑 하나와 멈춘 것엔 빨강. 개표소 평면 위에 투표함의 길(접수대 → 분류기 여섯 → 심사석 여섯 → 위원 검열·공표)을 화살표로, 자리마다 처리한 투표함 수와 상태를 날것의 상자로 — 멈춘 분류기에서 나가는 화살표는 빨간 점선. 오른쪽에 개표율, 단계별 투표함, 동별 개표율(블록 막대), 저녁 동안의 개표율. 후보·정당의 득표는 싣지 않고 개표의 진행만. 도시와 선거는 지어낸 것이라 예시 데이터입니다.',
     en: 'A by-election’s counting-hall board as a brutalist web page — a raw grey floor, thick black rules, a monospace face, one highlighter yellow for what is moving and red for what has stopped. On the hall’s plan the ballot boxes’ way as arrows (the receiving desk → six sorters → six review tables → the commission, which publishes), each station a raw box with the boxes it has done and its state — the arrow out of a stopped sorter turns red and dashed. On the right the count’s rate, the boxes through each stage, each district’s progress as a bar of blocks and the rate over the evening. No candidate’s or party’s figures — only how far the count has come. The city and its election are made up. Example data.',

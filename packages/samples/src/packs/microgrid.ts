@@ -243,6 +243,8 @@ export const microgrid: SamplePack = {
   title: { ko: '마이크로그리드 에너지 흐름', en: 'Microgrid energy flow' },
   field: { ko: '건물·에너지', en: 'Buildings & energy' },
   kind: { ko: '없음 — 흐름도', en: 'None — flow diagram' },
+  domain: 'energy',
+  styles: ['operations'],
   summary: {
     ko: '태양광·ESS·건물 부하·전기차 충전·한전 계통이 수배전반에서 만나는 사이트에서, 선마다 지금 흐르는 전력을 화살표 방향(충전과 방전, 수전과 역송)·굵기·점선(멈춤)으로, 옆에는 오늘 자립률과 계통에서 받고 보낸 양, 아침부터의 태양광과 부하. 예시 데이터입니다.',
     en: 'Solar, a battery, the building, car chargers and the utility grid meeting at the switchboard, each line showing the power on it now — its arrow the way it flows (charging or discharging, importing or exporting), its width the amount, dashed when idle; beside it the day’s self-sufficiency, what came from and went to the grid, and solar output against the load since morning. Example data.',

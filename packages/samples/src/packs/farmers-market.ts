@@ -194,6 +194,8 @@ export const farmersMarket: SamplePack = {
   title: { ko: '주말 파머스마켓 — 리소그래프', en: 'A weekend farmers’ market — a risograph print' },
   field: { ko: '지역 장터·소상공', en: 'Local markets & small traders' },
   kind: { ko: '공원 장터의 매대 지도', en: 'A map of a market’s stalls in a park' },
+  domain: 'services',
+  styles: ['print'],
   summary: {
     ko: '공원 주말 장터의 안내판을 리소그래프 인쇄물로 — 형광 분홍과 청색 두 잉크만, 미색 종이, 점점이 박힌 결, 망점 틴트, 분홍과 반 칸 어긋난 청색 판, 두 잉크가 겹친 곳의 보라. 공원 평면(길·나무·분수 무대) 위 느티나무 길 양쪽 매대 열둘과 잔디 광장 푸드트럭 셋 — 카드마다 무엇을 파는지와 아직 있는지: 청색 판매 중, 분홍 망점 몇 개 남음, 분홍 단색에 줄 그은 완판. 오른쪽에 방문객·장바구니 대여·다회용기, 오늘의 행사, 30분마다 방문객. 장터는 지어낸 것이라 예시 데이터입니다.',
     en: 'A park’s weekend-market board as a risograph print — two inks only, fluorescent pink and blue, on off-white stock, a speckled grain, halftone tints, the blue drum a hair out of register with the pink and purple where they overprint. On the park’s plan (paths, trees, the fountain stage) twelve stalls along the avenue and three food trucks by the lawn, each card saying what it sells and whether it still has it: blue on sale, a pink halftone when a few are left, solid pink and struck through once sold out. On the right the visitors, the shopping baskets lent and reusable containers, what is on later and the visitors by the half hour. The market is made up. Example data.',

@@ -215,6 +215,8 @@ export const laundromatDesktop: SamplePack = {
   title: { ko: '코인빨래방 저녁 — 90년대 데스크톱', en: 'A coin laundry’s evening — a nineties desktop' },
   field: { ko: '생활 서비스·무인 매장', en: 'Self-service shops' },
   kind: { ko: '세탁기·건조기 상태와 남은 시간', en: 'Washers and dryers, their states and minutes left' },
+  domain: 'services',
+  styles: ['retro'],
   summary: {
     ko: '코인빨래방을 90년대 데스크톱 화면으로 — 청록 바탕화면과 아이콘, 남색 제목 표시줄의 회색 입체 창, 움푹한 칸, 블록 진행 막대, 아래 작업 표시줄. 한 창에 세탁기, 한 창에 건조기 — 기계마다 문과 상태, 남은 시간을 칸칸이 차는 막대로. 옆에는 매장 정보 창, 시간대별 이용 창, 고장 난 건조기를 알리는 메시지 상자. 상태는 색과 함께 아이콘으로: ▶ 작동 중, ✓ 끝남(꺼내 주세요), 빈 칸 사용 가능, ✕ 고장 — 고장 난 기계는 빗금. 빨래방은 지어낸 것이라 예시 데이터입니다.',
     en: 'A coin laundry watched on a nineties desktop — a teal desktop with its icons, grey bevelled windows under navy title bars, sunken wells, block progress bars and a taskbar along the bottom. One window holds the washers and one the dryers, each machine with its door, its state and the minutes left as a segmented bar; beside them the shop’s properties, the uses by the hour, and a message box about the broken dryer. A machine tells its state with an icon as well as a colour — ▶ running, ✓ done and waiting to be emptied, an empty box free, ✕ out of order, hatched. The shop is made up. Example data.',

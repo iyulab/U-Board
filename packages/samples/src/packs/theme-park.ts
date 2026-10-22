@@ -257,6 +257,8 @@ export const themePark: SamplePack = {
   title: { ko: '놀이공원 대기 시간 — 멤피스', en: 'A theme park’s waits — in the Memphis style' },
   field: { ko: '여가·테마파크', en: 'Leisure & theme parks' },
   kind: { ko: '파스텔 구역의 놀이공원 지도', en: 'A park map of pastel zones' },
+  domain: 'leisure',
+  styles: ['art'],
   summary: {
     ko: '놀이공원 정문의 대기 시간 안내판을 80년대 멤피스 스타일로 — 지그재그·물결 테두리의 파스텔 구역, 물결선·점·삼각형 색종이, 모든 것에 굵은 검은 테. 장식은 보라·검정·옅은 색만 써서 강한 네 색은 뜻 하나씩: 놀이기구 대기 — 청록 짧음, 노랑 보통, 핫핑크 김, 회색 빗금 운휴. 놀이기구마다 대기 분을 큰 글자로 담은 배지, 정문에서 대기가 짧은 곳을 잇는 보라 점선 추천 동선(도보 분). 오른쪽에 오늘 입장·평균 대기·운휴, 오늘의 공연, 시간대별 평균 대기. 놀이공원은 지어낸 것이라 예시 데이터입니다.',
     en: 'A theme park’s wait-time board at its gate in the Memphis style of the eighties — pastel zones with zigzag and wavy edges, confetti of squiggles, dots and triangles, thick black outlines on everything. The decoration keeps to purple, black and pale tints, so the four strong colours mean one thing each: a ride’s wait — teal short, yellow middling, hot pink long, grey hatched down. Each ride is a badge with its wait in large type, and a purple dashed route strings the shortest waits together from the gate (minutes on foot). On the right the day’s entries, the average wait and the rides down, today’s shows and the average wait by the hour. The park is made up. Example data.',

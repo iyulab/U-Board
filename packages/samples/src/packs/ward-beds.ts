@@ -280,6 +280,8 @@ export const wardBeds: SamplePack = {
   title: { ko: '병동 병상 현황판 — 스위스 타이포그래피', en: 'A ward’s bed board — in the Swiss style' },
   field: { ko: '의료', en: 'Healthcare' },
   kind: { ko: '병동 평면(컴포넌트 반복)', en: 'A ward plan (one component, repeated)' },
+  domain: 'health',
+  styles: ['minimal'],
   summary: {
     ko: '병동 간호사실 벽에 거는 병상 현황판을 스위스 타이포그래피로 — 흰 종이, 굵은 검은 글자, 빨강 하나, 엄격한 격자. 복도 양쪽 병실 여덟과 격리실·간호사실 평면 위에 병상마다 컴포넌트 하나: 병상 번호, 가린 환자 표시와 재원 일수, 낙상 위험, 상태(재원 검정 · 오늘 퇴원 빨강 · 청소 중 회색 빗금 · 빈 병상 테두리 · 입원 예정 빨간 점선 · 격리 빨간 테). 오른쪽에 아주 큰 재원 수, 오늘 입원·퇴원·간호 인력, 이번 주 재원율, 응급실에서 올라올 환자. 예시 데이터입니다.',
     en: 'The bed board on a ward’s nurse-station wall, set in the Swiss style — white paper, heavy black type, one red, a strict grid. On the plan of eight rooms either side of the corridor, the isolation room and the station, every bed is one component: its number, the patient masked with their day of stay, a fall-risk tag, and its state (in: black · going home today: red · being cleaned: grey hatching · free: outline · kept for an admission: red dashes · isolation: a red rim). On the right the census in very large figures, today’s admissions, discharges and staffing, the week’s occupancy, and who is coming up from the emergency room. Example data.',

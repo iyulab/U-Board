@@ -217,6 +217,8 @@ export const powerSld: SamplePack = {
   title: { ko: '수배전 단선결선도', en: 'Power distribution single-line diagram' },
   field: { ko: '에너지·전력', en: 'Energy & power' },
   kind: { ko: '단선결선도', en: 'Single-line diagram' },
+  domain: 'energy',
+  styles: ['drawing'],
   summary: {
     ko: '수전부터 주변압기, 저압 모선, 피더 여섯까지 단선결선도 위에 차단기 상태와 피더 전력을, 위에는 수전 전력·역률·변압기 부하율을, 아래에는 오늘의 수요 전력과 계약 전력 대비 최대 수요를. 트립한 차단기만 색으로 드러납니다. 예시 데이터입니다.',
     en: 'Each feeder’s breaker state and power on the single-line diagram from the utility supply through the main transformer and the low-voltage bus to six feeders, the incoming power, power factor and transformer load above, and today’s demand and its peak against the contract below. Only the tripped breaker takes colour. Example data.',

@@ -240,6 +240,8 @@ export const offshoreWindChart: SamplePack = {
   title: { ko: '해상풍력단지 — 해도', en: 'An offshore wind farm — a nautical chart' },
   field: { ko: '해상풍력·재생에너지', en: 'Offshore wind' },
   kind: { ko: '발전기 상태·해저 케이블·정비선', en: 'Turbines, submarine cables and service vessels' },
+  domain: 'energy',
+  styles: ['drawing'],
   summary: {
     ko: '해상풍력단지를 해도로 — 등심선과 흩어진 수심 숫자가 있는 옅은 바다, 해안선을 두른 담황색 육지, 눈금 테두리, 나침도, 바다는 기울인 글자·땅은 바른 글자. 발전기 열둘이 세 줄로 서고, 줄 사이 해저 케이블과 육지로 가는 송전 케이블은 해도가 해저 케이블을 그리듯 자홍색 — 고장 난 구간은 빨간 점선. 정비선 둘, 기상 부이, 해상·육상 변전소는 제자리에. 발전기 상태는 색과 함께 기호로: 꽉 찬 원 발전, 반원 출력 제한, 마름모 정비, ✕ 고장. 오른쪽에 단지 이름 표제, 지금 수치, 범례, 오늘 시간별 출력. 단지는 지어낸 것이라 예시 데이터입니다.',
     en: 'An offshore wind farm drawn as a nautical chart — pale sea with depth contours and scattered soundings, buff land inside its coastline, a graduated border, a compass rose, italic lettering on the sea and upright on the land. Twelve turbines stand in three strings; the inter-array cables and the export cable to shore run in magenta, as charts draw submarine cables, and a faulted length turns red and dashed. Two service vessels, a weather buoy and the substations sit where they are. A turbine tells its state with a sign as well as a colour — a full disc generating, a half disc curtailed, a diamond under maintenance, a cross faulted. On the right a cartouche with the farm’s name, the figures now, the key and the output through the day. The farm is made up. Example data.',

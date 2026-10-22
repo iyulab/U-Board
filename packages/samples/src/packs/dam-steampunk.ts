@@ -220,6 +220,8 @@ export const damSteampunk: SamplePack = {
   title: { ko: '댐 수문 방류 — 스팀펑크 기관실', en: 'A dam’s floodgates — a steampunk engine room' },
   field: { ko: '댐·수자원', en: 'Dams & water resources' },
   kind: { ko: '수문 개도·저수위·방류·운영 일지', en: 'Gate openings, reservoir level, discharge and the log' },
+  domain: 'energy',
+  styles: ['retro'],
   summary: {
     ko: '댐의 수문 방류를 스팀펑크 기관실처럼 — 놋쇠 리벳을 박은 쇠판 위로 구리 관이 계기에서 계기로 이어집니다. 수문마다 압력계 하나: 놋쇠 테, 눈금이 새겨진 크림색 판, 바늘이 가리키는 개도, 그 아래 신호등과 새긴 명판. 수문 상태는 색과 함께 등과 명판으로: 방류 중이면 호박색 등이 켜지고, 닫히면 등이 꺼진 유리, 점검 중이면 붉은 등과 경고 줄무늬. 가운데에는 저수지를 수위 유리관으로 표시선과 함께, 아래에는 전신 테이프 같은 운영 일지, 오른쪽에 댐 명판, 지금 유량, 범례, 크림색 카드 위 시간별 방류. 댐은 지어낸 것이라 예시 데이터입니다.',
     en: 'A dam’s floodgates run from a steampunk engine room — an iron plate riveted in brass, copper pipes running from gauge to gauge. Every spillway gate is a pressure dial: a brass bezel, a cream face with its ticks, the needle at the gate’s opening, a signal lamp and an engraved plate below. A gate tells its state by its lamp and plate, as well as by colour: an amber lamp lit while it discharges, dark glass when it is shut, a red lamp over hazard stripes when it is out for repair. In the middle the reservoir in a sight glass against its marks; below, the operator’s log on telegraph tape; on the right the dam’s plaque, the flows now, the key and the discharge by the hour on a cream card. The dam is made up. Example data.',

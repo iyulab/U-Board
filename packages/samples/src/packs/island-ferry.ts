@@ -271,6 +271,8 @@ export const islandFerry: SamplePack = {
   title: { ko: '섬 여객선 운항 — 바우하우스 기하', en: 'Island ferries — a Bauhaus poster' },
   field: { ko: '해운·여객선', en: 'Shipping & ferries' },
   kind: { ko: '기하 도형으로 그린 섬 항로도', en: 'A route map of islands as geometric figures' },
+  domain: 'transport',
+  styles: ['art'],
   summary: {
     ko: '항구 여객선 터미널의 섬 항로 안내판을 바우하우스 포스터로 — 섬을 원·반원·정사각형·삼각형·고리·마름모로, 본토를 아래의 검은 띠로 그리고, 부두 사이 항로를 굵은 막대로. 세 원색은 뜻 하나씩에 모양과 짝지어 색 없이도 읽힘: 파란 원 운항, 노란 사각형 지연, 빨간 삼각형 결항(점선). 부두마다 카드(상태·다음 출항·배), 오른쪽에 해상 상태(파고·풍속·시정 다섯 단계와 풍랑주의보), 출항 예정, 시간대별 승선. 항구와 섬은 지어낸 것이라 예시 데이터입니다.',
     en: 'The island-ferry board at a harbour’s passenger terminal as a Bauhaus poster — the islands as a circle, a half-disc, a square, a triangle, a ring and a lozenge, the mainland a black bar along the foot, the runs between the piers as thick bars. Each of the three primaries keeps one meaning and a shape, so the state reads without the colour: a blue circle sails, a yellow square is delayed, a red triangle is cancelled (and dashed). A card on each pier (its state, the next departure, the ship), and on the right the sea’s state (wave height, wind and visibility in five steps, and the gale warning), the next departures and passengers boarded by the hour. The harbour and its islands are made up. Example data.',

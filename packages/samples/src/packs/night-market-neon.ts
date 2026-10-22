@@ -164,6 +164,8 @@ export const nightMarketNeon: SamplePack = {
   title: { ko: '강변 야시장 푸드트럭 — 네온사인', en: 'A riverside night market’s food trucks — neon signs' },
   field: { ko: '야시장·푸드트럭', en: 'Night market and food trucks' },
   kind: { ko: '트럭별 대기·주문', en: 'Lines and orders by truck' },
+  domain: 'services',
+  styles: ['signage'],
   summary: {
     ko: '강변 야시장의 푸드트럭을 벽돌 벽 위 네온사인으로 — 트럭마다 유리관 간판 하나: 제 색으로 빛나는 이름, 지금 메뉴, 대기 분과 줄 선 사람 수, 그리고 간판 스스로 말하는 상태 — 영업 중이면 그대로, 줄이 길면 아래에 주황 관과 «줄 김», 품절이면 빨간 «품절» 관이 가로지르고 나머지는 흐리게, 영업이 끝나면 관이 꺼지고 점선. 오른쪽에 네온 시계와 지금 방문객·영업 중 트럭·평균 대기, 범례, 어두운 판 위의 30분마다 주문. 야시장과 트럭은 지어낸 것이라 예시 데이터입니다.',
     en: 'A riverside night market’s food trucks as neon signs on a brick wall — a sign of glass tubes for every truck: its name lit in its own colour, what it is serving, the minutes of the wait and the people in line, and the sign itself telling the state — lit steady when serving, an orange tube underneath and «busy» when the line is long, a red «sold out» tube across it with the rest dimmed, the tubes dark and dashed once closed. On the right a neon clock with the visitors now, the trucks open and the average wait, the key, and the orders by the half hour on a dark panel. The market and its trucks are made up. Example data.',

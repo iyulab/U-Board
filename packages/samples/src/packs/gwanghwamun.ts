@@ -283,6 +283,8 @@ export const gwanghwamun: SamplePack = {
   title: { ko: '광화문·덕수궁 실시간', en: 'Gwanghwamun, live' },
   field: { ko: '도시·인파', en: 'City & crowds' },
   kind: { ko: '지역 약도 + 카드(혼합)', en: 'Area plan among cards (mixed)' },
+  domain: 'public',
+  styles: ['operations'],
   summary: {
     ko: '도시 상황판처럼 — 지역 약도에 대여소마다 남은 따릉이와 공영주차장의 주차 대수를 서 있는 자리에, 옆 열에 혼잡도·인구·도로 소통과 인구 예측, 아래 날씨. 약도는 여러 줄에 걸친 그리드 칸 안의 캔버스입니다.',
     en: 'Laid out like a city’s situation room — the area’s plan with the bikes left at each station and the cars in the public car park where they stand; beside it a column of the crowd, the roads and the crowd forecast; the weather below. The plan is a canvas in a grid cell spanning the column’s rows.',

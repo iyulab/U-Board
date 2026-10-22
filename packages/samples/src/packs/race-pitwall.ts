@@ -253,6 +253,8 @@ export const racePitwall: SamplePack = {
   title: { ko: '레이스 피트월 — 모터스포츠 중계 그래픽', en: 'A race team’s pit wall — in the style of race broadcast graphics' },
   field: { ko: '모터스포츠', en: 'Motorsport' },
   kind: { ko: '서킷 지도 + 타이밍 타워', en: 'A circuit map beside a timing tower' },
+  domain: 'leisure',
+  styles: ['control-room'],
   summary: {
     ko: '그랑프리 중 팀 피트월 화면을 레이스 중계 그래픽처럼 — 검정 바탕, 흰 기울인 좁은 글자, 빨강 하나, 비스듬히 잘린 패널. 왼쪽 타이밍 타워(순위·간격·타이어와 사용 랩·지난 랩의 섹터 색 — 보라 세션 최고, 초록 개인 최고, 노랑 그 밖, 피트 중 표시, 우리 팀 두 대 강조), 오른쪽 서킷(세 섹터 색·피트 레인·DRS 구간)과 섹터마다 최고 기록 보유자, 아래 두 대의 타이어 전략(지난 스틴트·계획, 지금 랩 표시)과 랩 타임. 경기와 선수는 지어낸 것이라 예시 데이터입니다.',
     en: 'A race team’s pit-wall screen during a grand prix, drawn like race broadcast graphics — black, white condensed italic type, one red, panels cut on a slant. The timing tower on the left (position, interval, tyre and its age, last lap’s sectors coloured purple for the session’s best, green for a personal best, yellow otherwise, a pit flag, the team’s two cars marked); the circuit on the right (its three sectors in colour, the pit lane and the DRS zones) with who holds each sector’s best; below, the two cars’ tyre strategy (stints run and planned, the current lap marked) and their lap times. The race and drivers are made up. Example data.',

@@ -254,6 +254,8 @@ export const makerspaceShadowboard: SamplePack = {
   title: { ko: '메이커스페이스 공구 벽 — 그림자판', en: 'A makerspace’s tool wall — a shadow board' },
   field: { ko: '메이커스페이스·공방', en: 'Makerspace & workshop' },
   kind: { ko: '공구 대여·장비 상태·예약', en: 'Tool loans, machines and bookings' },
+  domain: 'services',
+  styles: ['craft'],
   summary: {
     ko: '메이커스페이스의 공구 벽을 그림자판으로 — 타공판에 공구마다 제 모양의 빨간 그림자를 칠해 두고 그 위에 공구를 건다. 그래서 빠진 공구는 한눈에 보인다: 그림자가 드러난다. 빌려 간 공구는 그림자와 검은 엠보싱 라벨(누가·언제까지), 기한이 지난 것은 빨간 라벨에 느낌표, 수리 중인 것은 노란 라벨에 톱니와 빗금 그림자. 아래에는 장비 — 3D 프린터 셋, 레이저 커터, CNC — 를 카드마다 지금 하는 일·진행·예약자로. 오른쪽에 라벨 테이프로 쓴 공간 이름, 지금 수치, 범례, 오늘 저녁 장비 예약, 시간별 대여. 메이커스페이스는 지어낸 것이라 예시 데이터입니다.',
     en: 'A makerspace’s tool wall as a shadow board — a pegboard with every tool hung over its own shadow painted in red, so a missing tool is seen at a glance: its shadow shows. A tool lent out shows its shadow and a black embossed label tape with who has it and until when; one overdue a red tape with a bang; one away for repair a yellow tape with a gear over a hatched shadow. Below, the machines — three 3D printers, a laser cutter, a CNC router — each a card with what it is doing, how far along and who booked it. On the right the space’s name on label tape, the figures now, the key, the evening’s machine bookings and the loans through the day. The space is made up. Example data.',

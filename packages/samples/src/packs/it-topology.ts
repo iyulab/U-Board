@@ -241,6 +241,8 @@ export const itTopology: SamplePack = {
   title: { ko: '서비스 운영 토폴로지', en: 'Service operations topology' },
   field: { ko: 'IT 운영', en: 'IT operations' },
   kind: { ko: '없음 — 영역 구성도', en: 'None — zone diagram' },
+  domain: 'it',
+  styles: ['operations'],
   summary: {
     ko: '인터넷 경계·서비스 계층·데이터 계층의 영역 안에 서버마다 상태와 CPU를, 서버 사이 링크에는 트래픽을 라벨로·사용률을 굵기로, 혼잡하거나 끊긴 링크만 색으로. 복제 링크에는 복제 지연을. 위에는 서비스 지표, 아래에는 인터넷 회선 트래픽. 예시 데이터입니다.',
     en: 'Each server’s state and CPU inside its zone — the internet edge, the service tier, the data tier — and on the links between them the traffic as a label and the load as the width, with colour only for a busy or broken link; the replica’s link shows its replication lag. The service’s figures above, the internet line’s traffic below. Example data.',

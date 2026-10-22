@@ -138,6 +138,8 @@ export const lineOee: SamplePack = {
   title: { ko: '조립 라인 OEE 현황', en: 'Assembly line OEE' },
   field: { ko: '제조·생산', en: 'Manufacturing & production' },
   kind: { ko: '없음 — 그리드 배치', en: 'None — grid layout' },
+  domain: 'manufacturing',
+  styles: ['operations'],
   summary: {
     ko: '도면 없이 순서대로 놓은 일반 대시보드 — 라인의 OEE와 세 요소, 시간대별 생산 실적과 계획, 설비 상태, 비가동 사유, 작업 지시. 화면 폭에 맞춰 줄을 바꿉니다. 예시 데이터입니다.',
     en: 'An ordinary dashboard with no drawing, laid out in order — the line’s OEE and its three factors, output against plan by the hour, the machines’ states, why the line stood still and its work orders. It rewraps to the screen’s width. Example data.',

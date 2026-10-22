@@ -230,6 +230,8 @@ export const pumpStation: SamplePack = {
   title: { ko: '펌프장 설비 — 보드가 그린 심볼', en: 'Pump station — symbols the board draws' },
   field: { ko: '상하수도', en: 'Water & wastewater' },
   kind: { ko: '없음 — 그리드 배치', en: 'None — grid layout' },
+  domain: 'energy',
+  styles: ['operations'],
   summary: {
     ko: '위젯에 없는 펌프·밸브·수조 심볼을 보드가 직접 정의해(HTML/SVG와 CSS, 스크립트 없음) 설비마다 놓은 보드 — 펌프는 운전 중에 돌고, 수조는 경보 한계를 넘으면 붉게 표시됩니다. 유량 추세는 준비된 차트입니다. 예시 데이터입니다.',
     en: 'Pump, valve and tank symbols no widget has, defined by the board itself (HTML/SVG and CSS, no script) and placed for every machine — a running pump turns, a tank past an alarm limit turns red. The flow trend is a prepared chart. Example data.',

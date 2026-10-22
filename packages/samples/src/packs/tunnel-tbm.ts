@@ -412,6 +412,8 @@ export const tunnelTbm: SamplePack = {
   title: { ko: '지하철 터널 굴진 — 앰버 단색 터미널', en: 'A subway tunnel’s boring — an amber monochrome terminal' },
   field: { ko: '건설·토목', en: 'Construction & civil works' },
   kind: { ko: '종단면도(지층·터널)', en: 'A long section (the ground and the tunnel)' },
+  domain: 'construction',
+  styles: ['retro'],
   summary: {
     ko: '지하철 연장 공사의 TBM 굴진을 현장 사무실 벽면에 — 지층과 건물·하천이 그려진 종단면 위에 이미 라이닝을 친 구간과 앞으로 팔 점선, 발진·도달 수직구와 환기구, 지표 침하 측정점마다 지시선과 값 카드. 아래로 굴진 링 진척, 일 굴진, TBM 기계 값(토크·추력·막장압·속도·방향 편차), 갱내 공기. 검은 바탕에 앰버 한 색, 관리 기준을 넘은 값만 반전. 예시 데이터입니다.',
     en: 'A subway extension’s tunnel boring machine on the site office wall — the long section with its ground layers, the buildings and the stream above, the lined tunnel behind the machine and the dashed bore ahead, the shafts, and each surface settlement point with a leader to its reading. Under it the rings built, the rings a day, the machine’s torque, thrust, face pressure, speed and steering, and the air at the face. Amber on black in one colour; only a reading past its limit is shown in reverse. Example data.',

@@ -266,6 +266,8 @@ export const bloodJourney: SamplePack = {
   title: { ko: '혈액 한 팩의 여정 — 인포그래픽', en: 'The journey of a blood bag — an infographic' },
   field: { ko: '공공·보건의료', en: 'Public health' },
   kind: { ko: '없음 — 인포그래픽(이야기 순서)', en: 'None — infographic (the story’s order)' },
+  domain: 'health',
+  styles: ['print'],
   summary: {
     ko: '포스터처럼 읽는 하루의 혈액 수급 — 큰 제목과 오늘 헌혈자 수, 보유량 일수와 그것이 정하는 단계, 헌혈·검사·제제·보관·공급 다섯 단계를 화살표로 잇는 큰 숫자, 적정 5일과 견준 혈액형별 보유량, 헌혈자 연령대, 지난 30일 보유량. 예시 데이터입니다.',
     en: 'A day of the blood supply read like a poster — a headline with today’s donors, the stock in days and the level it sets, the five steps from donation to hospital as large numbers the arrows read in order, the stock by blood type against five days, who gave today, and the last thirty days of stock. Example data.',

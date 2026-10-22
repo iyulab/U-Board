@@ -232,6 +232,8 @@ export const wineryEngraving: SamplePack = {
   title: { ko: '와이너리의 수확철 — 동판화', en: 'A winery at harvest — a copperplate engraving' },
   field: { ko: '와인 양조', en: 'Winemaking' },
   kind: { ko: '발효 탱크·숙성 오크통·셀러 일', en: 'Fermentation tanks, barrels and the cellar’s work' },
+  domain: 'agrifood',
+  styles: ['print'],
   summary: {
     ko: '수확철 와이너리 셀러를 동판화로 — 크림 종이에 세피아 잉크, 모든 음영을 빗금과 교차 빗금으로, 괘선 테두리와 모서리 덩굴, 명조 글자. 위는 발효실 — 탱크 여섯, 안의 와인을 그 높이까지 새김; 아래는 숙성 셀러 — 오크통 여덟, 와인과 오크에 든 달 수. 탱크 상태는 잉크와 함께 작은 새김 그림으로: 발효 중이면 오르는 기포, 안정되면 모래시계, 온도가 높으면 붉은 온도 표시, 비워 세척 중이면 ✕. 오른쪽에 와이너리 이름 카르투슈, 지금 수치, 범례, 오늘의 셀러 일, 두 탱크의 오늘 발효 온도. 와이너리는 지어낸 것이라 예시 데이터입니다.',
     en: 'A winery’s cellar at harvest drawn as a copperplate engraving — sepia ink on cream, every shade laid in hatching and cross-hatching, a ruled border with corner flourishes, serif lettering. Above, the fermentation hall — six tanks, the wine inside engraved at its level; below, the barrel cellar — eight barrels with their wine and their months in oak. A tank tells its state with a small engraved vignette as well as by the ink: rising bubbles while it ferments, an hourglass when it rests, a red mark when it runs warm, a cross when it stands empty for cleaning. On the right the cartouche with the winery’s name, the figures now, the key, the day’s work in the cellar and two tanks’ fermentation temperatures through the day. The winery is made up. Example data.',

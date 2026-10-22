@@ -283,6 +283,8 @@ export const railNetwork: SamplePack = {
   title: { ko: '고속철도 운행 관제 — 전국 노선도', en: 'High-speed rail operations — the network map' },
   field: { ko: '교통·철도', en: 'Transport & rail' },
   kind: { ko: '노선도(도식 지도, 광역)', en: 'Network map (schematic, nationwide)' },
+  domain: 'transport',
+  styles: ['control-room'],
   summary: {
     ko: '전국 고속철도를 노선도로 — 노선 색으로 이은 역과 역, 구간마다 시간당 운행 편수만큼의 굵기, 늦는 구간은 점선과 지연 분, 열차가 묶인 역은 붉은 고리. 옆에 오늘의 숫자, 목표와 견준 노선별 정시율, 지연 열차. 예시 데이터입니다.',
     en: 'The country’s high-speed rail as a transit map — stations joined in their line’s colour, each section as thick as the trains on it in the hour, dashed with its delay where late, a red ring where trains are held; beside it the day’s figures, punctuality by line against its target and the trains running late. Example data.',

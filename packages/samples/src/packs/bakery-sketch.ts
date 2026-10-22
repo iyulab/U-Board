@@ -295,6 +295,8 @@ export const bakerySketch: SamplePack = {
   title: { ko: '동네 빵집의 오후 — 손그림 스케치', en: 'A neighbourhood bakery’s afternoon — a pencil sketch' },
   field: { ko: '소상공인·외식', en: 'Small business & food' },
   kind: { ko: '가게 평면 스케치', en: 'A sketched shop plan' },
+  domain: 'services',
+  styles: ['craft'],
   summary: {
     ko: '주방 문 옆 태블릿에 띄운 동네 빵집의 오후를 공책에 연필로 그린 듯이 — 흔들리는 선으로 그린 가게 평면(데크 오븐 둘·발효기·반죽기·작업대, 카운터·진열대·카페 탁자) 위에 오븐·발효기마다 붙인 카드, 오븐에서 진열대로 다음 판이 언제 나오는지 점선, 진열대 쟁반의 남은 개수와 다 팔린 것엔 빨간 줄. 옆에 오늘 매출과 나간 빵, 시간대별 판매, 포스트잇 메모 둘. 모눈종이에 연필, 노란 형광펜, 빨간 펜. 예시 데이터입니다.',
     en: 'A neighbourhood bakery’s afternoon on the tablet by the kitchen door, drawn as if in pencil in a notebook — the shop’s plan in wobbly lines (two deck ovens, the proofer, the mixer and the bench; the counter, the display case and the café tables), a card taped by each oven and the proofer, a dashed line from each oven to the case saying when the next batch comes out, and the case’s trays with what is left, a red line through what has sold out. Beside it the day’s takings and loaves, sales by the hour and two sticky notes. Pencil on squared paper, a yellow highlighter, red pen. Example data.',

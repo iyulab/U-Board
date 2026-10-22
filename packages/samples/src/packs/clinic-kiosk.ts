@@ -237,6 +237,8 @@ export const clinicKiosk: SamplePack = {
   title: { ko: '외래 대기 안내 — 세로 키오스크', en: 'Outpatient waiting — a portrait kiosk' },
   field: { ko: '의료', en: 'Healthcare' },
   kind: { ko: '세로 화면(9:16 키오스크)', en: 'Portrait screen (a 9:16 kiosk)' },
+  domain: 'health',
+  styles: ['signage'],
   summary: {
     ko: '병원 외래 로비에 세워 두는 세로 화면 — 몸이 불편한 사람도 몇 걸음 떨어져 읽도록 한 단, 아주 큰 숫자, 쉬운 말, 높은 대비. 진료과마다 지금 호출 번호와 다음 순서·대기 인원·예상 시간(복도 색과 같은 색), 검사실 대기, 약 받을 번호, 주차장 층별 빈자리, 평소 붐비는 시간. 예시 데이터입니다.',
     en: 'The upright screen in a hospital’s outpatient hall — one column read from a few steps away by people who are unwell: very large numbers, plain words, high contrast. Each clinic’s number being called now, who is next, how many wait and for how long, in the colour of its corridor; the queue at the test rooms, prescriptions ready to collect, free spaces in the car park, and the hours it is usually busiest. Example data.',

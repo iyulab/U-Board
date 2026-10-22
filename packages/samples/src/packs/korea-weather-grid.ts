@@ -235,6 +235,8 @@ export const koreaWeatherGrid: SamplePack = {
   title: { ko: '전국 열네 곳 지금 날씨 — 예보 격자 도면', en: 'The weather now in fourteen towns — on the forecast grid' },
   field: { ko: '기상', en: 'Weather' },
   kind: { ko: '격자 도면', en: 'Grid plot' },
+  domain: 'environment',
+  styles: ['drawing'],
   summary: {
     ko: '기상청 초단기실황으로 전국 열네 곳의 지금 기온·습도·풍속과 내리는 것(비·눈)을, 기상청 동네예보 격자 자체 위에 — 5 km마다 찍은 점, 가장자리의 격자 번호, 도시마다 시청이 든 격자점에 점과 지시선으로 이은 카드. 원천은 «몇 시의 자료»로 묻는 API라 요청 경로에 시각 자리(`{{now:yyyyMMdd}}`)를 쓰고, 정시 관측이 몇 분 뒤에 나오므로 15분이 지난 뒤에 그 정시를 묻습니다. 원천이 이용자마다 키를 발급해, 설치본에서 만들 때 발급받은 키가 필요합니다.',
     en: 'The temperature, humidity, wind and anything falling in fourteen Korean towns now, from the weather service’s hourly observations — drawn on its forecast grid itself: a point every 5 km, the grid numbers along the edges, and every town a dot at the grid point of its city hall with a card on a leader line. The source is asked for the data of a given hour, so the request path carries time places (`{{now:yyyyMMdd}}`), and since an hour is out a few minutes after it, it asks for an hour a quarter of an hour on. The source issues each user a key, so creating it in an installation needs one.',

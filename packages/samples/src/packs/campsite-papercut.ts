@@ -242,6 +242,8 @@ export const campsitePapercut: SamplePack = {
   title: { ko: '캠핑장의 오후 — 종이 오리기', en: 'A campground’s afternoon — cut paper' },
   field: { ko: '캠핑·야외 여가', en: 'Camping & the outdoors' },
   kind: { ko: '사이트 입실·편의시설·입퇴실·날씨', en: 'Pitches, facilities, arrivals and the weather' },
+  domain: 'leisure',
+  styles: ['craft'],
   summary: {
     ko: '캠핑장의 오후를 종이 오리기로 — 겹겹이 놓은 색 판지 언덕과 그 그림자, 호수, 초록 종이를 오린 소나무, 그리고 풀밭 위에 층층이 오려 놓은 사이트 카드. 사이트 상태는 카드 색과 함께 카드에 오린 텐트로: 입실이면 꽉 찬 텐트, 오는 중이면 윤곽만 오린 텐트와 점선 오림선, 빈 사이트는 빈 원, 닫힌 곳은 빗금 판지에 ✕. 위에는 편의시설을 종이 칩으로, 아래에는 오늘 입실·퇴실과 저녁 날씨·모닥불 규칙, 오른쪽에 판지를 오린 캠핑장 이름, 지금 수치, 범례, 이번 주 예약. 캠핑장은 지어낸 것이라 예시 데이터입니다.',
     en: 'A campground’s afternoon made in cut paper — hills of coloured card laid over one another with their shadows, a lake, pines snipped from green, and every pitch a card cut out and set on the meadow in layers. A pitch tells its state by the tent cut on its card, as well as by the card’s colour: a solid tent when campers are in, a tent cut only as an outline with a dashed cutting line when they are on their way, an empty circle for a free pitch, a cross over hatched card when it is closed. Above, the facilities as paper chips; below, the day’s arrivals and departures and the evening’s weather with the campfire rule; on the right the campground’s name cut from card, the figures now, the key and the pitches booked through the week. The campground is made up. Example data.',

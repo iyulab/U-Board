@@ -176,6 +176,8 @@ export const museumNajeon: SamplePack = {
   title: { ko: '박물관 수장고 보존 환경 — 나전칠기', en: 'A museum’s storage rooms — lacquer inlaid with mother-of-pearl' },
   field: { ko: '문화재 보존·수장고', en: 'Collections care and storage' },
   kind: { ko: '수장고별 온습도', en: 'Temperature and humidity by room' },
+  domain: 'leisure',
+  styles: ['korean', 'craft'],
   summary: {
     ko: '공예박물관의 수장고 여섯을 나전칠기로 — 방마다 자개 테를 두른 검은 옻칠 함 하나: 소장품, 큰 온도와 상대습도, 자개 눈금자 위에 그 방이 허용하는 습도 띠와 지금 공기의 자리, 그리고 상태가 글자·낱말·테로 — 安 안정(자개 실선), 注 주의(점선), 離 이탈(주칠 빨강), 檢 점검(점점선·흐리게). 오른쪽에 서화 수장고의 지난 24시간 습도와 기준 띠, 오늘의 수장고 일지. 박물관과 수장고는 지어낸 것이라 예시 데이터입니다.',
     en: 'A craft museum’s six storage rooms drawn as lacquerware inlaid with mother-of-pearl — a black lacquer box framed in shell for every room: its collection, temperature and relative humidity large, a pearl gauge with the humidity band the room allows and a marker where the air is now, and its state in a character, a word and the frame — 安 steady (a solid pearl frame), 注 watch (dashed), 離 out of band (vermilion lacquer), 檢 being checked (dotted, dimmed). On the right the painting store’s humidity over the last day against its band, and the day’s log of movements and checks. The museum and its rooms are made up. Example data.',

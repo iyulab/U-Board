@@ -226,6 +226,8 @@ export const observatoryGlass: SamplePack = {
   title: { ko: '천문대의 밤 — 스테인드글라스', en: 'An observatory’s night — stained glass' },
   field: { ko: '천문대·과학 관측', en: 'Observatories & science' },
   kind: { ko: '돔·망원경·하늘 상태·관측 계획', en: 'Domes, telescopes, the sky and the night’s programme' },
+  domain: 'environment',
+  styles: ['craft'],
   summary: {
     ko: '천문대의 밤을 스테인드글라스로 — 어두운 벽에 납선, 돔마다 색유리 긴 아치 창 하나, 그 안에 망원경과 관측 대상이 납땜된 판으로. 돔 상태는 유리 색과 함께 창 꼭대기의 둥근 장식으로: 돔을 열고 관측 중이면 금빛 별, 다음 대상을 기다리면 반만 밝은 원, 닫혔으면 어두운 원, 정비 중이면 붉은 ✕. 아래에는 하늘 상태를 장미창에, 오늘 밤 관측 계획을, 오른쪽에 아치 아래 천문대 이름, 지금 수치, 범례, 어두운 유리 위 밤새 구름량. 천문대는 지어낸 것이라 예시 데이터입니다.',
     en: 'An observatory’s night set in stained glass — lead lines on a dark wall, every dome a tall lancet window of coloured glass with its telescope and target leaded in. A dome tells its state by the roundel at the top of its window, as well as by its glass’s colour: a gold star when it is open and observing, a half-lit disc when it waits for its next target, a dark disc when it is closed, a red cross when it is out for service. Below, the sky’s readings in a rose window and the night’s programme; on the right the observatory’s name under an arch, the figures now, the key and the cloud cover through the night on a dark pane. The observatory is made up. Example data.',

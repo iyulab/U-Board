@@ -177,6 +177,8 @@ export const recyclingPolaroid: SamplePack = {
   title: { ko: '자원순환센터 선별장 — 즉석사진 앨범', en: 'A recycling centre’s sorting lines — an instant-photo album' },
   field: { ko: '자원순환·재활용 선별', en: 'Recycling and sorting' },
   kind: { ko: '선별 라인별 적재·순도', en: 'Bays and purity by sorting line' },
+  domain: 'environment',
+  styles: ['craft'],
   summary: {
     ko: '자원순환센터의 선별 라인 여섯을 즉석사진 앨범으로 — 라인마다 검은 앨범 종이에 모서리로 붙인 사진 한 장: 사진 속 베일장이 찬 만큼 쌓인 압축 베일, 아래 흰 여백에 펜으로 품목·오늘 처리량·순도, 그리고 상태가 낱말과 사진에 붙인 것으로 — 정상은 체크만, 혼입 주의는 노란 테이프, 만재는 빨간 압정과 동그라미 친 낱말, 정지는 빛바랜 사진에 엇갈린 테이프. 오른쪽에 테이프로 붙인 종이 위 시간대별 반입량과 오늘 나가는 트럭. 센터는 지어낸 것이라 예시 데이터입니다.',
     en: 'A recycling centre’s six sorting lines kept as an instant-photo album — a photo held by paper corners on the black album page for every line: the line’s bale bay stacked as full as it is, the white edge below carrying the material, today’s tonnage and purity in pen, and the state in a word and in what is stuck on the photo — just a tick when it runs, a strip of yellow tape when other material is getting in, a red pin and a circled word when the bay is full and wants a truck, crossed tape over a faded photo when the line has stopped. On the right the day’s intake by hour and the trucks going out, on paper taped into the album. The centre is made up. Example data.',

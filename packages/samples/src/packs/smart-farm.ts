@@ -358,6 +358,8 @@ export const smartFarm: SamplePack = {
   title: { ko: '스마트팜 단지 — 아이소메트릭', en: 'A smart farm — isometric' },
   field: { ko: '농업·스마트팜', en: 'Agriculture & smart farming' },
   kind: { ko: '아이소메트릭 배치도', en: 'Isometric site plan' },
+  domain: 'agrifood',
+  styles: ['drawing'],
   summary: {
     ko: '탁자 위 모형처럼 비스듬히 내려다본 농장 — 유리 너머로 작물 줄이 보이는 온실 네 동과 육묘장·양액실·선별장, 지붕마다 꽂힌 태그에 안의 온도와 습도, 지금 하는 일(환기창 열림·차광·관수). 옆에 환기창이 따르는 바깥 날씨, 오늘 수확량, 고온 경보와 견준 동별 온도, 관수와 전력. 예시 데이터입니다.',
     en: 'A farm seen from above at an angle, like a model on a table — four glasshouses with their crop rows showing through the glass, the seedling house, the nutrient room and the packing house, each with a tag pinned to its roof: the temperature and humidity inside and what it is doing now (vents open, shading, irrigating). Beside it the weather the vents answer to, the day’s harvest, each house’s temperature against the heat alarm, and the water and power used. Example data.',

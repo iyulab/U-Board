@@ -340,6 +340,8 @@ export const groundStation: SamplePack = {
   title: { ko: '지구관측 위성 임무 관제', en: 'An earth-observation satellite’s mission operations' },
   field: { ko: '우주·위성', en: 'Space & satellites' },
   kind: { ko: '세계 지도(위성 지상 궤적)', en: 'A world map (the satellite’s ground track)' },
+  domain: 'it',
+  styles: ['control-room'],
   summary: {
     ko: '지구관측 위성의 운영 콘솔 — 회색 점으로 찍은 세계 위에 지상 궤적(방금 돈 궤도는 실선, 다음 궤도는 점선)과 지금 위성의 위치, 지상국 다섯 중 교신 중인 곳과의 무선 링크. 옆에 다음 통과 일정과 위성 상태, 아래에 지난 두 궤도의 배터리(식 구간마다 내려감)·탑재체 온도와 이번 통과의 명령·이벤트. 어두운 회색 패널, 고정폭 수치, 상태에만 색. 예시 데이터입니다.',
     en: 'An earth-observation satellite’s operations console — the world in grey dots with the ground track across it (the orbit just flown solid, the next dashed), the satellite where it is now and a radio link to the ground station it is talking to. Beside it the next passes and the satellite’s state; under it the last two orbits’ battery (dipping in each eclipse) and payload temperature, and this pass’s commands and events. Dark grey panels, fixed-width readings, colour only for a state. Example data.',

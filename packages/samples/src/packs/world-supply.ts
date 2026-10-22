@@ -355,6 +355,8 @@ export const worldSupply: SamplePack = {
   title: { ko: '전자부품 공급망 — 신문 데이터 지면', en: 'An electronics supply chain — a newspaper’s data page' },
   field: { ko: '제조·공급망', en: 'Manufacturing & supply chain' },
   kind: { ko: '세계 지도(점 지도 · 흐름 호)', en: 'A world map (dots and flow arcs)' },
+  domain: 'manufacturing',
+  styles: ['print'],
   summary: {
     ko: '전자제품 회사의 공급망을 신문 데이터 지면처럼 — 이번 주에 무엇이 바뀌었는지 말하는 제목, 회색 점으로 찍은 세계, 부품 공급사에서 조립공장으로, 공장에서 판매 물류센터로 가는 구간을 곡선 호로(굵기 = 주간 컨테이너, 색 = 제때·느림·늦음). 옆에 이번 주 수치와 위험 공급사, 아래에 무슨 일이 있었는지 한 단락, 세 구간의 12주 리드타임, 운송 중인 선적. 종이색 바탕, 세리프 제목, 늦음만 붉은색. 예시 데이터입니다.',
     en: 'An electronics maker’s supply chain drawn as a newspaper’s data page — a headline saying what changed this week, a world of grey dots, and the lanes as arcs from the parts suppliers to the assembly plant and from the plant to the sales centres (width = containers a week, colour = on time, slow or late). Beside it the week’s figures and the suppliers at risk; under it a paragraph on what happened, three lanes’ lead times over twelve weeks and the shipments at sea. Paper, a serif headline, red only for late. Example data.',

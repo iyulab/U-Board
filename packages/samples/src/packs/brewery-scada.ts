@@ -285,6 +285,8 @@ export const breweryScada: SamplePack = {
   title: { ko: '양조장 공정 — 스큐어모픽 SCADA', en: 'A brewery’s process — skeuomorphic SCADA' },
   field: { ko: '식음료 제조', en: 'Food & beverage' },
   kind: { ko: '공정 그림(금속 패널)', en: 'Process picture (a steel panel)' },
+  domain: 'manufacturing',
+  styles: ['control-room'],
   summary: {
     ko: '수제 맥주 양조장의 운전 화면을 옛 SCADA처럼 — 헤어라인 금속 패널, 금속 원통으로 그린 용기와 플랜지 배관, 용기마다 나사로 박은 명판(백라이트 온도 표시창·사이트글라스 액위·램프), 베젤 달린 아날로그 계기, 램프 경보 표시반, 발효조 2의 발효 곡선. 당화조에서 숙성 탱크까지 왼쪽에서 오른쪽으로. 예시 데이터입니다.',
     en: 'A craft brewery’s operator screen drawn as an old SCADA panel — brushed steel, vessels shaded as metal cylinders with flanged pipes, a screwed nameplate under each vessel (a backlit temperature display, the level in a sight glass, a lamp), round gauges with a bezel, an annunciator of lamps, and the fermentation curve of tank 2. Mash tun to bright beer tank, left to right. Example data.',

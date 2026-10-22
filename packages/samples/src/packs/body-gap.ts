@@ -214,6 +214,8 @@ export const bodyGap: SamplePack = {
   title: { ko: '차체 간극·단차 품질 맵', en: 'Car body gap & flush' },
   field: { ko: '제조·품질', en: 'Manufacturing & quality' },
   kind: { ko: '부품 실루엣', en: 'Part silhouette' },
+  domain: 'manufacturing',
+  styles: ['operations'],
   summary: {
     ko: '차체 측면 실루엣의 측정점마다 공차 사용률 색의 고리와, 지시선으로 이은 간극·단차 카드. 옆에는 마지막 측정 차체, 공차를 넘은 측정점 수, 측정점별 공차 사용률. 예시 데이터입니다.',
     en: 'Each measuring point on a car body’s side outline as a ring in the colour of its tolerance use, led by a line to a card with its gap and flush; the latest body, how many points are out and each point’s tolerance use beside it. Example data.',

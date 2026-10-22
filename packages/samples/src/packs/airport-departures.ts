@@ -223,6 +223,8 @@ export const airportDepartures: SamplePack = {
   title: { ko: '공항 출발 안내판', en: 'Airport departures board' },
   field: { ko: '항공·공항', en: 'Aviation & airports' },
   kind: { ko: '없음 — 사이니지(그리드, 다크)', en: 'None — signage (grid, dark)' },
+  domain: 'transport',
+  styles: ['signage'],
   summary: {
     ko: '터미널 홀 건너편에서 읽는 출발 안내판 — 스플릿 플랩 칸의 시각·편명·게이트, 한·영 목적지, 탑승 중·지연·마감·결항 현황. 옆에 시계와 날씨, 오전 정시 출발률, 시간대별 계획과 실제 출발, 보안검색 대기. 큰 글자 몇 가지로 읽는 화면. 예시 데이터입니다.',
     en: 'A departures board read from across the terminal hall — time, flight and gate on split-flap tiles, the destination in Korean and English, and each flight boarding, delayed, closed or cancelled; beside it the clock and the weather, the morning’s punctuality, the hour’s departures planned against flown, and the security wait. A few things, very large. Example data.',

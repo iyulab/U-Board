@@ -193,6 +193,8 @@ export const aquariumLabels: SamplePack = {
   title: { ko: '수족관 생명유지 — 박물관 표본 라벨', en: 'An aquarium’s life support — museum specimen labels' },
   field: { ko: '수족관·동물 관리', en: 'Aquariums & animal care' },
   kind: { ko: '수조 수질·먹이 주기·입장객', en: 'Tank water, feeding rounds and visitors' },
+  domain: 'leisure',
+  styles: ['print'],
   summary: {
     ko: '수족관의 생명유지를 자연사 박물관 표본장처럼 — 초록 펠트를 댄 짙은 나무 장에 수조마다 표본 라벨이 핀으로 꽂힙니다. 크림색 카드에 가는 이중 테, 타자기 글씨 목록 번호, 바른 글자 수조 이름, 기울인 라틴어 학명, 점선 지시선 옆 수온·pH·용존 산소. 수조 상태는 색과 함께 큐레이터의 표시로: 원 양호, 노란 쪽지의 세모 주의, 모서리를 가로지르는 붉은 띠와 ✕ 경보. 아래에는 먹이 주기를 긴 라벨로, 오른쪽에 놋쇠 명판, 지금 수치, 범례, 시간별 입장. 수족관은 지어낸 것이라 예시 데이터입니다.',
     en: 'An aquarium’s life support set out as a natural history cabinet — a dark wood case lined with green felt, every tank a specimen label pinned to it: cream card with a fine double rule, the catalogue number typewritten, the tank’s name in serif, the species in italic Latin, the water’s readings against dotted leaders. A tank tells its state the way a curator marks a card, as well as by colour — a ring sound, a triangle on a yellow tag to watch, a red ribbon across the corner with a cross when something is wrong. Below, the feeding rounds on a long label; on the right a brass plaque, the figures now, the key and the visitors by the hour. The aquarium is made up. Example data.',

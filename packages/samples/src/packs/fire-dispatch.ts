@@ -226,6 +226,8 @@ export const fireDispatch: SamplePack = {
   title: { ko: '119 출동 상황판 — 구성주의 포스터', en: 'A fire and rescue dispatch board — a Constructivist poster' },
   field: { ko: '소방·119', en: 'Fire & rescue' },
   kind: { ko: '안전센터 차량과 진행 중 출동', en: 'Stations’ vehicles and the calls in progress' },
+  domain: 'public',
+  styles: ['art'],
   summary: {
     ko: '도시의 119 출동 상황을 러시아 구성주의 포스터로 — 빨강·검정·크림 세 가지만, 사선 위에 세운 구도, 기울여 앉힌 굵은 글자, 평평한 종이를 오린 듯한 원과 띠. 지도는 붉은 사선 띠(강)와 검은 블록, 몇 줄의 길로만 남기고, 안전센터마다 검은 머리의 카드에 차량을 늘어놓아 상태를 색과 함께 도형으로: 검은 네모 대기, 빨간 삼각 출동, 빨간 마름모 현장, 회색 뒤집힌 삼각 복귀. 진행 중인 출동은 빨간 원, 그리로 가는 차량은 남은 분이 적힌 선으로. 오른쪽에 오늘 출동·평균 도착·대기 차량, 진행 중 목록, 두 시간마다 출동. 도시는 지어낸 것이라 예시 데이터입니다.',
     en: 'A city’s fire and rescue dispatch as a Russian Constructivist poster — red, black and cream only, a composition built on diagonals, heavy type set at an angle, circles and bars cut from flat paper. The map is kept to a red diagonal band (the river), black blocks and a few roads; each station is a black-headed card listing its vehicles, each state told by a shape as well as a colour: a black square waiting, a red triangle on its way, a red diamond at the scene, a grey triangle pointing back on its way home. The calls in progress are red discs, and the vehicles heading to them follow lines labelled with their minutes. On the right the day’s calls, the average arrival and the vehicles free, the calls in progress and the calls by two hours. The city is made up. Example data.',

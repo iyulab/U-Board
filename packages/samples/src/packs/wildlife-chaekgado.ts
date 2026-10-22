@@ -184,6 +184,8 @@ export const wildlifeChaekgado: SamplePack = {
   title: { ko: '자연공원 무인 센서 카메라 — 책가도', en: 'A nature park’s camera traps — a chaekgado bookshelf screen' },
   field: { ko: '야생동물 조사·자연공원', en: 'Wildlife monitoring' },
   kind: { ko: '카메라 지점별 포착과 상태', en: 'Catches and state by camera' },
+  domain: 'environment',
+  styles: ['korean'],
   summary: {
     ko: '자연공원의 무인 센서 카메라를 책가도로 — 칠한 나무 책장의 엇갈린 칸들, 그중 둘은 책가도의 정물(책 더미·꽃병·필통)이고 나머지 칸마다 카메라 지점 하나: 자리, 마지막으로 찍힌 동물과 시각, 오늘 촬영 수, 전지와 저장 공간을 먹 막대로, 그리고 상태가 낙관(도장)과 낱말로 — 安 정상, 珍 희귀·보호종 포착(주홍 도장), 電 전지 부족, 障 고장(촬영 없음), 滿 저장 공간 가득. 오른쪽 족자에 오늘 종별 포착과 아침 순회. 공원과 지점은 지어낸 것이라 예시 데이터입니다.',
     en: 'A nature park’s camera traps painted as a chaekgado, the Joseon bookshelf screen — the staggered compartments of a lacquered shelf, two of them holding the screen’s still life (stacked books, a vase, a brush pot) and every other one a camera’s station: its place, the last animal it caught and when, today’s shots, its battery and memory as ink bars, and the state as a seal and a word — 安 steady, 珍 a rare or protected animal caught (a vermilion seal), 電 battery low, 障 a fault (no shots), 滿 memory full. On the right a hanging scroll with today’s catches by species and the morning round. The park and its stations are made up. Example data.',

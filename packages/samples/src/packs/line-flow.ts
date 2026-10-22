@@ -147,6 +147,8 @@ export const lineFlow: SamplePack = {
   title: { ko: '생산 라인 공정 흐름', en: 'Production line flow' },
   field: { ko: '제조·생산', en: 'Manufacturing & production' },
   kind: { ko: '없음 — 흐름도', en: 'None — flow diagram' },
+  domain: 'manufacturing',
+  styles: ['operations'],
   summary: {
     ko: '작업이 흐르는 순서대로 놓은 공정 카드와 라인의 지표. 카드는 공정 id 하나를 받는 컴포넌트로 한 번만 그리고, 공정마다 그 인스턴스가 자기 행을 읽습니다 — 공정이 늘면 인스턴스만 더합니다. 예시 데이터입니다.',
     en: 'A line’s stations in the order work flows through them, with the line’s figures. The card is drawn once, as a component that takes a station’s id, and each station is an instance of it that reads its own row — more stations are more instances. Example data.',

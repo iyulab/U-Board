@@ -233,6 +233,8 @@ export const poolMosaic: SamplePack = {
   title: { ko: '실내 수영장의 저녁 — 모자이크 타일', en: 'An indoor pool’s evening — mosaic tiles' },
   field: { ko: '체육시설·수영장', en: 'Sports facilities & pools' },
   kind: { ko: '레인 사용·수질·강습·입장', en: 'Lanes, water quality, classes and admissions' },
+  domain: 'leisure',
+  styles: ['craft'],
   summary: {
     ko: '실내 수영장의 저녁을 모자이크로 — 위에서 본 수조가 작은 파란 유리 타일로 깔리고, 둘레에 타일 띠, 사이사이 줄눈. 레인마다 흰 타일 한 줄: 번호를 새긴 타일, 레인의 쓰임, 그리고 타일로 센 사람 수 — 채운 타일 하나가 한 사람, 빈 타일이 남은 자리. 레인 상태는 색과 함께 끝에 놓은 표지와 레인 줄로: 자유 수영은 ○와 파랑·흰 줄, 강습은 ◆와 노란 줄, 만원은 ▲와 붉은 줄, 닫힘은 ✕와 빗금 줄. 아래에는 수질과 저녁 강습, 오른쪽에 타일 띠 속 수영장 이름, 지금 수치, 범례, 시간별 입장. 수영장은 지어낸 것이라 예시 데이터입니다.',
     en: 'An indoor pool’s evening laid in mosaic — the pool seen from above in small glass tiles of blue, a band of tiles round it, the grout between. Every lane is a strip of white tile: its number on a tile of its own, what the lane is for, and its swimmers counted in tiles — a filled tile a swimmer, an empty one a free place. A lane tells its state by a sign at its end and by its rope, as well as by colour: a ring and a blue-and-white rope for free swimming, a diamond and a yellow rope for a class, a triangle and a red rope when it is full, a cross and a hatched rope when it is closed. Below, the water’s quality and the evening’s classes; on the right the pool’s name in a tiled band, the figures now, the key and the admissions by the hour. The pool is made up. Example data.',

@@ -158,6 +158,8 @@ export const kilnPorcelain: SamplePack = {
   title: { ko: '도예 공방 가마 — 청화백자', en: 'A pottery studio’s kilns — blue-and-white porcelain' },
   field: { ko: '공예·도예 공방', en: 'Crafts and pottery' },
   kind: { ko: '가마별 소성 진행', en: 'Firings by kiln' },
+  domain: 'services',
+  styles: ['korean', 'craft'],
   summary: {
     ko: '도예 공방의 가마 넷을 청화백자로 — 가마마다 코발트로 그린 접시 하나: 전에 물결 띠, 가마 이름과 종류, 굽 안에 큰 온도, 굽을 두른 고리가 소성이 나아간 만큼 차고, 가운데 단계가 낱말과 글자 문양으로 — 오르는 중 火(채운 띠), 머무는 중 雲(겹선), 식는 중 水(점선), 쉬는 중 空(흐리게). 오른쪽에 장작가마의 계획 대 실측 소성 곡선, 한지 띠 위에 오늘 굽는 것. 공방과 가마는 지어낸 것이라 예시 데이터입니다.',
     en: 'A pottery studio’s four kilns drawn as blue-and-white porcelain — a plate painted in cobalt for every kiln: a band of waves on the rim, the kiln’s name and kind, its temperature large in the well, a ring round the well filled as far as the firing has gone, and the stage in a word and a character — 火 heating up (a filled band), 雲 holding at the top (a double line), 水 cooling (dashed), 空 waiting (faded). On the right the wood kiln’s firing curve, planned against measured, and the day’s glaze batches on a strip of hanji. The studio and its kilns are made up. Example data.',

@@ -181,6 +181,8 @@ export const waterPumps: SamplePack = {
   title: { ko: '정수장 송수 계통', en: 'Water treatment transfer system' },
   field: { ko: '상하수도·유틸리티', en: 'Water & utilities' },
   kind: { ko: '계통도', en: 'Process diagram' },
+  domain: 'energy',
+  styles: ['operations'],
   summary: {
     ko: '착수정부터 송수 펌프 셋, 정수지, 두 배수지까지 계통도 위에 수위·펌프 상태·토출 압력·송수 유량을 그 자리에. 정상은 회색으로 두고 이상만 색으로 드러내는 SCADA 화면 원칙(ISA-101)을 따랐습니다. 예시 데이터입니다.',
     en: 'Levels, pump states, discharge pressures and the transfer flow on their places in the process diagram, from the intake well through three transfer pumps and the clear well to two reservoirs. Normal stays grey and only the abnormal takes colour, as SCADA screens are drawn (ISA-101). Example data.',

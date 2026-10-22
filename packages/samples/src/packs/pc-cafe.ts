@@ -225,6 +225,8 @@ export const pcCafe: SamplePack = {
   title: { ko: 'PC방 좌석 현황 — Y2K 크롬', en: 'A gaming café’s seats — Y2K chrome' },
   field: { ko: '여가·PC방', en: 'Leisure & gaming cafés' },
   kind: { ko: '구역별 좌석과 주문', en: 'Seats by zone and kitchen orders' },
+  domain: 'leisure',
+  styles: ['retro'],
   summary: {
     ko: 'PC방 객장 현황을 2000년 무렵의 Y2K 크롬으로 — 깊은 우주색 방에 빛나는 원근 격자, 액체 크롬 덩어리와 반짝이, 모서리가 둥글고 빛이 도는 금속 판, 광택 젤 알약. 구역마다 크롬 판 안에 좌석을 알약으로: 사용 중은 켜진 하늘색, 10분 안에 끝나는 자리는 라임, 빈자리는 어두운 빈 홈, 청소 중은 라일락, 고장은 빨강에 ✕ — 빛만으로 읽지 않게 알약마다 기호(● ◔ ○ ~ ✕). 아래에 주방 주문(조리 중·픽업 대기), 오른쪽에 사용 좌석·평균 이용·대기 손님, 장르별 지금 하는 게임(홀로그램 막대), 시간대별 사용 좌석. 매장은 지어낸 것이라 예시 데이터입니다.',
     en: 'A gaming café’s floor in the Y2K chrome look of the turn of the millennium — a deep space-blue room with a glowing perspective grid, liquid-chrome blobs and sparkles, rounded brushed-metal panels and glossy gel pills. In each zone’s chrome panel every seat is a pill: lit aqua in use, lime when its time ends within ten minutes, a dark empty socket when free, lilac while being wiped down, red with a cross when broken — each with its own glyph (● ◔ ○ ~ ✕) so the state does not rest on the glow alone. Below, the kitchen’s orders on the stove and waiting; on the right the seats in use, the average session and the guests waiting, the games played by genre as holographic bars and the seats in use by the hour. The café is made up. Example data.',

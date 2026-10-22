@@ -231,6 +231,8 @@ export const clinicVaccines: SamplePack = {
   title: { ko: '보건소 예방접종 — 아르누보', en: 'A health centre’s vaccination line — Art Nouveau' },
   field: { ko: '보건·예방접종', en: 'Public health & vaccination' },
   kind: { ko: '접수부터 관찰까지의 흐름과 백신 재고', en: 'The line from reception to observation and the vaccines in stock' },
+  domain: 'health',
+  styles: ['art'],
   summary: {
     ko: '보건소 예방접종 현황을 아르누보로 — 상아색 종이에 올리브·금·버건디·청록, 채찍처럼 휘는 곡선과 덩굴, 금줄을 두른 아치 액자, 가운데 원형 메달, 새긴 듯한 세리프. 방문객이 거치는 접수·예진·접종·관찰 네 단계가 S자 길을 따라 아치 판으로 서고, 그 사이 곡선이 대기 인원을 실어 나릅니다. 판 안의 방마다 무엇을 하는지 색과 함께 기호로: 채운 점 진행 중, 빈 원 비어 있음, 두 막대 잠시 멈춤. 가운데 메달은 지금 접종 번호와 다음 번호. 오른쪽에 백신 재고(잎 셋 충분 · 둘 보통 · 하나 부족), 오늘 접종·평균 소요·관찰 중, 시간대별 접종. 보건소는 지어낸 것이라 예시 데이터입니다.',
     en: 'A health centre’s vaccination line in Art Nouveau — ivory paper with olive, gold, burgundy and sea green, whiplash curves and climbing stems, arched frames with a gold rule, a medallion at the centre and an engraved serif. The four stages a visitor walks through — reception, screening, vaccination and observation — stand as arched panels along an S-shaped path, the curves between them carrying how many are waiting. In each panel every room says what it is doing with a sign as well as a colour: a filled dot working, a ring free, two bars paused. The medallion shows the number being vaccinated and the next. On the right the vaccines in stock (three leaves plenty, two some, one running low), the day’s vaccinations, the average visit and the people under observation, and the vaccinations by the hour. The centre is made up. Example data.',

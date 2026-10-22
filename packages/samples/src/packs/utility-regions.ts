@@ -245,6 +245,8 @@ export const utilityRegions: SamplePack = {
   title: { ko: '상수도 광역 설비 지도', en: 'Water utility service area' },
   field: { ko: '상하수도·유틸리티', en: 'Water & utilities' },
   kind: { ko: '약도(지도)', en: 'Sketch map' },
+  domain: 'energy',
+  styles: ['drawing'],
   summary: {
     ko: '급수 구역 약도 위 네 권역마다 가압장·배수지의 상태와 열린 작업을 설비가 선 자리에, 권역마다 건강도(가동 중인 설비 비율에서 점검 지연을 뺀 값 — 85 미만 주황, 70 미만 빨강)를 권역 표지에, 옆에는 사업소 가동률과 작업. 예시 데이터입니다.',
     en: 'A water utility’s four districts on a sketch map: each booster station and reservoir with its state and open work orders where it stands, each district’s health (its share of sites running without an alarm, less overdue inspections — amber below 85, red below 70) on its badge, and the utility’s availability and work beside them. Example data.',

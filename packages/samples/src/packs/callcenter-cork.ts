@@ -240,6 +240,8 @@ export const callcenterCork: SamplePack = {
   title: { ko: '콜센터의 오후 — 코르크판 메모', en: 'A call centre’s afternoon — notes on a corkboard' },
   field: { ko: '고객 상담·콜센터', en: 'Customer service & call centres' },
   kind: { ko: '상담원 상태·대기 콜·문의 유형·인입', en: 'Agents, waiting calls, kinds of call and calls in' },
+  domain: 'services',
+  styles: ['craft'],
   summary: {
     ko: '콜센터의 오후를 코르크판에 — 나무 테 안 갈색 반점 코르크에 상담원마다 종이 메모 한 장. 메모의 상태는 종이 색과 함께 붙인 방식과 모서리 표시로: 통화 중이면 마스킹 테이프와 수화기, 받을 수 있으면 둥근 압정과 빈 원, 후처리 중이면 접힌 귀와 연필, 휴식이면 압정 하나에 기운 메모와 쉼표. 아래에는 기다리는 전화를 색인 카드에, 오늘 문의를 유형별 획으로, 오른쪽에 크라프트지 띠, 찢은 메모 위 수치, 범례, 모눈종이 위 시간별 인입. 콜센터는 지어낸 것이라 예시 데이터입니다.',
     en: 'A call centre’s afternoon pinned to a corkboard — cork speckled brown in a wooden frame, every agent a paper note. A note tells its state by how it is fixed and by the mark in its corner, as well as by its paper’s colour: masking tape and a handset while on a call, a round push pin and an open ring when ready, a folded corner and a pencil while writing up a call, a single tack, a tilt and a pause mark on a break. Below, the calls waiting on an index card and the day’s calls by kind as tally strokes; on the right a kraft paper banner, the figures on torn notes, the key and the calls coming in by the hour on graph paper. The centre is made up. Example data.',

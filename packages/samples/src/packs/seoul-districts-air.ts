@@ -151,6 +151,8 @@ export const seoulDistrictsAir: SamplePack = {
   title: { ko: '서울 25개 구 미세먼지', en: 'Fine dust in Seoul’s 25 districts' },
   field: { ko: '환경·대기', en: 'Environment & air' },
   kind: { ko: '타일 지도', en: 'Tile map' },
+  domain: 'environment',
+  styles: ['operations'],
   summary: {
     ko: '25개 구마다 PM10과 에어코리아 등급 색을, 이웃한 구를 이웃한 칸에 놓은 타일 지도로. 원천이 이용자마다 키를 발급해, 설치본에서 만들 때 발급받은 키가 필요합니다.',
     en: 'Each of the 25 districts’ PM10 in the colour of its grade, on a tile map that keeps neighbouring districts side by side. The source issues each user a key, so creating it in an installation needs one.',

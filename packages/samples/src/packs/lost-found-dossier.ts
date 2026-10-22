@@ -200,6 +200,8 @@ export const lostFoundDossier: SamplePack = {
   title: { ko: '역 분실물 센터 — 타자기 사건 서류철', en: 'A station’s lost and found — typed case files' },
   field: { ko: '대중교통·분실물', en: 'Transit lost and found' },
   kind: { ko: '사건 서류철·창구 대기', en: 'Case files and the counter' },
+  domain: 'transport',
+  styles: ['print'],
   summary: {
     ko: '철도역 분실물 센터를 책상 위 타자기 서류철로 — 마닐라 폴더마다 탭에 사건 번호, 안에 타자로 친 색인 카드(품목·습득 장소·일시·특징), 그리고 카드에 찍힌 고무도장: 보관(파란 겹선), 연락(주황 점선), 인계(초록 둥근 도장, 카드는 흐리게), 폐기 예정(빨간 굵은 도장) — 도장 글자와 모양, 폴더 가장자리 색이 함께 말한다. 오른쪽에 라벨 테이프 제목, 타자 메모의 오늘 수치, 모눈종이 위 종류별 보관 건수, 아래에 창구 인계 대기 명부. 역과 센터는 지어낸 것이라 예시 데이터입니다.',
     en: 'A railway station’s lost-and-found office as a desk of typed case files — a manila folder for each case with its number on the tab, an index card typed on a typewriter inside (what was found, where, when, what marks it), and a rubber stamp across the card: kept (a blue double ring), owner contacted (an orange dashed one), handed back (a round green stamp, the card faded), due for disposal (a heavy red one) — the stamp’s word and shape and the folder’s edge say it together. On the right a label-maker title, the day’s figures on a typed memo and what is kept by kind on graph paper; below, the claims waiting at the counter. The station and its office are made up. Example data.',

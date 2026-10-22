@@ -288,6 +288,8 @@ export const skiResort: SamplePack = {
   title: { ko: '스키장 슬로프 현황 — 레트로 픽셀 아트', en: 'A ski resort’s slopes — in retro pixel art' },
   field: { ko: '레저·관광', en: 'Leisure & tourism' },
   kind: { ko: '픽셀로 그린 산 지도', en: 'A mountain map drawn in pixels' },
+  domain: 'leisure',
+  styles: ['retro'],
   summary: {
     ko: '스키장 슬로프 현황판을 8비트 게임 지도처럼 — 평평한 하늘 아래 네모 픽셀로 그린 산, 난이도 색(초급 초록·중급 파랑·상급 빨강·최상급 검정)으로 계단처럼 내려오는 슬로프, 점선 케이블과 철탑의 리프트. 그 위에 게임 팝업처럼 슬로프마다 개장·정설 상태, 리프트마다 운행과 대기 시간. 옆에 굵은 검은 테 창으로 날씨·적설, 지금 연 슬로프·리프트 수, 시간대별 탑승. 예시 데이터입니다.',
     en: 'A ski resort’s slope board drawn as an 8-bit game’s map — the mountain in square pixels under a flat sky, the runs stepping down it in their difficulty’s colour (easy green, intermediate blue, advanced red, expert black), the lifts as dotted cables with pylons. On it, as game pop-ups, whether each run is open and when it was groomed, and each lift’s state and queue. Beside it, in chunky black-bordered windows, the weather and snow, the runs and lifts open now, and riders by the hour. Example data.',

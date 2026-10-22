@@ -356,6 +356,8 @@ export const portTerminal: SamplePack = {
   title: { ko: '컨테이너 터미널 관제실', en: 'Container terminal control room' },
   field: { ko: '물류·항만', en: 'Logistics & ports' },
   kind: { ko: '터미널 약도 + 카드(혼합, 다크)', en: 'Terminal plan among cards (mixed, dark)' },
+  domain: 'logistics',
+  styles: ['control-room'],
   summary: {
     ko: '관제실 벽에 거는 다크 상황판 — 위에 오늘의 숫자들, 가운데 터미널: 선석의 배마다 하역 진척과 출항 시각, 채워지는 장치장 블록, 안벽→장치장과 게이트의 흐름. 옆에 선석 계획(간트), 크레인 생산성, 알람. 예시 데이터입니다.',
     en: 'A dark wall board for the control room — the day’s figures across the top; the terminal in the middle: each ship at its berth with its progress and departure, the yard blocks filling up, the moves flowing quay to yard and in at the gate; beside it the berth schedule (Gantt), the cranes’ rates and the alarms. Example data.',

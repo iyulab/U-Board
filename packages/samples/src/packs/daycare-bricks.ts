@@ -255,6 +255,8 @@ export const daycareBricks: SamplePack = {
   title: { ko: '어린이집의 오후 — 장난감 블록', en: 'A daycare centre’s afternoon — toy bricks' },
   field: { ko: '보육·어린이집', en: 'Childcare' },
   kind: { ko: '반별 원아·활동·하원 차량', en: 'Children by class, activities and the buses home' },
+  domain: 'education',
+  styles: ['craft'],
   summary: {
     ko: '어린이집의 오후를 장난감 블록으로 — 돌기가 박힌 초록 바닥판, 회색 복도 판, 그리고 위쪽에 돌기가 줄지은 반마다의 색 판. 반은 아이 수를 동그란 머리로 센다: 원내에 있는 아이는 채운 머리, 하원했거나 오지 않은 아이는 빈 고리. 지금 하는 일은 둥근 타일에 색과 함께 기호로: 삼각형 실내 놀이, 해 바깥 놀이, 달 낮잠, 화살표 하원 중. 위에는 놀이터 판(기온·미세먼지·바깥 놀이 시각·안전 점검), 아래에는 오늘 일과표, 오른쪽에 어린이집 이름 블록, 지금 수치, 범례, 하원 차량, 오후 간식과 내일 준비물, 이번 주 등원. 어린이집은 지어낸 것이라 예시 데이터입니다.',
     en: 'A daycare centre’s afternoon built from toy bricks — a green baseplate dotted with studs, a grey corridor plate, and every class a coloured plate with studs along its top. A class counts its children as round heads: a filled head for a child in the room, an empty ring for one who has gone home or did not come. What it is doing shows on a round tile, by a symbol as well as a colour: a triangle for play indoors, a sun for the playground, a moon for a nap, an arrow for children leaving. Above, the playground plate (temperature, fine dust, outdoor time, safety check); below, the day’s timetable; on the right the centre’s name brick, the figures now, the key, the buses home, the afternoon snack with what to bring tomorrow, and the week’s attendance. The centre is made up. Example data.',

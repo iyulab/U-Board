@@ -176,6 +176,8 @@ export const kitchenTickets: SamplePack = {
   title: { ko: '식당 주방 점심 — 감열지 주문표', en: 'A restaurant kitchen’s lunch rush — thermal tickets' },
   field: { ko: '외식·식당 주방', en: 'Restaurants & kitchens' },
   kind: { ko: '주문표·스테이션 대기·조리 시간', en: 'Order tickets, station queues and cooking time' },
+  domain: 'services',
+  styles: ['print'],
   summary: {
     ko: '식당 주방의 점심 몰림을 감열지로 — 스테인리스 배식대 위 주문표 레일에 주문마다 좁은 영수증이 매달립니다. 고정폭 글자, 점선 절취선, 찢긴 톱니 아랫단, 출력된 뒤 지난 시간이 큰 숫자로. 주문의 상태는 색과 함께 종이 위 고무도장으로: 새 주문은 도장 없이 NEW, 조리 중엔 파란 «조리중», 배식대에서 기다리면 빨간 원 «완료», 늦어지면 종이가 검게 뒤집힙니다. 아래에는 스테이션별 대기를 금전등록기 롤처럼, 오늘 합계를 계산 영수증처럼, 몰림 동안의 평균 조리 시간. 식당은 지어낸 것이라 예시 데이터입니다.',
     en: 'A restaurant kitchen’s lunch rush on thermal paper — on a brushed steel pass a ticket rail runs along the top, every order hanging from it as a narrow receipt with fixed-width type, a dashed tear line and a torn zigzag foot, the minutes since it printed in big figures. An order’s state is a rubber stamp across its paper as well as a colour: NEW and no stamp when it arrives, a blue «cooking» stamp, a red ring «done» once it waits at the pass, and the paper turned black when it is late. Below, each station’s queue printed like a register roll, the day’s totals as a till receipt, and the average cooking time through the rush. The restaurant is made up. Example data.',

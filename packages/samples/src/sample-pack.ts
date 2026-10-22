@@ -1,3 +1,4 @@
+import type { Domain, Style } from './tags.js';
 import type { Attribution, SourceErrorField, ViewDocument } from '@iyulab/u-board/domain';
 
 /** Text in each language the site and the console speak. */
@@ -84,6 +85,10 @@ export interface SamplePack {
   /** What the board is drawn on: a site plan, a district map, a line diagram — or none, for a grid laid out in
    *  order. The gallery's columns. */
   kind: Localized;
+  /** The field the gallery files it under (one of `DOMAINS`) — `field` says it in the board's own words. */
+  domain: Domain;
+  /** The families of visual style it is drawn in (from `STYLES`), for the gallery's filter. */
+  styles: readonly Style[];
   summary: Localized;
   connectors: SampleConnector[];
   document: ViewDocument;

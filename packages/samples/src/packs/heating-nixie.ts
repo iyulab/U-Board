@@ -206,6 +206,8 @@ export const heatingNixie: SamplePack = {
   title: { ko: '지역난방 열수송관망 — 1960년대 관제반', en: 'A district heating network — a 1960s control console' },
   field: { ko: '지역난방·열 공급', en: 'District heating' },
   kind: { ko: '관망 계통과 지점별 상태', en: 'Network and stations' },
+  domain: 'energy',
+  styles: ['retro'],
   summary: {
     ko: '지역난방 열수송관망을 1960년대 관제반으로 — 열원·가압장 둘·지구 넷이 계통판 위 베젤 모듈: 공급·회수 온도가 닉시관에 빛나고, 정상·주의·경보·정비 네 개의 새긴 램프 가운데 켜진 하나가 상태(색과 자리로 읽힘). 모듈 사이 관로는 유량(t/h)을 라벨에 싣고 물이 많을수록 굵게, 누수 의심은 빨간 점선, 우회는 회색 점선. 오른쪽에 하루 열 공급량과 지금 켜진 조건만 불 들어오는 경보 표시반. 관망은 지어낸 것이라 예시 데이터입니다.',
     en: 'A district heating network on a 1960s control console — the plant, two booster stations and four districts as bezel modules on a mimic panel: supply and return temperatures glowing in Nixie tubes, and of four engraved lamps — steady, watch, alarm, maintenance — the lit one is the state, read by place as well as colour. The pipes carry the flow (t/h) on their label, wider the more water moves, dashed red where a leak is suspected and dashed grey where a district is bypassed. On the right the heat sent out over the day and an annunciator whose windows light up for the conditions active now. The network is made up. Example data.',

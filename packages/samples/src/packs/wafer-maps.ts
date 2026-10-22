@@ -231,6 +231,8 @@ export const waferMaps: SamplePack = {
   title: { ko: '웨이퍼 빈 맵 — 논문 그림처럼', en: 'Wafer bin maps — set as a paper’s figure' },
   field: { ko: '반도체 제조', en: 'Semiconductor manufacturing' },
   kind: { ko: '없음 — 작은 여러 개(같은 컴포넌트)', en: 'None — small multiples of one component' },
+  domain: 'manufacturing',
+  styles: ['print'],
   summary: {
     ko: '두 로트의 웨이퍼 검사 결과를 논문 그림처럼 — 웨이퍼마다 같은 작은 지도를 로트가 흐른 순서대로 나란히, 다이마다 검사기가 매긴 빈의 색(양품은 옅은 회색, 불량 빈은 색각 이상도 가려 보는 팔레트), 아래에 수율과 불량이 그리는 무늬. 옆에 빈 범례·로트 수율·판독 메모, 아래에 빈별 불량과 최근 12로트 수율. 흰 바탕, 가는 선, 작은 글자. 웨이퍼 지도는 한 번 그린 컴포넌트를 웨이퍼마다 놓은 것입니다. 예시 데이터입니다.',
     en: 'Two lots’ probe results set as a paper’s figure — every wafer the same small map, side by side in the order the lot ran, each die the colour of its bin (good dice a light grey, failing bins a palette colour-blind readers can tell apart), with its yield and the pattern its failures make. Beside it the bins’ legend, the lots’ yields and the engineer’s notes; under it the failures by bin and the last twelve lots’ yield. White, hairlines, small type. The wafer map is one component placed for each wafer. Example data.',

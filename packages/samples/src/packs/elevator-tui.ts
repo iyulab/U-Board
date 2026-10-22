@@ -236,6 +236,8 @@ export const elevatorTui: SamplePack = {
   title: { ko: '업무용 빌딩 승강기 관제 — 텍스트 모드 화면', en: 'An office tower’s lifts — a text-mode console' },
   field: { ko: '승강기·건물 설비', en: 'Lifts & building services' },
   kind: { ko: '승강기 위치·상태·호출·경보', en: 'Car positions, states, hall calls and alarms' },
+  domain: 'construction',
+  styles: ['retro'],
   summary: {
     ko: '업무용 빌딩 승강기를 옛 텍스트 모드 관제 프로그램으로 — 짙은 파란 화면, 이중선 상자, 회색 메뉴 줄과 아래 기능키 줄, 모든 글자가 고정 칸에. 승강기 여섯 대는 1층부터 22층까지의 승강로이고, 그 안에 지금 있는 층에 칸이 그려진다 — 칸의 높이가 곧 데이터. 칸 상태는 색과 함께 표시로: 운행 중이면 화살표, 대기면 점, 정비 모드면 음영 블록, 사람이 갇히면 빨간 느낌표 둘. 오른쪽에 관제 제목, 지금 수치, 범례, 승강장 호출, 경보 기록, 시간별 운행 횟수. 건물은 지어낸 것이라 예시 데이터입니다.',
     en: 'An office tower’s lifts on an old text-mode control console — a deep blue screen, double-line boxes, a grey menu bar and a function-key line, every character on a fixed grid. The six lifts are shafts from the ground to the twenty-second floor, each with its car drawn at the floor it is at now — the car’s height in the shaft is the data. A car tells its state by its mark as well as its colour: an arrow while it travels, a dot when it waits, a shaded block in service mode, two red bangs when someone is trapped. On the right the console’s title, the figures now, the key, the hall calls waiting, the alarm log and the trips by the hour. The tower is made up. Example data.',

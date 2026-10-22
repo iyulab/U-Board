@@ -285,6 +285,8 @@ export const hotelGlass: SamplePack = {
   title: { ko: '호텔 오늘의 운영 — 글래스', en: 'A hotel’s day — glass' },
   field: { ko: '숙박·관광', en: 'Hospitality' },
   kind: { ko: '패널 배치(글래스 화면)', en: 'Panel layout (a glass screen)' },
+  domain: 'leisure',
+  styles: ['minimal'],
   summary: {
     ko: '프런트 뒤와 총지배인실에 거는 도심 호텔의 하루 — 노을빛 그라데이션 위에 뒤를 흐리게 비치는 반투명 유리 패널. 점유율·객실 단가·RevPAR·추천 지수, 층마다 객실 160개의 상태 타일, 시간대별 체크인·체크아웃, 객실 정비 조별 진행, 고객 요청, 매출 구성. 예시 데이터입니다.',
     en: 'A city hotel’s day on the screen behind the front desk and in the general manager’s office — frosted glass panes over a dusk gradient, blurring the lights behind them. Occupancy, average rate, RevPAR and the guest score; a tile for each of 160 rooms by its state, floor by floor; check-ins and check-outs through the day; the housekeeping crews’ progress; guest requests; where the revenue comes from. Example data.',

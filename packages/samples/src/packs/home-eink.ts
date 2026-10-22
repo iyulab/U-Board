@@ -169,6 +169,8 @@ export const homeEink: SamplePack = {
   title: { ko: '우리 집 에너지 — 미니멀 e-ink 액자', en: 'A home’s energy — a minimal e-ink frame' },
   field: { ko: '가정·생활', en: 'Home & daily life' },
   kind: { ko: '액자 화면(4:3 e-ink)', en: 'A frame screen (4:3 e-ink)' },
+  domain: 'energy',
+  styles: ['minimal'],
   summary: {
     ko: '부엌 문 옆 e-ink 액자 — 나가는 길에 한눈에. 오늘 쓴 전기를 아주 크고 가는 숫자 하나로(어제 이 시간과 견주어), 옆에 태양광·가스·이달 예상 요금, 시간대별 사용, 사흘 날씨, 오늘의 한 줄 조언. 색 없이 종이 위 회색, 가는 괘선과 넉넉한 여백. 예시 데이터입니다.',
     en: 'An e-ink frame by the kitchen door, read in passing on the way out — today’s electricity in one very large, thin number against yesterday at this hour; beside it the solar panels, the gas and the month’s bill so far; the day’s use by the hour, three days of weather and one line of advice. No colour: grey on paper, thin rules and plenty of white. Example data.',

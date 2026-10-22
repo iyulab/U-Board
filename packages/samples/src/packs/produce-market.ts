@@ -225,6 +225,8 @@ export const produceMarket: SamplePack = {
   title: { ko: '농산물 도매시장 새벽 경매 — 신문 1면', en: 'A wholesale produce market’s dawn auction — a newspaper front page' },
   field: { ko: '농산물 유통', en: 'Produce wholesale' },
   kind: { ko: '경매동 진행과 품목별 경락가', en: 'The halls’ auctions and the prices by item' },
+  domain: 'agrifood',
+  styles: ['print'],
   summary: {
     ko: '농산물 도매시장의 새벽 경매를 신문 1면으로 — 신문 용지에 먹 한 색과 빨강 한 색, 위를 가로지르는 제호, 세리프 큰 제목과 부제, 단을 가르는 괘선, 망점으로 인쇄한 시장 배치 그림과 사진 설명. 경매동마다 배치 그림 위 상자 기사로: 경매 중은 검은 막대가 차오르고 빨간 표지, 끝난 동은 회색 막대, 기다리는 동은 점선 상자에 빈 막대. 경락가 표는 오르면 빨간 위 삼각, 내리면 검은 아래 삼각이라 색 없이도 방향이 읽힙니다. 옆 단에 배추 경락가 7일, 오늘 반입·경매 진행·낙찰 건수, 알림. 시장은 지어낸 것이라 예시 데이터입니다.',
     en: 'A wholesale produce market’s dawn auction set as a newspaper front page — black ink and one red on newsprint, a nameplate across the top, a serif headline over its deck, column rules, and the market’s plan printed as a halftone picture with its caption. Each auction hall is a boxed item on the plan: a black bar filling with a red tag while its auction is on, a grey bar once it has ended, a dashed box with an empty bar while it waits. The price table marks a rise with a red triangle up and a fall with a black triangle down, so the direction reads without the colour. Beside them the cabbage price over a week, the produce brought in, the auction’s progress and the lots sold, and the notices. The market is made up. Example data.',

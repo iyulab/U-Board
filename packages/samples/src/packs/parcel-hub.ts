@@ -228,6 +228,8 @@ export const parcelHub: SamplePack = {
   title: { ko: '소포 분류센터 야간 분류 — 클레이 3D', en: 'A parcel hub’s night sort — soft clay' },
   field: { ko: '우편·택배 물류', en: 'Parcels & postal logistics' },
   kind: { ko: '도크·분류 라인·지역별 출고 카트', en: 'Docks, sorting lines and outbound carts by region' },
+  domain: 'logistics',
+  styles: ['craft'],
   summary: {
     ko: '소포 분류센터의 야간 분류를 말랑한 클레이 3D로 — 따뜻한 파스텔 바닥, 위쪽이 밝고 아래에 부드러운 그림자가 지는 무광 점토 덩어리, 둥글고 굵은 글자. 위에는 도크마다 트럭 상태, 가운데는 길쭉한 점토 벨트 넷이 시간당 처리량을, 옆에는 재작업대, 아래에는 지역별 출고 카트가 병처럼 차오릅니다. 라인과 도크의 상태는 색과 함께 기호로: ▶ 가동, ‼ 정체, ■ 정지, ↓ 하차 중, … 대기, 빈 원 비어 있음 — 거의 찬 카트는 산호색 테. 오른쪽에 오늘 처리·지금 처리·재작업, 시간대별 처리. 센터는 지어낸 것이라 예시 데이터입니다.',
     en: 'A parcel hub’s night sort modelled in soft clay — a warm pastel floor, matte clay lumps lit along the top with a soft shadow under them, chunky rounded type. Along the top each dock door with its truck’s state, across the floor four long clay belts with the parcels they move an hour, the rework table beside them, and along the bottom every region’s outbound cart filling like a jar. Lines and docks tell their state with a sign as well as a colour — ▶ running, ‼ jammed, ■ stopped, ↓ unloading, … waiting, an empty ring free — and the nearly full carts get a coral rim. On the right the night’s count, the rate now and the parcels in rework, and the parcels by the hour. The hub is made up. Example data.',

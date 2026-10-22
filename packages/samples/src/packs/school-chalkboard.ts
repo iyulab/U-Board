@@ -222,6 +222,8 @@ export const schoolChalkboard: SamplePack = {
   title: { ko: '중학교 하루 — 칠판과 분필', en: 'A middle school’s day — chalk on a blackboard' },
   field: { ko: '교육·학교', en: 'Education & schools' },
   kind: { ko: '교실 배치·출결·점심 순서', en: 'Classrooms, attendance and the lunch rota' },
+  domain: 'education',
+  styles: ['craft'],
   summary: {
     ko: '중학교의 하루를 칠판에 분필로 — 나무 받침이 달린 짙은 녹색 칠판, 분필 선으로 그린 2층 교실 배치, 노랑·분홍·하늘색 분필 제목. 교실마다 지금 누가 무엇을 하는지, 특별실은 어느 반이 와 있는지 적혀 있어, 과학 수업으로 옮긴 반은 제 교실이 비고 복도 끝 과학실이 찹니다. 상태는 색과 함께 분필 기호로: ● 수업 중, → 이동 수업, ✎ 시험, + 보건, 빈 원 비어 있음 — 아무도 없는 방은 테두리가 점선. 아래에는 점심 순서와 오늘 알림, 오른쪽에 교시와 시각, 오늘 출결, 최근 2주 결석. 학교는 지어낸 것이라 예시 데이터입니다.',
     en: 'A middle school’s day chalked on a blackboard — the slate-green board on its wooden ledge, the second floor’s rooms drawn in chalk lines, headings in yellow, pink and blue chalk. Each classroom says who is in it and what they are doing; each special room which class came to it, so a class that moved for science leaves its own room empty and fills the lab down the corridor. A room tells its state with a chalk sign as well as a colour — ● in lesson, → moved out, ✎ a test, + the nurse, an empty ring free — and a room nobody is in has a dashed outline. Along the bottom the lunch rota and the day’s notes; on the right the period and the clock, today’s attendance and the absences of the last two weeks. The school is made up. Example data.',

@@ -272,6 +272,8 @@ export const harborAuction: SamplePack = {
   title: { ko: '어항 새벽 위판장 — 우키요에 목판', en: 'A fishing harbour’s dawn auction — an ukiyo-e woodblock print' },
   field: { ko: '수산·어항', en: 'Fisheries & harbours' },
   kind: { ko: '어선 위치와 위판 진행', en: 'Where the boats are and how the auction runs' },
+  domain: 'agrifood',
+  styles: ['art'],
   summary: {
     ko: '어항의 새벽 위판 현황을 우키요에 목판화로 — 따뜻한 화지에 프러시안 블루와 남색, 검은 윤곽판, 위에서 종이로 번지는 하늘(보카시), 발톱 같은 물보라가 달린 큰 파도, 수평선의 붉은 해와 붉은 낙관. 위는 바다, 가운데는 두 방파제 사이 입구, 아래는 위판장이 있는 물양장 — 배마다 무엇을 잡았고 어디 있는지 카드로: 점선 테두리는 조업 중, 남색이 번진 카드는 귀항 중(방파제까지 남은 분을 따라가는 선에), 남색 단색은 하역 중, 엷은 황토 빗금은 위판 끝. 오른쪽에 위판 상자·입항 척수·평균 낙찰가, 경매 순서, 30분마다 위판한 상자. 어항은 지어낸 것이라 예시 데이터입니다.',
     en: 'A fishing harbour’s dawn auction as an ukiyo-e woodblock print — Prussian blue and indigo on warm washi, black key-block outlines, a sky graded from blue into the paper, big curling waves with claw-shaped foam, a vermilion sun on the horizon and a vermilion seal. The sea at the top, the mouth between two breakwaters in the middle, the quay with the auction hall at the bottom; each boat is a card saying what it caught and where it is: a dashed outline still fishing, graded blue on its way in (its minutes to the breakwater on the line it follows), solid indigo unloading, a pale ochre hatch once its catch is sold. On the right the boxes sold, the boats in and the average price, the auction’s order and the boxes sold by the half hour. The harbour is made up. Example data.',

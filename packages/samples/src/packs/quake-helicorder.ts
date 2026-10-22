@@ -243,6 +243,8 @@ export const quakeHelicorder: SamplePack = {
   title: { ko: '지진 관측망 — 드럼 기록지', en: 'A seismic network — a drum recorder’s paper' },
   field: { ko: '지진 관측', en: 'Seismic monitoring' },
   kind: { ko: '관측소 진동·지진 기록·감지 건수', en: 'Station shaking, events and detections' },
+  domain: 'environment',
+  styles: ['print'],
   summary: {
     ko: '지진 관측망을 드럼 기록지로 — 분 단위 눈금이 그어진 크림색 기록지, 빨간 여백선, 그리고 관측소마다 기록지를 가로지르는 채널 하나와 기록계가 지금 그리는 대로 잉크로 그은 파형. 채널 상태는 잉크 색과 함께 파형 자체로: 평온하면 가는 잔떨림, 무언가를 감지하면 파랗게 부푸는 흔들림, 경보 수준을 넘으면 빨간 폭발, 보고가 끊기면 회색 점선 — 끝에는 기호(빈 원 · ◆ · ! 세모 · ✕). 아래에 관측망이 골라낸 지진, 오른쪽에 기록지 머리에 찍은 관측망 이름, 지금 수치, 범례, 최근 지진 기록, 이번 주 감지 건수. 관측망과 관측소는 지어낸 것이라 예시 데이터입니다.',
     en: 'A seismic network drawn as a drum recorder’s paper — cream chart paper ruled by the minute, a red margin, and every station a channel across it with its trace inked as the recorder draws it now. A channel tells its state by the trace itself as well as by its ink: a fine tremor when quiet, a swelling wiggle in blue when it felt something, a burst in red when it crossed its alert level, a dashed grey line when it stopped reporting — and by a sign at its end (an empty ring, a diamond, a triangle, a cross). Below, the event the network picked out; on the right the network’s name stamped on the paper’s header, the figures now, the key, the recent events and the detections through the week. The network and its stations are made up. Example data.',

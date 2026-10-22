@@ -246,6 +246,8 @@ export const serverRoom: SamplePack = {
   title: { ko: '서버실 열 지도', en: 'Server room thermal map' },
   field: { ko: '데이터센터·에너지', en: 'Data center & energy' },
   kind: { ko: '서버실 평면도', en: 'Room floor plan' },
+  domain: 'it',
+  styles: ['operations'],
   summary: {
     ko: '두 줄의 랙마다 흡기 온도(권장 27 °C·허용 32 °C 구간 색)와 전력을 랙이 선 자리에, 벽의 항온항습기마다 상태와 공급 온도를, 옆에는 PUE와 IT 부하, 가장 더운 랙의 흐름. 예시 데이터입니다.',
     en: 'Each rack’s inlet temperature (coloured by the recommended 27 °C and allowable 32 °C bands) and power where it stands in two rows, each cooling unit’s state and supply temperature on the walls, and the room’s PUE, IT load and its hottest rack over time beside them. Example data.',

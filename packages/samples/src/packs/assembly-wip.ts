@@ -186,6 +186,8 @@ export const assemblyWip: SamplePack = {
   title: { ko: '조립 라인 흐름과 재공', en: 'Assembly line flow and WIP' },
   field: { ko: '제조·생산', en: 'Manufacturing & production' },
   kind: { ko: '없음 — 흐름도', en: 'None — flow diagram' },
+  domain: 'manufacturing',
+  styles: ['operations'],
   summary: {
     ko: '차체가 흐르는 순서대로 놓은 공정마다 상태와 택트 대비 사이클 시간을, 공정 사이 선에는 그 버퍼에서 기다리는 차체 수를 라벨로·굵기로. 가득 차 앞 공정을 막거나 비어 뒤 공정을 굶기는 버퍼만 색으로, 라인을 잡고 있는 공정에는 «병목». 위에는 생산 실적, 아래에는 버퍼별 재공. 예시 데이터입니다.',
     en: 'Each station’s state and cycle time against the takt, in the order bodies flow, and on the line between two stations how many bodies wait in that buffer — as its label and its width. Only a buffer that is full (blocking the station before it) or empty (starving the one after) takes colour, and the station holding the line back is marked as its bottleneck. Output against plan above, every buffer against its size below. Example data.',
