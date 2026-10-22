@@ -444,6 +444,22 @@ describe('ConnectorsPage', () => {
       expect(api.updateConnector).not.toHaveBeenCalled();
     });
 
+    it('tries a path with time places on the author’s own clock, and says so', async () => {
+      vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [BEARER] });
+      vi.mocked(api.listMembers).mockResolvedValue(OWNER);
+      vi.mocked(api.testConnector).mockResolvedValue({ ok: true });
+      renderPage();
+      await userEvent.click(await screen.findByRole('button', { name: 'Bearer API 수정' }));
+      // `{{` is how user-event types a literal `{`.
+      await userEvent.type(screen.getByLabelText('시험할 경로'), '/obs?d={{{{now:yyyyMMdd}}');
+      expect(screen.getByText(/이 브라우저 시간대의 지금 시각/)).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: '연결 테스트' }));
+
+      expect(api.testConnector).toHaveBeenCalledWith('w1', expect.objectContaining({
+        path: '/obs?d={{now:yyyyMMdd}}', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }));
+    });
+
     it('names the failing stage, the upstream status and what to check', async () => {
       vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
       vi.mocked(api.listMembers).mockResolvedValue(OWNER);

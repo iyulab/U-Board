@@ -291,7 +291,13 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
     }
     let target: URL | null = null;
     if (body.path !== undefined) {
-      target = isValidRef({ path: body.path }) ? buildResolveTarget(candidate, { path: body.path }) : null;
+      // A path with time places is filled in on the clock the caller names, at the time it names (`requestTime`).
+      const ref = {
+        path: body.path,
+        ...(body.timeZone !== undefined && { timeZone: body.timeZone }),
+        ...(body.requestTime !== undefined && { requestTime: body.requestTime }),
+      };
+      target = isValidRef(ref) ? buildResolveTarget(candidate, ref) : null;
       if (!target) {
         res.status(400).json({ code: 'INVALID_INPUT' });
         return;

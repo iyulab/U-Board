@@ -199,6 +199,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
         ...formSettings(),
         ...(editingId ? { connectorId: editingId } : {}),
         ...(path ? { path } : {}),
+        // Time places are filled in on the author's own clock — the likeliest for a source they are trying.
+        ...(path.includes('{{now:') ? { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone } : {}),
       });
       setTestOutcome({ ok: result.ok, text: describeTestResult(result, path), excerpt: result.excerpt });
     } catch (err) {
@@ -367,6 +369,11 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
           <FormField label={isOAuth ? '시험할 경로(선택 — 비우면 토큰만)' : '시험할 경로'}>
             <input value={testPath} onChange={e => setTestPath(e.target.value)} placeholder="/assets" />
           </FormField>
+          {testPath.includes('{{now:') && (
+            <p className="ub-connector-hint">
+              시각 자리({'{{now:…}}'})는 이 브라우저 시간대의 지금 시각(분 단위)으로 채워 시험합니다. 정시 자료만 주는 원천은 시각을 직접 적어 시험하세요.
+            </p>
+          )}
           <Button type="button" variant="ghost" onClick={handleTest} disabled={isTesting || !baseUrl}>
             {isTesting ? '시험 중…' : '연결 테스트'}
           </Button>

@@ -290,11 +290,11 @@ export type ConnectorTestResult =
     };
 
 /** Tries settings without saving them: the OAuth token request and, given `path`, one request to the
- *  data source. With `connectorId` the settings are an edit of that connector — a secret left out is
+ *  data source — a path with time places (`{{now:yyyyMMdd}}`) filled in on `timeZone`'s clock. With `connectorId` the settings are an edit of that connector — a secret left out is
  *  the stored one. Fails with `PATH_REQUIRED` when there is nothing to call without a path. */
 export function testConnector(
   workspaceId: string,
-  input: { connectorId?: string; path?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
+  input: { connectorId?: string; path?: string; timeZone?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
 ) {
   return request<ConnectorTestResult>(`/workspaces/${workspaceId}/connectors/test`, {
     method: 'POST',

@@ -70,6 +70,18 @@ describe('a request path with time places', () => {
     expect(new URL(requested.at(-1)!).searchParams.get('base_time')).toBe('1300');
   });
 
+  it('is tried by the connection test on the clock the caller names', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-22T04:31:00Z')); // 13:31 in Seoul
+    const res = await request(app)
+      .post(`/api/workspaces/${workspaceId}/connectors/test`)
+      .set('Cookie', ownerCookie)
+      .send({ baseUrl: 'https://api.example.com', authType: 'query', authParamName: 'serviceKey', authValue: KEY, path: '/obs?d={{now:yyyyMMdd}}&t={{now:HHmm}}', timeZone: 'Asia/Seoul' });
+    expect(res.status).toBe(200);
+    const sent = new URL(requested[0]);
+    expect([sent.searchParams.get('d'), sent.searchParams.get('t')]).toEqual(['20261022', '1331']);
+  });
+
   it('refuses a place that is not a time', async () => {
     const { body: created } = await create({ baseUrl: 'https://api.example.com', authType: 'query', authParamName: 'serviceKey', authValue: KEY });
     const res = await resolve(created.id, { path: '/air?host={{host}}' });
