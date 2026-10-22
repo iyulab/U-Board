@@ -75,6 +75,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a campground's afternoon made in cut paper: every pitch a layered card whose cut tent tells its
   state, the facilities as paper chips, the day's arrivals and departures, the evening's weather with the campfire rule
   and the pitches booked through the week (example data).
+- A gallery sample of an EV charging hub drawn as a printed circuit board: every charger a chip fed from a copper power
+  trunk through a trace whose width, colour and kilowatts follow what it draws, a status LED and sign on every chip,
+  the grid intake and battery, the cars waiting and the energy through the day (example data).
 
 ### Changed
 
