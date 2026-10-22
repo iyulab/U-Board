@@ -2,8 +2,14 @@
 // Runs inside the page `look` draws (passed to Playwright's `page.evaluate`) — it reads the drawn board's DOM.
 
 /** Elements that failed or were held back, and widgets whose content runs past their box — of the board drawn in
- *  `root` (the page, when left out: a host that draws the board beside other things gives the box it drew it in). */
-export function findProblems(placed: Array<{ id: string; path: string; attr: string }>, root: ParentNode = document): Array<{ path?: string; message: string }> {
+ *  `root` (the page, when left out: a host that draws the board beside other things gives the box it drew it in).
+ *  An element drawing past its box is reported when it reaches more than `spillTolerancePx` past it (1 px — any spill
+ *  an author can fix; a showcase that draws a few px of decoration over its edge on purpose can allow more). */
+export function findProblems(
+  placed: Array<{ id: string; path: string; attr: string }>,
+  root: ParentNode = document,
+  { spillTolerancePx = 1 }: { spillTolerancePx?: number } = {},
+): Array<{ path?: string; message: string }> {
   // Everything this function uses is inside it: the page runs it from its source alone.
   /** How far anything drawn inside `root` reaches past `host`'s box, in px (0 when it stays inside). */
   function spillOf(host: HTMLElement, root: ShadowRoot): number {
@@ -41,7 +47,7 @@ export function findProblems(placed: Array<{ id: string; path: string; attr: str
     }
     const element = frame.querySelector('[data-element]') as HTMLElement | null;
     const spill = element?.shadowRoot ? spillOf(element, element.shadowRoot) : 0;
-    if (spill > 1) out.push({ path, message: `its element draws up to ${Math.round(spill)} px past its box — over its neighbours; give the node more room or draw smaller` });
+    if (spill > spillTolerancePx) out.push({ path, message: `its element draws up to ${Math.round(spill)} px past its box — over its neighbours; give the node more room or draw smaller` });
     const widget = frame.querySelector('u-widget') as HTMLElement | null;
     const inner = (widget?.shadowRoot?.firstElementChild ?? widget) as HTMLElement | null;
     if (inner) {

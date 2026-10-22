@@ -14,7 +14,6 @@ const boards = [...readFileSync(built, 'utf8').matchAll(/data-sample-board="([^"
  *  purpose — a card pasted in askew, a strip of tape over the edge, a glyph's side bearing — and is not a defect a
  *  visitor sees; text spilling onto the next node is tens of px. */
 const SPILL_TOLERANCE_PX = 10;
-const spill = /draws up to (\d+) px past its box/;
 
 /** One browser context per worker, so the viewer's code and the fonts are fetched once and every board after the first
  *  loads warm; one page per board, so the boards already looked at do not pile up in the page being measured. */
@@ -49,7 +48,7 @@ for (const id of boards) {
     await tab.evaluate(() => document.fonts.ready.then(() => undefined));
     await tab.waitForTimeout(800);
     const problems = await tab.evaluate(
-      ({ source, id }) => {
+      ({ source, id, spillTolerancePx }) => {
         const root = document.querySelector(`[data-sample-board="${id}"]`)!;
         const placed = [...root.querySelectorAll('[data-node-id], [data-item-id]')].map(el => {
           const attr = el.hasAttribute('data-node-id') ? 'data-node-id' : 'data-item-id';
@@ -59,11 +58,10 @@ for (const id of boards) {
         // `findProblems` carries everything it uses inside it, so the page can run it from its source — the same way
         // `page.evaluate` ships a function, with a second argument; the source is this repository's own code.
         const run = new Function(`return (${source})`)() as typeof findProblems;
-        return run(placed, root);
+        return run(placed, root, { spillTolerancePx });
       },
-      { source: findProblems.toString(), id },
+      { source: findProblems.toString(), id, spillTolerancePx: SPILL_TOLERANCE_PX },
     );
-    const seen = problems.filter(p => Number(spill.exec(p.message)?.[1] ?? Infinity) >= SPILL_TOLERANCE_PX);
-    expect(seen, seen.map(p => `${p.path}: ${p.message}`).join('\n')).toEqual([]);
+    expect(problems, problems.map(p => `${p.path}: ${p.message}`).join('\n')).toEqual([]);
   });
 }

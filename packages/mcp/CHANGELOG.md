@@ -10,6 +10,8 @@ All notable changes to this package are documented here. The format follows
 
 - `sample_source` takes `timeZone` and `requestTime`, so a request with time places is read for the time the binding
   will ask for.
+- `findProblems` (from `./tools`) takes `{ spillTolerancePx }`: how far an element may draw past its box before it is
+  reported (1 px, as before, when left out) — for a page that draws a few px of decoration over an edge on purpose.
 
 ### Changed
 

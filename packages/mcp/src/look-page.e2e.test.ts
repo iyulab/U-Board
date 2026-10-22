@@ -49,6 +49,24 @@ describe('findProblems', () => {
     ]);
   });
 
+  it('reports an element drawing past its box only beyond the tolerance it is given', async () => {
+    await show(`
+      <div data-node-id="a"><div data-element style="position:relative;width:100px;height:50px">
+        <template shadowrootmode="open"><div style="position:absolute;left:0;top:0;width:106px;height:10px"></div></template>
+      </div></div>
+      <div data-node-id="b"><div data-element style="position:relative;width:100px;height:50px">
+        <template shadowrootmode="open"><div style="position:absolute;left:0;top:0;width:130px;height:10px"></div></template>
+      </div></div>`);
+    // `page.evaluate` ships one argument; the third goes with the function's source, as a host page would call it.
+    const problems = await page.evaluate(
+      ({ source, placed }) => (new Function(`return (${source})`)() as typeof findProblems)(placed, document, { spillTolerancePx: 10 }),
+      { source: findProblems.toString(), placed: [node('a'), node('b')] },
+    );
+    expect(problems).toEqual([
+      { path: '/nodes/b', message: 'its element draws up to 30 px past its box — over its neighbours; give the node more room or draw smaller' },
+    ]);
+  });
+
   it('reports a widget whose content runs past its box, and one drawing its invalid-spec card', async () => {
     await show(`
       <div data-node-id="a"><u-widget style="display:block;width:100px;height:50px">
