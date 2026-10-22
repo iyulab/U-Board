@@ -22,6 +22,11 @@ do when upgrading. Each release's notes carry its section.
   every lookout tower and camera a map symbol whose shape is its state — a filled red triangle where a smoke was
   found — the suspected fire a red cross in a circle, and the crew and the helicopter joined to it by lines carrying
   when they get there, with the day's fire danger by hour and the crews on call (example data).
+- A gallery sample of a coast's lighthouses kept as a stamp stock book: each light a perforated stamp with its
+  lighthouse and beam, its range as the face value and its light character, and its state as the postmark over it —
+  none when steady, a machine cancel while its fog signal sounds, a square cancel in service, a red round postmark on
+  a faded stamp when it is out — with the night's visibility at sea and the morning round on an envelope (example
+  data).
 - A JSON playground on the introduction site (`/playground/`): load a gallery board, edit its definition and data,
   and see it drawn as you type, with every problem named by its JSON path.
 - A data source can be asked for the data of a given time: a binding's request writes the time as a place

@@ -79,6 +79,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'heating-nixie': () => import('./packs/heating-nixie.js').then(m => m.heatingNixie),
   'wildlife-chaekgado': () => import('./packs/wildlife-chaekgado.js').then(m => m.wildlifeChaekgado),
   'wildfire-topo': () => import('./packs/wildfire-topo.js').then(m => m.wildfireTopo),
+  'lighthouse-stamps': () => import('./packs/lighthouse-stamps.js').then(m => m.lighthouseStamps),
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),
