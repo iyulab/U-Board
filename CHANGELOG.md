@@ -93,6 +93,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a bowling alley's Thursday night in the Googie style: every lane a maple strip with its ten pins
   as they stand in the frame being bowled, a starburst lamp for a lane in play, the waiting list and the lanes in use by
   the hour (example data).
+- A gallery sample of an office tower's lifts on a text-mode console: six shafts with every car drawn at the floor it
+  is at, its mark telling travel, waiting, service mode or a trapped alarm, the hall calls, the alarm log and the trips
+  by the hour (example data).
 
 ### Changed
 

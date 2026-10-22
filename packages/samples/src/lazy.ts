@@ -65,6 +65,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'quake-helicorder': () => import('./packs/quake-helicorder.js').then(m => m.quakeHelicorder),
   'winery-engraving': () => import('./packs/winery-engraving.js').then(m => m.wineryEngraving),
   'bowling-googie': () => import('./packs/bowling-googie.js').then(m => m.bowlingGoogie),
+  'elevator-tui': () => import('./packs/elevator-tui.js').then(m => m.elevatorTui),
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),
