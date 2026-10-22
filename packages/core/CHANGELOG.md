@@ -16,6 +16,11 @@ All notable changes to this package are documented here. The format follows
   is not a reference. The binding form asks for the zone, the delay and the step when a path has time places, shows
   the request it makes now, and explores the source with them.
 
+### Changed
+
+- Requires `@iyulab/u-widgets` 0.40, whose `form` widget draws its fields with `<formdown-ui>` and loads it only when a
+  form is first drawn, and `@canvas-kit/viewer` 0.6.1, where dragging to pan no longer selects overlay text.
+
 ## [0.33.1] - 2026-10-21
 
 ### Changed

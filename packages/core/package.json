@@ -65,8 +65,8 @@
   "dependencies": {
     "@canvas-kit/core": "^0.8.0",
     "@canvas-kit/designer": "^0.10.0",
-    "@canvas-kit/viewer": "^0.6.0",
-    "@iyulab/u-widgets": "^0.39.0",
+    "@canvas-kit/viewer": "^0.6.1",
+    "@iyulab/u-widgets": "^0.40.0",
     "@lit/react": "^1.0.8",
     "echarts": "^6.1.0"
   },

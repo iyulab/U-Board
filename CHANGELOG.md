@@ -11,6 +11,13 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- A board's `form` widget draws its fields with `<formdown-ui>` (`@iyulab/u-widgets` 0.40): every rule a field declares
+  is checked on submit, each failing field says why under it, Enter moves to the next field, and the form code loads
+  only when a board first shows a form — a board or share page without one does not carry it. Dragging to pan a board
+  in the share viewer no longer selects the text of the widgets it passes over (`@canvas-kit/viewer` 0.6.1).
+
 ## [0.26.0] - 2026-10-23
 
 ### Added
