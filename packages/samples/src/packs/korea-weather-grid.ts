@@ -7,8 +7,8 @@ import { snapshot } from '../snapshots/korea-weather-grid.js';
 // The weather now in fourteen towns across Korea, from the national weather service's hourly observations on its
 // forecast grid — drawn on that grid itself, the way a plotter draws: a lattice of points five kilometres apart,
 // the grid numbers along the edges, and every town a dot at its own grid point with a card on a leader line. The
-// source is asked for the data of a given hour (`base_date`, `base_time`), which it has out about forty minutes
-// after the hour; it issues each user a key, and says in its answer whether it served the request.
+// source is asked for the data of a given hour (`base_date`, `base_time`), which it has out a few minutes after
+// the hour; it issues each user a key, and says in its answer whether it served the request.
 
 export const KMA_NOW: SampleConnector = {
   key: 'kma-now',
@@ -26,12 +26,13 @@ export const KMA_NOW: SampleConnector = {
 };
 
 /** The hour's observations at grid point (`nx`, `ny`) — every kind in one answer, one item each (`category`). The
- *  hour is the latest the source has out: an hour's data is published about forty minutes after it. */
+ *  hour is the latest the source has out: an hour's data is out a few minutes after it (between 3 and 10 past, measured 2026-10-22) — asked a quarter of an
+ *  hour after, so a request never names an hour that is not out yet. */
 const nowPath = (nx: number, ny: number) =>
   `/getUltraSrtNcst?pageNo=1&numOfRows=10&dataType=JSON&base_date={{now:yyyyMMdd}}&base_time={{now:HHmm}}&nx=${nx}&ny=${ny}`;
 
-/** Observed on the hour, out forty minutes later: up to a hundred minutes old before the next. */
-const MAX_AGE_SECONDS = 2 * 60 * 60;
+/** Observed on the hour and asked for a quarter of an hour later: up to seventy-five minutes old before the next. */
+const MAX_AGE_SECONDS = 90 * 60;
 
 /** One kind of observation at a grid point: T1H temperature (℃), REH humidity (%), RN1 the last hour's rain (mm),
  *  WSD wind speed (m/s), PTY what is falling (0 nothing, 1 rain, 2 rain and snow, 3 snow, 5 drizzle, 6 drizzle and
@@ -43,7 +44,7 @@ const observed = (nx: number, ny: number, category: string): Binding => ({
     item: { list: '/response/body/items/item', where: { category } },
     valuePath: '/obsrValue',
     timeZone: SEOUL_TIME_ZONE,
-    requestTime: { delaySeconds: 40 * 60, stepSeconds: 60 * 60 },
+    requestTime: { delaySeconds: 15 * 60, stepSeconds: 60 * 60 },
     maxAgeSeconds: MAX_AGE_SECONDS,
   },
 });
@@ -186,7 +187,7 @@ p{margin:10px 0 0;font-size:12px;line-height:1.5;color:#4b5862}`,
 const title: ElementDefinition = {
   render: 'template',
   props: { type: 'object', properties: {} },
-  template: `<header class="tb"><small>KMA · ULTRA-SHORT OBSERVATION</small><h1>지금, 전국 열네 곳</h1><p>기상청 초단기실황 — 정시 관측을 40분쯤 뒤에 냅니다. 동네예보 격자(5 km) 위에 도시마다 시청이 든 격자점.</p></header>`,
+  template: `<header class="tb"><small>KMA · ULTRA-SHORT OBSERVATION</small><h1>지금, 전국 열네 곳</h1><p>기상청 초단기실황 — 정시 관측을 몇 분 뒤에 냅니다(15분 뒤에 묻습니다). 동네예보 격자(5 km) 위에 도시마다 시청이 든 격자점.</p></header>`,
   style: `.tb{height:100%;box-sizing:border-box;padding:16px 18px;background:${INK};color:${PAPER};font-family:${TEXT};display:grid;align-content:center;gap:6px}
 small{font:11px ${MONO};letter-spacing:2px;color:#c9c2ae}
 h1{margin:0;font-size:26px}
@@ -235,8 +236,8 @@ export const koreaWeatherGrid: SamplePack = {
   field: { ko: '기상', en: 'Weather' },
   kind: { ko: '격자 도면', en: 'Grid plot' },
   summary: {
-    ko: '기상청 초단기실황으로 전국 열네 곳의 지금 기온·습도·풍속과 내리는 것(비·눈)을, 기상청 동네예보 격자 자체 위에 — 5 km마다 찍은 점, 가장자리의 격자 번호, 도시마다 시청이 든 격자점에 점과 지시선으로 이은 카드. 원천은 «몇 시의 자료»로 묻는 API라 요청 경로에 시각 자리(`{{now:yyyyMMdd}}`)를 쓰고, 발표가 정시 40분쯤 뒤이므로 그만큼 앞선 정시를 묻습니다. 원천이 이용자마다 키를 발급해, 설치본에서 만들 때 발급받은 키가 필요합니다.',
-    en: 'The temperature, humidity, wind and anything falling in fourteen Korean towns now, from the weather service’s hourly observations — drawn on its forecast grid itself: a point every 5 km, the grid numbers along the edges, and every town a dot at the grid point of its city hall with a card on a leader line. The source is asked for the data of a given hour, so the request path carries time places (`{{now:yyyyMMdd}}`), and since an hour is out about forty minutes after it, it asks for the hour that is. The source issues each user a key, so creating it in an installation needs one.',
+    ko: '기상청 초단기실황으로 전국 열네 곳의 지금 기온·습도·풍속과 내리는 것(비·눈)을, 기상청 동네예보 격자 자체 위에 — 5 km마다 찍은 점, 가장자리의 격자 번호, 도시마다 시청이 든 격자점에 점과 지시선으로 이은 카드. 원천은 «몇 시의 자료»로 묻는 API라 요청 경로에 시각 자리(`{{now:yyyyMMdd}}`)를 쓰고, 정시 관측이 몇 분 뒤에 나오므로 15분이 지난 뒤에 그 정시를 묻습니다. 원천이 이용자마다 키를 발급해, 설치본에서 만들 때 발급받은 키가 필요합니다.',
+    en: 'The temperature, humidity, wind and anything falling in fourteen Korean towns now, from the weather service’s hourly observations — drawn on its forecast grid itself: a point every 5 km, the grid numbers along the edges, and every town a dot at the grid point of its city hall with a card on a leader line. The source is asked for the data of a given hour, so the request path carries time places (`{{now:yyyyMMdd}}`), and since an hour is out a few minutes after it, it asks for an hour a quarter of an hour on. The source issues each user a key, so creating it in an installation needs one.',
   },
   connectors: [KMA_NOW],
   document,
