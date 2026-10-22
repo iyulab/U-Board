@@ -60,6 +60,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'observatory-glass': () => import('./packs/observatory-glass.js').then(m => m.observatoryGlass),
   'campsite-papercut': () => import('./packs/campsite-papercut.js').then(m => m.campsitePapercut),
   'charging-pcb': () => import('./packs/charging-pcb.js').then(m => m.chargingPcb),
+  'daycare-bricks': () => import('./packs/daycare-bricks.js').then(m => m.daycareBricks),
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),

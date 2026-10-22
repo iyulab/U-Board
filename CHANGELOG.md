@@ -78,6 +78,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of an EV charging hub drawn as a printed circuit board: every charger a chip fed from a copper power
   trunk through a trace whose width, colour and kilowatts follow what it draws, a status LED and sign on every chip,
   the grid intake and battery, the cars waiting and the energy through the day (example data).
+- A gallery sample of a daycare centre's afternoon built from toy bricks: every class a studded plate counting its
+  children as filled heads and empty rings, a tile telling what it is doing, the playground, the buses home, the day's
+  timetable and the week's attendance (example data).
 
 ### Changed
 
