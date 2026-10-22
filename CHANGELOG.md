@@ -84,6 +84,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a makerspace's tool wall as a shadow board: every tool hung over its painted shadow, so a tool
   lent out shows its shadow and a label tape with who has it and until when (red when overdue, yellow when away for
   repair), the machines with their jobs, the evening's bookings and the loans by the hour (example data).
+- A gallery sample of a seismic network drawn as a drum recorder's paper: every station a channel whose inked trace
+  tells its state — a fine tremor, a blue wiggle, a red burst, a dashed grey line — the event the network picked out,
+  the recent events and the week's detections (example data).
 
 ### Changed
 
