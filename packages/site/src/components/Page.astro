@@ -19,16 +19,25 @@ import {
 
 interface Props {
   locale: Locale;
+  /** Which page of the site this is — its bar link is marked current. */
   page: PageId;
   title: string;
   description: string;
+  /** Where this page lives in each language, when it is not the section's own page (a board of the gallery). */
+  paths?: { ko: string; en: string };
+  /** The link preview's picture, when the page has its own (a board's thumbnail); else the site's. */
+  image?: { path: string; width: number; height: number; alt: string };
+  /** Structured data for search engines (schema.org), written into the head as JSON-LD. */
+  jsonLd?: object[];
 }
 
-const { locale, page, title, description } = Astro.props;
+const { locale, page, title, description, jsonLd = [] } = Astro.props;
+const paths = Astro.props.paths ?? PATHS[page];
 const c = COPY[locale];
 const other: Locale = locale === 'ko' ? 'en' : 'ko';
 const url = (path: string) => new URL(path, SITE_URL).href;
-const canonical = url(PATHS[page][locale]);
+const canonical = url(paths[locale]);
+const image = Astro.props.image ?? { path: `/og-${locale}.png`, width: 1200, height: 630, alt: c.title };
 ---
 
 <!doctype html>
@@ -41,9 +50,9 @@ const canonical = url(PATHS[page][locale]);
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang="ko" href={url(PATHS[page].ko)} />
-    <link rel="alternate" hreflang="en" href={url(PATHS[page].en)} />
-    <link rel="alternate" hreflang="x-default" href={url(PATHS[page].ko)} />
+    <link rel="alternate" hreflang="ko" href={url(paths.ko)} />
+    <link rel="alternate" hreflang="en" href={url(paths.en)} />
+    <link rel="alternate" hreflang="x-default" href={url(paths.ko)} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="U-Board" />
@@ -51,11 +60,12 @@ const canonical = url(PATHS[page][locale]);
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={locale === 'ko' ? 'ko_KR' : 'en_US'} />
-    <meta property="og:image" content={url(`/og-${locale}.png`)} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content={c.title} />
+    <meta property="og:image" content={url(image.path)} />
+    <meta property="og:image:width" content={String(image.width)} />
+    <meta property="og:image:height" content={String(image.height)} />
+    <meta property="og:image:alt" content={image.alt} />
     <meta name="twitter:card" content="summary_large_image" />
+    {jsonLd.map(data => <script type="application/ld+json" set:html={JSON.stringify(data).replace(/</g, '\\u003c')} />)}
   </head>
   <body>
     <header class="bar">
@@ -63,7 +73,7 @@ const canonical = url(PATHS[page][locale]);
       <nav aria-label={locale === 'ko' ? '바로가기' : 'Shortcuts'}>
         <a href={PATHS.gallery[locale]} aria-current={page === 'gallery' ? 'page' : undefined}>{c.gallery.nav}</a>
         <a href={DOCS_URL}>{c.footer.docs}</a>
-        <a href={PATHS[page][other]} hreflang={other} lang={other}>{c.otherLanguage}</a>
+        <a href={paths[other]} hreflang={other} lang={other}>{c.otherLanguage}</a>
       </nav>
     </header>
 

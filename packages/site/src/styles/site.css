@@ -331,3 +331,13 @@ main,
   --ub-quality-stale: var(--stale);
   --ub-quality-disconnected: var(--disconnected);
 }
+
+/* A list of board cards (the gallery, a board's neighbours). */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

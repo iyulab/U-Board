@@ -1,14 +1,18 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
 import { findProblems } from '@iyulab/u-board-mcp/tools';
 
-// Every board on the gallery page, drawn and read the way `look` reads a board: an element drawing past its box, a
+// Every board of the gallery, on its own page, drawn and read the way `look` reads a board: an element drawing past its box, a
 // widget whose content runs past its box, an "invalid spec" card, an element that failed — each is a defect a visitor
 // sees. The boards come from the built page, so a board added to the gallery is checked without listing it here.
 
-const built = new URL('../dist/gallery/index.html', import.meta.url);
+// Every board has its own page in the built gallery (`dist/gallery/<id>/`).
+const built = new URL('../dist/gallery/', import.meta.url);
 if (!existsSync(built)) throw new Error('build the site first (npm run build --workspace=packages/site) — this checks the built gallery');
-const boards = [...readFileSync(built, 'utf8').matchAll(/data-sample-board="([^"]+)"/g)].map(m => m[1]);
+const boards = readdirSync(built, { withFileTypes: true })
+  .filter(entry => entry.isDirectory() && existsSync(new URL(`${entry.name}/index.html`, built)))
+  .map(entry => entry.name)
+  .filter(id => id !== 'thumbs');
 
 /** `look` tells an author about anything drawn over 1 px past its box. On the gallery a few px is decoration on
  *  purpose — a card pasted in askew, a strip of tape over the edge, a glyph's side bearing — and is not a defect a
@@ -39,7 +43,7 @@ test('the gallery shows boards', () => {
 
 for (const id of boards) {
   test(`gallery board ${id} draws without problems`, async ({ tab }) => {
-    await tab.goto('/gallery/', { waitUntil: 'domcontentloaded' });
+    await tab.goto(`/gallery/${id}/`, { waitUntil: 'domcontentloaded' });
     const board = tab.locator(`[data-sample-board="${id}"]`);
     await board.scrollIntoViewIfNeeded();
     // The board is attached when it comes into view; its parts carry the attribute `look` finds them by.

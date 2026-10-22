@@ -1,11 +1,12 @@
 ---
-// Sample boards, one card each: what field and what kind of background, the board itself (drawn by the
-// library viewer from recorded answers once the page runs script), and when the answers were recorded — or,
-// for a board on example data, that they are an example.
+// The gallery's list: a card per board — its picture, title, field and tags — each opening the board's own page, and a
+// filter by tag over them. Every card is in the page as written, so the list reads (and is indexed) without script;
+// the filter is the script's.
 import Page from './Page.astro';
-import { COPY, type Locale } from '../copy';
-import { SAMPLE_PACKS, isInstallable, ownKeyConnectors } from '@iyulab/u-board-samples';
-import { expandComponents, sizedNodes, type CanvasView } from '@iyulab/u-board/domain';
+import { COPY, SITE_URL, type Locale } from '../copy';
+import { ALL_TAGS } from '@iyulab/u-board-samples';
+import Card from './Card.astro';
+import { CARDS, boardPaths } from '../gallery';
 
 interface Props {
   locale: Locale;
@@ -14,73 +15,59 @@ interface Props {
 const { locale } = Astro.props;
 const c = COPY[locale];
 const g = c.gallery;
-const time = (iso: string) =>
-  new Intl.DateTimeFormat(locale === 'ko' ? 'ko-KR' : 'en-GB', {
-    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Seoul', timeZoneName: 'short',
-  }).format(new Date(iso));
-// A board drawn over a background keeps its drawing's proportions; one with no drawing, those of its parts (with the
-// viewer's margin around them); a grid has none, and is as tall as its items.
-const partsExtent = (document: CanvasView) => {
-  const nodes = sizedNodes(expandComponents(document));
-  const width = Math.max(...nodes.map(n => n.x + n.width)) - Math.min(...nodes.map(n => n.x));
-  const height = Math.max(...nodes.map(n => n.y + n.height)) - Math.min(...nodes.map(n => n.y));
-  return { width: width + 32, height: height + 32 };
-};
-const cards = SAMPLE_PACKS.map(pack => {
-  const image = pack.document.kind === 'canvas' ? (pack.document.background.image ?? partsExtent(pack.document)) : undefined;
-  const ownKeys = ownKeyConnectors(pack).map(c => g.ownKey.replace('{host}', new URL(c.ownKey!.signUpUrl).host));
-  const recorded = isInstallable(pack) ? [g.recorded.replace('{time}', time(pack.snapshot.capturedAt)), ...ownKeys].join(' ') : g.example;
-  return { pack, aspect: image ? `aspect-ratio: ${image.width} / ${image.height}; --ratio: ${(image.width / image.height).toFixed(3)}` : undefined, portrait: !!image && image.height > image.width, recorded };
-});
+const groups = (['domain', 'style', 'trait'] as const).map(group => ({
+  group,
+  name: g.filter.groups[group],
+  tags: ALL_TAGS.filter(t => t.group === group).map(t => ({ ...t, count: CARDS.filter(card => card.tags.some(x => x.id === t.id)).length })),
+}));
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: g.heading,
+    description: g.description,
+    inLanguage: locale,
+    hasPart: CARDS.map(({ pack }) => ({ '@type': 'CreativeWork', name: pack.title[locale], url: new URL(boardPaths(pack.id)[locale], SITE_URL).href })),
+  },
+];
 ---
 
-<Page locale={locale} page="gallery" title={g.title} description={g.description}>
+<Page locale={locale} page="gallery" title={g.title} description={g.description} jsonLd={jsonLd}>
   <section class="gallery" data-claim="gallery">
     <div class="gallery-head">
       <h1>{g.heading}</h1>
       <p>{g.intro}</p>
     </div>
-    <nav class="gallery-index" aria-label={g.index}>
-      <ol>
-        {
-          cards.map(({ pack }) => (
-            <li>
-              <a href={`#${pack.id}`}>{pack.title[locale]}</a>
-              <span>{pack.field[locale]} · {pack.kind[locale]}</span>
-            </li>
-          ))
-        }
-      </ol>
-    </nav>
-    {
-      cards.map(({ pack, aspect, portrait, recorded }) => (
-        <article class="sample" id={pack.id}>
-          <header class="sample-head">
-            <h2>{pack.title[locale]}</h2>
-            <dl class="sample-tags">
-              <div>
-                <dt>{g.field}</dt>
-                <dd>{pack.field[locale]}</dd>
-              </div>
-              <div>
-                <dt>{g.kind}</dt>
-                <dd>{pack.kind[locale]}</dd>
-              </div>
-            </dl>
-            <p class="sample-summary">{pack.summary[locale]}</p>
-          </header>
-          <div class:list={['sample-board', { 'sample-board--grid': !aspect, 'sample-board--portrait': portrait }]} style={aspect} data-sample-board={pack.id} data-label={pack.title[locale]}>
-            <noscript>{pack.summary[locale]}</noscript>
+    <div class="filter" data-gallery-filter data-count-text={g.filter.count}>
+      <h2 class="filter-label">{g.filter.label}</h2>
+      {
+        groups.map(({ group, name, tags }) => (
+          <div class="filter-group" role="group" aria-label={name}>
+            <span class="filter-group-name">{name}</span>
+            {tags.map(t => (
+              <button type="button" class={`chip chip--${group}`} data-tag={t.id} aria-pressed="false">
+                {t.label[locale]} <span class="chip-count">{t.count}</span>
+              </button>
+            ))}
           </div>
-          <p class="sample-recorded">{recorded}</p>
-        </article>
-      ))
-    }
+        ))
+      }
+      <p class="filter-status">
+        <span data-gallery-count aria-live="polite">{g.filter.count.replace('{n}', String(CARDS.length))}</span>
+        <button type="button" class="filter-clear" data-gallery-clear hidden>{g.filter.clear}</button>
+      </p>
+    </div>
+    <ul class="cards" aria-label={g.index}>
+      {
+        CARDS.map(card => <Card card={card} locale={locale} />)
+      }
+    </ul>
+    <p class="filter-none" data-gallery-none hidden>{g.filter.none}</p>
   </section>
 </Page>
 
 <script>
-  import '../live/gallery';
+  import '../live/gallery-filter';
 </script>
 
 <style>
@@ -89,105 +76,83 @@ const cards = SAMPLE_PACKS.map(pack => {
   }
   .gallery-head {
     max-width: 46rem;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
   }
   .gallery-head h1 {
     margin: 0 0 0.75rem;
   }
-  .gallery-head p,
-  .sample-summary {
+  .gallery-head p {
     margin: 0;
     color: var(--muted);
     line-height: 1.65;
-    word-break: keep-all;
   }
-  .gallery-index {
-    margin: 0 0 2.5rem;
+  .filter {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0 0 1.75rem;
     padding: 1rem 1.25rem;
-    border: 1px solid var(--line, #d6dedb);
+    border: 1px solid var(--rule);
     border-radius: 8px;
+    background: var(--sheet);
   }
-  .gallery-index ol {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-    gap: 0.6rem 1.5rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  .filter-label {
+    font-size: 1rem;
   }
-  .gallery-index li {
-    display: grid;
-    gap: 0.1rem;
-    min-width: 0;
-  }
-  .gallery-index a {
-    font-weight: 600;
-    word-break: keep-all;
-  }
-  .gallery-index span {
-    font-size: 0.8125rem;
-    color: var(--muted);
-    word-break: keep-all;
-  }
-  .sample {
-    margin-block: 0 3rem;
-    /* A jump from the index lands the board's heading under the page's top edge, not behind it. */
-    scroll-margin-top: 1.5rem;
-    /* The board's box takes its height from the card's width (cqi). */
-    container-type: inline-size;
-  }
-  .sample-head h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.35rem;
-  }
-  .sample-tags {
+  .filter-group {
     display: flex;
-    gap: 1.25rem;
-    margin: 0 0 0.5rem;
-    font-size: 0.875rem;
-  }
-  .sample-tags div {
-    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 0.4rem;
   }
-  .sample-tags dt {
+  .filter-group-name {
+    min-width: 3.5rem;
+    font-size: 0.8125rem;
     color: var(--muted);
   }
-  .sample-tags dd {
-    margin: 0;
-    font-weight: 600;
-  }
-  .sample-board {
-    width: 100%;
-    margin-top: 1rem;
-    border: 1px solid var(--line, #d6dedb);
-    border-radius: 8px;
-    overflow: hidden;
-    background: #ffffff;
-  }
-  /* The viewer's toolbar and its credit line sit inside the box with the board, so give them room: as tall as the
-     board is at the card's width (its drawing's proportions, or its parts'), plus those two, and never past the screen. */
-  .sample-board.live {
-    aspect-ratio: auto !important;
-    height: min(80vh, 760px, calc(100cqi / var(--ratio, 1.6) + 76px));
-  }
-  /* A portrait board (a kiosk, a printed page) is as wide as the height it gets allows — not the card's whole width
-     with the board a strip in the middle of it. */
-  .sample-board--portrait {
-    max-width: calc((min(80vh, 760px) - 76px) * var(--ratio) + 2px);
-    margin-inline: auto;
-  }
-  /* A grid not drawn yet holds room for itself, so the page does not jump as the boards above it are drawn. */
-  .sample-board--grid:not(.live) {
-    min-height: 32rem;
-  }
-  /* A grid has no drawing to fit: it is as tall as its items, at the width it is given. */
-  .sample-board--grid.live {
-    height: auto;
-  }
-  .sample-recorded {
-    margin: 0.5rem 0 0;
+  .chip {
+    font: inherit;
     font-size: 0.8125rem;
+    line-height: 1.3;
+    padding: 0.3rem 0.65rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .chip[aria-pressed='true'] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #fff;
+  }
+  .chip:focus-visible,
+  .filter-clear:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 2px;
+  }
+  .chip-count {
+    color: var(--muted);
+  }
+  .chip[aria-pressed='true'] .chip-count {
+    color: #cfd8da;
+  }
+  .filter-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.25rem 0 0;
+    font-size: 0.875rem;
+  }
+  .filter-clear {
+    font: inherit;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--focus);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .filter-none {
     color: var(--muted);
   }
 </style>

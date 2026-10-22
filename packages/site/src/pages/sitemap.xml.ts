@@ -1,8 +1,11 @@
 import type { APIRoute } from 'astro';
+import { SAMPLE_PACKS } from '@iyulab/u-board-samples';
 import { PATHS, SITE_URL } from '../copy';
+import { boardPaths } from '../gallery';
 
-// Both language versions, each naming the other (hreflang), as search engines read a sitemap.
-const PAGES = Object.values(PATHS);
+// Both language versions, each naming the other (hreflang), as search engines read a sitemap — the site's pages and
+// every board of the gallery.
+const PAGES = [...Object.values(PATHS), ...SAMPLE_PACKS.map(pack => boardPaths(pack.id))];
 
 export const GET: APIRoute = () => {
   const url = (path: string) => new URL(path, SITE_URL).href;

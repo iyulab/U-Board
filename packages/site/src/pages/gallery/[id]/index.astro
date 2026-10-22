@@ -1,0 +1,12 @@
+---
+import GalleryBoard from '../../../components/GalleryBoard.astro';
+import { SAMPLE_PACKS, type SamplePack } from '@iyulab/u-board-samples';
+
+export function getStaticPaths() {
+  return SAMPLE_PACKS.map(pack => ({ params: { id: pack.id }, props: { pack } }));
+}
+
+const { pack } = Astro.props as { pack: SamplePack };
+---
+
+<GalleryBoard locale="ko" pack={pack} />

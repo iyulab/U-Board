@@ -1,0 +1,91 @@
+---
+// One board's card: its picture, title, field and its field and style tags (the traits are on the board's page — nearly
+// every board has some of them, so on a card they are noise), opening the board's own page. The gallery's list and a board's
+// page (the boards near it) show the same card.
+import { COPY, type Locale } from '../copy';
+import { boardPaths, type Card } from '../gallery';
+
+interface Props {
+  card: Card;
+  locale: Locale;
+}
+
+const { card, locale } = Astro.props;
+const { pack, tags, thumb } = card;
+const g = COPY[locale].gallery;
+---
+
+<li class="card" data-tags={tags.map(t => t.id).join(' ')}>
+  <a href={boardPaths(pack.id)[locale]}>
+    {thumb ? <img src={thumb.path} width={thumb.width} height={thumb.height} alt="" loading="lazy" decoding="async" /> : <span class="card-blank" aria-hidden="true" />}
+    <span class="card-title">{pack.title[locale]}</span>
+  </a>
+  <p class="card-field">{pack.field[locale]} · {pack.kind[locale]}</p>
+  <ul class="card-tags" aria-label={g.board.tags}>
+    {tags.filter(t => t.group !== 'trait').map(t => <li class={`tag tag--${t.group}`}>{t.label[locale]}</li>)}
+  </ul>
+</li>
+
+<style>
+  .card {
+    display: grid;
+    align-content: start;
+    gap: 0.35rem;
+    min-width: 0;
+  }
+  .card[hidden] {
+    display: none;
+  }
+  .card > a {
+    display: grid;
+    gap: 0.6rem;
+    text-decoration: none;
+  }
+  .card img,
+  .card-blank {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    object-position: top center;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: #fff;
+  }
+  .card-blank {
+    background: repeating-linear-gradient(0deg, var(--grid) 0 1px, transparent 1px 24px), repeating-linear-gradient(90deg, var(--grid) 0 1px, var(--sheet) 1px 24px);
+  }
+  .card-title {
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .card > a:hover .card-title {
+    text-decoration: underline;
+  }
+  .card-field {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--muted);
+  }
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .tag {
+    font-size: 0.75rem;
+    line-height: 1.4;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: #e3e9e8;
+    color: var(--drawing-strong);
+  }
+  .tag--domain {
+    background: #dbe8f3;
+    color: #1d4e75;
+  }
+</style>

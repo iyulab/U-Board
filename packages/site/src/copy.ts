@@ -82,6 +82,24 @@ export interface Copy {
     example: string;
     /** After `recorded`, for a board whose source issues each user a key — `{host}`: where it is issued. */
     ownKey: string;
+    /** A board's own page title — `{title}`: the board's. */
+    boardTitle: string;
+    /** The filter over the list: its name, the group names, clearing it, and `{n}` boards shown. */
+    filter: { label: string; groups: { domain: string; style: string; trait: string }; clear: string; count: string; none: string };
+    /** A board's page: the way back, its tags, what to do with it, and the boards near it. */
+    board: {
+      back: string;
+      tags: string;
+      definition: string;
+      definitionNote: string;
+      data: string;
+      dataNote: string;
+      download: string;
+      openPlayground: string;
+      related: string;
+      /** In the definition shown on the page, in place of a drawing written into it — `{size}`: how big it is. */
+      imageElided: string;
+    };
   };
 }
 
@@ -213,6 +231,20 @@ export const COPY: Record<Locale, Copy> = {
       recorded: '{time}에 녹화한 원천 응답입니다.',
       example: 'U-Board로 그린 보드입니다. 표시된 값은 이 보드를 위해 지어낸 예시 데이터로, 실제 시설의 값이 아닙니다.',
       ownKey: '이 원천은 이용자마다 키를 발급합니다 — 설치한 U-Board에서 만들려면 {host}에서 받은 키가 필요합니다.',
+      boardTitle: '{title} — U-Board 갤러리',
+      filter: { label: '태그로 거르기', groups: { domain: '분야', style: '양식', trait: '특징' }, clear: '모두 보기', count: '보드 {n}개', none: '고른 태그를 모두 가진 보드가 없습니다.' },
+      board: {
+        back: '갤러리',
+        tags: '태그',
+        definition: '보드 정의 (view document JSON)',
+        definitionNote: '이 보드를 그리는 정의 전부입니다 — 배경, 노드의 자리와 위젯, 각 값을 어디서 읽는지(바인딩). U-Board의 편집기와 AI 비서가 쓰는 것과 같은 형식입니다. 배경 그림은 길어서 화면에서는 줄여 보이고, 내려받은 파일에는 그대로 있습니다.',
+        data: '데이터 (원천 응답 JSON)',
+        dataNote: '보드가 읽는 원천과, 원천이 돌려준 응답입니다 — 바인딩이 읽는 필드만 남겼습니다. 이 페이지는 서버 없이 이 응답으로 보드를 그립니다.',
+        download: '내려받기',
+        openPlayground: '플레이그라운드에서 열기',
+        related: '같은 분야의 다른 보드',
+        imageElided: '(배경 그림 {size} — 내려받은 파일에 있음)',
+      },
     },
   },
   en: {
@@ -342,6 +374,20 @@ export const COPY: Record<Locale, Copy> = {
       recorded: 'Answers from the source recorded at {time}.',
       example: 'A board drawn with U-Board. Its values are example data written for it, not readings from a real site.',
       ownKey: 'This source issues each user a key — creating the board in an installed U-Board needs one from {host}.',
+      boardTitle: '{title} — U-Board gallery',
+      filter: { label: 'Filter by tag', groups: { domain: 'Field', style: 'Style', trait: 'Traits' }, clear: 'Show all', count: '{n} boards', none: 'No board has every tag picked.' },
+      board: {
+        back: 'Gallery',
+        tags: 'Tags',
+        definition: 'Board definition (view document JSON)',
+        definitionNote: 'Everything that draws this board — its background, where each node sits and its widget, and where each value is read from (its bindings), in the same format U-Board’s editor and AI assistant write. The background drawing is long, so it is shortened here; the downloaded file has it whole.',
+        data: 'Data (source answers JSON)',
+        dataNote: 'The sources the board reads and what they answered — only the fields its bindings read. This page draws the board from these answers, with no server.',
+        download: 'Download',
+        openPlayground: 'Open in the playground',
+        related: 'More boards in this field',
+        imageElided: '(background drawing, {size} — in the downloaded file)',
+      },
     },
   },
 };
