@@ -90,6 +90,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a winery at harvest drawn as a copperplate engraving: fermentation tanks engraved with the wine
   at its level and a vignette for their state, the barrels in the cellar with their months in oak, the day's work and
   two tanks' fermentation temperatures through the day (example data).
+- A gallery sample of a bowling alley's Thursday night in the Googie style: every lane a maple strip with its ten pins
+  as they stand in the frame being bowled, a starburst lamp for a lane in play, the waiting list and the lanes in use by
+  the hour (example data).
 
 ### Changed
 
