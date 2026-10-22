@@ -87,6 +87,9 @@ do when upgrading. Each release's notes carry its section.
 - A gallery sample of a seismic network drawn as a drum recorder's paper: every station a channel whose inked trace
   tells its state — a fine tremor, a blue wiggle, a red burst, a dashed grey line — the event the network picked out,
   the recent events and the week's detections (example data).
+- A gallery sample of a winery at harvest drawn as a copperplate engraving: fermentation tanks engraved with the wine
+  at its level and a vignette for their state, the barrels in the cellar with their months in oak, the day's work and
+  two tanks' fermentation temperatures through the day (example data).
 
 ### Changed
 
