@@ -18,6 +18,10 @@ do when upgrading. Each release's notes carry its section.
   an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
   The binding form asks for the time zone and when the source has its data, and shows the request it makes now;
   the console's connection test fills a path's time places on the author's own clock.
+- A gallery sample of a nature park's camera traps painted as a chaekgado bookshelf screen: each camera in a
+  compartment with the last animal it caught, its battery and memory, and its state as a seal and a word — a
+  vermilion seal when a protected animal was caught — with today's catches by species and the morning round
+  (example data).
 - A gallery sample of a district heating network on a 1960s control console: each station's supply and return
   temperatures in Nixie tubes and its state as the lit one of four engraved lamps, the pipes carrying their flow and
   drawn dashed where a leak is suspected or a district bypassed, with the heat sent out over the day and an
