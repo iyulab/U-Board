@@ -18,6 +18,10 @@ do when upgrading. Each release's notes carry its section.
   an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
   The binding form asks for the time zone and when the source has its data, and shows the request it makes now;
   the console's connection test fills a path's time places on the author's own clock.
+- A gallery sample of a museum's storage rooms as lacquer boxes inlaid with mother-of-pearl: each room's temperature
+  and humidity, a pearl gauge with the humidity band it allows, and its state in a character, a word and the frame —
+  vermilion lacquer when it is out of band — with the painting store's humidity over the day and the day's log
+  (example data).
 - A gallery sample of a pottery studio's kilns as blue-and-white porcelain plates: each kiln's temperature in the
   well, a ring filled as far as the firing has gone and its stage in a word and a character, with the wood kiln's
   firing curve and the day's glaze batches (example data).
