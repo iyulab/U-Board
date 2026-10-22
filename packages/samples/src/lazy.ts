@@ -78,6 +78,7 @@ const LOADERS: Record<string, () => Promise<SamplePack>> = {
   'harbor-radar': () => import('./packs/harbor-radar.js').then(m => m.harborRadar),
   'heating-nixie': () => import('./packs/heating-nixie.js').then(m => m.heatingNixie),
   'wildlife-chaekgado': () => import('./packs/wildlife-chaekgado.js').then(m => m.wildlifeChaekgado),
+  'wildfire-topo': () => import('./packs/wildfire-topo.js').then(m => m.wildfireTopo),
   'gwanghwamun': () => import('./packs/gwanghwamun.js').then(m => m.gwanghwamun),
   'seoul-air': () => import('./packs/seoul-air.js').then(m => m.seoulAir),
   'seoul-districts-air': () => import('./packs/seoul-districts-air.js').then(m => m.seoulDistrictsAir),

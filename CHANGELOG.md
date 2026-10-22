@@ -18,6 +18,10 @@ do when upgrading. Each release's notes carry its section.
   can be linked to (`?tag=a,b`). Every board has a page of its own in both languages, with its tags, the board, its
   definition and data as JSON to read or download (`board.json`, `data.json`), and the boards near it — each page with
   its own title, description, link preview picture and structured data, all listed in the sitemap.
+- A gallery sample of a mountain's fire watch on a topographic map sheet: contours, streams and the kilometre grid,
+  every lookout tower and camera a map symbol whose shape is its state — a filled red triangle where a smoke was
+  found — the suspected fire a red cross in a circle, and the crew and the helicopter joined to it by lines carrying
+  when they get there, with the day's fire danger by hour and the crews on call (example data).
 - A JSON playground on the introduction site (`/playground/`): load a gallery board, edit its definition and data,
   and see it drawn as you type, with every problem named by its JSON path.
 - A data source can be asked for the data of a given time: a binding's request writes the time as a place
