@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-10-23
+
 ### Added
 
 - The gallery is a list of cards — each board's picture, title, field and style — filtered by tag (field, style,
