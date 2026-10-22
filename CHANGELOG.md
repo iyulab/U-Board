@@ -16,6 +16,9 @@ do when upgrading. Each release's notes carry its section.
 - A data source can be asked for the data of a given time: a binding's request writes the time as a place
   (`{{now:yyyyMMdd}}`), filled in on the source's clock each time it is sent — so a source that answers only for
   an hour you name, as many public weather and statistics APIs do, stays current without editing the board.
+- A gallery sample of a pottery studio's kilns as blue-and-white porcelain plates: each kiln's temperature in the
+  well, a ring filled as far as the firing has gone and its stage in a word and a character, with the wood kiln's
+  firing curve and the day's glaze batches (example data).
 - A gallery sample of a building site's noise readings written as a score: a staff for every measuring point, each
   ten-minute reading a note set as high as it is loud, the daytime limit a red line, and a note over it red with an
   accent (example data).
