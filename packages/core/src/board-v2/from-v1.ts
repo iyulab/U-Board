@@ -221,7 +221,7 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
       const read = reads.read(value, { label: str(data.label), unit: str(data.unit) ?? str(options.unit), format: str(options.format) });
       if (!read) return undefined;
       tone(reads, bindings['data.tone'] ?? bindings['data.level'], value, read, unsupported, widget.type);
-      // A gauge's end and its subtitle may be read from the item its value is: the end a field, the subtitle its words.
+      // A gauge's end and subtitle, a metric's trend, may be read from the item its value is — each a field of it.
       const sameItem = (key: string) => {
         const other = reads.read(bindings[key]!, {});
         if (other === undefined) return undefined;
@@ -231,9 +231,11 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
       const bound: Record<string, unknown> = {};
       for (const key of Object.keys(bindings)) {
         if (['data.value', 'data.tone', 'data.level'].includes(key)) continue;
-        const field = widget.type === 'gauge' && ['data.max', 'options.subtitle'].includes(key) ? sameItem(key) : undefined;
+        const takes = widget.type === 'gauge' ? ['data.max', 'options.subtitle'] : ['data.sparkline'];
+        const field = takes.includes(key) ? sameItem(key) : undefined;
         if (field === undefined) { unsupported.push(`a ${widget.type} bound at ${key}`); continue; }
         if (key === 'data.max') bound.max = field;
+        else if (key === 'data.sparkline') bound.trend = field;
         else bound.title = `{{${field}}}`;
       }
       const { format: _format, unit: _unit, ...rest } = options;

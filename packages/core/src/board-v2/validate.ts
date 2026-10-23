@@ -255,6 +255,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     checkTexts(part, at, reads);
     checkOptions(raw, part, kind, at);
     if (kind.kind === 'status-card' && part.meter !== undefined) checkMeter(part.meter, `${at}/meter`);
+    if (kind.kind === 'stat' && part.trend !== undefined && typeof part.trend !== 'string') fail(`${at}/trend`, '"trend" names a field of the item holding its recent values, a list of numbers');
     // A `state` option names the field whose state colours the rows (or the card): it needs a state to give.
     if (part.state !== undefined && kind.own.includes('state')) {
       if (typeof part.state !== 'string') fail(`${at}/state`, '"state" names a field of what the part reads');

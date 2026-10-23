@@ -163,7 +163,7 @@ describe('validateBoardV2', () => {
       m: { as: 'marker', of: 'equipment[PR-01]', shape: 'ring' },
     }))).toEqual([]);
     expect(issues(canvas({ s: { as: 'stat', of: 'totals', show: 'load', colour: 'red' }, l: { as: 'label', title: 'Line 1', size: 14 } }))).toEqual([
-      '/parts/s/colour: "colour" is not an option — options of a stat: format',
+      '/parts/s/colour: "colour" is not an option — options of a stat: trend, format',
       '/parts/l/size: "size" is not an option — a label takes no options',
     ]);
     expect(issues(canvas({

@@ -269,12 +269,15 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         const f = field(name);
         bindValue('data.value', name);
         bindState('data.', name, { emphasis: true });
+        // A trend is another field of the same item: the values the reading came from, drawn as a line under it.
+        const { trend, ...rest } = options as { trend?: string };
+        if (trend !== undefined) bindValue('data.sparkline', trend);
         const format = formatOf(f);
         return {
           type: 'metric',
           props: {
             data: { label: text(title, 'data.label') ?? f.label ?? name, value: '', ...(f.unit ? { unit: f.unit } : {}) },
-            ...(format || Object.keys(options).length ? { options: { ...(format ? { format } : {}), ...options } } : {}),
+            ...(format || Object.keys(rest).length ? { options: { ...(format ? { format } : {}), ...rest } } : {}),
           },
           bindings,
         };

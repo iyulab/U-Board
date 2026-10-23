@@ -181,6 +181,17 @@ describe('fromV1', () => {
     expect(validateBoardV2({ ...board, parts: { p: { ...board.parts.p!, state: 'pressure' } } }).map(i => i.message)).toContain('"pressure" has no "state" in /data/equipment/fields — the field that colours the rows needs one');
   });
 
+  it('reads a metric’s trend from its item as the stat’s trend', () => {
+    const { board, unsupported } = fromV1(canvas([
+      node('m', { type: 'metric', props: { data: { value: 0, label: 'Traffic' } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment('L1', '/value') }, 'data.sparkline': { adapter: 'plant', ref: equipment('L1', '/last6h') } } }),
+    ]));
+    expect(unsupported).toEqual([]);
+    expect(board.parts.m).toEqual({ as: 'stat', of: 'equipment[L1]', show: 'value', trend: 'last6h' });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'canvas' && drawn.nodes[0]!.widget.bindings!['data.sparkline']!.ref).toMatchObject({ valuePath: '/last6h' });
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {

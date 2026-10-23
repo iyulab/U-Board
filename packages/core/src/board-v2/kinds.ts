@@ -37,7 +37,7 @@ interface CatalogEntry {
 const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['of'], own?: readonly string[]])[] = [
   ['status-card', 'status-card', 'needs', ['meter', 'subtitle', 'note', 'state']],
   ['header', 'header', 'may', ['kicker', 'subtitle', 'clock']],
-  ['stat', 'metric', 'needs'],
+  ['stat', 'metric', 'needs', ['trend']],
   ['stat-list', 'kv', 'needs', ['state']],
   ['list', 'list', 'needs', ['primary', 'secondary', 'trailing', 'badge', 'time', 'state', 'max', 'variant']],
   ['table', 'table', 'needs'],
