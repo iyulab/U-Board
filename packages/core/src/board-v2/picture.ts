@@ -638,8 +638,34 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
   };
 
   /**
-   * A grid's items in order. A cell holding a grid stacks its items in the cell's columns: the row it sits in becomes as
-   * many rows as it stacks, the items beside it spanning them all.
+   * The rows a grid in a cell of `cell` columns lays its items in, each item with the columns it takes of the whole
+   * grid: an item's span is twelfths of the cell (12 when absent — one under another), and each row fills the cell, so
+   * the grid's own flow puts the next row's items back in the cell's columns.
+   */
+  const cellRows = (stack: Unit, cell: number, at: string): { unit: Unit; span: number }[][] => {
+    const rows: { unit: Unit; span: number }[][] = [];
+    let used = 12;
+    for (const unit of stack.grid!) {
+      const twelfths = unit.layout.span ?? 12;
+      const span = (cell * twelfths) / 12;
+      if (!Number.isInteger(span)) {
+        throw new PictureError(at, `a grid in a cell of ${cell} columns takes items of whole columns — ${twelfths} of 12 is ${span.toFixed(2)} of them`);
+      }
+      if (used + twelfths > 12) {
+        if (used < 12) throw new PictureError(at, `each row of a grid in a cell fills the cell — a row takes ${used} of 12`);
+        rows.push([]);
+        used = 0;
+      }
+      rows.at(-1)!.push({ unit, span });
+      used += twelfths;
+    }
+    if (used < 12) throw new PictureError(at, `each row of a grid in a cell fills the cell — the last row takes ${used} of 12`);
+    return rows;
+  };
+
+  /**
+   * A grid's items in order. A cell holding a grid lays its items out in the cell's columns, in rows that fill it: the
+   * row it sits in becomes as many rows as the cell has, the items beside it spanning them all.
    */
   const gridItems = (entries: V2GridItem[], at: string): GridItem[] => {
     const units = entries.flatMap((entry, i) => unitsOf(entry, at, i));
@@ -650,15 +676,13 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       const stacks = row.filter(u => u.grid !== undefined);
       if (stacks.length === 0) out.push(...row.map(u => u.make!({})));
       else {
-        const depth = stacks[0]!.grid!.length;
-        if (stacks.some(u => u.grid!.length !== depth)) throw new PictureError(at, 'grid cells side by side stack the same number of items — or put them in rows of their own');
-        if (depth > 6) throw new PictureError(at, 'a grid cell stacks at most six items');
-        if (stacks.some(u => u.grid!.some(inner => inner.layout.span !== undefined && inner.layout.span !== 12))) {
-          throw new PictureError(at, 'the items of a grid in a cell stack, each the cell’s whole width — side by side is not drawn yet');
-        }
-        const span = (u: Unit) => ({ span: u.layout.span ?? 4 });
-        for (const u of row) out.push(u.grid ? u.grid[0]!.make!(span(u)) : u.make!(depth > 1 ? { rowSpan: depth } : {}));
-        for (let r = 1; r < depth; r++) for (const u of stacks) out.push(u.grid![r]!.make!(span(u)));
+        const rowsOf = new Map(stacks.map(u => [u, cellRows(u, u.layout.span ?? 4, at)]));
+        const depth = rowsOf.get(stacks[0]!)!.length;
+        if (stacks.some(u => rowsOf.get(u)!.length !== depth)) throw new PictureError(at, 'grid cells side by side lay out the same number of rows — or put them in rows of their own');
+        if (depth > 6) throw new PictureError(at, 'a grid cell lays out at most six rows');
+        const cellRow = (u: Unit, r: number) => rowsOf.get(u)![r]!.map(({ unit, span }) => unit.make!({ span }));
+        for (const u of row) out.push(...(u.grid ? cellRow(u, 0) : [u.make!(depth > 1 ? { rowSpan: depth } : {})]));
+        for (let r = 1; r < depth; r++) for (const u of stacks) out.push(...cellRow(u, r));
       }
       row = [];
       used = 0;

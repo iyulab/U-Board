@@ -254,8 +254,26 @@ describe('the picture model of a v2 board', () => {
     expect(doc.kind === 'grid' && doc.items.map(i => [i.id, i.span, i.rowSpan])).toEqual([
       ['map', 8, 2], ['a', 4, undefined], ['b', 4, undefined], ['c', 12, undefined],
     ]);
-    const side = board(parts, { kind: 'grid', items: [{ grid: [['a', 6], ['b', 6]], span: 4 }, ['map', 8]] });
-    expect(() => toViewDocument(side)).toThrow(/side by side is not drawn yet/);
+  });
+
+  it('lays the items of a grid in a cell side by side, in rows that fill the cell', () => {
+    const parts = {
+      map: { as: 'stat', of: 'totals', show: 'output' }, a: { as: 'stat', of: 'totals', show: 'temp' },
+      b: { as: 'stat', of: 'totals', show: 'oee' }, c: { as: 'stat', of: 'totals', show: 'output' },
+    };
+    const doc = view(board(parts, { kind: 'grid', items: [{ grid: [['a', 6], ['b', 6], 'c'], span: 4 }, ['map', 8]] }));
+    expect(doc.kind === 'grid' && doc.items.map(i => [i.id, i.span, i.rowSpan])).toEqual([
+      ['a', 2, undefined], ['b', 2, undefined], ['map', 8, 2], ['c', 4, undefined],
+    ]);
+
+    const third = board(parts, { kind: 'grid', items: [{ grid: [['a', 4], ['b', 4], ['c', 4]], span: 6 }, ['map', 6]] });
+    const thirds = view(third);
+    expect(thirds.kind === 'grid' && thirds.items.map(i => i.span)).toEqual([2, 2, 2, 6]);
+
+    const short = board(parts, { kind: 'grid', items: [{ grid: [['a', 6], 'b'], span: 4 }, ['map', 8]] });
+    expect(() => toViewDocument(short)).toThrow(new PictureError('/layout/items', 'each row of a grid in a cell fills the cell — a row takes 6 of 12'));
+    const split = board(parts, { kind: 'grid', items: [{ grid: [['a', 4], ['b', 8]], span: 4 }, ['map', 8]] });
+    expect(() => toViewDocument(split)).toThrow(/takes items of whole columns — 4 of 12 is 1\.33 of them/);
   });
 
   it('writes a title of words and fields from the item it reads, the fields in their words and digits', () => {
