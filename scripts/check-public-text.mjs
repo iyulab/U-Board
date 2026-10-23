@@ -38,7 +38,10 @@ const GENERATED = /\.snap$/;
 const IGNORE_FILE = /(^|\/)\.[a-z]*ignore$/;
 
 const PATTERNS = [
+  // Decision ids of the private notes (D250-2, A622-1, R-13, D-K43-1) are matched case-sensitively and only in their own
+  // shape — a single-digit suffix — so an equipment or lot code (A2381-03) is not one.
   { rule: 'tracking-id', re: /\bHD-\d+\b|\bBD-\d{8}(?:-\d+)?\b|\bcycle-\d+\b|\bdocket\s+#?\d+/gi },
+  { rule: 'tracking-id', re: /\b[AD]\d{2,4}-[1-9]\b|\bR-\d{1,3}(?:-\d+)?\b|\bD-[A-Z]{1,3}\d+(?:-\d+)?\b/g },
   { rule: 'internal-path', re: /~\/\.claude\b|(?:^|[\s`'"(/])\.claude\/|\bclaudedocs\b/g, skipInIgnoreFiles: true },
   { rule: 'local-path', re: /\b[A-Za-z]:\\[A-Za-z]|\b[A-Za-z]:\/(?:Users|data|home)\b|\/(?:Users|home)\/[a-z][\w.-]*\//g },
 ];

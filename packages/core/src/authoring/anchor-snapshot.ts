@@ -4,7 +4,7 @@ import { nodeSize, sizedNodes } from '../node-size.js';
 
 /** Where the anchored nodes stood, by coordinate, before the background's reference points changed or went
  *  away — so that once the background has points again, the nodes can be put back at the same places. A node's
- *  place is stored as scene x/y and its coordinate derived (D250-2), so changing the points, or the image under
+ *  place is stored as scene x/y and its coordinate derived from it, so changing the points, or the image under
  *  them, would otherwise move every anchored node's coordinate without a word. */
 export interface AnchorSnapshot {
   /** Each anchored node's coordinate then, by node id. Empty when no node was anchored. */

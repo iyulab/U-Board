@@ -41,6 +41,12 @@ test('flags internal tracking ids', () => {
   assert.deepEqual(rules('src/a.ts', '// measured in cycle-41'), ['tracking-id']);
   assert.deepEqual(rules('src/a.ts', '// see docket #79'), ['tracking-id']);
   assert.deepEqual(rules('src/a.ts', '// a life-cycle-aware hook, see #79 upstream'), []);
+  assert.deepEqual(rules('src/a.ts', '// stored this way (D250-2)'), ['tracking-id']);
+  assert.deepEqual(rules('src/a.ts', '// left for A622-1'), ['tracking-id']);
+  assert.deepEqual(rules('src/a.ts', '// the R-13 shape'), ['tracking-id']);
+  assert.deepEqual(rules('src/a.ts', '// per D-K43-2'), ['tracking-id']);
+  assert.deepEqual(rules('src/a.ts', "wafers: [['A2381-03', 'scratch']]"), []);
+  assert.deepEqual(rules('src/a.ts', '// r-13 in lower case, d250-2 too'), []);
 });
 
 test('flags internal document and local machine paths', () => {

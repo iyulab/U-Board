@@ -29,7 +29,7 @@ async function joinAs(inviter: Agent, workspaceId: string, email: string, role: 
   return { agent, userId: res.body.userId as string };
 }
 
-/** The R-13 shape: the operator creates a customer workspace, hands it to the customer's admin, leaves. */
+/** The hand-over shape: the operator creates a customer workspace, hands it to the customer's admin, leaves. */
 async function customerWorkspace(operator: Agent, operatorId: string) {
   const ws = await operator.post('/api/workspaces').send({ name: 'Customer A' });
   const admin = await joinAs(operator, ws.body.id, 'admin@x.com', 'owner');
