@@ -190,7 +190,7 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
   // A widget bound to nothing that reads anything shows only the text it was given — a placeholder.
   const live = Object.entries(bindings).filter(([, b]) => isHttpRef(b.ref));
   for (const [key, b] of Object.entries(bindings)) {
-    if (!isHttpRef(b.ref)) notes.push(`${node.id}: the binding of ${key} to "${b.adapter}" reads no HTTP connector — left out (A622-1)`);
+    if (!isHttpRef(b.ref)) notes.push(`${node.id}: the binding of ${key} to "${b.adapter}" reads no HTTP connector — left out`);
   }
   if (live.length === 0) {
     const words = [data.label, data.title, props.title].find(w => typeof w === 'string' && w.trim() !== '') as string | undefined;
@@ -272,7 +272,7 @@ function elementPart(id: string, widget: Widget, reads: Reads, elements: Element
   const bind: Record<string, string> = {};
   let of: string | undefined;
   for (const [prop, binding] of Object.entries(bindings)) {
-    if (!isHttpRef(binding.ref)) { notes.push(`${id}: the binding of ${prop} to "${binding.adapter}" reads no HTTP connector — left out (A622-1)`); continue; }
+    if (!isHttpRef(binding.ref)) { notes.push(`${id}: the binding of ${prop} to "${binding.adapter}" reads no HTTP connector — left out`); continue; }
     if (prop.includes('.')) { unsupported.push('an element bound inside a prop'); return undefined; }
     if (binding.text !== undefined || binding.itemFields !== undefined) { unsupported.push('an element prop bound with a text or item fields'); return undefined; }
     const toned = binding.map !== undefined && mapsTo(binding.map, w => (TONES as readonly string[]).includes(w));
@@ -370,7 +370,7 @@ function linkOf(connector: Connector, reads: Reads, notes: string[], unsupported
     if (!['label', 'style.stroke'].includes(key)) { unsupported.push(`a connector bound at ${key}`); return undefined; }
   }
   if (bindings.label) {
-    if (!isHttpRef(bindings.label.ref)) notes.push(`${connector.id}: the binding of label to "${bindings.label.adapter}" reads no HTTP connector — left out (A622-1)`);
+    if (!isHttpRef(bindings.label.ref)) notes.push(`${connector.id}: the binding of label to "${bindings.label.adapter}" reads no HTTP connector — left out`);
     else {
       // A label written around its value (`{{value | fixed:1}} Mbps`) keeps its text, the field in the value's place and
       // its digits as the field's format.

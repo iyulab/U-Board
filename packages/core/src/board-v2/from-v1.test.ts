@@ -83,7 +83,7 @@ describe('fromV1', () => {
     expect(board.parts).toEqual({ p: { as: 'label', title: 'New node' }, g: { as: 'label', title: 'gauge' } });
     expect(notes).toEqual([
       'p: a status bound to nothing is drawn as its text',
-      'g: the binding of data.value to "demo-cmms" reads no HTTP connector — left out (A622-1)',
+      'g: the binding of data.value to "demo-cmms" reads no HTTP connector — left out',
       'g: a gauge bound to nothing is drawn as its text',
     ]);
   });
