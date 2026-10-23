@@ -169,7 +169,13 @@ async function focusClip(page: Page, document: ViewDocument, focus: string, scal
   const margin = Math.max(FOCUS_MARGIN, Math.max(box.width, box.height) / 2);
   const x = Math.max(0, box.x - margin);
   const y = Math.max(0, box.y - margin);
-  return { x, y, width: Math.min(viewport.width - x, box.width + 2 * margin), height: Math.min(viewport.height - y, box.height + 2 * margin) };
+  const clip = { x, y, width: Math.min(viewport.width - x, box.width + 2 * margin), height: Math.min(viewport.height - y, box.height + 2 * margin) };
+  // A part placed past the screen, or one with no size, has nothing to take a picture of — said so rather than a
+  // failed screenshot.
+  if (clip.width <= 0 || clip.height <= 0 || box.width <= 0 || box.height <= 0) {
+    throw new Error(`${focus} is drawn at ${Math.round(box.x)}, ${Math.round(box.y)} (${Math.round(box.width)} × ${Math.round(box.height)} px), outside the ${viewport.width} × ${viewport.height} screen or with no size — look at the whole board, or with a larger width or height`);
+  }
+  return clip;
 }
 
 /** The box around every element `parts` finds — an instance's parts, together. */

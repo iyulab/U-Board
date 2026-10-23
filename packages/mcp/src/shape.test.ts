@@ -19,13 +19,13 @@ describe('shapeOf', () => {
         '/items/0/running: boolean true',
         '/items/0/note: null',
       ],
-      lists: [{ list: '/items', items: 2, keys: ['id', 'temp', 'running'] }],
+      lists: [{ list: '/items', items: 2, keys: ['id', 'temp', 'running'], names: { id: ['P-101', 'P-102'] } }],
     });
   });
 
   it('offers only fields whose values tell the items apart', () => {
     const items = Array.from({ length: 20 }, (_, i) => ({ station: `S${i}`, district: i < 10 ? 'east' : 'west', pm10: i }));
-    expect(shapeOf({ rows: items }).lists).toEqual([{ list: '/rows', items: 20, keys: ['station', 'pm10'] }]);
+    expect(shapeOf({ rows: items }).lists).toEqual([{ list: '/rows', items: 20, keys: ['station', 'pm10'], names: { station: items.slice(0, 12).map(i => i.station) } }]);
   });
 
   it('escapes keys in pointers, shortens long examples, and reads a bare value or list', () => {

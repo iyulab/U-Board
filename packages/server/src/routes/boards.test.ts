@@ -6,6 +6,7 @@ import { createTestDb } from '../test-support/test-db.js';
 import { createApp } from '../app.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
+import { createConnector } from '../db/connectors.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
 import { RULEBOOK_EXAMPLE } from '@iyulab/u-board/board-v2';
@@ -368,7 +369,7 @@ describe("a board in the board language's second version", () => {
       board({ e: { as: 'element', element: 'tag', props: { name: 'pump' } } }, { elements: { tag: { template: '<b>{{name}}</b>', props: { name: 'string' } } } })
     );
     expect(res.status).toBe(200);
-    expect(res.body.advice).toEqual([{ path: '/elements/tag', message: expect.stringContaining('draws no shape of its own') }]);
+    expect(res.body.advice).toContainEqual({ path: '/elements/tag', message: expect.stringContaining('draws no shape of its own') });
   });
 
   it('changes by a JSON Patch, and is checked after it', async () => {
@@ -385,5 +386,13 @@ describe("a board in the board language's second version", () => {
       .send([{ op: 'replace', path: '/parts/t/of', value: 'nowhere' }]);
     expect(refused.status).toBe(400);
     expect(refused.body.issues.map((i: { path: string }) => i.path)).toEqual(['/parts/t/of']);
+  });
+
+  it('advises on a read whose source is named by its name — with the id it takes', async () => {
+    const source = await createConnector(db, { actorUserId: 'test-actor', workspaceId, name: 'Plant', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const boardId = await newBoard();
+    const res = await put(boardId, { ...board({ t: { as: 'stat', of: 'totals', show: 'count' } }), data: { totals: { from: 'plant', path: '/plant/totals' } } });
+    expect(res.status).toBe(200);
+    expect(res.body.advice).toEqual([{ path: '/data/totals/from', message: `"plant" is the name of a data source — "from" takes its id: "${source.id}". Nothing is read until it does` }]);
   });
 });

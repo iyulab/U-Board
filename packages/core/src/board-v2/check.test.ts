@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkBoardV2 } from './check.js';
+import { checkBoardV2, sourceAdvice } from './check.js';
 import { RULEBOOK_EXAMPLE } from './rulebook.js';
 import { validateBoardV2 } from './validate.js';
 
@@ -36,5 +36,23 @@ describe('checkBoardV2', () => {
       layout: { kind: 'grid', items: ['e'] },
     };
     expect(checkBoardV2(board)).toEqual({ issues: [], advice: [{ path: '/elements/tag', message: expect.stringContaining('draws no shape of its own') }] });
+  });
+
+  it('says when a read names a source by its name, or one the workspace does not have — with the id to write', () => {
+    const board = {
+      version: 2 as const,
+      data: {
+        byName: { from: 'Line 1', path: '/line.json' },
+        byId: { from: 's1', path: '/line.json' },
+        gone: { from: 'nowhere', path: '/x' },
+        hosted: { from: 'plc', ref: { tag: 'T1' } },
+      },
+      parts: {},
+      layout: { kind: 'grid' as const, items: [] },
+    };
+    expect(sourceAdvice(board, [{ id: 's1', name: ' line 1' }])).toEqual([
+      { path: '/data/byName/from', message: '"Line 1" is the name of a data source — "from" takes its id: "s1". Nothing is read until it does' },
+      { path: '/data/gone/from', message: '"nowhere" is no data source of this workspace — "from" takes a source\'s id (list_sources). Nothing is read until it does' },
+    ]);
   });
 });

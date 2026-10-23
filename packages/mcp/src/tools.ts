@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { applyJsonPatch, getByPointer, JsonPatchError, lintViewDocument, placedAt, type ViewDocument } from '@iyulab/u-board/domain';
-import { checkBoardV2, fromV1, isBoardV2, type BoardV2 } from '@iyulab/u-board/board-v2';
+import { checkBoardV2, fromV1, isBoardV2, sourceAdvice, type BoardV2 } from '@iyulab/u-board/board-v2';
 import { UBoardApiError, type Board, type UBoardClient } from './client.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
@@ -335,6 +335,8 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
           candidate = applyJsonPatch(boardOf(current).board, patch);
         }
         const { issues, advice } = checkBoardV2(candidate);
+        // As saving advises: a read whose source is not one of the workspace's.
+        if (issues.length === 0) advice.push(...sourceAdvice(candidate as BoardV2, await client.listSources()));
         // A check of a change to a board saves nothing: say so, with the revision the change is to be sent on — a
         // writer that took the check for the save sends the next patch on a revision the board never reached.
         const unsaved = revision !== undefined && issues.length === 0 && { next: `nothing is saved yet — send this patch with patch_board, on revision ${revision}` };

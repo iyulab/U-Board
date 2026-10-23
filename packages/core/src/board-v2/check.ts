@@ -42,3 +42,28 @@ export function checkBoardV2(board: unknown): BoardCheck {
   }
   return { issues, advice: issues.length > 0 ? [] : found.filter(f => f.hint).map(({ at, message }) => ({ path: at, message })) };
 }
+
+/** A data source of the workspace a board is saved in, as a board names it: by its id. */
+export interface KnownSource {
+  id: string;
+  name: string;
+}
+
+/**
+ * The data reads whose `from` names no data source of the workspace — read by a connector's request (`path`), so it is
+ * one of the workspace's sources or nothing reads it — each at its `from`, saying which id to write when it names a
+ * source by its name. Advice, not a refusal: a source may be removed after a board reads it, and the board still saves.
+ */
+export function sourceAdvice(board: BoardV2, sources: readonly KnownSource[]): BoardFinding[] {
+  const ids = new Set(sources.map(s => s.id));
+  return Object.entries(board.data ?? {}).flatMap(([name, query]) => {
+    if (query.path === undefined || typeof query.from !== 'string' || ids.has(query.from)) return [];
+    const said = query.from.trim().toLowerCase();
+    const named = sources.filter(s => s.name.trim().toLowerCase() === said);
+    const message =
+      named.length === 1
+        ? `"${query.from}" is the name of a data source — "from" takes its id: "${named[0]!.id}". Nothing is read until it does`
+        : `"${query.from}" is no data source of this workspace — "from" takes a source's id (list_sources). Nothing is read until it does`;
+    return [{ path: `/data/${name.replace(/~/g, '~0').replace(/\//g, '~1')}/from`, message }];
+  });
+}

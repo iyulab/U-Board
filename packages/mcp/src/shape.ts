@@ -7,8 +7,9 @@
 export interface ResponseShape {
   /** `"<pointer>: <type> <example>"`, one per value, depth first. */
   values: string[];
-  /** Each list of objects: its pointer, how many items, and the fields whose values differ from item to item. */
-  lists: { list: string; items: number; keys: string[] }[];
+  /** Each list of objects: its pointer, how many items, the fields whose values differ from item to item, and the
+   *  values of the first of them — the names a part gives to read one item (`<data>[<value>]`), at most `MAX_NAMES`. */
+  lists: { list: string; items: number; keys: string[]; names?: Record<string, unknown[]> }[];
   /** Set when the response had more values than were listed. */
   truncated?: true;
 }
@@ -16,6 +17,7 @@ export interface ResponseShape {
 const MAX_LINES = 80;
 const MAX_DEPTH = 8;
 const MAX_EXAMPLE = 40;
+const MAX_NAMES = 12;
 
 export function shapeOf(response: unknown): ResponseShape {
   const values: string[] = [];
@@ -30,7 +32,13 @@ export function shapeOf(response: unknown): ResponseShape {
     if (Array.isArray(value)) {
       values.push(`${pointer || '/'}: array(${value.length})`);
       if (value.length === 0 || depth >= MAX_DEPTH) return;
-      if (value.every(item => isObject(item))) lists.push({ list: pointer || '/', items: value.length, keys: distinguishingKeys(value) });
+      if (value.every(item => isObject(item))) {
+        const keys = distinguishingKeys(value);
+        // Only the first item is walked below: the values that tell the items apart are said here, so an item is named
+        // by what it is called, not guessed.
+        const names = keys[0] === undefined ? undefined : { [keys[0]]: value.slice(0, MAX_NAMES).map(item => item[keys[0]!]) };
+        lists.push({ list: pointer || '/', items: value.length, keys, ...(names && { names }) });
+      }
       walk(value[0], `${pointer}/0`, depth + 1);
     } else if (isObject(value)) {
       const keys = Object.keys(value);

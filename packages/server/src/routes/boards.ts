@@ -7,6 +7,7 @@ import { pathParam } from '../middleware/path-param.js';
 import { requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from '../db/boards.js';
 import { elementFramesAddress } from '../element-frame.js';
+import { listConnectorsForWorkspace } from '../db/connectors.js';
 import { documentAdvice, documentIssues, documentKind, type BoardDocument } from '../board-document.js';
 
 /** How many document issues a 400 names at most. */
@@ -119,7 +120,7 @@ export function createBoardsRouter(config: AppConfig): Router {
         updatedAt: board.updatedAt,
         revision: board.revision,
         // What the saved document could do better — for a program writing it to act on.
-        advice: documentAdvice(board.document),
+        advice: documentAdvice(board.document, await listConnectorsForWorkspace(db, workspaceId)),
       });
   }
 

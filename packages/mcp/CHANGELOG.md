@@ -26,6 +26,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `sample_source` names a list's items: for each list of objects, the values of the field that tells them apart
+  (`names: { "id": ["input", "process-01", …] }`, up to 12) — an item is read by what it is called, not guessed from the
+  first one. `validate`, as saving does, advises on a data read whose `from` is not a source's id — and gives the id when
+  it names a source by its name.
 - `sample_source` takes `timeZone` and `requestTime`, so a request with time places is read for the time the binding
   will ask for.
 - `findProblems` (from `./tools`) takes `{ spillTolerancePx }`: how far an element may draw past its box before it is
@@ -40,6 +44,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- `look` with `focus` on a part drawn outside the screen, or with no size, says so instead of failing to take the
+  picture.
 - `look` no longer reports an element drawing past its box for what the element itself cuts off: a part's box is cut by
   every box inside the element whose `overflow` clips it (from a positioned part's containing block up), so a
   decoration clipped at the element's edge is not taken for one drawn over its neighbours.

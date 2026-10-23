@@ -6,7 +6,7 @@ import {
   type ViewDocumentIssue,
   type ViewKind,
 } from '@iyulab/u-board/domain';
-import { checkBoardV2, isBoardV2, keyReadsOf, keysIn, toViewDocument, type BoardV2 } from '@iyulab/u-board/board-v2';
+import { checkBoardV2, isBoardV2, keyReadsOf, keysIn, sourceAdvice, toViewDocument, type BoardV2, type KnownSource } from '@iyulab/u-board/board-v2';
 
 /**
  * What a board stores: a document in the board language's second version, which says so (`"version": 2`), or a
@@ -23,9 +23,10 @@ export function documentIssues(document: unknown): ViewDocumentIssue[] {
   return isBoardV2(document) ? checkBoardV2(document).issues : validateViewDocument(document, { strict: true });
 }
 
-/** What a stored document could do better — advice for whoever writes it, never a reason to refuse it. */
-export function documentAdvice(document: BoardDocument): ViewDocumentAdvice[] {
-  return isBoardV2(document) ? checkBoardV2(document).advice : lintViewDocument(document);
+/** What a stored document could do better — advice for whoever writes it, never a reason to refuse it. A
+ *  second-version board is also told of a read whose `from` is none of the workspace's data sources (`sources`). */
+export function documentAdvice(document: BoardDocument, sources: readonly KnownSource[]): ViewDocumentAdvice[] {
+  return isBoardV2(document) ? [...checkBoardV2(document).advice, ...sourceAdvice(document, sources)] : lintViewDocument(document);
 }
 
 /** The kind of view a document lays out — what a board list shows beside its name. */

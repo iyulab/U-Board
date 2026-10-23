@@ -364,6 +364,11 @@ describe('u-board-mcp', () => {
     expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
   });
 
+  it('advises, as saving does, on a read that names its source by its name — with the id to write', async () => {
+    const { value } = await call('validate', { document: { ...gaugeBoard(), data: { line: { ...line.line, from: 'plant api' } } } });
+    expect(value).toMatchObject({ valid: true, advice: [{ path: '/data/line/from', message: expect.stringContaining('"from" takes its id: "s1"') }] });
+  });
+
   it('reads a source asked for a given time with the zone and request time a binding will have', async () => {
     await call('sample_source', { source: 's1', path: '/obs?date={{now:yyyyMMdd}}', timeZone: 'Asia/Seoul', requestTime: { delaySeconds: 2400, stepSeconds: 3600 } });
     expect(server.requests.filter(r => r.path.endsWith('/resolve')).at(-1)!.body).toEqual({
@@ -380,7 +385,7 @@ describe('u-board-mcp', () => {
     expect(value).toEqual({
       read: true,
       quality: 'live',
-      shape: { values: ['/items: array(2)', '/items/0/id: string "P-101"', '/items/0/temp: number 61.5'], lists: [{ list: '/items', items: 2, keys: ['id', 'temp'] }] },
+      shape: { values: ['/items: array(2)', '/items/0/id: string "P-101"', '/items/0/temp: number 61.5'], lists: [{ list: '/items', items: 2, keys: ['id', 'temp'], names: { id: ['P-101', 'P-102'] } }] },
     });
     expect(server.requests.find(r => r.path.endsWith('/resolve'))!.body).toEqual({ ref: { path: '/readings' } });
     expect((await call('sample_source', { source: 's1', path: '/down' })).value).toEqual({
