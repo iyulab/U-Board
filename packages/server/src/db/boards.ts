@@ -1,13 +1,14 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import { recordAuditEvent } from './audit.js';
-import { emptyViewDocument, type ViewDocument, type ViewKind } from '@iyulab/u-board/domain';
+import { emptyViewDocument, type ViewKind } from '@iyulab/u-board/domain';
+import { documentKind, type BoardDocument } from '../board-document.js';
 
 export interface Board {
   id: string;
   workspaceId: string;
   name: string;
-  document: ViewDocument;
+  document: BoardDocument;
   createdAt: string;
   updatedAt: string;
   /** How many times the board has been saved, counting its creation as 1 — what a save names to say
@@ -52,7 +53,7 @@ export async function createBoard(db: DbClient, input: { workspaceId: string; na
   await db.withTransaction(async tx => {
     await tx.query(
       `INSERT INTO boards (id, workspace_id, name, document, kind, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [board.id, board.workspaceId, board.name, JSON.stringify(board.document), board.document.kind, board.createdAt, board.updatedAt]
+      [board.id, board.workspaceId, board.name, JSON.stringify(board.document), documentKind(board.document), board.createdAt, board.updatedAt]
     );
     await recordAuditEvent(tx, {
       action: 'board.created',
@@ -97,7 +98,7 @@ export async function updateBoard(
   db: DbClient,
   workspaceId: string,
   boardId: string,
-  input: { name?: string; document?: ViewDocument },
+  input: { name?: string; document?: BoardDocument },
   expectedRevision?: number
 ): Promise<UpdateBoardResult> {
   const { rows } = await db.query<BoardRow>(
@@ -113,7 +114,7 @@ export async function updateBoard(
       boardId,
       workspaceId,
       expectedRevision ?? null,
-      input.document?.kind ?? null,
+      input.document === undefined ? null : documentKind(input.document),
     ]
   );
   if (rows[0]) return { board: rowToBoard(rows[0]) };

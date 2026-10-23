@@ -8,6 +8,7 @@ import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
+import { RULEBOOK_EXAMPLE } from '@iyulab/u-board/board-v2';
 
 const SECRET = 'test-secret-at-least-16-chars';
 let db: DbClient;
@@ -313,5 +314,76 @@ describe('PATCH /boards/:boardId — a JSON Patch', () => {
       .send([{ op: 'replace', path: '/items/0/span', value: 3 }]);
     expect(res.status).toBe(412);
     expect(res.body).toEqual({ code: 'BOARD_CHANGED', revision: 2 });
+  });
+});
+
+describe("a board in the board language's second version", () => {
+  const data = { totals: { from: 'plant', path: '/plant/totals' } };
+  const board = (parts: Record<string, unknown>, more: Record<string, unknown> = {}) => ({
+    version: 2,
+    data,
+    parts,
+    layout: { kind: 'grid', items: Object.keys(parts) },
+    ...more,
+  });
+
+  async function newBoard(): Promise<string> {
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'V2' });
+    return create.body.id as string;
+  }
+  const put = (boardId: string, document: unknown) =>
+    request(app).put(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie).send({ document });
+
+  it('stores it as written, and lists it with the kind its layout has', async () => {
+    const boardId = await newBoard();
+    const saved = await put(boardId, RULEBOOK_EXAMPLE);
+    expect(saved.status).toBe(200);
+    const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    expect(get.body.document).toEqual(RULEBOOK_EXAMPLE);
+
+    await put(boardId, board({ t: { as: 'stat', of: 'totals', show: 'count' } }));
+    const list = await request(app).get(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie);
+    expect(list.body.boards.find((b: { id: string }) => b.id === boardId).kind).toBe('grid');
+  });
+
+  it('refuses what its language does not have, each problem where it is', async () => {
+    const boardId = await newBoard();
+    const res = await put(boardId, board({ t: { as: 'metric', of: 'totals' } }));
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe('INVALID_DOCUMENT');
+    expect(res.body.issues).toEqual([{ path: '/parts/t/as', message: expect.stringContaining('stat') }]);
+  });
+
+  it('reads any document that names a version as one, and says which version to name', async () => {
+    const boardId = await newBoard();
+    const res = await put(boardId, { ...board({ t: { as: 'stat', of: 'totals', show: 'count' } }), version: 3 });
+    expect(res.status).toBe(400);
+    expect(res.body.issues).toEqual([{ path: '/version', message: 'a board in this language says "version": 2' }]);
+  });
+
+  it('answers a save with the advice its language gives', async () => {
+    const boardId = await newBoard();
+    const res = await put(
+      boardId,
+      board({ e: { as: 'element', element: 'tag', props: { name: 'pump' } } }, { elements: { tag: { template: '<b>{{name}}</b>', props: { name: 'string' } } } })
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.advice).toEqual([{ path: '/elements/tag', message: expect.stringContaining('draws no shape of its own') }]);
+  });
+
+  it('changes by a JSON Patch, and is checked after it', async () => {
+    const boardId = await newBoard();
+    await put(boardId, board({ t: { as: 'stat', of: 'totals', show: 'count' } }));
+    const patched = await request(app)
+      .patch(`/api/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .send([{ op: 'add', path: '/parts/t/title', value: 'Total' }]);
+    expect(patched.status).toBe(200);
+    const refused = await request(app)
+      .patch(`/api/workspaces/${workspaceId}/boards/${boardId}`)
+      .set('Cookie', memberCookie)
+      .send([{ op: 'replace', path: '/parts/t/of', value: 'nowhere' }]);
+    expect(refused.status).toBe(400);
+    expect(refused.body.issues.map((i: { path: string }) => i.path)).toEqual(['/parts/t/of']);
   });
 });

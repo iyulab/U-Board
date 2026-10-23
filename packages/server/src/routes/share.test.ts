@@ -10,6 +10,7 @@ import { createBoard, updateBoard } from '../db/boards.js';
 import { createConnector } from '../db/connectors.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
+import { RULEBOOK_EXAMPLE } from '@iyulab/u-board/board-v2';
 
 const SECRET = 'test-secret-at-least-16-chars';
 let db: DbClient;
@@ -449,5 +450,17 @@ describe('public share routes', () => {
   it('answers 404 for the state of a board without a valid token', async () => {
     const res = await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', 'Bearer nope');
     expect(res.status).toBe(404);
+  });
+
+  it("answers 409 for a board in the second version on every share route — the viewer does not draw one yet", async () => {
+    await updateBoard(db, workspaceId, boardId, { document: RULEBOOK_EXAMPLE });
+    const token = await createShareToken();
+    const auth = `Bearer ${token}`;
+    const answers = [
+      await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', auth),
+      await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', auth).send({ bindings: [] }),
+      await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', auth),
+    ];
+    expect(answers.map(a => [a.status, a.body.code])).toEqual(Array(3).fill([409, 'DOCUMENT_NOT_SHOWN']));
   });
 });

@@ -12,6 +12,7 @@ import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveStat
 import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { Connector } from '../db/connectors.js';
 import { elementFramesAddress } from '../element-frame.js';
+import { firstVersionOf } from '../board-document.js';
 
 /** Upper bound on one batch resolve request. A board's own bindings are the only entries that
  * resolve, so this only bounds the work a malformed or hostile request can make the server do. */
@@ -118,6 +119,11 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
+    const document = firstVersionOf(board.document);
+    if (!document) {
+      res.status(409).json({ code: 'DOCUMENT_NOT_SHOWN' });
+      return;
+    }
     await token.used();
     // An open viewer whose board has no bindings has no value batch to learn the revision from, so it
     // asks here with the revision it shows (If-None-Match): unchanged, the answer is a bodiless 304.
@@ -129,11 +135,11 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     }
     res.status(200).json({
       name: board.name,
-      document: board.document,
+      document,
       revision: board.revision,
       elementOrigins: config.elementOrigins ?? [],
       ...(config.elementFrameOrigin && { elementFrames: elementFramesAddress(config.elementFrameOrigin, boardId) }),
-      ...(await connectorsForViewer(db, token.workspaceId, board.document)),
+      ...(await connectorsForViewer(db, token.workspaceId, document)),
     });
   });
 
@@ -181,9 +187,14 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
+    const document = firstVersionOf(board.document);
+    if (!document) {
+      res.status(409).json({ code: 'DOCUMENT_NOT_SHOWN' });
+      return;
+    }
     await token.used();
 
-    const read = bindingReader(token.workspaceId, board.document);
+    const read = bindingReader(token.workspaceId, document);
     const results = await Promise.all(
       (bindings as { connectorId: string; ref?: unknown }[]).map(({ connectorId, ref }) => read(connectorId, ref))
     );
@@ -205,13 +216,18 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
+    const document = firstVersionOf(board.document);
+    if (!document) {
+      res.status(409).json({ code: 'DOCUMENT_NOT_SHOWN' });
+      return;
+    }
     await token.used();
 
-    const read = bindingReader(token.workspaceId, board.document);
+    const read = bindingReader(token.workspaceId, document);
     const ids = new Set<string>();
-    for (const { connectorId } of declaredBindings(board.document)) ids.add(connectorId);
+    for (const { connectorId } of declaredBindings(document)) ids.add(connectorId);
     const adapters: Adapter[] = [...ids].map(connectorId => ({ id: connectorId, resolve: ref => read(connectorId, ref) }));
-    const resolved = await resolveDocument(board.document, adapters);
+    const resolved = await resolveDocument(document, adapters);
     res.status(200).json(boardStateOf(resolved, { now: Date.now(), revision: board.revision }));
   });
 

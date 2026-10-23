@@ -3,7 +3,7 @@ import type { DbClient } from '../db.js';
 import { createTestDb } from '../test-support/test-db.js';
 import { createWorkspace } from './workspaces.js';
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from './boards.js';
-import { placedIn } from '@iyulab/u-board/domain';
+import { placedIn, type ViewDocument } from '@iyulab/u-board/domain';
 
 let db: DbClient;
 let workspaceId: string;
@@ -24,7 +24,7 @@ describe('board repository', () => {
     const board1 = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     const board2 = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'B' });
     expect(board1.document).not.toBe(board2.document);
-    expect(placedIn(board1.document)).not.toBe(placedIn(board2.document));
+    expect(placedIn(board1.document as ViewDocument)).not.toBe(placedIn(board2.document as ViewDocument));
   });
 
   it('lists boards for a workspace without the document body', async () => {

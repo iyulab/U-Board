@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { applyJsonPatch, JsonPatchError, lintViewDocument, validateViewDocument, type ViewDocument } from '@iyulab/u-board/domain';
+import { applyJsonPatch, JsonPatchError } from '@iyulab/u-board/domain';
 import type { Response } from 'express';
 import type { AppConfig } from '../app.js';
 import { requireAuth, type AuthedRequest } from '../middleware/require-auth.js';
@@ -7,6 +7,7 @@ import { pathParam } from '../middleware/path-param.js';
 import { requireWorkspaceMember } from '../middleware/require-workspace-role.js';
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from '../db/boards.js';
 import { elementFramesAddress } from '../element-frame.js';
+import { documentAdvice, documentIssues, documentKind, type BoardDocument } from '../board-document.js';
 
 /** How many document issues a 400 names at most. */
 const MAX_REPORTED_ISSUES = 20;
@@ -51,7 +52,7 @@ export function createBoardsRouter(config: AppConfig): Router {
     res
       .status(201)
       .set('ETag', etagOf(board.revision))
-      .json({ id: board.id, name: board.name, kind: board.document.kind, updatedAt: board.updatedAt, revision: board.revision });
+      .json({ id: board.id, name: board.name, kind: documentKind(board.document), updatedAt: board.updatedAt, revision: board.revision });
   });
 
   router.get('/:boardId', async (req: AuthedRequest<{ boardId: string }>, res) => {
@@ -88,14 +89,16 @@ export function createBoardsRouter(config: AppConfig): Router {
     if (change.document !== undefined) {
       // The API is a boundary like file import: a document stored here is later trusted by the
       // console, the share routes and the viewer, so every structural problem is refused now and
-      // named (capped — a wholly wrong body would otherwise answer with one issue per field).
-      const issues = validateViewDocument(change.document, { strict: true });
+      // named (capped — a wholly wrong body would otherwise answer with one issue per field). A document in the board
+      // language's second version says so (`"version": 2`) and is checked by it; one without a version is a
+      // first-version view document.
+      const issues = documentIssues(change.document);
       if (issues.length > 0) {
         res.status(400).json({ code: 'INVALID_DOCUMENT', issues: issues.slice(0, MAX_REPORTED_ISSUES) });
         return;
       }
     }
-    const document = change.document as ViewDocument | undefined;
+    const document = change.document as BoardDocument | undefined;
     const result = await updateBoard(db, workspaceId, boardId, { name: change.name, document }, expectedRevision);
     if ('notFound' in result) {
       res.status(404).json({ code: 'NOT_FOUND' });
@@ -115,8 +118,8 @@ export function createBoardsRouter(config: AppConfig): Router {
         name: board.name,
         updatedAt: board.updatedAt,
         revision: board.revision,
-        // What the saved document could do better — for a program writing it to act on (`lintViewDocument`).
-        advice: lintViewDocument(board.document),
+        // What the saved document could do better — for a program writing it to act on.
+        advice: documentAdvice(board.document),
       });
   }
 

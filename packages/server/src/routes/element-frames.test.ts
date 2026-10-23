@@ -65,6 +65,15 @@ describe('GET /api/element-frames/:boardId/:name/:hash', () => {
     expect(res.get('X-Content-Type-Options')).toBe('nosniff');
   });
 
+  it('answers 404 for a board in the second version — its elements draw in an isolated root, never a frame', async () => {
+    const path = `/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`;
+    const { rows } = await db.query<{ workspace_id: string }>('SELECT workspace_id FROM boards WHERE id = $1', [boardId]);
+    await updateBoard(db, rows[0]!.workspace_id, boardId, {
+      document: { version: 2, parts: {}, layout: { kind: 'grid', items: [] }, elements: { chart: { template: '<b/>' } } },
+    });
+    expect((await request(app).get(path)).status).toBe(404);
+  });
+
   it('revalidates by entity tag', async () => {
     const path = `/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`;
     const first = await request(app).get(path);

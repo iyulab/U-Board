@@ -3,6 +3,7 @@ import { elementDefinitionHash, elementFrameLabel } from '@iyulab/u-board/domain
 import type { AppConfig } from '../app.js';
 import { findBoardById } from '../db/boards.js';
 import { frameHostLabel, sendElementFrame } from '../element-frame.js';
+import { firstVersionOf } from '../board-document.js';
 
 /**
  * The frames script elements run in: `GET /api/element-frames/:boardId/:name/:hash`. The address names the definition
@@ -25,13 +26,16 @@ export function createElementFramesRouter(config: AppConfig): Router {
   router.get('/:boardId/:name/:hash', async (req, res) => {
     const { boardId, name, hash } = req.params;
     const board = await findBoardById(db, boardId);
-    const definition = board && Object.hasOwn(board.document.elements ?? {}, name) ? board.document.elements![name] : undefined;
+    // A board in the second version has no script elements — the elements it defines draw in an isolated root, not a
+    // frame — so it has no frame to answer with.
+    const document = board && firstVersionOf(board.document);
+    const definition = document && Object.hasOwn(document.elements ?? {}, name) ? document.elements![name] : undefined;
     const label = config.elementFrameOrigin ? frameHostLabel(config.elementFrameOrigin, req.headers.host) : undefined;
-    if (!board || !definition || (await elementDefinitionHash(definition)) !== hash || (label !== undefined && label !== elementFrameLabel(hash))) {
+    if (!document || !definition || (await elementDefinitionHash(definition)) !== hash || (label !== undefined && label !== elementFrameLabel(hash))) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    sendElementFrame(res, board.document, name, config.elementOrigins ?? [], frameAncestors);
+    sendElementFrame(res, document, name, config.elementOrigins ?? [], frameAncestors);
   });
 
   return router;
