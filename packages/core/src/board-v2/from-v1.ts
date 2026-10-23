@@ -541,7 +541,7 @@ function linkOf(connector: Connector, ctx: Context): Link | undefined {
     return true;
   };
   for (const key of Object.keys(bindings)) {
-    if (!['label', 'style.stroke', 'style.dash'].includes(key)) { unsupported.push(`a connector bound at ${key}`); return undefined; }
+    if (!['label', 'style.stroke', 'style.dash', 'style.strokeWidth'].includes(key)) { unsupported.push(`a connector bound at ${key}`); return undefined; }
   }
   if (bindings.label) {
     {
@@ -573,6 +573,19 @@ function linkOf(connector: Connector, ctx: Context): Link | undefined {
       if (!(TONES as readonly string[]).includes(style.stroke.trim().toLowerCase())) notes.push(`${connector.id}: its colour ${style.stroke} is drawn in the nearest tone, ${tone}`);
       if (tone !== 'idle') link.tone = tone;
     }
+  }
+  // A width read from a value is an amount — the link's weight, by bands or a map of that field.
+  const widthBinding = bindings['style.strokeWidth'];
+  if (widthBinding) {
+    const mapping = widthBinding.map === undefined ? undefined : mappingOf(widthBinding.map);
+    const widths = (m: (string | number)[]) => m.map((v, i) => (i % 2 === 0 ? Number(v) : v)) as number[];
+    const weight = Array.isArray(mapping) ? { bands: widths(mapping) }
+      : mapping !== undefined ? { map: Object.fromEntries(Object.entries(mapping).map(([k, v]) => [k, Number(v)])) } : undefined;
+    const numbers = weight !== undefined && [...(weight.bands ?? []).filter((_, i) => i % 2 === 0), ...Object.values(weight.map ?? {})].every(n => Number.isFinite(n) && n > 0);
+    if (!numbers) { unsupported.push('a connector width read as a value without widths for it'); return undefined; }
+    const read = reads.read({ ...widthBinding, map: undefined }, {});
+    if (!reading('style.strokeWidth', read)) return undefined;
+    link.weight = { field: read!.field, ...weight };
   }
   if (of !== undefined) link.of = of;
   if (style.strokeWidth !== undefined) link.width = style.strokeWidth;

@@ -192,6 +192,30 @@ describe('fromV1', () => {
     expect(drawn.kind === 'canvas' && drawn.nodes[0]!.widget.bindings!['data.sparkline']!.ref).toMatchObject({ valuePath: '/last6h' });
   });
 
+  it('reads a connector width bound to a value as the link’s weight, and a label of one field with its places', () => {
+    const metric = (id: string, x: number) => node(id, { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } }, x);
+    const lane = (valuePath: string) => ({ adapter: 'plant', ref: { path: '/lanes', valuePath } });
+    const { board, unsupported } = fromV1(canvas([metric('A', 0), metric('B', 300)], {
+      connectors: [{
+        id: 'l', fromNodeId: 'A', toNodeId: 'B', label: '{{value | fixed:0}} Mbps', style: { strokeWidth: 3 },
+        bindings: {
+          label: lane('/a/mbps'),
+          'style.strokeWidth': { ...lane('/a/mbps'), map: { ranges: [{ min: 85, value: 5 }, { min: 60, value: 3.5 }], otherwise: 2 } },
+        },
+      }],
+    }));
+    expect(unsupported).toEqual([]);
+    expect(board.layout.kind === 'canvas' && board.layout.links!.l).toEqual({ from: 'A', to: 'B', label: '{{mbps}} Mbps', of: 'lanes', width: 3, weight: { field: 'mbps', bands: [2, 60, 3.5, 85, 5] } });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    const c = drawn.kind === 'canvas' ? drawn.connectors[0]! : undefined;
+    expect(c!.label).toBe('{{value | fixed:0}} Mbps');
+    expect(c!.bindings!.label!.ref).toMatchObject({ valuePath: '/a/mbps' });
+    expect(c!.bindings!['style.strokeWidth']!.map).toEqual({ ranges: [{ max: 60, value: 2 }, { min: 60, max: 85, value: 3.5 }, { min: 85, value: 5 }] });
+    expect(validateBoardV2({ ...board, layout: { ...board.layout, links: { l: { from: 'A', to: 'B', of: 'lanes', weight: { field: 'mbps', bands: [2, 60] } } } } as typeof board.layout }).map(i => i.at))
+      .toContain('/layout/links/l/weight/bands');
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {

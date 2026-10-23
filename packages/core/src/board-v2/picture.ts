@@ -13,6 +13,26 @@ import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
 import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
 
+/** A weight as the value map a connector's width binding takes: bands as ranges, a map as values and `otherwise`. */
+function weightMap(weight: { bands?: number[]; map?: Record<string, number> }): ValueMap {
+  if (weight.bands !== undefined) {
+    const b = weight.bands;
+    const ranges: { min?: number; max?: number; value: number }[] = [];
+    for (let i = 0; i < b.length; i += 2) ranges.push({ ...(i > 0 ? { min: b[i - 1]! } : {}), ...(i + 1 < b.length ? { max: b[i + 1]! } : {}), value: b[i]! });
+    return { ranges } as ValueMap;
+  }
+  const { '*': otherwise, ...values } = weight.map ?? {};
+  return { values, ...(otherwise !== undefined ? { otherwise } : {}) } as ValueMap;
+}
+
+/** A field's decimal places as a text's value pipe: its `digits`, or the places a `number:N` format gives; a plain
+ *  `number` groups its thousands. */
+function pipeOf(f: Field): string {
+  const places = f.digits ?? (/^number:(\d+)$/.exec(f.format ?? '')?.[1] !== undefined ? Number(/^number:(\d+)$/.exec(f.format!)![1]) : undefined);
+  if (places !== undefined) return ` | ${f.format === 'number' ? 'grouped' : 'fixed'}:${places}`;
+  return f.format === 'number' ? ' | grouped:0' : '';
+}
+
 /** Whether a field's values are figures — a number format, decimal places or a unit — which a table sets right. */
 export function isFigure(field: Field): boolean {
   return field.digits !== undefined || field.unit !== undefined || /^(number|compact|currency|percent|bytes)\b/.test(field.format ?? '');
@@ -188,8 +208,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       const key = keyOf(reads.query, name, at);
       if (f.names !== undefined) gained[`${name}$name`] = { from: key, map: mapOf(f.names, w => w) };
       const shown = f.names !== undefined ? `${name}$name` : key;
-      const digits = f.digits !== undefined ? ` | ${f.format === 'number' ? 'grouped' : 'fixed'}:${f.digits}` : f.format === 'number' ? ' | grouped:0' : '';
-      return `{{${shown}${digits}}}`;
+      return `{{${shown}${pipeOf(f)}}}`;
     });
     return {
       ...readFor(reads.query, reads.item, undefined, at),
@@ -631,10 +650,16 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
           bindings['style.strokeWidth'] = binding(link.show!, form(e => (e === 'invert' ? width * 2 : width)));
         }
       }
-      const only = label !== undefined ? /^\{\{\s*([\w.-]+)\s*\}\}$/.exec(label) : null;
-      if (only) {
-        bindings.label = binding(only[1]!, fieldOf(query, only[1]!).names ? mapOf(fieldOf(query, only[1]!).names!, w => w) : undefined);
-        label = '';
+      // An amount sets the width itself — over a status's form, which then keeps only its colour and dash.
+      if (link.weight !== undefined) bindings['style.strokeWidth'] = binding(link.weight.field, weightMap(link.weight));
+      // A label of one field (with words around it) binds that field — wherever it lives in the item — and keeps its words
+      // as the connector's own pattern, the field's places in it; a label of several fields is a text of the item.
+      const one = label !== undefined ? /^([^{}]*)\{\{\s*([\w.-]+)\s*\}\}([^{}]*)$/.exec(label) : null;
+      if (one && one[2] !== 'key') {
+        const f = fieldOf(query, one[2]!);
+        bindings.label = binding(one[2]!, f.names ? mapOf(f.names, w => w) : undefined);
+        const pipe = f.names ? '' : pipeOf(f);
+        label = one[1] === '' && one[3] === '' && pipe === '' ? '' : `${one[1]}{{value${pipe}}}${one[3]}`;
       } else if (label !== undefined && /\{\{/.test(label)) {
         bindings.label = textBinding(label, { query, ...(item !== undefined ? { item } : {}) }, at);
         label = '';

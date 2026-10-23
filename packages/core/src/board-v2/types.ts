@@ -165,8 +165,18 @@ export interface Link {
    *  wiring are drawn, or `curved`, bowing to the left of the way it runs, as flows on a map are drawn. */
   route?: 'straight' | 'orthogonal' | 'curved';
   width?: number;
+  /** Its width read from a field of the item it reads — an amount (a flow, a count), not a status: `bands` from the
+   *  width below the first number up (`[2, 8, 3.5, 15, 5]`), or a `map` of raw values (`"*"` for the rest). */
+  weight?: Weight;
   dash?: boolean;
   arrow?: boolean;
+}
+
+/** A link's width from a field: bands of widths and numbers, or a map of raw values to widths. */
+export interface Weight {
+  field: string;
+  bands?: number[];
+  map?: Record<string, number>;
 }
 
 /** Parts placed on a drawing. An `each` part is placed item by item, inside its own entry. */

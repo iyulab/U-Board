@@ -427,8 +427,26 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       if (l.show !== undefined && l.of === undefined) fail(`${linkAt}/show`, 'a link shows a field "of" a data item — give "of" too');
       if (l.tone !== undefined && !(TONES as readonly unknown[]).includes(l.tone)) fail(`${linkAt}/tone`, `"${String(l.tone)}" is not a tone — use ${TONES.join(' · ')}`);
       if (l.route !== undefined && !['straight', 'orthogonal', 'curved'].includes(l.route as string)) fail(`${linkAt}/route`, 'a link\u2019s route is "straight", "orthogonal" or "curved"');
+      if (l.weight !== undefined) checkWeight(l, `${linkAt}/weight`);
       checkTexts(l, linkAt, reads);
     }
+  };
+  /** A link's width from a field: `{ "field", "bands": [width, number, width, …] }` or `{ "field", "map": { "<raw>": width } }`. */
+  const checkWeight = (l: Obj, at: string) => {
+    const w = l.weight;
+    const shape = 'a weight is { "field", "bands": [width, number, width, …] } or { "field", "map": { "<raw>": width, "*": width } }';
+    if (!isObj(w) || typeof w.field !== 'string' || (w.bands === undefined) === (w.map === undefined)) { fail(at, shape); return; }
+    if (l.of === undefined) fail(at, 'a weight reads a field "of" a data item — give "of" too');
+    if (w.bands !== undefined) {
+      const b = w.bands;
+      if (!Array.isArray(b) || b.length < 3 || b.length % 2 === 0) { fail(`${at}/bands`, 'bands are [width, number, width, …] — a width, then a number and the width from it up'); return; }
+      b.forEach((v, i) => {
+        if (!isNum(v)) fail(`${at}/bands/${i}`, i % 2 === 0 ? 'a width is a number above 0' : 'a number comes before each width after the first');
+        else if (i % 2 === 0 && v <= 0) fail(`${at}/bands/${i}`, 'a width is a number above 0');
+        else if (i % 2 === 1 && i > 1 && isNum(b[i - 2]) && v <= (b[i - 2] as number)) fail(`${at}/bands/${i}`, 'the numbers of bands go up');
+      });
+    } else if (!isObj(w.map) || Object.keys(w.map).length === 0) fail(`${at}/map`, shape);
+    else for (const [raw, v] of Object.entries(w.map)) if (!isNum(v) || v <= 0) fail(`${at}/map/${raw}`, 'a width is a number above 0');
   };
 
   for (const [id, raw] of Object.entries(parts)) {

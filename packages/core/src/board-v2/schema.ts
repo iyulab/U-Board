@@ -161,10 +161,22 @@ export function boardV2Schema(): Schema {
           tone: { enum: [...TONES] },
           route: { enum: ['straight', 'orthogonal', 'curved'] },
           width: { type: 'number', exclusiveMinimum: 0 },
+          weight: {
+            type: 'object',
+            description: 'Its width from a field of the item it reads: bands [width, number, width, …] or a map { "<raw>": width, "*": width }.',
+            required: ['field'],
+            additionalProperties: false,
+            oneOf: [{ required: ['bands'] }, { required: ['map'] }],
+            properties: {
+              field: { type: 'string' },
+              bands: { type: 'array', items: { type: 'number' }, minItems: 3 },
+              map: { type: 'object', additionalProperties: { type: 'number', exclusiveMinimum: 0 } },
+            },
+          },
           dash: { type: 'boolean' },
           arrow: { type: 'boolean' },
         },
-        dependentRequired: { show: ['of'] },
+        dependentRequired: { show: ['of'], weight: ['of'] },
       },
       canvas: {
         type: 'object',

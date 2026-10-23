@@ -6,18 +6,18 @@ import { v2Coverage } from './v2-coverage.js';
 // ratchet: a board here that stops reading the same fails, and a board that starts reading the same fails until it is
 // added — so what the conversion reaches only grows, and every sample on this list is the acceptance test at the end.
 const READ_THE_SAME = [
-  'airport-departures', 'apiary-stitch', 'aquarium-labels', 'bakery-sketch', 'bank-branch', 'bike-share',
-  'blood-journey', 'body-gap', 'bowling-googie', 'brewery-scada', 'building-floor', 'bus-terminal', 'callcenter-cork',
-  'campsite-papercut', 'clinic-kiosk', 'clinic-vaccines', 'coldchain-vapor', 'commerce-live', 'count-hall',
-  'dam-steampunk', 'daycare-bricks', 'delivery-boardgame', 'elevator-tui', 'factory-floor', 'farmers-market',
-  'festival-ops', 'fire-dispatch', 'harbor-auction', 'harbor-radar', 'home-eink', 'hotel-glass', 'island-ferry',
-  'kiln-porcelain', 'library-report', 'lighthouse-stamps', 'line-flow', 'line-spc', 'lost-found-dossier',
-  'makerspace-shadowboard', 'mall-wayfinding', 'museum-najeon', 'night-market-neon', 'observatory-glass',
-  'offshore-wind-chart', 'palace-visit', 'parcel-hub', 'park-trails', 'parking-signs', 'pc-cafe', 'pool-mosaic',
-  'port-terminal', 'power-sld', 'produce-market', 'quake-helicorder', 'recycling-polaroid', 'school-chalkboard',
-  'seoul-air', 'server-room', 'site-noise-score', 'ski-resort', 'smart-farm', 'telecom-noc', 'theatre-boxoffice',
-  'theme-park', 'tunnel-tbm', 'utility-regions', 'vet-comic', 'wafer-maps', 'ward-beds', 'water-pumps',
-  'wildfire-topo', 'wildlife-chaekgado', 'winery-engraving',
+  'airport-departures', 'apiary-stitch', 'aquarium-labels', 'assembly-wip', 'bakery-sketch', 'bank-branch',
+  'bike-share', 'blood-journey', 'body-gap', 'bowling-googie', 'brewery-scada', 'building-floor', 'bus-terminal',
+  'callcenter-cork', 'campsite-papercut', 'charging-pcb', 'clinic-kiosk', 'clinic-vaccines', 'coldchain-vapor',
+  'commerce-live', 'count-hall', 'dam-steampunk', 'daycare-bricks', 'delivery-boardgame', 'drone-routes',
+  'elevator-tui', 'factory-floor', 'farmers-market', 'festival-ops', 'fire-dispatch', 'harbor-auction', 'harbor-radar',
+  'heating-nixie', 'home-eink', 'hotel-glass', 'island-ferry', 'it-topology', 'kiln-porcelain', 'library-report',
+  'lighthouse-stamps', 'line-flow', 'line-spc', 'lost-found-dossier', 'makerspace-shadowboard', 'mall-wayfinding',
+  'museum-najeon', 'night-market-neon', 'observatory-glass', 'offshore-wind-chart', 'palace-visit', 'parcel-hub',
+  'park-trails', 'parking-signs', 'pc-cafe', 'pool-mosaic', 'port-terminal', 'power-sld', 'produce-market',
+  'quake-helicorder', 'recycling-polaroid', 'school-chalkboard', 'seoul-air', 'server-room', 'site-noise-score',
+  'ski-resort', 'smart-farm', 'telecom-noc', 'theatre-boxoffice', 'theme-park', 'tunnel-tbm', 'utility-regions',
+  'vet-comic', 'wafer-maps', 'ward-beds', 'water-pumps', 'wildfire-topo', 'wildlife-chaekgado', 'winery-engraving',
 ];
 
 describe('conversion of the samples to the second version', () => {
