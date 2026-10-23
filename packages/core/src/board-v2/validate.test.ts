@@ -224,8 +224,12 @@ describe('validateBoardV2', () => {
       '/parts/u/bind/zz: "tank" has no prop "zz" — props: level, name, state',
       '/parts/v/element: no element "pump" — elements: tank, bad',
     ]);
-    expect(issues({ ...canvas({}), elements: { 'ub-dial': { template: '<svg/>' }, Dial: { template: '<svg/>' } } })).toEqual([
-      `/elements/ub-dial: "ub-" names U-Board's own drawings — name "ub-dial" otherwise`,
+    expect(issues({ ...canvas({}), symbols: { L1: { path: 'M0 0h1v1z' }, pump: { markup: '<path/>' } } })).toEqual([
+      `/symbols/L1: a symbol's name is lowercase letters, digits and "-", starting with a letter — not "L1"`,
+      '/symbols/pump/path: a symbol is { "viewBox"?, "path": "M … Z" } — an SVG path in its own coordinates',
+    ]);
+    expect(issues({ ...canvas({}), elements: { 'u-board-dial': { template: '<svg/>' }, Dial: { template: '<svg/>' } } })).toEqual([
+      `/elements/u-board-dial: "u-board-" names U-Board's own drawings — name "u-board-dial" otherwise`,
       `/elements/Dial: an element's name is lowercase letters, digits and "-", starting with a letter — not "Dial"`,
     ]);
   });

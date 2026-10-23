@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkSpec } from '@iyulab/u-widgets/tools';
-import { applyValueMap, withItemFields } from '../adapter.js';
+import { applyValueMap, withItemFields, writeText } from '../adapter.js';
 import { readHttpRef, type HttpRef } from '../http-ref.js';
 import { validateViewDocument } from '../validate-view-document.js';
 import type { Node, ViewDocument, Widget } from '../view-document.js';
@@ -29,7 +29,8 @@ function drawn(widget: Widget): Record<string, unknown> {
     const reading = readHttpRef(SOURCE[ref.path], ref, READ_AT);
     if (!reading.ok) throw new Error(`${key}: ${reading.message}`);
     const mapped = binding.map ? applyValueMap(binding.map, reading.value) : reading.value;
-    const value = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
+    const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
+    const value = binding.text !== undefined ? writeText(binding.text, gained) : gained;
     const path = key.split('.');
     let at: Record<string, unknown> = props;
     for (const step of path.slice(0, -1)) at = (at[step] ??= {}) as Record<string, unknown>;
@@ -129,12 +130,12 @@ describe('the picture model of a v2 board', () => {
       { kind: 'grid', items: ['rows', 'table', 'bars', 'cells'] },
     ));
     const rows = drawn(nodeOf(doc, 'rows').widget);
-    expect(rows.mapping).toEqual({ primary: 'id', secondary: 'state', tone: 'state@tone' });
+    expect(rows.mapping).toEqual({ primary: 'id', secondary: 'state', tone: 'state$tone' });
     expect(rows.options).toEqual({ maxItems: 5 });
-    expect((rows.data as Record<string, unknown>[]).map(r => r['state@tone'])).toEqual(['ok', 'alarm']);
+    expect((rows.data as Record<string, unknown>[]).map(r => r['state$tone'])).toEqual(['ok', 'alarm']);
     const table = drawn(nodeOf(doc, 'table').widget);
     expect(table.mapping).toEqual({ columns: [
-      { field: 'id', label: 'id' }, { field: 'state', label: 'state', toneField: 'state@tone' }, { field: 'flow', label: 'Flow', unit: 'm³/h', format: 'number:1' },
+      { field: 'id', label: 'id' }, { field: 'state', label: 'state', toneField: 'state$tone' }, { field: 'flow', label: 'Flow', unit: 'm³/h', format: 'number:1' },
     ] });
     expect((drawn(nodeOf(doc, 'bars').widget).data as Record<string, unknown>[]).map(r => [r.label, r.value])).toEqual([['P1', 41.5], ['P2', 0]]);
     expect((drawn(nodeOf(doc, 'cells').widget).data as Record<string, unknown>[]).map(r => [r.label, r.tone])).toEqual([['P1', 'ok'], ['P2', 'alarm']]);
@@ -199,14 +200,14 @@ describe('the picture model of a v2 board', () => {
       },
     ));
     if (doc.kind !== 'canvas') throw new Error('a canvas');
-    expect(Object.keys(doc.elements ?? {}).sort()).toEqual(['ub-legend', 'ub-label', 'ub-marker', 'ub-shape-edge', 'ub-shape-pipe'].sort());
+    expect(Object.keys(doc.elements ?? {}).sort()).toEqual(['u-board-legend', 'u-board-label', 'u-board-marker', 'u-board-shape-edge', 'u-board-shape-pipe'].sort());
     expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', note: '', shape: 'ring' });
     expect(drawn(nodeOf(doc, 'l').widget)).toEqual({ text: 41.5, tone: '' });
     expect(drawn(nodeOf(doc, 'key').widget)).toEqual({ items: [{ tone: 'ok', label: 'Running', glyph: '' }, { tone: 'alarm', label: 'Tripped', glyph: '' }] });
     // A line is a node boxed around its points, under the parts, drawn in the box's own coordinates.
-    expect(doc.nodes[0]).toMatchObject({ id: 'shape.pipe', x: 96, y: 96, width: 208, height: 108, widget: { type: 'element:ub-shape-pipe' } });
-    expect(doc.elements!['ub-shape-pipe']!.template).toContain('d="M4 4 L204 4 L204 104"');
-    expect(doc.elements!['ub-shape-edge']!.template).toContain('d="M 3 3 L 43 43"');
+    expect(doc.nodes[0]).toMatchObject({ id: 'shape.pipe', x: 96, y: 96, width: 208, height: 108, widget: { type: 'element:u-board-shape-pipe' } });
+    expect(doc.elements!['u-board-shape-pipe']!.template).toContain('d="M4 4 L204 4 L204 104"');
+    expect(doc.elements!['u-board-shape-edge']!.template).toContain('d="M 3 3 L 43 43"');
   });
 
   it("draws the board's own elements, their props fixed or bound to a field, its status or its tone", () => {
@@ -257,8 +258,34 @@ describe('the picture model of a v2 board', () => {
     expect(() => toViewDocument(side)).toThrow(/side by side is not drawn yet/);
   });
 
+  it('writes a title of words and fields from the item it reads, the fields in their words and digits', () => {
+    const b = board(
+      { p: { as: 'status-card', each: 'pumps', title: 'Pump {{key}} · {{flow}} m³/h · {{mode}}', show: ['state'] } },
+      { kind: 'canvas', size: [400, 200], place: { p: { P1: [0, 0, 200, 100] } } },
+    );
+    (b.data!.pumps as { fields: Record<string, unknown> }).fields = { ...pumps.fields, mode: { names: { run: 'auto', '*': 'manual' }, at: '/state' } };
+    const doc = view(b);
+    const title = nodeOf(doc, 'p/P1').widget.bindings!['data.title']!;
+    expect(title.text).toBe('Pump P1 · {{flow | fixed:1}} m³/h · {{mode$name}}');
+    expect(drawn(nodeOf(doc, 'p/P1').widget).data).toMatchObject({ title: 'Pump P1 · 41.5 m³/h · auto' });
+  });
+
+  it("draws a marker as one of the board's symbols, the one a field names", () => {
+    const b = board(
+      { m: { as: 'marker', each: 'pumps', symbol: '{{kind}}', show: 'state', note: '{{rpm}} rpm' } },
+      { kind: 'canvas', size: [400, 200], place: { m: { P1: [0, 0, 120, 60] } } },
+    );
+    // The source's line names the drawing, in the board's words for it.
+    (b.data!.pumps as { fields: Record<string, unknown> }).fields = { ...pumps.fields, kind: { at: '/line', names: { L1: 'pump-a', '*': 'pump-b' } } };
+    b.symbols = { 'pump-a': { viewBox: '0 0 24 24', path: 'M2 2h20v20H2z' }, 'pump-b': { path: 'M2 2h10v10H2z' } };
+    const doc = view(b);
+    expect(doc.kind === 'canvas' && doc.symbols).toEqual({ 'pump-a': { viewBox: '0 0 24 24', markup: '<path d="M2 2h20v20H2z"/>' }, 'pump-b': { markup: '<path d="M2 2h10v10H2z"/>' } });
+    expect(drawn(nodeOf(doc, 'm/P1').widget)).toEqual({ name: 'P1', tone: 'ok', status: 'Running', note: '1,450 rpm', symbol: 'pump-a' });
+  });
+
   it('says what it does not draw yet, and where', () => {
-    const b = board({ v: { as: 'marker', of: 'pumps[P1]', symbol: 'valve' } }, { kind: 'canvas', size: [100, 100], place: { v: [0, 0] } });
-    expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/v/symbol', 'a marker with a symbol is not drawn yet'));
+    const b = board({ t: { as: 'table', of: 'air' } }, { kind: 'canvas', size: [100, 100], place: { t: [0, 0] } });
+    b.data!.air = { from: 'gov', path: '/air', list: '/items', key: 'station', where: { item: 'PM10' } };
+    expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/t', 'reading the whole of "air" kept by "where" is not drawn yet — read an item of it'));
   });
 });

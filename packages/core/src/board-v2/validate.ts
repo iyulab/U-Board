@@ -146,12 +146,19 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     return isObj(fields[name]) ? fields[name] : undefined;
   };
 
+  // ── symbols ──
+  for (const [name, symbol] of Object.entries(isObj(board.symbols) ? board.symbols : {})) {
+    const at = `/symbols/${name}`;
+    if (!/^[a-z][a-z0-9-]*$/.test(name)) fail(at, `a symbol's name is lowercase letters, digits and "-", starting with a letter — not "${name}"`);
+    if (!isObj(symbol) || typeof symbol.path !== 'string') fail(`${at}/path`, 'a symbol is { "viewBox"?, "path": "M … Z" } — an SVG path in its own coordinates');
+  }
+
   // ── elements ──
   const elements = isObj(board.elements) ? board.elements : {};
   for (const [name, el] of Object.entries(elements)) {
     const at = `/elements/${name}`;
     if (!/^[a-z][a-z0-9-]*$/.test(name)) fail(at, `an element's name is lowercase letters, digits and "-", starting with a letter — not "${name}"`);
-    else if (name.startsWith('ub-')) fail(at, `"ub-" names U-Board's own drawings — name "${name}" otherwise`);
+    else if (name.startsWith('u-board-')) fail(at, `"u-board-" names U-Board's own drawings — name "${name}" otherwise`);
     if (!isObj(el) || typeof el.template !== 'string') { fail(`${at}/template`, 'an element needs a "template": markup with {{prop}} holes'); continue; }
     const props = isObj(el.props) ? el.props : {};
     for (const [prop, type] of Object.entries(props)) {

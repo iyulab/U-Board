@@ -1,6 +1,6 @@
 // The spatial built-ins U-Board draws itself — a marker, a label, a legend, a line — as elements of the picture model:
 // markup the renderer's element layer draws in an isolated root, with the widgets' tokens and tones. Their names start
-// with `ub-`, which a board's own elements do not.
+// with `u-board-`, which a board's own elements do not.
 
 import { TONES } from '@iyulab/u-widgets';
 import type { ElementDefinition } from '../view-document.js';
@@ -21,6 +21,20 @@ export const MARKER: ElementDefinition = {
     '.mk i{flex:none;width:14px;height:14px;border-radius:50%;background:var(--c)}.mk.ring i{background:none;border:3px solid var(--c)}' +
     '.mk.pin i{border-radius:50% 50% 50% 0;transform:rotate(-45deg)}.txt{display:grid;line-height:1.2;min-width:0}' +
     '.txt b,.st,small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.st{color:var(--c);font-weight:600}.st:empty,small:empty{display:none}' +
+    'small{color:var(--u-widget-text-secondary)}',
+};
+
+/** A marker drawn as one of the board's symbols — in its status's colour — with its name, status and note under it. */
+export const MARKER_SYMBOL: ElementDefinition = {
+  render: 'template',
+  props: { type: 'object', properties: { symbol: text, name: text, tone: text, status: text, note: text } },
+  template:
+    '<figure class="sm" data-tone="{{tone}}"><svg class="sym" aria-hidden="true"><use href="#{{symbol}}" width="100%" height="100%"/></svg>' +
+    '<figcaption><b>{{name}}</b><span class="st">{{status}}</span><small>{{note}}</small></figcaption></figure>',
+  style:
+    `.sm{--c:var(--u-widget-tone-idle);margin:0;display:grid;grid-template-rows:minmax(0,1fr) auto;height:100%;font:12px var(--u-widget-font-family);color:var(--u-widget-text)}${TONE_RULES}` +
+    '.sym{width:100%;height:100%;fill:var(--c)}figcaption{display:flex;gap:6px;align-items:baseline;min-width:0}' +
+    'figcaption b,.st,small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.st{color:var(--c);font-weight:600}.st:empty,small:empty{display:none}' +
     'small{color:var(--u-widget-text-secondary)}',
 };
 

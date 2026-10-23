@@ -8,7 +8,7 @@
 
 import type { Binding, CellCanvas, Connector, ElementDefinition, GridItem, GridLayout, ItemField, Node, Shape as ViewShape, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
-import { LABEL, LEGEND, MARKER, lineElement } from './builtins.js';
+import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
 import { partKind } from './kinds.js';
 import { TONES } from './types.js';
 import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
@@ -82,6 +82,17 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
 
   const fieldOf = (query: string | undefined, name: string): Field => (query === undefined ? {} : data[query]?.fields?.[name] ?? {});
 
+  /**
+   * The key a field lives under in an item — its `at` (`/sky` → `sky`), else its own name — where a list's rows and a
+   * text read it. A field deeper in an item is read only one value at a time.
+   */
+  const keyOf = (query: string, name: string, at: string): string => {
+    const where = fieldOf(query, name).at;
+    if (where === undefined) return name;
+    if (where.indexOf('/', 1) >= 0) throw new PictureError(at, `"${name}" lives deeper in an item (${where}) — a list's rows and a text read a field at the top of it`);
+    return where.slice(1);
+  };
+
   /** A status by name: one the board declares, or a tone standing for itself. */
   const statusOf = (name: string): Status => statuses[name] ?? { tone: name as Tone };
 
@@ -142,6 +153,33 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     return Object.keys(statuses).filter(name => used.has(name));
   };
 
+  /**
+   * A text of words and fields read from one item (or a read that is not a list): the item bound whole and written into
+   * the text — each field in its words when it names them, with its digits — and `{{key}}` the item's key.
+   */
+  const textBinding = (t: string, reads: Reads, at: string): Binding => {
+    const q = data[reads.query]!;
+    if (reads.item === undefined && q.list !== undefined) {
+      throw new PictureError(at, `a text of fields reads one item — "${reads.query}" is a list: write "${reads.query}[<key>]"`);
+    }
+    const gained: Record<string, ItemField> = {};
+    const written = t.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_m, name: string) => {
+      if (name === 'key') return reads.item ?? '';
+      const f = fieldOf(reads.query, name);
+      const key = keyOf(reads.query, name, at);
+      if (f.names !== undefined) gained[`${name}$name`] = { from: key, map: mapOf(f.names, w => w) };
+      const shown = f.names !== undefined ? `${name}$name` : key;
+      const digits = f.digits !== undefined ? ` | ${f.format === 'number' ? 'grouped' : 'fixed'}:${f.digits}` : f.format === 'number' ? ' | grouped:0' : '';
+      return `{{${shown}${digits}}}`;
+    });
+    return {
+      adapter: q.from,
+      ref: refFor(reads.query, reads.item, undefined, at),
+      ...(Object.keys(gained).length > 0 ? { itemFields: gained } : {}),
+      text: written,
+    };
+  };
+
   // ── parts ──
 
   /** A part as drawn: its preset's settings under its own. */
@@ -174,7 +212,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       if (takes.emphasis && maps.emphasis) bind(`${prefix}emphasis`, name, maps.emphasis);
     };
     /**
-     * The whole list bound at `key`, each item gaining `gained` — a row's tone from its state (`<field>@tone`), a field
+     * The whole list bound at `key`, each item gaining `gained` — a row's tone from its state (`<field>$tone`), a field
      * under the name the widget reads it by.
      */
     const bindList = (key: string, gained: Record<string, ItemField>) => {
@@ -186,12 +224,14 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       if (name === undefined) return {};
       const f = field(name);
       return {
-        ...(f.state !== undefined ? { [`${name}@tone`]: { from: name, map: stateMaps(f.state).tone } } : {}),
-        ...(f.names !== undefined ? { [`${name}@name`]: { from: name, map: mapOf(f.names, w => w) } } : {}),
+        ...(f.state !== undefined ? { [`${name}$tone`]: { from: key(name), map: stateMaps(f.state).tone } } : {}),
+        ...(f.names !== undefined ? { [`${name}$name`]: { from: key(name), map: mapOf(f.names, w => w) } } : {}),
       };
     };
-    /** The field a row shows `name` by: its words when it names them, else the field itself. */
-    const shown = (name: string) => (field(name).names !== undefined ? `${name}@name` : name);
+    /** Where a row holds field `name`. */
+    const key = (name: string) => keyOf(query!, name, at);
+    /** The field a row shows `name` by: its words when it names them, else the field where it lives. */
+    const shown = (name: string) => (field(name).names !== undefined ? `${name}$name` : key(name));
     /** The first of `names` whose field has a state. */
     const stateIn = (names: readonly (string | undefined)[]) => names.find(n => n !== undefined && field(n).state !== undefined);
     const text = (t: string | undefined, key: string): string | undefined => {
@@ -201,7 +241,8 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       const only = /^\{\{\s*([\w.-]+)\s*\}\}$/.exec(t);
       if (only && only[1] !== 'key') { bindValue(key, only[1]!); return ''; }
       if (holes.every(h => h[1] === 'key')) return t.replace(/\{\{\s*key\s*\}\}/g, item ?? '');
-      throw new PictureError(`${at}/title`, `a text mixing words and fields ("${t}") is not drawn yet — write the field alone, or {{key}}`);
+      if (query !== undefined) bindings[key] = textBinding(t, { query, ...(item !== undefined ? { item } : {}) }, at);
+      return '';
     };
 
     switch (kind.kind) {
@@ -270,7 +311,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
           const format = formatOf(f);
           return {
             field: shown(name), label: f.label ?? name,
-            ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(f.state !== undefined ? { toneField: `${name}@tone` } : {}),
+            ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(f.state !== undefined ? { toneField: `${name}$tone` } : {}),
           };
         });
         return {
@@ -287,8 +328,8 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         const mapping = {
           ...(primary !== undefined ? { primary: shown(primary) } : {}),
           ...(secondary !== undefined ? { secondary: shown(secondary) } : {}),
-          ...(time !== undefined ? { time } : {}),
-          ...(tone !== undefined ? { tone: `${tone}@tone` } : {}),
+          ...(time !== undefined ? { time: key(time) } : {}),
+          ...(tone !== undefined ? { tone: `${tone}$tone` } : {}),
         };
         const listOptions = { ...rest, ...(max !== undefined ? { maxItems: max } : {}), ...(variant === 'tiles' ? { layout: 'tiles' } : {}) };
         return {
@@ -306,9 +347,9 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         const tone = stateIn([state, ...fields]);
         const toneMap = tone !== undefined ? field(tone).state : undefined;
         bindList('data', {
-          ...(labelField !== undefined ? { label: { from: labelField, ...(field(labelField).names ? { map: mapOf(field(labelField).names!, w => w) } : {}) } } : {}),
-          ...(valueField !== undefined ? { value: { from: valueField } } : {}),
-          ...(tone !== undefined && toneMap !== undefined ? { tone: { from: tone, map: stateMaps(toneMap).tone } } : {}),
+          ...(labelField !== undefined ? { label: { from: key(labelField), ...(field(labelField).names ? { map: mapOf(field(labelField).names!, w => w) } : {}) } } : {}),
+          ...(valueField !== undefined ? { value: { from: key(valueField) } } : {}),
+          ...(tone !== undefined && toneMap !== undefined ? { tone: { from: key(tone), map: stateMaps(toneMap).tone } } : {}),
         });
         return {
           type: kind.kind,
@@ -353,28 +394,26 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         throw new PictureError(`${at}/as`, `a ${kind.kind} is not drawn yet`);
       }
       case 'marker': {
-        const { shape = 'dot', symbol, note } = options as { shape?: string; symbol?: unknown; note?: string };
-        if (symbol !== undefined) throw new PictureError(`${at}/symbol`, 'a marker with a symbol is not drawn yet');
+        const { shape = 'dot', symbol, note } = options as { shape?: string; symbol?: string; note?: string };
         const stateField = stateIn(fields);
         if (stateField) bindState('', stateField, { words: true });
-        return {
-          type: builtin('ub-marker', MARKER),
-          props: { name: text(title, 'name') ?? item ?? '', tone: '', status: '', note: text(note, 'note') ?? '', shape },
-          bindings,
-        };
+        const props = { name: text(title, 'name') ?? item ?? '', tone: '', status: '', note: text(note, 'note') ?? '' };
+        // A marker with a symbol draws the board's drawing — one, or the one a field names — in its status's colour.
+        if (symbol !== undefined) return { type: builtin('u-board-marker-symbol', MARKER_SYMBOL), props: { ...props, symbol: text(symbol, 'symbol') ?? '' }, bindings };
+        return { type: builtin('u-board-marker', MARKER), props: { ...props, shape }, bindings };
       }
       case 'label': {
         const name = fields[0];
         const textProp = title !== undefined ? text(title, 'text') : name !== undefined ? (bindValue('text', name), '') : '';
         if (name !== undefined) bindState('', name);
-        return { type: builtin('ub-label', LABEL), props: { text: textProp ?? '', tone: '' }, bindings };
+        return { type: builtin('u-board-label', LABEL), props: { text: textProp ?? '', tone: '' }, bindings };
       }
       case 'legend': {
         const items = usedStatuses().map(name => {
           const s = statuses[name]!;
           return { tone: s.tone, label: s.label ?? name, glyph: s.glyph ?? '' };
         });
-        return { type: builtin('ub-legend', LEGEND), props: { items } };
+        return { type: builtin('u-board-legend', LEGEND), props: { items } };
       }
       case 'element': {
         // One of the board's own drawings: its fixed props, and props bound to a field, its status or its tone.
@@ -423,14 +462,14 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     const connectors: Connector[] = [];
     const decorations: ViewShape[] = [];
     const lines: Node[] = [];
-    const placeOne = (id: string, part: Part, place: Place, reads: Reads | undefined) => {
+    const placeOne = (partId: string, id: string, part: Part, place: Place, reads: Reads | undefined) => {
       const nodeId = `${frame.ids}${id}`;
       const p = resolve(part);
       const [x, y] = [frame.dx + place[0] * frame.sx, frame.dy + place[1] * frame.sy];
       if (p.as === 'group') {
         const size = p.size as [number, number];
         const [w, h] = place.length === 4 ? [place[2] * frame.sx, place[3] * frame.sy] : [size[0] * frame.sx, size[1] * frame.sy];
-        const inner = canvasOf(groupCanvas(p), `/parts/${id}`, `${nodeId}/`, p.parts as Record<string, Part>, {
+        const inner = canvasOf(groupCanvas(p), `/parts/${partId}`, `${nodeId}/`, p.parts as Record<string, Part>, {
           dx: x, dy: y, sx: w / size[0], sy: h / size[1], ids: `${nodeId}/`, reads: reads ?? null,
         });
         nodes.push(...inner.nodes);
@@ -439,14 +478,14 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         return;
       }
       const placed = place.length === 4 ? { width: place[2] * frame.sx, height: place[3] * frame.sy } : {};
-      nodes.push({ id: nodeId, x, y, ...placed, anchored: true, widget: widgetFor(part, `/parts/${id}`, reads) });
+      nodes.push({ id: nodeId, x, y, ...placed, anchored: true, widget: widgetFor(part, `/parts/${partId}`, reads) });
     };
     for (const [id, place] of Object.entries(canvas.place)) {
       const part = parts[id]!;
       // A part inside a group reads the group's data unless it names its own.
       const own = (key?: string) => readsOf(part, key) ?? (frame.reads === null ? undefined : frame.reads);
-      if (Array.isArray(place)) placeOne(id, part, place, own());
-      else for (const [key, p] of Object.entries(place)) placeOne(`${id}/${key}`, part, p, own(key));
+      if (Array.isArray(place)) placeOne(id, id, part, place, own());
+      else for (const [key, p] of Object.entries(place)) placeOne(id, `${id}/${key}`, part, p, own(key));
     }
     for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
       const moved = moveShape(shape, frame);
@@ -511,7 +550,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     const d = shape.line !== undefined
       ? `M${shape.line.map(([px, py]) => `${px - x} ${py - y}`).join(' L')}`
       : shape.path!.replace(/-?\d*\.?\d+/g, n => String(Number(n) - (k++ % 2 === 0 ? x : y)));
-    const name = `ub-${id.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`;
+    const name = `u-board-${id.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`;
     return { id, x, y, ...box, anchored: true, widget: { type: builtin(name, lineElement(d, box, { tone: shape.tone, width, dash: shape.dash === true })) } };
   };
 
@@ -540,9 +579,11 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       if (only) {
         bindings.label = binding(only[1]!, fieldOf(query, only[1]!).names ? mapOf(fieldOf(query, only[1]!).names!, w => w) : undefined);
         label = '';
+      } else if (label !== undefined && /\{\{/.test(label)) {
+        bindings.label = textBinding(label, { query, ...(item !== undefined ? { item } : {}) }, at);
+        label = '';
       }
     }
-    if (label !== undefined && /\{\{/.test(label)) throw new PictureError(`${at}/label`, `a label mixing words and fields ("${label}") is not drawn yet — write the field alone`);
     return {
       id, fromNodeId: link.from, toNodeId: link.to,
       ...(label !== undefined ? { label } : {}),
@@ -627,7 +668,12 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     return out;
   };
 
-  const withElements = () => (Object.keys(elements).length > 0 ? { elements } : {});
+  const withElements = () => ({
+    ...(Object.keys(elements).length > 0 ? { elements } : {}),
+    ...(board.symbols !== undefined && Object.keys(board.symbols).length > 0
+      ? { symbols: Object.fromEntries(Object.entries(board.symbols).map(([name, sym]) => [name, { ...(sym.viewBox !== undefined ? { viewBox: sym.viewBox } : {}), markup: `<path d="${sym.path ?? ''}"/>` }])) }
+      : {}),
+  });
   const head = board.board ?? {};
   const look = { ...(head.theme !== undefined ? { appearance: head.theme } : {}), ...(head.accent !== undefined ? { accent: head.accent } : {}) };
   const layout = board.layout;
