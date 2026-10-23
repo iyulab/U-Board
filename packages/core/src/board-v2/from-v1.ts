@@ -6,8 +6,8 @@
 import { isHttpRef, type HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { THEME_PALETTE, isThemeColor } from '../theme-colors.js';
-import type { Binding, CanvasView, Connector, ElementDefinition, Node, PropsSchema, Shape as V1Shape, ValueMap, ViewDocument, Widget } from '../view-document.js';
-import { TONES, type BoardV2, type ElementDefinition as V2Element, type Field, type Link, type Part, type Place, type Query, type Shape, type Tone, type ValueMapping } from './types.js';
+import type { Binding, CanvasView, CellCanvas, Connector, ElementDefinition, GridView, GridWidgetItem, Node, PropsSchema, Shape as V1Shape, ValueMap, ViewDocument, Widget } from '../view-document.js';
+import { TONES, type BoardV2, type CanvasLayout, type ElementDefinition as V2Element, type Field, type GridItem as V2GridItem, type Link, type Part, type Place, type Query, type Shape, type Tone, type ValueMapping } from './types.js';
 
 /** A converted board, what changed on the way, and what has no place in the second version yet. */
 export interface V1Conversion {
@@ -25,21 +25,51 @@ export function fromV1(doc: ViewDocument): V1Conversion {
   const unsupported: string[] = [];
   const reads = new Reads(unsupported);
   const parts: Record<string, Part> = {};
-  const place: Record<string, Place> = {};
-
-  if (doc.kind !== 'canvas') {
-    unsupported.push('a grid board');
-    return { board: { version: 2, parts: {}, layout: { kind: 'canvas', size: [1, 1], place: {} } }, notes, unsupported };
-  }
-  const canvas = doc as CanvasView;
-  if (canvas.components !== undefined || (canvas.instances ?? []).length > 0) unsupported.push('components');
-  if ((canvas.triggers ?? []).length > 0) unsupported.push('triggers');
+  const elements = new Elements(doc.elements ?? {}, unsupported);
+  const ctx: Context = { reads, elements, parts, notes, unsupported, appearance: doc.appearance };
+  if (doc.kind === 'canvas' && (doc.components !== undefined || (doc.instances ?? []).length > 0)) unsupported.push('components');
+  if ((doc.triggers ?? []).length > 0) unsupported.push('triggers');
 
   // Every binding first: a data read is shared by the parts that read it, so its key is known only once all are seen.
-  for (const node of canvas.nodes) for (const binding of Object.values(node.widget.bindings ?? {})) reads.see(binding);
-  for (const connector of canvas.connectors) for (const binding of Object.values(connector.bindings ?? {})) reads.see(binding);
+  const canvases: CellCanvas[] = doc.kind === 'canvas' ? [doc] : doc.items.flatMap(item => ('canvas' in item ? [item.canvas] : []));
+  const widgets: Widget[] = doc.kind === 'grid' ? doc.items.flatMap(item => ('widget' in item ? [item.widget] : [])) : [];
+  for (const canvas of canvases) {
+    for (const node of canvas.nodes) widgets.push(node.widget);
+    for (const connector of canvas.connectors) for (const binding of Object.values(connector.bindings ?? {})) reads.see(binding);
+  }
+  for (const widget of widgets) for (const binding of Object.values(widget.bindings ?? {})) reads.see(binding);
 
-  const elements = new Elements(canvas.elements ?? {}, unsupported);
+  const layout: BoardV2['layout'] = doc.kind === 'canvas' ? { kind: 'canvas', ...canvasOf(doc, ctx) } : { kind: 'grid', items: gridOf(doc, ctx) };
+  const look = {
+    ...(doc.appearance !== undefined ? { theme: doc.appearance } : {}),
+    ...(doc.accent !== undefined ? { accent: doc.accent } : {}),
+  };
+  const board: BoardV2 = {
+    version: 2,
+    ...(Object.keys(look).length > 0 ? { board: look } : {}),
+    ...(Object.keys(elements.converted).length > 0 ? { elements: elements.converted } : {}),
+    ...(Object.keys(reads.data).length > 0 ? { data: reads.data } : {}),
+    parts,
+    layout,
+  };
+  return { board, notes: [...new Set(notes)], unsupported: [...new Set(unsupported)] };
+}
+
+/** What every part of a conversion writes into: the data reads, the elements, the parts, and what it notes. */
+interface Context {
+  reads: Reads;
+  elements: Elements;
+  parts: Record<string, Part>;
+  notes: string[];
+  unsupported: string[];
+  appearance: CanvasView['appearance'];
+}
+
+/** A canvas — a board's own or a grid cell's: its nodes as parts placed on it, its decorations as shapes and its
+ *  connectors as links. */
+function canvasOf(canvas: CellCanvas, ctx: Context): Omit<CanvasLayout, 'kind'> {
+  const { reads, elements, parts, notes, unsupported } = ctx;
+  const place: Record<string, Place> = {};
   for (const node of canvas.nodes) {
     const part = partOf(node, reads, elements, notes, unsupported);
     if (part === undefined) continue;
@@ -49,39 +79,101 @@ export function fromV1(doc: ViewDocument): V1Conversion {
     if (node.caption !== undefined) unsupported.push('a node caption');
     if (node.states !== undefined) unsupported.push('node states');
   }
-
   const links: Record<string, Link> = {};
   for (const connector of canvas.connectors) {
-    if (!(connector.fromNodeId in parts) || !(connector.toNodeId in parts)) { unsupported.push('a connector to a node not converted'); continue; }
-    const link = linkOf(connector, reads, notes, unsupported, canvas.appearance);
+    if (!(connector.fromNodeId in place) || !(connector.toNodeId in place)) { unsupported.push('a connector to a node not converted'); continue; }
+    const link = linkOf(connector, reads, notes, unsupported, ctx.appearance);
     if (link !== undefined) links[unique(connector.id.replace(/[^\w-]+/g, '-'), links)] = link;
   }
   const shapes: Record<string, Shape> = {};
-  for (const decoration of canvas.decorations ?? []) shapes[unique(decoration.id.replace(/[^\w-]+/g, '-'), shapes)] = shapeOf(decoration, notes, canvas.appearance);
-
+  for (const decoration of canvas.decorations ?? []) shapes[unique(decoration.id.replace(/[^\w-]+/g, '-'), shapes)] = shapeOf(decoration, notes, ctx.appearance);
   const image = canvas.background.image;
   const right = Math.max(1, ...Object.values(place).map(([x, , w = 0]) => x + w));
   const bottom = Math.max(1, ...Object.values(place).map(([, y, , h = 0]) => y + h));
-  const look = {
-    ...(canvas.appearance !== undefined ? { theme: canvas.appearance } : {}),
-    ...(canvas.accent !== undefined ? { accent: canvas.accent } : {}),
+  return {
+    size: image ? [image.width, image.height] : [Math.ceil(right), Math.ceil(bottom)],
+    ...(image ? { background: image.src } : {}),
+    place,
+    ...(Object.keys(shapes).length > 0 ? { shapes } : {}),
+    ...(Object.keys(links).length > 0 ? { links } : {}),
   };
-  const board: BoardV2 = {
-    version: 2,
-    ...(Object.keys(look).length > 0 ? { board: look } : {}),
-    ...(Object.keys(elements.converted).length > 0 ? { elements: elements.converted } : {}),
-    ...(Object.keys(reads.data).length > 0 ? { data: reads.data } : {}),
-    parts,
-    layout: {
-      kind: 'canvas',
-      size: image ? [image.width, image.height] : [Math.ceil(right), Math.ceil(bottom)],
-      ...(image ? { background: image.src } : {}),
-      place,
-      ...(Object.keys(shapes).length > 0 ? { shapes } : {}),
-      ...(Object.keys(links).length > 0 ? { links } : {}),
-    },
+}
+
+/**
+ * A grid's items in order. An item spanning several rows becomes a cell of its own beside a grid in a cell holding the
+ * items that fill the rows beside it — found where the first version's flow puts them; a span at medium width is the
+ * board's.
+ */
+function gridOf(grid: GridView, ctx: Context): V2GridItem[] {
+  const items = grid.items;
+  const spans = items.map(item => Math.min(12, item.span ?? 4));
+  const rows = items.map(item => Math.max(1, item.rowSpan ?? 1));
+  if (items.some(item => item.spanMedium !== undefined)) ctx.notes.push('the spans at medium width are the board\'s');
+  // Where the first version's flow puts each item: rows of twelve columns, an item spanning rows keeping its columns.
+  const taken: boolean[][] = [];
+  const at: { row: number; col: number }[] = [];
+  let cursor = { row: 0, col: 0 };
+  const fits = (row: number, col: number, i: number) => {
+    if (col + spans[i]! > 12) return false;
+    for (let r = row; r < row + rows[i]!; r++) for (let c = col; c < col + spans[i]!; c++) if (taken[r]?.[c]) return false;
+    return true;
   };
-  return { board, notes: [...new Set(notes)], unsupported: [...new Set(unsupported)] };
+  for (let i = 0; i < items.length; i++) {
+    let { row, col } = cursor;
+    while (!fits(row, col, i)) { col++; if (col + spans[i]! > 12) { row++; col = 0; } }
+    for (let r = row; r < row + rows[i]!; r++) for (let c = col; c < col + spans[i]!; c++) (taken[r] ??= [])[c] = true;
+    at.push({ row, col });
+    cursor = { row, col: col + spans[i]! };
+  }
+  // The items beside each tall one: in its rows, outside its columns, which must be filled by them alone.
+  const besideOf = new Map<number, number[]>();
+  const owner = new Map<number, number>();
+  for (let x = 0; x < items.length; x++) {
+    if (rows[x]! === 1) continue;
+    const { row, col } = at[x]!;
+    const beside = items.map((_, i) => i).filter(i => i !== x && at[i]!.row >= row && at[i]!.row < row + rows[x]!);
+    const width = 12 - spans[x]!;
+    const filled = beside.every(i => rows[i] === 1 && (col === 0 ? at[i]!.col >= spans[x]! : at[i]!.col < col))
+      && [...Array(rows[x]!).keys()].every(r => beside.filter(i => at[i]!.row === row + r).reduce((n, i) => n + spans[i]!, 0) === width)
+      && (col === 0 || col === width)
+      && beside.every(i => (spans[i]! * 12) % width === 0);
+    if (!filled || besideOf.has(x) || beside.some(i => owner.has(i) || rows[i]! > 1)) { ctx.unsupported.push('a grid item spanning rows beside items that do not fill them'); return []; }
+    besideOf.set(x, beside);
+    for (const i of beside) owner.set(i, x);
+  }
+  const entry = (i: number): V2GridItem | undefined => {
+    const item = items[i]!;
+    const extra = item.height !== undefined ? { height: item.height } : {};
+    if ('canvas' in item) return { canvas: canvasOf(item.canvas, ctx), span: spans[i]!, ...extra };
+    const part = partOf(item as GridWidgetItem as unknown as Node, ctx.reads, ctx.elements, ctx.notes, ctx.unsupported);
+    if (part === undefined) return undefined;
+    if (item.states !== undefined) ctx.unsupported.push('node states');
+    ctx.parts[item.id] = part;
+    return item.height !== undefined ? { id: item.id, span: spans[i]!, ...extra } : [item.id, spans[i]!];
+  };
+  const out: V2GridItem[] = [];
+  const cell = (x: number): V2GridItem => {
+    const width = 12 - spans[x]!;
+    const inner = besideOf.get(x)!.flatMap(i => {
+      const e = entry(i);
+      if (e === undefined) return [];
+      const twelfths = (spans[i]! * 12) / width;
+      return [typeof e === 'string' ? [e, twelfths] as [string, number] : Array.isArray(e) ? [e[0], twelfths] as [string, number] : { ...e, span: twelfths }];
+    });
+    return { grid: inner, span: width };
+  };
+  for (let i = 0; i < items.length; i++) {
+    const tall = owner.get(i);
+    if (tall !== undefined) {
+      // A tall item at the end of its rows: the cell beside it comes first, where its first item is.
+      if (at[tall]!.col !== 0 && besideOf.get(tall)![0] === i) out.push(cell(tall));
+      continue;
+    }
+    const e = entry(i);
+    if (e !== undefined) out.push(e);
+    if (besideOf.has(i) && at[i]!.col === 0) out.push(cell(i));
+  }
+  return out;
 }
 
 // ── parts ──
@@ -493,6 +585,7 @@ class Reads {
     if (map !== undefined) {
       names = mappingOf(map);
       if (names === undefined) { this.unsupported.push('a value map that is not a mapping of words'); return undefined; }
+      if (Object.values(names).includes('')) { this.unsupported.push('a value map to an empty word'); return undefined; }
     }
     const want: Field = {
       ...(pointer !== `/${fieldName(pointer)}` ? { at: pointer } : {}),
@@ -529,25 +622,20 @@ function mappingOf(map: ValueMap): ValueMapping | undefined {
   const word = (v: unknown) => (typeof v === 'string' ? v : typeof v === 'number' || typeof v === 'boolean' ? String(v) : undefined);
   if (map.ranges !== undefined && map.ranges.length > 0) {
     if (map.values !== undefined && Object.keys(map.values).length > 0) return undefined;
-    const ranges = [...map.ranges].sort((a, b) => (a.min ?? -Infinity) - (b.min ?? -Infinity));
-    const bands: (string | number)[] = [];
-    const below = ranges[0]!.min === undefined ? word(ranges.shift()!.value) : word(map.otherwise);
-    if (below === undefined) return undefined;
-    bands.push(below);
-    let edge = ranges[0]?.min;
-    for (const [i, r] of ranges.entries()) {
-      const name = word(r.value);
-      if (name === undefined || r.min === undefined || r.min !== edge) return undefined;
-      bands.push(r.min, name);
-      const next = ranges[i + 1];
-      if (r.max !== undefined && (next === undefined ? true : r.max !== next.min)) {
-        // A band that ends before the next starts gives the rest to `otherwise`.
-        const rest = word(map.otherwise);
-        if (rest === undefined) return undefined;
-        bands.push(r.max, rest);
-        if (next !== undefined && next.min !== r.max) return undefined;
-      }
-      edge = next?.min;
+    // Between each two numbers a range starts or ends at, the value is what the first version gives there: the first
+    // range, in the order written, holding it (from its `min`, inclusive, to its `max`, exclusive), else `otherwise`.
+    const edges = [...new Set(map.ranges.flatMap(r => [r.min, r.max]).filter((n): n is number => typeof n === 'number'))].sort((a, b) => a - b);
+    const at = (v: number) => {
+      const hit = map.ranges!.find(r => (r.min === undefined || v >= r.min) && (r.max === undefined || v < r.max));
+      return word(hit !== undefined ? hit.value : map.otherwise);
+    };
+    const first = at(edges[0]! - 1);
+    if (first === undefined) return undefined;
+    const bands: (string | number)[] = [first];
+    for (const edge of edges) {
+      const name = at(edge);
+      if (name === undefined) return undefined;
+      if (name !== bands.at(-1)) bands.push(edge, name);
     }
     return bands;
   }

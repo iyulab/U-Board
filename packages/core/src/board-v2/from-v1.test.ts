@@ -146,12 +146,40 @@ describe('fromV1', () => {
     ]);
   });
 
+  it('lays a grid out item by item, an item spanning rows beside a grid in a cell of the items that fill them', () => {
+    const metric = (id: string) => ({ id, widget: { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } } });
+    const { board, notes, unsupported } = fromV1({
+      kind: 'grid',
+      items: [
+        { ...metric('map'), span: 8, rowSpan: 2 },
+        { ...metric('a'), span: 4, spanMedium: 3 },
+        { ...metric('b'), span: 2 }, { ...metric('c'), span: 2 },
+        { id: 'plan', span: 12, height: 300, canvas: { background: {}, nodes: [node('d', metric('d').widget)], connectors: [] } },
+      ],
+    });
+    expect(unsupported).toEqual([]);
+    expect(notes).toEqual(["the spans at medium width are the board's"]);
+    expect(board.layout).toEqual({
+      kind: 'grid',
+      items: [
+        ['map', 8],
+        { grid: [['a', 12], ['b', 6], ['c', 6]], span: 4 },
+        { canvas: { size: [160, 100], place: { d: [0, 0, 160, 100] } }, span: 12, height: 300 },
+      ],
+    });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'grid' && drawn.items.map(i => [i.id, i.span, i.rowSpan])).toEqual([
+      ['map', 8, 2], ['a', 4, undefined], ['b', 2, undefined], ['c', 2, undefined], [expect.stringMatching(/^cell/), 12, undefined],
+    ]);
+  });
+
   it('reports what the second version has no place for yet, never dropping it without a word', () => {
     const { unsupported } = fromV1(canvas(
       [node('e', { type: 'element:pump', props: {} })],
       { connectors: [{ id: 'l', fromNodeId: 'e', toNodeId: 'e' }] },
     ));
     expect(unsupported).toEqual(['an element the board does not define', 'a connector to a node not converted']);
-    expect(fromV1({ kind: 'grid', items: [] }).unsupported).toEqual(['a grid board']);
+    expect(fromV1({ kind: 'grid', items: [] }).unsupported).toEqual([]);
   });
 });
