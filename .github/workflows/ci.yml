@@ -22,7 +22,9 @@ jobs:
     # the Playwright `-noble` image, Ubuntu 24.04): its fonts and anti-aliasing are what the visual
     # comparison expects, and `ubuntu-latest` moves to a newer release on its own schedule.
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # The whole `npm run check` in one job takes 7–18 minutes depending on the runner; the limit sits well
+    # above that spread so a slow runner is not cut off mid-way through a passing run.
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v7
