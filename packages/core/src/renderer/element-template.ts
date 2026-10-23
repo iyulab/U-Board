@@ -2,6 +2,7 @@ import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../vi
 import { symbolSheet, symbolsUsed } from '../elements/symbols.js';
 import { formatValue, parseTemplate, type TemplateNode } from '../elements/template.js';
 import { TEMPLATE_TAGS, attributeProblem, checkStyle, isResourceOrigin } from '../elements/markup-policy.js';
+import { TONES } from '@iyulab/u-widgets';
 import { THEME_PALETTE } from '../theme-colors.js';
 
 /**
@@ -22,6 +23,7 @@ export const ELEMENT_THEME: Record<BoardAppearance, Record<string, string>> = {
     '--u-widget-warning': THEME_PALETTE.light.warning,
     '--u-widget-font-family': 'system-ui, -apple-system, sans-serif',
     '--u-widget-font-mono': "ui-monospace, 'Cascadia Code', Consolas, monospace",
+    ...toneTokens('light'),
   },
   dark: {
     '--u-widget-bg': '#1e1e2e',
@@ -35,8 +37,14 @@ export const ELEMENT_THEME: Record<BoardAppearance, Record<string, string>> = {
     '--u-widget-warning': THEME_PALETTE.dark.warning,
     '--u-widget-font-family': 'system-ui, -apple-system, sans-serif',
     '--u-widget-font-mono': "ui-monospace, 'Cascadia Code', Consolas, monospace",
+    ...toneTokens('dark'),
   },
 };
+
+/** The tones' colours as the widgets name them (`--u-widget-tone-ok` …) — `accent` follows the board's primary. */
+function toneTokens(appearance: BoardAppearance): Record<string, string> {
+  return Object.fromEntries(TONES.map(tone => [`--u-widget-tone-${tone}`, tone === 'accent' ? 'var(--u-widget-primary)' : THEME_PALETTE[appearance][tone]]));
+}
 
 /** Ink on an accent fill: the light one, or the dark one where the accent is light. */
 const ON_ACCENT = { light: '#ffffff', dark: '#1a1a2e' };
