@@ -6,7 +6,7 @@ import {
   type ViewDocumentIssue,
   type ViewKind,
 } from '@iyulab/u-board/domain';
-import { PictureError, toViewDocument, validateBoardV2, type BoardV2 } from '@iyulab/u-board/board-v2';
+import { PictureError, keyReadsOf, keysIn, toViewDocument, validateBoardV2, type BoardV2 } from '@iyulab/u-board/board-v2';
 
 /**
  * What a board stores: a document in the board language's second version, which says so (`"version": 2`), or a
@@ -60,12 +60,18 @@ export function documentKind(document: BoardDocument): ViewKind {
   return isBoardV2(document) ? document.layout.kind : document.kind;
 }
 
+/** Reads one value for a board — a binding's adapter and reference. */
+export type ValueReader = (adapter: string, ref: unknown) => Promise<{ value?: unknown }>;
+
 /**
- * The first-version view document the share routes still read, or `undefined` for a second-version board — which
- * they answer as not shown yet.
- * TODO(v2 switch ②): draw a second-version board through its picture (`toViewDocument`) on the share routes and the
- * viewer, and remove this.
+ * The view document the renderer draws a board from. A second-version board is drawn through its picture, which a
+ * grid laying out a part per item of a list makes with the keys of the items it has now — read here, with `read`.
  */
-export function firstVersionOf(document: BoardDocument): ViewDocument | undefined {
-  return isBoardV2(document) ? undefined : document;
+export async function pictureOf(document: BoardDocument, read: ValueReader): Promise<ViewDocument> {
+  if (!isBoardV2(document)) return document;
+  const keys = new Map<string, string[]>();
+  await Promise.all(
+    keyReadsOf(document).map(async ({ data, adapter, ref }) => keys.set(data, keysIn(document, data, (await read(adapter, ref)).value)))
+  );
+  return toViewDocument(document, { keysOf: data => keys.get(data) ?? [] });
 }

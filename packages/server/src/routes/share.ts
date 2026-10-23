@@ -12,7 +12,7 @@ import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveStat
 import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { Connector } from '../db/connectors.js';
 import { elementFramesAddress } from '../element-frame.js';
-import { firstVersionOf } from '../board-document.js';
+import { isBoardV2, pictureOf } from '../board-document.js';
 
 /** Upper bound on one batch resolve request. A board's own bindings are the only entries that
  * resolve, so this only bounds the work a malformed or hostile request can make the server do. */
@@ -119,11 +119,6 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    const document = firstVersionOf(board.document);
-    if (!document) {
-      res.status(409).json({ code: 'DOCUMENT_NOT_SHOWN' });
-      return;
-    }
     await token.used();
     // An open viewer whose board has no bindings has no value batch to learn the revision from, so it
     // asks here with the revision it shows (If-None-Match): unchanged, the answer is a bodiless 304.
@@ -133,27 +128,32 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(304).end();
       return;
     }
+    // A board in the language's second version travels as it is stored, with the picture the viewer draws it from.
+    const picture = await pictureOf(board.document, upstreamReader(token.workspaceId));
     res.status(200).json({
       name: board.name,
-      document,
+      document: board.document,
+      ...(isBoardV2(board.document) && { picture }),
       revision: board.revision,
       elementOrigins: config.elementOrigins ?? [],
       ...(config.elementFrameOrigin && { elementFrames: elementFramesAddress(config.elementFrameOrigin, boardId) }),
-      ...(await connectorsForViewer(db, token.workspaceId, document)),
+      ...(await connectorsForViewer(db, token.workspaceId, picture)),
     });
   });
 
-  /** Reads one of a board’s bindings for a request — only a valid ref this board’s document declares, for a connector
-   *  that exists (`isDeclaredBinding`); anything else answers `disconnected` without calling an upstream. Each connector
-   *  is looked up once per request, and upstream reads go through the shared reuse window (`resolveState`). */
-  const bindingReader = (workspaceId: string, document: ViewDocument) => {
+  /** Reads values for a request, from upstream, as a board's bindings name them — a valid ref for a connector that
+   *  exists, else `disconnected` without calling an upstream. Each connector is looked up once per request, and
+   *  upstream reads go through the shared reuse window (`resolveState`). Not gated: what reads a board's values for a
+   *  caller is `bindingReader`, and the server reads through this alone what a board itself needs to be drawn — the
+   *  items a grid lays out (`pictureOf`). */
+  const upstreamReader = (workspaceId: string) => {
     const connectors = new Map<string, Promise<Connector | undefined>>();
     const connectorOf = (id: string) => {
       if (!connectors.has(id)) connectors.set(id, findConnector(db, workspaceId, id, secrets));
       return connectors.get(id)!;
     };
     return async (connectorId: string, ref: unknown): Promise<ResolvedBinding> => {
-      if (!isValidRef(ref) || !isDeclaredBinding(document, connectorId, ref)) return DISCONNECTED;
+      if (!isValidRef(ref)) return DISCONNECTED;
       const connector = await connectorOf(connectorId);
       const target = connector && buildResolveTarget(connector, ref);
       if (!connector || !target) return DISCONNECTED;
@@ -162,6 +162,12 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       return served;
     };
   };
+
+  /** Reads one of a board’s bindings for a request — only one the view document it is drawn from declares
+   *  (`isDeclaredBinding`); anything else answers `disconnected` without calling an upstream. */
+  const bindingReader = (read: ReturnType<typeof upstreamReader>, document: ViewDocument) =>
+    async (connectorId: string, ref: unknown): Promise<ResolvedBinding> =>
+      isDeclaredBinding(document, connectorId, ref) ? read(connectorId, ref) : DISCONNECTED;
 
   /** Resolves many of a board's bindings in one request, answering in request order — the only
    * resolve route a share link has. The viewer sends every binding it renders here at once, so
@@ -187,14 +193,10 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    const document = firstVersionOf(board.document);
-    if (!document) {
-      res.status(409).json({ code: 'DOCUMENT_NOT_SHOWN' });
-      return;
-    }
     await token.used();
 
-    const read = bindingReader(token.workspaceId, document);
+    const upstream = upstreamReader(token.workspaceId);
+    const read = bindingReader(upstream, await pictureOf(board.document, upstream));
     const results = await Promise.all(
       (bindings as { connectorId: string; ref?: unknown }[]).map(({ connectorId, ref }) => read(connectorId, ref))
     );
@@ -216,18 +218,15 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    const document = firstVersionOf(board.document);
-    if (!document) {
-      res.status(409).json({ code: 'DOCUMENT_NOT_SHOWN' });
-      return;
-    }
     await token.used();
 
-    const read = bindingReader(token.workspaceId, document);
+    const upstream = upstreamReader(token.workspaceId);
+    const picture = await pictureOf(board.document, upstream);
+    const read = bindingReader(upstream, picture);
     const ids = new Set<string>();
-    for (const { connectorId } of declaredBindings(document)) ids.add(connectorId);
+    for (const { connectorId } of declaredBindings(picture)) ids.add(connectorId);
     const adapters: Adapter[] = [...ids].map(connectorId => ({ id: connectorId, resolve: ref => read(connectorId, ref) }));
-    const resolved = await resolveDocument(document, adapters);
+    const resolved = await resolveDocument(picture, adapters);
     res.status(200).json(boardStateOf(resolved, { now: Date.now(), revision: board.revision }));
   });
 

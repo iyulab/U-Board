@@ -50,6 +50,14 @@ describe('App', () => {
     expect(fetch).toHaveBeenCalledWith('/api/share/boards/b1', expect.objectContaining({ headers: { Authorization: 'Bearer tok' } }));
   });
 
+  it('draws a board in the second version from the picture the server made of it', async () => {
+    setLocation('?board=b1&token=tok');
+    const picture = { ...DOC, nodes: [{ id: 'pump/P1' }, { id: 'pump/P2' }] };
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: { version: 2 }, picture, connectorIds: [] }) });
+    render(<App />);
+    expect(await screen.findByTestId('node-ids')).toHaveTextContent('pump/P1,pump/P2');
+  });
+
   describe('events from a board’s triggers', () => {
     it('names the board to the viewer and hands its events to the embedding page', async () => {
       setLocation('?board=b1&token=tok');

@@ -4,7 +4,7 @@ import { applyValueMap, withItemFields, writeText } from '../adapter.js';
 import { isHttpRef, readHttpRef, type HttpRef } from '../http-ref.js';
 import { validateViewDocument } from '../validate-view-document.js';
 import type { Node, ViewDocument, Widget } from '../view-document.js';
-import { PictureError, toViewDocument } from './picture.js';
+import { PictureError, keyReadsOf, keysIn, toViewDocument } from './picture.js';
 import type { BoardV2 } from './types.js';
 import { validateBoardV2 } from './validate.js';
 
@@ -145,6 +145,18 @@ describe('the picture model of a v2 board', () => {
     const doc = view(board({ pump: { as: 'stat', each: 'pumps', show: 'flow' } }, { kind: 'grid', items: [['pump', 4]] }), { pumps: ['P1', 'P2'] });
     expect(doc.kind === 'grid' && doc.items.map(i => i.id)).toEqual(['pump/P1', 'pump/P2']);
     expect(drawn(nodeOf(doc, 'pump/P2').widget)).toEqual({ data: { label: 'Flow', value: 0, unit: 'm³/h' }, options: { format: 'number:1' } });
+  });
+
+  it('says which lists a grid needs the keys of, and how to read them — a canvas names its items and needs none', () => {
+    const grid = board({ pump: { as: 'stat', each: 'pumps', show: 'flow' }, t: { as: 'stat', of: 'totals', show: 'temp' } }, { kind: 'grid', items: ['pump', 't'] });
+    const reads = keyReadsOf(grid);
+    expect(reads).toEqual([{ data: 'pumps', adapter: 'plant', ref: { path: '/plant/pumps', valuePath: '/value', maxAgeSeconds: 60 } }]);
+    const read = readHttpRef(SOURCE[(reads[0]!.ref as HttpRef).path], reads[0]!.ref as HttpRef, READ_AT);
+    expect(read.ok && keysIn(grid, 'pumps', read.value)).toEqual(['P1', 'P2']);
+    expect(keysIn({ ...grid, data: { ...grid.data, pumps: { ...pumps, key: undefined } } }, 'pumps', [{}, {}])).toEqual(['0', '1']);
+    expect(keysIn(grid, 'pumps', { not: 'a list' })).toEqual([]);
+
+    expect(keyReadsOf(board({ m: { as: 'marker', each: 'pumps', show: 'state' } }, { kind: 'canvas', size: [100, 100], place: { m: { P1: [0, 0, 10, 10] } } }))).toEqual([]);
   });
 
   it('draws a status card’s meter, subtitle and note from its item', () => {

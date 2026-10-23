@@ -10,7 +10,7 @@ import { createBoard, updateBoard } from '../db/boards.js';
 import { createConnector } from '../db/connectors.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
-import { RULEBOOK_EXAMPLE } from '@iyulab/u-board/board-v2';
+import type { BoardV2 } from '@iyulab/u-board/board-v2';
 
 const SECRET = 'test-secret-at-least-16-chars';
 let db: DbClient;
@@ -452,15 +452,34 @@ describe('public share routes', () => {
     expect(res.status).toBe(404);
   });
 
-  it("answers 409 for a board in the second version on every share route — the viewer does not draw one yet", async () => {
-    await updateBoard(db, workspaceId, boardId, { document: RULEBOOK_EXAMPLE });
+  it('draws a board in the second version from its picture — a grid laying out a part per item of a list as it is now', async () => {
+    const plant = await createConnector(db, {
+      actorUserId: 'test-actor', workspaceId, name: 'Plant', baseUrl: 'https://plant.example.com', authType: 'none' });
+    const board: BoardV2 = {
+      version: 2,
+      data: { pumps: { from: plant.id, path: '/pumps', list: '/value', key: 'id' } },
+      parts: { pump: { as: 'stat', each: 'pumps', show: 'flow' } },
+      layout: { kind: 'grid', items: ['pump'] },
+    };
+    await updateBoard(db, workspaceId, boardId, { document: board });
     const token = await createShareToken();
     const auth = `Bearer ${token}`;
-    const answers = [
-      await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', auth),
-      await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', auth).send({ bindings: [] }),
-      await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', auth),
-    ];
-    expect(answers.map(a => [a.status, a.body.code])).toEqual(Array(3).fill([409, 'DOCUMENT_NOT_SHOWN']));
+    (fetch as any).mockImplementation(async () => jsonResponse({ value: [{ id: 'P1', flow: 3 }, { id: 'P2', flow: 5 }] }));
+
+    const read = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', auth);
+    expect(read.status).toBe(200);
+    expect(read.body.document).toEqual(board);
+    expect(read.body.picture.items.map((i: { id: string }) => i.id)).toEqual(['pump/P1', 'pump/P2']);
+    expect(read.body.connectorIds).toEqual([plant.id]);
+
+    const binding = read.body.picture.items[1].widget.bindings['data.value'];
+    const resolve = await request(app).post(`/api/share/boards/${boardId}/resolve`).set('Authorization', auth)
+      .send({ bindings: [{ connectorId: binding.adapter, ref: binding.ref }, { connectorId: plant.id, ref: { path: '/pumps', valuePath: '/value' } }] });
+    // The item's value is a read of the board's; the whole list, read only to lay the grid out, is not one.
+    expect(resolve.body.results.map((r: { value?: unknown; quality: string }) => [r.value, r.quality])).toEqual([[5, 'live'], [undefined, 'disconnected']]);
+
+    const state = await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', auth);
+    expect(state.status).toBe(200);
+    expect(state.body.parts).toEqual({ 'pump/P1': { quality: 'live', observedAt: expect.any(String) }, 'pump/P2': { quality: 'live', observedAt: expect.any(String) } });
   });
 });

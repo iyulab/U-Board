@@ -3,7 +3,7 @@ import { elementDefinitionHash, elementFrameLabel } from '@iyulab/u-board/domain
 import type { AppConfig } from '../app.js';
 import { findBoardById } from '../db/boards.js';
 import { frameHostLabel, sendElementFrame } from '../element-frame.js';
-import { firstVersionOf } from '../board-document.js';
+import { isBoardV2 } from '../board-document.js';
 
 /**
  * The frames script elements run in: `GET /api/element-frames/:boardId/:name/:hash`. The address names the definition
@@ -28,7 +28,7 @@ export function createElementFramesRouter(config: AppConfig): Router {
     const board = await findBoardById(db, boardId);
     // A board in the second version has no script elements — the elements it defines draw in an isolated root, not a
     // frame — so it has no frame to answer with.
-    const document = board && firstVersionOf(board.document);
+    const document = board && !isBoardV2(board.document) ? board.document : undefined;
     const definition = document && Object.hasOwn(document.elements ?? {}, name) ? document.elements![name] : undefined;
     const label = config.elementFrameOrigin ? frameHostLabel(config.elementFrameOrigin, req.headers.host) : undefined;
     if (!document || !definition || (await elementDefinitionHash(definition)) !== hash || (label !== undefined && label !== elementFrameLabel(hash))) {

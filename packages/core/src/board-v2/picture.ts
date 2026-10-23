@@ -61,6 +61,88 @@ interface StateMaps {
   emphasis?: ValueMap<string>;
 }
 
+/** Where a binding reads: the adapter, and its reference — for an HTTP connector the request, the item, the value in it
+ *  and how current it must be; for another adapter its own reference and where in its item the value is. */
+function readOf(data: Record<string, Query>, query: string, item: string | undefined, field: string | undefined, at: string): Pick<Binding, 'adapter' | 'ref' | 'at'> {
+  const q = data[query]!;
+  const valueAt = field === undefined ? undefined : q.fields?.[field]?.at ?? `/${field}`;
+  if (q.ref !== undefined) return { adapter: q.from, ref: q.ref, ...(valueAt ? { at: valueAt } : {}) };
+  return { adapter: q.from, ref: refFor(q, query, item, field, valueAt, at) };
+}
+
+/** An HTTP connector's reference: the request, the item, the value in it, and how current it must be. */
+function refFor(q: Query, query: string, item: string | undefined, field: string | undefined, valueAt: string | undefined, at: string): HttpRef {
+  const ref: HttpRef = { path: q.path! };
+  if (q.pivot !== undefined) {
+    // A pivoted list is one item: its field is the row its name is, the value that row holds.
+    if (field === undefined) throw new PictureError(at, `"${query}" is pivoted — name its fields, it has no whole item to write`);
+    ref.item = { list: q.list!, where: { ...q.where, [q.pivot.key]: field } };
+    ref.valuePath = `/${q.pivot.value}`;
+  } else if (item !== undefined) {
+    if (q.key !== undefined) {
+      ref.item = { list: q.list!, where: { ...q.where, [q.key]: item } };
+      if (valueAt !== undefined) ref.valuePath = valueAt;
+    } else {
+      ref.valuePath = `${q.list}/${item}${valueAt ?? ''}`;
+    }
+  } else {
+    if (q.where !== undefined) {
+      // The rows a list or a table shows: every item the data keeps, each whole.
+      if (valueAt !== undefined) throw new PictureError(at, `"${field}" of every item of "${query}" is not one value — read the list, or a field of one item`);
+      ref.items = { list: q.list!, where: q.where };
+    } else {
+      const path = `${q.list ?? ''}${valueAt ?? ''}`;
+      if (path !== '') ref.valuePath = path;
+    }
+  }
+  // The time the source observed a value is the item's — a whole list has one per row, not one of its own.
+  if (q.time !== undefined && (item !== undefined || q.list === undefined || q.pivot !== undefined)) ref.observedAtPath = q.fields?.[q.time]?.at ?? `/${q.time}`;
+  // The whole list is as old as the answer says it is.
+  else if (q.answerTime !== undefined && item === undefined && q.where === undefined && field === undefined) ref.observedAtPath = q.answerTime;
+  if (q.zone !== undefined) ref.timeZone = q.zone;
+  if (q.fresh !== undefined) ref.maxAgeSeconds = q.fresh;
+  if (q.now !== undefined) {
+    ref.requestTime = {
+      ...(q.now.delay !== undefined ? { delaySeconds: q.now.delay } : {}),
+      ...(q.now.step !== undefined ? { stepSeconds: q.now.step } : {}),
+    };
+  }
+  return ref;
+}
+
+/** A data list whose items a board lays out one part each (`each` in a grid): the read of the whole list. */
+export interface KeyRead extends Pick<Binding, 'adapter' | 'ref'> {
+  /** The data's name — what `keysOf` is asked for. */
+  data: string;
+}
+
+/**
+ * The reads that tell a grid which items to lay out: one per data list a part made per item (`each`) stands for. A
+ * canvas names its items where it places them and needs none. Read each, give `keysIn` the value, and draw with the
+ * keys (`toViewDocument(board, { keysOf })`).
+ */
+export function keyReadsOf(board: BoardV2): KeyRead[] {
+  const needed = new Set<string>();
+  toViewDocument(board, { keysOf: name => (needed.add(name), []) });
+  const data = board.data ?? {};
+  return [...needed].map(name => {
+    const { adapter, ref } = readOf(data, name, undefined, undefined, `/data/${name}`);
+    return { data: name, adapter, ref };
+  });
+}
+
+/** The keys of a data list's items, from the value its `KeyRead` read: each item's key field — or its place in the
+ *  list, for a list with no key. Anything but a list has no items. */
+export function keysIn(board: BoardV2, data: string, value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const key = board.data?.[data]?.key;
+  return value.flatMap((item, i) => {
+    if (key === undefined) return [String(i)];
+    const k = typeof item === 'object' && item !== null ? (item as Record<string, unknown>)[key] : undefined;
+    return typeof k === 'string' || typeof k === 'number' ? [String(k)] : [];
+  });
+}
+
 /** Make the view document that draws `board`. */
 export function toViewDocument(board: BoardV2, options: PictureOptions = {}): ViewDocument {
   const data = board.data ?? {};
@@ -75,54 +157,8 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     return m[2] === undefined ? { query: m[1]! } : { query: m[1]!, item: m[2] };
   };
 
-  /** Where a binding reads: the adapter, and its reference — for an HTTP connector the request, the item, the value in it
-   *  and how current it must be; for another adapter its own reference and where in its item the value is. */
-  const readFor = (query: string, item: string | undefined, field: string | undefined, at: string): Pick<Binding, 'adapter' | 'ref' | 'at'> => {
-    const q = data[query]!;
-    const valueAt = field === undefined ? undefined : q.fields?.[field]?.at ?? `/${field}`;
-    if (q.ref !== undefined) return { adapter: q.from, ref: q.ref, ...(valueAt ? { at: valueAt } : {}) };
-    return { adapter: q.from, ref: refFor(q, query, item, field, valueAt, at) };
-  };
-
-  /** An HTTP connector's reference: the request, the item, the value in it, and how current it must be. */
-  const refFor = (q: Query, query: string, item: string | undefined, field: string | undefined, valueAt: string | undefined, at: string): HttpRef => {
-    const ref: HttpRef = { path: q.path! };
-    if (q.pivot !== undefined) {
-      // A pivoted list is one item: its field is the row its name is, the value that row holds.
-      if (field === undefined) throw new PictureError(at, `"${query}" is pivoted — name its fields, it has no whole item to write`);
-      ref.item = { list: q.list!, where: { ...q.where, [q.pivot.key]: field } };
-      ref.valuePath = `/${q.pivot.value}`;
-    } else if (item !== undefined) {
-      if (q.key !== undefined) {
-        ref.item = { list: q.list!, where: { ...q.where, [q.key]: item } };
-        if (valueAt !== undefined) ref.valuePath = valueAt;
-      } else {
-        ref.valuePath = `${q.list}/${item}${valueAt ?? ''}`;
-      }
-    } else {
-      if (q.where !== undefined) {
-        // The rows a list or a table shows: every item the data keeps, each whole.
-        if (valueAt !== undefined) throw new PictureError(at, `"${field}" of every item of "${query}" is not one value — read the list, or a field of one item`);
-        ref.items = { list: q.list!, where: q.where };
-      } else {
-        const path = `${q.list ?? ''}${valueAt ?? ''}`;
-        if (path !== '') ref.valuePath = path;
-      }
-    }
-    // The time the source observed a value is the item's — a whole list has one per row, not one of its own.
-    if (q.time !== undefined && (item !== undefined || q.list === undefined || q.pivot !== undefined)) ref.observedAtPath = q.fields?.[q.time]?.at ?? `/${q.time}`;
-    // The whole list is as old as the answer says it is.
-    else if (q.answerTime !== undefined && item === undefined && q.where === undefined && field === undefined) ref.observedAtPath = q.answerTime;
-    if (q.zone !== undefined) ref.timeZone = q.zone;
-    if (q.fresh !== undefined) ref.maxAgeSeconds = q.fresh;
-    if (q.now !== undefined) {
-      ref.requestTime = {
-        ...(q.now.delay !== undefined ? { delaySeconds: q.now.delay } : {}),
-        ...(q.now.step !== undefined ? { stepSeconds: q.now.step } : {}),
-      };
-    }
-    return ref;
-  };
+  /** Where a binding reads, for a part of this board. */
+  const readFor = (query: string, item: string | undefined, field: string | undefined, at: string) => readOf(data, query, item, field, at);
 
   const fieldOf = (query: string | undefined, name: string): Field => (query === undefined ? {} : data[query]?.fields?.[name] ?? {});
 
