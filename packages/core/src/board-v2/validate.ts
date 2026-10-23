@@ -234,9 +234,25 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     if (kind.of === 'no' && (part.of !== undefined || part.each !== undefined)) fail(`${at}/of`, `a ${kind.kind} reads no data — leave "of" out`);
     checkTexts(part, at, reads);
     checkOptions(raw, part, kind, at);
+    if (kind.kind === 'status-card' && part.meter !== undefined) checkMeter(part.meter, `${at}/meter`);
     if (kind.kind === 'group') checkGroup(part, at, reads);
     if (kind.kind === 'element') checkElementPart(part, at, reads);
     return part;
+  };
+
+  /** A status card's meter: a field's name, or `{ "field", "min"?, "max"?, "form"? }` with `max` above `min`. */
+  const checkMeter = (meter: unknown, at: string) => {
+    if (typeof meter === 'string') return;
+    const shape = 'a meter is "<field>" or { "field": "<field>", "min"?, "max"?, "form"?: "bar" | "ring" }';
+    if (!isObj(meter) || typeof meter.field !== 'string') { fail(at, shape); return; }
+    for (const key of Object.keys(meter)) if (!['field', 'min', 'max', 'form'].includes(key)) fail(`${at}/${key}`, shape);
+    for (const key of ['min', 'max'] as const) if (meter[key] !== undefined && !isNum(meter[key])) fail(`${at}/${key}`, `"${key}" is a number`);
+    if (isNum(meter.min) || isNum(meter.max)) {
+      const min = isNum(meter.min) ? meter.min : 0;
+      const max = isNum(meter.max) ? meter.max : 100;
+      if (max <= min) fail(`${at}/max`, `a meter’s max is above its min (${min})`);
+    }
+    if (meter.form !== undefined && meter.form !== 'bar' && meter.form !== 'ring') fail(`${at}/form`, 'a meter’s form is "bar" or "ring"');
   };
 
   /** Preset options already reported — a preset many parts use is reported once. */
@@ -263,7 +279,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
 
   /** `{{field}}` in a part's title or a link's label names a field of what it reads, or `{{key}}` its item's key. */
   const checkTexts = (holder: Obj, at: string, reads: string | null | undefined) => {
-    for (const prop of ['title', 'label'] as const) {
+    for (const prop of ['title', 'label', 'subtitle', 'note'] as const) {
       const text = holder[prop];
       if (typeof text !== 'string') continue;
       for (const m of text.matchAll(HOLE)) {

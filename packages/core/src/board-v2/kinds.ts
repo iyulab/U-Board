@@ -35,7 +35,7 @@ interface CatalogEntry {
  * board's `stat` is the library's `metric`, its `stat-list` the library's `kv`.
  */
 const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['of'], own?: readonly string[]])[] = [
-  ['status-card', 'status-card', 'needs'],
+  ['status-card', 'status-card', 'needs', ['meter', 'subtitle', 'note']],
   ['header', 'header', 'may', ['kicker', 'subtitle', 'clock']],
   ['stat', 'metric', 'needs'],
   ['stat-list', 'kv', 'needs'],

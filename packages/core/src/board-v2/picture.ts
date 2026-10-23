@@ -11,7 +11,7 @@ import type { HttpRef } from '../http-ref.js';
 import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
-import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
+import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Meter, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
 
 /** Something in a board the picture model does not draw yet. */
 export class PictureError extends Error {
@@ -277,7 +277,9 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         return { type: 'kv', props: { data: rows, ...(Object.keys(options).length ? { options } : {}) }, bindings };
       }
       case 'status-card': {
-        // The first field with a state is the card's state; the others are its readings.
+        // The first field with a state is the card's state; the others are its readings. A meter shows one field
+        // against its range; a subtitle and a note are texts, as a title is.
+        const { meter, note, subtitle, ...rest } = options as { meter?: Meter; note?: string; subtitle?: string };
         const stateField = fields.find(n => field(n).state !== undefined);
         if (stateField) bindState('data.', stateField, { words: true, emphasis: true });
         const readings = fields.filter(n => n !== stateField).map((name, i) => {
@@ -287,9 +289,33 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
           const format = formatOf(f);
           return { label: f.label ?? name, value: '', ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}) };
         });
+        const gauge = meter === undefined ? undefined : typeof meter === 'string' ? { field: meter } : meter;
+        let meterProp: Record<string, unknown> | undefined;
+        if (gauge !== undefined) {
+          const f = field(gauge.field);
+          bindValue('data.meter.value', gauge.field);
+          bindState('data.meter.', gauge.field);
+          const format = formatOf(f);
+          meterProp = {
+            value: 0,
+            ...(gauge.min !== undefined ? { min: gauge.min } : {}), ...(gauge.max !== undefined ? { max: gauge.max } : {}),
+            ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(gauge.form !== undefined ? { form: gauge.form } : {}),
+          };
+        }
+        const subtitleText = text(subtitle, 'data.subtitle');
+        const noteText = text(note, 'data.note');
         return {
           type: 'status-card',
-          props: { data: { title: text(title, 'data.title') ?? item ?? '', ...(readings.length ? { readings } : {}) }, ...(Object.keys(options).length ? { options } : {}) },
+          props: {
+            data: {
+              title: text(title, 'data.title') ?? item ?? '',
+              ...(subtitleText !== undefined ? { subtitle: subtitleText } : {}),
+              ...(readings.length ? { readings } : {}),
+              ...(meterProp ? { meter: meterProp } : {}),
+              ...(noteText !== undefined ? { note: noteText } : {}),
+            },
+            ...(Object.keys(rest).length ? { options: rest } : {}),
+          },
           bindings,
         };
       }

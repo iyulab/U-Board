@@ -114,6 +114,12 @@ export interface GroupPart extends Part {
   links?: Record<string, Link>;
 }
 
+/**
+ * A status card's meter: one field against its range, as a bar or a ring — the field's name, or the field with its
+ * range (`min` 0 and `max` 100 when absent) and its form. The field's unit, format and state go with it.
+ */
+export type Meter = string | { field: string; min?: number; max?: number; form?: 'bar' | 'ring' };
+
 /** `[x, y]`, or `[x, y, width, height]`, on the canvas. */
 export type Place = [number, number] | [number, number, number, number];
 

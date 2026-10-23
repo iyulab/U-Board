@@ -166,9 +166,19 @@ describe('validateBoardV2', () => {
       '/parts/s/colour: "colour" is not an option — options of a stat: format',
       '/parts/l/size: "size" is not an option — a label takes no options',
     ]);
+    expect(issues(canvas({
+      a: { as: 'status-card', of: 'equipment[PR-01]', meter: 'load', note: 'Seal {{seal}}', subtitle: 'Line 1' },
+      b: { as: 'status-card', of: 'equipment[PR-02]', meter: { field: 'load', min: 10, max: 5, form: 'dial', colour: 'red' } },
+      c: { as: 'status-card', of: 'equipment[PR-03]', meter: 42 },
+    }))).toEqual([
+      '/parts/b/meter/colour: a meter is "<field>" or { "field": "<field>", "min"?, "max"?, "form"?: "bar" | "ring" }',
+      '/parts/b/meter/max: a meter’s max is above its min (10)',
+      '/parts/b/meter/form: a meter’s form is "bar" or "ring"',
+      '/parts/c/meter: a meter is "<field>" or { "field": "<field>", "min"?, "max"?, "form"?: "bar" | "ring" }',
+    ]);
     // A preset's key is the preset's mistake, said once however many parts use it.
     const board = { ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' }, b: { use: 'card', of: 'equipment[PR-02]' } }), presets: { card: { as: 'status-card', glow: true } } };
-    expect(issues(board)).toEqual(['/presets/card/glow: "glow" is not an option — options of a status-card: overflow']);
+    expect(issues(board)).toEqual(['/presets/card/glow: "glow" is not an option — options of a status-card: meter, subtitle, note, overflow']);
   });
 
   it('reports a wrong "of" once, not again in what reads through it', () => {

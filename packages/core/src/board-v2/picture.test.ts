@@ -147,6 +147,29 @@ describe('the picture model of a v2 board', () => {
     expect(drawn(nodeOf(doc, 'pump/P2').widget)).toEqual({ data: { label: 'Flow', value: 0, unit: 'm³/h' }, options: { format: 'number:1' } });
   });
 
+  it('draws a status card’s meter, subtitle and note from its item', () => {
+    const doc = view(board(
+      {
+        P1: { as: 'status-card', of: 'pumps[P1]', show: ['state', 'rpm'], subtitle: 'Line {{line}}', meter: { field: 'flow', max: 60, form: 'ring' }, note: '{{rpm}} rpm' },
+        P2: { as: 'status-card', of: 'pumps[P2]', show: 'state', meter: 'flow', note: 'Check the seal' },
+      },
+      { kind: 'canvas', size: [400, 200], place: { P1: [0, 0, 180, 160], P2: [200, 0, 180, 160] } },
+    ));
+    const p1 = nodeOf(doc, 'P1').widget;
+    expect(p1.props).toMatchObject({ data: { meter: { value: 0, max: 60, unit: 'm³/h', format: 'number:1', form: 'ring' } } });
+    expect(drawn(p1)).toEqual({
+      data: {
+        title: 'P1', subtitle: 'Line L1', tone: 'ok', status: 'Running', emphasis: '',
+        readings: [{ label: 'rpm', value: 1450, format: 'number' }],
+        meter: { value: 41.5, max: 60, unit: 'm³/h', format: 'number:1', form: 'ring' },
+        note: '1,450 rpm',
+      },
+    });
+    expect(drawn(nodeOf(doc, 'P2').widget)).toEqual({
+      data: { title: 'P2', tone: 'alarm', status: 'Tripped', emphasis: 'blink', meter: { value: 0, unit: 'm³/h', format: 'number:1' }, note: 'Check the seal' },
+    });
+  });
+
   it('reads a request time and a fixed filter with the item', () => {
     const b = board({ p: { as: 'stat', of: 'air[중구]', show: 'pm10' } }, { kind: 'canvas', size: [100, 100], place: { p: [0, 0] } });
     b.data!.air = { from: 'gov', path: '/air?date={{now:yyyyMMdd}}', list: '/items', key: 'station', where: { item: 'PM10' }, now: { delay: 2400, step: 3600 }, zone: 'Asia/Seoul' };
