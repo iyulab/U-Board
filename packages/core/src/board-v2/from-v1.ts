@@ -3,10 +3,11 @@
 // and what they mean (`data`), what is shown (`parts`) and where (`layout`). What the second version has no place for
 // is reported as unsupported, never dropped without a word; what changes on the way (a placeholder's text) is noted.
 
+import { expandComponents, instanceParts } from '../components.js';
 import { isHttpRef, type HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { THEME_PALETTE, isThemeColor } from '../theme-colors.js';
-import type { Binding, CanvasView, CellCanvas, Connector, ElementDefinition, GridView, GridWidgetItem, Node, PropsSchema, Shape as V1Shape, ValueMap, ViewDocument, Widget } from '../view-document.js';
+import type { Binding, CanvasView, CellCanvas, ComponentDefinition, Connector, ElementDefinition, GridView, GridWidgetItem, Node, PropsSchema, Shape as V1Shape, ValueMap, ViewDocument, Widget } from '../view-document.js';
 import { TONES, type BoardV2, type CanvasLayout, type ElementDefinition as V2Element, type Field, type GridItem as V2GridItem, type Link, type Part, type Place, type Query, type Shape, type Status, type Tone, type ValueMapping } from './types.js';
 import { isFigure } from './picture.js';
 
@@ -28,8 +29,8 @@ export function fromV1(doc: ViewDocument): V1Conversion {
   const parts: Record<string, Part> = {};
   const elements = new Elements(doc.elements ?? {}, unsupported);
   const statuses: Record<string, Status> = {};
-  const ctx: Context = { reads, elements, parts, statuses, notes, unsupported, appearance: doc.appearance };
-  if (doc.kind === 'canvas' && (doc.components !== undefined || (doc.instances ?? []).length > 0)) unsupported.push('components');
+  const presets: Record<string, Part> = {};
+  const ctx: Context = { reads, elements, parts, presets, statuses, notes, unsupported, appearance: doc.appearance };
   if ((doc.triggers ?? []).length > 0) unsupported.push('triggers');
 
   // Every binding first: a data read is shared by the parts that read it, so its key is known only once all are seen.
@@ -39,6 +40,8 @@ export function fromV1(doc: ViewDocument): V1Conversion {
     for (const node of canvas.nodes) widgets.push(node.widget);
     for (const connector of canvas.connectors) for (const binding of Object.values(connector.bindings ?? {})) reads.see(binding);
   }
+  // An instance's bindings are its component's with the instance's values in them — seen as each instance reads them.
+  if (doc.kind === 'canvas') for (const node of expandComponents(doc).nodes.slice(doc.nodes.length)) widgets.push(node.widget);
   for (const widget of widgets) for (const binding of Object.values(widget.bindings ?? {})) reads.see(binding);
 
   const layout: BoardV2['layout'] = doc.kind === 'canvas' ? { kind: 'canvas', ...canvasOf(doc, ctx) } : { kind: 'grid', items: gridOf(doc, ctx) };
@@ -50,6 +53,7 @@ export function fromV1(doc: ViewDocument): V1Conversion {
     version: 2,
     ...(Object.keys(look).length > 0 ? { board: look } : {}),
     ...(Object.keys(statuses).length > 0 ? { statuses } : {}),
+    ...(Object.keys(presets).length > 0 ? { presets } : {}),
     ...(Object.keys(elements.converted).length > 0 ? { elements: elements.converted } : {}),
     ...(Object.keys(reads.data).length > 0 ? { data: reads.data } : {}),
     parts,
@@ -63,6 +67,8 @@ interface Context {
   reads: Reads;
   elements: Elements;
   parts: Record<string, Part>;
+  /** A group per component the board's instances use. */
+  presets: Record<string, Part>;
   /** The board's statuses the conversion declares — a state that draws a line in a form of its own. */
   statuses: Record<string, Status>;
   notes: string[];
@@ -84,9 +90,17 @@ function canvasOf(canvas: CellCanvas, ctx: Context): Omit<CanvasLayout, 'kind'> 
     if (node.caption !== undefined) unsupported.push('a node caption');
     if (node.states !== undefined) unsupported.push('node states');
   }
+  if ('instances' in canvas) instancesOf(canvas as CanvasView, place, ctx);
   const links: Record<string, Link> = {};
   for (const connector of canvas.connectors) {
-    if (!(connector.fromNodeId in place) || !(connector.toNodeId in place)) { unsupported.push('a connector to a node not converted'); continue; }
+    // An end inside an instance is the node of its group's part: `<instance>/<part>`.
+    const isEnd = (end: string) => {
+      if (end in place) return true;
+      const [head, inner, ...more] = end.split('/');
+      const use = parts[head!]?.use;
+      return more.length === 0 && inner !== undefined && use !== undefined && inner in ((ctx.presets[use]?.parts as Record<string, Part> | undefined) ?? {});
+    };
+    if (!isEnd(connector.fromNodeId) || !isEnd(connector.toNodeId)) { unsupported.push('a connector to a node not converted'); continue; }
     const link = linkOf(connector, ctx);
     if (link !== undefined) links[unique(connector.id.replace(/[^\w-]+/g, '-'), links)] = link;
   }
@@ -255,6 +269,71 @@ function chartOf(widget: Widget, reads: Reads, unsupported: string[]): Part | un
   const mapping = isObject(props.mapping) ? props.mapping : {};
   const options = isObject(props.options) ? props.options : {};
   return { as: widget.type, of: read, ...(typeof props.title === 'string' ? { title: props.title } : {}), ...mapping, ...options };
+}
+
+/**
+ * A board's component instances: each component a `group` preset — its nodes the group's parts, reading the item the
+ * instance reads — and each instance a part that uses it, reading `<data>[<its value>]`. A component takes one parameter
+ * and it names the item: a prop that is the parameter alone shows the item's key. Anything an instance would change
+ * beyond its item (a parameter written into a text, a node reading another item) has no place in a group yet — the
+ * instances' parts then differ, and that is reported.
+ */
+function instancesOf(view: CanvasView, place: Record<string, Place>, ctx: Context): void {
+  const { reads, elements, parts, presets, notes, unsupported } = ctx;
+  for (const instance of view.instances ?? []) {
+    const definition = view.components?.[instance.component];
+    if (!definition) continue;
+    const params = Object.keys(definition.params?.properties ?? {});
+    if (params.length !== 1) { unsupported.push('a component with other than one parameter'); return; }
+    if ((definition.connectors ?? []).length > 0 || (definition.decorations ?? []).length > 0) { unsupported.push('a component with connectors or decorations'); return; }
+    const whole = `{{${params[0]}}}`;
+    // A prop that is the parameter alone is the item's key, bound below; the rest of the component is filled per instance.
+    const keyProps = new Map<string, string[]>();
+    const plain: ComponentDefinition = {
+      ...definition,
+      nodes: definition.nodes.map(node => {
+        const props = (node.widget.props ?? {}) as Record<string, unknown>;
+        // A bound prop shows what it reads; its text is only the placeholder until then.
+        const keyed = Object.keys(props).filter(k => props[k] === whole && !(k in (node.widget.bindings ?? {})));
+        if (keyed.length === 0) return node;
+        keyProps.set(node.id, keyed);
+        return { ...node, widget: { ...node.widget, props: Object.fromEntries(Object.entries(props).filter(([k]) => !keyed.includes(k))) } };
+      }),
+    };
+    const inner: Record<string, Part> = {};
+    const innerPlace: Record<string, Place> = {};
+    let of: string | undefined;
+    for (const node of instanceParts(plain, instance).nodes) {
+      const id = node.id.slice(instance.id.length + 1);
+      const part = partOf(node, reads, elements, notes, unsupported);
+      if (part === undefined) return;
+      if (part.of === undefined || (of !== undefined && part.of !== of)) { unsupported.push('a component whose nodes read other than one item'); return; }
+      of = part.of;
+      const { of: _of, ...rest } = part;
+      const keyed = keyProps.get(id);
+      if (keyed !== undefined) {
+        const query = of.replace(/\[.*$/, '');
+        const key = reads.data[query]?.key;
+        const field = key === undefined ? undefined : reads.itemField(query, key, {});
+        if (field === undefined || rest.as !== 'element') { unsupported.push('a component parameter shown outside an element'); return; }
+        rest.bind = { ...(rest.bind as Record<string, string> | undefined), ...Object.fromEntries(keyed.map(k => [k, field])) };
+      }
+      inner[id] = rest;
+      const own = elements.sizeOf(node.widget.type);
+      innerPlace[id] = [node.x - instance.x, node.y - instance.y, node.width ?? own?.width ?? DEFAULT_NODE_WIDTH, node.height ?? own?.height ?? DEFAULT_NODE_HEIGHT];
+    }
+    if (of === undefined) { unsupported.push('a component that reads nothing'); return; }
+    const size: [number, number] = [
+      Math.ceil(Math.max(1, ...Object.values(innerPlace).map(([x, , w = 0]) => x + w))),
+      Math.ceil(Math.max(1, ...Object.values(innerPlace).map(([, y, , h = 0]) => y + h))),
+    ];
+    const preset: Part = { as: 'group', size, parts: inner, place: innerPlace };
+    const name = instance.component.replace(/[^\w-]+/g, '-');
+    if (presets[name] !== undefined && JSON.stringify(presets[name]) !== JSON.stringify(preset)) { unsupported.push('a component whose instances differ beyond their item'); return; }
+    presets[name] = preset;
+    parts[instance.id] = { use: name, of };
+    place[instance.id] = [instance.x, instance.y, size[0], size[1]];
+  }
 }
 
 /** A table: its whole list read, each column a field of its items with the column's label and format as the field's. A

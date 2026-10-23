@@ -3,7 +3,7 @@
 // Not part of the package's entry: the coverage script and its ratchet test read it.
 
 import { fromV1, toViewDocument, validateBoardV2, type V1Conversion } from '@iyulab/u-board/board-v2';
-import { resolveConnector, resolveWidget, type ViewDocument, type Widget } from '@iyulab/u-board/domain';
+import { expandComponents, resolveConnector, resolveWidget, type ViewDocument, type Widget } from '@iyulab/u-board/domain';
 import type { SamplePack } from './sample-pack.js';
 import { snapshotAdapters } from './snapshot-adapter.js';
 
@@ -46,7 +46,8 @@ export async function v2Coverage(packs: readonly SamplePack[]): Promise<Outcome[
   const outcomes: Outcome[] = [];
   for (const pack of packs) {
     const v1 = pack.document as ViewDocument;
-    const before = widgets(v1);
+    // A component instance's widgets read as the board draws them, each under its `<instance>/<part>` id.
+    const before = widgets(expandComponents(v1));
     const nodes = { same: 0, differs: 0, left: before.size };
     let conversion: V1Conversion;
     try {

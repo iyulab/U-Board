@@ -104,6 +104,28 @@ describe('fromV1', () => {
     ] });
   });
 
+  it('draws a component as a group preset and each instance as a part that uses it, reading the item it names', () => {
+    const bed = (field: string) => ({ adapter: 'ward', ref: { path: '/ward/beds', item: { list: '/value', where: { id: '{{bed}}' } }, valuePath: `/${field}` } });
+    const { board, unsupported } = fromV1(canvas([node('desk', { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'ward', ref: { path: '/ward/summary', valuePath: '/free' } } } })], {
+      elements: { bed: { render: 'template', template: '<b>{{no}}</b>{{state}}', size: { width: 100, height: 110 }, props: { type: 'object', properties: { no: { type: 'string' }, state: { type: 'string' } } } } },
+      components: { bed: { params: { type: 'object', required: ['bed'], properties: { bed: { type: 'string' } } }, nodes: [{ id: 'card', x: 0, y: 0, widget: { type: 'element:bed', props: { no: '{{bed}}', state: '' }, bindings: { state: bed('state') } } }] } },
+      instances: [
+        { id: 'b1', component: 'bed', x: 200, y: 0, anchored: false, params: { bed: '701-1' } },
+        { id: 'b2', component: 'bed', x: 320, y: 0, anchored: false, params: { bed: '701-2' } },
+      ],
+      connectors: [{ id: 'c', fromNodeId: 'desk', toNodeId: 'b2/card' }],
+    }));
+    expect(unsupported).toEqual([]);
+    expect(board.presets).toEqual({ bed: { as: 'group', size: [100, 110], parts: { card: { as: 'element', element: 'bed', bind: { state: 'state', no: 'id' } } }, place: { card: [0, 0, 100, 110] } } });
+    expect(board.parts.b1).toEqual({ use: 'bed', of: 'beds[701-1]' });
+    expect(board.parts.b2).toEqual({ use: 'bed', of: 'beds[701-2]' });
+    expect(board.layout.kind === 'canvas' && board.layout.place).toMatchObject({ b1: [200, 0, 100, 110], b2: [320, 0, 100, 110] });
+    expect(board.layout.kind === 'canvas' && board.layout.links).toEqual({ c: { from: 'desk', to: 'b2/card' } });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'canvas' && drawn.nodes.map(n => n.id)).toEqual(['desk', 'b1/card', 'b2/card']);
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {
