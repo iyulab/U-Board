@@ -3,7 +3,7 @@ import { elementDefinitionHash, elementFrameLabel } from '@iyulab/u-board/domain
 import type { AppConfig } from '../app.js';
 import { findBoardById } from '../db/boards.js';
 import { frameHostLabel, sendElementFrame } from '../element-frame.js';
-import { isBoardV2 } from '../board-document.js';
+import { isBoardV2 } from '@iyulab/u-board/board-v2';
 
 /**
  * The frames script elements run in: `GET /api/element-frames/:boardId/:name/:hash`. The address names the definition

@@ -6,6 +6,24 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **The tools read and write boards in the board language's second version** (`"version": 2` — data read once and
+  given meaning once, parts by id, a layout per view kind). `describe("rules")` is how the tools change a board, then the
+  language's rulebook, generated from its schema and kinds; `describe("kind:<name>")` gives a kind in full (its options
+  with their types and defaults, several by commas); `describe("schema")` is the language's JSON Schema. `get_board`
+  reads a board stored in the first version converted, and the first change saves it in the second; one that uses what
+  the second version does not have yet answers `409 FIRST_VERSION_BOARD`. `create_board` without a first board makes an
+  empty one of its kind. `look` draws the picture the server makes of a board, takes `focus: "/parts/<id>"`, and says
+  what it found of the board's parts.
+- Requires `@iyulab/u-board` with the `./board-v2` entry.
+
+### Removed
+
+- `edit_board`: a board's parts are addressed by id, so a rename or a removal is a patch at the part and at where the
+  layout places it. The topics `canvas`, `data`, `elements`, `components`, `mixed`, `widgets` and `widget:<type>` —
+  the rulebook and `kind:<name>` say what they said, for the second version.
+
 ### Added
 
 - `sample_source` takes `timeZone` and `requestTime`, so a request with time places is read for the time the binding

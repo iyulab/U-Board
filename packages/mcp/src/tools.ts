@@ -1,20 +1,9 @@
 import { z } from 'zod';
-import {
-  applyEditCommands,
-  applyJsonPatch,
-  documentPatch,
-  EditCommandError,
-  getByPointer,
-  JsonPatchError,
-  lintViewDocument,
-  validateViewDocument,
-  type EditCommand,
-  type ViewDocument,
-} from '@iyulab/u-board/domain';
-import { UBoardApiError, type UBoardClient } from './client.js';
+import { applyJsonPatch, getByPointer, JsonPatchError, lintViewDocument, placedAt, type ViewDocument } from '@iyulab/u-board/domain';
+import { checkBoardV2, fromV1, isBoardV2, type BoardV2 } from '@iyulab/u-board/board-v2';
+import { UBoardApiError, type Board, type UBoardClient } from './client.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
-import { widgetAdvice } from './widget-advice.js';
 import type { Looker } from './look.js';
 
 /** What a tool answers: compact JSON text, and for `look` a picture with it — the shape an MCP tool result takes. */
@@ -34,12 +23,9 @@ function failed(error: unknown): ToolResult {
       error.status === 403 && error.body.code === 'READ_ONLY_TOKEN' ? 'This token may only read — ask for a write token.' :
       error.status === 403 && error.body.code === 'CREDENTIALS_IN_CONSOLE' ? 'Credentials are entered by a person in the console, never here.' :
       error.status === 404 ? 'Nothing in this workspace has that id — list_boards and list_sources give the ids.' :
-      error.body.code === 'INVALID_DOCUMENT' ? 'Fix each issue at its path; describe("rules") or describe("canvas") says what goes there.' :
+      error.body.code === 'INVALID_DOCUMENT' ? 'Fix each issue at its path; describe("rules") says what goes there, describe("kind:<name>") what a kind takes.' :
       undefined;
     return { content: [{ type: 'text', text: JSON.stringify({ status: error.status, ...error.body, ...(hint && { hint }) }) }], isError: true };
-  }
-  if (error instanceof EditCommandError) {
-    return { content: [{ type: 'text', text: JSON.stringify({ code: 'INVALID_COMMAND', command: error.index, path: error.path, message: error.message }) }], isError: true };
   }
   if (error instanceof JsonPatchError) return { content: [{ type: 'text', text: JSON.stringify({ code: 'INVALID_PATCH', operation: error.index, message: error.message }) }], isError: true };
   return { content: [{ type: 'text', text: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }) }], isError: true };
@@ -54,18 +40,75 @@ function lookStatus(problems: number, advice: number, focus: string | undefined)
   return focus ? 'nothing to fix on this part — look at the whole board before finishing' : 'done — nothing to fix';
 }
 
-/** Whether advice is about the part at `focus`: at it or inside it, or naming it ("overlaps node … (/nodes/3)") — and for
- *  a component instance, what is said of its component (`within`, "/components/card/"), which it draws too. */
-function concerns(advice: { path?: string; message: string }, focus: string, within?: string): boolean {
-  return advice.path === focus || !!advice.path?.startsWith(`${focus}/`) || advice.message.includes(`(${focus})`) || (!!within && !!advice.path?.startsWith(within));
+/** Whether a finding is about the part at `focus` ("/parts/pump"): at it or inside it, or naming it. */
+function concerns(finding: { path?: string; message: string }, focus: string): boolean {
+  return finding.path === focus || !!finding.path?.startsWith(`${focus}/`) || finding.message.includes(`(${focus})`);
 }
 
-/** The pointer prefix of the component the instance at `focus` draws, when `focus` is one. */
-function componentOf(document: ViewDocument, focus: string | undefined): string | undefined {
-  const instance = focus && /^\/instances\/(\d+)$/.exec(focus);
-  if (!instance || document.kind !== 'canvas') return undefined;
-  const name = document.instances?.[Number(instance[1])]?.component;
-  return name === undefined ? undefined : `/components/${name.replace(/~/g, '~0').replace(/\//g, '~1')}/`;
+/** A board as these tools read and write it — in the language's second version. A board stored in the first is read
+ *  converted; the first change saves it in the second. One that uses what the second version does not have yet cannot
+ *  be changed here, and says so. */
+function boardOf(found: Board): { board: BoardV2; first: boolean } {
+  if (isBoardV2(found.document)) return { board: found.document, first: false };
+  const { board, unsupported } = fromV1(found.document);
+  if (unsupported.length > 0) {
+    throw new UBoardApiError(409, {
+      code: 'FIRST_VERSION_BOARD',
+      message: `this board is stored in the first version of the format and uses what the second does not have yet (${unsupported.join(', ')}) — it cannot be read or changed with these tools; a person changes it in the console`,
+    });
+  }
+  return { board, first: true };
+}
+
+/** Where in the board a place in the view document it is drawn from is: the part drawn there (`/parts/<id>`), and the
+ *  item of a part made per item. `undefined` for a place that is no part. */
+function partAt(board: BoardV2, picture: ViewDocument, path: string): { path: string; item?: string } | undefined {
+  let id: unknown;
+  try {
+    id = (getByPointer(picture, path) as { id?: unknown } | undefined)?.id;
+  } catch {
+    return undefined;
+  }
+  if (typeof id !== 'string') return undefined;
+  if (Object.hasOwn(board.parts, id)) return { path: `/parts/${pointerKey(id)}` };
+  const cut = id.indexOf('/');
+  const part = cut > 0 ? id.slice(0, cut) : undefined;
+  return part !== undefined && Object.hasOwn(board.parts, part) ? { path: `/parts/${pointerKey(part)}`, item: id.slice(cut + 1) } : undefined;
+}
+
+/** A finding about the view document a board is drawn from, said of the board: at the part, naming the parts it names
+ *  by where they are in the board — the writer never sees the view document. */
+function inBoard<P extends { path?: string; message: string }>(board: BoardV2, picture: ViewDocument, finding: P): P {
+  const message = finding.message.replace(/\((\/[^)\s]+)\)/g, (whole, path: string) => {
+    const named = partAt(board, picture, path);
+    return named ? `(${named.path})` : whole;
+  });
+  const at = finding.path ? partAt(board, picture, finding.path) : undefined;
+  if (!at) return { ...finding, message };
+  return { ...finding, path: at.path, message: at.item === undefined ? message : `${message} — its item "${at.item}"` };
+}
+
+/** Where the view document draws the part `focus` names ("/parts/pump"): its first node or grid item. */
+function inPicture(picture: ViewDocument, focus: string): string {
+  const named = /^\/parts\/(.+)$/.exec(focus);
+  if (!named) throw new Error(`focus a part: "/parts/<id>" — not ${focus}`);
+  const id = named[1]!.replace(/~1/g, '/').replace(/~0/g, '~');
+  const drawn = (picture.kind === 'canvas' ? picture.nodes.map((n, i) => ({ id: n.id, at: `/nodes/${i}` })) : placedAt(picture).map(({ placed, at }) => ({ id: placed.id, at })))
+    .find(p => p.id === id || p.id.startsWith(`${id}/`));
+  if (!drawn) throw new Error(`nothing drawn for ${focus} — get_board gives the parts`);
+  return drawn.at;
+}
+
+const pointerKey = (key: string) => key.replace(/~/g, '~0').replace(/\//g, '~1');
+
+/** A board with nothing on it yet, of a kind. */
+function emptyBoard(kind: 'grid' | 'canvas'): BoardV2 {
+  return { version: 2, parts: {}, layout: kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', size: [1600, 900], place: {} } };
+}
+
+/** Refuses a board that does not pass its check, as saving would — before anything is saved. */
+function refuseInvalid(issues: Array<{ path: string; message: string }>, message: string): void {
+  if (issues.length > 0) throw new UBoardApiError(400, { code: 'INVALID_DOCUMENT', issues: issues.slice(0, 50), message });
 }
 
 async function tool(run: () => Promise<unknown> | unknown): Promise<ToolResult> {
@@ -99,35 +142,18 @@ const WRAPPED = (key: string, shape: string) => (issue: { input?: unknown }) =>
     : undefined;
 const operation = z.object({
   op: z.enum(['add', 'remove', 'replace', 'move', 'copy', 'test'], { error: WRAPPED('op', '{ "op": "add", "path": "/…", "value": … }') }),
-  path: z.string().describe('A JSON Pointer: "/nodes/-" appends to nodes, "/nodes/3/x" is a field.'),
+  path: z.string().describe('A JSON Pointer: "/parts/pump" is a part, "/layout/items/-" appends to a grid.'),
   value: z.unknown().optional().describe('For add, replace and test.'),
   from: z.string().optional().describe('For move and copy.'),
 });
 const patch = z.array(operation).min(1).describe('A JSON Patch (RFC 6902), applied entirely or not at all.');
-const name = z.string().min(1).max(40);
-const command = z.discriminatedUnion('command', [
-  z.strictObject({ command: z.literal('rename-element'), from: name, to: name }),
-  z.strictObject({ command: z.literal('remove-element'), name }),
-  z.strictObject({ command: z.literal('rename-symbol'), from: name, to: name }),
-  z.strictObject({ command: z.literal('remove-symbol'), name }),
-  z.strictObject({ command: z.literal('remove'), ids: z.array(z.string().min(1)).min(1).describe('Node, connector, decoration or instance ids (a grid: item ids, and node, connector or decoration ids of its canvas cells).') }),
-  z.strictObject({
-    command: z.literal('make-component'),
-    ids: z.array(z.string().min(1)).min(1).describe('The board’s own nodes and frames to make one; the lines between them come along.'),
-    name,
-    instance: z.string().min(1).max(100).describe('The id of the instance that then draws them where they were.'),
-  }),
-  z.strictObject({ command: z.literal('detach'), instance: z.string().min(1).max(100) }),
-  z.strictObject({ command: z.literal('rename-component'), from: name, to: name }),
-  z.strictObject({ command: z.literal('remove-component'), name }),
-]);
 // `additionalProperties: true`, not the `{}` a passthrough object is written as: a widely used open-model tool-call
 // parser (vLLM's, serving Qwen) rewrites the values under an empty schema — arrays came back as objects — and the
 // model was told off for what it never sent.
 const document = z
-  .looseObject({ kind: z.enum(['canvas', 'grid'], { error: WRAPPED('kind', 'the document { "kind": "canvas", … }') }) })
+  .looseObject({ version: z.literal(2, { error: WRAPPED('version', 'the board { "version": 2, … }') }) })
   .meta({ additionalProperties: true })
-  .describe('A whole board document: { kind: "canvas", background, nodes, connectors, decorations?, elements? } or { kind: "grid", items } — describe("rules").');
+  .describe('A whole board: { version: 2, data?, parts, layout, … } — describe("rules").');
 
 /** A tool an assistant draws boards with: what the MCP server lists, and what any other host of a model (the
  *  console's chat panel) offers it — the same names, descriptions, inputs and answers. */
@@ -162,14 +188,13 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
   define(
     'describe',
     {
-      description: 'What a U-Board board can hold and how to write one. No topic: the list of topics. Start with "rules"; read "canvas" before drawing a canvas board.',
+      description: 'What a U-Board board can hold and how to write one. No topic: the list of topics. Start with "rules".',
       inputSchema: z.strictObject({
         topic: z.string().max(200).optional().describe(`One of: ${Object.keys(TOPICS).join(', ')}.`),
-        pointer: z.string().max(200).optional().describe('With topic "schema": the JSON Pointer of one part, e.g. "/$defs/elementDefinition".'),
-        query: z.string().max(200).optional().describe('With topic "widgets": words for what it should show, e.g. "list of messages" — only the widgets that match.'),
+        pointer: z.string().max(200).optional().describe('With topic "schema": the JSON Pointer of one part, e.g. "/$defs/query".'),
       }),
     },
-    async ({ topic, pointer, query }) => tool(() => describeTopic(topic, pointer, query))
+    async ({ topic, pointer }) => tool(() => describeTopic(topic, pointer))
   );
 
   define(
@@ -181,21 +206,23 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
   define(
     'get_board',
     {
-      description: 'A board, or one part of its document by JSON Pointer ("/items", "/elements/pump", "/nodes/3/widget"), with its revision.',
+      description: 'A board, or one part of it by JSON Pointer ("/parts/pump", "/data", "/layout"), with its revision.',
       inputSchema: z.strictObject({
         board: boardId,
-        pointer: z.string().max(200).optional().describe('A JSON Pointer into the document. Omit for the whole document.'),
+        pointer: z.string().max(200).optional().describe('A JSON Pointer into the board. Omit for the whole board.'),
       }),
     },
     async ({ board, pointer }) =>
       tool(async () => {
         const found = await client.getBoard(board);
+        const { board: read, first } = boardOf(found);
         return {
           id: found.id,
           name: found.name,
           revision: found.revision,
-          kind: found.document.kind,
-          ...(pointer ? { pointer, value: getByPointer(found.document, pointer) } : { document: found.document }),
+          kind: read.layout.kind,
+          ...(first && { stored: 'in the first version of the format — read here in the second; the first change saves it so' }),
+          ...(pointer ? { pointer, value: getByPointer(read, pointer) } : { document: read }),
         };
       })
   );
@@ -215,7 +242,7 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
   define(
     'create_board',
     {
-      description: 'Makes a board of a kind ("grid" for an ordinary dashboard, "canvas" to place over a drawing), optionally with a whole first document.',
+      description: 'Makes a board of a kind ("grid" for an ordinary dashboard, "canvas" to place over a drawing), optionally with a whole first board.',
       inputSchema: z.strictObject({
         name: z.string().min(1).max(200),
         kind: z.enum(['grid', 'canvas']),
@@ -224,21 +251,19 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
     },
     async ({ name, kind, document }) =>
       tool(async () => {
-        // A refused first document makes no board: checked here first, as the server would — and should the server
-        // still refuse it, the board just made is taken away again, so a retry never leaves empty boards behind.
-        if (document) {
-          const issues = validateViewDocument(document, { strict: true });
-          if (document.kind !== kind) issues.unshift({ path: '/kind', message: `expected "${kind}", the kind asked for — got "${String(document.kind)}"` });
-          if (issues.length > 0) throw new UBoardApiError(400, { code: 'INVALID_DOCUMENT', issues: issues.slice(0, 50), message: 'no board was made — fix the document and call create_board again' });
-        }
+        // A refused first board makes no board: checked here first, as the server would — and should the server still
+        // refuse it, the board just made is taken away again, so a retry never leaves empty boards behind.
+        const first = (document as unknown as BoardV2 | undefined) ?? emptyBoard(kind);
+        const { issues } = checkBoardV2(first);
+        const laidOut = (first as { layout?: { kind?: unknown } }).layout?.kind;
+        if (laidOut !== undefined && laidOut !== kind) issues.unshift({ path: '/layout/kind', message: `expected "${kind}", the kind asked for — got "${String(laidOut)}"` });
+        refuseInvalid(issues, 'no board was made — fix the board and call create_board again');
         const created = await client.createBoard(name, kind);
-        if (!document) return { id: created.id, revision: created.revision, advice: [] };
         try {
-          const saved = await client.putDocument(created.id, document, created.revision);
-          return { ...saved, advice: [...saved.advice, ...widgetAdvice(document)] };
+          return await client.putDocument(created.id, first, created.revision);
         } catch (error) {
           await client.deleteBoard(created.id).catch(() => {});
-          if (error instanceof UBoardApiError) error.body.message = 'no board was made — the server refused the document';
+          if (error instanceof UBoardApiError) error.body.message = 'no board was made — the server refused the board';
           throw error;
         }
       })
@@ -277,49 +302,26 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
   define(
     'patch_board',
     {
-      description: "Changes part of a board's document with a JSON Patch, applied entirely or not at all, and saves it. Answers the new revision and advice.",
+      description: 'Changes part of a board with a JSON Patch, applied entirely or not at all, and saves it. Answers the new revision and advice.',
       inputSchema: z.strictObject({ board: boardId, revision, patch }),
     },
     async ({ board, revision, patch }) =>
       tool(async () => {
-        const saved = await client.patchDocument(board, patch, revision);
-        // The widgets the patch writes, checked where they land — the server does not read a widget's props.
-        const added = patch.flatMap(op => ('value' in op ? widgetAdvice(op.value, String(op.path)) : []));
-        return { ...saved, advice: [...saved.advice, ...added] };
-      })
-  );
-
-  define(
-    'edit_board',
-    {
-      description:
-        'Makes edits that change a board in more than one place, as the editor does, and saves them as one patch: rename or remove an element or a symbol (every use follows), remove parts with the lines and triggers that name them, make a component of nodes and frames, detach an instance into parts, rename or remove a component with its instances. Commands run in order, all or nothing. dryRun answers the patch and the checks without saving.',
-      inputSchema: z.strictObject({ board: boardId, revision, commands: z.array(command).min(1).max(50), dryRun: z.boolean().optional() }),
-    },
-    async ({ board, revision: expected, commands, dryRun }) =>
-      tool(async () => {
-        const current = await client.getBoard(board);
-        if (expected !== undefined && expected !== current.revision) {
-          throw new Error(`the board is at revision ${current.revision}, not ${expected} — get_board again and redo the change`);
-        }
-        const edited = applyEditCommands(current.document as ViewDocument, commands as EditCommand[]);
-        const change = documentPatch(current.document, edited);
-        if (change.length === 0) return { revision: current.revision, operations: 0, advice: [] };
-        if (dryRun) {
-          const issues = validateViewDocument(edited, { strict: true });
-          const advice = issues.length === 0 ? [...lintViewDocument(edited), ...widgetAdvice(edited)] : [];
-          return { valid: issues.length === 0, issues, advice, patch: change, next: `nothing is saved yet — run edit_board again without dryRun, on revision ${current.revision}` };
-        }
-        // Against the revision it was read at: a save in between answers 412 rather than being overwritten.
-        const saved = await client.patchDocument(board, change, current.revision);
-        return { ...saved, operations: change.length };
+        const found = await client.getBoard(board);
+        if (isBoardV2(found.document)) return client.patchDocument(board, patch, revision);
+        // A board stored in the first version: the patch is made against the board as get_board reads it, converted,
+        // and the result is saved whole — in the second version, on the revision it was read at.
+        if (revision !== undefined && revision !== found.revision) throw new UBoardApiError(412, { code: 'BOARD_CHANGED', revision: found.revision });
+        const changed = applyJsonPatch(boardOf(found).board, patch);
+        refuseInvalid(checkBoardV2(changed).issues, 'nothing was saved — fix the patch');
+        return client.putDocument(board, changed, found.revision);
       })
   );
 
   define(
     'validate',
     {
-      description: 'Checks without saving: a whole document, or what a board would become with a patch. Answers issues (each with its path) and advice.',
+      description: 'Checks without saving: a whole board, or what a board would become with a patch. Answers issues (each with its path) and advice.',
       inputSchema: z.strictObject({ document: document.optional(), board: boardId.optional(), patch: patch.optional() }),
     },
     async ({ document, board, patch }) =>
@@ -330,10 +332,9 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
           if (!board || !patch) throw new Error('give a document, or a board and a patch');
           const current = await client.getBoard(board);
           revision = current.revision;
-          candidate = applyJsonPatch(current.document, patch);
+          candidate = applyJsonPatch(boardOf(current).board, patch);
         }
-        const issues = validateViewDocument(candidate, { strict: true });
-        const advice = issues.length === 0 ? [...lintViewDocument(candidate as ViewDocument), ...widgetAdvice(candidate)] : [];
+        const { issues, advice } = checkBoardV2(candidate);
         // A check of a change to a board saves nothing: say so, with the revision the change is to be sent on — a
         // writer that took the check for the save sends the next patch on a revision the board never reached.
         const unsaved = revision !== undefined && issues.length === 0 && { next: `nothing is saved yet — send this patch with patch_board, on revision ${revision}` };
@@ -346,11 +347,11 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
       'look',
       {
         description: looker.picture === false
-          ? 'Draws a saved board as its viewers see it and answers what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box, values not live) and the advice the board’s saving gave (parts drawn over one another) — no picture. Look after a change, then fix what it reports and advises. `focus` a node, grid item, connector or decoration for only its problems and advice.'
-          : 'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box, values not live) and the advice the board’s saving gave (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a node, grid item, connector or decoration to see it up close — and only its problems and advice.',
+          ? 'Draws a saved board as its viewers see it and answers what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box, values not live) and the advice that stands (parts drawn over one another) — no picture. Look after a change, then fix what it reports and advises. `focus` a part for only its problems and advice.'
+          : 'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box, values not live) and the advice that stands (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a part to see it up close — and only its problems and advice.',
         inputSchema: z.strictObject({
           board: boardId,
-          focus: z.string().max(200).optional().describe('A JSON Pointer to one part: "/nodes/3", "/items/0", "/connectors/2", "/decorations/5", or a component instance, "/instances/1".'),
+          focus: z.string().max(200).optional().describe('One part: "/parts/<id>".'),
           appearance: z.enum(['light', 'dark']).optional().describe('Draw it on this paper instead of the board’s own — to check the other one.'),
           width: z.number().int().min(320).max(2560).optional().describe('The screen width, px (1600).'),
           height: z.number().int().min(240).max(1600).optional().describe('The screen height, px (900).'),
@@ -359,16 +360,19 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
       async ({ board, focus, appearance, width = 1600, height = 900 }) => {
         try {
           const found = await client.getBoard(board);
-          const { image, report } = await looker.look({ board, focus, appearance, width, height }, found.document);
+          const { board: read } = boardOf(found);
+          // What the viewers' page draws: a second-version board's picture, made by the server with its data's items.
+          const picture = isBoardV2(found.document) ? await client.getPicture(board) : found.document;
+          const { image, report } = await looker.look({ board, focus: focus && inPicture(picture, focus), appearance, width, height }, picture);
           // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
           // Up close, every layout finding is read before keeping the part's own — a fold past the limit would hide some.
-          const lint = lintViewDocument(found.document, focus ? { geometryLimit: Infinity } : {});
-          const within = componentOf(found.document, focus);
-          const advice = [...lint, ...widgetAdvice(found.document)].filter(a => !focus || concerns(a, focus, within));
+          const layout = lintViewDocument(picture, focus ? { geometryLimit: Infinity } : {}).map(a => inBoard(read, picture, a));
+          const advice = [...checkBoardV2(read).advice, ...layout].filter(a => !focus || concerns(a, focus));
           // A folded line stands for the findings it counts.
-          const left = advice.reduce((n, a) => n + (a.count ?? 1), 0);
+          const left = advice.reduce((n, a) => n + ((a as { count?: number }).count ?? 1), 0);
           // What went wrong while drawing is the whole board's; up close, only the part's — as its advice is.
-          const problems = focus ? report.problems.filter(p => concerns(p, focus, within)) : report.problems;
+          const seen = report.problems.map(p => inBoard(read, picture, p));
+          const problems = focus ? seen.filter(p => concerns(p, focus)) : seen;
           const said = { type: 'text' as const, text: JSON.stringify({ revision: found.revision, status: lookStatus(problems.length, left, focus), ...report, problems, advice }) };
           return { content: image ? [{ type: 'image' as const, data: image, mimeType: 'image/png' }, said] : [said] };
         } catch (error) {

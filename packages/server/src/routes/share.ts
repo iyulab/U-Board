@@ -12,7 +12,8 @@ import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveStat
 import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { Connector } from '../db/connectors.js';
 import { elementFramesAddress } from '../element-frame.js';
-import { isBoardV2, pictureOf } from '../board-document.js';
+import { isBoardV2 } from '@iyulab/u-board/board-v2';
+import { pictureOf } from '../board-document.js';
 
 /** Upper bound on one batch resolve request. A board's own bindings are the only entries that
  * resolve, so this only bounds the work a malformed or hostile request can make the server do. */

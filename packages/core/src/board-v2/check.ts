@@ -23,6 +23,12 @@ export interface BoardCheck {
  *  items, and the items it has later do not change what it is. */
 const NO_ITEMS = { keysOf: () => [] };
 
+/** Whether a document is a board in this language — any object that names a version is read as one, so a wrong version
+ *  is told what to say rather than read as a first-version view document, which names none. */
+export function isBoardV2(document: unknown): document is BoardV2 {
+  return typeof document === 'object' && document !== null && !Array.isArray(document) && Object.hasOwn(document, 'version');
+}
+
 export function checkBoardV2(board: unknown): BoardCheck {
   const found = validateBoardV2(board);
   const issues = found.filter(f => !f.hint).map(({ at, message }) => ({ path: at, message }));

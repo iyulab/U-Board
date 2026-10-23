@@ -29,7 +29,7 @@ describe('the board tools outside the MCP server', () => {
 
   it('answer describe("schema") without a file system', async () => {
     const describeTool = boardTools(new UBoardClient('https://board.example.com', 'ubt_test')).find(t => t.name === 'describe')!;
-    const answer = await describeTool.run({ topic: 'schema', pointer: '/$defs/elementDefinition' } as never);
+    const answer = await describeTool.run({ topic: 'schema', pointer: '/$defs/query' } as never);
     expect(answer.isError).toBeUndefined();
     expect(JSON.parse((answer.content[0] as { text: string }).text)).toHaveProperty('properties');
   });
@@ -50,7 +50,8 @@ describe('look without a picture', () => {
     expect(answer.content.map(c => c.type)).toEqual(['text']);
     const report = JSON.parse((answer.content[0] as { text: string }).text);
     expect(report.status).toMatch(/^not done — 1 problem/);
-    expect(report.problems).toEqual([{ path: '/items/0', message: 'its content runs past its box' }]);
+    // A board stored in the first version is drawn as it is, and what went wrong is said of its part.
+    expect(report.problems).toEqual([{ path: '/parts/a', message: 'its content runs past its box' }]);
   });
 });
 

@@ -6,7 +6,7 @@ import {
   type ViewDocumentIssue,
   type ViewKind,
 } from '@iyulab/u-board/domain';
-import { checkBoardV2, keyReadsOf, keysIn, toViewDocument, type BoardV2 } from '@iyulab/u-board/board-v2';
+import { checkBoardV2, isBoardV2, keyReadsOf, keysIn, toViewDocument, type BoardV2 } from '@iyulab/u-board/board-v2';
 
 /**
  * What a board stores: a document in the board language's second version, which says so (`"version": 2`), or a
@@ -14,14 +14,6 @@ import { checkBoardV2, keyReadsOf, keysIn, toViewDocument, type BoardV2 } from '
  * version; a first-version document is never written back from a second-version one.
  */
 export type BoardDocument = ViewDocument | BoardV2;
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
-
-/** Whether a document is written in the second version — any document that names a version is read as one, so a
- *  wrong version is told what to say rather than read as a first-version document. */
-export function isBoardV2(document: unknown): document is BoardV2 {
-  return isRecord(document) && Object.hasOwn(document, 'version');
-}
 
 /**
  * Every structural problem in a document about to be stored, each at a JSON Pointer into it. A second-version board

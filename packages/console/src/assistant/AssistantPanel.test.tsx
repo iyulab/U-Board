@@ -28,7 +28,7 @@ describe('the assistant panel', () => {
 
   it('draws with the model: the tool it ran shows as a line, the board is read again, the answer follows', async () => {
     localStorage.setItem('ub-assistant-model', JSON.stringify(SETTINGS));
-    const patch = JSON.stringify({ board: 'b1', revision: 3, patch: [{ op: 'add', path: '/items/-', value: { id: 'a', widget: { type: 'metric', props: {} } } }] });
+    const patch = JSON.stringify({ board: 'b1', revision: 3, patch: [{ op: 'add', path: '/parts/a', value: { as: 'stat', of: 'line', show: 'temp' } }] });
     const requests: string[] = [];
     vi.stubGlobal('fetch', async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
@@ -39,7 +39,10 @@ describe('the assistant panel', () => {
       }
       // The board API, on this origin, with the session.
       expect(init?.credentials).toBe('same-origin');
-      return new Response(JSON.stringify({ id: 'b1', revision: 4, advice: [] }), { headers: { 'Content-Type': 'application/json' } });
+      const answer = (init?.method ?? 'GET') === 'GET'
+        ? { id: 'b1', name: 'B', revision: 3, updatedAt: 't', document: { version: 2, parts: {}, layout: { kind: 'grid', items: [] } } }
+        : { id: 'b1', revision: 4, advice: [] };
+      return new Response(JSON.stringify(answer), { headers: { 'Content-Type': 'application/json' } });
     });
     const onBoardChanged = vi.fn();
     render(<AssistantPanel workspaceId="w1" board={BOARD} lookSetting={{ adapters: [] }} onBoardChanged={onBoardChanged} onClose={() => {}} />);

@@ -38,16 +38,15 @@ In a client's JSON configuration:
 
 | Tool | What it does |
 |---|---|
-| `describe` | What a board can hold and how to write one: `rules` (read first), `canvas`, `data`, `elements`, `widgets` (with a `query` for only the matching ones), `widget:<type>` (examples as `{ type, props }`; several by commas, `widget:metric,chart.bar`, up to 8 in one read), `schema` (with a JSON Pointer for one part). |
+| `describe` | What a board can hold and how to write one: `rules` (read first — how the tools change a board, then the board language), `kind:<name>` (a kind of part in full — its options with their types and defaults; several by commas, `kind:stat,chart.bar`, up to 8 in one read), `schema` (with a JSON Pointer for one part). |
 | `list_boards` | The workspace's boards. |
-| `get_board` | A board, or one part of its document by JSON Pointer, with its revision. |
-| `create_board` | A new board of a kind (`grid` or `canvas`), optionally with a first document. |
+| `get_board` | A board, or one part of it by JSON Pointer (`/parts/pump`), with its revision. |
+| `create_board` | A new board of a kind (`grid` or `canvas`), empty or with a first board. |
 | `patch_board` | Changes part of a board with a JSON Patch (RFC 6902) on a revision; answers the new revision and advice. |
-| `edit_board` | Makes the edits that change a board in more than one place, as the editor does — rename or remove an element, a symbol or a component, remove parts with their lines, make or detach a component — saved as one JSON Patch; `dryRun` checks without saving. |
 | `rename_board` | Renames a board; its id, share links and history stay. |
 | `delete_board` | Deletes a board for good (marked destructive, so a client can ask first). A data source is removed in the console. |
-| `validate` | Checks a document, or a board with a patch, without saving. |
-| `look` | A picture of a saved board as its viewers see it, with what went wrong while drawing; `focus` one part, or `appearance` the other paper. Needs Chrome or Edge on this computer, or `UBOARD_BROWSER`. |
+| `validate` | Checks a board, or a board with a patch, without saving. |
+| `look` | A picture of a saved board as its viewers see it, with what went wrong while drawing; `focus` one part (`/parts/<id>`), or `appearance` the other paper. Needs Chrome or Edge on this computer, or `UBOARD_BROWSER`. |
 | `list_sources` | The workspace's data sources — never a credential. |
 | `sample_source` | What a source's response looks like: each value's JSON Pointer, type and example, and the fields that tell a list's items apart. |
 | `create_source` | A data source that needs no credential; one that does is made by a person in the console. |

@@ -1,4 +1,5 @@
 import type { ViewDocument, ViewDocumentAdvice, ViewDocumentIssue, ViewKind } from '@iyulab/u-board/domain';
+import type { BoardV2 } from '@iyulab/u-board/board-v2';
 
 /** What the server says went wrong — its code, and whatever it adds (issues, the operation that failed, a revision). */
 export class UBoardApiError extends Error {
@@ -27,7 +28,8 @@ export interface BoardSummary {
 export interface Board {
   id: string;
   name: string;
-  document: ViewDocument;
+  /** As stored: a board in the language's second version, or a first-version view document. */
+  document: BoardV2 | ViewDocument;
   revision: number;
   updatedAt: string;
 }
@@ -111,6 +113,13 @@ export class UBoardClient {
    *  its data is — no values. Read through the share route, which takes this token as a viewer. */
   async getBoardState(boardId: string): Promise<unknown> {
     return this.request('GET', `/api/share/boards/${encodeURIComponent(boardId)}/state`);
+  }
+
+  /** The view document a board is drawn from, as its viewers get it — for a board in the language's second version, the
+   *  picture the server makes of it with its data's items as they are. Read through the share route, as a viewer. */
+  async getPicture(boardId: string): Promise<ViewDocument> {
+    const body = await this.request<{ document: ViewDocument; picture?: ViewDocument }>('GET', `/api/share/boards/${encodeURIComponent(boardId)}`);
+    return body.picture ?? body.document;
   }
 
   async createBoard(name: string, kind: ViewKind): Promise<{ id: string; revision: number }> {
