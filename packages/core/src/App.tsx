@@ -28,7 +28,7 @@ const demoDocument: CanvasView = {
       anchored: true,
       widget: {
         type: 'status',
-        props: { data: { label: 'Pump A', level: 'success' } },
+        props: { data: { label: 'Pump A', tone: 'ok' } },
         bindings: { 'data.value': { adapter: 'fixture', ref: 'pump-a.state' } },
       },
     },
@@ -54,7 +54,7 @@ const demoDocument: CanvasView = {
       anchored: true,
       widget: {
         type: 'status',
-        props: { data: { label: 'Pump B', level: 'warning' } },
+        props: { data: { label: 'Pump B', tone: 'warn' } },
         bindings: { 'data.value': { adapter: 'fixture', ref: 'pump-b.state' } },
       },
     },

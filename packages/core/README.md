@@ -264,7 +264,7 @@ The authoring UI's widget picker offers these, each starting from props that alr
 
 | `type` | Starting `props` | Headline field |
 |---|---|---|
-| `status` | `{ data: { label, level, value } }` | `data.value` |
+| `status` | `{ data: { label, tone, value } }` | `data.value` |
 | `gauge` | `{ data: { value } }` | `data.value` |
 | `chart.line` | `{ data: [{ t, value }], mapping: { x: 't', y: 'value' } }` | none |
 

@@ -328,7 +328,7 @@ const items: GridItem[] = [
       title: '2시간 단위 처리 moves — 실적과 목표',
       data: [],
       mapping: { x: 'hour', y: ['moves', 'target'] },
-      options: { xFormat: { type: 'time' }, series: [{ label: '실적' }, { label: '목표', type: 'line', lineStyle: 'dashed', symbol: 'none', color: '#f59e0b' }] },
+      options: { xFormat: 'time', series: [{ label: '실적' }, { label: '목표', type: 'line', lineStyle: 'dashed', symbol: 'none', color: '#f59e0b' }] },
     },
     bindings: { data: bind('/terminal/hourly', '/value') },
   }),

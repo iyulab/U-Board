@@ -35,14 +35,14 @@ test('an open shared board follows its source, says when its link expires, and o
             id: 'pump-a', x: 40, y: 40, anchored: false,
             widget: {
               type: 'status',
-              props: { data: { label: 'Pump A', level: 'neutral', value: '?' } },
+              props: { data: { label: 'Pump A', tone: 'idle', value: '?' } },
               bindings: {
                 'data.value': { adapter: connector.id, ref: { path: '/plant', valuePath: '/value/0/Status' } },
-                // the same field again, translated into the widget's level
-                'data.level': {
+                // the same field again, translated into the widget's tone
+                'data.tone': {
                   adapter: connector.id,
                   ref: { path: '/plant', valuePath: '/value/0/Status' },
-                  map: { values: { Running: 'success', Fault: 'error' }, otherwise: 'neutral' },
+                  map: { values: { Running: 'ok', Fault: 'alarm' }, otherwise: 'idle' },
                 },
               },
             },
@@ -62,7 +62,7 @@ test('an open shared board follows its source, says when its link expires, and o
     await sharePage.clock.install();
     await sharePage.goto(`http://localhost:5176/?board=${board.id}&token=${token}`);
     await expect(sharePage.getByText('Running')).toBeVisible();
-    await expect(sharePage.locator('[data-level="success"]')).toBeVisible();
+    await expect(sharePage.locator('[data-tone="ok"]')).toBeVisible();
     await expect(sharePage.getByText(/^갱신 /)).toBeVisible(); // the view says it is live, and since when
 
     status = 'Fault';
@@ -71,7 +71,7 @@ test('an open shared board follows its source, says when its link expires, and o
     await sharePage.clock.fastForward(30_000);
     expect((await poll).status()).toBe(200);
     await expect(sharePage.getByText('Fault')).toBeVisible();
-    await expect(sharePage.locator('[data-level="error"]')).toBeVisible();
+    await expect(sharePage.locator('[data-tone="alarm"]')).toBeVisible();
     await sharePage.screenshot({ path: test.info().outputPath('live-share.png') });
 
     // Let the link expire in real time, then reach the next poll.

@@ -10,10 +10,10 @@ import type { ElementDefinition, Widget } from '../view-document.js';
 const summary = (widget: Widget) => widgetFields(widget).fields.map(f => `${f.section}.${f.key}:${f.kind}`);
 
 describe('widgetFields', () => {
-  it("offers a status widget's data fields, its level as a choice", () => {
+  it("offers a status widget's data fields, its tone and emphasis as choices", () => {
     const { fields, otherOptions } = widgetFields(seedWidget('status'));
-    expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual(['data.label:text', 'data.value:text', 'data.level:choice']);
-    expect(fields[2].choices).toContain('warning');
+    expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual(['data.label:text', 'data.value:text', 'data.tone:choice', 'data.emphasis:choice']);
+    expect(fields[2].choices).toContain('warn');
     expect(otherOptions).toBe(0);
   });
 
@@ -21,15 +21,17 @@ describe('widgetFields', () => {
     const { fields, otherOptions } = widgetFields(seedWidget('gauge'));
     expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual([
       'data.value:number',
+      'data.tone:choice',
       'options.min:number',
       'options.max:number',
       'options.unit:text',
       'options.label:text',
       'options.subtitle:text',
       'options.format:text',
+      'options.form:choice',
     ]);
     expect(fields.find(f => f.key === 'max')?.defaultValue).toBe(100);
-    expect(otherOptions).toBe(1); // thresholds — a list
+    expect(otherOptions).toBe(3); // thresholds, bands and marks — lists
   });
 
   it('offers a choice with its default, and a yes/no', () => {
@@ -40,9 +42,9 @@ describe('widgetFields', () => {
 
   it("names each field as the widget library does, in the labels' language", () => {
     const names = (locale?: string) => widgetFields(seedWidget('gauge'), locale).fields.map(f => f.label);
-    expect(names()).toEqual(['Value', 'Minimum', 'Maximum', 'Unit', 'Label', 'Subtitle', 'Value format']);
-    expect(names('ko-KR')).toEqual(['값', '최솟값', '최댓값', '단위', '라벨', '부제', '값 서식']);
-    expect(widgetFields(seedWidget('gauge')).fields[1].description).toBe('Minimum range value');
+    expect(names()).toEqual(['Value', 'Tone', 'Minimum', 'Maximum', 'Unit', 'Label', 'Subtitle', 'Value format', 'Drawn as']);
+    expect(names('ko-KR')).toEqual(['값', '상태 톤', '최솟값', '최댓값', '단위', '라벨', '부제', '값 서식', '그리는 꼴']);
+    expect(widgetFields(seedWidget('gauge')).fields[2].description).toBe('Minimum range value');
   });
 
   it('leaves data given as rows to the JSON editor', () => {
@@ -105,13 +107,13 @@ describe('WidgetPropsForm', () => {
     render(<WidgetPropsForm widget={status} onChange={onChange} />);
     fireEvent.blur(screen.getByLabelText(/^Value/));
     expect(onChange).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText(/^Level/), { target: { value: 'error' } });
-    expect(onChange).toHaveBeenCalledWith({ type: 'status', props: { data: { label: 'Pump', level: 'error' } } });
+    fireEvent.change(screen.getByLabelText(/^Tone/), { target: { value: 'alarm' } });
+    expect(onChange).toHaveBeenCalledWith({ type: 'status', props: { data: { label: 'Pump', tone: 'alarm' } } });
   });
 
   it('says how many options only the JSON editor holds', () => {
     render(<WidgetPropsForm widget={gauge} onChange={vi.fn()} />);
-    expect(screen.getByText('More options in Advanced: 1')).toBeInTheDocument();
+    expect(screen.getByText('More options in Advanced: 3')).toBeInTheDocument();
   });
 });
 

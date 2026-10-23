@@ -97,7 +97,7 @@ function rackNode({ id, x, y }: (typeof RACKS)[number]): Node {
 }
 
 const CRAC_STATE = { values: { cooling: '냉각', standby: '대기', fault: '고장' }, otherwise: '알 수 없음' };
-const CRAC_LEVEL = { values: { cooling: 'success', standby: 'neutral', fault: 'error' }, otherwise: 'neutral' };
+const CRAC_LEVEL = { values: { cooling: 'ok', standby: 'idle', fault: 'alarm' }, otherwise: 'idle' };
 const CRACS = [
   { id: 'CRAC-1', x: 260, y: 108 },
   { id: 'CRAC-2', x: 600, y: 108 },
@@ -115,10 +115,10 @@ function cracNode({ id, x, y }: (typeof CRACS)[number]): Node {
     anchored: true,
     widget: {
       type: 'status',
-      props: { data: [{ label: id, value: '', level: 'neutral' }, { label: '공급(°C)', value: '', level: 'neutral' }] },
+      props: { data: [{ label: id, value: '', tone: 'idle' }, { label: '공급(°C)', value: '', tone: 'idle' }] },
       bindings: {
         'data.0.value': bindItem('/room/cooling', id, 'state', CRAC_STATE),
-        'data.0.level': bindItem('/room/cooling', id, 'state', CRAC_LEVEL),
+        'data.0.tone': bindItem('/room/cooling', id, 'state', CRAC_LEVEL),
         'data.1.value': bindItem('/room/cooling', id, 'supplyC'),
       },
     },
@@ -184,7 +184,7 @@ const SIDE: Node[] = [
         title: '가장 더운 랙 흡기 온도(°C)',
         data: [],
         mapping: { x: 'time', y: 'maxInletC' },
-        options: { xFormat: { type: 'time' }, series: [{ label: '최고 흡기' }] },
+        options: { xFormat: 'time', series: [{ label: '최고 흡기' }] },
       },
       bindings: { data: { adapter: DCIM.key, ref: { path: '/room/inlet-history', valuePath: '/value', observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS } } },
     },

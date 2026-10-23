@@ -36,9 +36,9 @@ const bindPath = (path: string, valuePath: string): Binding => ({
 /** What the source judged: in control, out of control (a run rule broken), out of specification (a part
  *  outside its limits), or no subgroup in time. */
 const STATE_TEXT = { values: { in: '관리 안', ooc: '관리 이탈', oos: '규격 이탈', stale: '미수집' }, otherwise: '알 수 없음' };
-const STATE_LEVEL = { values: { in: 'success', ooc: 'warning', oos: 'error', stale: 'neutral' }, otherwise: 'neutral' };
+const STATE_LEVEL = { values: { in: 'ok', ooc: 'warn', oos: 'alarm', stale: 'idle' }, otherwise: 'idle' };
 /** Cpk in the bands most plants read it by: 1.33 and over capable, 1.0 to 1.33 marginal, under 1.0 not. */
-const CPK_LEVEL = { ranges: [{ max: 1, value: 'error' }, { min: 1, max: 1.33, value: 'warning' }, { min: 1.33, value: 'success' }] };
+const CPK_LEVEL = { ranges: [{ max: 1, value: 'alarm' }, { min: 1, max: 1.33, value: 'warn' }, { min: 1.33, value: 'ok' }] };
 
 /** The line's process boxes, left to right; the ones with an inspection point carry its characteristic. */
 const STEPS: { id: string; name: string; characteristic?: string }[] = [
@@ -69,12 +69,12 @@ function station(i: number): Node[] {
       anchored: true,
       widget: {
         type: 'status',
-        props: { data: [{ label: characteristic, value: '', level: 'neutral' }, { label: '최근 측정', value: 0, level: 'neutral' }] },
+        props: { data: [{ label: characteristic, value: '', tone: 'idle' }, { label: '최근 측정', value: 0, tone: 'idle' }] },
         bindings: {
           'data.0.value': bindStation(id, 'state', STATE_TEXT),
-          'data.0.level': bindStation(id, 'state', STATE_LEVEL),
+          'data.0.tone': bindStation(id, 'state', STATE_LEVEL),
           'data.1.value': bindStation(id, 'last'),
-          'data.1.level': bindStation(id, 'state', STATE_LEVEL),
+          'data.1.tone': bindStation(id, 'state', STATE_LEVEL),
         },
       },
     },
@@ -91,7 +91,7 @@ function station(i: number): Node[] {
           data: [],
           mapping: { x: 't', y: ['mean', 'ucl', 'lcl'] },
           options: {
-            xFormat: { type: 'time' },
+            xFormat: 'time',
             series: [{ label: '평균' }, { label: 'UCL', lineStyle: 'dashed', symbol: 'none' }, { label: 'LCL', lineStyle: 'dashed', symbol: 'none' }],
             // A control chart reads around its centre line: the axis spans the limits, not zero.
             valueAxisZero: false,
@@ -109,8 +109,8 @@ function station(i: number): Node[] {
       anchored: false,
       widget: {
         type: 'status',
-        props: { data: { label: 'Cpk', value: 0, level: 'neutral' } },
-        bindings: { 'data.value': bindStation(id, 'cpk'), 'data.level': bindStation(id, 'cpk', CPK_LEVEL) },
+        props: { data: { label: 'Cpk', value: 0, tone: 'idle' } },
+        bindings: { 'data.value': bindStation(id, 'cpk'), 'data.tone': bindStation(id, 'cpk', CPK_LEVEL) },
       },
     },
   ];

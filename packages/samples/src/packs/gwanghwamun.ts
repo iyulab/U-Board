@@ -70,11 +70,11 @@ const bindItem = (list: string, where: Record<string, string>, valuePath: string
 });
 
 /** The source's own words for each level, in the colours its site gives them. */
-const CROWD_LEVEL = { values: { 여유: 'success', 보통: 'neutral', '약간 붐빔': 'warning', 붐빔: 'error' }, otherwise: 'neutral' };
-const AIR_LEVEL = { values: { 좋음: 'info', 보통: 'success', 나쁨: 'warning', 매우나쁨: 'error' }, otherwise: 'neutral' };
-const TRAFFIC_LEVEL = { values: { 원활: 'success', 서행: 'warning', 정체: 'error' }, otherwise: 'neutral' };
+const CROWD_LEVEL = { values: { 여유: 'ok', 보통: 'idle', '약간 붐빔': 'warn', 붐빔: 'alarm' }, otherwise: 'idle' };
+const AIR_LEVEL = { values: { 좋음: 'info', 보통: 'ok', 나쁨: 'warn', 매우나쁨: 'alarm' }, otherwise: 'idle' };
+const TRAFFIC_LEVEL = { values: { 원활: 'ok', 서행: 'warn', 정체: 'alarm' }, otherwise: 'idle' };
 /** Bikes docked: none, a couple, or enough to take one. */
-const BIKES_LEVEL = { ranges: [{ max: 1, value: 'error' }, { min: 1, max: 3, value: 'warning' }, { min: 3, value: 'success' }] };
+const BIKES_LEVEL = { ranges: [{ max: 1, value: 'alarm' }, { min: 1, max: 3, value: 'warn' }, { min: 3, value: 'ok' }] };
 
 /** Where a node goes for its anchor — its box's center — to stand at a place on the map. */
 function at(node: { width: number; height: number }, lat: number, lng: number): { x: number; y: number } {
@@ -102,11 +102,11 @@ function bikeStation({ id, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
     anchored: true,
     widget: {
       type: 'status',
-      props: { data: { label: '따릉이', value: '', level: 'neutral' } },
+      props: { data: { label: '따릉이', value: '', tone: 'idle' } },
       bindings: {
         'data.label': field('SBIKE_SPOT_NM'),
         'data.value': field('SBIKE_PARKING_CNT'),
-        'data.level': field('SBIKE_PARKING_CNT', BIKES_LEVEL),
+        'data.tone': field('SBIKE_PARKING_CNT', BIKES_LEVEL),
       },
     },
   };
@@ -147,8 +147,8 @@ const card = (id: string, span: number, spanMedium: number, widget: Widget): Gri
 const TOP: GridItem[] = [
   card('crowd', 4, 3, {
     type: 'status',
-    props: { data: { label: '지금 혼잡도', value: '', level: 'neutral' } },
-    bindings: { 'data.value': bind(PEOPLE, '/AREA_CONGEST_LVL'), 'data.level': bind(PEOPLE, '/AREA_CONGEST_LVL', CROWD_LEVEL) },
+    props: { data: { label: '지금 혼잡도', value: '', tone: 'idle' } },
+    bindings: { 'data.value': bind(PEOPLE, '/AREA_CONGEST_LVL'), 'data.tone': bind(PEOPLE, '/AREA_CONGEST_LVL', CROWD_LEVEL) },
   }),
   card('people', 4, 3, {
     type: 'metric',
@@ -157,8 +157,8 @@ const TOP: GridItem[] = [
   }),
   card('traffic', 4, 3, {
     type: 'status',
-    props: { data: { label: '도로 소통', value: '', level: 'neutral' } },
-    bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_IDX'), 'data.level': bind(ROADS, '/ROAD_TRAFFIC_IDX', TRAFFIC_LEVEL) },
+    props: { data: { label: '도로 소통', value: '', tone: 'idle' } },
+    bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_IDX'), 'data.tone': bind(ROADS, '/ROAD_TRAFFIC_IDX', TRAFFIC_LEVEL) },
   }),
   card('speed', 4, 3, {
     type: 'metric',
@@ -170,7 +170,7 @@ const TOP: GridItem[] = [
 /** Beside the plan: the crowd to come. */
 const FORECAST: GridItem = card('forecast', 4, 3, {
   type: 'chart.line',
-  props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' }, options: { xFormat: { type: 'time' } } },
+  props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' }, options: { xFormat: 'time' } },
   bindings: { data: bind(PEOPLE, '/FCST_PPLTN') },
 });
 
@@ -188,13 +188,13 @@ const WEATHER_CARDS: GridItem[] = [
   }),
   card('fine-dust', 4, 2, {
     type: 'status',
-    props: { data: { label: '미세먼지', value: '', level: 'neutral' } },
-    bindings: { 'data.value': bind(WEATHER, '/PM10_INDEX'), 'data.level': bind(WEATHER, '/PM10_INDEX', AIR_LEVEL) },
+    props: { data: { label: '미세먼지', value: '', tone: 'idle' } },
+    bindings: { 'data.value': bind(WEATHER, '/PM10_INDEX'), 'data.tone': bind(WEATHER, '/PM10_INDEX', AIR_LEVEL) },
   }),
   card('temperature-forecast', 12, 6, {
     type: 'chart.line',
     // The source writes each hour as digits (`202610092100`); the axis shows it as a date and time.
-    props: { title: '24시간 기온 예보(°C)', data: [], mapping: { x: 'FCST_DT', y: 'TEMP' }, options: { xFormat: { type: 'time' } } },
+    props: { title: '24시간 기온 예보(°C)', data: [], mapping: { x: 'FCST_DT', y: 'TEMP' }, options: { xFormat: 'time' } },
     bindings: { data: bind(WEATHER, '/FCST24HOURS') },
   }),
 ];

@@ -34,9 +34,9 @@ const bindSummary = (valuePath: string): Binding => ({
 
 /** A machine's state in words, and in the color the board gives it. */
 const STATE_TEXT = { values: { running: '가동', idle: '대기', down: '정지', maintenance: '점검' }, otherwise: '알 수 없음' };
-const STATE_LEVEL = { values: { running: 'success', idle: 'info', down: 'error', maintenance: 'warning' }, otherwise: 'neutral' };
+const STATE_LEVEL = { values: { running: 'ok', idle: 'info', down: 'alarm', maintenance: 'warn' }, otherwise: 'idle' };
 /** Open work orders: none is fine, any is something to look at. */
-const ORDERS_LEVEL = { ranges: [{ max: 1, value: 'success' }, { min: 1, value: 'warning' }] };
+const ORDERS_LEVEL = { ranges: [{ max: 1, value: 'ok' }, { min: 1, value: 'warn' }] };
 
 interface Line {
   id: string;
@@ -73,12 +73,12 @@ function machine(line: Line, { id, name }: Line['machines'][number], i: number):
     anchored: true,
     widget: {
       type: 'status',
-      props: { data: [{ label: name, value: '', level: 'neutral' }, { label: '미결 작업', value: 0, level: 'neutral' }] },
+      props: { data: [{ label: name, value: '', tone: 'idle' }, { label: '미결 작업', value: 0, tone: 'idle' }] },
       bindings: {
         'data.0.value': bindItem('/plant/equipment', id, 'state', STATE_TEXT),
-        'data.0.level': bindItem('/plant/equipment', id, 'state', STATE_LEVEL),
+        'data.0.tone': bindItem('/plant/equipment', id, 'state', STATE_LEVEL),
         'data.1.value': bindItem('/plant/equipment', id, 'openWorkOrders'),
-        'data.1.level': bindItem('/plant/equipment', id, 'openWorkOrders', ORDERS_LEVEL),
+        'data.1.tone': bindItem('/plant/equipment', id, 'openWorkOrders', ORDERS_LEVEL),
       },
     },
   };
@@ -154,7 +154,7 @@ const SIDE: Node[] = [
     anchored: false,
     widget: {
       type: 'chart.bar',
-      props: { title: '시간대별 생산량(전 라인)', data: [], mapping: { x: 'hour', y: 'count' }, options: { xFormat: { type: 'time' } } },
+      props: { title: '시간대별 생산량(전 라인)', data: [], mapping: { x: 'hour', y: 'count' }, options: { xFormat: 'time' } },
       bindings: { data: { adapter: PLANT.key, ref: { path: '/plant/output', valuePath: '/value', observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS } } },
     },
   },

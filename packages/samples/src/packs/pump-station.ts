@@ -215,7 +215,7 @@ const items: GridItem[] = [
         title: '송수 유량 (m³/h)',
         data: [],
         mapping: { x: 'time', y: 'flow' },
-        options: { xFormat: { type: 'time' }, valueAxisZero: false, series: [{ label: '유량' }] },
+        options: { xFormat: 'time', valueAxisZero: false, series: [{ label: '유량' }] },
       },
       bindings: { data: { adapter: SCADA.key, ref: { path: '/station/flow', valuePath: '/value', observedAtPath: '/updatedAt', maxAgeSeconds: 90 * 60 } } },
     },

@@ -50,11 +50,11 @@ const bindStation = (name: string, field: string, map?: Binding['map']): Binding
 
 /** The grade the source gives a PM10 reading — 1 좋음, 2 보통, 3 나쁨, 4 매우나쁨 — in the colours Korea's public
  *  air sites give them. A station under maintenance has no grade, and reads `-`. */
-const PM10_GRADE: Binding['map'] = { values: { '1': 'info', '2': 'success', '3': 'warning', '4': 'error' }, otherwise: 'neutral' };
+const PM10_GRADE: Binding['map'] = { values: { '1': 'info', '2': 'ok', '3': 'warn', '4': 'alarm' }, otherwise: 'idle' };
 
 /** The tile itself takes its grade's colour — a ring around it, so the map reads at a glance. */
 const GRADE_STATES: Node['states'] = {
-  from: 'data.level',
+  from: 'data.tone',
   map: { values: { '1': 'good', '2': 'moderate', '3': 'bad', '4': 'very-bad' } },
   looks: { good: { outline: '#2f7fd8' }, moderate: { outline: '#2ea44f' }, bad: { outline: '#e0911a' }, 'very-bad': { outline: '#d03b3b', blink: true } },
 };
@@ -108,10 +108,10 @@ function tile({ name, col, row }: (typeof DISTRICTS)[number]): Node {
     anchored: true,
     widget: {
       type: 'status',
-      props: { data: { label: name, value: '', level: 'neutral' } },
+      props: { data: { label: name, value: '', tone: 'idle' } },
       bindings: {
         'data.value': bindStation(name, 'pm10Value'),
-        'data.level': bindStation(name, 'pm10Grade', PM10_GRADE),
+        'data.tone': bindStation(name, 'pm10Grade', PM10_GRADE),
       },
     },
     states: GRADE_STATES,

@@ -215,7 +215,7 @@ const SIDE: Node[] = [
         title: '태양광과 부하 (kW)',
         data: [],
         mapping: { x: 'time', y: ['pvKw', 'loadKw'] },
-        options: { xFormat: { type: 'time' }, series: [{ label: '태양광', color: '#d89a00' }, { label: '부하', color: '#4a555b' }] },
+        options: { xFormat: 'time', series: [{ label: '태양광', color: '#d89a00' }, { label: '부하', color: '#4a555b' }] },
       },
       bindings: { data: { adapter: EMS.key, ref: { path: '/site/history', valuePath: '/value', observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS } } },
     },

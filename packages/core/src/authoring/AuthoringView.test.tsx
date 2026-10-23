@@ -113,7 +113,7 @@ describe('AuthoringView new nodes', () => {
     fireEvent.click(screen.getByText('저장'));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     const saved: CanvasView = onSave.mock.calls[0][0];
-    expect(saved.nodes.at(-1)!.widget.props).toEqual({ data: { label: '새 노드', level: 'neutral', value: '연결 전' } });
+    expect(saved.nodes.at(-1)!.widget.props).toEqual({ data: { label: '새 노드', tone: 'idle', value: '연결 전' } });
   });
 });
 
@@ -322,7 +322,7 @@ describe('AuthoringView node selection', () => {
           x: 0,
           y: 0,
           anchored: false,
-          widget: { type: 'status', props: { data: { label: 'Pump A', level: 'info', value: 'running' } } },
+          widget: { type: 'status', props: { data: { label: 'Pump A', tone: 'info', value: 'running' } } },
         },
       ],
       connectors: [],

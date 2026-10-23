@@ -4,17 +4,15 @@
 // and declares its statuses and its look once (`statuses`, `board.skin`). Everything a person picks is addressed by
 // id, within its own map, and there is one way to write each thing. Coordinates appear only in a canvas layout.
 
-/**
- * The eleven tones a status is drawn in: `ok` · `info` · `watch` · `warn` · `alarm` · `off` · `idle` · `accent`, and
- * the places in a sequence `past` · `now` · `next`.
- */
-// TODO: use the widget library's `TONES` once the core depends on a version that exports it.
-export const TONES = ['ok', 'info', 'watch', 'warn', 'alarm', 'off', 'idle', 'accent', 'past', 'now', 'next'] as const;
-export type Tone = (typeof TONES)[number];
+import type { Emphasis, Tone } from '@iyulab/u-widgets';
 
-/** A second channel besides colour, for a status that must not be missed. */
-export const EMPHASES = ['invert', 'hatch', 'stamp', 'blink'] as const;
-export type Emphasis = (typeof EMPHASES)[number];
+/**
+ * The eleven tones a status is drawn in (`ok` · `info` · `watch` · `warn` · `alarm` · `off` · `idle` · `accent`, and
+ * the places in a sequence `past` · `now` · `next`) and the emphases that add a second channel besides colour — the
+ * widget library's own vocabulary, so a board and the widgets drawing it agree on every word.
+ */
+export { EMPHASES, TONES } from '@iyulab/u-widgets';
+export type { Emphasis, Tone };
 
 /** The panel a framed part is drawn in. */
 export const FRAMES = ['card', 'flat', 'glow', 'plate', 'ticket', 'postage', 'tape'] as const;

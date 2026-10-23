@@ -23,7 +23,7 @@ const DEFAULT_SEED_TEXT: SeedText = { label: 'New node', value: 'Not bound' };
 export function seedWidget(type: WidgetType, text: SeedText = DEFAULT_SEED_TEXT): Widget {
   switch (type) {
     case 'status':
-      return { type: 'status', props: { data: { label: text.label, level: 'neutral', value: text.value } } };
+      return { type: 'status', props: { data: { label: text.label, tone: 'idle', value: text.value } } };
     case 'gauge':
       return { type: 'gauge', props: { data: { value: 0 } } };
     case 'chart.line':

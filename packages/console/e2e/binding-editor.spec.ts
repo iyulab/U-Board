@@ -61,22 +61,22 @@ test('binds a node to a live value via the property panel and its path explorer'
     await expect(page.getByRole('code').filter({ hasText: /^data\.value$/ })).toBeVisible();
     await expect(page.getByText('· /status /status', { exact: true })).toBeVisible();
 
-    // 같은 필드를 한 번 더 — 이번엔 값 매핑으로 위젯의 수준(level)에. 원천의 "running"이 "success"로 보여야 한다.
-    await page.getByLabel('프롭 경로').selectOption('data.level');
+    // 같은 필드를 한 번 더 — 이번엔 값 매핑으로 위젯의 상태 톤(tone)에. 원천의 "running"이 "ok"로 보여야 한다.
+    await page.getByLabel('프롭 경로').selectOption('data.tone');
     await page.getByLabel('데이터소스').selectOption({ label: 'Mock Plant API' });
     await page.getByLabel('요청 경로', { exact: true }).fill('/status');
     await page.getByLabel('값 경로').fill('/status');
     await page.getByText('매핑 추가', { exact: true }).click();
     await page.getByLabel('원천 값 1').fill('running');
-    await page.getByLabel('표시 값 1').fill('success');
-    await page.getByLabel('그 밖의 값').fill('neutral');
+    await page.getByLabel('표시 값 1').fill('ok');
+    await page.getByLabel('그 밖의 값').fill('idle');
     await page.getByText('미리보기', { exact: true }).click();
-    await expect(page.getByText('값: running → success', { exact: true })).toBeVisible();
+    await expect(page.getByText('값: running → ok', { exact: true })).toBeVisible();
     await page.getByText('바인딩 저장', { exact: true }).click();
-    await expect(page.getByRole('code').filter({ hasText: /^data\.level$/ })).toBeVisible();
+    await expect(page.getByRole('code').filter({ hasText: /^data\.tone$/ })).toBeVisible();
     await expect(page.getByText('· 매핑됨')).toBeVisible();
-    // 편집기에 제자리로 그려진 위젯이 매핑된 수준으로 그려진다.
-    await expect(page.locator('[data-level="success"]').first()).toBeVisible();
+    // 편집기에 제자리로 그려진 위젯이 매핑된 톤으로 그려진다.
+    await expect(page.locator('[data-tone="ok"]').first()).toBeVisible();
 
     await page.getByRole('button', { name: '저장', exact: true }).click();
     // board-crud.spec.ts와 동일한 패턴: 저장 PUT이 실제로 반영됐다는 신호(저장됨)를 기다린 뒤에만

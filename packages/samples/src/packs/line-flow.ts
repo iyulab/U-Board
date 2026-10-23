@@ -97,10 +97,10 @@ const metric = (label: string, valuePath: string, suffix: string): Node['widget'
 const nodes: Node[] = [
   figure('line-state', 0, {
     type: 'status',
-    props: { data: { label: '라인 상태', value: '—', level: 'neutral' } },
+    props: { data: { label: '라인 상태', value: '—', tone: 'idle' } },
     bindings: {
       'data.value': bindLine('/state', STATE_TEXT),
-      'data.level': bindLine('/state', { values: { running: 'success', delayed: 'warning', stopped: 'error' }, otherwise: 'neutral' }),
+      'data.tone': bindLine('/state', { values: { running: 'ok', delayed: 'warn', stopped: 'alarm' }, otherwise: 'idle' }),
     },
   }),
   figure('throughput', 1, metric('현재 생산량', '/throughput', ' 개/시')),

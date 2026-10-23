@@ -5,13 +5,13 @@ describe('seedWidget', () => {
   it('seeds a status widget with a visible placeholder value and no bindings', () => {
     expect(seedWidget('status')).toEqual({
       type: 'status',
-      props: { data: { label: 'New node', level: 'neutral', value: 'Not bound' } },
+      props: { data: { label: 'New node', tone: 'idle', value: 'Not bound' } },
     });
   });
 
   it('seeds a status widget in the words it is given', () => {
     expect(seedWidget('status', { label: '새 노드', value: '연결 전' }).props).toEqual({
-      data: { label: '새 노드', level: 'neutral', value: '연결 전' },
+      data: { label: '새 노드', tone: 'idle', value: '연결 전' },
     });
   });
 

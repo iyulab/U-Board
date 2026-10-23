@@ -34,8 +34,8 @@ const MAX_AGE_SECONDS = 10 * 60;
 /** Where a train is, by the source's arrival code (`arvlCd`): entering or at the platform, one to three stops away,
  *  or running further off. */
 const ARRIVAL_LEVEL: Binding['map'] = {
-  values: { '0': 'success', '1': 'success', '2': 'info', '3': 'info', '4': 'info', '5': 'info' },
-  otherwise: 'neutral',
+  values: { '0': 'ok', '1': 'ok', '2': 'info', '3': 'info', '4': 'info', '5': 'info' },
+  otherwise: 'idle',
 };
 
 /** A field of the first arrival the station lists for a line (`subwayId`) one way (`updnLine`) — the next train
@@ -130,10 +130,10 @@ const boards = (station: Station): Node[] => {
     anchored: true,
     widget: {
       type: 'status',
-      props: { data: { label: `${transfer ? `${line.name} ` : ''}${toward} 방면`, value: '', level: 'neutral' } },
+      props: { data: { label: `${transfer ? `${line.name} ` : ''}${toward} 방면`, value: '', tone: 'idle' } },
       bindings: {
         'data.value': bindNext(station.name, line.id, way, 'arvlMsg2'),
-        'data.level': bindNext(station.name, line.id, way, 'arvlCd', ARRIVAL_LEVEL),
+        'data.tone': bindNext(station.name, line.id, way, 'arvlCd', ARRIVAL_LEVEL),
       },
     },
   }));

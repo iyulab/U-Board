@@ -34,7 +34,7 @@ const bindPump = (id: string, field: string, map?: Binding['map']): Binding => (
 
 /** A pump's state in words and in the board's colour: normal states (running, standby) stay grey — ISA-101. */
 const PUMP_TEXT = { values: { running: '운전', standby: '대기', fault: '고장 정지', maintenance: '정비' }, otherwise: '알 수 없음' };
-const PUMP_LEVEL = { values: { running: 'neutral', standby: 'neutral', fault: 'error', maintenance: 'warning' }, otherwise: 'warning' };
+const PUMP_LEVEL = { values: { running: 'idle', standby: 'idle', fault: 'alarm', maintenance: 'warn' }, otherwise: 'warn' };
 
 // The process, left to right: intake well → suction header → pumps → discharge header → clear well → flow meter →
 // the two reservoirs. The drawing and the nodes share these numbers.
@@ -63,12 +63,12 @@ const pumpNode = (id: string, i: number): Node => ({
   anchored: true,
   widget: {
     type: 'status',
-    props: { data: [{ label: id, value: '', level: 'neutral' }, { label: '토출 압력(bar)', value: 0, level: 'neutral' }] },
+    props: { data: [{ label: id, value: '', tone: 'idle' }, { label: '토출 압력(bar)', value: 0, tone: 'idle' }] },
     bindings: {
       'data.0.value': bindPump(id, 'state', PUMP_TEXT),
-      'data.0.level': bindPump(id, 'state', PUMP_LEVEL),
+      'data.0.tone': bindPump(id, 'state', PUMP_LEVEL),
       'data.1.value': bindPump(id, 'pressure'),
-      'data.1.level': bindPump(id, 'state', PUMP_LEVEL),
+      'data.1.tone': bindPump(id, 'state', PUMP_LEVEL),
     },
   },
 });
@@ -119,7 +119,7 @@ const NODES: Node[] = [
         title: '송수 유량 (m³/h, 6시간)',
         data: [],
         mapping: { x: 't', y: 'flow' },
-        options: { xFormat: { type: 'time' }, valueAxisZero: false, series: [{ label: '송수 유량', symbol: 'none', color: '#4a555b' }] },
+        options: { xFormat: 'time', valueAxisZero: false, series: [{ label: '송수 유량', symbol: 'none', color: '#4a555b' }] },
       },
       bindings: { data: bind('/scada/flow-trend', '/value') },
     },

@@ -158,10 +158,10 @@ const metric = (label: string, valuePath: string, unit: string): Node['widget'] 
 const NODES: Node[] = [
   figure('service', 0, {
     type: 'status',
-    props: { data: { label: '서비스', value: '—', level: 'neutral' } },
+    props: { data: { label: '서비스', value: '—', tone: 'idle' } },
     bindings: {
       'data.value': bindPath('/nms/summary', '/state', STATE_TEXT),
-      'data.level': bindPath('/nms/summary', '/state', { values: { up: 'success', degraded: 'warning', down: 'error' }, otherwise: 'neutral' }),
+      'data.tone': bindPath('/nms/summary', '/state', { values: { up: 'ok', degraded: 'warn', down: 'alarm' }, otherwise: 'idle' }),
     },
   }),
   figure('requests', 1, metric('요청', '/requestsPerSecond', '건/초')),
@@ -178,10 +178,10 @@ const NODES: Node[] = [
     anchored: false,
     widget: {
       type: 'status',
-      props: { data: { label: '인터넷 회선', value: '—', level: 'neutral' } },
+      props: { data: { label: '인터넷 회선', value: '—', tone: 'idle' } },
       bindings: {
         'data.value': bindItem('/nms/links', 'isp-fw', 'state', { values: { ok: '정상', busy: '혼잡', down: '중단' }, otherwise: '알 수 없음' }),
-        'data.level': bindItem('/nms/links', 'isp-fw', 'state', { values: { ok: 'neutral', busy: 'warning', down: 'error' }, otherwise: 'neutral' }),
+        'data.tone': bindItem('/nms/links', 'isp-fw', 'state', { values: { ok: 'idle', busy: 'warn', down: 'alarm' }, otherwise: 'idle' }),
       },
     },
   },
@@ -200,7 +200,7 @@ const NODES: Node[] = [
         data: [],
         mapping: { x: 't', y: 'mbps' },
         options: {
-          xFormat: { type: 'time' },
+          xFormat: 'time',
           series: [{ label: '트래픽', symbol: 'none', color: '#4a555b' }],
           referenceLines: [{ axis: 'y', value: 1000, label: '회선 용량 1 Gbps', style: 'dashed', color: '#5b666c' }],
         },

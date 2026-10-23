@@ -18,6 +18,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- Requires `@iyulab/u-widgets` 0.41: a `status` item's state is `data.tone` (`ok` · `warn` · `alarm` · `idle` · …)
+  where it was `data.level` (`success` · `warning` · `error` · `neutral`), a `metric`'s is `data.tone` where it was
+  `data.variant`, and a chart's axis format is a string (`xFormat: 'time'`). A new status widget starts with
+  `tone: 'idle'`. The property panel offers the fields the library now describes — a status item's tone and emphasis,
+  a gauge's tone and form. A binding's value map translates into whatever the prop takes, so maps that set a tone
+  write the new words.
 - Requires `@iyulab/u-widgets` 0.40, whose `form` widget draws its fields with `<formdown-ui>` and loads it only when a
   form is first drawn, and `@canvas-kit/viewer` 0.6.1, where dragging to pan no longer selects overlay text.
 

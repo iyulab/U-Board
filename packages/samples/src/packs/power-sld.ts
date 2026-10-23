@@ -151,7 +151,7 @@ const NODES: Node[] = [
         data: [],
         mapping: { x: 't', y: 'kw' },
         options: {
-          xFormat: { type: 'time' },
+          xFormat: 'time',
           valueAxisZero: false,
           series: [{ label: '수요 전력', symbol: 'none', color: '#4a555b' }],
           // The contract the demand is held under — above today's data, so the axis reaches up to show it.

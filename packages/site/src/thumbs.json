@@ -2,7 +2,7 @@
   "airport-departures": {
     "width": 800,
     "height": 557,
-    "hash": "0cd668d386b8b276"
+    "hash": "6bb640ca5a9a501e"
   },
   "apiary-stitch": {
     "width": 800,
@@ -132,7 +132,7 @@
   "factory-floor": {
     "width": 800,
     "height": 496,
-    "hash": "1d03d241261e144d"
+    "hash": "0392521ba757995e"
   },
   "farmers-market": {
     "width": 800,
@@ -157,7 +157,7 @@
   "gwanghwamun": {
     "width": 800,
     "height": 974,
-    "hash": "59834bf0cb28f6ec"
+    "hash": "6fc4d1f7f5f49cf0"
   },
   "harbor-auction": {
     "width": 800,
@@ -192,7 +192,7 @@
   "it-topology": {
     "width": 800,
     "height": 479,
-    "hash": "bf288a8847294940"
+    "hash": "fd1fe3a978200740"
   },
   "kiln-porcelain": {
     "width": 800,
@@ -227,17 +227,17 @@
   "line-flow": {
     "width": 800,
     "height": 353,
-    "hash": "9fb651c470a7ae56"
+    "hash": "c57eb811e1904cfd"
   },
   "line-oee": {
     "width": 800,
     "height": 679,
-    "hash": "b917ea0333a5cc09"
+    "hash": "8f9f56c6886d5c26"
   },
   "line-spc": {
     "width": 800,
     "height": 495,
-    "hash": "40a63cbc10b3b1c6"
+    "hash": "4d90bcf7dcf3a252"
   },
   "lost-found-dossier": {
     "width": 800,
@@ -257,7 +257,7 @@
   "microgrid": {
     "width": 800,
     "height": 453,
-    "hash": "9c42a94337e8b74d"
+    "hash": "a502bbac63d9227c"
   },
   "museum-najeon": {
     "width": 800,
@@ -312,12 +312,12 @@
   "port-terminal": {
     "width": 800,
     "height": 731,
-    "hash": "ced0f716bbc1d8a9"
+    "hash": "6471f396ce2252a6"
   },
   "power-sld": {
     "width": 800,
     "height": 495,
-    "hash": "424f68ffb18f14f2"
+    "hash": "7633316ca592340b"
   },
   "produce-market": {
     "width": 800,
@@ -327,7 +327,7 @@
   "pump-station": {
     "width": 800,
     "height": 527,
-    "hash": "d03340eef3a4fd3f"
+    "hash": "ba2847f11222274c"
   },
   "quake-helicorder": {
     "width": 800,
@@ -357,22 +357,22 @@
   "seoul-air": {
     "width": 800,
     "height": 496,
-    "hash": "419768188dcd1d6f"
+    "hash": "431269574ab6952b"
   },
   "seoul-districts-air": {
     "width": 800,
     "height": 469,
-    "hash": "86dfc69c98cc1217"
+    "hash": "3b3c34eb5468821c"
   },
   "seoul-subway": {
     "width": 800,
     "height": 496,
-    "hash": "53c3a66b61bcc9e7"
+    "hash": "9b959cdfd1d881d6"
   },
   "server-room": {
     "width": 800,
     "height": 496,
-    "hash": "8b5fb4a64f9c1349"
+    "hash": "81e368fd00b30aeb"
   },
   "site-noise-score": {
     "width": 800,
@@ -392,7 +392,7 @@
   "telecom-noc": {
     "width": 800,
     "height": 572,
-    "hash": "aebd5a23b61bd165"
+    "hash": "5ca769080d1939a8"
   },
   "theatre-boxoffice": {
     "width": 800,
@@ -437,7 +437,7 @@
   "water-pumps": {
     "width": 800,
     "height": 495,
-    "hash": "e41c28111993a993"
+    "hash": "41705d2444d07dc8"
   },
   "wildfire-topo": {
     "width": 800,

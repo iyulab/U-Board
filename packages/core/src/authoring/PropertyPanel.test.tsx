@@ -15,7 +15,7 @@ function statusNode(bindings?: Node['widget']['bindings']): Node {
     x: 0,
     y: 0,
     anchored: false,
-    widget: { type: 'status', props: { data: { label: 'Pump A', level: 'info', value: 'running' } }, bindings },
+    widget: { type: 'status', props: { data: { label: 'Pump A', tone: 'info', value: 'running' } }, bindings },
   };
 }
 
@@ -42,7 +42,7 @@ describe('PropertyPanel', () => {
     render(<PropertyPanel node={statusNode()} adapters={[]} onChange={vi.fn()} />);
     expect(screen.getByLabelText('Widget type')).toHaveValue('status');
     expect(screen.getByLabelText('Static props (JSON)')).toHaveValue(
-      JSON.stringify({ data: { label: 'Pump A', level: 'info', value: 'running' } }, null, 2)
+      JSON.stringify({ data: { label: 'Pump A', tone: 'info', value: 'running' } }, null, 2)
     );
   });
 
@@ -112,12 +112,12 @@ describe('PropertyPanel', () => {
     render(<PropertyPanel node={statusNode()} adapters={[]} onChange={onChange} />);
 
     const textarea = screen.getByLabelText('Static props (JSON)');
-    fireEvent.change(textarea, { target: { value: '{"data":{"label":"Pump A","level":"info","value":"stopped"}}' } });
+    fireEvent.change(textarea, { target: { value: '{"data":{"label":"Pump A","tone":"info","value":"stopped"}}' } });
     fireEvent.blur(textarea);
 
     expect(onChange).toHaveBeenCalledWith({
       type: 'status',
-      props: { data: { label: 'Pump A', level: 'info', value: 'stopped' } },
+      props: { data: { label: 'Pump A', tone: 'info', value: 'stopped' } },
     });
   });
 
@@ -404,7 +404,7 @@ describe('PropertyPanel bindings', () => {
 
     expect(onChange).toHaveBeenCalledWith({
       type: 'status',
-      props: { data: { label: 'Pump A', level: 'info', value: 'running' } },
+      props: { data: { label: 'Pump A', tone: 'info', value: 'running' } },
       bindings: { 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } },
     });
   });
@@ -421,7 +421,7 @@ describe('PropertyPanel bindings', () => {
 
     expect(onChange).toHaveBeenCalledWith({
       type: 'status',
-      props: { data: { label: 'Pump A', level: 'info', value: 'running' } },
+      props: { data: { label: 'Pump A', tone: 'info', value: 'running' } },
       bindings: { 'data.value': { adapter: 'fixture', ref: 'pump-a.state' } },
     });
   });
@@ -508,7 +508,7 @@ describe('PropertyPanel bindings', () => {
 
     expect(onChange).toHaveBeenCalledWith({
       type: 'status',
-      props: { data: { label: 'Pump A', level: 'info', value: 'running' } },
+      props: { data: { label: 'Pump A', tone: 'info', value: 'running' } },
       bindings: {},
     });
   });
@@ -762,7 +762,7 @@ describe('PropertyPanel bindings', () => {
 
   describe('value map', () => {
     const fillBinding = () => {
-      fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.level' } });
+      fireEvent.change(screen.getByLabelText('Prop path'), { target: { value: 'data.tone' } });
       fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/a' } });
       fireEvent.change(screen.getByLabelText('Value path'), { target: { value: 'status' } });
     };
@@ -773,33 +773,33 @@ describe('PropertyPanel bindings', () => {
       fillBinding();
       fireEvent.click(screen.getByText('Add mapping'));
       fireEvent.change(screen.getByLabelText('Source value 1'), { target: { value: 'running' } });
-      fireEvent.change(screen.getByLabelText('Shown as 1'), { target: { value: 'success' } });
+      fireEvent.change(screen.getByLabelText('Shown as 1'), { target: { value: 'ok' } });
       fireEvent.click(screen.getByText('Add mapping'));
       fireEvent.change(screen.getByLabelText('Source value 2'), { target: { value: 'fault' } });
-      fireEvent.change(screen.getByLabelText('Shown as 2'), { target: { value: 'error' } });
-      fireEvent.change(screen.getByLabelText('Anything else'), { target: { value: 'neutral' } });
+      fireEvent.change(screen.getByLabelText('Shown as 2'), { target: { value: 'alarm' } });
+      fireEvent.change(screen.getByLabelText('Anything else'), { target: { value: 'idle' } });
       fireEvent.click(screen.getByText('Save binding'));
 
-      expect(onChange.mock.calls[0][0].bindings['data.level']).toEqual({
+      expect(onChange.mock.calls[0][0].bindings['data.tone']).toEqual({
         adapter: 'connector-1',
         ref: { path: '/pumps/a', valuePath: 'status' },
-        map: { values: { running: 'success', fault: 'error' }, otherwise: 'neutral' },
+        map: { values: { running: 'ok', fault: 'alarm' }, otherwise: 'idle' },
       });
     });
 
     it('saves no map when no mapping is left and anything else is empty', () => {
       const onChange = vi.fn();
       const node = statusNode({
-        'data.level': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' }, map: { values: { running: 'success' } } },
+        'data.tone': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' }, map: { values: { running: 'ok' } } },
       });
       render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
       expect(screen.getByText(/mapped/)).toBeInTheDocument();
       fireEvent.click(screen.getByText('Edit'));
       expect(screen.getByLabelText('Source value 1')).toHaveValue('running');
-      expect(screen.getByLabelText('Shown as 1')).toHaveValue('success');
+      expect(screen.getByLabelText('Shown as 1')).toHaveValue('ok');
       fireEvent.click(screen.getByRole('button', { name: 'Remove mapping 1' }));
       fireEvent.click(screen.getByText('Save binding'));
-      expect(onChange.mock.calls[0][0].bindings['data.level']).toEqual({ adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } });
+      expect(onChange.mock.calls[0][0].bindings['data.tone']).toEqual({ adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } });
     });
 
     it('keeps a mapped value that is not text as it was, unless its row is edited', () => {
@@ -821,18 +821,18 @@ describe('PropertyPanel bindings', () => {
       fillBinding();
       fireEvent.click(screen.getByText('Add range'));
       fireEvent.change(screen.getByLabelText('Range 1 from'), { target: { value: '80' } });
-      fireEvent.change(screen.getByLabelText('Range 1 shown as'), { target: { value: 'error' } });
+      fireEvent.change(screen.getByLabelText('Range 1 shown as'), { target: { value: 'alarm' } });
       fireEvent.click(screen.getByText('Add range'));
       fireEvent.change(screen.getByLabelText('Range 2 from'), { target: { value: '70' } });
       fireEvent.change(screen.getByLabelText('Range 2 below'), { target: { value: '80' } });
-      fireEvent.change(screen.getByLabelText('Range 2 shown as'), { target: { value: 'warning' } });
+      fireEvent.change(screen.getByLabelText('Range 2 shown as'), { target: { value: 'warn' } });
       fireEvent.click(screen.getByText('Add range')); // left empty — not saved
-      fireEvent.change(screen.getByLabelText('Anything else'), { target: { value: 'success' } });
+      fireEvent.change(screen.getByLabelText('Anything else'), { target: { value: 'ok' } });
       fireEvent.click(screen.getByText('Save binding'));
 
-      expect(onChange.mock.calls[0][0].bindings['data.level'].map).toEqual({
-        ranges: [{ min: 80, value: 'error' }, { min: 70, max: 80, value: 'warning' }],
-        otherwise: 'success',
+      expect(onChange.mock.calls[0][0].bindings['data.tone'].map).toEqual({
+        ranges: [{ min: 80, value: 'alarm' }, { min: 70, max: 80, value: 'warn' }],
+        otherwise: 'ok',
       });
     });
 
@@ -854,7 +854,7 @@ describe('PropertyPanel bindings', () => {
       render(<PropertyPanel node={statusNode()} adapters={[new FakeHttpAdapter()]} onChange={vi.fn()} />);
       fillBinding();
       fireEvent.click(screen.getByText('Add range'));
-      fireEvent.change(screen.getByLabelText('Range 1 shown as'), { target: { value: 'error' } });
+      fireEvent.change(screen.getByLabelText('Range 1 shown as'), { target: { value: 'alarm' } });
       expect(screen.getByRole('alert')).toHaveTextContent('Range 1:');
       expect(screen.getByText('Save binding')).toBeDisabled();
     });
@@ -878,9 +878,9 @@ describe('PropertyPanel bindings', () => {
       fillBinding();
       fireEvent.click(screen.getByText('Add mapping'));
       fireEvent.change(screen.getByLabelText('Source value 1'), { target: { value: 'running' } });
-      fireEvent.change(screen.getByLabelText('Shown as 1'), { target: { value: 'success' } });
+      fireEvent.change(screen.getByLabelText('Shown as 1'), { target: { value: 'ok' } });
       fireEvent.click(screen.getByText('Preview'));
-      expect(await screen.findByText('Value: running → success')).toBeInTheDocument();
+      expect(await screen.findByText('Value: running → ok')).toBeInTheDocument();
     });
   });
 });

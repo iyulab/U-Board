@@ -180,7 +180,7 @@ const items: GridItem[] = [
       bindings: {
         'data.value': bind('/fids/now', '/punctuality'),
         'data.sparkline': bind('/fids/now', '/punctualityByHour'),
-        'data.variant': bind('/fids/now', '/punctuality', { ranges: [{ max: 85, value: 'warning' }, { min: 85, value: 'success' }] }),
+        'data.tone': bind('/fids/now', '/punctuality', { ranges: [{ max: 85, value: 'warn' }, { min: 85, value: 'ok' }] }),
       },
     },
     { height: 130 }

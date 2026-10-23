@@ -47,7 +47,7 @@ const bindDistrict = (name: string, field: string, map?: Binding['map']): Bindin
 /** PM10 (㎍/㎥) in the bands of Korea's air quality index — 좋음 0–30, 보통 31–80, 나쁨 81–150, 매우나쁨
  *  151 and over — in the colours its public sites give them (blue, green, yellow, red). */
 const PM10_LEVEL = {
-  ranges: [{ max: 31, value: 'info' }, { min: 31, max: 81, value: 'success' }, { min: 81, max: 151, value: 'warning' }, { min: 151, value: 'error' }],
+  ranges: [{ max: 31, value: 'info' }, { min: 31, max: 81, value: 'ok' }, { min: 81, max: 151, value: 'warn' }, { min: 151, value: 'alarm' }],
 };
 
 /** Each district by the station name the source gives it, the shape drawn for it, and where its reading sits. */
@@ -69,10 +69,10 @@ function reading({ name, at }: (typeof DISTRICTS)[number]): Node {
     anchored: true,
     widget: {
       type: 'status',
-      props: { data: { label: name, value: '', level: 'neutral' } },
+      props: { data: { label: name, value: '', tone: 'idle' } },
       bindings: {
         'data.value': bindDistrict(name, 'PM'),
-        'data.level': bindDistrict(name, 'PM', PM10_LEVEL),
+        'data.tone': bindDistrict(name, 'PM', PM10_LEVEL),
       },
     },
   };
@@ -121,10 +121,10 @@ const PANEL: Node[] = [
     anchored: false,
     widget: {
       type: 'status',
-      props: { data: { label: '대기지수(중구)', value: '', level: 'neutral' } },
+      props: { data: { label: '대기지수(중구)', value: '', tone: 'idle' } },
       bindings: {
         'data.value': bindDistrict('중구', 'CAI_GRD'),
-        'data.level': bindDistrict('중구', 'CAI_GRD', { values: { 좋음: 'info', 보통: 'success', 나쁨: 'warning', 매우나쁨: 'error' }, otherwise: 'neutral' }),
+        'data.tone': bindDistrict('중구', 'CAI_GRD', { values: { 좋음: 'info', 보통: 'ok', 나쁨: 'warn', 매우나쁨: 'alarm' }, otherwise: 'idle' }),
       },
     },
   },

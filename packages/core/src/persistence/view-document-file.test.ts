@@ -10,7 +10,7 @@ describe('serializeViewDocument / parseViewDocument', () => {
   it('round-trips a document unchanged', () => {
     const original = doc({
       background: { image: { src: 'plan.png', width: 800, height: 600 } },
-      nodes: [{ id: 'n1', x: 10, y: 20, anchored: true, widget: { type: 'status', props: { data: { label: 'A', level: 'success', value: 'x' } } } }],
+      nodes: [{ id: 'n1', x: 10, y: 20, anchored: true, widget: { type: 'status', props: { data: { label: 'A', tone: 'ok', value: 'x' } } } }],
       connectors: [],
     });
 

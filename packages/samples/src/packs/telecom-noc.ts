@@ -132,7 +132,7 @@ const kpi = (id: string, label: string, unit: string, danger?: Binding['map']): 
     bindings: {
       'data.value': bindItem('/noc/kpis', id, 'value'),
       'data.sparkline': bindItem('/noc/kpis', id, 'last6h'),
-      ...(danger && { 'data.variant': bindItem('/noc/kpis', id, 'value', danger) }),
+      ...(danger && { 'data.tone': bindItem('/noc/kpis', id, 'value', danger) }),
     },
   },
 });
@@ -148,10 +148,10 @@ const card = (id: string, span: number, spanMedium: number, widget: Widget, extr
 const items: GridItem[] = [
   kpi('traffic', '전체 트래픽', 'Tbps'),
   kpi('sessions', '5G 동시 접속', '만'),
-  kpi('callSuccess', '호 성공률', '%', { ranges: [{ max: 99.5, value: 'danger' }, { min: 99.5, value: 'success' }] }),
-  kpi('latency', '평균 지연', 'ms', { ranges: [{ max: 15, value: 'success' }, { min: 15, value: 'danger' }] }),
-  kpi('alarms', '활성 경보', '건', { ranges: [{ max: 30, value: 'neutral' }, { min: 30, value: 'warning' }] }),
-  kpi('impacted', '장애 영향 가입자', '명', { ranges: [{ max: 1000, value: 'neutral' }, { min: 1000, value: 'danger' }] }),
+  kpi('callSuccess', '호 성공률', '%', { ranges: [{ max: 99.5, value: 'alarm' }, { min: 99.5, value: 'ok' }] }),
+  kpi('latency', '평균 지연', 'ms', { ranges: [{ max: 15, value: 'ok' }, { min: 15, value: 'alarm' }] }),
+  kpi('alarms', '활성 경보', '건', { ranges: [{ max: 30, value: 'idle' }, { min: 30, value: 'warn' }] }),
+  kpi('impacted', '장애 영향 가입자', '명', { ranges: [{ max: 1000, value: 'idle' }, { min: 1000, value: 'alarm' }] }),
   card(
     'matrix',
     7,

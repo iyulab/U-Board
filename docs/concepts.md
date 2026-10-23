@@ -121,7 +121,7 @@ the source's latest value is older than the binding expects of it), or `disconne
 been reached) — and, when the adapter can tell, the reason it is not live (the source unreachable,
 credentials refused, the bound value not found at the source, an answer it cannot read, rate
 limiting, or the source behind on its own updates). A binding can also translate the value it reads into the one its widget takes —
-the source's own words (`Fault`) or numbers (a temperature) into a status level — by exact values
+the source's own words (`Fault`) or numbers (a temperature) into a status tone — by exact values
 and numeric ranges the author sets; U-Board attaches no meaning to either side of that table.
 This is deliberately narrower than a full alarm
 model (priority, acknowledgement, shelving) — that belongs to the system a binding points at, not

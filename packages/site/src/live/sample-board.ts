@@ -50,10 +50,10 @@ export function sampleBoard(text: SampleBoardText): CanvasView {
         anchored: true,
         widget: {
           type: 'status',
-          props: { data: { label: text.pump, level: 'neutral', value: '' } },
+          props: { data: { label: text.pump, tone: 'idle', value: '' } },
           bindings: {
             'data.value': { ...bind('pump-a.state'), map: { values: { running: text.running } } },
-            'data.level': { ...bind('pump-a.state'), map: { values: { running: 'success' }, otherwise: 'error' } },
+            'data.tone': { ...bind('pump-a.state'), map: { values: { running: 'ok' }, otherwise: 'alarm' } },
           },
         },
       },
@@ -79,7 +79,7 @@ export function sampleBoard(text: SampleBoardText): CanvasView {
         anchored: true,
         widget: {
           type: 'status',
-          props: { data: { label: text.temp, level: 'neutral', value: '' } },
+          props: { data: { label: text.temp, tone: 'idle', value: '' } },
           bindings: { 'data.value': bind('tank.temperature') },
         },
       },
@@ -92,7 +92,7 @@ export function sampleBoard(text: SampleBoardText): CanvasView {
         anchored: true,
         widget: {
           type: 'status',
-          props: { data: { label: text.pressure, level: 'neutral', value: '' } },
+          props: { data: { label: text.pressure, tone: 'idle', value: '' } },
           bindings: { 'data.value': bind('line.pressure') },
         },
       },
@@ -105,7 +105,7 @@ export function sampleBoard(text: SampleBoardText): CanvasView {
         anchored: true,
         widget: {
           type: 'status',
-          props: { data: { label: text.conveyor, level: 'neutral', value: '—' } },
+          props: { data: { label: text.conveyor, tone: 'idle', value: '—' } },
           bindings: { 'data.value': bind('conveyor.state') },
         },
       },

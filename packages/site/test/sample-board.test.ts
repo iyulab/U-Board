@@ -24,7 +24,7 @@ describe('the live board at the top of the site', () => {
       conveyor: 'disconnected',
     });
     const pump = resolved.nodes.find(n => n.id === 'pump-a')!;
-    expect(pump.widget.props).toMatchObject({ data: { value: 'Running', level: 'success' } });
+    expect(pump.widget.props).toMatchObject({ data: { value: 'Running', tone: 'ok' } });
   });
 
   it('moves its live values with the clock, and ages its stale one from when the page opened', async () => {

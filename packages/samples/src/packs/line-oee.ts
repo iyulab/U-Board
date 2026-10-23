@@ -36,7 +36,7 @@ const bindMachine = (id: string, map: Binding['map']): Binding => ({
 });
 
 const STATE_TEXT = { values: { running: '가동', idle: '대기', down: '정지', maintenance: '점검' }, otherwise: '알 수 없음' };
-const STATE_LEVEL = { values: { running: 'success', idle: 'info', down: 'error', maintenance: 'warning' }, otherwise: 'neutral' };
+const STATE_LEVEL = { values: { running: 'ok', idle: 'info', down: 'alarm', maintenance: 'warn' }, otherwise: 'idle' };
 
 const MACHINES = [
   { id: 'PR-11', name: '프레스' },
@@ -73,7 +73,7 @@ const items: GridItem[] = [
         data: [],
         mapping: { x: 'hour', y: ['output', 'target'] },
         options: {
-          xFormat: { type: 'time' },
+          xFormat: 'time',
           series: [{ label: '실적' }, { label: '계획', type: 'line', lineStyle: 'dashed', symbol: 'none' }],
         },
       },
@@ -85,11 +85,11 @@ const items: GridItem[] = [
     span: 4,
     widget: {
       type: 'status',
-      props: { title: '설비 상태', data: MACHINES.map(({ name }) => ({ label: name, value: '', level: 'neutral' })) },
+      props: { title: '설비 상태', data: MACHINES.map(({ name }) => ({ label: name, value: '', tone: 'idle' })) },
       bindings: Object.fromEntries(
         MACHINES.flatMap(({ id }, i) => [
           [`data.${i}.value`, bindMachine(id, STATE_TEXT)],
-          [`data.${i}.level`, bindMachine(id, STATE_LEVEL)],
+          [`data.${i}.tone`, bindMachine(id, STATE_LEVEL)],
         ])
       ),
     },
