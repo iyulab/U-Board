@@ -76,6 +76,34 @@ describe('fromV1', () => {
     expect(drawn.kind === 'canvas' && Object.keys(drawn.nodes[0]!.widget.bindings!)).toEqual(['data.0.value', 'data.0.tone']);
   });
 
+  it('reads a table’s whole list, each column a field of its items — a figure set right, an alignment it cannot keep noted', () => {
+    const { board, notes, unsupported } = fromV1(canvas([
+      node('t', {
+        type: 'table',
+        props: { title: 'Orders', data: [], mapping: { columns: [
+          { field: 'order', label: 'Order' },
+          { field: 'planned', label: 'Planned', format: 'number', align: 'right' },
+          { field: 'rank', label: 'Rank', align: 'right' },
+        ] } },
+        bindings: { data: { adapter: 'mes', ref: { path: '/line/orders', valuePath: '/value', observedAtPath: '/updatedAt', maxAgeSeconds: 300 } } },
+      }),
+    ]));
+    expect(unsupported).toEqual([]);
+    expect(notes).toEqual(['t: its column rank is set left']);
+    expect(board.data!.orders).toEqual({
+      from: 'mes', path: '/line/orders', list: '/value', answerTime: '/updatedAt', fresh: 300,
+      fields: { order: { label: 'Order' }, planned: { label: 'Planned', format: 'number' }, rank: { label: 'Rank' } },
+    });
+    expect(board.parts.t).toEqual({ as: 'table', of: 'orders', show: ['order', 'planned', 'rank'], title: 'Orders' });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'canvas' && (drawn.nodes[0]!.widget.props as { mapping: unknown }).mapping).toEqual({ columns: [
+      { field: 'order', label: 'Order' },
+      { field: 'planned', label: 'Planned', format: 'number', align: 'right' },
+      { field: 'rank', label: 'Rank' },
+    ] });
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {

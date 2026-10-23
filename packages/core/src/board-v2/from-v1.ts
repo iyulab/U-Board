@@ -8,6 +8,7 @@ import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { THEME_PALETTE, isThemeColor } from '../theme-colors.js';
 import type { Binding, CanvasView, CellCanvas, Connector, ElementDefinition, GridView, GridWidgetItem, Node, PropsSchema, Shape as V1Shape, ValueMap, ViewDocument, Widget } from '../view-document.js';
 import { TONES, type BoardV2, type CanvasLayout, type ElementDefinition as V2Element, type Field, type GridItem as V2GridItem, type Link, type Part, type Place, type Query, type Shape, type Status, type Tone, type ValueMapping } from './types.js';
+import { isFigure } from './picture.js';
 
 /** A converted board, what changed on the way, and what has no place in the second version yet. */
 export interface V1Conversion {
@@ -238,6 +239,7 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
     }
     default:
       if (widget.type.startsWith('chart.')) return chartOf(widget, reads, unsupported);
+      if (widget.type === 'table') return tableOf(node.id, widget, reads, notes, unsupported);
       unsupported.push(`a ${widget.type} node`);
       return undefined;
   }
@@ -253,6 +255,32 @@ function chartOf(widget: Widget, reads: Reads, unsupported: string[]): Part | un
   const mapping = isObject(props.mapping) ? props.mapping : {};
   const options = isObject(props.options) ? props.options : {};
   return { as: widget.type, of: read, ...(typeof props.title === 'string' ? { title: props.title } : {}), ...mapping, ...options };
+}
+
+/** A table: its whole list read, each column a field of its items with the column's label and format as the field's. A
+ *  column's alignment is the field's to say — a figure is set right — so one written otherwise is noted. */
+function tableOf(id: string, widget: Widget, reads: Reads, notes: string[], unsupported: string[]): Part | undefined {
+  const bindings = widget.bindings ?? {};
+  const props = (widget.props ?? {}) as Record<string, unknown>;
+  if (Object.keys(bindings).some(k => k !== 'data')) { unsupported.push('a table bound beyond its data'); return undefined; }
+  const mapping = isObject(props.mapping) ? props.mapping : {};
+  if (Object.keys(mapping).some(k => k !== 'columns')) { unsupported.push('a table mapped beyond its columns'); return undefined; }
+  const columns = Array.isArray(mapping.columns) ? (mapping.columns as Record<string, unknown>[]) : [];
+  if (columns.length === 0) { unsupported.push('a table without columns'); return undefined; }
+  const read = reads.readList(bindings.data!);
+  if (!read) return undefined;
+  const show: string[] = [];
+  for (const column of columns) {
+    const other = Object.keys(column).filter(k => !['field', 'label', 'format', 'align'].includes(k));
+    if (typeof column.field !== 'string' || other.length > 0) { unsupported.push(`a table column with ${other.join(', ') || 'no field'}`); return undefined; }
+    const field = reads.itemField(read, column.field, { label: str(column.label), format: str(column.format) });
+    if (field === undefined) return undefined;
+    show.push(field);
+    const right = isFigure(reads.data[read]!.fields![field]!);
+    if ((column.align === 'right') !== right || column.align === 'center') notes.push(`${id}: its column ${column.field} is set ${right ? 'right, a figure' : 'left'}`);
+  }
+  const options = isObject(props.options) ? props.options : {};
+  return { as: 'table', of: read, show, ...(typeof props.title === 'string' ? { title: props.title } : {}), ...options };
 }
 
 /** A widget's tone binding as the state of the field it shows — when it reads where its value binding does. */
@@ -572,6 +600,11 @@ class Reads {
     }
     const field = this.field(this.data[name]!, binding.at ?? '', binding.map, meaning, state);
     return field === undefined ? undefined : { of: name, field };
+  }
+
+  /** A field of the items of a list read, at its name, with what it means. */
+  itemField(query: string, name: string, meaning: Meaning): string | undefined {
+    return this.field(this.data[query]!, toPointer(name), undefined, meaning);
   }
 
   /** The data a binding reads a whole list of. */

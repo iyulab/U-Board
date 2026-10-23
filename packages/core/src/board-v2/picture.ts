@@ -13,6 +13,11 @@ import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
 import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
 
+/** Whether a field's values are figures — a number format, decimal places or a unit — which a table sets right. */
+export function isFigure(field: Field): boolean {
+  return field.digits !== undefined || field.unit !== undefined || /^(number|compact|currency|percent|bytes)\b/.test(field.format ?? '');
+}
+
 /** Something in a board the picture model does not draw yet. */
 export class PictureError extends Error {
   constructor(readonly at: string, message: string) {
@@ -350,7 +355,8 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
           const format = formatOf(f);
           return {
             field: shown(name), label: f.label ?? name,
-            ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(f.state !== undefined ? { toneField: `${name}$tone` } : {}),
+            ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(isFigure(f) ? { align: 'right' } : {}),
+            ...(f.state !== undefined ? { toneField: `${name}$tone` } : {}),
           };
         });
         return {
