@@ -52,6 +52,8 @@ takes the HTTP connector's reference, `{ path, item?, valuePath?, observedAtPath
 - `valuePath`: an RFC 6901 JSON Pointer into the response.
 - `item: { list, where }`: one element of the list at `list`, named by its fields rather than its
   position — sources reorder their lists. `valuePath` is then read inside that element.
+- `items: { list, where }`: every element of the list whose fields match, in the source's order — the rows a table
+  shows, kept to the part of the list it is about. It goes without `item`, `valuePath` and `observedAtPath`.
 - `observedAtPath`: a pointer, read where `valuePath` is, to the time the source says it observed the
   value; `timeZone` (IANA) is the zone of a time written without an offset. The reading's `observedAt`
   is then the source's time rather than the time of the request.

@@ -232,6 +232,10 @@ export interface UBoardLabels {
   /** A binding that reads a list item named by its fields: "{list} · {field} = {value}" follows. */
   listItem: string;
   clearListItem: string;
+  /** A binding that reads every item of a list whose fields match (`items`): "{list} · {field} = {value}" follows,
+   *  and the button that reads the whole list instead. */
+  listItems: string;
+  clearListItems: string;
   /** The select naming the field where the source says when it observed the value (`observedAtPath`), its
    *  first option (no field: the value counts as observed when it is read), and the hint shown before the
    *  response has been explored for such fields. */
@@ -576,6 +580,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   pickItemByPosition: 'its position in the list',
   listItem: 'List item',
   clearListItem: 'Pick by position',
+  listItems: 'Every list item where',
+  clearListItems: 'Read the whole list',
   observedAt: 'Observed time',
   observedAtWhenRead: 'When it is read',
   observedAtHint: 'Explore the response to pick the field where the source says when it observed the value.',

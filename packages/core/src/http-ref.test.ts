@@ -27,6 +27,15 @@ describe('isHttpRef', () => {
     expect(isHttpRef({ path: '/r', maxAgeSeconds: 90 })).toBe(true);
   });
 
+  it('takes every item a list keeps, alone — not with an item, a value path or an observed-time path', () => {
+    const items = { list: '/items', where: { item: 'PM10' } };
+    expect(isHttpRef({ path: '/air', items, maxAgeSeconds: 5400, timeZone: 'Asia/Seoul' })).toBe(true);
+    expect(isHttpRef({ path: '/air', items: { list: '/items', where: {} } })).toBe(false);
+    expect(isHttpRef({ path: '/air', items, item: { list: '/items', where: { station: 'north' } } })).toBe(false);
+    expect(isHttpRef({ path: '/air', items, valuePath: '/value' })).toBe(false);
+    expect(isHttpRef({ path: '/air', items, observedAtPath: '/time' })).toBe(false);
+  });
+
   it('refuses an item with no fields to match', () => {
     expect(isHttpRef({ path: '/r', item: { list: '/rows', where: {} } })).toBe(false);
   });
@@ -179,6 +188,38 @@ describe('readHttpRef', () => {
   it('says which item is missing', () => {
     const reading = readHttpRef(body, { path: '/r', item: { list: '/rows', where: { station: 'east' } }, valuePath: '/level' }, READ_AT);
     expect(reading).toEqual({ ok: false, reason: 'address', message: 'no item of "/rows" where station=east' });
+  });
+
+  describe('every item a list keeps (`items`)', () => {
+    const air = {
+      items: [
+        { station: 'north', item: 'PM10', value: '36' },
+        { station: 'north', item: 'O3', value: '0.031' },
+        { station: 'south', item: 'PM10', value: 41 },
+      ],
+    };
+
+    it('reads the elements whose fields all match, in the source’s order, observed at the read', () => {
+      expect(readHttpRef(air, { path: '/air', items: { list: '/items', where: { item: 'PM10' } } }, READ_AT)).toEqual({
+        ok: true,
+        value: [air.items[0], air.items[2]],
+        observedAt: READ_AT,
+        lagging: false,
+      });
+    });
+
+    it('reads an empty list when no element matches — the rows are there, none of them this kind', () => {
+      expect(readHttpRef(air, { path: '/air', items: { list: '/items', where: { item: 'CO' } } }, READ_AT)).toMatchObject({ ok: true, value: [] });
+    });
+
+    it('says the address is wrong when there is no list there', () => {
+      expect(readHttpRef(air, { path: '/air', items: { list: '/rows', where: { item: 'PM10' } } }, READ_AT)).toEqual({
+        ok: false,
+        reason: 'address',
+        message: 'no list at "/rows" in the response',
+      });
+      expect(readHttpRef('OK', { path: '/air', items: { list: '/items', where: { item: 'PM10' } } }, READ_AT)).toMatchObject({ ok: false, reason: 'format' });
+    });
   });
 });
 

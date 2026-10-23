@@ -537,6 +537,24 @@ describe('PropertyPanel bindings', () => {
     expect(onChange.mock.calls[0][0].bindings).toEqual({ data: { adapter: 'connector-1', ref: { path: '/pumps/all', valuePath: '/value' }, itemFields } });
   });
 
+  it('keeps the items a list is kept to when its binding is edited, and reads the whole list once asked', () => {
+    const onChange = vi.fn();
+    const items = { list: '/items', where: { item: 'PM10' } };
+    const node = statusNode({ data: { adapter: 'connector-1', ref: { path: '/air', items } } });
+    render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+
+    fireEvent.click(screen.getByText('Edit'));
+    expect(screen.getByText(/Every list item where: \/items · item = PM10/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/air?hour=1' } });
+    fireEvent.click(screen.getByText('Save binding'));
+    expect(onChange.mock.calls[0][0].bindings).toEqual({ data: { adapter: 'connector-1', ref: { path: '/air?hour=1', items } } });
+
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.click(screen.getByText('Read the whole list'));
+    fireEvent.click(screen.getByText('Save binding'));
+    expect(onChange.mock.calls[1][0].bindings).toEqual({ data: { adapter: 'connector-1', ref: { path: '/air', valuePath: '/items' } } });
+  });
+
   it('removes the old binding key when its prop path is edited, instead of leaving an orphaned duplicate', () => {
     const onChange = vi.fn();
     const node = statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });

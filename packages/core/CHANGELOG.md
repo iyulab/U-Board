@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- An HTTP connector reference can read every item of a list whose fields match: `items: { list, where }` — the rows a
+  list or a table shows, kept to the part of a list they are about (one pollutant out of a list of all of them), in the
+  source's order and empty when none matches. It goes without `item`, `valuePath` and `observedAtPath`; `isHttpRef`
+  refuses the mix, and the binding form keeps it when the binding is edited, with a button that reads the whole list
+  instead.
+
 - A binding whose value is a list can give each item fields of its own: `itemFields: { "<name>": { from, map? } }` —
   each the value of the item's `from` field, translated by `map` when there is one. A list's or a table's rows keep the
   source's words and gain the tone they are coloured by (`mapping.tone`); a field the widget reads by another name is

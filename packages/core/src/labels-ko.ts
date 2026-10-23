@@ -162,6 +162,8 @@ export const KO_LABELS: UBoardLabels = {
   pickItemByPosition: '목록 안 순서(지금처럼)',
   listItem: '목록 항목',
   clearListItem: '순서로 고르기',
+  listItems: '이 조건의 목록 항목 전부',
+  clearListItems: '목록 전체 읽기',
   observedAt: '관측 시각',
   observedAtWhenRead: '읽은 시각',
   observedAtHint: '응답을 탐색하면 원천이 관측 시각을 적은 필드를 고를 수 있습니다.',

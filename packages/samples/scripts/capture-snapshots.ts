@@ -40,6 +40,8 @@ function requests(pack: SamplePack): Map<string, Map<string, HttpRef[]>> {
 /** The pointers into `body` that `ref` reads — the value and the time the source observed it, and for a list
  *  item, the item's place in this answer with the fields it is matched by, so the recording still finds it. */
 function pointersOf(body: unknown, ref: HttpRef): string[] {
+  // Every item a list keeps is read whole, and which ones match can change between reads: keep the list.
+  if (ref.items) return [ref.items.list];
   const inScope = [ref.valuePath ?? '', ...(ref.observedAtPath !== undefined ? [ref.observedAtPath] : [])];
   if (!ref.item) return inScope;
   const found = findHttpRefItem(body, ref.item);

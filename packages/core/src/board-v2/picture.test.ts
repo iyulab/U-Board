@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { checkSpec } from '@iyulab/u-widgets/tools';
 import { applyValueMap, withItemFields, writeText } from '../adapter.js';
-import { readHttpRef, type HttpRef } from '../http-ref.js';
+import { isHttpRef, readHttpRef, type HttpRef } from '../http-ref.js';
 import { validateViewDocument } from '../validate-view-document.js';
 import type { Node, ViewDocument, Widget } from '../view-document.js';
 import { PictureError, toViewDocument } from './picture.js';
@@ -283,9 +283,18 @@ describe('the picture model of a v2 board', () => {
     expect(drawn(nodeOf(doc, 'm/P1').widget)).toEqual({ name: 'P1', tone: 'ok', status: 'Running', note: '1,450 rpm', symbol: 'pump-a' });
   });
 
-  it('says what it does not draw yet, and where', () => {
+  it('reads the whole of a list kept by "where" as the items it keeps', () => {
     const b = board({ t: { as: 'table', of: 'air' } }, { kind: 'canvas', size: [100, 100], place: { t: [0, 0] } });
+    b.data!.air = { from: 'gov', path: '/air', list: '/items', key: 'station', where: { item: 'PM10' }, fresh: 5400 };
+    expect(validateBoardV2(b)).toEqual([]);
+    const refs = Object.values(nodeOf(toViewDocument(b), 't').widget.bindings!).map(binding => binding.ref);
+    expect(refs).toEqual([{ path: '/air', items: { list: '/items', where: { item: 'PM10' } }, maxAgeSeconds: 5400 }]);
+    expect(refs.every(isHttpRef)).toBe(true);
+  });
+
+  it('says what one value of every item kept by "where" would be, and where', () => {
+    const b = board({ s: { as: 'stat', of: 'air', show: 'pm10' } }, { kind: 'canvas', size: [100, 100], place: { s: [0, 0] } });
     b.data!.air = { from: 'gov', path: '/air', list: '/items', key: 'station', where: { item: 'PM10' } };
-    expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/t', 'reading the whole of "air" kept by "where" is not drawn yet — read an item of it'));
+    expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/s', '"pm10" of every item of "air" is not one value — read the list, or a field of one item'));
   });
 });

@@ -47,6 +47,8 @@ interface BindingDraft extends MapDraft {
   valuePath: string;
   /** The list item the value path reads in, named by its fields — an HTTP connector reference's `item`. */
   item?: ListItem;
+  /** Every item of a list whose fields match — an HTTP connector reference's `items`, kept as loaded. */
+  items?: ListItem;
   /** Where the source says when it observed the value, read where `valuePath` is, and the zone of a time
    *  written without an offset — an HTTP connector reference's `observedAtPath` and `timeZone`, kept as loaded. */
   observedAtPath?: string;
@@ -166,6 +168,7 @@ function draftFromBinding(propPath: string, binding: Binding): BindingDraft {
     path: ref.path ?? '',
     valuePath: ref.valuePath ?? '',
     item: ref.item,
+    items: ref.items,
     observedAtPath: ref.observedAtPath,
     timeZone: ref.timeZone,
     maxAgeMinutes: ref.maxAgeSeconds === undefined ? '' : String(ref.maxAgeSeconds / 60),
@@ -279,6 +282,7 @@ export function BindingEditor({
       : {
           path: draft.path,
           ...(draft.item ? { item: draft.item } : {}),
+          ...(draft.items ? { items: draft.items } : {}),
           valuePath: draft.valuePath || undefined,
           // A time zone places the observed time, and the path's time places; with neither, it has nothing to place.
           ...(draft.observedAtPath !== undefined ? { observedAtPath: draft.observedAtPath } : {}),
@@ -516,7 +520,15 @@ export function BindingEditor({
                     </button>
                   </p>
                 )}
-                {!draft.item && keyStep && (
+                {draft.items && (
+                  <p className="ub-panel__hint">
+                    {labels.listItems}: {itemText(draft.items)}{' '}
+                    <button type="button" className="ub-action" onClick={() => setDraft(d => ({ ...d, items: undefined, valuePath: d.items?.list ?? '' }))}>
+                      {labels.clearListItems}
+                    </button>
+                  </p>
+                )}
+                {!draft.item && !draft.items && keyStep && (
                   <label className="ub-panel__field" style={FIELD_STYLE}>
                     {labels.pickItemBy}
                     <select
@@ -540,7 +552,7 @@ export function BindingEditor({
                 {exploreResult !== null && (
                   <JsonTreeExplorer
                     value={exploreResult}
-                    onSelectPath={path => setDraft(d => ({ ...d, item: undefined, valuePath: path, observedAtPath: d.item ? undefined : d.observedAtPath }))}
+                    onSelectPath={path => setDraft(d => ({ ...d, item: undefined, items: undefined, valuePath: path, observedAtPath: d.item ? undefined : d.observedAtPath }))}
                     wholeResponseLabel={labels.wholeResponse}
                   />
                 )}

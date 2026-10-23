@@ -63,9 +63,14 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         ref.valuePath = `${q.list}/${item}${valueAt ?? ''}`;
       }
     } else {
-      if (q.where !== undefined) throw new PictureError(at, `reading the whole of "${query}" kept by "where" is not drawn yet — read an item of it`);
-      const path = `${q.list ?? ''}${valueAt ?? ''}`;
-      if (path !== '') ref.valuePath = path;
+      if (q.where !== undefined) {
+        // The rows a list or a table shows: every item the data keeps, each whole.
+        if (valueAt !== undefined) throw new PictureError(at, `"${field}" of every item of "${query}" is not one value — read the list, or a field of one item`);
+        ref.items = { list: q.list!, where: q.where };
+      } else {
+        const path = `${q.list ?? ''}${valueAt ?? ''}`;
+        if (path !== '') ref.valuePath = path;
+      }
     }
     // The time the source observed a value is the item's — a whole list has one per row, not one of its own.
     if (q.time !== undefined && (item !== undefined || q.list === undefined)) ref.observedAtPath = `/${q.time}`;

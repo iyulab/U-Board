@@ -23,6 +23,11 @@ export interface HttpRef {
   path: string;
   /** The list item the binding reads in, named by its fields. Absent: the whole response. */
   item?: HttpRefItem;
+  /** Every element of a list whose fields equal every one in `where`, in the source's order — the rows a list or
+   *  a table shows, kept to the part of a list it is about (one pollutant of a list of all of them). The value is
+   *  that array, possibly empty; it takes neither `item` nor `valuePath`, and no `observedAtPath` — each row has a
+   *  time of its own. */
+  items?: HttpRefItem;
   /** A JSON Pointer to the value, inside `item` when there is one, else inside the whole response. */
   valuePath?: string;
   /** A JSON Pointer to the time the source says its value was observed, read where `valuePath` is. Absent:
@@ -65,7 +70,7 @@ export interface HttpRefRequestTime {
  */
 export function isHttpRef(ref: unknown): ref is HttpRef {
   if (!ref || typeof ref !== 'object' || Array.isArray(ref)) return false;
-  const { path, item, valuePath, observedAtPath, timeZone, maxAgeSeconds, requestTime } = ref as Record<string, unknown>;
+  const { path, item, items, valuePath, observedAtPath, timeZone, maxAgeSeconds, requestTime } = ref as Record<string, unknown>;
   return (
     typeof path === 'string' &&
     path.startsWith('/') &&
@@ -73,6 +78,7 @@ export function isHttpRef(ref: unknown): ref is HttpRef {
     requestTimeProblem(path) === undefined &&
     (requestTime === undefined || isRequestTime(requestTime)) &&
     (item === undefined || isHttpRefItem(item)) &&
+    (items === undefined || (isHttpRefItem(items) && item === undefined && valuePath === undefined && observedAtPath === undefined)) &&
     (valuePath === undefined || typeof valuePath === 'string') &&
     (observedAtPath === undefined || isPointer(observedAtPath)) &&
     (timeZone === undefined || (typeof timeZone === 'string' && isTimeZone(timeZone))) &&
@@ -215,17 +221,21 @@ export function valueAtPath(value: unknown, path: string): { found: true; value:
 export function findHttpRefItem(body: unknown, item: HttpRefItem): { found: true; value: unknown; index: number } | { found: false } {
   const list = valueAtPath(body, item.list);
   if (!list.found || !Array.isArray(list.value)) return { found: false };
-  const index = list.value.findIndex(
-    element =>
-      element !== null &&
-      typeof element === 'object' &&
-      Object.entries(item.where).every(([field, expected]) => {
-        if (!Object.hasOwn(element, field)) return false;
-        const actual = (element as Record<string, unknown>)[field];
-        return actual !== undefined && actual !== null && String(actual) === String(expected);
-      })
-  );
+  const index = list.value.findIndex(element => matches(element, item.where));
   return index < 0 ? { found: false } : { found: true, value: list.value[index], index };
+}
+
+/** Whether a list element's fields equal every one in `where`, as `findHttpRefItem` compares them. */
+function matches(element: unknown, where: HttpRefItem['where']): boolean {
+  return (
+    element !== null &&
+    typeof element === 'object' &&
+    Object.entries(where).every(([field, expected]) => {
+      if (!Object.hasOwn(element, field)) return false;
+      const actual = (element as Record<string, unknown>)[field];
+      return actual !== undefined && actual !== null && String(actual) === String(expected);
+    })
+  );
 }
 
 /** What reading a response with a reference gave: the value, when the source observed it (epoch ms), and
@@ -270,9 +280,15 @@ function readValueAndTime(
   ref: HttpRef,
   readAt: number
 ): { ok: true; value: unknown; observedAt: number } | { ok: false; reason: 'address' | 'format'; message: string } {
-  if ((ref.valuePath || ref.item || ref.observedAtPath) && typeof body === 'string') {
+  if ((ref.valuePath || ref.item || ref.items || ref.observedAtPath) && typeof body === 'string') {
     // Plain text has no fields: a path into it asks for a form the source does not answer in.
     return { ok: false, reason: 'format', message: 'the response is plain text, which a path cannot read into' };
+  }
+  if (ref.items) {
+    const { list, where } = ref.items;
+    const rows = valueAtPath(body, list);
+    if (!rows.found || !Array.isArray(rows.value)) return { ok: false, reason: 'address', message: `no list at "${list}" in the response` };
+    return { ok: true, value: rows.value.filter(element => matches(element, where)), observedAt: readAt };
   }
   let scope = body;
   if (ref.item) {

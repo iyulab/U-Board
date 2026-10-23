@@ -18,7 +18,8 @@ what it shows. Nothing here is specific to one product; a board reads any source
 - **A value anywhere in the answer**, by JSON Pointer (`/value/0/load`), or an **item of a list picked by
   its fields** (`{ "list": "/value", "where": { "id": "PR-01" } }`) so a reordered list still gives the
   same item. A whole array or object can be bound too — a table or a chart takes it as it is, as rows or
-  as one array per field.
+  as one array per field — or **the items of a list whose fields match** (`"items": { "list": "/value",
+  "where": { "kind": "PM10" } }`), the rows of one kind out of a list of all of them.
 - **When the value was observed**, from a field of the answer, and **how old it may normally be**. With
   both, a board shows each value's age and marks a source that has fallen behind.
 

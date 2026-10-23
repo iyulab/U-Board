@@ -391,6 +391,7 @@ states: {
 interface HttpRef {
   path: string;
   item?: { list: string; where: Record<string, string | number | boolean> };
+  items?: { list: string; where: Record<string, string | number | boolean> };
   valuePath?: string;
   observedAtPath?: string;
   timeZone?: string;
@@ -410,6 +411,10 @@ for an adapter that lists no references of its own. Implement this shape to have
 - `item` — one element of the list at the JSON Pointer `list`: the first whose fields equal every one
   in `where` (`"12"` and `12` match). Sources reorder their lists, so a position would name another
   element.
+- `items` — every element of the list at `list` whose fields equal every one in `where`, in the
+  source's order: the rows a list or a table shows, kept to the part of the list they are about (one
+  pollutant of a list of all of them). The value is that array, empty when none matches. It goes alone —
+  with no `item`, `valuePath` or `observedAtPath` (each row has a time of its own).
 - `valuePath` — an RFC 6901 JSON Pointer to the value, inside `item` when there is one, else inside
   the whole response. Absent or `''`: the whole of it.
 - `observedAtPath` — a JSON Pointer, read where `valuePath` is, to the time the source says it
