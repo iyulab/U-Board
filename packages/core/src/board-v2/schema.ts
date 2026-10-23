@@ -153,6 +153,8 @@ export function boardV2Schema(): Schema {
           of: { type: 'string' },
           show: { type: 'string' },
           label: { type: 'string' },
+          tone: { enum: [...TONES] },
+          route: { enum: ['straight', 'orthogonal', 'curved'] },
           width: { type: 'number', exclusiveMinimum: 0 },
           dash: { type: 'boolean' },
           arrow: { type: 'boolean' },

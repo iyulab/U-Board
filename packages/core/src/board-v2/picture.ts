@@ -620,7 +620,10 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     return {
       id, fromNodeId: link.from, toNodeId: link.to,
       ...(label !== undefined ? { label } : {}),
-      style: { stroke: 'idle', strokeWidth: width, ...(link.dash ? { dash: 'dashed' as const } : {}), arrow: link.arrow ? 'end' : 'none' },
+      style: {
+        stroke: link.tone ?? 'idle', strokeWidth: width, ...(link.dash ? { dash: 'dashed' as const } : {}), arrow: link.arrow ? 'end' : 'none',
+        ...(link.route !== undefined && link.route !== 'straight' ? { route: link.route } : {}),
+      },
       ...(Object.keys(bindings).length > 0 ? { bindings } : {}),
     };
   };

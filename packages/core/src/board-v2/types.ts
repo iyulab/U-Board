@@ -152,6 +152,11 @@ export interface Link {
   of?: string;
   show?: string;
   label?: string;
+  /** Its tone when it carries no status — `idle` when absent. */
+  tone?: Tone;
+  /** The way it runs: `straight` (when absent) from box to box, `orthogonal` with one turn between them, as pipes and
+   *  wiring are drawn, or `curved`, bowing to the left of the way it runs, as flows on a map are drawn. */
+  route?: 'straight' | 'orthogonal' | 'curved';
   width?: number;
   dash?: boolean;
   arrow?: boolean;

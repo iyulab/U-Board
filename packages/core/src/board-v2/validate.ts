@@ -408,6 +408,8 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       }
       const reads = l.of !== undefined ? checkOf(l.of, `${linkAt}/of`) ?? null : null;
       if (l.show !== undefined && l.of === undefined) fail(`${linkAt}/show`, 'a link shows a field "of" a data item — give "of" too');
+      if (l.tone !== undefined && !(TONES as readonly unknown[]).includes(l.tone)) fail(`${linkAt}/tone`, `"${String(l.tone)}" is not a tone — use ${TONES.join(' · ')}`);
+      if (l.route !== undefined && !['straight', 'orthogonal', 'curved'].includes(l.route as string)) fail(`${linkAt}/route`, 'a link\u2019s route is "straight", "orthogonal" or "curved"');
       checkTexts(l, linkAt, reads);
     }
   };
