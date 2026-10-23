@@ -1,16 +1,24 @@
 // The structural checks of a board in the language's second version. Each problem names where it is (a JSON Pointer
 // into the board) and says how to write it instead — the reader is often a model, which fixes what it is told.
 //
-// This covers the board's shape: its version, statuses, data reads, parts and how they are reused, and every layout.
-// What a kind takes (its fields and options) and element markup are checked elsewhere.
+// This covers the board's shape: its version, look, statuses, data reads and what their fields mean, its elements,
+// parts — their kinds, what they read, how they are reused — and every layout with its shapes and links.
 
-import { BOARD_LANGUAGE_VERSION, EMPHASES, TONES } from './types.js';
+import { PART_KINDS, boardWordFor, partKind } from './kinds.js';
+import { BOARD_LANGUAGE_VERSION, EMPHASES, FRAMES, TONES } from './types.js';
 
-/** A problem in a board: where (a JSON Pointer) and what to write instead. */
+/**
+ * A problem in a board: where (a JSON Pointer) and what to write instead. A `hint` is advice — the board is right as
+ * it is, and there is a better way to write it.
+ */
 export interface BoardIssue {
   at: string;
   message: string;
+  hint?: true;
 }
+
+/** Markup that draws a shape of its own — what an element is for, where no built-in draws it. */
+const DRAWING = /<svg|<canvas|clip-path|conic-gradient|radial-gradient|<path|<ellipse|<circle|<polygon/i;
 
 type Obj = Record<string, unknown>;
 
@@ -24,12 +32,26 @@ const list = (names: Iterable<string>, max = 12) => {
 /** `<data>` or `<data>[<key>]` — the one way a part names what it shows. */
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
+/** The types an element's prop may be. */
+const PROP_TYPES = ['number', 'string', 'boolean', 'list'];
+
+/** `{{…}}` in a text: the name inside, as written. */
+const HOLE = /\{\{([^}]*)\}\}/g;
+
 export function validateBoardV2(board: unknown): BoardIssue[] {
   const issues: BoardIssue[] = [];
   const fail = (at: string, message: string) => void issues.push({ at, message });
 
   if (!isObj(board)) return [{ at: '', message: 'a board is a JSON object' }];
   if (board.version !== BOARD_LANGUAGE_VERSION) fail('/version', `a board in this language says "version": ${BOARD_LANGUAGE_VERSION}`);
+
+  // ── look ──
+  const head = isObj(board.board) ? board.board : {};
+  if (head.theme !== undefined && head.theme !== 'light' && head.theme !== 'dark') fail('/board/theme', 'a theme is "light" or "dark"');
+  const skin = isObj(head.skin) ? head.skin : {};
+  if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
+  if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
+  if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');
 
   // ── statuses ──
   const statuses = isObj(board.statuses) ? board.statuses : {};
@@ -40,6 +62,39 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       fail(`${at}/emphasis`, `"${String(s.emphasis)}" is not an emphasis — use ${EMPHASES.join(' · ')}`);
     }
   }
+
+  /** A word a state maps to: a status the board declares, or a tone. */
+  const isStatus = (name: unknown) => typeof name === 'string' && (name in statuses || (TONES as readonly string[]).includes(name));
+  const statusHint = () => (Object.keys(statuses).length > 0
+    ? `declare it under /statuses (${list(Object.keys(statuses))}) or use a tone`
+    : `declare it under /statuses or use a tone — ${TONES.join(' · ')}`);
+
+  /**
+   * A mapping, in one of its two forms: a map of raw values (`"*"` for anything else), or bands of numbers starting
+   * with the word below the first number. For a state, every word is a status.
+   */
+  const checkMapping = (m: unknown, at: string, what: 'state' | 'names') => {
+    const word = (w: unknown, wordAt: string) => {
+      if (typeof w !== 'string' || w === '') fail(wordAt, what === 'state' ? 'a state maps to a status name' : 'a name is a word');
+      else if (what === 'state' && !isStatus(w)) fail(wordAt, `no status "${w}" — ${statusHint()}`);
+    };
+    if (Array.isArray(m)) {
+      if (typeof m[0] === 'number') { fail(at, `bands start with the word below the first number — ["ok", ${m[0]}, "warn"], not [${m[0]}, "ok", …]`); return; }
+      if (m.length < 3 || m.length % 2 === 0) { fail(at, 'bands are [word, number, word, …] — a word, then a number and the word from it up'); return; }
+      m.forEach((v, i) => {
+        if (i % 2 === 0) word(v, `${at}/${i}`);
+        else if (!isNum(v)) fail(`${at}/${i}`, 'a number comes before each word after the first');
+        else if (i > 1 && isNum(m[i - 2]) && v <= (m[i - 2] as number)) fail(`${at}/${i}`, 'the numbers of bands go up');
+      });
+    } else if (isObj(m)) {
+      if (Object.keys(m).length === 0) fail(at, 'a map names raw values: { "<raw>": "<word>", "*": "<anything else>" }');
+      for (const [raw, w] of Object.entries(m)) word(w, `${at}/${raw}`);
+    } else {
+      fail(at, what === 'state'
+        ? 'a state is "raw" (the value is a status), a map { "<raw>": "<status>", "*": … } or bands ["ok", 1, "warn", …]'
+        : 'names are a map { "<raw>": "<word>", "*": … } or bands ["low", 30, "high"]');
+    }
+  };
 
   // ── data ──
   const data = isObj(board.data) ? board.data : {};
@@ -63,6 +118,48 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
         if (now.step !== undefined && !(isNum(now.step) && now.step > 0)) fail(`${at}/now/step`, '"step" is how often the source has new data, in seconds (more than 0)');
       }
     }
+    if (q.fields !== undefined && !isObj(q.fields)) fail(`${at}/fields`, 'fields are { "<field>": { "label", "unit", "state", … } }');
+    for (const [name, f] of Object.entries(isObj(q.fields) ? q.fields : {})) {
+      const fieldAt = `${at}/fields/${name}`;
+      if (!isObj(f)) { fail(fieldAt, 'a field is an object: { "label", "unit", "format", "names", "state", … }'); continue; }
+      if (f.at !== undefined && !(typeof f.at === 'string' && f.at.startsWith('/'))) fail(`${fieldAt}/at`, '"at" is where the value lives in an item, starting with "/"');
+      if (f.digits !== undefined && !(Number.isInteger(f.digits) && (f.digits as number) >= 0)) fail(`${fieldAt}/digits`, '"digits" is a whole number of decimal places');
+      if (f.format !== undefined && typeof f.format !== 'string') fail(`${fieldAt}/format`, 'a format is a string, as the widgets write values: "number:1", "percent", "time" …');
+      if (f.state !== undefined && f.state !== 'raw') checkMapping(f.state, `${fieldAt}/state`, 'state');
+      if (f.names !== undefined) checkMapping(f.names, `${fieldAt}/names`, 'names');
+    }
+  }
+
+  /** The field a data read declares, by name. */
+  const fieldOf = (query: string, name: string): Obj | undefined => {
+    const q = data[query];
+    const fields = isObj(q) && isObj(q.fields) ? q.fields : {};
+    return isObj(fields[name]) ? fields[name] : undefined;
+  };
+
+  // ── elements ──
+  const elements = isObj(board.elements) ? board.elements : {};
+  for (const [name, el] of Object.entries(elements)) {
+    const at = `/elements/${name}`;
+    if (!isObj(el) || typeof el.template !== 'string') { fail(`${at}/template`, 'an element needs a "template": markup with {{prop}} holes'); continue; }
+    const props = isObj(el.props) ? el.props : {};
+    for (const [prop, type] of Object.entries(props)) {
+      if (!PROP_TYPES.includes(type as string)) fail(`${at}/props/${prop}`, `"${String(type)}" is not a prop type — ${PROP_TYPES.join(' · ')}`);
+    }
+    // A hole is a prop — or a list's section, {{#items}} … {{/items}}, and {{.}} inside it. Nothing is computed in it.
+    for (const m of el.template.matchAll(HOLE)) {
+      const hole = m[1]!.split('|')[0]!.trim().replace(/^[#/^]/, '').split('.')[0]!;
+      if (hole !== '' && !(hole in props)) {
+        fail(`${at}/template`, `"{{${m[1]}}}" — a hole is a prop this element declares (${list(Object.keys(props))}); compute with CSS calc() on a prop, not inside the braces`);
+      }
+    }
+    if (!DRAWING.test(el.template + (typeof el.style === 'string' ? el.style : '')) && Object.keys(props).length <= 4) {
+      issues.push({
+        at,
+        message: `"${name}" draws no shape of its own — a title, a status and a few values are a status-card, stat or stat-list; keep an element for a drawing no built-in makes`,
+        hint: true,
+      });
+    }
   }
 
   // ── parts, with their presets ──
@@ -80,44 +177,104 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
 
   /** Parts by id as the layout addresses them; an `each` part stands for its items. */
   const ids = new Map<string, { at: string; part: Obj }>();
-  const checkPart = (raw: unknown, at: string): Obj | undefined => {
+  /**
+   * A part, and the data it reads: its own `of` or `each`, else its group's (`group.reads`). What a part reads is a
+   * data name, `null` when it reads none, or `undefined` when its `of` or `each` is wrong — already reported, so the
+   * checks that build on it are skipped rather than reporting the same mistake again.
+   */
+  const checkPart = (raw: unknown, at: string, group?: { reads: string | null | undefined }): Obj | undefined => {
     if (!isObj(raw)) { fail(at, 'a part is an object: { "as": …, "of": … }'); return undefined; }
     const part = resolve(raw, at);
     if (part.each !== undefined && part.of !== undefined) fail(`${at}/of`, 'a part with "each" takes its items from "each" — leave "of" out');
-    if (part.of !== undefined) checkOf(part.of, `${at}/of`);
+    const ofData = part.of !== undefined ? checkOf(part.of, `${at}/of`) : undefined;
     if (part.each !== undefined) {
       const q = typeof part.each === 'string' ? data[part.each] : undefined;
       if (!isObj(q)) fail(`${at}/each`, `no data "${String(part.each)}" — data: ${list(Object.keys(data))}`);
       else if (q.list === undefined) fail(`${at}/each`, `"each" makes a part per item of a "list" — "${String(part.each)}" has none`);
     }
-    if (part.as === undefined) fail(at, 'a part needs "as" (or a preset that gives it)');
-    if (part.as === 'group') checkGroup(part, at);
+    const reads = part.of !== undefined ? ofData
+      : part.each !== undefined ? (typeof part.each === 'string' && isObj(data[part.each]) ? part.each : undefined)
+        : group ? group.reads : null;
+    if (part.as === undefined) { fail(at, 'a part needs "as" (or a preset that gives it)'); return part; }
+    const kind = typeof part.as === 'string' ? partKind(part.as) : undefined;
+    if (!kind) {
+      const word = typeof part.as === 'string' ? boardWordFor(part.as) : undefined;
+      fail(`${at}/as`, word
+        ? `a board writes "${word}" for the widget library's "${String(part.as)}" — "as": "${word}"`
+        : `unknown kind "${String(part.as)}" — one of ${PART_KINDS.map(k => k.kind).join(', ')}`);
+      return part;
+    }
+    if (kind.of === 'needs' && reads === null) {
+      fail(`${at}/of`, `a ${kind.kind} shows data — give "of": "<data>" or "<data>[<key>]"`);
+    }
+    if (kind.of === 'no' && (part.of !== undefined || part.each !== undefined)) fail(`${at}/of`, `a ${kind.kind} reads no data — leave "of" out`);
+    checkTexts(part, at, reads);
+    if (kind.kind === 'group') checkGroup(part, at, reads);
+    if (kind.kind === 'element') checkElementPart(part, at, reads);
     return part;
   };
 
-  const checkOf = (of: unknown, at: string) => {
+  /** `{{field}}` in a part's title or a link's label names a field of what it reads, or `{{key}}` its item's key. */
+  const checkTexts = (holder: Obj, at: string, reads: string | null | undefined) => {
+    for (const prop of ['title', 'label'] as const) {
+      const text = holder[prop];
+      if (typeof text !== 'string') continue;
+      for (const m of text.matchAll(HOLE)) {
+        const name = m[1]!.trim();
+        if (!/^[\w.-]+$/.test(name)) fail(`${at}/${prop}`, `"{{${m[1]}}}" — write {{field}} with a field name, or {{key}} for the item's key`);
+        else if (reads === null) fail(`${at}/${prop}`, `"{{${name}}}" reads a field, but this reads no data — give "of"`);
+      }
+    }
+  };
+
+  /** A part drawn by one of the board's elements: fixed `props`, and `bind` — a field, its status or its tone. */
+  const checkElementPart = (part: Obj, at: string, reads: string | null | undefined) => {
+    const name = part.element;
+    const el = typeof name === 'string' ? elements[name] : undefined;
+    if (!isObj(el)) { fail(`${at}/element`, `no element "${String(name)}" — elements: ${list(Object.keys(elements))}`); return; }
+    const declared = isObj(el.props) ? el.props : {};
+    const holes = `props: ${list(Object.keys(declared))}`;
+    for (const key of Object.keys(isObj(part.props) ? part.props : {})) {
+      if (!(key in declared)) fail(`${at}/props/${key}`, `"${String(name)}" has no prop "${key}" — ${holes}`);
+    }
+    if (part.bind === undefined) return;
+    if (!isObj(part.bind)) { fail(`${at}/bind`, 'bind is { "<prop>": "<field>" | "<field>.status" | "<field>.tone" }'); return; }
+    if (reads === null) { fail(`${at}/of`, 'a part that binds props reads data — give "of"'); return; }
+    if (reads === undefined) return;
+    for (const [prop, ref] of Object.entries(part.bind)) {
+      const bindAt = `${at}/bind/${prop}`;
+      if (!(prop in declared)) { fail(bindAt, `"${String(name)}" has no prop "${prop}" — ${holes}`); continue; }
+      const m = typeof ref === 'string' ? /^([\w-]+)(?:\.(status|tone))?$/.exec(ref) : null;
+      if (!m) { fail(bindAt, `"${String(ref)}" — write a field, "<field>.status" or "<field>.tone"`); continue; }
+      if (m[2] && fieldOf(reads, m[1]!)?.state === undefined) fail(bindAt, `"${m[1]}" has no "state" in /data/${reads}/fields — its ${m[2]} needs one`);
+    }
+  };
+
+  /** The data an `of` reads, when it names one. */
+  const checkOf = (of: unknown, at: string): string | undefined => {
     const m = typeof of === 'string' ? OF.exec(of) : null;
     if (!m) {
       const slash = typeof of === 'string' ? of.indexOf('/') : -1;
       fail(at, slash > 0
         ? `an item of data is written "${(of as string).slice(0, slash)}[${(of as string).slice(slash + 1)}]" — "/" is only in the ids of parts "each" makes`
         : `"${String(of)}" is not "<data>" or "<data>[<key>]"`);
-      return;
+      return undefined;
     }
     const q = data[m[1]!];
-    if (!isObj(q)) fail(at, `no data "${m[1]}" — data: ${list(Object.keys(data))}`);
-    else if (m[2] !== undefined && q.list === undefined) fail(at, `"${m[1]}" has no "list", so it has no items to name — write "${m[1]}"`);
+    if (!isObj(q)) { fail(at, `no data "${m[1]}" — data: ${list(Object.keys(data))}`); return undefined; }
+    if (m[2] !== undefined && q.list === undefined) fail(at, `"${m[1]}" has no "list", so it has no items to name — write "${m[1]}"`);
+    return m[1];
   };
 
-  /** A group: its parts, each placed on its own small canvas. */
-  const checkGroup = (group: Obj, at: string) => {
+  /** A group: its parts, each placed on its own small canvas, reading what the group reads unless they name their own. */
+  const checkGroup = (group: Obj, at: string, reads: string | null | undefined) => {
     if (!isSize(group.size)) fail(`${at}/size`, 'a group needs "size": [width, height]');
     const inner = isObj(group.parts) ? group.parts : undefined;
     if (!inner) { fail(`${at}/parts`, 'a group needs "parts": the parts drawn together'); return; }
     const place = isObj(group.place) ? group.place : {};
     for (const [id, raw] of Object.entries(inner)) {
       const innerAt = `${at}/parts/${id}`;
-      const part = checkPart(raw, innerAt);
+      const part = checkPart(raw, innerAt, { reads });
       if (part?.each !== undefined) fail(`${innerAt}/each`, 'a part inside a group is one part — repeat the group with "each" instead');
       if (!(id in place)) fail(innerAt, `"${id}" is not placed in the group — put it in its "place", or remove it`);
     }
@@ -125,7 +282,33 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       if (!(id in inner)) fail(`${at}/place/${id}`, `no part "${id}" in the group — its parts: ${list(Object.keys(inner))}`);
       else if (!isPlace(p)) fail(`${at}/place/${id}`, 'a place is [x, y] or [x, y, width, height]');
     }
+    checkShapes(group.shapes, `${at}/shapes`);
     checkLinks(group.links, `${at}/links`, id => id in inner);
+  };
+
+  /** Shapes on a canvas: a box (with a label), a text at a point, a line through points, or a path. */
+  const checkShapes = (shapes: unknown, at: string) => {
+    if (shapes === undefined) return;
+    if (!isObj(shapes)) { fail(at, 'shapes are { "<id>": { "box" | "text" | "line" | "path", … } }'); return; }
+    for (const [id, s] of Object.entries(shapes)) {
+      const shapeAt = `${at}/${id}`;
+      if (!isObj(s)) { fail(shapeAt, 'a shape is an object'); continue; }
+      const forms = ['box', 'text', 'line', 'path'].filter(k => s[k] !== undefined);
+      if (forms.length !== 1) { fail(shapeAt, 'a shape is one of a "box", a "text" with "at", a "line" or a "path"'); continue; }
+      if (s.box !== undefined && !(Array.isArray(s.box) && s.box.length === 4 && s.box.every(isNum))) fail(`${shapeAt}/box`, 'a box is [x, y, width, height]');
+      if (s.text !== undefined && !(Array.isArray(s.at) && s.at.length === 2 && s.at.every(isNum))) fail(`${shapeAt}/at`, 'a text needs "at": [x, y]');
+      if (s.line !== undefined && !(Array.isArray(s.line) && s.line.length >= 2 && s.line.every(p => Array.isArray(p) && p.length === 2 && p.every(isNum)))) {
+        fail(`${shapeAt}/line`, 'a line is two or more [x, y] points');
+      }
+      if (s.path !== undefined) {
+        if (typeof s.path !== 'string' || /[^MLCQZ0-9.,\s-]/.test(s.path)) fail(`${shapeAt}/path`, 'a path uses absolute M · L · C · Q · Z and numbers only');
+        else {
+          const nums = s.path.match(/-?\d*\.?\d+/g) ?? [];
+          if (nums.length < 4 || nums.length % 2 !== 0) fail(`${shapeAt}/path`, 'a path needs x y pairs');
+        }
+      }
+      if (s.tone !== undefined && !(TONES as readonly unknown[]).includes(s.tone)) fail(`${shapeAt}/tone`, `"${String(s.tone)}" is not a tone — use ${TONES.join(' · ')}`);
+    }
   };
 
   /** Whether a link end names a part: a part, an item of an `each` part, or a part inside a group. */
@@ -148,8 +331,9 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       for (const end of ['from', 'to'] as const) {
         if (typeof l[end] !== 'string' || !exists(l[end] as string)) fail(`${linkAt}/${end}`, `no part "${String(l[end])}" to link`);
       }
-      if (l.of !== undefined) checkOf(l.of, `${linkAt}/of`);
+      const reads = l.of !== undefined ? checkOf(l.of, `${linkAt}/of`) ?? null : null;
       if (l.show !== undefined && l.of === undefined) fail(`${linkAt}/show`, 'a link shows a field "of" a data item — give "of" too');
+      checkTexts(l, linkAt, reads);
     }
   };
 
@@ -188,6 +372,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
         fail(placeAt, `"${id}" is not a part with "each", so its place is [x, y, width?, height?]`);
       }
     }
+    checkShapes(canvas.shapes, `${at}/shapes`);
     checkLinks(canvas.links, `${at}/links`, isEnd);
   };
   const checkGrid = (items: unknown, at: string) => {

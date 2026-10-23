@@ -18,7 +18,8 @@ const canvas = (parts: Record<string, unknown>, more: Record<string, unknown> = 
   },
 });
 
-const issues = (board: unknown) => validateBoardV2(board).map(i => `${i.at}: ${i.message}`);
+/** The problems with a board, without the advice. */
+const issues = (board: unknown) => validateBoardV2(board).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
 
 describe('validateBoardV2', () => {
   it('takes a board that is right', () => {
@@ -119,6 +120,122 @@ describe('validateBoardV2', () => {
       '/layout/links/a/to: no part "P9" to link',
       '/layout/links/b/show: a link shows a field "of" a data item — give "of" too',
     ]);
+  });
+
+  it('names the kinds there are for a kind that is not one, and asks what a kind shows', () => {
+    const [unknown] = issues(canvas({ g: { as: 'timeline', of: 'equipment' } }));
+    expect(unknown).toMatch(/^\/parts\/g\/as: unknown kind "timeline" — one of status-card, header, stat, /);
+    expect(unknown).toContain('chart.gantt');
+    expect(issues(canvas({ g: { as: 'chart.gantt', of: 'equipment' } }))).toEqual([]);
+    expect(issues(canvas({ m: { as: 'metric', of: 'totals' }, s: { as: 'status', of: 'equipment[PR-01]' } }))).toEqual([
+      '/parts/m/as: a board writes "stat" for the widget library\'s "metric" — "as": "stat"',
+      '/parts/s/as: a board writes "stat-list" for the widget library\'s "status" — "as": "stat-list"',
+    ]);
+    expect(issues(canvas({ s: { as: 'stat' } }))).toEqual(['/parts/s/of: a stat shows data — give "of": "<data>" or "<data>[<key>]"']);
+    expect(issues(canvas({ h: { as: 'header', title: 'Plant' }, l: { as: 'legend', of: 'totals' } }))).toEqual(['/parts/l/of: a legend reads no data — leave "of" out']);
+  });
+
+  it('reports a wrong "of" once, not again in what reads through it', () => {
+    const board = {
+      ...canvas({ a: { as: 'element', element: 'tank', of: 'tanks[T1]', title: '{{name}}', bind: { level: 'level.tone' } } }),
+      elements: { tank: { template: '<svg style="--l: {{level}}"></svg>', props: { level: 'number' } } },
+    };
+    expect(issues(board)).toEqual(['/parts/a/of: no data "tanks" — data: equipment, totals']);
+  });
+
+  it('reads {{field}} in a title of what the part reads, and {{key}} as its item', () => {
+    expect(issues(canvas({ a: { as: 'status-card', of: 'equipment[PR-01]', title: '{{key}} · {{state}}' } }))).toEqual([]);
+    expect(issues(canvas({ h: { as: 'header', title: 'Line {{line}}' }, a: { as: 'stat', of: 'totals', title: '{{ count + 1 }}' } }))).toEqual([
+      '/parts/h/title: "{{line}}" reads a field, but this reads no data — give "of"',
+      '/parts/a/title: "{{ count + 1 }}" — write {{field}} with a field name, or {{key}} for the item\'s key',
+    ]);
+  });
+
+  it('checks what a field means: a state names statuses, names take the same two forms', () => {
+    const board = {
+      ...canvas({}),
+      statuses: { running: { tone: 'ok' } },
+      data: {
+        pumps: {
+          from: 'plant', path: '/pumps', list: '/value', key: 'id',
+          fields: {
+            state: { state: { run: 'running', trip: 'alarm', '*': 'stopped' } },
+            temp: { state: [60, 'ok', 80, 'alarm'], digits: 1.5 },
+            level: { state: ['ok', 80, 'warn', 70, 'alarm'], names: ['low', 30, 'mid', 70, 'high'] },
+            weather: { names: { '1': '맑음', '*': '흐림' }, at: 'sky' },
+          },
+        },
+      },
+    };
+    expect(issues(board)).toEqual([
+      '/data/pumps/fields/state/state/*: no status "stopped" — declare it under /statuses (running) or use a tone',
+      '/data/pumps/fields/temp/digits: "digits" is a whole number of decimal places',
+      '/data/pumps/fields/temp/state: bands start with the word below the first number — ["ok", 60, "warn"], not [60, "ok", …]',
+      '/data/pumps/fields/level/state/3: the numbers of bands go up',
+      '/data/pumps/fields/weather/at: "at" is where the value lives in an item, starting with "/"',
+    ]);
+  });
+
+  it('checks shapes and the look', () => {
+    const board = {
+      ...canvas({}, {
+        shapes: {
+          zone: { box: [0, 0, 100, 60], label: 'Zone A', tone: 'accent' },
+          pipe: { line: [[0, 0], [100, 50]] },
+          bad: { line: [[0, 0]] },
+          rel: { path: 'm 0 0 l 10 10' },
+          two: { box: [0, 0, 1, 1], text: 'x', at: [0, 0] },
+          note: { text: 'here' },
+        },
+      }),
+      board: { theme: 'dim', skin: { frame: 'stamp', density: 'compact' } },
+    };
+    expect(issues(board)).toEqual([
+      '/board/theme: a theme is "light" or "dark"',
+      '/board/skin/frame: "stamp" is not a frame — use card · flat · glow · plate · ticket · postage · tape',
+      '/layout/shapes/bad/line: a line is two or more [x, y] points',
+      '/layout/shapes/rel/path: a path uses absolute M · L · C · Q · Z and numbers only',
+      '/layout/shapes/two: a shape is one of a "box", a "text" with "at", a "line" or a "path"',
+      '/layout/shapes/note/at: a text needs "at": [x, y]',
+    ]);
+  });
+
+  it("checks the board's elements and the parts that draw them", () => {
+    const elements = {
+      tank: { template: '<svg><rect style="--l: {{level}}"/></svg><b>{{name}}</b><i class="{{state}}"></i>', props: { level: 'number', name: 'string', state: 'string' } },
+      bad: { template: '<b>{{ level * 2 }}</b>', props: { level: 'float' } },
+    };
+    const board = {
+      ...canvas({
+        t: { as: 'element', element: 'tank', of: 'equipment[PR-01]', props: { name: 'T1' }, bind: { level: 'state', state: 'state.tone' } },
+        u: { as: 'element', element: 'tank', of: 'totals', props: { colour: 'red' }, bind: { level: 'count.status', zz: 'count' } },
+        v: { as: 'element', element: 'pump' },
+      }),
+      elements,
+    };
+    expect(issues(board)).toEqual([
+      '/elements/bad/props/level: "float" is not a prop type — number · string · boolean · list',
+      '/elements/bad/template: "{{ level * 2 }}" — a hole is a prop this element declares (level); compute with CSS calc() on a prop, not inside the braces',
+      '/parts/u/props/colour: "tank" has no prop "colour" — props: level, name, state',
+      '/parts/u/bind/level: "count" has no "state" in /data/totals/fields — its status needs one',
+      '/parts/u/bind/zz: "tank" has no prop "zz" — props: level, name, state',
+      '/parts/v/element: no element "pump" — elements: tank, bad',
+    ]);
+  });
+
+  it('advises a built-in for an element that draws nothing of its own, without failing the board', () => {
+    const board = {
+      ...canvas({ c: { as: 'element', element: 'card', of: 'totals' }, d: { as: 'element', element: 'dial', of: 'totals' } }),
+      elements: {
+        card: { template: '<b>{{a}}</b><span>{{b}}</span>', props: { a: 'string', b: 'string' } },
+        dial: { template: '<svg><circle r="{{a}}"/></svg>', props: { a: 'number' } },
+      },
+    };
+    expect(validateBoardV2(board)).toEqual([{
+      at: '/elements/card',
+      message: '"card" draws no shape of its own — a title, a status and a few values are a status-card, stat or stat-list; keep an element for a drawing no built-in makes',
+      hint: true,
+    }]);
   });
 
   it('checks a data read: where on a list, the request time, and statuses', () => {
