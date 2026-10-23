@@ -85,7 +85,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       }
     }
     // The time the source observed a value is the item's — a whole list has one per row, not one of its own.
-    if (q.time !== undefined && (item !== undefined || q.list === undefined)) ref.observedAtPath = `/${q.time}`;
+    if (q.time !== undefined && (item !== undefined || q.list === undefined)) ref.observedAtPath = q.fields?.[q.time]?.at ?? `/${q.time}`;
     // The whole list is as old as the answer says it is.
     else if (q.answerTime !== undefined && item === undefined && q.where === undefined && field === undefined) ref.observedAtPath = q.answerTime;
     if (q.zone !== undefined) ref.timeZone = q.zone;
@@ -337,12 +337,15 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         const f = field(name);
         bindValue('data.value', name);
         bindState('data.', name);
+        // An end read from the item — a capacity — is a field's value; a number is the end itself.
+        const { max, ...gaugeOptions } = options as { max?: unknown };
+        if (typeof max === 'string') bindValue('options.max', max);
         const format = formatOf(f);
         return {
           type: 'gauge',
           props: {
             data: { value: 0 },
-            options: { ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(title !== undefined ? { subtitle: text(title, 'options.subtitle') } : {}), ...options },
+            options: { ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(title !== undefined ? { subtitle: text(title, 'options.subtitle') } : {}), ...(typeof max === 'number' ? { max } : {}), ...gaugeOptions },
           },
           bindings,
         };

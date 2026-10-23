@@ -221,14 +221,29 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
       const read = reads.read(value, { label: str(data.label), unit: str(data.unit) ?? str(options.unit), format: str(options.format) });
       if (!read) return undefined;
       tone(reads, bindings['data.tone'] ?? bindings['data.level'], value, read, unsupported, widget.type);
-      for (const key of Object.keys(bindings)) if (!['data.value', 'data.tone', 'data.level'].includes(key)) unsupported.push(`a ${widget.type} bound at ${key}`);
+      // A gauge's end and its subtitle may be read from the item its value is: the end a field, the subtitle its words.
+      const sameItem = (key: string) => {
+        const other = reads.read(bindings[key]!, {});
+        if (other === undefined) return undefined;
+        if (other.of !== read.of) { unsupported.push(`a ${widget.type} reading more than one item`); return undefined; }
+        return other.field;
+      };
+      const bound: Record<string, unknown> = {};
+      for (const key of Object.keys(bindings)) {
+        if (['data.value', 'data.tone', 'data.level'].includes(key)) continue;
+        const field = widget.type === 'gauge' && ['data.max', 'options.subtitle'].includes(key) ? sameItem(key) : undefined;
+        if (field === undefined) { unsupported.push(`a ${widget.type} bound at ${key}`); continue; }
+        if (key === 'data.max') bound.max = field;
+        else bound.title = `{{${field}}}`;
+      }
       const { format: _format, unit: _unit, ...rest } = options;
       return {
         as: widget.type === 'metric' ? 'stat' : 'gauge',
         of: read.of,
         show: read.field,
         ...(widget.type === 'gauge' && typeof data.label === 'string' ? { title: data.label } : {}),
-        ...(widget.type === 'metric' ? {} : rest),
+        ...(widget.type === 'metric' ? {} : { ...rest, ...(typeof data.max === 'number' && bound.max === undefined ? { max: data.max } : {}) }),
+        ...bound,
       };
     }
     case 'status': {
@@ -249,6 +264,9 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
         tone(reads, bindings[`${at}tone`] ?? bindings[`${at}level`], value, read, unsupported, 'status row');
       }
       if (of === undefined) { unsupported.push('a status without rows'); return undefined; }
+      // A row's words or unit read from the source has no place in a row whose label is its field's.
+      const read = new Set(rows.flatMap(([, at]) => ['value', 'tone', 'level'].map(k => `${at}${k}`)));
+      for (const key of Object.keys(bindings)) if (!read.has(key)) { unsupported.push(`a status row bound at ${key.split('.').at(-1)}`); return undefined; }
       return { as: 'stat-list', of, show: fields };
     }
     default:
@@ -763,7 +781,8 @@ class Reads {
     const time = (list === undefined ? [ref] : this.seen.get(key) ?? []).map(r => r.observedAtPath).find(p => p !== undefined);
     if (time !== undefined) {
       if (/^\/[^/]+$/.test(time)) q.time = time.slice(1).replace(/~1/g, '/').replace(/~0/g, '~');
-      else this.unsupported.push('an observed time deeper in an item');
+      // A time deeper in the item is a field of its own, which `time` names.
+      else q.time = this.field(q, time, undefined, {});
     }
     if (ref.timeZone !== undefined) q.zone = ref.timeZone;
     if (ref.maxAgeSeconds !== undefined) q.fresh = ref.maxAgeSeconds;

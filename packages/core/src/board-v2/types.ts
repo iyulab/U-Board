@@ -82,7 +82,7 @@ export interface Query {
   key?: string;
   /** Only the items whose fields equal these values. */
   where?: Record<string, string | number | boolean>;
-  /** The field holding when the source observed the item. */
+  /** The field holding when the source observed the item — its own name, or a field declared with where it lives (`at`). */
   time?: string;
   /** Where the answer says when it was observed as a whole (a JSON Pointer) — the time of a part that reads the whole
    *  list, whose items carry none of their own. */

@@ -141,6 +141,23 @@ describe('fromV1', () => {
     expect(drawn.kind === 'canvas' && (drawn.nodes[0]!.widget.props as { mapping: unknown }).mapping).toEqual({ primary: 'item', secondary: 'who', trailing: 'amount', badge: 'badge' });
   });
 
+  it('reads a gauge’s end and subtitle from its item, and a time deeper in the answer as a field', () => {
+    const lot = (valuePath: string) => ({ adapter: 'city', ref: { path: '/city', item: { list: '/parking', where: { code: 'P1' } }, valuePath } });
+    const { board, unsupported } = fromV1(canvas([
+      node('g', { type: 'gauge', props: { data: { value: 0, max: 100 }, options: { unit: 'cars', subtitle: 'Lot' } }, bindings: { 'data.value': lot('/now'), 'data.max': lot('/capacity'), 'options.subtitle': lot('/name') } }),
+      node('t', { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'city', ref: { path: '/city', valuePath: '/weather/0/temp', observedAtPath: '/weather/0/at' } } } }),
+      node('s', { type: 'status', props: { data: { label: 'Bikes', value: '' } }, bindings: { 'data.label': lot('/name'), 'data.value': lot('/now') } }),
+    ]));
+    expect(unsupported).toEqual(['a status row bound at label']);
+    expect(board.parts.g).toEqual({ as: 'gauge', of: 'city[P1]', show: 'now', subtitle: 'Lot', max: 'capacity', title: '{{name}}' });
+    expect(board.data!.city!.fields!.now).toMatchObject({ unit: 'cars' });
+    expect(Object.values(board.data!).find(q => q.time !== undefined)).toMatchObject({ time: 'at', fields: { temp: { at: '/weather/0/temp' }, at: { at: '/weather/0/at' } } });
+    const drawn = toViewDocument({ ...board, parts: { g: board.parts.g!, t: board.parts.t! }, layout: { kind: 'canvas', size: [400, 200], place: { g: [0, 0, 100, 100], t: [200, 0, 100, 100] } } });
+    const nodes = drawn.kind === 'canvas' ? drawn.nodes : [];
+    expect(nodes[0]!.widget.bindings!['options.max']!.ref).toMatchObject({ valuePath: '/capacity' });
+    expect(nodes[1]!.widget.bindings!['data.value']!.ref).toMatchObject({ valuePath: '/weather/0/temp', observedAtPath: '/weather/0/at' });
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {
