@@ -7,7 +7,7 @@ import { isHttpRef, type HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { THEME_PALETTE, isThemeColor } from '../theme-colors.js';
 import type { Binding, CanvasView, CellCanvas, Connector, ElementDefinition, GridView, GridWidgetItem, Node, PropsSchema, Shape as V1Shape, ValueMap, ViewDocument, Widget } from '../view-document.js';
-import { TONES, type BoardV2, type CanvasLayout, type ElementDefinition as V2Element, type Field, type GridItem as V2GridItem, type Link, type Part, type Place, type Query, type Shape, type Tone, type ValueMapping } from './types.js';
+import { TONES, type BoardV2, type CanvasLayout, type ElementDefinition as V2Element, type Field, type GridItem as V2GridItem, type Link, type Part, type Place, type Query, type Shape, type Status, type Tone, type ValueMapping } from './types.js';
 
 /** A converted board, what changed on the way, and what has no place in the second version yet. */
 export interface V1Conversion {
@@ -26,7 +26,8 @@ export function fromV1(doc: ViewDocument): V1Conversion {
   const reads = new Reads(unsupported);
   const parts: Record<string, Part> = {};
   const elements = new Elements(doc.elements ?? {}, unsupported);
-  const ctx: Context = { reads, elements, parts, notes, unsupported, appearance: doc.appearance };
+  const statuses: Record<string, Status> = {};
+  const ctx: Context = { reads, elements, parts, statuses, notes, unsupported, appearance: doc.appearance };
   if (doc.kind === 'canvas' && (doc.components !== undefined || (doc.instances ?? []).length > 0)) unsupported.push('components');
   if ((doc.triggers ?? []).length > 0) unsupported.push('triggers');
 
@@ -47,6 +48,7 @@ export function fromV1(doc: ViewDocument): V1Conversion {
   const board: BoardV2 = {
     version: 2,
     ...(Object.keys(look).length > 0 ? { board: look } : {}),
+    ...(Object.keys(statuses).length > 0 ? { statuses } : {}),
     ...(Object.keys(elements.converted).length > 0 ? { elements: elements.converted } : {}),
     ...(Object.keys(reads.data).length > 0 ? { data: reads.data } : {}),
     parts,
@@ -60,6 +62,8 @@ interface Context {
   reads: Reads;
   elements: Elements;
   parts: Record<string, Part>;
+  /** The board's statuses the conversion declares — a state that draws a line in a form of its own. */
+  statuses: Record<string, Status>;
   notes: string[];
   unsupported: string[];
   appearance: CanvasView['appearance'];
@@ -82,7 +86,7 @@ function canvasOf(canvas: CellCanvas, ctx: Context): Omit<CanvasLayout, 'kind'> 
   const links: Record<string, Link> = {};
   for (const connector of canvas.connectors) {
     if (!(connector.fromNodeId in place) || !(connector.toNodeId in place)) { unsupported.push('a connector to a node not converted'); continue; }
-    const link = linkOf(connector, reads, notes, unsupported, ctx.appearance);
+    const link = linkOf(connector, ctx);
     if (link !== undefined) links[unique(connector.id.replace(/[^\w-]+/g, '-'), links)] = link;
   }
   const shapes: Record<string, Shape> = {};
@@ -357,8 +361,10 @@ function propType(schema: PropsSchema): 'number' | 'string' | 'boolean' | 'list'
 // ── links and shapes ──
 
 /** A connector as a link: its ends, label, width, dash, arrow and route, its colour as the nearest tone, a bound label as
- *  a text of the item it reads, and a bound colour as the state of that field. */
-function linkOf(connector: Connector, reads: Reads, notes: string[], unsupported: string[], appearance: CanvasView['appearance']): Link | undefined {
+ *  a text of the item it reads, and a bound colour and dash as the state of that field — each value's colour as its
+ *  tone, its dash as its emphasis. */
+function linkOf(connector: Connector, ctx: Context): Link | undefined {
+  const { reads, notes, unsupported, appearance } = ctx;
   const style = connector.style ?? {};
   const bindings = connector.bindings ?? {};
   const link: Link = { from: connector.fromNodeId, to: connector.toNodeId };
@@ -370,7 +376,7 @@ function linkOf(connector: Connector, reads: Reads, notes: string[], unsupported
     return true;
   };
   for (const key of Object.keys(bindings)) {
-    if (!['label', 'style.stroke'].includes(key)) { unsupported.push(`a connector bound at ${key}`); return undefined; }
+    if (!['label', 'style.stroke', 'style.dash'].includes(key)) { unsupported.push(`a connector bound at ${key}`); return undefined; }
   }
   if (bindings.label) {
     if (!isHttpRef(bindings.label.ref)) notes.push(`${connector.id}: the binding of label to "${bindings.label.adapter}" reads no HTTP connector — left out`);
@@ -389,13 +395,12 @@ function linkOf(connector: Connector, reads: Reads, notes: string[], unsupported
       link.label = pattern !== undefined ? pattern.replace(/\{\{\s*value\s*(?:\|\s*fixed:\d\s*)?\}\}/g, `{{${read!.field}}}`) : `{{${read!.field}}}`;
     }
   } else if (connector.label !== undefined) link.label = connector.label;
-  if (bindings['style.stroke']) {
-    const binding = bindings['style.stroke'];
-    const toned = isHttpRef(binding.ref) && binding.map !== undefined && mapsTo(binding.map, w => (TONES as readonly string[]).includes(w));
-    if (!toned) { unsupported.push('a connector coloured by a value that is not a tone'); return undefined; }
-    const state = mappingOf(binding.map!);
-    const read = state === undefined ? undefined : reads.read({ ...binding, map: undefined }, {}, state);
-    if (!reading('style.stroke', read)) return undefined;
+  const look = bindings['style.stroke'] ?? bindings['style.dash'];
+  if (look) {
+    const state = lineState(connector, ctx);
+    if (state === undefined) return undefined;
+    const read = reads.read({ ...look, map: undefined }, {}, state);
+    if (!reading('style', read)) return undefined;
     link.show = read!.field;
   } else if (style.stroke !== undefined) {
     const tone = nearestTone(style.stroke, appearance);
@@ -407,7 +412,7 @@ function linkOf(connector: Connector, reads: Reads, notes: string[], unsupported
   }
   if (of !== undefined) link.of = of;
   if (style.strokeWidth !== undefined) link.width = style.strokeWidth;
-  if (style.dash !== undefined && style.dash !== 'solid') {
+  if (style.dash !== undefined && style.dash !== 'solid' && !bindings['style.dash']) {
     link.dash = true;
     if (style.dash === 'dotted') notes.push(`${connector.id}: a dotted line is drawn dashed`);
   }
@@ -416,6 +421,45 @@ function linkOf(connector: Connector, reads: Reads, notes: string[], unsupported
   if (style.route !== undefined && style.route !== 'straight') link.route = style.route;
   if (connector.labelAt !== undefined || connector.labelSize !== undefined) notes.push(`${connector.id}: its label's place and size take the board's`);
   return link;
+}
+
+/** The state of the field a connector's colour and dash are bound to, as a mapping of its raw values: each value's colour
+ *  as the nearest tone and its dash as an emphasis — `dashed` hatched, `dotted` blinking. A value drawn with an emphasis
+ *  is a status of the board named by the value itself; one without is its tone. */
+function lineState(connector: Connector, ctx: Context): Record<string, string> | undefined {
+  const { notes, unsupported, statuses, appearance } = ctx;
+  const style = connector.style ?? {};
+  const { 'style.stroke': stroke, 'style.dash': dash } = connector.bindings ?? {};
+  const where = (b: Binding) => (isHttpRef(b.ref) ? JSON.stringify([b.adapter, { ...b.ref, valuePath: toPointer(b.ref.valuePath ?? '') }]) : undefined);
+  const bound = [stroke, dash].filter((b): b is Binding => b !== undefined);
+  if (bound.some(b => where(b) === undefined) || new Set(bound.map(where)).size > 1) { unsupported.push('a connector coloured and dashed by different fields'); return undefined; }
+  if (bound.some(b => b.map === undefined || (b.map.ranges ?? []).length > 0)) { unsupported.push('a connector coloured by a value that is not a tone'); return undefined; }
+  const raws = [...new Set(bound.flatMap(b => Object.keys(b.map!.values ?? {})))];
+  const at = (b: Binding | undefined, raw: string | undefined, fixed: string | undefined) => {
+    if (b === undefined) return fixed;
+    const v = raw !== undefined && raw in (b.map!.values ?? {}) ? b.map!.values![raw] : b.map!.otherwise;
+    return v === undefined ? fixed : String(v);
+  };
+  const state: Record<string, string> = {};
+  for (const raw of [...raws, undefined]) {
+    const colour = at(stroke, raw, style.stroke);
+    const tone = colour === undefined ? 'idle' : nearestTone(colour, appearance);
+    if (tone === undefined) { unsupported.push('a connector coloured by a value that is not a tone'); return undefined; }
+    if (colour !== undefined && !(TONES as readonly string[]).includes(colour.trim().toLowerCase())) notes.push(`${connector.id}: its colour ${colour} is drawn in the nearest tone, ${tone}`);
+    // Only a bound dash is a state's form; a fixed one stays the link's own.
+    const form = dash === undefined ? 'solid' : (at(dash, raw, style.dash) ?? 'solid');
+    const emphasis = form === 'dashed' ? 'hatch' : form === 'dotted' ? 'blink' : undefined;
+    let word: string = tone;
+    if (emphasis !== undefined) {
+      // A value that is itself a tone's name (`idle`), or every other value, names its status by its form too.
+      word = raw !== undefined && !(TONES as readonly string[]).includes(raw) ? raw : `${raw ?? tone}-${emphasis}`;
+      const status: Status = { tone, emphasis };
+      if (word in statuses && JSON.stringify(statuses[word]) !== JSON.stringify(status)) { unsupported.push('one status drawn two ways'); return undefined; }
+      statuses[word] = status;
+    }
+    state[raw ?? '*'] = word;
+  }
+  return state;
 }
 
 /** A decoration as a shape: a frame as a box with its label, a text at its point; colours as the nearest tone. */

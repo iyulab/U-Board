@@ -144,6 +144,8 @@ describe('fromV1', () => {
       feed: { from: 'A', to: 'B', label: '{{flow}} t/h', show: 'state', of: 'equipment[A]', width: 3, dash: true, arrow: true, route: 'curved' },
       back: { from: 'B', to: 'A', label: 'return', tone: 'alarm', route: 'orthogonal' },
     });
+    expect(board.statuses).toBeUndefined();
+    expect(board.data!.equipment!.fields!.state).toEqual({ state: { trip: 'alarm', '*': 'ok' } });
     expect(board.layout.kind === 'canvas' && board.layout.shapes).toEqual({
       zone: { box: [0, 0, 400, 200], label: 'Line 1' },
       note: { text: 'Hourly', at: [10, 190], size: 12, tone: 'info' },
@@ -162,6 +164,42 @@ describe('fromV1', () => {
       { stroke: 'idle', strokeWidth: 3, dash: 'dashed', arrow: 'end', route: 'curved' },
       { stroke: 'alarm', strokeWidth: 2, arrow: 'none', route: 'orthogonal' },
     ]);
+  });
+
+  it('draws a colour and a dash bound to one field as its state — tones, and a dashed or dotted value as a status of its own', () => {
+    const metric = (id: string, x: number) => node(id, { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } }, x);
+    const { board, notes, unsupported } = fromV1(canvas([metric('A', 0), metric('B', 300)], {
+      connectors: [{
+        id: 'run', fromNodeId: 'A', toNodeId: 'B', style: { stroke: '#1d4fa0', strokeWidth: 6 },
+        bindings: {
+          'style.stroke': { adapter: 'plant', ref: equipment('A', '/state'), map: { values: { ok: 'positive', cancel: '#d7261e', idle: '#94a3b8' }, otherwise: 'warning' } },
+          'style.dash': { adapter: 'plant', ref: equipment('A', '/state'), map: { values: { cancel: 'dashed', idle: 'dotted' }, otherwise: 'solid' } },
+        },
+      }],
+    }));
+    expect(unsupported).toEqual([]);
+    expect(board.statuses).toEqual({ cancel: { tone: 'alarm', emphasis: 'hatch' }, 'idle-blink': { tone: 'idle', emphasis: 'blink' } });
+    expect(board.data!.equipment!.fields!.state).toEqual({ state: { ok: 'ok', cancel: 'cancel', idle: 'idle-blink', '*': 'warn' } });
+    expect(board.layout.kind === 'canvas' && board.layout.links).toEqual({ run: { from: 'A', to: 'B', show: 'state', of: 'equipment[A]', width: 6 } });
+    expect(notes).toContain('run: its colour #d7261e is drawn in the nearest tone, alarm');
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    const dash = drawn.kind === 'canvas' ? drawn.connectors[0]!.bindings!['style.dash']!.map : undefined;
+    expect(dash).toMatchObject({ values: { cancel: 'dashed', idle: 'dotted' } });
+  });
+
+  it('leaves a connector coloured and dashed by different fields unsupported', () => {
+    const metric = (id: string, x: number) => node(id, { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } }, x);
+    const { unsupported } = fromV1(canvas([metric('A', 0), metric('B', 300)], {
+      connectors: [{
+        id: 'run', fromNodeId: 'A', toNodeId: 'B',
+        bindings: {
+          'style.stroke': { adapter: 'plant', ref: equipment('A', '/state'), map: { values: { down: 'alarm' }, otherwise: 'ok' } },
+          'style.dash': { adapter: 'plant', ref: equipment('A', '/mode'), map: { values: { idle: 'dashed' }, otherwise: 'solid' } },
+        },
+      }],
+    }));
+    expect(unsupported).toEqual(['a connector coloured and dashed by different fields']);
   });
 
   it('lays a grid out item by item, an item spanning rows beside a grid in a cell of the items that fill them', () => {

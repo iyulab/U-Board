@@ -84,13 +84,16 @@ export async function v2Coverage(packs: readonly SamplePack[]): Promise<Outcome[
       if (found.length > 0) nodes.differs++; else nodes.same++;
       differences.push(...found);
     }
-    // A connector's bound label and colour read again: the label's words, and live where they were live.
+    // A connector's bound label, colour and dash read again: the label's words, live where they were live, the same dash.
     if (v1.kind === 'canvas' && drawn.kind === 'canvas') {
       for (const connector of v1.connectors.filter(c => c.bindings)) {
         const again = drawn.connectors.find(c => c.id === `link.${connector.id.replace(/[^\w-]+/g, '-')}`);
         if (!again) continue;
         const [a, b] = await Promise.all([resolveConnector(connector, adapters), resolveConnector(again, adapters)]);
         if (connector.bindings!.label && a.label !== b.label) differences.push(`${connector.id}: label ${JSON.stringify(a.label)} → ${JSON.stringify(b.label)}`);
+      // A bound dash is drawn the same (a solid line and none are the same line).
+      const dash = (c: typeof a) => (c.style?.dash === 'solid' ? undefined : c.style?.dash);
+      if (connector.bindings!['style.dash'] && dash(a) !== dash(b)) differences.push(`${connector.id}: dash ${JSON.stringify(dash(a))} → ${JSON.stringify(dash(b))}`);
         const live = (q: Record<string, string>) => Object.values(q).filter(v => v !== 'disconnected').length;
         if (live(b.quality) < live(a.quality)) differences.push(`${connector.id}: ${live(a.quality) - live(b.quality)} fewer live`);
       }
