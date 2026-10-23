@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 // A static import, not `await import()` inside a test: loading an entry transforms its whole
 // module graph, and inside a test body that cost counts against the per-test timeout — enough
 // to time the first test out when the suite runs under load.
@@ -48,6 +50,14 @@ describe('domain entry', () => {
     expect(Object.keys(root).sort()).toEqual([...new Set([...Object.keys(mod), ...Object.keys(viewer), 'AuthoringView'])].sort());
   });
 
+  // The server and the MCP server load this entry in a bare Node process, and the server image carries only the
+  // workspace's root node_modules: a package that core alone depends on (the widget library, canvas-kit) is installed
+  // under packages/core and is missing there — the process fails at start, not in a test. Every package this entry
+  // reaches at runtime is listed here on purpose; a new one has to be one the server itself can resolve.
+  it('reaches no package at runtime, so a Node process without the widgets or the canvas can load it', () => {
+    expect(runtimePackagesReachedFrom(resolve(process.cwd(), 'src/domain-entry.ts'))).toEqual([]);
+  });
+
   it('carries the same document types in every entry point', () => {
     const point: ReferencePoint = { x: 0, y: 0, coordinate: { x: 0, y: 0 } };
     const same: DomainReferencePoint = point;
@@ -57,3 +67,32 @@ describe('domain entry', () => {
     expect([sameRange, image].length).toBe(2);
   });
 });
+
+/**
+ * The packages a module's runtime import graph reaches, following the relative imports from `entry` (type-only imports
+ * and exports are erased by the compiler and do not count). Reads the source, so it needs no build.
+ */
+function runtimePackagesReachedFrom(entry: string): string[] {
+  const statement = /\b(?:import|export)\s+(type\s+)?(?:[\w*{}\s,$]*?\s+from\s+)?['"]([^'"]+)['"]|\bimport\(\s*['"]([^'"]+)['"]\s*\)/g;
+  const visited = new Set<string>();
+  const packages = new Set<string>();
+  const sourceOf = (path: string): string => {
+    const candidates = [path, path.replace(/\.js$/, '.ts'), path.replace(/\.js$/, '.tsx'), `${path}.ts`, `${path}/index.ts`];
+    const found = candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
+    if (!found) throw new Error(`cannot find the source of ${path}`);
+    return found;
+  };
+  const visit = (file: string): void => {
+    if (visited.has(file)) return;
+    visited.add(file);
+    const code = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:\\])\/\/.*$/gm, '$1');
+    for (const [, typeOnly, specifier = '', dynamic] of code.matchAll(statement)) {
+      const target = dynamic ?? specifier;
+      if (typeOnly) continue;
+      if (target.startsWith('.')) visit(sourceOf(resolve(dirname(file), target)));
+      else packages.add(target.startsWith('@') ? target.split('/').slice(0, 2).join('/') : target.split('/')[0]!);
+    }
+  };
+  visit(entry);
+  return [...packages].sort();
+}
