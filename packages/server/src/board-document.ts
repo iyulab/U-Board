@@ -6,7 +6,7 @@ import {
   type ViewDocumentIssue,
   type ViewKind,
 } from '@iyulab/u-board/domain';
-import { PictureError, keyReadsOf, keysIn, toViewDocument, validateBoardV2, type BoardV2 } from '@iyulab/u-board/board-v2';
+import { checkBoardV2, keyReadsOf, keysIn, toViewDocument, type BoardV2 } from '@iyulab/u-board/board-v2';
 
 /**
  * What a board stores: a document in the board language's second version, which says so (`"version": 2`), or a
@@ -23,36 +23,17 @@ export function isBoardV2(document: unknown): document is BoardV2 {
   return isRecord(document) && Object.hasOwn(document, 'version');
 }
 
-/** The items a part made per item stands for when a board is checked: none — a board is drawable before its data
- *  has any items, and the items it has later do not change what it is. */
-const NO_ITEMS = { keysOf: () => [] };
-
 /**
  * Every structural problem in a document about to be stored, each at a JSON Pointer into it. A second-version board
- * is checked by its language and must also draw — a part the renderer cannot draw yet is refused here, not on the
- * page that shows it.
+ * is checked by its language and must also draw (`checkBoardV2`).
  */
 export function documentIssues(document: unknown): ViewDocumentIssue[] {
-  if (!isBoardV2(document)) return validateViewDocument(document, { strict: true });
-  const issues = validateBoardV2(document)
-    .filter(issue => !issue.hint)
-    .map(({ at, message }) => ({ path: at, message }));
-  if (issues.length > 0) return issues;
-  try {
-    toViewDocument(document, NO_ITEMS);
-  } catch (error) {
-    if (!(error instanceof PictureError)) throw error;
-    return [{ path: error.at, message: error.message.slice(error.at.length + 2) }];
-  }
-  return [];
+  return isBoardV2(document) ? checkBoardV2(document).issues : validateViewDocument(document, { strict: true });
 }
 
 /** What a stored document could do better — advice for whoever writes it, never a reason to refuse it. */
 export function documentAdvice(document: BoardDocument): ViewDocumentAdvice[] {
-  if (!isBoardV2(document)) return lintViewDocument(document);
-  return validateBoardV2(document)
-    .filter(issue => issue.hint)
-    .map(({ at, message }) => ({ path: at, message }));
+  return isBoardV2(document) ? checkBoardV2(document).advice : lintViewDocument(document);
 }
 
 /** The kind of view a document lays out — what a board list shows beside its name. */
