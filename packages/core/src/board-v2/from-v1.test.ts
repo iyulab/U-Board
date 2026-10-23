@@ -58,6 +58,24 @@ describe('fromV1', () => {
     expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
   });
 
+  it('reads a status whose data is one row itself (the older form) as a list of one row', () => {
+    const { board, unsupported } = fromV1(canvas([
+      node('s', {
+        type: 'status',
+        props: { data: { label: 'Press', value: '', tone: 'idle' } },
+        bindings: {
+          'data.value': { adapter: 'plant', ref: equipment('PR-01', '/load') },
+          'data.tone': { adapter: 'plant', ref: equipment('PR-01', '/load'), map: { ranges: [{ max: 80, value: 'ok' }, { min: 80, value: 'warn' }] } },
+        },
+      }),
+    ]));
+    expect(unsupported).toEqual([]);
+    expect(board.parts.s).toEqual({ as: 'stat-list', of: 'equipment[PR-01]', show: ['load'] });
+    expect(board.data!.equipment!.fields).toEqual({ load: { label: 'Press', state: ['ok', 80, 'warn'] } });
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'canvas' && Object.keys(drawn.nodes[0]!.widget.bindings!)).toEqual(['data.0.value', 'data.0.tone']);
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {

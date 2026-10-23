@@ -217,18 +217,21 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
       };
     }
     case 'status': {
-      const rows = Array.isArray(data) ? (data as Record<string, unknown>[]) : [];
+      // A status's rows, each with where its bindings sit — `data` a list of rows, or (the older form) one row itself.
+      const rows: [Record<string, unknown>, string][] = Array.isArray(data)
+        ? (data as Record<string, unknown>[]).map((row, i) => [row, `data.${i}.`])
+        : Object.keys(data).length > 0 ? [[data, 'data.']] : [];
       const fields: string[] = [];
       let of: string | undefined;
-      for (const [i, row] of rows.entries()) {
-        const value = bindings[`data.${i}.value`];
+      for (const [row, at] of rows) {
+        const value = bindings[`${at}value`];
         if (!value) { unsupported.push('a status row not bound at its value'); return undefined; }
         const read = reads.read(value, { label: str(row.label), unit: str(row.unit), format: str(row.format) });
         if (!read) return undefined;
         if (of !== undefined && of !== read.of) { unsupported.push('a status reading more than one item'); return undefined; }
         of = read.of;
         fields.push(read.field);
-        tone(reads, bindings[`data.${i}.tone`] ?? bindings[`data.${i}.level`], value, read, unsupported, 'status row');
+        tone(reads, bindings[`${at}tone`] ?? bindings[`${at}level`], value, read, unsupported, 'status row');
       }
       if (of === undefined) { unsupported.push('a status without rows'); return undefined; }
       return { as: 'stat-list', of, show: fields };

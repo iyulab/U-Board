@@ -12,7 +12,7 @@ const READ_THE_SAME = [
   'fire-dispatch', 'harbor-auction', 'harbor-radar', 'home-eink', 'hotel-glass', 'kiln-porcelain', 'lighthouse-stamps',
   'lost-found-dossier', 'makerspace-shadowboard', 'mall-wayfinding', 'museum-najeon', 'night-market-neon', 'observatory-glass',
   'palace-visit', 'parcel-hub', 'parking-signs', 'pc-cafe', 'pool-mosaic', 'power-sld', 'produce-market', 'quake-helicorder',
-  'recycling-polaroid', 'school-chalkboard', 'server-room', 'site-noise-score', 'ski-resort', 'theatre-boxoffice', 'theme-park',
+  'recycling-polaroid', 'school-chalkboard', 'seoul-air', 'server-room', 'site-noise-score', 'ski-resort', 'theatre-boxoffice', 'theme-park',
   'tunnel-tbm', 'utility-regions', 'vet-comic', 'wildlife-chaekgado', 'winery-engraving',
 ];
 
