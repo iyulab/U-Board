@@ -230,6 +230,25 @@ describe('fromV1', () => {
     expect(validateBoardV2({ ...board, parts: { t: { ...board.parts.t!, of: 'ncst[T1H]' } } }).map(i => i.message)).toContain('"ncst" is pivoted into one item — write "ncst" and name its fields');
   });
 
+  it('draws a component’s lines as its group’s links, reading the group’s item', () => {
+    const rack = (field: string) => ({ adapter: 'wms', ref: { path: '/racks', item: { list: '/value', where: { id: '{{rack}}' } }, valuePath: `/${field}` } });
+    const metric = (id: string, x: number, field: string) => ({ id, x, y: 0, width: 80, height: 40, widget: { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': rack(field) } } });
+    const { board, unsupported } = fromV1(canvas([], {
+      components: { row: {
+        params: { type: 'object', required: ['rack'], properties: { rack: { type: 'string' } } },
+        nodes: [metric('fill', 0, 'fill'), metric('lane', 120, 'lane')],
+        connectors: [{ id: 'picks', fromNodeId: 'fill', toNodeId: 'lane', label: '{{value}}', bindings: { label: rack('picks') } }],
+      } },
+      instances: [{ id: 'A', component: 'row', x: 0, y: 0, anchored: false, params: { rack: 'A' } }, { id: 'B', component: 'row', x: 0, y: 60, anchored: false, params: { rack: 'B' } }],
+    }));
+    expect(unsupported).toEqual([]);
+    expect((board.presets!.row as { links: unknown }).links).toEqual({ picks: { from: 'fill', to: 'lane', label: '{{picks}}' } });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    const line = drawn.kind === 'canvas' ? drawn.connectors.find(c => c.id === 'B/link.picks') : undefined;
+    expect(line!.bindings!.label!.ref).toMatchObject({ item: { list: '/value', where: { id: 'B' } }, valuePath: '/picks' });
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {

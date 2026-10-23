@@ -321,7 +321,6 @@ function instancesOf(view: CanvasView, place: Record<string, Place>, ctx: Contex
     if (!definition) continue;
     const params = Object.keys(definition.params?.properties ?? {});
     if (params.length !== 1) { unsupported.push('a component with other than one parameter'); return; }
-    if ((definition.connectors ?? []).length > 0 || (definition.decorations ?? []).length > 0) { unsupported.push('a component with connectors or decorations'); return; }
     const whole = `{{${params[0]}}}`;
     // A prop that is the parameter alone is the item's key, bound below; the rest of the component is filled per instance.
     const keyProps = new Map<string, string[]>();
@@ -339,7 +338,8 @@ function instancesOf(view: CanvasView, place: Record<string, Place>, ctx: Contex
     const inner: Record<string, Part> = {};
     const innerPlace: Record<string, Place> = {};
     let of: string | undefined;
-    for (const node of instanceParts(plain, instance).nodes) {
+    const drawn = instanceParts(plain, instance);
+    for (const node of drawn.nodes) {
       const id = node.id.slice(instance.id.length + 1);
       const part = partOf(node, reads, elements, notes, unsupported);
       if (part === undefined) return;
@@ -363,7 +363,23 @@ function instancesOf(view: CanvasView, place: Record<string, Place>, ctx: Contex
       Math.ceil(Math.max(1, ...Object.values(innerPlace).map(([x, , w = 0]) => x + w))),
       Math.ceil(Math.max(1, ...Object.values(innerPlace).map(([, y, , h = 0]) => y + h))),
     ];
-    const preset: Part = { as: 'group', size, parts: inner, place: innerPlace };
+    // Its lines read the item the instance reads, as its parts do; its frames and texts are its own drawing.
+    const links: Record<string, Link> = {};
+    for (const connector of drawn.connectors) {
+      const local = (end: string) => end.slice(instance.id.length + 1);
+      if (!(local(connector.fromNodeId) in inner) || !(local(connector.toNodeId) in inner)) { unsupported.push('a connector to a node not converted'); return; }
+      const link = linkOf(connector, ctx);
+      if (link === undefined) return;
+      if (link.of !== undefined && link.of !== of) { unsupported.push('a component line reading another item than its parts'); return; }
+      const { of: _of, ...rest } = link;
+      links[unique(local(connector.id).replace(/[^\w-]+/g, '-'), links)] = { ...rest, from: local(connector.fromNodeId), to: local(connector.toNodeId) };
+    }
+    const shapes: Record<string, Shape> = {};
+    for (const decoration of definition.decorations ?? []) shapes[unique(decoration.id.replace(/[^\w-]+/g, '-'), shapes)] = shapeOf(decoration, notes, ctx.appearance);
+    const preset: Part = {
+      as: 'group', size, parts: inner, place: innerPlace,
+      ...(Object.keys(shapes).length > 0 ? { shapes } : {}), ...(Object.keys(links).length > 0 ? { links } : {}),
+    };
     const name = instance.component.replace(/[^\w-]+/g, '-');
     if (presets[name] !== undefined && JSON.stringify(presets[name]) !== JSON.stringify(preset)) { unsupported.push('a component whose instances differ beyond their item'); return; }
     presets[name] = preset;

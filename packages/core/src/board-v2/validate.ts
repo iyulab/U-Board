@@ -383,7 +383,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       else if (!isPlace(p)) fail(`${at}/place/${id}`, 'a place is [x, y] or [x, y, width, height]');
     }
     checkShapes(group.shapes, `${at}/shapes`);
-    checkLinks(group.links, `${at}/links`, id => id in inner);
+    checkLinks(group.links, `${at}/links`, id => id in inner, reads);
   };
 
   /** Shapes on a canvas: a box (with a label), a text at a point, a line through points, or a path. */
@@ -422,7 +422,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     return rest.length === 1 && rest[0]! in innerOf(owner);
   };
 
-  const checkLinks = (links: unknown, at: string, exists: (id: string) => boolean) => {
+  const checkLinks = (links: unknown, at: string, exists: (id: string) => boolean, groupReads?: string | null) => {
     if (links === undefined) return;
     if (!isObj(links)) { fail(at, 'links are { "<id>": { "from", "to" } }'); return; }
     for (const [id, l] of Object.entries(links)) {
@@ -431,20 +431,21 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       for (const end of ['from', 'to'] as const) {
         if (typeof l[end] !== 'string' || !exists(l[end] as string)) fail(`${linkAt}/${end}`, `no part "${String(l[end])}" to link`);
       }
-      const reads = l.of !== undefined ? checkOf(l.of, `${linkAt}/of`) ?? null : null;
-      if (l.show !== undefined && l.of === undefined) fail(`${linkAt}/show`, 'a link shows a field "of" a data item — give "of" too');
+      // A link inside a group reads the group's data unless it names its own.
+      const reads = l.of !== undefined ? checkOf(l.of, `${linkAt}/of`) ?? null : groupReads ?? null;
+      if (l.show !== undefined && l.of === undefined && !groupReads) fail(`${linkAt}/show`, 'a link shows a field "of" a data item — give "of" too');
       if (l.tone !== undefined && !(TONES as readonly unknown[]).includes(l.tone)) fail(`${linkAt}/tone`, `"${String(l.tone)}" is not a tone — use ${TONES.join(' · ')}`);
       if (l.route !== undefined && !['straight', 'orthogonal', 'curved'].includes(l.route as string)) fail(`${linkAt}/route`, 'a link\u2019s route is "straight", "orthogonal" or "curved"');
-      if (l.weight !== undefined) checkWeight(l, `${linkAt}/weight`);
+      if (l.weight !== undefined) checkWeight(l, `${linkAt}/weight`, groupReads);
       checkTexts(l, linkAt, reads);
     }
   };
   /** A link's width from a field: `{ "field", "bands": [width, number, width, …] }` or `{ "field", "map": { "<raw>": width } }`. */
-  const checkWeight = (l: Obj, at: string) => {
+  const checkWeight = (l: Obj, at: string, groupReads?: string | null) => {
     const w = l.weight;
     const shape = 'a weight is { "field", "bands": [width, number, width, …] } or { "field", "map": { "<raw>": width, "*": width } }';
     if (!isObj(w) || typeof w.field !== 'string' || (w.bands === undefined) === (w.map === undefined)) { fail(at, shape); return; }
-    if (l.of === undefined) fail(at, 'a weight reads a field "of" a data item — give "of" too');
+    if (l.of === undefined && !groupReads) fail(at, 'a weight reads a field "of" a data item — give "of" too');
     if (w.bands !== undefined) {
       const b = w.bands;
       if (!Array.isArray(b) || b.length < 3 || b.length % 2 === 0) { fail(`${at}/bands`, 'bands are [width, number, width, …] — a width, then a number and the width from it up'); return; }

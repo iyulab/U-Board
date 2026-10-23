@@ -87,8 +87,11 @@ export async function v2Coverage(packs: readonly SamplePack[]): Promise<Outcome[
     }
     // A connector's bound label, colour and dash read again: the label's words, live where they were live, the same dash.
     if (v1.kind === 'canvas' && drawn.kind === 'canvas') {
-      for (const connector of v1.connectors.filter(c => c.bindings)) {
-        const again = drawn.connectors.find(c => c.id === `link.${connector.id.replace(/[^\w-]+/g, '-')}`);
+      for (const connector of (expandComponents(v1) as typeof v1).connectors.filter(c => c.bindings)) {
+        // A board's own line is `link.<id>`; a line of a component instance is `<instance>/link.<id>`.
+      const [owner, local] = connector.id.includes('/') ? [connector.id.slice(0, connector.id.indexOf('/')), connector.id.slice(connector.id.indexOf('/') + 1)] : [undefined, connector.id];
+      const id = `${owner !== undefined ? `${owner}/` : ''}link.${local.replace(/[^\w-]+/g, '-')}`;
+      const again = drawn.connectors.find(c => c.id === id);
         if (!again) continue;
         const [a, b] = await Promise.all([resolveConnector(connector, adapters), resolveConnector(again, adapters)]);
         if (connector.bindings!.label && a.label !== b.label) differences.push(`${connector.id}: label ${JSON.stringify(a.label)} → ${JSON.stringify(b.label)}`);

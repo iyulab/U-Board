@@ -123,7 +123,7 @@ export function boardV2Schema(): Schema {
           parts: map(ref('part')),
           place: map(ref('place')),
           shapes: map(ref('shape')),
-          links: map(ref('link')),
+          links: map(ref('groupLink')),
           element: { type: 'string' },
           props: { type: 'object' },
           bind: map({ type: 'string', pattern: '^[\\w-]+(\\.(status|tone))?$' }),
@@ -155,7 +155,7 @@ export function boardV2Schema(): Schema {
         },
         oneOf: [{ required: ['box'] }, { required: ['text', 'at'] }, { required: ['line'] }, { required: ['path'] }],
       },
-      link: {
+      groupLink: {
         type: 'object',
         required: ['from', 'to'],
         additionalProperties: false,
@@ -183,8 +183,10 @@ export function boardV2Schema(): Schema {
           dash: { type: 'boolean' },
           arrow: { type: 'boolean' },
         },
-        dependentRequired: { show: ['of'], weight: ['of'] },
       },
+      // A link on a board's own canvas shows or weighs a field only "of" something; inside a group (above) it may read
+      // the group's data instead.
+      link: { $ref: '#/$defs/groupLink', dependentRequired: { show: ['of'], weight: ['of'] } },
       canvas: {
         type: 'object',
         required: ['size', 'place'],

@@ -17,7 +17,7 @@ const READ_THE_SAME = [
   'offshore-wind-chart', 'palace-visit', 'parcel-hub', 'park-trails', 'parking-signs', 'pc-cafe', 'pool-mosaic',
   'port-terminal', 'power-sld', 'produce-market', 'quake-helicorder', 'recycling-polaroid', 'school-chalkboard',
   'seoul-air', 'server-room', 'site-noise-score', 'ski-resort', 'smart-farm', 'telecom-noc', 'theatre-boxoffice',
-  'theme-park', 'tunnel-tbm', 'utility-regions', 'vet-comic', 'wafer-maps', 'ward-beds', 'water-pumps',
+  'theme-park', 'tunnel-tbm', 'utility-regions', 'vet-comic', 'warehouse-racks', 'wafer-maps', 'ward-beds', 'water-pumps',
   'wildfire-topo', 'wildlife-chaekgado', 'winery-engraving',
 ];
 

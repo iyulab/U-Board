@@ -573,7 +573,9 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       else decorations.push(shapeOf(moved, `${prefix}shape.${id}`));
     }
     for (const [id, link] of Object.entries(canvas.links ?? {})) {
-      connectors.push(connectorOf({ ...link, from: `${frame.ids}${link.from}`, to: `${frame.ids}${link.to}` }, `${prefix}link.${id}`, `${at}/links/${id}`));
+      // A link inside a group reads the group's data unless it names its own, as the group's parts do.
+      const of = link.of ?? (frame.reads ? (frame.reads.item !== undefined ? `${frame.reads.query}[${frame.reads.item}]` : frame.reads.query) : undefined);
+      connectors.push(connectorOf({ ...link, ...(of !== undefined ? { of } : {}), from: `${frame.ids}${link.from}`, to: `${frame.ids}${link.to}` }, `${prefix}link.${id}`, `${at}/links/${id}`));
     }
     // Lines are drawn under the parts, as the decorations are.
     return { nodes: [...lines, ...nodes], connectors, ...(decorations.length > 0 ? { decorations } : {}) };
