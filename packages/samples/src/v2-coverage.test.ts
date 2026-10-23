@@ -11,13 +11,14 @@ const READ_THE_SAME = [
   'callcenter-cork', 'campsite-papercut', 'charging-pcb', 'clinic-kiosk', 'clinic-vaccines', 'coldchain-vapor',
   'commerce-live', 'count-hall', 'dam-steampunk', 'daycare-bricks', 'delivery-boardgame', 'drone-routes',
   'elevator-tui', 'factory-floor', 'farmers-market', 'festival-ops', 'fire-dispatch', 'harbor-auction', 'harbor-radar',
-  'heating-nixie', 'home-eink', 'hotel-glass', 'island-ferry', 'it-topology', 'kiln-porcelain', 'library-report',
-  'lighthouse-stamps', 'line-flow', 'line-spc', 'lost-found-dossier', 'makerspace-shadowboard', 'mall-wayfinding',
-  'museum-najeon', 'night-market-neon', 'observatory-glass', 'offshore-wind-chart', 'palace-visit', 'parcel-hub',
-  'park-trails', 'parking-signs', 'pc-cafe', 'pool-mosaic', 'port-terminal', 'power-sld', 'produce-market',
-  'quake-helicorder', 'recycling-polaroid', 'school-chalkboard', 'seoul-air', 'server-room', 'site-noise-score',
-  'ski-resort', 'smart-farm', 'telecom-noc', 'theatre-boxoffice', 'theme-park', 'tunnel-tbm', 'utility-regions',
-  'vet-comic', 'wafer-maps', 'ward-beds', 'water-pumps', 'wildfire-topo', 'wildlife-chaekgado', 'winery-engraving',
+  'heating-nixie', 'home-eink', 'hotel-glass', 'island-ferry', 'it-topology', 'kiln-porcelain', 'korea-weather-grid',
+  'library-report', 'lighthouse-stamps', 'line-flow', 'line-oee', 'line-spc', 'lost-found-dossier',
+  'makerspace-shadowboard', 'mall-wayfinding', 'museum-najeon', 'night-market-neon', 'observatory-glass',
+  'offshore-wind-chart', 'palace-visit', 'parcel-hub', 'park-trails', 'parking-signs', 'pc-cafe', 'pool-mosaic',
+  'port-terminal', 'power-sld', 'produce-market', 'quake-helicorder', 'recycling-polaroid', 'school-chalkboard',
+  'seoul-air', 'server-room', 'site-noise-score', 'ski-resort', 'smart-farm', 'telecom-noc', 'theatre-boxoffice',
+  'theme-park', 'tunnel-tbm', 'utility-regions', 'vet-comic', 'wafer-maps', 'ward-beds', 'water-pumps',
+  'wildfire-topo', 'wildlife-chaekgado', 'winery-engraving',
 ];
 
 describe('conversion of the samples to the second version', () => {

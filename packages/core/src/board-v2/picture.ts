@@ -87,7 +87,12 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
   /** An HTTP connector's reference: the request, the item, the value in it, and how current it must be. */
   const refFor = (q: Query, query: string, item: string | undefined, field: string | undefined, valueAt: string | undefined, at: string): HttpRef => {
     const ref: HttpRef = { path: q.path! };
-    if (item !== undefined) {
+    if (q.pivot !== undefined) {
+      // A pivoted list is one item: its field is the row its name is, the value that row holds.
+      if (field === undefined) throw new PictureError(at, `"${query}" is pivoted — name its fields, it has no whole item to write`);
+      ref.item = { list: q.list!, where: { ...q.where, [q.pivot.key]: field } };
+      ref.valuePath = `/${q.pivot.value}`;
+    } else if (item !== undefined) {
       if (q.key !== undefined) {
         ref.item = { list: q.list!, where: { ...q.where, [q.key]: item } };
         if (valueAt !== undefined) ref.valuePath = valueAt;
@@ -105,7 +110,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       }
     }
     // The time the source observed a value is the item's — a whole list has one per row, not one of its own.
-    if (q.time !== undefined && (item !== undefined || q.list === undefined)) ref.observedAtPath = q.fields?.[q.time]?.at ?? `/${q.time}`;
+    if (q.time !== undefined && (item !== undefined || q.list === undefined || q.pivot !== undefined)) ref.observedAtPath = q.fields?.[q.time]?.at ?? `/${q.time}`;
     // The whole list is as old as the answer says it is.
     else if (q.answerTime !== undefined && item === undefined && q.where === undefined && field === undefined) ref.observedAtPath = q.answerTime;
     if (q.zone !== undefined) ref.timeZone = q.zone;

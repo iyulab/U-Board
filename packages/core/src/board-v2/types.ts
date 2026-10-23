@@ -87,6 +87,9 @@ export interface Query {
   /** Where the answer says when it was observed as a whole (a JSON Pointer) — the time of a part that reads the whole
    *  list, whose items carry none of their own. */
   answerTime?: string;
+  /** A list of one row per name (`{ "category": "T1H", "obsrValue": 3.1 }`) read as one item: each row's `key` field names a
+   *  field, its `value` field is that field's value — parts read the data whole, its fields by those names. */
+  pivot?: { key: string; value: string };
   /** Seconds a value may be old and still be current. */
   fresh?: number;
   /** The time the request's `{{now:…}}` places stand for. */

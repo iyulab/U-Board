@@ -216,6 +216,20 @@ describe('fromV1', () => {
       .toContain('/layout/links/l/weight/bands');
   });
 
+  it('reads a list of one row per name as one item when a widget reads several of its rows — pivoted', () => {
+    const row = (category: string) => ({ adapter: 'kma', ref: { path: '/ncst?nx=60', item: { list: '/items', where: { category } }, valuePath: '/obsrValue' } });
+    const { board, unsupported } = fromV1(canvas([
+      node('t', { type: 'element:town', props: { temp: 0, humidity: 0 }, bindings: { temp: row('T1H'), humidity: row('REH') } }),
+    ], { elements: { town: { render: 'template', template: '{{temp}} {{humidity}}', size: { width: 100, height: 60 }, props: { type: 'object', properties: { temp: { type: 'number' }, humidity: { type: 'number' } } } } } }));
+    expect(unsupported).toEqual([]);
+    expect(board.data!.ncst).toEqual({ from: 'kma', path: '/ncst?nx=60', list: '/items', pivot: { key: 'category', value: 'obsrValue' }, fields: { T1H: {}, REH: {} } });
+    expect(board.parts.t).toEqual({ as: 'element', element: 'town', of: 'ncst', bind: { temp: 'T1H', humidity: 'REH' } });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'canvas' && drawn.nodes[0]!.widget.bindings!.humidity!.ref).toEqual({ path: '/ncst?nx=60', item: { list: '/items', where: { category: 'REH' } }, valuePath: '/obsrValue' });
+    expect(validateBoardV2({ ...board, parts: { t: { ...board.parts.t!, of: 'ncst[T1H]' } } }).map(i => i.message)).toContain('"ncst" is pivoted into one item — write "ncst" and name its fields');
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {

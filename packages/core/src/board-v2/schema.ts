@@ -80,7 +80,7 @@ export function boardV2Schema(): Schema {
         required: ['from'],
         oneOf: [
           { required: ['path'] },
-          { required: ['ref'], not: { anyOf: ['list', 'key', 'where', 'time', 'answerTime', 'fresh', 'now', 'zone'].map(k => ({ required: [k] })) } },
+          { required: ['ref'], not: { anyOf: ['list', 'key', 'where', 'time', 'answerTime', 'fresh', 'now', 'zone', 'pivot'].map(k => ({ required: [k] })) } },
         ],
         additionalProperties: false,
         properties: {
@@ -91,6 +91,13 @@ export function boardV2Schema(): Schema {
           key: { type: 'string', description: 'The field that names each item: parts address one as <data>[<key>].' },
           where: map({ type: ['string', 'number', 'boolean'] }, 'Only the items whose fields equal these values.'),
           time: { type: 'string', description: 'The field holding when the source observed the item.' },
+          pivot: {
+            type: 'object',
+            required: ['key', 'value'],
+            additionalProperties: false,
+            description: 'A list of one row per name read as one item: each row’s key field names a field, its value field is the value.',
+            properties: { key: { type: 'string' }, value: { type: 'string' } },
+          },
           answerTime: { type: 'string', pattern: '^/', description: 'Where the answer says when it was observed as a whole — the time of a part that reads the whole list.' },
           fresh: { type: 'number', exclusiveMinimum: 0, description: 'Seconds a value may be old and still be current.' },
           now: {

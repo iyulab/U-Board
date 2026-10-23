@@ -121,11 +121,17 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     if (byRef) {
       // An adapter that is not an HTTP connector answers one item, and says itself how current it is.
       if (q.path !== undefined) fail(`${at}/path`, 'a data read is either asked a "path" (an HTTP connector) or given a "ref" (another adapter) — not both');
-      for (const k of ['list', 'key', 'where', 'time', 'answerTime', 'fresh', 'now', 'zone']) {
+      for (const k of ['list', 'key', 'where', 'time', 'answerTime', 'fresh', 'now', 'zone', 'pivot']) {
         if (q[k] !== undefined) fail(`${at}/${k}`, `a "ref" read answers one item and says itself how current it is — "${k}" belongs to a "path" read`);
       }
     } else if (typeof q.path !== 'string' || !q.path.startsWith('/')) fail(`${at}/path`, 'a data read needs "path": the request, starting with "/" — or "ref" for an adapter that is not an HTTP connector');
     if (q.key !== undefined && q.list === undefined) fail(`${at}/key`, 'a "key" names the items of a "list" — give the list too');
+    if (q.pivot !== undefined) {
+      const p = q.pivot;
+      if (!isObj(p) || typeof p.key !== 'string' || typeof p.value !== 'string') fail(`${at}/pivot`, '"pivot" is { "key": "<field naming each row>", "value": "<field holding its value>" }');
+      else if (q.list === undefined) fail(`${at}/pivot`, '"pivot" reads the rows of a "list" as one item — give the list too');
+      else if (q.key !== undefined) fail(`${at}/key`, 'a pivoted list is one item, not items named by a "key" — leave "key" out');
+    }
     if (q.answerTime !== undefined) {
       if (typeof q.answerTime !== 'string' || !q.answerTime.startsWith('/')) fail(`${at}/answerTime`, '"answerTime" is where the answer holds its time, a JSON Pointer starting with "/"');
       else if (q.list === undefined) fail(`${at}/answerTime`, 'without a "list" the answer is the item — its time is "time"');
@@ -235,6 +241,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       const q = typeof part.each === 'string' ? data[part.each] : undefined;
       if (!isObj(q)) fail(`${at}/each`, `no data "${String(part.each)}" — data: ${list(Object.keys(data))}`);
       else if (q.list === undefined) fail(`${at}/each`, `"each" makes a part per item of a "list" — "${String(part.each)}" has none`);
+      else if (q.pivot !== undefined) fail(`${at}/each`, `"${String(part.each)}" is pivoted into one item — there is one, not one per row`);
     }
     const reads = part.of !== undefined ? ofData
       : part.each !== undefined ? (typeof part.each === 'string' && isObj(data[part.each]) ? part.each : undefined)
@@ -354,6 +361,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     const q = data[m[1]!];
     if (!isObj(q)) { fail(at, `no data "${m[1]}" — data: ${list(Object.keys(data))}`); return undefined; }
     if (m[2] !== undefined && q.list === undefined) fail(at, `"${m[1]}" has no "list", so it has no items to name — write "${m[1]}"`);
+    if (m[2] !== undefined && q.pivot !== undefined) fail(at, `"${m[1]}" is pivoted into one item — write "${m[1]}" and name its fields`);
     return m[1];
   };
 

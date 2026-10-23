@@ -43,6 +43,8 @@ export function fromV1(doc: ViewDocument): V1Conversion {
   // An instance's bindings are its component's with the instance's values in them — seen as each instance reads them.
   if (doc.kind === 'canvas') for (const node of expandComponents(doc).nodes.slice(doc.nodes.length)) widgets.push(node.widget);
   for (const widget of widgets) for (const binding of Object.values(widget.bindings ?? {})) reads.see(binding);
+  // A widget reading several rows of one list at one place in each row reads the list pivoted — the rows one item.
+  for (const widget of widgets) reads.seeRows(Object.values(widget.bindings ?? {}));
 
   const layout: BoardV2['layout'] = doc.kind === 'canvas' ? { kind: 'canvas', ...canvasOf(doc, ctx) } : { kind: 'grid', items: gridOf(doc, ctx) };
   const look = {
@@ -707,8 +709,24 @@ class Reads {
   /** The bindings seen per read, before any is named — a list's key is the field the items differ by. */
   private readonly seen = new Map<string, HttpRef[]>();
   private readonly names = new Map<string, string>();
+  /** The reads a widget reads several rows of, each at one place — read pivoted. */
+  private readonly pivoted = new Set<string>();
 
   constructor(private readonly unsupported: string[]) {}
+
+  /** The reads one widget makes: rows of one list, each at the same place, mark that list to be read pivoted. */
+  seeRows(bindings: Binding[]) {
+    const rows = new Map<string, Set<string>>();
+    for (const b of bindings) {
+      if (!isHttpRef(b.ref) || !b.ref.item) continue;
+      const key = readKey(b.adapter, b.ref, b.ref.item.list);
+      rows.set(key, (rows.get(key) ?? new Set()).add(JSON.stringify([b.ref.item.where, toPointer(b.ref.valuePath ?? '')])));
+    }
+    for (const [key, seen] of rows) {
+      const wheres = [...seen].map(r => JSON.parse(r) as [Record<string, unknown>, string]);
+      if (new Set(wheres.map(([w]) => JSON.stringify(w))).size > 1 && new Set(wheres.map(([, at]) => at)).size === 1) this.pivoted.add(key);
+    }
+  }
 
   see(binding: Binding) {
     if (!isHttpRef(binding.ref) || !binding.ref.item) return;
@@ -725,6 +743,16 @@ class Reads {
     const name = this.query(binding.adapter, ref, ref.item?.list);
     const q = this.data[name]!;
     let of = name;
+    if (ref.item && q.pivot !== undefined) {
+      // A row of a pivoted list is the field its name is.
+      const id = ref.item.where[q.pivot.key];
+      if (toPointer(ref.valuePath ?? '') !== `/${q.pivot.value}` || (typeof id !== 'string' && typeof id !== 'number') || !/^[A-Za-z_][\w-]*$/.test(String(id))) {
+        this.unsupported.push('a row of a pivoted list read other than by its name');
+        return undefined;
+      }
+      const field = this.field(q, `/${String(id)}`, binding.map, meaning, state);
+      return field === undefined ? undefined : { of, field };
+    }
     if (ref.item) {
       const id = ref.item.where[q.key!];
       if (id === undefined) { this.unsupported.push('items of one list picked by different fields'); return undefined; }
@@ -798,8 +826,13 @@ class Reads {
       const fields = Object.keys(items[0]!);
       const varying = fields.filter(f => new Set(items.map(w => String(w[f]))).size > 1);
       const keyField = varying.length === 1 ? varying[0]! : varying.length === 0 ? fields.at(-1)! : undefined;
+      const values = new Set((this.seen.get(key) ?? [ref]).map(r => toPointer(r.valuePath ?? '')));
       if (keyField === undefined) this.unsupported.push('items of one list told apart by more than one field');
-      else {
+      else if (this.pivoted.has(key) && values.size === 1 && /^\/[^/]+$/.test([...values][0]!)) {
+        q.pivot = { key: keyField, value: [...values][0]!.slice(1) };
+        const fixed = Object.fromEntries(fields.filter(f => f !== keyField).map(f => [f, items[0]![f]!]));
+        if (Object.keys(fixed).length > 0) q.where = fixed;
+      } else {
         q.key = keyField;
         const fixed = Object.fromEntries(fields.filter(f => f !== keyField).map(f => [f, items[0]![f]!]));
         if (Object.keys(fixed).length > 0) q.where = fixed;
