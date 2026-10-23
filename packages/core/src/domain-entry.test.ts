@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import * as mod from './domain-entry.js';
 import * as viewer from './viewer-entry.js';
 import * as root from './index.js';
+import * as boardV2 from './board-v2-entry.js';
 // Compiles only while every entry point carries the types of the fields it exports (document-types.ts).
 import type { ReferencePoint, ValueRange, BackgroundImage } from './viewer-entry.js';
 import type { ReferencePoint as DomainReferencePoint, ValueRange as DomainValueRange } from './domain-entry.js';
@@ -65,6 +66,23 @@ describe('domain entry', () => {
     const sameRange: DomainValueRange = range;
     const image: BackgroundImage = { src: '', width: 1, height: 1, referencePoints: [same, same] };
     expect([sameRange, image].length).toBe(2);
+  });
+});
+
+// The board language's second version has its own entry: it is not part of the package root (nothing there reads it yet),
+// and it reaches the widget library — its kinds are generated from the library's catalog — so a process that loads it has
+// to resolve that library.
+describe('board-v2 entry', () => {
+  it('exports exactly these values', () => {
+    expect(Object.keys(boardV2).sort()).toEqual([
+      'BOARD_LANGUAGE_VERSION', 'EMPHASES', 'FRAMES', 'PART_KINDS', 'PictureError', 'TONES', 'boardV2Schema', 'fromV1', 'partKind',
+      'toViewDocument', 'validateBoardV2',
+    ]);
+    for (const key of Object.keys(boardV2)) expect(key in root).toBe(false);
+  });
+
+  it('reaches the widget library and nothing else at runtime', () => {
+    expect(runtimePackagesReachedFrom(resolve(process.cwd(), 'src/board-v2-entry.ts'))).toEqual(['@iyulab/u-widgets']);
   });
 });
 

@@ -8,6 +8,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A `./board-v2` entry: the board language's second version — its types, its JSON Schema, its check, the view
+  document it is drawn as, and the conversion of a first-version document. Not stable before the release that makes it
+  the stored format.
+
 - An HTTP connector reference can read every item of a list whose fields match: `items: { list, where }` — the rows a
   list or a table shows, kept to the part of a list they are about (one pollutant out of a list of all of them), in the
   source's order and empty when none matches. It goes without `item`, `valuePath` and `observedAtPath`; `isHttpRef`

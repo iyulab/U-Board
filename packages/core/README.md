@@ -23,6 +23,7 @@ not `require`) and needs Node 22.12 or later.
 | `@iyulab/u-board/domain` | View document types, the `Adapter` contract, `resolveDocument`, `validateViewDocument`/`parseViewDocument`, connection-quality text (`describeQuality`) | No |
 | `@iyulab/u-board/viewer` | Read-only `ViewerPage` and the `useResolvedDocument` hook | Yes |
 | `@iyulab/u-board` | Everything in `domain`, plus `AuthoringView` and `ViewerPage` | Yes |
+| `@iyulab/u-board/board-v2` | The board language's second version — its types, JSON Schema (`boardV2Schema`), check (`validateBoardV2`), drawing (`toViewDocument`) and the conversion of a first-version document (`fromV1`). Not stable yet: it may change in a minor release until it becomes the stored format | No (reads the widget catalog of `@iyulab/u-widgets`) |
 
 Code that only reads or writes view documents, or implements an adapter for an external system,
 should import from `@iyulab/u-board/domain` so it never pulls in the rendering stack.
