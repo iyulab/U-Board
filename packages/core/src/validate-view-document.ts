@@ -96,7 +96,7 @@ const RECT_FIELDS = ['id', 'type', 'x', 'y', 'width', 'height', 'fill', 'stroke'
 const TEXT_FIELDS = ['id', 'type', 'x', 'y', 'text', 'fontSize', 'fill', 'anchor', 'background'];
 const SYMBOL_FIELDS = ['viewBox', 'markup'];
 const WIDGET_FIELDS = ['type', 'props', 'bindings'];
-const BINDING_FIELDS = ['adapter', 'ref', 'map', 'itemFields'];
+const BINDING_FIELDS = ['adapter', 'ref', 'map', 'itemFields', 'text'];
 const VALUE_MAP_FIELDS = ['values', 'ranges', 'otherwise'];
 const RANGE_FIELDS = ['min', 'max', 'value'];
 const STATES_FIELDS = ['from', 'map', 'looks'];
@@ -297,6 +297,12 @@ function checkBindings(doc: Checker, bindings: Record<string, unknown>, at: stri
     if (!('ref' in binding)) doc.fail([...bindingAt, 'ref'], 'expected a ref (its shape is up to the adapter)');
     if (binding.map !== undefined && doc.record(binding, [...bindingAt, 'map'])) {
       checkValueMap(doc, binding.map as Record<string, unknown>, [...bindingAt, 'map']);
+    }
+    if (binding.text !== undefined) doc.string(binding, [...bindingAt, 'text']);
+    if (typeof binding.text === 'string') {
+      const parsed = parseTemplate(binding.text);
+      if (!parsed.ok) doc.fail([...bindingAt, 'text'], parsed.error);
+      else if (parsed.nodes.some(node => node.kind === 'section')) doc.fail([...bindingAt, 'text'], 'a text takes values — {{field}} — and no sections');
     }
     if (binding.itemFields !== undefined && doc.record(binding, [...bindingAt, 'itemFields'])) {
       for (const [name, field] of Object.entries(binding.itemFields as Record<string, unknown>)) {

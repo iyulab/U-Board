@@ -366,6 +366,10 @@
         "adapter": { "type": "string" },
         "ref": {},
         "map": { "$ref": "#/$defs/valueMap" },
+        "text": {
+          "description": "The value written into a text: each {{field}} a field of the value, in a template element's value grammar ({{flow | fixed:1}}).",
+          "type": "string"
+        },
         "itemFields": {
           "description": "For a value that is a list: the fields each item gains, by name — each the value of the item's from field, translated by map when there is one.",
           "type": "object",

@@ -1,4 +1,5 @@
 import type { Binding, ItemField, Widget, ValueMap } from './view-document.js';
+import { formatValue, parseTemplate } from './elements/template.js';
 
 /**
  * A pluggable resolver for one specific external system's values (docs/concepts.md — "Adapter").
@@ -178,7 +179,8 @@ export async function resolveBindings(
         if (resolved.quality !== 'disconnected') {
           readings[propPath] = resolved.value;
           const mapped = binding.map ? applyValueMap(binding.map, resolved.value) : resolved.value;
-          const value = accept(propPath, binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped);
+          const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
+          const value = accept(propPath, typeof binding.text === 'string' ? writeText(binding.text, gained) : gained);
           if (value !== undefined) setPath(props, propPath, value);
         }
         quality[propPath] = resolved.quality;
@@ -211,11 +213,27 @@ export function applyValueMap(map: ValueMap, value: unknown): unknown {
 /** A list `value` whose items have gained `fields` (`Binding.itemFields`): each the value of the item's `from` field,
  *  mapped when the field has a map. A value that is not a list, and an item that is not an object, are left as they are. */
 export function withItemFields(fields: Record<string, ItemField>, value: unknown): unknown {
-  if (!Array.isArray(value) || !isObject(fields)) return value;
+  if (!isObject(fields)) return value;
   const entries = Object.entries(fields).filter(([, f]) => isObject(f) && typeof f.from === 'string');
-  return value.map(item => (isObject(item) && !Array.isArray(item)
+  const gain = (item: unknown) => (isObject(item) && !Array.isArray(item)
     ? { ...item, ...Object.fromEntries(entries.map(([name, f]) => [name, f.map ? applyValueMap(f.map, item[f.from]) : item[f.from]])) }
-    : item));
+    : item);
+  return Array.isArray(value) ? value.map(gain) : gain(value);
+}
+
+/** `value` written into `text` (`Binding.text`): each `{{field}}` the value's field — `{{.}}` the value — in a template
+ *  element's value grammar; a field it does not have is empty. A text that is not one (a section, an unclosed hole)
+ *  is returned as it is. */
+export function writeText(text: string, value: unknown): string {
+  const parsed = parseTemplate(text);
+  if (!parsed.ok) return text;
+  return parsed.nodes.map(node => {
+    if (node.kind === 'text') return node.text;
+    if (node.kind !== 'value') return '';
+    const found = node.path === '.' ? value : node.path.split('.').reduce<unknown>((at, step) => (isObject(at) ? at[step] : undefined), value);
+    const shown = formatValue(found, node);
+    return shown === undefined || shown === null ? '' : String(shown);
+  }).join('');
 }
 
 /** Whether `n` falls in `range` — `min` included, `max` not. A range with no numeric bound holds nothing. */

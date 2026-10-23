@@ -442,12 +442,17 @@ export interface Binding {
    * vocabulary (`"Fault"`, `3`), a widget prop its own (a status tone). Applied to a value that is
    * shown (`live` or `stale`) before it reaches the prop. Omitted: the value is used as it comes. */
   map?: ValueMap;
-  /** For a value that is a list — rows a list or a table shows — the fields each item gains, by name: each the value
-   * of the item's `from` field, translated by `map` when there is one. A row's state in the source's words (`"trip"`)
+  /** For a value that is a list — rows a list or a table shows — the fields each item gains, by name (an object value
+   * gains them as one item does): each the value of the item's `from` field, translated by `map` when there is one. A row's state in the source's words (`"trip"`)
    * becomes the tone the widget colours the row by, beside the words themselves; a field the widget reads by another
    * name (`label`) is the source's field under that name. Applied after `map`; an item that is not an object is left as
    * it is. */
   itemFields?: Record<string, ItemField>;
+  /** The value written into a text: each `{{field}}` a field of the value — the item it read, an object — in the value
+   * grammar of a template element (`{{flow | fixed:1}}`, `{{.}}` the value itself). A title of words and readings —
+   * `"Berth 1 · {{vessel}}"` — read from one item. Applied last, after `itemFields`, so a text can show the words a
+   * field gained. A value that is not shown (`disconnected`) leaves the prop as it is. */
+  text?: string;
 }
 
 /** A field each item of a list value gains: see `Binding.itemFields`. */

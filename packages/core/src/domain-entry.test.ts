@@ -37,7 +37,7 @@ describe('domain entry', () => {
       'emptyViewDocument', 'expandComponents', 'findHttpRefItem', 'firedBy', 'getByPointer', 'instancePartId', 'isCanvasItem', 'isHttpRef', 'isSourceErrorField', 'isTriggerLink', 'linkFor',
       'lintViewDocument', 'nodeSize', 'parseSourceTime', 'parseViewDocument', 'placeAt', 'placedAt', 'placedIn', 'readHttpRef', 'requestPath', 'requestTimeProblem',
       'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading', 'sizedNodes', 'sourceErrorIn', 'stateChanges',
-      'validateViewDocument', 'withItemFields', 'worstQuality',
+      'validateViewDocument', 'withItemFields', 'worstQuality', 'writeText',
     ]);
     expect(Object.keys(viewer).sort()).toEqual([
       'DEFAULT_LABELS', 'DEFAULT_QUALITY_TEXT', 'KO_LABELS', 'ViewerPage', 'ageText', 'serverClock', 'timeText', 'useResolvedDocument',

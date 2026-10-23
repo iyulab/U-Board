@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveWidget, applyValueMap, withItemFields } from './adapter';
+import { resolveWidget, applyValueMap, withItemFields, writeText } from './adapter';
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { Widget } from './view-document';
 
@@ -342,6 +342,25 @@ describe('value maps', () => {
     expect((await resolveWidget(widget, [plant])).props.data).toEqual([{ id: 'P1', state: 'run', tone: 'ok' }, { id: 'P2', state: 'trip', tone: 'alarm' }, 'note']);
     expect(withItemFields({ tone: { from: 'state', map: { values: {} } } }, 'not a list')).toBe('not a list');
     expect(withItemFields({ label: { from: 'id' } }, [{ id: 'P1' }])).toEqual([{ id: 'P1', label: 'P1' }]);
+    expect(withItemFields({ label: { from: 'id' } }, { id: 'P1' })).toEqual({ id: 'P1', label: 'P1' });
+  });
+
+  it('writes the item it read into a text, its fields in the template value grammar', async () => {
+    const port = new InMemoryAdapter('port', { b1: { value: { vessel: 'HMM Algeciras', draft: 14.567, teu: 23964, state: 'work' }, quality: 'live' } });
+    const widget: Widget = {
+      type: 'status-card',
+      props: { data: { title: 'Berth 1' } },
+      bindings: {
+        'data.title': {
+          adapter: 'port', ref: 'b1',
+          itemFields: { 'state$name': { from: 'state', map: { values: { work: 'Working' } } } },
+          text: 'Berth 1 · {{vessel}} · {{draft | fixed:1}} m · {{teu | grouped:0}} TEU · {{state$name}}{{missing}}',
+        },
+      },
+    };
+    expect((await resolveWidget(widget, [port])).props.data).toEqual({ title: 'Berth 1 · HMM Algeciras · 14.6 m · 23,964 TEU · Working' });
+    expect(writeText('{{.}} pumps', 4)).toBe('4 pumps');
+    expect(writeText('{{#rows}}x{{/rows}} and {{a}}', { a: 1 })).toBe(' and 1');
   });
 
   it('maps a bound value before it reaches the props, live or stale, and leaves a disconnected one alone', async () => {

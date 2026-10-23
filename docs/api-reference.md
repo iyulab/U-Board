@@ -306,8 +306,14 @@ interface ValueRange {
 - `itemFields` — for a value that is a list (the rows a `list` or a `table` shows), the fields each item gains, by
   name: `{ "<name>": { from, map? } }`, each the value of the item's `from` field, translated by `map` when there is
   one. A row keeps the source's words and gains the tone the widget colours it by; a field the widget reads by another
-  name (`label`) is the source's field under that name. Applied after `map`; an item that is not an object is left as
-  it is. `withItemFields(fields, value)` is the same for a host's own code.
+  name (`label`) is the source's field under that name; an object value — one item read alone — gains them as an item
+  does. Applied after `map`; an item that is not an object is left as it is. `withItemFields(fields, value)` is the same
+  for a host's own code.
+- `text` — the value written into a text: each `{{field}}` a field of the value (the item it read, an object), in the
+  value grammar of a template element — `{{draft | fixed:1}}`, `{{teu | grouped:0}}`, `{{.}}` the value itself; a
+  field the value does not have is empty. A title of words and readings — `"Berth 1 · {{vessel}}"` — read from one item.
+  Applied last, after `itemFields`, so a text shows the words a field gained. `writeText(text, value)` is the same for a
+  host's own code.
 
   ```ts
   bindings: {

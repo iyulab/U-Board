@@ -50,6 +50,7 @@ const AGREED: [string, unknown, boolean][] = [
   ['a grid cell holding a widget and a canvas', grid({ items: [{ id: 'c', widget: { type: 'gauge' }, canvas: { background: {}, nodes: [], connectors: [] } }] }), false],
   ['a canvas cell without its nodes', grid({ items: [{ id: 'c', canvas: { background: {}, connectors: [] } }] }), false],
   ['a canvas cell node without anchored', grid({ items: [{ id: 'c', canvas: { background: {}, nodes: [{ id: 'n', x: 0, y: 0, widget: { type: 'gauge' } }], connectors: [] } }] }), false],
+  ['a binding writing its item into a text', canvas({ nodes: [node('a', { type: 'status', bindings: { 'data.label': { adapter: 'http', ref: {}, text: 'Berth {{no}} · {{vessel}}' } } })] }), true],
   ['a list binding whose items gain a field', canvas({ nodes: [node('a', { type: 'list', bindings: { data: { adapter: 'http', ref: {}, itemFields: { tone: { from: 'state', map: { values: { run: 'ok' }, otherwise: 'off' } } } } } })] }), true],
   ['an item field without its source field', canvas({ nodes: [node('a', { type: 'list', bindings: { data: { adapter: 'http', ref: {}, itemFields: { tone: { map: { values: {} } } } } } })] }), false],
   ['an item field whose map is empty', canvas({ nodes: [node('a', { type: 'list', bindings: { data: { adapter: 'http', ref: {}, itemFields: { tone: { from: 'state', map: {} } } } } })] }), false],
@@ -101,6 +102,7 @@ const AGREED: [string, unknown, boolean][] = [
 
 /** Documents the validator refuses for a rule the schema says it cannot express — named in its description. */
 const VALIDATOR_ONLY: [string, unknown][] = [
+  ['a binding text with a section', canvas({ nodes: [node('a', { type: 'status', bindings: { 'data.label': { adapter: 'http', ref: {}, text: '{{#rows}}x{{/rows}}' } } })] })],
   ['an id used twice', canvas({ nodes: [node('a'), node('a')] })],
   ['reference points on one axis', canvas({ background: { image: { src: 'p', width: 1, height: 1, referencePoints: [{ x: 0, y: 0, coordinate: { x: 0, y: 0 } }, { x: 0, y: 1, coordinate: { x: 1, y: 1 } }] } } })],
   ['a value range with min above max', canvas({ nodes: [node('a', { type: 'gauge', bindings: { v: { adapter: 'http', ref: 1, map: { ranges: [{ min: 2, max: 1, value: 'x' }] } } } })] })],

@@ -13,6 +13,10 @@ All notable changes to this package are documented here. The format follows
   source's words and gain the tone they are coloured by (`mapping.tone`); a field the widget reads by another name is
   the source's field under that name. `withItemFields(fields, value)` applies them for a host's own code; the view
   document's JSON Schema and validator take the new field, and the binding form keeps it when the binding is edited.
+- A binding can write the value it read into a text: `text: "Berth 1 · {{vessel}} · {{draft | fixed:1}} m"` — each
+  `{{field}}` a field of the item it read, in a template element's value grammar — for a title of words and readings.
+  `itemFields` now also gives an object value (one item read alone) its fields, so a text can show a field's words.
+  `writeText(text, value)` is the same for a host's own code; the validator and the JSON Schema take the field.
 - A drawing colour — a decoration's, a connector's, a state's ring — takes the widgets' tones by name (`ok`, `info`,
   `watch`, `warn`, `alarm`, `off`, `idle`, `past`, `now`, `next`), drawn in the widgets' palette for the board's
   appearance, beside `positive`, `warning`, `negative` and `accent`. An element's markup reads the same colours as the
