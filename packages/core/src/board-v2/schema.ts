@@ -99,7 +99,7 @@ export function boardV2Schema(): Schema {
             description: 'A list of one row per name read as one item: each row’s key field names a field, its value field is the value.',
             properties: { key: { type: 'string' }, value: { type: 'string' } },
           },
-          answerTime: { type: 'string', pattern: '^/', description: 'Where the answer says when it was observed as a whole — the time of a part that reads the whole list.' },
+          answerTime: { type: 'string', pattern: '^/', description: 'Where the answer says when it was observed as a whole, a JSON Pointer ("/updatedAt") — the time of a part that reads the whole list.' },
           fresh: { type: 'number', exclusiveMinimum: 0, description: 'Seconds a value may be old and still be current.' },
           now: {
             description: 'For a source asked for a given time: the delay after a time it has its data, and how often it has new data (seconds).',

@@ -74,8 +74,13 @@ label, glyph. Never write colours for statuses.`,
 
 \`{ "as": <kind>, "of": "<data>" | "<data>[<key>]", "show": "<field>" | ["<field>", …], "title"?, …options }\`. \`{{field}}\`
 in a title or a label reads a field of \`of\`; \`{{key}}\` is the item's key. \`presets\` hold shared settings a part takes
-with \`use\`; \`each: "<data>"\` makes one part per item (ids \`<part>/<key>\`). A \`group\` is several parts on a small
+with \`use\`; \`each: "<data>"\` makes one part per item (ids \`<part>/<key>\`) — it takes no \`of\`, and is placed once. A \`group\` is several parts on a small
 canvas of their own — its parts and links read the group's \`of\` unless they name their own.
+
+The board's own options take fields of what the part reads: a \`status-card\`'s \`meter\` is \`"<field>"\` or
+\`{ "field", "min"?, "max"?, "form"?: "bar" | "ring" }\`, its \`state\` (and a \`stat-list\`'s) the field whose status colours
+it, a \`stat\`'s \`trend\` a field holding its recent values, a \`list\`'s \`primary\` · \`secondary\` · \`trailing\` ·
+\`badge\` · \`time\` fields of each row. Any other option is the widget's own — only those listed.
 
 | kind | shows | reads data | options |
 |---|---|---|---|
@@ -96,8 +101,10 @@ ${keys('groupLink')}`,
     `## elements and the look
 
 Use a built-in whenever one shows the thing — a title, a status and a few values are a \`status-card\`, \`stat\` or
-\`stat-list\`. Write an element (\`elements\`: a template, a style and its \`props\`) only for a drawing no built-in makes;
-a part places it with \`"as": "element"\`, fixed \`props\` and \`bind\` from fields. The look is \`board.skin\` — fonts, a
+\`stat-list\`. Write an element only for a drawing no built-in makes:
+\`"elements": { "tank": { "template": "<svg …>{{level}}</svg>", "style"?: "…", "props": { "level": "number", "tone": "string" } } }\`
+— every \`{{hole}}\` is a declared prop (\`number\` · \`string\` · \`boolean\` · \`list\` · \`object\`). A part places it with
+\`"as": "element", "element": "tank"\`, fixed \`props\` and \`bind\` (\`{ "level": "<field>", "tone": "<field>.tone" }\`). The look is \`board.skin\` — fonts, a
 palette and a frame (${code(FRAMES)}) — once for the board; parts never set fonts or colours.`,
 
     `## Rules
