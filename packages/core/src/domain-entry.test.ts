@@ -75,8 +75,8 @@ describe('domain entry', () => {
 describe('board-v2 entry', () => {
   it('exports exactly these values', () => {
     expect(Object.keys(boardV2).sort()).toEqual([
-      'BOARD_LANGUAGE_VERSION', 'EMPHASES', 'FRAMES', 'PART_KINDS', 'PictureError', 'TONES', 'boardV2Schema', 'fromV1', 'partKind',
-      'toViewDocument', 'validateBoardV2',
+      'BOARD_LANGUAGE_VERSION', 'EMPHASES', 'FRAMES', 'PART_KINDS', 'PictureError', 'RULEBOOK_EXAMPLE', 'TONES', 'boardV2Rulebook', 'boardV2Schema',
+      'fromV1', 'partKind', 'toViewDocument', 'validateBoardV2',
     ]);
     for (const key of Object.keys(boardV2)) expect(key in root).toBe(false);
   });

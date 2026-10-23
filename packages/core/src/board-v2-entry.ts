@@ -12,4 +12,5 @@ export type { PartKind } from './board-v2/kinds.js';
 export { toViewDocument, PictureError } from './board-v2/picture.js';
 export type { PictureOptions } from './board-v2/picture.js';
 export { fromV1 } from './board-v2/from-v1.js';
+export { boardV2Rulebook, RULEBOOK_EXAMPLE } from './board-v2/rulebook.js';
 export type { V1Conversion } from './board-v2/from-v1.js';
