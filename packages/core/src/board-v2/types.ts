@@ -4,14 +4,14 @@
 // and declares its statuses and its look once (`statuses`, `board.skin`). Everything a person picks is addressed by
 // id, within its own map, and there is one way to write each thing. Coordinates appear only in a canvas layout.
 
-import type { Emphasis, Tone } from '@iyulab/u-widgets';
+import type { Emphasis, Tone } from '../tones.js';
 
 /**
  * The eleven tones a status is drawn in (`ok` · `info` · `watch` · `warn` · `alarm` · `off` · `idle` · `accent`, and
  * the places in a sequence `past` · `now` · `next`) and the emphases that add a second channel besides colour — the
- * widget library's own vocabulary, so a board and the widgets drawing it agree on every word.
+ * widget library's vocabulary (`tones.ts`), so a board and the widgets drawing it agree on every word.
  */
-export { EMPHASES, TONES } from '@iyulab/u-widgets';
+export { EMPHASES, TONES } from '../tones.js';
 export type { Emphasis, Tone };
 
 /** The panel a framed part is drawn in. */

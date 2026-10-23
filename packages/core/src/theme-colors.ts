@@ -1,4 +1,4 @@
-import { TONES, type Tone } from '@iyulab/u-widgets';
+import { TONES, type Tone } from './tones.js';
 import type { BoardAppearance } from './view-document.js';
 
 /**

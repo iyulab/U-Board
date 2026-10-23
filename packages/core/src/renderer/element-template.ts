@@ -2,7 +2,7 @@ import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../vi
 import { symbolSheet, symbolsUsed } from '../elements/symbols.js';
 import { formatValue, parseTemplate, type TemplateNode } from '../elements/template.js';
 import { TEMPLATE_TAGS, attributeProblem, checkStyle, isResourceOrigin } from '../elements/markup-policy.js';
-import { TONES } from '@iyulab/u-widgets';
+import { TONES } from '../tones.js';
 import { THEME_PALETTE } from '../theme-colors.js';
 
 /**

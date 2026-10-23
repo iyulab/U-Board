@@ -2,7 +2,7 @@
 // markup the renderer's element layer draws in an isolated root, with the widgets' tokens and tones. Their names start
 // with `u-board-`, which a board's own elements do not.
 
-import { TONES } from '@iyulab/u-widgets';
+import { TONES } from '../tones.js';
 import type { ElementDefinition } from '../view-document.js';
 
 /** Each tone as the colour `--c` a part is drawn in, by its `data-tone`. */
