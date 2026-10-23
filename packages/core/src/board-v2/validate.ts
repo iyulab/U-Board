@@ -343,7 +343,14 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       const bindAt = `${at}/bind/${prop}`;
       if (!(prop in declared)) { fail(bindAt, `"${String(name)}" has no prop "${prop}" — ${holes}`); continue; }
       const m = typeof ref === 'string' ? /^([\w-]+)(?:\.(status|tone))?$/.exec(ref) : null;
-      if (!m) { fail(bindAt, `"${String(ref)}" — write a field, "<field>.status" or "<field>.tone"`); continue; }
+      if (!m) {
+        // "<other data>.<field>": a part reads one data — its own "of" (or its group's).
+        const other = typeof ref === 'string' ? /^([\w-]+)(?:\[[^\]]*\])?\.([\w-]+)/.exec(ref) : null;
+        fail(bindAt, other && other[1] !== reads && other[1]! in data
+          ? `"${String(ref)}" reads "${other[1]}", but this part reads "${reads}" — a part binds only fields of what it reads; show "${other[1]}" with a part of its own (in a group they sit together)`
+          : `"${String(ref)}" — write a field of "${reads}", "<field>.status" or "<field>.tone"`);
+        continue;
+      }
       if (m[2] && fieldOf(reads, m[1]!)?.state === undefined) fail(bindAt, `"${m[1]}" has no "state" in /data/${reads}/fields — its ${m[2]} needs one`);
     }
   };

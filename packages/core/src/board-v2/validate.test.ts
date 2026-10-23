@@ -332,6 +332,17 @@ describe('validateBoardV2', () => {
       .toEqual(['/data/q/fields/v/at: "at" is where the value lives in an item, starting with "/"']);
   });
 
+  it('says a part binds only what it reads when a bind names another data', () => {
+    const board = {
+      version: 2,
+      data: { gate: { from: 'x', path: '/gate' }, summary: { from: 'x', path: '/summary' } },
+      elements: { box: { template: '<b>{{a}}</b>', props: { a: 'number' } } },
+      parts: { g: { as: 'element', element: 'box', of: 'gate', bind: { a: 'summary.queue' } } },
+      layout: { kind: 'grid', items: ['g'] },
+    };
+    expect(issues(board)).toEqual(['/parts/g/bind/a: "summary.queue" reads "summary", but this part reads "gate" — a part binds only fields of what it reads; show "summary" with a part of its own (in a group they sit together)']);
+  });
+
   it('places a part once — an each part makes one per item by itself', () => {
     const board = { version: 2, data: { b: { from: 'x', path: '/b', list: '/v', key: 'id' } }, parts: { berth: { as: 'status-card', each: 'b' }, h: { as: 'header', title: 'H' } }, layout: { kind: 'grid', items: ['h', ['berth', 4], ['berth', 4]] } };
     expect(issues(board)).toEqual(['/layout/items/2/0: "berth" is placed twice — an "each" part makes one per item by itself: place it once']);

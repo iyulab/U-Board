@@ -53,7 +53,8 @@ ${['version', 'board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'pa
 
     `## data — read once, give meaning once
 
-A data read asks an HTTP connector a \`path\`, or gives another adapter its own \`ref\` (one item, its \`fields\` only).
+A data read asks an HTTP connector a \`path\` — the usual read. Only an adapter the host names itself is given its own
+\`ref\` instead (one item, its \`fields\` only, never with \`path\`).
 Parts name a read (\`"pumps"\`, the whole list) or one item of it (\`"pumps[P1]"\`, by its \`key\`). Data stays raw —
 names, units, places and statuses live in \`fields\`, never in the data.
 
