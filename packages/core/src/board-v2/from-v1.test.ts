@@ -126,6 +126,21 @@ describe('fromV1', () => {
     expect(drawn.kind === 'canvas' && drawn.nodes.map(n => n.id)).toEqual(['desk', 'b1/card', 'b2/card']);
   });
 
+  it('reads a list’s whole list, each slot of its rows a field of its items', () => {
+    const { board, unsupported } = fromV1(canvas([
+      node('l', {
+        type: 'list',
+        props: { title: 'Orders', data: [], mapping: { primary: 'item', secondary: 'who', trailing: 'amount', badge: 'badge' } },
+        bindings: { data: { adapter: 'shop', ref: { path: '/sales/orders', valuePath: '/value' } } },
+      }),
+    ]));
+    expect(unsupported).toEqual([]);
+    expect(board.parts.l).toEqual({ as: 'list', of: 'orders', show: 'item', secondary: 'who', trailing: 'amount', badge: 'badge', title: 'Orders' });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'canvas' && (drawn.nodes[0]!.widget.props as { mapping: unknown }).mapping).toEqual({ primary: 'item', secondary: 'who', trailing: 'amount', badge: 'badge' });
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {

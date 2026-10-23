@@ -254,6 +254,7 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
     default:
       if (widget.type.startsWith('chart.')) return chartOf(widget, reads, unsupported);
       if (widget.type === 'table') return tableOf(node.id, widget, reads, notes, unsupported);
+      if (widget.type === 'list') return listOf(widget, reads, unsupported);
       unsupported.push(`a ${widget.type} node`);
       return undefined;
   }
@@ -334,6 +335,28 @@ function instancesOf(view: CanvasView, place: Record<string, Place>, ctx: Contex
     parts[instance.id] = { use: name, of };
     place[instance.id] = [instance.x, instance.y, size[0], size[1]];
   }
+}
+
+/** A list: its whole list read, each slot of its rows a field of its items. */
+function listOf(widget: Widget, reads: Reads, unsupported: string[]): Part | undefined {
+  const bindings = widget.bindings ?? {};
+  const props = (widget.props ?? {}) as Record<string, unknown>;
+  if (Object.keys(bindings).some(k => k !== 'data')) { unsupported.push('a list bound beyond its data'); return undefined; }
+  const mapping = isObject(props.mapping) ? props.mapping : {};
+  const slots = ['primary', 'secondary', 'trailing', 'badge'];
+  if (Object.keys(mapping).some(k => !slots.includes(k)) || typeof mapping.primary !== 'string') { unsupported.push('a list mapped beyond its text slots'); return undefined; }
+  const read = reads.readList(bindings.data!);
+  if (!read) return undefined;
+  const part: Part = { as: 'list', of: read };
+  for (const slot of slots) {
+    if (typeof mapping[slot] !== 'string') continue;
+    const field = reads.itemField(read, mapping[slot] as string, {});
+    if (field === undefined) return undefined;
+    if (slot === 'primary') part.show = field;
+    else part[slot] = field;
+  }
+  const options = isObject(props.options) ? props.options : {};
+  return { ...part, ...(typeof props.title === 'string' ? { title: props.title } : {}), ...options };
 }
 
 /** A table: its whole list read, each column a field of its items with the column's label and format as the field's. A

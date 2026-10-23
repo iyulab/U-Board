@@ -39,7 +39,7 @@ const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['o
   ['header', 'header', 'may', ['kicker', 'subtitle', 'clock']],
   ['stat', 'metric', 'needs'],
   ['stat-list', 'kv', 'needs'],
-  ['list', 'list', 'needs', ['primary', 'secondary', 'time', 'state', 'max', 'variant']],
+  ['list', 'list', 'needs', ['primary', 'secondary', 'trailing', 'badge', 'time', 'state', 'max', 'variant']],
   ['table', 'table', 'needs'],
   ['bar-list', 'bar-list', 'needs', ['label', 'value', 'state']],
   ['status-grid', 'status-grid', 'needs', ['label', 'value', 'state']],

@@ -8,7 +8,7 @@ import { v2Coverage } from './v2-coverage.js';
 const READ_THE_SAME = [
   'apiary-stitch', 'aquarium-labels', 'bakery-sketch', 'bank-branch', 'bike-share', 'blood-journey', 'body-gap',
   'bowling-googie', 'brewery-scada', 'building-floor', 'bus-terminal', 'callcenter-cork', 'campsite-papercut',
-  'clinic-kiosk', 'clinic-vaccines', 'coldchain-vapor', 'count-hall', 'dam-steampunk', 'daycare-bricks',
+  'clinic-kiosk', 'clinic-vaccines', 'coldchain-vapor', 'commerce-live', 'count-hall', 'dam-steampunk', 'daycare-bricks',
   'delivery-boardgame', 'elevator-tui', 'factory-floor', 'farmers-market', 'festival-ops', 'fire-dispatch',
   'harbor-auction', 'harbor-radar', 'home-eink', 'hotel-glass', 'island-ferry', 'kiln-porcelain', 'library-report',
   'lighthouse-stamps', 'line-flow', 'lost-found-dossier', 'makerspace-shadowboard', 'mall-wayfinding', 'museum-najeon',

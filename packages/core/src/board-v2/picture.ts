@@ -366,13 +366,16 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         };
       }
       case 'list': {
-        // Rows: the first field (or `primary`) as the line, `secondary` under it, `time` before it, coloured by a state.
-        const { primary = fields[0], secondary, time, state, max, variant, ...rest } = options as Record<string, string | undefined> & { max?: number };
+        // Rows: the first field (or `primary`) as the line, `secondary` under it, `trailing` at its end, a `badge` beside
+        // it, `time` before it, coloured by a state.
+        const { primary = fields[0], secondary, trailing, badge, time, state, max, variant, ...rest } = options as Record<string, string | undefined> & { max?: number };
         const tone = stateIn([state, ...fields]);
-        bindList('data', Object.assign({}, rowFields(primary), rowFields(secondary), rowFields(tone)));
+        bindList('data', Object.assign({}, rowFields(primary), rowFields(secondary), rowFields(trailing), rowFields(badge), rowFields(tone)));
         const mapping = {
           ...(primary !== undefined ? { primary: shown(primary) } : {}),
           ...(secondary !== undefined ? { secondary: shown(secondary) } : {}),
+          ...(trailing !== undefined ? { trailing: shown(trailing) } : {}),
+          ...(badge !== undefined ? { badge: shown(badge) } : {}),
           ...(time !== undefined ? { time: key(time) } : {}),
           ...(tone !== undefined ? { tone: `${tone}$tone` } : {}),
         };
