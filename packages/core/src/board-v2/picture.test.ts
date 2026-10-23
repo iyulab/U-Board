@@ -155,8 +155,39 @@ describe('the picture model of a v2 board', () => {
     });
   });
 
+  it('draws shapes as decorations and links as connectors, a link in its field’s state', () => {
+    const doc = view(board(
+      { P1: { as: 'stat', of: 'pumps[P1]', show: 'flow' }, P2: { as: 'stat', of: 'pumps[P2]', show: 'flow' } },
+      {
+        kind: 'canvas', size: [600, 300],
+        place: { P1: [10, 10, 150, 80], P2: [300, 10, 150, 80] },
+        shapes: { zone: { box: [0, 0, 500, 120], label: 'Line 1', tone: 'accent' }, note: { text: 'North', at: [5, 140], size: 12 } },
+        links: {
+          feed: { from: 'P1', to: 'P2', of: 'pumps[P2]', show: 'state', label: '{{flow}}', arrow: true },
+          plain: { from: 'P2', to: 'P1', dash: true },
+        },
+      },
+    ));
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(doc.decorations).toEqual([
+      { id: 'shape.zone', type: 'rect', x: 0, y: 0, width: 500, height: 120, fill: 'none', stroke: 'accent', strokeWidth: 1.5, label: 'Line 1', labelAt: 'top-start' },
+      { id: 'shape.note', type: 'text', x: 5, y: 140, text: 'North', fill: 'next', fontSize: 12 },
+    ]);
+    const [feed, plain] = doc.connectors;
+    expect(plain).toEqual({ id: 'link.plain', fromNodeId: 'P2', toNodeId: 'P1', style: { stroke: 'idle', strokeWidth: 2, dash: 'dashed', arrow: 'none' } });
+    const read = (key: string) => {
+      const b = feed!.bindings![key]!;
+      const reading = readHttpRef(SOURCE[(b.ref as HttpRef).path], b.ref as HttpRef, READ_AT);
+      return reading.ok ? (b.map ? applyValueMap(b.map, reading.value) : reading.value) : reading.message;
+    };
+    // P2 has tripped: the link is in the alarm tone, dotted for the status's blink, and labelled with its flow.
+    expect([read('style.stroke'), read('style.dash'), read('style.strokeWidth'), read('label')]).toEqual(['alarm', 'dotted', 2, 0]);
+  });
+
   it('says what it does not draw yet, and where', () => {
     const b = board({ v: { as: 'marker', of: 'pumps[P1]' } }, { kind: 'canvas', size: [100, 100], place: { v: [0, 0] } });
     expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/v/as', 'a marker is not drawn yet'));
+    const line = board({}, { kind: 'canvas', size: [100, 100], place: {}, shapes: { pipe: { line: [[0, 0], [10, 10]] } } });
+    expect(() => toViewDocument(line)).toThrow(new PictureError('/layout/shapes/pipe', 'a line or a path is not drawn yet'));
   });
 });

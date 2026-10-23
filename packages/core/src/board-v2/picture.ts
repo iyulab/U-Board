@@ -6,11 +6,11 @@
 // The board is taken as valid (`validateBoardV2` first): what is wrong in it is reported there, with where and how to
 // write it instead. What the picture model cannot draw yet is a `PictureError`.
 
-import type { Binding, CellCanvas, GridItem, ItemField, Node, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
+import type { Binding, CellCanvas, Connector, GridItem, ItemField, Node, Shape as ViewShape, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { partKind } from './kinds.js';
 import { TONES } from './types.js';
-import type { BoardV2, CanvasLayout, Field, GridItem as V2GridItem, Part, Place, StateRule, Status, Tone, ValueMapping } from './types.js';
+import type { BoardV2, CanvasLayout, Field, GridItem as V2GridItem, Link, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
 
 /** Something in a board the picture model does not draw yet. */
 export class PictureError extends Error {
@@ -343,9 +343,9 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
 
   const box = (place: Place) => ({ x: place[0], y: place[1], ...(place.length === 4 ? { width: place[2], height: place[3] } : {}) });
 
-  const canvasNodes = (canvas: Omit<CanvasLayout, 'kind'>, at: string): Node[] => {
-    if (canvas.shapes !== undefined && Object.keys(canvas.shapes).length > 0) throw new PictureError(`${at}/shapes`, 'shapes are not drawn yet');
-    if (canvas.links !== undefined && Object.keys(canvas.links).length > 0) throw new PictureError(`${at}/links`, 'links are not drawn yet');
+  /** A canvas: its parts placed as nodes, its shapes as decorations, its links as connectors. `prefix` keeps the ids of
+   *  a cell's shapes and links apart from another cell's. */
+  const canvasOf = (canvas: Omit<CanvasLayout, 'kind'>, at: string, prefix = ''): Pick<CellCanvas, 'nodes' | 'connectors' | 'decorations'> => {
     const nodes: Node[] = [];
     for (const [id, place] of Object.entries(canvas.place)) {
       const part = board.parts[id]!;
@@ -357,7 +357,61 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         }
       }
     }
-    return nodes;
+    const decorations = Object.entries(canvas.shapes ?? {}).map(([id, shape]) => shapeOf(shape, `${prefix}shape.${id}`, `${at}/shapes/${id}`));
+    const connectors = Object.entries(canvas.links ?? {}).map(([id, link]) => connectorOf(link, `${prefix}link.${id}`, `${at}/links/${id}`));
+    return { nodes, connectors, ...(decorations.length > 0 ? { decorations } : {}) };
+  };
+
+  /** A shape as a decoration: a box with its label, or a text at a point — in its tone, else the board's muted line. */
+  const shapeOf = (shape: Shape, id: string, at: string): ViewShape => {
+    if (shape.box !== undefined) {
+      const [x, y, width, height] = shape.box;
+      return {
+        id, type: 'rect', x, y, width, height, fill: 'none', stroke: shape.tone ?? 'idle', strokeWidth: shape.width ?? 1.5,
+        ...(shape.dash ? { dash: 'dashed' as const } : {}),
+        ...(shape.label !== undefined ? { label: shape.label, labelAt: 'top-start' as const } : {}),
+      };
+    }
+    if (shape.text !== undefined && shape.at !== undefined) {
+      return { id, type: 'text', x: shape.at[0], y: shape.at[1], text: shape.text, fill: shape.tone ?? 'next', ...(shape.size !== undefined ? { fontSize: shape.size } : {}) };
+    }
+    throw new PictureError(at, 'a line or a path is not drawn yet');
+  };
+
+  /**
+   * A link as a connector between the nodes of its parts. With `of` and `show` it carries the field's state: its colour
+   * is the tone, its emphasis the line's form — `hatch` dashed, `blink` dotted, `invert` twice as thick.
+   */
+  const connectorOf = (link: Link, id: string, at: string): Connector => {
+    const width = link.width ?? 2;
+    const bindings: Record<string, Binding> = {};
+    let label = link.label;
+    if (link.of !== undefined) {
+      const { query, item } = target(link.of);
+      const binding = (field: string, map?: ValueMap): Binding => ({ adapter: data[query]!.from, ref: refFor(query, item, field, at), ...(map ? { map } : {}) });
+      const rule = link.show !== undefined ? fieldOf(query, link.show).state : undefined;
+      if (rule !== undefined) {
+        const maps = stateMaps(rule);
+        bindings['style.stroke'] = binding(link.show!, maps.tone);
+        if (maps.emphasis) {
+          const form = (to: (e: string) => unknown) => ({ ...maps.emphasis!, ...(maps.emphasis!.values ? { values: Object.fromEntries(Object.entries(maps.emphasis!.values).map(([k, e]) => [k, to(e)])) } : {}), ...(maps.emphasis!.ranges ? { ranges: maps.emphasis!.ranges.map(r => ({ ...r, value: to(r.value) })) } : {}), ...('otherwise' in maps.emphasis! ? { otherwise: to(maps.emphasis!.otherwise!) } : {}) }) as ValueMap;
+          bindings['style.dash'] = binding(link.show!, form(e => (e === 'hatch' ? 'dashed' : e === 'blink' ? 'dotted' : link.dash ? 'dashed' : 'solid')));
+          bindings['style.strokeWidth'] = binding(link.show!, form(e => (e === 'invert' ? width * 2 : width)));
+        }
+      }
+      const only = label !== undefined ? /^\{\{\s*([\w.-]+)\s*\}\}$/.exec(label) : null;
+      if (only) {
+        bindings.label = binding(only[1]!, fieldOf(query, only[1]!).names ? mapOf(fieldOf(query, only[1]!).names!, w => w) : undefined);
+        label = '';
+      }
+    }
+    if (label !== undefined && /\{\{/.test(label)) throw new PictureError(`${at}/label`, `a label mixing words and fields ("${label}") is not drawn yet — write the field alone`);
+    return {
+      id, fromNodeId: link.from, toNodeId: link.to,
+      ...(label !== undefined ? { label } : {}),
+      style: { stroke: 'idle', strokeWidth: width, ...(link.dash ? { dash: 'dashed' as const } : {}), arrow: link.arrow ? 'end' : 'none' },
+      ...(Object.keys(bindings).length > 0 ? { bindings } : {}),
+    };
   };
 
   const background = (canvas: Omit<CanvasLayout, 'kind'>) =>
@@ -371,7 +425,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
           : [entry.id, { ...(entry.span !== undefined ? { span: entry.span } : {}), ...(entry.height !== undefined ? { height: entry.height } : {}) }];
       if (typeof entry === 'object' && !Array.isArray(entry) && entry.grid !== undefined) throw new PictureError(itemAt, 'a grid in a grid cell is not drawn yet');
       if (typeof entry === 'object' && !Array.isArray(entry) && entry.canvas !== undefined) {
-        const canvas: CellCanvas = { background: background(entry.canvas), nodes: canvasNodes(entry.canvas, `${itemAt}/canvas`), connectors: [] };
+        const canvas: CellCanvas = { background: background(entry.canvas), ...canvasOf(entry.canvas, `${itemAt}/canvas`, `cell-${i}:`) };
         return [{ id: `cell-${i}`, canvas, ...layout }];
       }
       const part = board.parts[id!]!;
@@ -388,7 +442,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
   const look = { ...(head.theme !== undefined ? { appearance: head.theme } : {}), ...(head.accent !== undefined ? { accent: head.accent } : {}) };
   const layout = board.layout;
   if (layout.kind === 'canvas') {
-    return { kind: 'canvas', background: background(layout), nodes: canvasNodes(layout, '/layout'), connectors: [], ...look };
+    return { kind: 'canvas', background: background(layout), ...canvasOf(layout, '/layout'), ...look };
   }
   return { kind: 'grid', items: gridItems(layout.items, '/layout/items'), ...look };
 }
