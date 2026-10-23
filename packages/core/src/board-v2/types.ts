@@ -204,7 +204,8 @@ export interface ElementDefinition {
 /** A board in the language's second version. */
 export interface BoardV2 {
   version: typeof BOARD_LANGUAGE_VERSION;
-  board?: { title?: string; theme?: 'light' | 'dark'; skin?: Skin };
+  /** The board's title, theme, accent colour (the `accent` tone, a header's banner) and look. */
+  board?: { title?: string; theme?: 'light' | 'dark'; accent?: string; skin?: Skin };
   statuses?: Record<string, Status>;
   symbols?: Record<string, { viewBox?: string; path?: string }>;
   elements?: Record<string, ElementDefinition>;

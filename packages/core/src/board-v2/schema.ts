@@ -1,0 +1,238 @@
+// The JSON Schema of a board in the language's second version, generated from the same lists the validator reads —
+// the kinds, the tones, the emphases, the frames — so a reader that has only the schema (a model writing a board,
+// another language's validator) is told the same words.
+//
+// The schema says a board's shape. What it cannot say — that an `of` names a declared data read, that every part is
+// placed, that a state's words are statuses — `validateBoardV2` checks, and says where and how to write it instead.
+
+import { PART_KINDS } from './kinds.js';
+import { BOARD_LANGUAGE_VERSION, EMPHASES, FRAMES, TONES } from './types.js';
+
+type Schema = Record<string, unknown>;
+
+const ref = (name: string): Schema => ({ $ref: `#/$defs/${name}` });
+const map = (of: Schema, description?: string): Schema => ({ type: 'object', additionalProperties: of, ...(description ? { description } : {}) });
+const point: Schema = { type: 'array', prefixItems: [{ type: 'number' }, { type: 'number' }], items: false, minItems: 2 };
+const size: Schema = { type: 'array', prefixItems: [{ type: 'number', exclusiveMinimum: 0 }, { type: 'number', exclusiveMinimum: 0 }], items: false, minItems: 2 };
+
+/** The JSON Schema (draft 2020-12) of a board in the language's second version. */
+export function boardV2Schema(): Schema {
+  return {
+    $schema: 'https://json-schema.org/draft/2020-12/schema',
+    title: 'U-Board board, language version 2',
+    description:
+      'A board: where its values come from and what they mean (data), what it shows (parts) and where (layout), its statuses and its look. ' +
+      'Everything a person picks is addressed by id within its own map; coordinates appear only in a canvas layout.',
+    type: 'object',
+    required: ['version', 'parts', 'layout'],
+    additionalProperties: false,
+    properties: {
+      version: { const: BOARD_LANGUAGE_VERSION },
+      board: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          title: { type: 'string' },
+          theme: { enum: ['light', 'dark'] },
+          accent: { type: 'string', description: "The board's accent colour: the accent tone, a header's banner." },
+          skin: ref('skin'),
+        },
+      },
+      statuses: map(ref('status'), "The board's own statuses by name: each a tone, its words and optionally a glyph and an emphasis."),
+      symbols: map({ type: 'object', additionalProperties: false, properties: { viewBox: { type: 'string' }, path: { type: 'string' } } }),
+      elements: map(ref('element'), 'Drawings no built-in makes: markup with declared holes, shown by a part "as": "element".'),
+      data: map(ref('query'), 'Where values come from, read once for every part that shows them.'),
+      presets: map(ref('part'), 'Settings a part takes with "use"; its own settings win.'),
+      parts: map(ref('part'), 'What the board shows, by id — never where.'),
+      layout: ref('layout'),
+    },
+    $defs: {
+      tone: { enum: [...TONES], description: 'The tone a status is drawn in.' },
+      emphasis: { enum: [...EMPHASES], description: 'A second channel besides colour.' },
+      status: {
+        type: 'object',
+        required: ['tone'],
+        additionalProperties: false,
+        properties: { tone: ref('tone'), label: { type: 'string' }, glyph: { type: 'string' }, emphasis: ref('emphasis') },
+      },
+      mapping: {
+        description: 'A map of raw values to words ("*" for anything else), or bands: the word below the first number, then each number and the word from it up.',
+        oneOf: [
+          { type: 'object', additionalProperties: { type: 'string', minLength: 1 }, minProperties: 1 },
+          { type: 'array', minItems: 3, items: { type: ['string', 'number'] } },
+        ],
+      },
+      field: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          at: { type: 'string', pattern: '^/', description: 'Where the value lives in an item, when it is not /<field name>.' },
+          label: { type: 'string' },
+          unit: { type: 'string' },
+          digits: { type: 'integer', minimum: 0 },
+          format: { type: 'string', description: 'A value format: "number:1", "percent", "time" …' },
+          names: ref('mapping'),
+          state: { description: 'How the value is doing, as a status: "raw" when the value is one, else a mapping.', oneOf: [{ const: 'raw' }, ref('mapping')] },
+        },
+      },
+      query: {
+        type: 'object',
+        required: ['from', 'path'],
+        additionalProperties: false,
+        properties: {
+          from: { type: 'string', minLength: 1, description: 'The connector.' },
+          path: { type: 'string', pattern: '^/', description: 'The request — {{now:yyyyMMdd}}-style places take the request time.' },
+          list: { type: 'string', description: 'A JSON Pointer to the list of items in the answer.' },
+          key: { type: 'string', description: 'The field that names each item: parts address one as <data>[<key>].' },
+          where: map({ type: ['string', 'number', 'boolean'] }, 'Only the items whose fields equal these values.'),
+          time: { type: 'string', description: 'The field holding when the source observed the item.' },
+          fresh: { type: 'number', exclusiveMinimum: 0, description: 'Seconds a value may be old and still be current.' },
+          now: {
+            type: 'object',
+            additionalProperties: false,
+            properties: { delay: { type: 'number', minimum: 0 }, step: { type: 'number', exclusiveMinimum: 0 } },
+          },
+          zone: { type: 'string', description: 'The IANA time zone the source writes times in.' },
+          fields: map(ref('field')),
+        },
+      },
+      part: {
+        type: 'object',
+        description: 'What is shown, of which data, with which fields. Options a kind takes sit beside these.',
+        properties: {
+          as: { enum: PART_KINDS.map(k => k.kind), description: 'The kind: ' + PART_KINDS.map(k => `${k.kind} — ${k.shows}`).join('; ') },
+          use: { type: 'string', description: 'A preset whose settings this part takes.' },
+          of: { type: 'string', pattern: '^[\\w-]+(\\[[^\\]]+\\])?$', description: '<data> for the whole, <data>[<key>] for one item.' },
+          each: { type: 'string', description: 'A data list: one part per item, ids <part>/<key>.' },
+          title: { type: 'string', description: '{{field}} reads a field of what the part shows, {{key}} its item.' },
+          show: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+          size,
+          parts: map(ref('part')),
+          place: map(ref('place')),
+          shapes: map(ref('shape')),
+          links: map(ref('link')),
+          element: { type: 'string' },
+          props: { type: 'object' },
+          bind: map({ type: 'string', pattern: '^[\\w-]+(\\.(status|tone))?$' }),
+        },
+        not: { required: ['of', 'each'] },
+        // A group draws its parts on a canvas of its own: «not a group, or a group with its size, parts and places».
+        anyOf: [{ not: { properties: { as: { const: 'group' } }, required: ['as'] } }, { required: ['size', 'parts', 'place'] }],
+      },
+      place: {
+        description: '[x, y] or [x, y, width, height] on the canvas.',
+        type: 'array',
+        items: { type: 'number' },
+        oneOf: [{ minItems: 2, maxItems: 2 }, { minItems: 4, maxItems: 4 }],
+      },
+      shape: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          box: { type: 'array', items: { type: 'number' }, minItems: 4, maxItems: 4 },
+          label: { type: 'string' },
+          text: { type: 'string' },
+          at: point,
+          size: { type: 'number', exclusiveMinimum: 0 },
+          line: { type: 'array', items: point, minItems: 2 },
+          path: { type: 'string', pattern: '^[MLCQZ0-9.,\\s-]+$', description: 'Absolute M · L · C · Q · Z only.' },
+          tone: ref('tone'),
+          width: { type: 'number', exclusiveMinimum: 0 },
+          dash: { type: 'boolean' },
+        },
+        oneOf: [{ required: ['box'] }, { required: ['text', 'at'] }, { required: ['line'] }, { required: ['path'] }],
+      },
+      link: {
+        type: 'object',
+        required: ['from', 'to'],
+        additionalProperties: false,
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+          of: { type: 'string' },
+          show: { type: 'string' },
+          label: { type: 'string' },
+          width: { type: 'number', exclusiveMinimum: 0 },
+          dash: { type: 'boolean' },
+          arrow: { type: 'boolean' },
+        },
+        dependentRequired: { show: ['of'] },
+      },
+      canvas: {
+        type: 'object',
+        required: ['size', 'place'],
+        properties: {
+          size,
+          background: { type: 'string' },
+          place: map({ oneOf: [ref('place'), map(ref('place'))] }, 'Where each part is; an "each" part places its items inside its own entry.'),
+          shapes: map(ref('shape')),
+          links: map(ref('link')),
+        },
+      },
+      gridItem: {
+        oneOf: [
+          { type: 'string', description: 'A part.' },
+          { type: 'array', prefixItems: [{ type: 'string' }, ref('span')], items: false, minItems: 2, description: '[part, span].' },
+          {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              id: { type: 'string' },
+              span: ref('span'),
+              height: { type: 'number', exclusiveMinimum: 0 },
+              canvas: { type: 'object', $ref: '#/$defs/canvas', unevaluatedProperties: false },
+              grid: { type: 'array', items: ref('gridItem'), description: 'A grid in the cell: its items span its twelve columns and stack.' },
+            },
+            oneOf: [{ required: ['id'] }, { required: ['canvas'] }, { required: ['grid'] }],
+          },
+        ],
+      },
+      span: { type: 'integer', minimum: 1, maximum: 12, description: 'Of the twelve columns.' },
+      layout: {
+        oneOf: [
+          {
+            type: 'object',
+            allOf: [ref('canvas')],
+            properties: { kind: { const: 'canvas' } },
+            required: ['kind'],
+            unevaluatedProperties: false,
+          },
+          {
+            type: 'object',
+            required: ['kind', 'items'],
+            additionalProperties: false,
+            properties: { kind: { const: 'grid' }, items: { type: 'array', items: ref('gridItem') } },
+          },
+        ],
+      },
+      skin: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          font: { type: 'string' },
+          display: { type: 'string' },
+          mono: { type: 'string' },
+          palette: {
+            type: 'object',
+            additionalProperties: false,
+            properties: Object.fromEntries(['paper', 'ink', 'muted', 'rule', 'ground'].map(k => [k, { type: 'string' }])),
+          },
+          frame: { enum: [...FRAMES] },
+          radius: { type: 'number', minimum: 0 },
+          shadow: { enum: ['none', 'soft', 'hard'] },
+          density: { enum: ['regular', 'compact'] },
+        },
+      },
+      element: {
+        type: 'object',
+        required: ['template'],
+        additionalProperties: false,
+        properties: {
+          template: { type: 'string', description: 'Markup with {{prop}} holes — names only; compute with CSS calc().' },
+          style: { type: 'string' },
+          props: map({ enum: ['number', 'string', 'boolean', 'list'] }),
+        },
+      },
+    },
+  };
+}

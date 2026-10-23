@@ -26,8 +26,11 @@ describe('validateBoardV2', () => {
     expect(issues(canvas({ a: { as: 'status-card', of: 'equipment[PR-01]', show: 'state' }, t: { as: 'stat', of: 'totals', show: 'count' } }))).toEqual([]);
   });
 
-  it('asks for the version', () => {
+  it('asks for the version, and names the sections a board has', () => {
     expect(issues({ ...canvas({}), version: 1 })).toEqual(['/version: a board in this language says "version": 2']);
+    expect(issues({ ...canvas({}), nodes: [] })).toEqual([
+      '/nodes: a board has no "nodes" — its sections are version, board, statuses, symbols, elements, data, presets, parts, layout',
+    ]);
   });
 
   it('says how to write an item of data, and names what there is', () => {

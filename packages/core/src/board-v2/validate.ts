@@ -32,6 +32,9 @@ const list = (names: Iterable<string>, max = 12) => {
 /** `<data>` or `<data>[<key>]` — the one way a part names what it shows. */
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
+/** What a board says at its top, in the order it is written. */
+const BOARD_SECTIONS = ['version', 'board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout'] as const;
+
 /** The types an element's prop may be. */
 const PROP_TYPES = ['number', 'string', 'boolean', 'list'];
 
@@ -44,9 +47,15 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
 
   if (!isObj(board)) return [{ at: '', message: 'a board is a JSON object' }];
   if (board.version !== BOARD_LANGUAGE_VERSION) fail('/version', `a board in this language says "version": ${BOARD_LANGUAGE_VERSION}`);
+  for (const key of Object.keys(board)) {
+    if (!(BOARD_SECTIONS as readonly string[]).includes(key)) fail(`/${key}`, `a board has no "${key}" — its sections are ${BOARD_SECTIONS.join(', ')}`);
+  }
 
   // ── look ──
   const head = isObj(board.board) ? board.board : {};
+  for (const key of Object.keys(head)) {
+    if (!['title', 'theme', 'accent', 'skin'].includes(key)) fail(`/board/${key}`, `"board" has no "${key}" — it has title, theme, accent, skin`);
+  }
   if (head.theme !== undefined && head.theme !== 'light' && head.theme !== 'dark') fail('/board/theme', 'a theme is "light" or "dark"');
   const skin = isObj(head.skin) ? head.skin : {};
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
@@ -272,6 +281,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     const inner = isObj(group.parts) ? group.parts : undefined;
     if (!inner) { fail(`${at}/parts`, 'a group needs "parts": the parts drawn together'); return; }
     const place = isObj(group.place) ? group.place : {};
+    if (!isObj(group.place)) fail(`${at}/place`, 'a group needs "place": { "<part>": [x, y, width?, height?] } on its own canvas');
     for (const [id, raw] of Object.entries(inner)) {
       const innerAt = `${at}/parts/${id}`;
       const part = checkPart(raw, innerAt, { reads });
