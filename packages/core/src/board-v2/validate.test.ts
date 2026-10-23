@@ -332,6 +332,12 @@ describe('validateBoardV2', () => {
       .toEqual(['/data/q/fields/v/at: "at" is where the value lives in an item, starting with "/"']);
   });
 
+  it('places a part once — an each part makes one per item by itself', () => {
+    const board = { version: 2, data: { b: { from: 'x', path: '/b', list: '/v', key: 'id' } }, parts: { berth: { as: 'status-card', each: 'b' }, h: { as: 'header', title: 'H' } }, layout: { kind: 'grid', items: ['h', ['berth', 4], ['berth', 4]] } };
+    expect(issues(board)).toEqual(['/layout/items/2/0: "berth" is placed twice — an "each" part makes one per item by itself: place it once']);
+    expect(issues({ ...board, layout: { kind: 'grid', items: ['h', ['berth', 4], 'h'] } })).toEqual(['/layout/items/2: "h" is placed twice — a part is placed once; for another like it, add a part (a preset keeps them alike)']);
+  });
+
   it('takes the time an answer says its whole list is of, only for a list', () => {
     const read = (q: Record<string, unknown>) => issues({ version: 2, data: { q: { from: 'bank', path: '/types', ...q } }, parts: { c: { as: 'chart.bar', of: 'q' } }, layout: { kind: 'grid', items: ['c'] } });
     expect(read({ list: '/value', answerTime: '/updatedAt' })).toEqual([]);

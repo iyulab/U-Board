@@ -467,6 +467,10 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
 
   // ── layout ──
   const placed = new Set<string>();
+  // A part is drawn once, under its own id — an "each" part already makes one per item.
+  const twice = (id: string) => ids.get(id)?.part.each !== undefined
+    ? `"${id}" is placed twice — an "each" part makes one per item by itself: place it once`
+    : `"${id}" is placed twice — a part is placed once; for another like it, add a part (a preset keeps them alike)`;
   const layout = board.layout;
   const checkCanvas = (canvas: Obj, at: string) => {
     if (!isSize(canvas.size)) fail(`${at}/size`, 'a canvas needs "size": [width, height]');
@@ -482,6 +486,7 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
           : `no part "${id}" — parts: ${list(ids.keys())}`);
         continue;
       }
+      if (placed.has(id)) fail(placeAt, twice(id));
       placed.add(id);
       if (entry.part.each !== undefined) {
         if (!isObj(p)) { fail(placeAt, `"${id}" makes a part per item — place them inside it: { "<key>": [x, y, w, h], … }`); continue; }
@@ -501,8 +506,10 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     items.forEach((item, i) => {
       const itemAt = `${at}/${i}`;
       const name = (id: unknown, idAt: string) => {
-        if (typeof id === 'string' && ids.has(id)) placed.add(id);
-        else fail(idAt, `no part "${String(id)}" — parts: ${list(ids.keys())}`);
+        if (typeof id === 'string' && ids.has(id)) {
+          if (placed.has(id)) fail(idAt, twice(id));
+          placed.add(id);
+        } else fail(idAt, `no part "${String(id)}" — parts: ${list(ids.keys())}`);
       };
       const span = (s: unknown, spanAt: string) => {
         if (!(Number.isInteger(s) && (s as number) >= 1 && (s as number) <= 12)) fail(spanAt, 'a span is a whole number of the 12 columns, 1 to 12');
