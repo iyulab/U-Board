@@ -458,7 +458,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
           if (what === undefined) bindValue(prop, name);
           else bind(prop, name, what === 'tone' ? stateMaps(field(name).state!).tone : statusNames(field(name).state!));
         }
-        const blank = { number: 0, string: '', boolean: false, list: [] } as const;
+        const blank = { number: 0, string: '', boolean: false, list: [], object: {} } as const;
         const props = Object.fromEntries(Object.entries(definition.props ?? {}).map(([k, t]) => [k, blank[t]]));
         return { type: `element:${element}`, props: { ...props, ...fixed }, bindings };
       }
@@ -766,7 +766,7 @@ interface Unit {
 
 /** A v2 element definition as the view document's: its holes as a props schema. */
 function elementDefinition(definition: V2ElementDefinition): ElementDefinition {
-  const type = { number: 'number', string: 'string', boolean: 'boolean', list: 'array' } as const;
+  const type = { number: 'number', string: 'string', boolean: 'boolean', list: 'array', object: 'object' } as const;
   return {
     render: 'template',
     props: { type: 'object', properties: Object.fromEntries(Object.entries(definition.props ?? {}).map(([k, t]) => [k, { type: type[t] }])) },

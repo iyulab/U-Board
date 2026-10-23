@@ -260,12 +260,21 @@ describe('validateBoardV2', () => {
       elements,
     };
     expect(issues(board)).toEqual([
-      '/elements/bad/props/level: "float" is not a prop type — number · string · boolean · list',
+      '/elements/bad/props/level: "float" is not a prop type — number · string · boolean · list · object',
       '/elements/bad/template: "{{ level * 2 }}" — a hole is a prop this element declares (level); compute with CSS calc() on a prop, not inside the braces',
       '/parts/u/props/colour: "tank" has no prop "colour" — props: level, name, state',
       '/parts/u/bind/level: "count" has no "state" in /data/totals/fields — its status needs one',
       '/parts/u/bind/zz: "tank" has no prop "zz" — props: level, name, state',
       '/parts/v/element: no element "pump" — elements: tank, bad',
+    ]);
+    // Inside a list's section a hole names a field of its item; still nothing is computed there.
+    const listed = {
+      gates: { template: '{{#gates}}<li style="--l: {{load}}">{{name}} {{inbound | grouped:0}}</li>{{/gates}}{{^gates}}none{{/gates}}<b>{{title}}</b>', props: { gates: 'list', title: 'string' } },
+      sums: { template: '{{#rows}}<i>{{ a + b }}</i>{{/rows}}{{count}}', props: { rows: 'list' } },
+    };
+    expect(issues({ ...canvas({}), elements: listed })).toEqual([
+      '/elements/sums/template: "{{ a + b }}" — a hole is a prop this element declares (rows); compute with CSS calc() on a prop, not inside the braces',
+      '/elements/sums/template: "{{count}}" — a hole is a prop this element declares (rows); compute with CSS calc() on a prop, not inside the braces',
     ]);
     expect(issues({ ...canvas({}), symbols: { L1: { path: 'M0 0h1v1z' }, pump: { markup: '<path/>' } } })).toEqual([
       `/symbols/L1: a symbol's name is lowercase letters, digits and "-", starting with a letter — not "L1"`,

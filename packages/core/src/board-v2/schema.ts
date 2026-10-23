@@ -231,7 +231,7 @@ export function boardV2Schema(): Schema {
         properties: {
           template: { type: 'string', description: 'Markup with {{prop}} holes — names only; compute with CSS calc().' },
           style: { type: 'string' },
-          props: map({ enum: ['number', 'string', 'boolean', 'list'] }),
+          props: map({ enum: ['number', 'string', 'boolean', 'list', 'object'] }),
         },
       },
     },

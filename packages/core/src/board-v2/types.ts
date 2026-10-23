@@ -207,7 +207,8 @@ export interface Skin {
 export interface ElementDefinition {
   template: string;
   style?: string;
-  props?: Record<string, 'number' | 'string' | 'boolean' | 'list'>;
+  /** Its holes and their types — an `object` is a record its template reads by `{{prop.field}}`. */
+  props?: Record<string, 'number' | 'string' | 'boolean' | 'list' | 'object'>;
 }
 
 /** A board in the language's second version. */

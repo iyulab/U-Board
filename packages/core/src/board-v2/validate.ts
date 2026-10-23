@@ -42,7 +42,7 @@ const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 const BOARD_SECTIONS = ['version', 'board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout'] as const;
 
 /** The types an element's prop may be. */
-const PROP_TYPES = ['number', 'string', 'boolean', 'list'];
+const PROP_TYPES = ['number', 'string', 'boolean', 'list', 'object'];
 
 /** `{{…}}` in a text: the name inside, as written. */
 const HOLE = /\{\{([^}]*)\}\}/g;
@@ -174,12 +174,19 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     for (const [prop, type] of Object.entries(props)) {
       if (!PROP_TYPES.includes(type as string)) fail(`${at}/props/${prop}`, `"${String(type)}" is not a prop type — ${PROP_TYPES.join(' · ')}`);
     }
-    // A hole is a prop — or a list's section, {{#items}} … {{/items}}, and {{.}} inside it. Nothing is computed in it.
+    // A hole is a prop — or, inside a list's section ({{#items}} … {{/items}}), a field of its item or {{.}}, the item
+    // itself. Nothing is computed in it.
+    let sections = 0;
     for (const m of el.template.matchAll(HOLE)) {
-      const hole = m[1]!.split('|')[0]!.trim().replace(/^[#/^]/, '').split('.')[0]!;
-      if (hole !== '' && !(hole in props)) {
+      const body = m[1]!.split('|')[0]!.trim();
+      const hole = body.replace(/^[#/^]/, '').split('.')[0]!;
+      const computed = !/^[#/^]?[\w-]*(\.[\w-]+)*$|^\.$/.test(body);
+      if (body.startsWith('/')) { sections = Math.max(0, sections - 1); continue; }
+      const known = hole === '' || hole in props || (sections > 0 && !computed);
+      if (computed || !known) {
         fail(`${at}/template`, `"{{${m[1]}}}" — a hole is a prop this element declares (${list(Object.keys(props))}); compute with CSS calc() on a prop, not inside the braces`);
       }
+      if (body.startsWith('#') || body.startsWith('^')) sections++;
     }
     if (!DRAWING.test(el.template + (typeof el.style === 'string' ? el.style : '')) && Object.keys(props).length <= 4) {
       issues.push({
