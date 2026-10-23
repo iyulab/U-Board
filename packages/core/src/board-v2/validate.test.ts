@@ -94,6 +94,23 @@ describe('validateBoardV2', () => {
     ]);
   });
 
+  it('lays a grid in a cell out in rows that fill the cell, of whole columns', () => {
+    const parts = { map: { as: 'stat', of: 'totals' }, a: { as: 'stat', of: 'totals' }, b: { as: 'stat', of: 'totals' }, c: { as: 'stat', of: 'totals' } };
+    const grid = (items: unknown[]) => ({ version: 2, data, parts, layout: { kind: 'grid', items } });
+    expect(issues(grid([{ grid: [['a', 6], ['b', 6], 'c'], span: 4 }, ['map', 8]]))).toEqual([]);
+    expect(issues(grid([{ grid: [['a', 6], 'b', ['c', 6]], span: 4 }, ['map', 8]]))).toEqual([
+      '/layout/items/0/grid/1: each row of a grid in a cell fills the cell — the row before this item takes 6 of 12',
+      '/layout/items/0/grid/2: each row of a grid in a cell fills the cell — the last row takes 6 of 12',
+    ]);
+    expect(issues(grid([{ grid: [['a', 4], ['b', 8]], span: 4 }, ['map', 8], 'c']))).toEqual([
+      '/layout/items/0/grid/0/1: in a cell of 4 columns a span takes whole columns: one of 3, 6, 9, 12',
+      '/layout/items/0/grid/1/1: in a cell of 4 columns a span takes whole columns: one of 3, 6, 9, 12',
+    ]);
+    expect(issues(grid([{ grid: [{ grid: ['a', 'b'] }, 'c'], span: 4 }, ['map', 8]]))).toEqual([
+      '/layout/items/0/grid/0/grid: a grid in a grid in a cell is not drawn — lay its items out in the cell’s own rows',
+    ]);
+  });
+
   it('checks a group: its parts placed on its canvas, read of the group', () => {
     const pump = {
       as: 'group', size: [220, 140],
@@ -136,6 +153,22 @@ describe('validateBoardV2', () => {
     ]);
     expect(issues(canvas({ s: { as: 'stat' } }))).toEqual(['/parts/s/of: a stat shows data — give "of": "<data>" or "<data>[<key>]"']);
     expect(issues(canvas({ h: { as: 'header', title: 'Plant' }, l: { as: 'legend', of: 'totals' } }))).toEqual(['/parts/l/of: a legend reads no data — leave "of" out']);
+  });
+
+  it("takes a kind's options — the board's own and its widget's — and names them for a key that is neither", () => {
+    expect(issues(canvas({
+      g: { as: 'gauge', of: 'totals', show: 'load', form: 'tank', max: 120 },
+      l: { as: 'list', of: 'equipment', primary: 'name', maxItems: 5 },
+      c: { as: 'chart.bar', of: 'equipment', x: 'name', y: 'load', horizontal: true },
+      m: { as: 'marker', of: 'equipment[PR-01]', shape: 'ring' },
+    }))).toEqual([]);
+    expect(issues(canvas({ s: { as: 'stat', of: 'totals', show: 'load', colour: 'red' }, l: { as: 'label', title: 'Line 1', size: 14 } }))).toEqual([
+      '/parts/s/colour: "colour" is not an option — options of a stat: format',
+      '/parts/l/size: "size" is not an option — a label takes no options',
+    ]);
+    // A preset's key is the preset's mistake, said once however many parts use it.
+    const board = { ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' }, b: { use: 'card', of: 'equipment[PR-02]' } }), presets: { card: { as: 'status-card', glow: true } } };
+    expect(issues(board)).toEqual(['/presets/card/glow: "glow" is not an option — options of a status-card: overflow']);
   });
 
   it('reports a wrong "of" once, not again in what reads through it', () => {

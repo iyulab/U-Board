@@ -4,7 +4,7 @@
 // This covers the board's shape: its version, look, statuses, data reads and what their fields mean, its elements,
 // parts — their kinds, what they read, how they are reused — and every layout with its shapes and links.
 
-import { PART_KINDS, boardWordFor, partKind } from './kinds.js';
+import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
 import { BOARD_LANGUAGE_VERSION, EMPHASES, FRAMES, TONES } from './types.js';
 
 /**
@@ -28,6 +28,12 @@ const list = (names: Iterable<string>, max = 12) => {
   const all = [...names];
   return all.length === 0 ? 'none' : all.slice(0, max).join(', ') + (all.length > max ? ', …' : '');
 };
+
+/** The keys every part may have, whatever its kind. */
+const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show'] as const;
+
+/** The spans (twelfths) that take whole columns of a cell `cell` columns wide. */
+const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i + 1).filter(s => (cell * s) % 12 === 0).map(String));
 
 /** `<data>` or `<data>[<key>]` — the one way a part names what it shows. */
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
@@ -227,9 +233,32 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     }
     if (kind.of === 'no' && (part.of !== undefined || part.each !== undefined)) fail(`${at}/of`, `a ${kind.kind} reads no data — leave "of" out`);
     checkTexts(part, at, reads);
+    checkOptions(raw, part, kind, at);
     if (kind.kind === 'group') checkGroup(part, at, reads);
     if (kind.kind === 'element') checkElementPart(part, at, reads);
     return part;
+  };
+
+  /** Preset options already reported — a preset many parts use is reported once. */
+  const reportedPresetOptions = new Set<string>();
+  /**
+   * Every other key of a part is an option of its kind: one the board reads itself, or one the widget takes. A key
+   * neither knows would be dropped without a word. A preset's key is reported at the preset.
+   */
+  const checkOptions = (raw: Obj, part: Obj, kind: PartKind, at: string) => {
+    const known = new Set([...PART_FIELDS, ...kind.own, ...kind.options]);
+    const unknown = Object.keys(part).filter(key => !known.has(key));
+    if (unknown.length === 0) return;
+    const options = [...kind.own, ...kind.options];
+    const offered = options.length === 0 ? `a ${kind.kind} takes no options` : `options of a ${kind.kind}: ${list(options, 24)}`;
+    for (const key of unknown) {
+      const keyAt = key in raw ? `${at}/${key}` : `/presets/${String(raw.use)}/${key}`;
+      if (!(key in raw)) {
+        if (reportedPresetOptions.has(keyAt)) continue;
+        reportedPresetOptions.add(keyAt);
+      }
+      fail(keyAt, `"${key}" is not an option — ${offered}`);
+    }
   };
 
   /** `{{field}}` in a part's title or a link's label names a field of what it reads, or `{{key}}` its item's key. */
@@ -423,9 +452,41 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
         else if (item.canvas !== undefined) {
           if (isObj(item.canvas)) checkCanvas(item.canvas, `${itemAt}/canvas`);
           else fail(`${itemAt}/canvas`, 'a canvas is { "size", "place", … }');
-        } else checkGrid(item.grid, `${itemAt}/grid`);
+        } else {
+          checkGrid(item.grid, `${itemAt}/grid`);
+          checkCellRows(item.grid, Number.isInteger(item.span) ? (item.span as number) : 4, `${itemAt}/grid`);
+        }
       } else fail(itemAt, 'a grid item is "<part>", ["<part>", span] or an object');
     });
+  };
+  /**
+   * A grid in a cell lays its items out in rows that fill the cell, each item taking whole columns of the board's
+   * grid — its span is twelfths of the cell. Unknowable while an `each` part's items are not counted: skipped then.
+   */
+  const checkCellRows = (items: unknown, cell: number, at: string) => {
+    if (!Array.isArray(items)) return;
+    const spans: { span: number; at: string }[] = [];
+    for (const [i, item] of items.entries()) {
+      const id = typeof item === 'string' ? item : Array.isArray(item) ? item[0] : isObj(item) ? item.id : undefined;
+      if (typeof id === 'string' && ids.get(id)?.part.each !== undefined) return;
+      if (isObj(item) && item.grid !== undefined) { fail(`${at}/${i}/grid`, 'a grid in a grid in a cell is not drawn — lay its items out in the cell’s own rows'); return; }
+      const span = Array.isArray(item) ? item[1] : isObj(item) ? item.span ?? 12 : 12;
+      if (!Number.isInteger(span)) return;
+      spans.push({ span: span as number, at: Array.isArray(item) ? `${at}/${i}/1` : isObj(item) && item.span !== undefined ? `${at}/${i}/span` : `${at}/${i}` });
+    }
+    let used = 12;
+    let rows = 0;
+    for (const { span, at: spanAt } of spans) {
+      if ((cell * span) % 12 !== 0) fail(spanAt, `in a cell of ${cell} columns a span takes whole columns: one of ${spanSteps(cell)}`);
+      if (used + span > 12) {
+        if (used < 12) fail(spanAt, `each row of a grid in a cell fills the cell — the row before this item takes ${used} of 12`);
+        rows++;
+        used = 0;
+      }
+      used += span;
+    }
+    if (spans.length > 0 && used < 12) fail(`${at}/${items.length - 1}`, `each row of a grid in a cell fills the cell — the last row takes ${used} of 12`);
+    if (rows > 6) fail(at, `a grid in a cell lays out at most six rows — this one has ${rows}`);
   };
 
   if (!isObj(layout)) fail('/layout', 'a board needs "layout": { "kind": "canvas" | "grid", … }');

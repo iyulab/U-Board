@@ -9,7 +9,7 @@
 import type { Binding, CellCanvas, Connector, ElementDefinition, GridItem, GridLayout, ItemField, Node, Shape as ViewShape, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
-import { partKind } from './kinds.js';
+import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
 import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
 
@@ -747,5 +747,3 @@ function elementDefinition(definition: V2ElementDefinition): ElementDefinition {
   };
 }
 
-/** The options of a chart part that are its mapping — which field is x, y, … */
-const CHART_MAPPING = ['x', 'y', 'start', 'end', 'label', 'name', 'value', 'group', 'color', 'size', 'task', 'category'];
