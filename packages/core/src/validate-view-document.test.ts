@@ -324,13 +324,13 @@ describe('validateViewDocument', () => {
       }
     });
 
-    it('takes a theme colour’s name wherever a part is coloured, and says it among the forms — never as the board’s accent', () => {
-      for (const colour of ['positive', 'warning', 'negative', 'accent', 'Negative']) {
+    it('takes a theme colour’s name — a tone too — wherever a part is coloured, and says it among the forms — never as the board’s accent', () => {
+      for (const colour of ['positive', 'warning', 'negative', 'accent', 'Negative', 'ok', 'alarm', 'idle', 'now']) {
         expect(strict(broken(d => { d.decorations[0].stroke = colour; d.connectors[0].style = { stroke: colour }; })), colour).toEqual([]);
       }
-      expect(strict(broken(d => { d.decorations[0].stroke = 'var(--u-widget-positive)'; }))[0].message).toContain('or a theme colour: "positive", "warning", "negative", "accent"');
+      expect(strict(broken(d => { d.decorations[0].stroke = 'var(--u-widget-positive)'; }))[0].message).toContain('or a theme colour: "positive", "warning", "negative", "ok", "info", "watch", "warn", "alarm", "off", "idle", "accent", "past", "now", "next"');
       expect(strict(broken(d => { d.accent = 'accent'; })).map(i => `${i.path} ${i.message}`)).toEqual([
-        "/accent the board's accent is a colour itself — a theme name (positive, warning, negative, accent) goes where a part is coloured",
+        "/accent the board's accent is a colour itself — a theme name (positive, warning, negative, ok, info, watch, warn, alarm, off, idle, accent, past, now, next) goes where a part is coloured",
       ]);
     });
 

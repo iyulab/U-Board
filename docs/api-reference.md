@@ -882,7 +882,8 @@ validateViewDocument({
 `validate`. It also refuses what this version would keep but never draw: a field the format does not have — the
 issue names the fields that place has — and a decoration colour outside the forms every canvas reads: hex
 (`#1f6feb`, `#1f6feb33`), `rgb()`/`rgba()`, `hsl()`/`hsla()`, a CSS colour name, `transparent`, or `none` (paint
-nothing, the same as leaving the field out) — or a theme colour's name: `positive`, `warning`, `negative`, or
+nothing, the same as leaving the field out) — or a theme colour's name: a tone the widgets colour a state in (`ok`,
+`info`, `watch`, `warn`, `alarm`, `off`, `idle`, `past`, `now`, `next`), `positive`, `warning`, `negative`, or
 `accent` (the board's `accent`, else the theme's primary colour), drawn in the widgets' palette for the board's
 `appearance`, so a state's ring and a gauge mean the same green and a dark board needs no second set of colours. The
 board's `accent` itself takes a colour, not a name. A CSS variable is refused — a canvas has no stylesheet to resolve it.

@@ -10,6 +10,14 @@ describe('theme colours', () => {
     expect(drawingColor('steelblue')).toBe('steelblue');
   });
 
+  it('draws a tone as the widgets colour it, on either theme', () => {
+    expect(['ok', 'info', 'watch', 'warn', 'alarm', 'off', 'idle', 'past', 'now', 'next'].map(t => drawingColor(t))).toEqual([
+      '#15803d', '#2563eb', '#a16207', '#d97706', '#dc2626', '#78716c', '#64748b', '#5b6777', '#2563eb', '#1a1a2e',
+    ]);
+    expect(drawingColor('alarm', 'dark')).toBe('#f87171');
+    expect(drawingColor('accent', 'dark', '#22d3ee')).toBe('#22d3ee');
+  });
+
   it('draws accent as the board’s own, else the palette’s primary', () => {
     expect(drawingColor('accent', 'light', '#0f766e')).toBe('#0f766e');
     expect(drawingColor('accent', 'dark')).toBe('#818cf8');

@@ -13,6 +13,9 @@ All notable changes to this package are documented here. The format follows
   source's words and gain the tone they are coloured by (`mapping.tone`); a field the widget reads by another name is
   the source's field under that name. `withItemFields(fields, value)` applies them for a host's own code; the view
   document's JSON Schema and validator take the new field, and the binding form keeps it when the binding is edited.
+- A drawing colour — a decoration's, a connector's, a state's ring — takes the widgets' tones by name (`ok`, `info`,
+  `watch`, `warn`, `alarm`, `off`, `idle`, `past`, `now`, `next`), drawn in the widgets' palette for the board's
+  appearance, beside `positive`, `warning`, `negative` and `accent`.
 
 - An HTTP connector reference can ask a source for the data of a given time rather than for its latest: time places
   in its `path` (`base_date={{now:yyyyMMdd}}&base_time={{now:HHmm}}`) are filled in each time a request is sent, on
