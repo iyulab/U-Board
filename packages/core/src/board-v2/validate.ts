@@ -132,6 +132,11 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       else if (q.list === undefined) fail(`${at}/pivot`, '"pivot" reads the rows of a "list" as one item — give the list too');
       else if (q.key !== undefined) fail(`${at}/key`, 'a pivoted list is one item, not items named by a "key" — leave "key" out');
     }
+    // A field's name, not a pointer: "/observedAt" reads a field named "/observedAt", which no item has.
+    if (q.time !== undefined && (typeof q.time !== 'string' || q.time.startsWith('/'))) {
+      const name = typeof q.time === 'string' ? q.time.slice(1) : 'observedAt';
+      fail(`${at}/time`, `"time" names the field holding when the source observed the item — "${name}", not a JSON Pointer; a field that lives deeper says where with its "at"`);
+    }
     if (q.answerTime !== undefined) {
       if (typeof q.answerTime !== 'string' || !q.answerTime.startsWith('/')) fail(`${at}/answerTime`, '"answerTime" is where the answer holds its time, a JSON Pointer starting with "/"');
       else if (q.list === undefined) fail(`${at}/answerTime`, 'without a "list" the answer is the item — its time is "time"');

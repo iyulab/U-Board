@@ -354,6 +354,7 @@ describe('validateBoardV2', () => {
     const read = (q: Record<string, unknown>) => issues({ version: 2, data: { q: { from: 'bank', path: '/types', ...q } }, parts: { c: { as: 'chart.bar', of: 'q' } }, layout: { kind: 'grid', items: ['c'] } });
     expect(read({ list: '/value', answerTime: '/updatedAt' })).toEqual([]);
     expect(read({ list: '/value', answerTime: 'updatedAt' })).toEqual(['/data/q/answerTime: "answerTime" is where the answer holds its time, a JSON Pointer starting with "/"']);
+    expect(read({ time: '/observedAt' })).toEqual(['/data/q/time: "time" names the field holding when the source observed the item — "observedAt", not a JSON Pointer; a field that lives deeper says where with its "at"']);
     expect(read({ answerTime: '/updatedAt' })).toEqual(['/data/q/answerTime: without a "list" the answer is the item — its time is "time"']);
   });
 });
