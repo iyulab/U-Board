@@ -119,6 +119,10 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     if (typeof q.from !== 'string' || q.from === '') fail(`${at}/from`, 'a data read needs "from": the connector');
     if (typeof q.path !== 'string' || !q.path.startsWith('/')) fail(`${at}/path`, 'a data read needs "path": the request, starting with "/"');
     if (q.key !== undefined && q.list === undefined) fail(`${at}/key`, 'a "key" names the items of a "list" — give the list too');
+    if (q.answerTime !== undefined) {
+      if (typeof q.answerTime !== 'string' || !q.answerTime.startsWith('/')) fail(`${at}/answerTime`, '"answerTime" is where the answer holds its time, a JSON Pointer starting with "/"');
+      else if (q.list === undefined) fail(`${at}/answerTime`, 'without a "list" the answer is the item — its time is "time"');
+    }
     if (q.where !== undefined) {
       if (!isObj(q.where) || q.list === undefined) fail(`${at}/where`, '"where" keeps the items of a "list" whose fields equal its values: { "field": value }');
       else for (const [field, value] of Object.entries(q.where)) {

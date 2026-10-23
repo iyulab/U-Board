@@ -74,6 +74,8 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     }
     // The time the source observed a value is the item's — a whole list has one per row, not one of its own.
     if (q.time !== undefined && (item !== undefined || q.list === undefined)) ref.observedAtPath = `/${q.time}`;
+    // The whole list is as old as the answer says it is.
+    else if (q.answerTime !== undefined && item === undefined && q.where === undefined && field === undefined) ref.observedAtPath = q.answerTime;
     if (q.zone !== undefined) ref.timeZone = q.zone;
     if (q.fresh !== undefined) ref.maxAgeSeconds = q.fresh;
     if (q.now !== undefined) {

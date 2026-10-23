@@ -77,6 +77,9 @@ export interface Query {
   where?: Record<string, string | number | boolean>;
   /** The field holding when the source observed the item. */
   time?: string;
+  /** Where the answer says when it was observed as a whole (a JSON Pointer) — the time of a part that reads the whole
+   *  list, whose items carry none of their own. */
+  answerTime?: string;
   /** Seconds a value may be old and still be current. */
   fresh?: number;
   /** The time the request's `{{now:…}}` places stand for. */

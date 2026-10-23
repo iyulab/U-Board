@@ -86,6 +86,7 @@ export function boardV2Schema(): Schema {
           key: { type: 'string', description: 'The field that names each item: parts address one as <data>[<key>].' },
           where: map({ type: ['string', 'number', 'boolean'] }, 'Only the items whose fields equal these values.'),
           time: { type: 'string', description: 'The field holding when the source observed the item.' },
+          answerTime: { type: 'string', pattern: '^/', description: 'Where the answer says when it was observed as a whole — the time of a part that reads the whole list.' },
           fresh: { type: 'number', exclusiveMinimum: 0, description: 'Seconds a value may be old and still be current.' },
           now: {
             type: 'object',

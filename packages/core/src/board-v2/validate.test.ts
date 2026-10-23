@@ -309,4 +309,11 @@ describe('validateBoardV2', () => {
       '/data/bad/now/step: "step" is how often the source has new data, in seconds (more than 0)',
     ]);
   });
+
+  it('takes the time an answer says its whole list is of, only for a list', () => {
+    const read = (q: Record<string, unknown>) => issues({ version: 2, data: { q: { from: 'bank', path: '/types', ...q } }, parts: { c: { as: 'chart.bar', of: 'q' } }, layout: { kind: 'grid', items: ['c'] } });
+    expect(read({ list: '/value', answerTime: '/updatedAt' })).toEqual([]);
+    expect(read({ list: '/value', answerTime: 'updatedAt' })).toEqual(['/data/q/answerTime: "answerTime" is where the answer holds its time, a JSON Pointer starting with "/"']);
+    expect(read({ answerTime: '/updatedAt' })).toEqual(['/data/q/answerTime: without a "list" the answer is the item — its time is "time"']);
+  });
 });
