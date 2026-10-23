@@ -69,9 +69,9 @@ describe('domain entry', () => {
   });
 });
 
-// The board language's second version has its own entry: it is not part of the package root (nothing there reads it yet),
-// and it reaches the widget library — its kinds are generated from the library's catalog — so a process that loads it has
-// to resolve that library.
+// The board language's second version has its own entry: it is not part of the package root (nothing there reads it yet).
+// The server validates boards with it, so like ./domain it reaches no package at runtime — its kinds come from the copy of
+// the widget library's catalog written at build time (widget-catalog.generated.ts), not from the library.
 describe('board-v2 entry', () => {
   it('exports exactly these values', () => {
     expect(Object.keys(boardV2).sort()).toEqual([
@@ -81,8 +81,8 @@ describe('board-v2 entry', () => {
     for (const key of Object.keys(boardV2)) expect(key in root).toBe(false);
   });
 
-  it('reaches the widget library and nothing else at runtime', () => {
-    expect(runtimePackagesReachedFrom(resolve(process.cwd(), 'src/board-v2-entry.ts'))).toEqual(['@iyulab/u-widgets']);
+  it('reaches no package at runtime, so a Node process without the widgets can load it', () => {
+    expect(runtimePackagesReachedFrom(resolve(process.cwd(), 'src/board-v2-entry.ts'))).toEqual([]);
   });
 });
 

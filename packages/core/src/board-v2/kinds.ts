@@ -1,8 +1,9 @@
 // The kinds a part's `as` takes — generated from the widget library's own catalog and the board's own kinds, so the
 // validator, the schema and the rulebook a model reads list the same kinds, and a kind the library adds is not missing
-// from any of them.
+// from any of them. The catalog is the copy written at build time (`widget-catalog.generated.ts`), not the library
+// itself, so this module reaches no package at runtime.
 
-import { getWidgetOptions, help } from '@iyulab/u-widgets/tools';
+import { WIDGET_CATALOG } from './widget-catalog.generated.js';
 
 /** A kind of part: its name, what draws it, what it shows, and whether it reads data. */
 export interface PartKind {
@@ -23,12 +24,6 @@ export interface PartKind {
 
 /** The options of a chart part that are its mapping — which field is x, y, … */
 export const CHART_MAPPING: readonly string[] = ['x', 'y', 'start', 'end', 'label', 'name', 'value', 'group', 'color', 'size', 'task', 'category'];
-
-interface CatalogEntry {
-  widget: string;
-  category: string;
-  description: string;
-}
 
 /**
  * The general built-ins, each drawn by a widget of the library — under the board's name where the two differ: a
@@ -56,7 +51,7 @@ const BOARD_KINDS: readonly PartKind[] = [
 ];
 
 function generate(): PartKind[] {
-  const catalog = help() as CatalogEntry[];
+  const catalog = WIDGET_CATALOG;
   const entry = (widget: string) => {
     const found = catalog.find(c => c.widget === widget);
     if (!found) throw new Error(`the widget library has no "${widget}" widget`);
@@ -67,7 +62,7 @@ function generate(): PartKind[] {
     widget,
     shows: entry(widget).description,
     of,
-    options: (getWidgetOptions(widget) ?? []).map(o => o.key),
+    options: [...entry(widget).options],
     own: [...own],
   });
   return [

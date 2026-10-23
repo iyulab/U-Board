@@ -61,6 +61,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:visual:update": "bash ../../scripts/update-visual-baselines.sh",
+    "gen:widget-catalog": "tsx scripts/gen-widget-catalog.ts",
     "prepack": "node scripts/prepack.mjs"
   },
   "engines": {
