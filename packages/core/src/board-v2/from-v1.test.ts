@@ -108,12 +108,50 @@ describe('fromV1', () => {
     expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
   });
 
+  it('draws connectors as links and decorations as shapes, their colours in the nearest tone', () => {
+    const metric = (id: string, x: number) => node(id, { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } }, x);
+    const { board, notes, unsupported } = fromV1(canvas([metric('A', 0), metric('B', 300)], {
+      connectors: [
+        { id: 'feed', fromNodeId: 'A', toNodeId: 'B', label: '{{value | fixed:1}} t/h', labelSize: 14, style: { stroke: '#15803d', strokeWidth: 3, dash: 'dotted', arrow: 'end', route: 'curved' },
+          bindings: { label: { adapter: 'plant', ref: equipment('A', '/flow') }, 'style.stroke': { adapter: 'plant', ref: equipment('A', '/state'), map: { values: { trip: 'alarm' }, otherwise: 'ok' } } } },
+        { id: 'back', fromNodeId: 'B', toNodeId: 'A', label: 'return', style: { stroke: '#dc2626', route: 'orthogonal' } },
+      ],
+      decorations: [
+        { id: 'zone', type: 'rect', x: 0, y: 0, width: 400, height: 200, stroke: '#64748b', label: 'Line 1', fill: '#f1f5f9' },
+        { id: 'note', type: 'text', x: 10, y: 190, text: 'Hourly', fontSize: 12, fill: '#2563eb' },
+      ],
+    }));
+    expect(unsupported).toEqual([]);
+    expect(board.layout.kind === 'canvas' && board.layout.links).toEqual({
+      feed: { from: 'A', to: 'B', label: '{{flow}} t/h', show: 'state', of: 'equipment[A]', width: 3, dash: true, arrow: true, route: 'curved' },
+      back: { from: 'B', to: 'A', label: 'return', tone: 'alarm', route: 'orthogonal' },
+    });
+    expect(board.layout.kind === 'canvas' && board.layout.shapes).toEqual({
+      zone: { box: [0, 0, 400, 200], label: 'Line 1' },
+      note: { text: 'Hourly', at: [10, 190], size: 12, tone: 'info' },
+    });
+    expect(notes).toEqual([
+      'feed: a dotted line is drawn dashed',
+      "feed: its label's place and size take the board's",
+      'back: its colour #dc2626 is drawn in the nearest tone, alarm',
+      'zone: its colour #64748b is drawn in the nearest tone, idle',
+      "zone: its fill take the board's",
+      'note: its colour #2563eb is drawn in the nearest tone, info',
+    ]);
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'canvas' && drawn.connectors.map(c => c.style)).toEqual([
+      { stroke: 'idle', strokeWidth: 3, dash: 'dashed', arrow: 'end', route: 'curved' },
+      { stroke: 'alarm', strokeWidth: 2, arrow: 'none', route: 'orthogonal' },
+    ]);
+  });
+
   it('reports what the second version has no place for yet, never dropping it without a word', () => {
     const { unsupported } = fromV1(canvas(
       [node('e', { type: 'element:pump', props: {} })],
-      { connectors: [{ id: 'l', fromNodeId: 'e', toNodeId: 'e' }], decorations: [{ id: 'd', type: 'rect', x: 0, y: 0, width: 10, height: 10 }] },
+      { connectors: [{ id: 'l', fromNodeId: 'e', toNodeId: 'e' }] },
     ));
-    expect(unsupported).toEqual(['connectors', 'decorations', 'an element the board does not define']);
+    expect(unsupported).toEqual(['an element the board does not define', 'a connector to a node not converted']);
     expect(fromV1({ kind: 'grid', items: [] }).unsupported).toEqual(['a grid board']);
   });
 });

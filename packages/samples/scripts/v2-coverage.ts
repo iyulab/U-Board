@@ -7,7 +7,7 @@
 import { fromV1, type V1Conversion } from '../../core/src/board-v2/from-v1.js';
 import { toViewDocument } from '../../core/src/board-v2/picture.js';
 import { validateBoardV2 } from '../../core/src/board-v2/validate.js';
-import { resolveWidget, type ViewDocument, type Widget } from '@iyulab/u-board/domain';
+import { resolveConnector, resolveWidget, type ViewDocument, type Widget } from '@iyulab/u-board/domain';
 import { SAMPLE_PACKS } from '../src/index.js';
 import { snapshotAdapters } from '../src/snapshot-adapter.js';
 
@@ -82,6 +82,17 @@ for (const pack of SAMPLE_PACKS.filter(p => only.size === 0 || only.has(p.id))) 
     if (b.live < a.live) found.push(`${id}: ${a.live - b.live} fewer live`);
     if (found.length > 0) nodes.differs++; else nodes.same++;
     differences.push(...found);
+  }
+  // A connector's bound label and colour read again: the label's words, and live where they were live.
+  if (v1.kind === 'canvas' && drawn.kind === 'canvas') {
+    for (const connector of v1.connectors.filter(c => c.bindings)) {
+      const again = drawn.connectors.find(c => c.id === `link.${connector.id.replace(/[^\w-]+/g, '-')}`);
+      if (!again) continue;
+      const [a, b] = await Promise.all([resolveConnector(connector, adapters), resolveConnector(again, adapters)]);
+      if (connector.bindings!.label && a.label !== b.label) differences.push(`${connector.id}: label ${JSON.stringify(a.label)} → ${JSON.stringify(b.label)}`);
+      const live = (q: Record<string, string>) => Object.values(q).filter(v => v !== 'disconnected').length;
+      if (live(b.quality) < live(a.quality)) differences.push(`${connector.id}: ${live(a.quality) - live(b.quality)} fewer live`);
+    }
   }
   const result = conversion.unsupported.length > 0 ? 'unsupported' : differences.length === 0 ? 'same' : 'differs';
   outcomes.push({ id: pack.id, result, notes: [...conversion.unsupported.map(u => `unsupported: ${u}`), ...conversion.notes, ...differences], nodes });

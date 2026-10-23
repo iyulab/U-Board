@@ -5,8 +5,9 @@
 
 import { isHttpRef, type HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
-import type { Binding, CanvasView, ElementDefinition, Node, PropsSchema, ValueMap, ViewDocument, Widget } from '../view-document.js';
-import { TONES, type BoardV2, type ElementDefinition as V2Element, type Field, type Part, type Place, type Query, type ValueMapping } from './types.js';
+import { THEME_PALETTE, isThemeColor } from '../theme-colors.js';
+import type { Binding, CanvasView, Connector, ElementDefinition, Node, PropsSchema, Shape as V1Shape, ValueMap, ViewDocument, Widget } from '../view-document.js';
+import { TONES, type BoardV2, type ElementDefinition as V2Element, type Field, type Link, type Part, type Place, type Query, type Shape, type Tone, type ValueMapping } from './types.js';
 
 /** A converted board, what changed on the way, and what has no place in the second version yet. */
 export interface V1Conversion {
@@ -31,13 +32,12 @@ export function fromV1(doc: ViewDocument): V1Conversion {
     return { board: { version: 2, parts: {}, layout: { kind: 'canvas', size: [1, 1], place: {} } }, notes, unsupported };
   }
   const canvas = doc as CanvasView;
-  if (canvas.connectors.length > 0) unsupported.push('connectors');
-  if ((canvas.decorations ?? []).length > 0) unsupported.push('decorations');
   if (canvas.components !== undefined || (canvas.instances ?? []).length > 0) unsupported.push('components');
   if ((canvas.triggers ?? []).length > 0) unsupported.push('triggers');
 
   // Every binding first: a data read is shared by the parts that read it, so its key is known only once all are seen.
   for (const node of canvas.nodes) for (const binding of Object.values(node.widget.bindings ?? {})) reads.see(binding);
+  for (const connector of canvas.connectors) for (const binding of Object.values(connector.bindings ?? {})) reads.see(binding);
 
   const elements = new Elements(canvas.elements ?? {}, unsupported);
   for (const node of canvas.nodes) {
@@ -49,6 +49,15 @@ export function fromV1(doc: ViewDocument): V1Conversion {
     if (node.caption !== undefined) unsupported.push('a node caption');
     if (node.states !== undefined) unsupported.push('node states');
   }
+
+  const links: Record<string, Link> = {};
+  for (const connector of canvas.connectors) {
+    if (!(connector.fromNodeId in parts) || !(connector.toNodeId in parts)) { unsupported.push('a connector to a node not converted'); continue; }
+    const link = linkOf(connector, reads, notes, unsupported, canvas.appearance);
+    if (link !== undefined) links[unique(connector.id.replace(/[^\w-]+/g, '-'), links)] = link;
+  }
+  const shapes: Record<string, Shape> = {};
+  for (const decoration of canvas.decorations ?? []) shapes[unique(decoration.id.replace(/[^\w-]+/g, '-'), shapes)] = shapeOf(decoration, notes, canvas.appearance);
 
   const image = canvas.background.image;
   const right = Math.max(1, ...Object.values(place).map(([x, , w = 0]) => x + w));
@@ -68,6 +77,8 @@ export function fromV1(doc: ViewDocument): V1Conversion {
       size: image ? [image.width, image.height] : [Math.ceil(right), Math.ceil(bottom)],
       ...(image ? { background: image.src } : {}),
       place,
+      ...(Object.keys(shapes).length > 0 ? { shapes } : {}),
+      ...(Object.keys(links).length > 0 ? { links } : {}),
     },
   };
   return { board, notes: [...new Set(notes)], unsupported: [...new Set(unsupported)] };
@@ -246,6 +257,127 @@ function propType(schema: PropsSchema): 'number' | 'string' | 'boolean' | 'list'
   if (type === 'array') return 'list';
   if (type === 'object') return 'object';
   return undefined;
+}
+
+// ── links and shapes ──
+
+/** A connector as a link: its ends, label, width, dash, arrow and route, its colour as the nearest tone, a bound label as
+ *  a text of the item it reads, and a bound colour as the state of that field. */
+function linkOf(connector: Connector, reads: Reads, notes: string[], unsupported: string[], appearance: CanvasView['appearance']): Link | undefined {
+  const style = connector.style ?? {};
+  const bindings = connector.bindings ?? {};
+  const link: Link = { from: connector.fromNodeId, to: connector.toNodeId };
+  let of: string | undefined;
+  const reading = (key: string, read: { of: string; field: string } | undefined): boolean => {
+    if (!read) return false;
+    if (of !== undefined && of !== read.of) { unsupported.push('a connector reading more than one item'); return false; }
+    of = read.of;
+    return true;
+  };
+  for (const key of Object.keys(bindings)) {
+    if (!['label', 'style.stroke'].includes(key)) { unsupported.push(`a connector bound at ${key}`); return undefined; }
+  }
+  if (bindings.label) {
+    if (!isHttpRef(bindings.label.ref)) notes.push(`${connector.id}: the binding of label to "${bindings.label.adapter}" reads no HTTP connector — left out (A622-1)`);
+    else {
+      // A label written around its value (`{{value | fixed:1}} Mbps`) keeps its text, the field in the value's place and
+      // its digits as the field's format.
+      const pattern = connector.label?.includes('{{') ? connector.label : undefined;
+      const holes = pattern === undefined ? [] : [...pattern.matchAll(/\{\{\s*value\s*(?:\|\s*fixed:(\d)\s*)?\}\}/g)];
+      if (pattern !== undefined && (holes.length === 0 || pattern.replace(/\{\{\s*value\s*(?:\|\s*fixed:\d\s*)?\}\}/g, '').includes('{{'))) {
+        unsupported.push('a connector label written in a form the second version has no place for');
+        return undefined;
+      }
+      const digits = holes.find(h => h[1] !== undefined)?.[1];
+      const read = reads.read(bindings.label, digits !== undefined ? { format: `number:${digits}` } : {});
+      if (!reading('label', read)) return undefined;
+      link.label = pattern !== undefined ? pattern.replace(/\{\{\s*value\s*(?:\|\s*fixed:\d\s*)?\}\}/g, `{{${read!.field}}}`) : `{{${read!.field}}}`;
+    }
+  } else if (connector.label !== undefined) link.label = connector.label;
+  if (bindings['style.stroke']) {
+    const binding = bindings['style.stroke'];
+    const toned = isHttpRef(binding.ref) && binding.map !== undefined && mapsTo(binding.map, w => (TONES as readonly string[]).includes(w));
+    if (!toned) { unsupported.push('a connector coloured by a value that is not a tone'); return undefined; }
+    const state = mappingOf(binding.map!);
+    const read = state === undefined ? undefined : reads.read({ ...binding, map: undefined }, {}, state);
+    if (!reading('style.stroke', read)) return undefined;
+    link.show = read!.field;
+  } else if (style.stroke !== undefined) {
+    const tone = nearestTone(style.stroke, appearance);
+    if (tone === undefined) notes.push(`${connector.id}: its colour ${style.stroke} is not one a tone can stand for — drawn idle`);
+    else {
+      if (!(TONES as readonly string[]).includes(style.stroke.trim().toLowerCase())) notes.push(`${connector.id}: its colour ${style.stroke} is drawn in the nearest tone, ${tone}`);
+      if (tone !== 'idle') link.tone = tone;
+    }
+  }
+  if (of !== undefined) link.of = of;
+  if (style.strokeWidth !== undefined) link.width = style.strokeWidth;
+  if (style.dash !== undefined && style.dash !== 'solid') {
+    link.dash = true;
+    if (style.dash === 'dotted') notes.push(`${connector.id}: a dotted line is drawn dashed`);
+  }
+  if (style.arrow === 'end') link.arrow = true;
+  else if (style.arrow !== undefined && style.arrow !== 'none') { unsupported.push(`a connector with its arrow at ${style.arrow}`); return undefined; }
+  if (style.route !== undefined && style.route !== 'straight') link.route = style.route;
+  if (connector.labelAt !== undefined || connector.labelSize !== undefined) notes.push(`${connector.id}: its label's place and size take the board's`);
+  return link;
+}
+
+/** A decoration as a shape: a frame as a box with its label, a text at its point; colours as the nearest tone. */
+function shapeOf(decoration: V1Shape, notes: string[], appearance: CanvasView['appearance']): Shape {
+  const colour = decoration.type === 'rect' ? decoration.stroke : decoration.fill;
+  const tone = colour === undefined ? undefined : nearestTone(colour, appearance);
+  if (colour !== undefined && tone === undefined) notes.push(`${decoration.id}: its colour ${colour} is not one a tone can stand for — drawn idle`);
+  else if (colour !== undefined && !(TONES as readonly string[]).includes(colour.trim().toLowerCase())) notes.push(`${decoration.id}: its colour ${colour} is drawn in the nearest tone, ${tone}`);
+  const toned = tone !== undefined && tone !== 'idle' ? { tone } : {};
+  if (decoration.type === 'rect') {
+    const lost = (['fill', 'radius', 'labelAt', 'labelSize', 'labelFill'] as const).filter(k => decoration[k] !== undefined && decoration[k] !== 'none');
+    if (lost.length > 0) notes.push(`${decoration.id}: its ${lost.join(', ')} take the board's`);
+    return {
+      box: [decoration.x, decoration.y, decoration.width, decoration.height],
+      ...(decoration.label !== undefined ? { label: decoration.label } : {}),
+      ...toned,
+      ...(decoration.strokeWidth !== undefined ? { width: decoration.strokeWidth } : {}),
+      ...(decoration.dash !== undefined && decoration.dash !== 'solid' ? { dash: true } : {}),
+    };
+  }
+  const lost = (['anchor', 'background'] as const).filter(k => decoration[k] !== undefined && decoration[k] !== 'top-start');
+  if (lost.length > 0) notes.push(`${decoration.id}: its ${lost.join(', ')} take the board's`);
+  return { text: decoration.text, at: [decoration.x, decoration.y], ...(decoration.fontSize !== undefined ? { size: decoration.fontSize } : {}), ...toned };
+}
+
+/** The tone a colour is nearest to, on the board's own palette — `undefined` for a colour that is not written in a form
+ *  that can be measured (a CSS variable, a gradient). A theme name is its tone. */
+export function nearestTone(colour: string, appearance: CanvasView['appearance'] = 'light'): Tone | undefined {
+  const name = colour.trim().toLowerCase();
+  if (isThemeColor(name)) {
+    const meaning: Record<string, Tone> = { positive: 'ok', warning: 'warn', negative: 'alarm' };
+    return meaning[name] ?? (name as Tone);
+  }
+  const rgb = rgbOf(name);
+  if (rgb === undefined) return undefined;
+  const palette = THEME_PALETTE[appearance ?? 'light'];
+  let best: Tone | undefined;
+  let distance = Infinity;
+  for (const tone of TONES) {
+    if (tone === 'accent') continue;
+    const other = rgbOf(palette[tone]);
+    if (other === undefined) continue;
+    const d = (rgb[0] - other[0]) ** 2 + (rgb[1] - other[1]) ** 2 + (rgb[2] - other[2]) ** 2;
+    if (d < distance) { distance = d; best = tone; }
+  }
+  return best;
+}
+
+/** A colour written `#rgb`, `#rrggbb`, `#rrggbbaa` or `rgb()`/`rgba()` as its red, green and blue. */
+function rgbOf(colour: string): [number, number, number] | undefined {
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(colour);
+  if (hex) {
+    const h = hex[1]!.length === 3 ? [...hex[1]!].map(c => c + c).join('') : hex[1]!.slice(0, 6);
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  const fn = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/i.exec(colour);
+  return fn ? [Number(fn[1]), Number(fn[2]), Number(fn[3])] : undefined;
 }
 
 // ── data ──
