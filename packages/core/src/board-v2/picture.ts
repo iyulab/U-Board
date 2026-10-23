@@ -6,12 +6,12 @@
 // The board is taken as valid (`validateBoardV2` first): what is wrong in it is reported there, with where and how to
 // write it instead. What the picture model cannot draw yet is a `PictureError`.
 
-import type { Binding, CellCanvas, Connector, ElementDefinition, GridItem, ItemField, Node, Shape as ViewShape, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
+import type { Binding, CellCanvas, Connector, ElementDefinition, GridItem, GridLayout, ItemField, Node, Shape as ViewShape, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { LABEL, LEGEND, MARKER, lineElement } from './builtins.js';
 import { partKind } from './kinds.js';
 import { TONES } from './types.js';
-import type { BoardV2, CanvasLayout, Field, GridItem as V2GridItem, Link, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
+import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
 
 /** Something in a board the picture model does not draw yet. */
 export class PictureError extends Error {
@@ -376,11 +376,33 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         });
         return { type: builtin('ub-legend', LEGEND), props: { items } };
       }
+      case 'element': {
+        // One of the board's own drawings: its fixed props, and props bound to a field, its status or its tone.
+        const { element, props: fixed = {}, bind: bound = {} } = options as { element: string; props?: Record<string, unknown>; bind?: Record<string, string> };
+        const definition = board.elements![element]!;
+        elements[element] ??= elementDefinition(definition);
+        for (const [prop, ref] of Object.entries(bound)) {
+          const [name, what] = ref.split('.') as [string, 'status' | 'tone' | undefined];
+          if (what === undefined) bindValue(prop, name);
+          else bind(prop, name, what === 'tone' ? stateMaps(field(name).state!).tone : statusNames(field(name).state!));
+        }
+        const blank = { number: 0, string: '', boolean: false, list: [] } as const;
+        const props = Object.fromEntries(Object.entries(definition.props ?? {}).map(([k, t]) => [k, blank[t]]));
+        return { type: `element:${element}`, props: { ...props, ...fixed }, bindings };
+      }
+      case 'group':
+        throw new PictureError(at, 'a group is drawn by the layout that places it');
     }
   };
 
+  /** A field's state as the status name each raw value is in — what an element's `<field>.status` reads. */
+  const statusNames = (rule: StateRule): ValueMap<string> =>
+    rule === 'raw'
+      ? { values: Object.fromEntries([...Object.keys(statuses), ...TONES].map(n => [n, n])), otherwise: 'off' }
+      : mapOf(rule, w => w);
+
   /** The data a part reads, for an item `key` of an `each` part or as its `of` says. */
-  const readsOf = (part: Part, key?: string): { query: string; item?: string } | undefined => {
+  const readsOf = (part: Part, key?: string): Reads | undefined => {
     const p = resolve(part);
     if (p.each !== undefined) return { query: p.each, ...(key !== undefined ? { item: key } : {}) };
     return p.of !== undefined ? target(p.of) : undefined;
@@ -388,31 +410,77 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
 
   // ── layouts ──
 
-  const box = (place: Place) => ({ x: place[0], y: place[1], ...(place.length === 4 ? { width: place[2], height: place[3] } : {}) });
-
-  /** A canvas: its parts placed as nodes, its shapes as decorations, its links as connectors. `prefix` keeps the ids of
-   *  a cell's shapes and links apart from another cell's. */
-  const canvasOf = (canvas: Omit<CanvasLayout, 'kind'>, at: string, prefix = ''): Pick<CellCanvas, 'nodes' | 'connectors' | 'decorations'> => {
+  /**
+   * A canvas: its parts placed as nodes, its shapes as decorations, its links as connectors — `prefix` keeps the ids of
+   * a cell's or a group's shapes and links apart from another's. A group placed on it is its own small canvas drawn
+   * into its box — its parts' nodes named `<group>/<part>`, reading the group's data unless they name their own.
+   * `frame` moves and scales what a group places into the box it is placed in.
+   */
+  const canvasOf = (
+    canvas: Omit<CanvasLayout, 'kind'>, at: string, prefix = '', parts: Record<string, Part> = board.parts, frame: Frame = WHOLE,
+  ): Pick<CellCanvas, 'nodes' | 'connectors' | 'decorations'> => {
     const nodes: Node[] = [];
-    for (const [id, place] of Object.entries(canvas.place)) {
-      const part = board.parts[id]!;
-      if (Array.isArray(place)) {
-        nodes.push({ id, ...box(place), anchored: true, widget: widgetFor(part, `/parts/${id}`, readsOf(part)) });
-      } else {
-        for (const [key, p] of Object.entries(place)) {
-          nodes.push({ id: `${id}/${key}`, ...box(p), anchored: true, widget: widgetFor(part, `/parts/${id}`, readsOf(part, key)) });
-        }
-      }
-    }
+    const connectors: Connector[] = [];
     const decorations: ViewShape[] = [];
     const lines: Node[] = [];
-    for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
-      if (shape.line !== undefined || shape.path !== undefined) lines.push(lineNode(shape, `${prefix}shape.${id}`));
-      else decorations.push(shapeOf(shape, `${prefix}shape.${id}`));
+    const placeOne = (id: string, part: Part, place: Place, reads: Reads | undefined) => {
+      const nodeId = `${frame.ids}${id}`;
+      const p = resolve(part);
+      const [x, y] = [frame.dx + place[0] * frame.sx, frame.dy + place[1] * frame.sy];
+      if (p.as === 'group') {
+        const size = p.size as [number, number];
+        const [w, h] = place.length === 4 ? [place[2] * frame.sx, place[3] * frame.sy] : [size[0] * frame.sx, size[1] * frame.sy];
+        const inner = canvasOf(groupCanvas(p), `/parts/${id}`, `${nodeId}/`, p.parts as Record<string, Part>, {
+          dx: x, dy: y, sx: w / size[0], sy: h / size[1], ids: `${nodeId}/`, reads: reads ?? null,
+        });
+        nodes.push(...inner.nodes);
+        connectors.push(...inner.connectors);
+        decorations.push(...(inner.decorations ?? []));
+        return;
+      }
+      const placed = place.length === 4 ? { width: place[2] * frame.sx, height: place[3] * frame.sy } : {};
+      nodes.push({ id: nodeId, x, y, ...placed, anchored: true, widget: widgetFor(part, `/parts/${id}`, reads) });
+    };
+    for (const [id, place] of Object.entries(canvas.place)) {
+      const part = parts[id]!;
+      // A part inside a group reads the group's data unless it names its own.
+      const own = (key?: string) => readsOf(part, key) ?? (frame.reads === null ? undefined : frame.reads);
+      if (Array.isArray(place)) placeOne(id, part, place, own());
+      else for (const [key, p] of Object.entries(place)) placeOne(`${id}/${key}`, part, p, own(key));
     }
-    const connectors = Object.entries(canvas.links ?? {}).map(([id, link]) => connectorOf(link, `${prefix}link.${id}`, `${at}/links/${id}`));
+    for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
+      const moved = moveShape(shape, frame);
+      if (moved.line !== undefined || moved.path !== undefined) lines.push(lineNode(moved, `${prefix}shape.${id}`));
+      else decorations.push(shapeOf(moved, `${prefix}shape.${id}`));
+    }
+    for (const [id, link] of Object.entries(canvas.links ?? {})) {
+      connectors.push(connectorOf({ ...link, from: `${frame.ids}${link.from}`, to: `${frame.ids}${link.to}` }, `${prefix}link.${id}`, `${at}/links/${id}`));
+    }
     // Lines are drawn under the parts, as the decorations are.
     return { nodes: [...lines, ...nodes], connectors, ...(decorations.length > 0 ? { decorations } : {}) };
+  };
+
+  /** A group's own canvas. */
+  const groupCanvas = (group: Part): Omit<CanvasLayout, 'kind'> => ({
+    size: group.size as [number, number],
+    place: group.place as CanvasLayout['place'],
+    ...(group.shapes !== undefined ? { shapes: group.shapes as CanvasLayout['shapes'] } : {}),
+    ...(group.links !== undefined ? { links: group.links as CanvasLayout['links'] } : {}),
+  });
+
+  /** A shape moved and scaled by `frame` — a group's shape into the box the group is placed in. */
+  const moveShape = (shape: Shape, frame: Frame): Shape => {
+    if (frame === WHOLE) return shape;
+    const px = (x: number) => frame.dx + x * frame.sx;
+    const py = (y: number) => frame.dy + y * frame.sy;
+    let k = 0;
+    return {
+      ...shape,
+      ...(shape.box !== undefined ? { box: [px(shape.box[0]), py(shape.box[1]), shape.box[2] * frame.sx, shape.box[3] * frame.sy] } : {}),
+      ...(shape.at !== undefined ? { at: [px(shape.at[0]), py(shape.at[1])] } : {}),
+      ...(shape.line !== undefined ? { line: shape.line.map(([x, y]) => [px(x), py(y)] as [number, number]) } : {}),
+      ...(shape.path !== undefined ? { path: shape.path.replace(/-?\d*\.?\d+/g, n => String(k++ % 2 === 0 ? px(Number(n)) : py(Number(n)))) } : {}),
+    };
   };
 
   /** A shape as a decoration: a box with its label, or a text at a point — in its tone, else the board's muted line. */
@@ -486,26 +554,78 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
   const background = (canvas: Omit<CanvasLayout, 'kind'>) =>
     (canvas.background !== undefined ? { image: { src: canvas.background, width: canvas.size[0], height: canvas.size[1] } } : {});
 
-  const gridItems = (items: V2GridItem[], at: string): GridItem[] =>
-    items.flatMap((entry, i): GridItem[] => {
-      const itemAt = `${at}/${i}`;
-      const [id, layout] = typeof entry === 'string' ? [entry, {}]
-        : Array.isArray(entry) ? [entry[0], { span: entry[1] }]
-          : [entry.id, { ...(entry.span !== undefined ? { span: entry.span } : {}), ...(entry.height !== undefined ? { height: entry.height } : {}) }];
-      if (typeof entry === 'object' && !Array.isArray(entry) && entry.grid !== undefined) throw new PictureError(itemAt, 'a grid in a grid cell is not drawn yet');
-      if (typeof entry === 'object' && !Array.isArray(entry) && entry.canvas !== undefined) {
-        const canvas: CellCanvas = { background: background(entry.canvas), ...canvasOf(entry.canvas, `${itemAt}/canvas`, `cell-${i}:`) };
-        return [{ id: `cell-${i}`, canvas, ...layout }];
-      }
-      const part = board.parts[id!]!;
-      const p = resolve(part);
-      if (p.each !== undefined) {
-        const keys = options.keysOf?.(p.each);
-        if (keys === undefined) throw new PictureError(itemAt, `the items of "${p.each}" are not known — give keysOf`);
-        return keys.map(key => ({ id: `${id}/${key}`, widget: widgetFor(part, `/parts/${id}`, readsOf(part, key)), ...layout }));
-      }
-      return [{ id: id!, widget: widgetFor(part, `/parts/${id}`, readsOf(part)), ...layout }];
+  /** What a grid places for one entry — a part (once, or once per item of an `each` part), a group, or a canvas. */
+  const unitsOf = (entry: V2GridItem, at: string, i: number): Unit[] => {
+    const layout: GridLayout = typeof entry === 'string' ? {}
+      : Array.isArray(entry) ? { span: entry[1] }
+        : { ...(entry.span !== undefined ? { span: entry.span } : {}), ...(entry.height !== undefined ? { height: entry.height } : {}) };
+    if (typeof entry === 'object' && !Array.isArray(entry) && entry.grid !== undefined) {
+      return [{
+        layout,
+        grid: entry.grid.flatMap((inner, j) => {
+          const units = unitsOf(inner, `${at}/${i}/grid`, j);
+          if (units.some(u => u.grid !== undefined)) throw new PictureError(`${at}/${i}/grid/${j}`, 'a grid in a grid in a grid cell is not drawn yet');
+          return units;
+        }),
+      }];
+    }
+    if (typeof entry === 'object' && !Array.isArray(entry) && entry.canvas !== undefined) {
+      const canvas = entry.canvas;
+      const id = `cell${at.replace(/\D+/g, '-')}${i}`;
+      return [{ layout, make: extra => ({ id, canvas: { background: background(canvas), ...canvasOf(canvas, `${at}/${i}/canvas`, `${id}:`) }, ...layout, ...extra }) }];
+    }
+    const id = typeof entry === 'string' ? entry : Array.isArray(entry) ? entry[0] : entry.id!;
+    const part = board.parts[id]!;
+    const p = resolve(part);
+    const one = (itemId: string, reads: Reads | undefined): Unit => ({
+      layout,
+      make: extra => (p.as === 'group'
+        ? { id: itemId, canvas: { background: {}, ...canvasOf(groupCanvas(p), `/parts/${id}`, `${itemId}/`, p.parts as Record<string, Part>, { ...WHOLE, ids: `${itemId}/`, reads: reads ?? null }) }, ...layout, ...extra }
+        : { id: itemId, widget: widgetFor(part, `/parts/${id}`, reads), ...layout, ...extra }),
     });
+    if (p.each !== undefined) {
+      const keys = options.keysOf?.(p.each);
+      if (keys === undefined) throw new PictureError(`${at}/${i}`, `the items of "${p.each}" are not known — give keysOf`);
+      return keys.map(key => one(`${id}/${key}`, readsOf(part, key)));
+    }
+    return [one(id, readsOf(part))];
+  };
+
+  /**
+   * A grid's items in order. A cell holding a grid stacks its items in the cell's columns: the row it sits in becomes as
+   * many rows as it stacks, the items beside it spanning them all.
+   */
+  const gridItems = (entries: V2GridItem[], at: string): GridItem[] => {
+    const units = entries.flatMap((entry, i) => unitsOf(entry, at, i));
+    const out: GridItem[] = [];
+    let row: Unit[] = [];
+    let used = 0;
+    const flush = () => {
+      const stacks = row.filter(u => u.grid !== undefined);
+      if (stacks.length === 0) out.push(...row.map(u => u.make!({})));
+      else {
+        const depth = stacks[0]!.grid!.length;
+        if (stacks.some(u => u.grid!.length !== depth)) throw new PictureError(at, 'grid cells side by side stack the same number of items — or put them in rows of their own');
+        if (depth > 6) throw new PictureError(at, 'a grid cell stacks at most six items');
+        if (stacks.some(u => u.grid!.some(inner => inner.layout.span !== undefined && inner.layout.span !== 12))) {
+          throw new PictureError(at, 'the items of a grid in a cell stack, each the cell’s whole width — side by side is not drawn yet');
+        }
+        const span = (u: Unit) => ({ span: u.layout.span ?? 4 });
+        for (const u of row) out.push(u.grid ? u.grid[0]!.make!(span(u)) : u.make!(depth > 1 ? { rowSpan: depth } : {}));
+        for (let r = 1; r < depth; r++) for (const u of stacks) out.push(u.grid![r]!.make!(span(u)));
+      }
+      row = [];
+      used = 0;
+    };
+    for (const u of units) {
+      const span = u.layout.span ?? 4;
+      if (used + span > 12 && row.length > 0) flush();
+      row.push(u);
+      used += span;
+    }
+    if (row.length > 0) flush();
+    return out;
+  };
 
   const withElements = () => (Object.keys(elements).length > 0 ? { elements } : {});
   const head = board.board ?? {};
@@ -517,6 +637,39 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
   }
   const items = gridItems(layout.items, '/layout/items');
   return { kind: 'grid', items, ...look, ...withElements() };
+}
+
+/** What a part reads: a data read, and the item when it names one. */
+type Reads = { query: string; item?: string };
+
+/** How a group's own canvas is drawn into the box it is placed in: moved, scaled, its node ids prefixed, reading the
+ *  group's data (`null` when the group reads none). */
+interface Frame {
+  dx: number;
+  dy: number;
+  sx: number;
+  sy: number;
+  ids: string;
+  reads?: Reads | null;
+}
+const WHOLE: Frame = { dx: 0, dy: 0, sx: 1, sy: 1, ids: '' };
+
+/** A grid item to place — once its row knows how many rows the item beside it stacks — or a cell's stacked items. */
+interface Unit {
+  layout: GridLayout;
+  make?: (extra: GridLayout) => GridItem;
+  grid?: Unit[];
+}
+
+/** A v2 element definition as the view document's: its holes as a props schema. */
+function elementDefinition(definition: V2ElementDefinition): ElementDefinition {
+  const type = { number: 'number', string: 'string', boolean: 'boolean', list: 'array' } as const;
+  return {
+    render: 'template',
+    props: { type: 'object', properties: Object.fromEntries(Object.entries(definition.props ?? {}).map(([k, t]) => [k, { type: type[t] }])) },
+    template: definition.template,
+    ...(definition.style !== undefined ? { style: definition.style } : {}),
+  };
 }
 
 /** The options of a chart part that are its mapping — which field is x, y, … */

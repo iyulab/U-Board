@@ -15,7 +15,8 @@ All notable changes to this package are documented here. The format follows
   document's JSON Schema and validator take the new field, and the binding form keeps it when the binding is edited.
 - A drawing colour — a decoration's, a connector's, a state's ring — takes the widgets' tones by name (`ok`, `info`,
   `watch`, `warn`, `alarm`, `off`, `idle`, `past`, `now`, `next`), drawn in the widgets' palette for the board's
-  appearance, beside `positive`, `warning`, `negative` and `accent`.
+  appearance, beside `positive`, `warning`, `negative` and `accent`. An element's markup reads the same colours as the
+  widgets name them (`var(--u-widget-tone-alarm)` …).
 
 - An HTTP connector reference can ask a source for the data of a given time rather than for its latest: time places
   in its `path` (`base_date={{now:yyyyMMdd}}&base_time={{now:HHmm}}`) are filled in each time a request is sent, on

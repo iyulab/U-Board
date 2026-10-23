@@ -209,6 +209,54 @@ describe('the picture model of a v2 board', () => {
     expect(doc.elements!['ub-shape-edge']!.template).toContain('d="M 3 3 L 43 43"');
   });
 
+  it("draws the board's own elements, their props fixed or bound to a field, its status or its tone", () => {
+    const b = board(
+      { t: { as: 'element', element: 'tank', each: 'pumps', props: { name: 'Pump' }, bind: { level: 'flow', state: 'state.status', tone: 'state.tone' } } },
+      { kind: 'canvas', size: [400, 200], place: { t: { P2: [0, 0, 100, 100] } } },
+    );
+    b.elements = { tank: { template: '<svg style="--l: {{level}}"><circle r="4"/></svg><b class="{{state}}" data-tone="{{tone}}">{{name}}</b>', props: { level: 'number', state: 'string', tone: 'string', name: 'string' } } };
+    const doc = view(b);
+    expect(doc.kind === 'canvas' && doc.elements?.tank).toEqual({
+      render: 'template', template: b.elements.tank!.template,
+      props: { type: 'object', properties: { level: { type: 'number' }, state: { type: 'string' }, tone: { type: 'string' }, name: { type: 'string' } } },
+    });
+    expect(drawn(nodeOf(doc, 't/P2').widget)).toEqual({ level: 0, state: 'tripped', tone: 'alarm', name: 'Pump' });
+  });
+
+  it('draws a group into the box it is placed in, its parts reading its item, and as a canvas cell in a grid', () => {
+    const pump = {
+      as: 'group', size: [200, 100],
+      parts: { card: { as: 'status-card', show: ['state'] }, flow: { as: 'stat', show: 'flow' } },
+      place: { card: [0, 0, 100, 100], flow: [100, 0, 100, 100] },
+      shapes: { rim: { box: [0, 0, 200, 100] } },
+      links: { l: { from: 'card', to: 'flow' } },
+    };
+    const parts = { pumps: { use: 'pump', each: 'pumps' } };
+    const onCanvas = { ...board(parts, { kind: 'canvas', size: [800, 400], place: { pumps: { P1: [10, 10, 400, 200] } } }), presets: { pump } } as BoardV2;
+    const doc = view(onCanvas);
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(doc.nodes.map(n => [n.id, n.x, n.y, n.width, n.height])).toEqual([['pumps/P1/card', 10, 10, 200, 200], ['pumps/P1/flow', 210, 10, 200, 200]]);
+    expect(drawn(nodeOf(doc, 'pumps/P1/card').widget).data).toMatchObject({ title: 'P1', tone: 'ok' });
+    expect(doc.decorations).toEqual([expect.objectContaining({ id: 'pumps/P1/shape.rim', x: 10, y: 10, width: 400, height: 200 })]);
+    expect(doc.connectors).toEqual([expect.objectContaining({ id: 'pumps/P1/link.l', fromNodeId: 'pumps/P1/card', toNodeId: 'pumps/P1/flow' })]);
+
+    const inGrid = view({ ...board(parts, { kind: 'grid', items: [['pumps', 6]] }), presets: { pump } } as BoardV2, { pumps: ['P1', 'P2'] });
+    expect(inGrid.kind === 'grid' && inGrid.items.map(i => [i.id, i.span, 'canvas' in i && i.canvas.nodes.map(n => n.id)])).toEqual([
+      ['pumps/P1', 6, ['pumps/P1/card', 'pumps/P1/flow']],
+      ['pumps/P2', 6, ['pumps/P2/card', 'pumps/P2/flow']],
+    ]);
+  });
+
+  it('stacks the items of a grid in a cell, the row beside it spanning them all', () => {
+    const parts = { map: { as: 'stat', of: 'totals', show: 'output' }, a: { as: 'stat', of: 'totals', show: 'temp' }, b: { as: 'stat', of: 'totals', show: 'oee' }, c: { as: 'stat', of: 'totals', show: 'output' } };
+    const doc = view(board(parts, { kind: 'grid', items: [['map', 8], { grid: ['a', 'b'], span: 4 }, ['c', 12]] }));
+    expect(doc.kind === 'grid' && doc.items.map(i => [i.id, i.span, i.rowSpan])).toEqual([
+      ['map', 8, 2], ['a', 4, undefined], ['b', 4, undefined], ['c', 12, undefined],
+    ]);
+    const side = board(parts, { kind: 'grid', items: [{ grid: [['a', 6], ['b', 6]], span: 4 }, ['map', 8]] });
+    expect(() => toViewDocument(side)).toThrow(/side by side is not drawn yet/);
+  });
+
   it('says what it does not draw yet, and where', () => {
     const b = board({ v: { as: 'marker', of: 'pumps[P1]', symbol: 'valve' } }, { kind: 'canvas', size: [100, 100], place: { v: [0, 0] } });
     expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/v/symbol', 'a marker with a symbol is not drawn yet'));
