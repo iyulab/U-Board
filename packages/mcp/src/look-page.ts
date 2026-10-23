@@ -77,7 +77,11 @@ export function findProblems(
       // Across, what runs past is a line too long for the width — the scroll width says it. Down, it is rows, items
       // and charts — boxes; their bottom says it.
       const box = inner.getBoundingClientRect();
-      const height = Math.max(inner.clientHeight, Math.round(contentBottom(inner.shadowRoot ?? inner) - box.top));
+      // The boxes are measured on the screen, the widget's own height is not: a canvas drawn larger or smaller than its
+      // size (scaled to its cell) scales one and not the other, so the content's reach is brought back to the widget's
+      // own px before the two are compared.
+      const scale = inner.offsetHeight > 0 && box.height > 0 ? box.height / inner.offsetHeight : 1;
+      const height = Math.max(inner.clientHeight, Math.round((contentBottom(inner.shadowRoot ?? inner) - box.top) / scale));
       if (inner.scrollWidth > inner.clientWidth + 1 || height > inner.clientHeight + 1) {
         out.push({ path, message: `its content runs past its box (${inner.scrollWidth}×${height} in ${inner.clientWidth}×${inner.clientHeight}) — it scrolls or is cut off; give it more room` });
       }

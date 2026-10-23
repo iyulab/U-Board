@@ -44,6 +44,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- `look` measures a widget in a canvas drawn larger or smaller than its size (a canvas scaled to its grid cell) in the
+  widget's own px: it reported a widget that fits as running past its box by the scale, and missed one that did not fit
+  in a canvas drawn smaller.
 - `look` with `focus` on a part drawn outside the screen, or with no size, says so instead of failing to take the
   picture.
 - `look` no longer reports an element drawing past its box for what the element itself cuts off: a part's box is cut by

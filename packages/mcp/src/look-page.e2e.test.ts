@@ -114,6 +114,21 @@ describe('findProblems', () => {
     ]);
   });
 
+  it('measures a widget in a canvas drawn larger than its size in the widget’s own px — the scale is not overflow', async () => {
+    await show(`
+      <div style="transform:scale(2.6);transform-origin:0 0">
+        <div data-node-id="a"><u-widget style="display:block;width:200px;height:80px">
+          <template shadowrootmode="open"><div style="width:200px;height:80px"><div style="height:70px">fits</div></div></template>
+        </u-widget></div>
+        <div data-node-id="b"><u-widget style="display:block;width:200px;height:80px">
+          <template shadowrootmode="open"><div style="width:200px;height:80px;overflow:hidden"><div style="height:120px">too tall</div></div></template>
+        </u-widget></div>
+      </div>`);
+    expect(await page.evaluate(findProblems, [node('a'), node('b')])).toEqual([
+      { path: '/nodes/b', message: 'its content runs past its box (200×120 in 200×80) — it scrolls or is cut off; give it more room' },
+    ]);
+  });
+
   it('skips a part that is not on the page', async () => {
     await show('<div data-node-id="a"></div>');
     expect(await page.evaluate(findProblems, [node('a'), node('gone')])).toEqual([]);
