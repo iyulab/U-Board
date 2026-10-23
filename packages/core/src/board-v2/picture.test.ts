@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkSpec } from '@iyulab/u-widgets/tools';
-import { applyValueMap } from '../adapter.js';
+import { applyValueMap, withItemFields } from '../adapter.js';
 import { readHttpRef, type HttpRef } from '../http-ref.js';
 import { validateViewDocument } from '../validate-view-document.js';
 import type { Node, ViewDocument, Widget } from '../view-document.js';
@@ -28,7 +28,8 @@ function drawn(widget: Widget): Record<string, unknown> {
     const ref = binding.ref as HttpRef;
     const reading = readHttpRef(SOURCE[ref.path], ref, READ_AT);
     if (!reading.ok) throw new Error(`${key}: ${reading.message}`);
-    const value = binding.map ? applyValueMap(binding.map, reading.value) : reading.value;
+    const mapped = binding.map ? applyValueMap(binding.map, reading.value) : reading.value;
+    const value = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
     const path = key.split('.');
     let at: Record<string, unknown> = props;
     for (const step of path.slice(0, -1)) at = (at[step] ??= {}) as Record<string, unknown>;
@@ -114,6 +115,28 @@ describe('the picture model of a v2 board', () => {
     expect(drawn(nodeOf(doc, 'hourly').widget)).toEqual({
       title: 'Per hour', data: [{ hour: '09:00', count: 120 }, { hour: '10:00', count: 131 }], mapping: { x: 'hour', y: 'count' },
     });
+  });
+
+  it("colours the rows of a list, a table, bars and a grid of cells by each item's state", () => {
+    const doc = view(board(
+      {
+        rows: { as: 'list', of: 'pumps', show: ['id', 'flow', 'state'], secondary: 'state', title: 'Pumps', max: 5 },
+        table: { as: 'table', of: 'pumps', show: ['id', 'state', 'flow'] },
+        bars: { as: 'bar-list', of: 'pumps', show: 'flow' },
+        cells: { as: 'status-grid', of: 'pumps', show: ['id', 'state'] },
+      },
+      { kind: 'grid', items: ['rows', 'table', 'bars', 'cells'] },
+    ));
+    const rows = drawn(nodeOf(doc, 'rows').widget);
+    expect(rows.mapping).toEqual({ primary: 'id', secondary: 'state', tone: 'state@tone' });
+    expect(rows.options).toEqual({ maxItems: 5 });
+    expect((rows.data as Record<string, unknown>[]).map(r => r['state@tone'])).toEqual(['ok', 'alarm']);
+    const table = drawn(nodeOf(doc, 'table').widget);
+    expect(table.mapping).toEqual({ columns: [
+      { field: 'id', label: 'id' }, { field: 'state', label: 'state', toneField: 'state@tone' }, { field: 'flow', label: 'Flow', unit: 'm³/h', format: 'number:1' },
+    ] });
+    expect((drawn(nodeOf(doc, 'bars').widget).data as Record<string, unknown>[]).map(r => [r.label, r.value])).toEqual([['P1', 41.5], ['P2', 0]]);
+    expect((drawn(nodeOf(doc, 'cells').widget).data as Record<string, unknown>[]).map(r => [r.label, r.tone])).toEqual([['P1', 'ok'], ['P2', 'alarm']]);
   });
 
   it('lays out a part per item in a grid, for the keys of its list', () => {

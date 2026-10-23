@@ -6,7 +6,7 @@
 // The board is taken as valid (`validateBoardV2` first): what is wrong in it is reported there, with where and how to
 // write it instead. What the picture model cannot draw yet is a `PictureError`.
 
-import type { Binding, CellCanvas, GridItem, Node, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
+import type { Binding, CellCanvas, GridItem, ItemField, Node, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { partKind } from './kinds.js';
 import { TONES } from './types.js';
@@ -66,7 +66,8 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       const path = `${q.list ?? ''}${valueAt ?? ''}`;
       if (path !== '') ref.valuePath = path;
     }
-    if (q.time !== undefined) ref.observedAtPath = `/${q.time}`;
+    // The time the source observed a value is the item's — a whole list has one per row, not one of its own.
+    if (q.time !== undefined && (item !== undefined || q.list === undefined)) ref.observedAtPath = `/${q.time}`;
     if (q.zone !== undefined) ref.timeZone = q.zone;
     if (q.fresh !== undefined) ref.maxAgeSeconds = q.fresh;
     if (q.now !== undefined) {
@@ -149,6 +150,27 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       if (takes.words) bind(`${prefix}status`, name, maps.status);
       if (takes.emphasis && maps.emphasis) bind(`${prefix}emphasis`, name, maps.emphasis);
     };
+    /**
+     * The whole list bound at `key`, each item gaining `gained` — a row's tone from its state (`<field>@tone`), a field
+     * under the name the widget reads it by.
+     */
+    const bindList = (key: string, gained: Record<string, ItemField>) => {
+      bind(key, undefined);
+      if (bindings[key] && Object.keys(gained).length > 0) bindings[key] = { ...bindings[key]!, itemFields: gained };
+    };
+    /** The fields a row gains for `name`: its tone when the field has a state, its words when it names them. */
+    const rowFields = (name: string | undefined): Record<string, ItemField> => {
+      if (name === undefined) return {};
+      const f = field(name);
+      return {
+        ...(f.state !== undefined ? { [`${name}@tone`]: { from: name, map: stateMaps(f.state).tone } } : {}),
+        ...(f.names !== undefined ? { [`${name}@name`]: { from: name, map: mapOf(f.names, w => w) } } : {}),
+      };
+    };
+    /** The field a row shows `name` by: its words when it names them, else the field itself. */
+    const shown = (name: string) => (field(name).names !== undefined ? `${name}@name` : name);
+    /** The first of `names` whose field has a state. */
+    const stateIn = (names: readonly (string | undefined)[]) => names.find(n => n !== undefined && field(n).state !== undefined);
     const text = (t: string | undefined, key: string): string | undefined => {
       if (t === undefined) return undefined;
       const holes = [...t.matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)];
@@ -218,15 +240,56 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         };
       }
       case 'table': {
-        bind('data', undefined);
+        // A column whose field has a state colours each of its cells by it.
+        bindList('data', Object.assign({}, ...fields.map(rowFields)));
         const columns = fields.map(name => {
           const f = field(name);
           const format = formatOf(f);
-          return { field: name, label: f.label ?? name, ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}) };
+          return {
+            field: shown(name), label: f.label ?? name,
+            ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(f.state !== undefined ? { toneField: `${name}@tone` } : {}),
+          };
         });
         return {
           type: 'table',
           props: { ...(title !== undefined ? { title: text(title, 'title') } : {}), data: [], ...(columns.length ? { mapping: { columns } } : {}), ...(Object.keys(options).length ? { options } : {}) },
+          bindings,
+        };
+      }
+      case 'list': {
+        // Rows: the first field (or `primary`) as the line, `secondary` under it, `time` before it, coloured by a state.
+        const { primary = fields[0], secondary, time, state, max, variant, ...rest } = options as Record<string, string | undefined> & { max?: number };
+        const tone = stateIn([state, ...fields]);
+        bindList('data', Object.assign({}, rowFields(primary), rowFields(secondary), rowFields(tone)));
+        const mapping = {
+          ...(primary !== undefined ? { primary: shown(primary) } : {}),
+          ...(secondary !== undefined ? { secondary: shown(secondary) } : {}),
+          ...(time !== undefined ? { time } : {}),
+          ...(tone !== undefined ? { tone: `${tone}@tone` } : {}),
+        };
+        const listOptions = { ...rest, ...(max !== undefined ? { maxItems: max } : {}), ...(variant === 'tiles' ? { layout: 'tiles' } : {}) };
+        return {
+          type: 'list',
+          props: { ...(title !== undefined ? { title: text(title, 'title') } : {}), data: [], mapping, ...(Object.keys(listOptions).length ? { options: listOptions } : {}) },
+          bindings,
+        };
+      }
+      case 'bar-list':
+      case 'status-grid': {
+        // Each item's label, value and tone, under the names the widget reads.
+        const { label, value, state, ...rest } = options as Record<string, string | undefined>;
+        const labelField = kind.kind === 'bar-list' ? label ?? data[query!]?.key : label ?? fields[0] ?? data[query!]?.key;
+        const valueField = kind.kind === 'bar-list' ? value ?? fields[0] : value ?? (fields[0] !== labelField ? fields[0] : undefined);
+        const tone = stateIn([state, ...fields]);
+        const toneMap = tone !== undefined ? field(tone).state : undefined;
+        bindList('data', {
+          ...(labelField !== undefined ? { label: { from: labelField, ...(field(labelField).names ? { map: mapOf(field(labelField).names!, w => w) } : {}) } } : {}),
+          ...(valueField !== undefined ? { value: { from: valueField } } : {}),
+          ...(tone !== undefined && toneMap !== undefined ? { tone: { from: tone, map: stateMaps(toneMap).tone } } : {}),
+        });
+        return {
+          type: kind.kind,
+          props: { ...(title !== undefined ? { title: text(title, 'title') } : {}), data: [], ...(Object.keys(rest).length ? { options: rest } : {}) },
           bindings,
         };
       }
