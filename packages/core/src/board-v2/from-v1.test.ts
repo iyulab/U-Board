@@ -158,6 +158,29 @@ describe('fromV1', () => {
     expect(nodes[1]!.widget.bindings!['data.value']!.ref).toMatchObject({ valuePath: '/weather/0/temp', observedAtPath: '/weather/0/at' });
   });
 
+  it('colours a status row toned by another field of its item by that field’s state — the part’s state', () => {
+    const { board, unsupported } = fromV1(canvas([
+      node('p', {
+        type: 'status',
+        props: { data: [{ label: 'State', value: '' }, { label: 'Pressure', value: 0, unit: 'bar' }] },
+        bindings: {
+          'data.0.value': { adapter: 'plant', ref: equipment('P1', '/state') },
+          'data.0.tone': { adapter: 'plant', ref: equipment('P1', '/state'), map: { values: { run: 'ok', trip: 'alarm' }, otherwise: 'off' } },
+          'data.1.value': { adapter: 'plant', ref: equipment('P1', '/pressure') },
+          'data.1.tone': { adapter: 'plant', ref: equipment('P1', '/state'), map: { values: { run: 'ok', trip: 'alarm' }, otherwise: 'off' } },
+        },
+      }),
+    ]));
+    expect(unsupported).toEqual([]);
+    expect(board.parts.p).toEqual({ as: 'stat-list', of: 'equipment[P1]', show: ['state', 'pressure'], state: 'state' });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    const b = drawn.kind === 'canvas' ? drawn.nodes[0]!.widget.bindings! : {};
+    expect(b['data.1.tone']!.ref).toMatchObject({ valuePath: '/state' });
+    expect(b['data.1.value']!.ref).toMatchObject({ valuePath: '/pressure' });
+    expect(validateBoardV2({ ...board, parts: { p: { ...board.parts.p!, state: 'pressure' } } }).map(i => i.message)).toContain('"pressure" has no "state" in /data/equipment/fields — the field that colours the rows needs one');
+  });
+
   it('reads a chart’s whole list with the time the answer says it is of', () => {
     const { board } = fromV1(canvas([
       node('c', {

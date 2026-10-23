@@ -255,6 +255,13 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     checkTexts(part, at, reads);
     checkOptions(raw, part, kind, at);
     if (kind.kind === 'status-card' && part.meter !== undefined) checkMeter(part.meter, `${at}/meter`);
+    // A `state` option names the field whose state colours the rows (or the card): it needs a state to give.
+    if (part.state !== undefined && kind.own.includes('state')) {
+      if (typeof part.state !== 'string') fail(`${at}/state`, '"state" names a field of what the part reads');
+      else if (typeof reads === 'string' && fieldOf(reads, part.state)?.state === undefined) {
+        fail(`${at}/state`, `"${part.state}" has no "state" in /data/${reads}/fields — the field that colours the rows needs one`);
+      }
+    }
     if (kind.kind === 'group') checkGroup(part, at, reads);
     if (kind.kind === 'element') checkElementPart(part, at, reads);
     return part;

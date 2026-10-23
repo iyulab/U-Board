@@ -253,6 +253,8 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
         : Object.keys(data).length > 0 ? [[data, 'data.']] : [];
       const fields: string[] = [];
       let of: string | undefined;
+      let state: string | undefined;
+      let untoned = 0;
       for (const [row, at] of rows) {
         const value = bindings[`${at}value`];
         if (!value) { unsupported.push('a status row not bound at its value'); return undefined; }
@@ -261,13 +263,24 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
         if (of !== undefined && of !== read.of) { unsupported.push('a status reading more than one item'); return undefined; }
         of = read.of;
         fields.push(read.field);
-        tone(reads, bindings[`${at}tone`] ?? bindings[`${at}level`], value, read, unsupported, 'status row');
+        const toneBinding = bindings[`${at}tone`] ?? bindings[`${at}level`];
+        if (toneBinding === undefined) { untoned++; continue; }
+        if (sameValue(toneBinding) === sameValue(value)) { tone(reads, toneBinding, value, read, unsupported, 'status row'); continue; }
+        // A row toned by another field of its item: that field's state colours it — the part's `state`.
+        const rule = toneBinding.map === undefined ? 'raw' : mappingOf(toneBinding.map);
+        if (rule === undefined) { unsupported.push('a status row’s tone map that is not a mapping of words'); return undefined; }
+        const by = reads.read({ ...toneBinding, map: undefined }, {}, rule);
+        if (by === undefined) return undefined;
+        if (by.of !== read.of || (state !== undefined && state !== by.field)) { unsupported.push('a status toned by more than one other field'); return undefined; }
+        state = by.field;
       }
       if (of === undefined) { unsupported.push('a status without rows'); return undefined; }
+      // Rows without a tone would take the state's under `state`.
+      if (state !== undefined && untoned > 0) { unsupported.push('a status with rows toned by another field beside rows without a tone'); return undefined; }
       // A row's words or unit read from the source has no place in a row whose label is its field's.
       const read = new Set(rows.flatMap(([, at]) => ['value', 'tone', 'level'].map(k => `${at}${k}`)));
       for (const key of Object.keys(bindings)) if (!read.has(key)) { unsupported.push(`a status row bound at ${key.split('.').at(-1)}`); return undefined; }
-      return { as: 'stat-list', of, show: fields };
+      return { as: 'stat-list', of, show: fields, ...(state !== undefined ? { state } : {}) };
     }
     default:
       if (widget.type.startsWith('chart.')) return chartOf(widget, reads, unsupported);

@@ -280,20 +280,22 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         };
       }
       case 'stat-list': {
+        // A row is coloured by its own field's state, else by the `state` field's — a value toned by another field.
+        const { state, ...rest } = options as { state?: string };
         const rows = fields.map((name, i) => {
           const f = field(name);
           bindValue(`data.${i}.value`, name);
-          bindState(`data.${i}.`, name);
+          bindState(`data.${i}.`, f.state !== undefined || state === undefined ? name : state);
           const format = formatOf(f);
           return { label: f.label ?? name, value: '', ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}) };
         });
-        return { type: 'kv', props: { data: rows, ...(Object.keys(options).length ? { options } : {}) }, bindings };
+        return { type: 'kv', props: { data: rows, ...(Object.keys(rest).length ? { options: rest } : {}) }, bindings };
       }
       case 'status-card': {
         // The first field with a state is the card's state; the others are its readings. A meter shows one field
         // against its range; a subtitle and a note are texts, as a title is.
-        const { meter, note, subtitle, ...rest } = options as { meter?: Meter; note?: string; subtitle?: string };
-        const stateField = fields.find(n => field(n).state !== undefined);
+        const { meter, note, subtitle, state, ...rest } = options as { meter?: Meter; note?: string; subtitle?: string; state?: string };
+        const stateField = state ?? fields.find(n => field(n).state !== undefined);
         if (stateField) bindState('data.', stateField, { words: true, emphasis: true });
         const readings = fields.filter(n => n !== stateField).map((name, i) => {
           const f = field(name);
