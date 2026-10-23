@@ -150,6 +150,8 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
   const elements = isObj(board.elements) ? board.elements : {};
   for (const [name, el] of Object.entries(elements)) {
     const at = `/elements/${name}`;
+    if (!/^[a-z][a-z0-9-]*$/.test(name)) fail(at, `an element's name is lowercase letters, digits and "-", starting with a letter — not "${name}"`);
+    else if (name.startsWith('ub-')) fail(at, `"ub-" names U-Board's own drawings — name "${name}" otherwise`);
     if (!isObj(el) || typeof el.template !== 'string') { fail(`${at}/template`, 'an element needs a "template": markup with {{prop}} holes'); continue; }
     const props = isObj(el.props) ? el.props : {};
     for (const [prop, type] of Object.entries(props)) {

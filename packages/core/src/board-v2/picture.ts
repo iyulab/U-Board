@@ -6,8 +6,9 @@
 // The board is taken as valid (`validateBoardV2` first): what is wrong in it is reported there, with where and how to
 // write it instead. What the picture model cannot draw yet is a `PictureError`.
 
-import type { Binding, CellCanvas, Connector, GridItem, ItemField, Node, Shape as ViewShape, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
+import type { Binding, CellCanvas, Connector, ElementDefinition, GridItem, ItemField, Node, Shape as ViewShape, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
+import { LABEL, LEGEND, MARKER, lineElement } from './builtins.js';
 import { partKind } from './kinds.js';
 import { TONES } from './types.js';
 import type { BoardV2, CanvasLayout, Field, GridItem as V2GridItem, Link, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
@@ -117,6 +118,28 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     const status = merge(mapOf(mapping, w => statuses[w]?.label ?? (w in statuses ? w : '')), withTones && { values: Object.fromEntries(TONES.map(t => [t, ''])) });
     const emphasised = Object.values(statuses).some(s => s.emphasis !== undefined);
     return { tone, status, ...(emphasised ? { emphasis: merge(mapOf(mapping, w => statuses[w]?.emphasis ?? '')) } : {}) };
+  };
+
+  // ── the board's own drawings ──
+
+  const elements: Record<string, ElementDefinition> = {};
+  /** The widget type of one of U-Board's own drawings, defined once in the document. */
+  const builtin = (name: string, definition: ElementDefinition) => {
+    elements[name] ??= definition;
+    return `element:${name}`;
+  };
+
+  /** The statuses a field's state names, in the order the board declares them — what a legend lists. */
+  const usedStatuses = (): string[] => {
+    const used = new Set<string>();
+    for (const q of Object.values(data)) {
+      for (const f of Object.values(q.fields ?? {})) {
+        if (f.state === undefined) continue;
+        const words = f.state === 'raw' ? Object.keys(statuses) : Array.isArray(f.state) ? f.state.filter((w, i) => i % 2 === 0) : Object.values(f.state);
+        for (const w of words) used.add(String(w));
+      }
+    }
+    return Object.keys(statuses).filter(name => used.has(name));
   };
 
   // ── parts ──
@@ -329,6 +352,30 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         }
         throw new PictureError(`${at}/as`, `a ${kind.kind} is not drawn yet`);
       }
+      case 'marker': {
+        const { shape = 'dot', symbol, note } = options as { shape?: string; symbol?: unknown; note?: string };
+        if (symbol !== undefined) throw new PictureError(`${at}/symbol`, 'a marker with a symbol is not drawn yet');
+        const stateField = stateIn(fields);
+        if (stateField) bindState('', stateField, { words: true });
+        return {
+          type: builtin('ub-marker', MARKER),
+          props: { name: text(title, 'name') ?? item ?? '', tone: '', status: '', note: text(note, 'note') ?? '', shape },
+          bindings,
+        };
+      }
+      case 'label': {
+        const name = fields[0];
+        const textProp = title !== undefined ? text(title, 'text') : name !== undefined ? (bindValue('text', name), '') : '';
+        if (name !== undefined) bindState('', name);
+        return { type: builtin('ub-label', LABEL), props: { text: textProp ?? '', tone: '' }, bindings };
+      }
+      case 'legend': {
+        const items = usedStatuses().map(name => {
+          const s = statuses[name]!;
+          return { tone: s.tone, label: s.label ?? name, glyph: s.glyph ?? '' };
+        });
+        return { type: builtin('ub-legend', LEGEND), props: { items } };
+      }
     }
   };
 
@@ -357,13 +404,19 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         }
       }
     }
-    const decorations = Object.entries(canvas.shapes ?? {}).map(([id, shape]) => shapeOf(shape, `${prefix}shape.${id}`, `${at}/shapes/${id}`));
+    const decorations: ViewShape[] = [];
+    const lines: Node[] = [];
+    for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
+      if (shape.line !== undefined || shape.path !== undefined) lines.push(lineNode(shape, `${prefix}shape.${id}`));
+      else decorations.push(shapeOf(shape, `${prefix}shape.${id}`));
+    }
     const connectors = Object.entries(canvas.links ?? {}).map(([id, link]) => connectorOf(link, `${prefix}link.${id}`, `${at}/links/${id}`));
-    return { nodes, connectors, ...(decorations.length > 0 ? { decorations } : {}) };
+    // Lines are drawn under the parts, as the decorations are.
+    return { nodes: [...lines, ...nodes], connectors, ...(decorations.length > 0 ? { decorations } : {}) };
   };
 
   /** A shape as a decoration: a box with its label, or a text at a point — in its tone, else the board's muted line. */
-  const shapeOf = (shape: Shape, id: string, at: string): ViewShape => {
+  const shapeOf = (shape: Shape, id: string): ViewShape => {
     if (shape.box !== undefined) {
       const [x, y, width, height] = shape.box;
       return {
@@ -372,10 +425,26 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         ...(shape.label !== undefined ? { label: shape.label, labelAt: 'top-start' as const } : {}),
       };
     }
-    if (shape.text !== undefined && shape.at !== undefined) {
-      return { id, type: 'text', x: shape.at[0], y: shape.at[1], text: shape.text, fill: shape.tone ?? 'next', ...(shape.size !== undefined ? { fontSize: shape.size } : {}) };
-    }
-    throw new PictureError(at, 'a line or a path is not drawn yet');
+    const at = shape.at!;
+    return { id, type: 'text', x: at[0], y: at[1], text: shape.text!, fill: shape.tone ?? 'next', ...(shape.size !== undefined ? { fontSize: shape.size } : {}) };
+  };
+
+  /** A line or a path as a node of its own, boxed around its points with room for its width. */
+  const lineNode = (shape: Shape, id: string): Node => {
+    const width = shape.width ?? 3;
+    const numbers = shape.line !== undefined ? shape.line.flat() : (shape.path!.match(/-?\d*\.?\d+/g) ?? []).map(Number);
+    const xs = numbers.filter((_, i) => i % 2 === 0);
+    const ys = numbers.filter((_, i) => i % 2 === 1);
+    const x = Math.min(...xs) - width;
+    const y = Math.min(...ys) - width;
+    const box = { width: Math.max(...xs) + width - x, height: Math.max(...ys) + width - y };
+    // The points in the box's own coordinates.
+    let k = 0;
+    const d = shape.line !== undefined
+      ? `M${shape.line.map(([px, py]) => `${px - x} ${py - y}`).join(' L')}`
+      : shape.path!.replace(/-?\d*\.?\d+/g, n => String(Number(n) - (k++ % 2 === 0 ? x : y)));
+    const name = `ub-${id.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`;
+    return { id, x, y, ...box, anchored: true, widget: { type: builtin(name, lineElement(d, box, { tone: shape.tone, width, dash: shape.dash === true })) } };
   };
 
   /**
@@ -438,13 +507,16 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       return [{ id: id!, widget: widgetFor(part, `/parts/${id}`, readsOf(part)), ...layout }];
     });
 
+  const withElements = () => (Object.keys(elements).length > 0 ? { elements } : {});
   const head = board.board ?? {};
   const look = { ...(head.theme !== undefined ? { appearance: head.theme } : {}), ...(head.accent !== undefined ? { accent: head.accent } : {}) };
   const layout = board.layout;
   if (layout.kind === 'canvas') {
-    return { kind: 'canvas', background: background(layout), ...canvasOf(layout, '/layout'), ...look };
+    const canvas = canvasOf(layout, '/layout');
+    return { kind: 'canvas', background: background(layout), ...canvas, ...look, ...withElements() };
   }
-  return { kind: 'grid', items: gridItems(layout.items, '/layout/items'), ...look };
+  const items = gridItems(layout.items, '/layout/items');
+  return { kind: 'grid', items, ...look, ...withElements() };
 }
 
 /** The options of a chart part that are its mapping — which field is x, y, … */

@@ -224,6 +224,10 @@ describe('validateBoardV2', () => {
       '/parts/u/bind/zz: "tank" has no prop "zz" — props: level, name, state',
       '/parts/v/element: no element "pump" — elements: tank, bad',
     ]);
+    expect(issues({ ...canvas({}), elements: { 'ub-dial': { template: '<svg/>' }, Dial: { template: '<svg/>' } } })).toEqual([
+      `/elements/ub-dial: "ub-" names U-Board's own drawings — name "ub-dial" otherwise`,
+      `/elements/Dial: an element's name is lowercase letters, digits and "-", starting with a letter — not "Dial"`,
+    ]);
   });
 
   it('advises a built-in for an element that draws nothing of its own, without failing the board', () => {

@@ -64,7 +64,8 @@ function view(b: BoardV2, keys: Record<string, string[]> = {}): ViewDocument {
   const doc = toViewDocument(b, { keysOf: d => keys[d] ?? [] });
   expect(validateViewDocument(doc)).toEqual([]);
   for (const placed of doc.kind === 'canvas' ? doc.nodes : doc.items) {
-    if (!('widget' in placed)) continue;
+    // An element is U-Board's own drawing, checked by the view document's validator above.
+    if (!('widget' in placed) || placed.widget.type.startsWith('element:')) continue;
     const { valid, errors, warnings } = checkSpec({ widget: placed.widget.type, ...drawn(placed.widget) });
     expect({ valid, errors, warnings }, placed.id).toEqual({ valid: true, errors: [], warnings: [] });
   }
@@ -184,10 +185,32 @@ describe('the picture model of a v2 board', () => {
     expect([read('style.stroke'), read('style.dash'), read('style.strokeWidth'), read('label')]).toEqual(['alarm', 'dotted', 2, 0]);
   });
 
+  it("draws markers, labels, a legend and lines with U-Board's own elements", () => {
+    const doc = view(board(
+      {
+        m: { as: 'marker', each: 'pumps', show: 'state', shape: 'ring' },
+        l: { as: 'label', of: 'pumps[P1]', show: 'flow' },
+        key: { as: 'legend' },
+      },
+      {
+        kind: 'canvas', size: [600, 300],
+        place: { m: { P1: [10, 10, 120, 30], P2: [10, 50, 120, 30] }, l: [200, 10, 100, 24], key: [300, 260, 280, 30] },
+        shapes: { pipe: { line: [[100, 100], [300, 100], [300, 200]], tone: 'info', width: 4 }, edge: { path: 'M 10 250 L 50 290' } },
+      },
+    ));
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(Object.keys(doc.elements ?? {}).sort()).toEqual(['ub-legend', 'ub-label', 'ub-marker', 'ub-shape-edge', 'ub-shape-pipe'].sort());
+    expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', note: '', shape: 'ring' });
+    expect(drawn(nodeOf(doc, 'l').widget)).toEqual({ text: 41.5, tone: '' });
+    expect(drawn(nodeOf(doc, 'key').widget)).toEqual({ items: [{ tone: 'ok', label: 'Running', glyph: '' }, { tone: 'alarm', label: 'Tripped', glyph: '' }] });
+    // A line is a node boxed around its points, under the parts, drawn in the box's own coordinates.
+    expect(doc.nodes[0]).toMatchObject({ id: 'shape.pipe', x: 96, y: 96, width: 208, height: 108, widget: { type: 'element:ub-shape-pipe' } });
+    expect(doc.elements!['ub-shape-pipe']!.template).toContain('d="M4 4 L204 4 L204 104"');
+    expect(doc.elements!['ub-shape-edge']!.template).toContain('d="M 3 3 L 43 43"');
+  });
+
   it('says what it does not draw yet, and where', () => {
-    const b = board({ v: { as: 'marker', of: 'pumps[P1]' } }, { kind: 'canvas', size: [100, 100], place: { v: [0, 0] } });
-    expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/v/as', 'a marker is not drawn yet'));
-    const line = board({}, { kind: 'canvas', size: [100, 100], place: {}, shapes: { pipe: { line: [[0, 0], [10, 10]] } } });
-    expect(() => toViewDocument(line)).toThrow(new PictureError('/layout/shapes/pipe', 'a line or a path is not drawn yet'));
+    const b = board({ v: { as: 'marker', of: 'pumps[P1]', symbol: 'valve' } }, { kind: 'canvas', size: [100, 100], place: { v: [0, 0] } });
+    expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/v/symbol', 'a marker with a symbol is not drawn yet'));
   });
 });
