@@ -88,12 +88,32 @@ describe('fromV1', () => {
     ]);
   });
 
+  it('draws an element node as an element part: its definition, fixed props, and bound props as fields, words or tones', () => {
+    const { board, unsupported } = fromV1(canvas(
+      [node('t', {
+        type: 'element:Tank',
+        props: { name: 'T1', level: 0, tone: 'idle', counts: {} },
+        bindings: {
+          level: { adapter: 'plant', ref: equipment('T1', '/level') },
+          tone: { adapter: 'plant', ref: equipment('T1', '/level'), map: { ranges: [{ max: 20, value: 'alarm' }, { min: 20, value: 'ok' }] } },
+          counts: { adapter: 'plant', ref: equipment('T1', '/counts') },
+        },
+      })],
+      { elements: { Tank: { render: 'template', template: '<b>{{name}}</b><i style="--l: {{level}}" class="{{tone}}"></i>{{counts.open}}', size: { width: 120, height: 90 }, props: { type: 'object', properties: { name: { type: 'string' }, level: { type: 'number' }, tone: { enum: ['ok', 'alarm', 'idle'] }, counts: { type: 'object' } } } } } },
+    ));
+    expect(unsupported).toEqual([]);
+    expect(board.elements).toEqual({ tank: { template: '<b>{{name}}</b><i style="--l: {{level}}" class="{{tone}}"></i>{{counts.open}}', props: { name: 'string', level: 'number', tone: 'string', counts: 'object' } } });
+    expect(board.parts.t).toEqual({ as: 'element', element: 'tank', of: 'equipment[T1]', props: { name: 'T1' }, bind: { level: 'level', tone: 'level.tone', counts: 'counts' } });
+    expect(board.data!.equipment!.fields).toEqual({ level: { state: ['alarm', 20, 'ok'] }, counts: {} });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+  });
+
   it('reports what the second version has no place for yet, never dropping it without a word', () => {
     const { unsupported } = fromV1(canvas(
       [node('e', { type: 'element:pump', props: {} })],
       { connectors: [{ id: 'l', fromNodeId: 'e', toNodeId: 'e' }], decorations: [{ id: 'd', type: 'rect', x: 0, y: 0, width: 10, height: 10 }] },
     ));
-    expect(unsupported).toEqual(['connectors', 'decorations', 'an element node']);
+    expect(unsupported).toEqual(['connectors', 'decorations', 'an element the board does not define']);
     expect(fromV1({ kind: 'grid', items: [] }).unsupported).toEqual(['a grid board']);
   });
 });

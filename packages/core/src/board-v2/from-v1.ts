@@ -5,8 +5,8 @@
 
 import { isHttpRef, type HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
-import type { Binding, CanvasView, Node, ValueMap, ViewDocument, Widget } from '../view-document.js';
-import type { BoardV2, Field, Part, Place, Query, ValueMapping } from './types.js';
+import type { Binding, CanvasView, ElementDefinition, Node, PropsSchema, ValueMap, ViewDocument, Widget } from '../view-document.js';
+import { TONES, type BoardV2, type ElementDefinition as V2Element, type Field, type Part, type Place, type Query, type ValueMapping } from './types.js';
 
 /** A converted board, what changed on the way, and what has no place in the second version yet. */
 export interface V1Conversion {
@@ -39,11 +39,13 @@ export function fromV1(doc: ViewDocument): V1Conversion {
   // Every binding first: a data read is shared by the parts that read it, so its key is known only once all are seen.
   for (const node of canvas.nodes) for (const binding of Object.values(node.widget.bindings ?? {})) reads.see(binding);
 
+  const elements = new Elements(canvas.elements ?? {}, unsupported);
   for (const node of canvas.nodes) {
-    const part = partOf(node, reads, notes, unsupported);
+    const part = partOf(node, reads, elements, notes, unsupported);
     if (part === undefined) continue;
     parts[node.id] = part;
-    place[node.id] = [node.x, node.y, node.width ?? DEFAULT_NODE_WIDTH, node.height ?? DEFAULT_NODE_HEIGHT];
+    const own = elements.sizeOf(node.widget.type);
+    place[node.id] = [node.x, node.y, node.width ?? own?.width ?? DEFAULT_NODE_WIDTH, node.height ?? own?.height ?? DEFAULT_NODE_HEIGHT];
     if (node.caption !== undefined) unsupported.push('a node caption');
     if (node.states !== undefined) unsupported.push('node states');
   }
@@ -58,6 +60,7 @@ export function fromV1(doc: ViewDocument): V1Conversion {
   const board: BoardV2 = {
     version: 2,
     ...(Object.keys(look).length > 0 ? { board: look } : {}),
+    ...(Object.keys(elements.converted).length > 0 ? { elements: elements.converted } : {}),
     ...(Object.keys(reads.data).length > 0 ? { data: reads.data } : {}),
     parts,
     layout: {
@@ -73,14 +76,14 @@ export function fromV1(doc: ViewDocument): V1Conversion {
 // ── parts ──
 
 /** The part a node's widget becomes, or `undefined` when it has none here (reported). */
-function partOf(node: Node, reads: Reads, notes: string[], unsupported: string[]): Part | undefined {
+function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], unsupported: string[]): Part | undefined {
   const widget = node.widget;
   const bindings = widget.bindings ?? {};
   const props = (widget.props ?? {}) as Record<string, unknown>;
   const data = (props.data ?? {}) as Record<string, unknown>;
   const options = isObject(props.options) ? props.options : {};
 
-  if (widget.type.startsWith('element:')) { unsupported.push('an element node'); return undefined; }
+  if (widget.type.startsWith('element:')) return elementPart(node.id, widget, reads, elements, notes, unsupported);
   // A widget bound to nothing that reads anything shows only the text it was given — a placeholder.
   const live = Object.entries(bindings).filter(([, b]) => isHttpRef(b.ref));
   for (const [key, b] of Object.entries(bindings)) {
@@ -156,6 +159,95 @@ function tone(reads: Reads, binding: Binding | undefined, value: Binding, read: 
   reads.setState(read, state, unsupported);
 }
 
+/** A node drawing one of the board's elements: its name, its fixed props, and each bound prop as a field — its value, its
+ *  words, or the tone of its state. */
+function elementPart(id: string, widget: Widget, reads: Reads, elements: Elements, notes: string[], unsupported: string[]): Part | undefined {
+  const name = elements.use(widget.type.slice('element:'.length));
+  if (name === undefined) return undefined;
+  const bindings = widget.bindings ?? {};
+  const fixed = Object.fromEntries(Object.entries((widget.props ?? {}) as Record<string, unknown>).filter(([k]) => !(k in bindings)));
+  const bind: Record<string, string> = {};
+  let of: string | undefined;
+  for (const [prop, binding] of Object.entries(bindings)) {
+    if (!isHttpRef(binding.ref)) { notes.push(`${id}: the binding of ${prop} to "${binding.adapter}" reads no HTTP connector — left out (A622-1)`); continue; }
+    if (prop.includes('.')) { unsupported.push('an element bound inside a prop'); return undefined; }
+    if (binding.text !== undefined || binding.itemFields !== undefined) { unsupported.push('an element prop bound with a text or item fields'); return undefined; }
+    const toned = binding.map !== undefined && mapsTo(binding.map, w => (TONES as readonly string[]).includes(w));
+    const state = toned ? mappingOf(binding.map!) : undefined;
+    const read = toned
+      ? (state === undefined ? undefined : reads.read({ ...binding, map: undefined }, {}, state))
+      : reads.read(binding, {});
+    if (!read) { if (toned && state === undefined) unsupported.push('a tone map that is not a mapping of words'); return undefined; }
+    if (of !== undefined && of !== read.of) { unsupported.push('an element reading more than one item'); return undefined; }
+    of = read.of;
+    bind[prop] = toned ? `${read.field}.tone` : read.field;
+  }
+  return {
+    as: 'element',
+    element: name,
+    ...(of !== undefined ? { of } : {}),
+    ...(Object.keys(fixed).length > 0 ? { props: fixed } : {}),
+    ...(Object.keys(bind).length > 0 ? { bind } : {}),
+  };
+}
+
+/** Whether every word a value map gives — its values, its ranges' and its `otherwise` — is a word `test` takes. */
+function mapsTo(map: ValueMap, test: (word: string) => boolean): boolean {
+  const out = [...Object.values(map.values ?? {}), ...(map.ranges ?? []).map(r => r.value), ...(map.otherwise !== undefined ? [map.otherwise] : [])];
+  return out.length > 0 && out.every(v => typeof v === 'string' && test(v));
+}
+
+/** The board's elements as the second version writes them, converted as they are used. */
+class Elements {
+  readonly converted: Record<string, V2Element> = {};
+  private readonly names = new Map<string, string | undefined>();
+
+  constructor(private readonly defined: Record<string, ElementDefinition>, private readonly unsupported: string[]) {}
+
+  sizeOf(type: string): { width: number; height: number } | undefined {
+    return type.startsWith('element:') ? this.defined[type.slice('element:'.length)]?.size : undefined;
+  }
+
+  /** The second version's name of a first-version element, converting it on first use — `undefined` when it cannot be. */
+  use(name: string): string | undefined {
+    if (this.names.has(name)) return this.names.get(name);
+    const def = this.defined[name];
+    const converted = def === undefined ? undefined : this.convert(def);
+    let renamed: string | undefined;
+    if (def === undefined) this.unsupported.push('an element the board does not define');
+    else if (converted !== undefined) {
+      const base = name.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^[^a-z]+/, '').replace(/-+$/, '') || 'element';
+      renamed = unique(base.startsWith('u-board-') ? `el-${base}` : base, this.converted);
+      this.converted[renamed] = converted;
+    }
+    this.names.set(name, renamed);
+    return renamed;
+  }
+
+  private convert(def: ElementDefinition): V2Element | undefined {
+    if (def.render !== 'template' || def.template === undefined) { this.unsupported.push('a script element'); return undefined; }
+    if ((def.resources ?? []).length > 0) { this.unsupported.push('an element that loads resources'); return undefined; }
+    const props: Record<string, 'number' | 'string' | 'boolean' | 'list' | 'object'> = {};
+    for (const [prop, schema] of Object.entries(def.props?.properties ?? {})) {
+      const type = propType(schema);
+      if (type === undefined) { this.unsupported.push(`an element prop that is ${String(schema.type ?? 'of no type')}`); return undefined; }
+      props[prop] = type;
+    }
+    return { template: def.template, ...(def.style !== undefined ? { style: def.style } : {}), ...(Object.keys(props).length > 0 ? { props } : {}) };
+  }
+}
+
+/** A first-version prop schema as one of the second version's four prop types — a list of words is a string. */
+function propType(schema: PropsSchema): 'number' | 'string' | 'boolean' | 'list' | 'object' | undefined {
+  const words = [...(schema.enum ?? []), ...(schema.const !== undefined ? [schema.const] : [])];
+  const type = schema.type ?? (words.length > 0 && words.every(v => typeof v === 'string') ? 'string' : undefined);
+  if (type === 'number' || type === 'integer') return 'number';
+  if (type === 'string' || type === 'boolean') return type;
+  if (type === 'array') return 'list';
+  if (type === 'object') return 'object';
+  return undefined;
+}
+
 // ── data ──
 
 /** A field's meaning as a part shows it: its label, unit and format. */
@@ -177,7 +269,7 @@ class Reads {
   }
 
   /** The data and field a binding reads one value of. */
-  read(binding: Binding, meaning: Meaning): { of: string; field: string } | undefined {
+  read(binding: Binding, meaning: Meaning, state?: Field['state']): { of: string; field: string } | undefined {
     if (!isHttpRef(binding.ref)) return undefined;
     const ref = binding.ref;
     if (ref.items) { this.unsupported.push('a value read of the items a list keeps'); return undefined; }
@@ -191,7 +283,7 @@ class Reads {
     }
     const pointer = toPointer(ref.valuePath ?? '');
     if (pointer === '') { this.unsupported.push('a value read as a whole item'); return undefined; }
-    const field = this.field(q, pointer, binding.map, meaning);
+    const field = this.field(q, pointer, binding.map, meaning, state);
     return field === undefined ? undefined : { of, field };
   }
 
@@ -264,7 +356,7 @@ class Reads {
   }
 
   /** The field of `q` at `pointer` with `map`'s words and `meaning` — a new one when an existing one means otherwise. */
-  private field(q: Query, pointer: string, map: ValueMap | undefined, meaning: Meaning): string | undefined {
+  private field(q: Query, pointer: string, map: ValueMap | undefined, meaning: Meaning, state?: Field['state']): string | undefined {
     let names: ValueMapping | undefined;
     if (map !== undefined) {
       names = mappingOf(map);
@@ -284,11 +376,13 @@ class Reads {
       if ((f.at ?? `/${name}`) !== pointer) continue;
       const agrees = (['label', 'unit', 'format', 'names'] as const).every(k => want[k] === undefined || f[k] === undefined || JSON.stringify(want[k]) === JSON.stringify(f[k]));
       if (!agrees || (want.names === undefined) !== (f.names === undefined)) continue;
+      if (state !== undefined && f.state !== undefined && JSON.stringify(f.state) !== JSON.stringify(state)) continue;
       for (const k of ['label', 'unit', 'format'] as const) if (f[k] === undefined && want[k] !== undefined) f[k] = want[k];
+      if (state !== undefined) f.state = state;
       return name;
     }
     const name = unique(base, q.fields);
-    q.fields[name] = { ...want, ...(name !== base || want.at !== undefined ? { at: pointer } : {}) };
+    q.fields[name] = { ...want, ...(name !== base || want.at !== undefined ? { at: pointer } : {}), ...(state !== undefined ? { state } : {}) };
     return name;
   }
 }
