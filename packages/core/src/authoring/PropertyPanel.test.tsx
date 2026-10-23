@@ -524,6 +524,19 @@ describe('PropertyPanel bindings', () => {
     expect(screen.getByLabelText('Value path')).toHaveValue('status');
   });
 
+  it("keeps the fields a list's items gain when its binding is edited", () => {
+    const onChange = vi.fn();
+    const itemFields = { tone: { from: 'state', map: { values: { run: 'ok' }, otherwise: 'off' } } };
+    const node = statusNode({ data: { adapter: 'connector-1', ref: { path: '/pumps', valuePath: '/value' }, itemFields } });
+    render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
+
+    fireEvent.click(screen.getByText('Edit'));
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/all' } });
+    fireEvent.click(screen.getByText('Save binding'));
+
+    expect(onChange.mock.calls[0][0].bindings).toEqual({ data: { adapter: 'connector-1', ref: { path: '/pumps/all', valuePath: '/value' }, itemFields } });
+  });
+
   it('removes the old binding key when its prop path is edited, instead of leaving an orphaned duplicate', () => {
     const onChange = vi.fn();
     const node = statusNode({ 'data.value': { adapter: 'connector-1', ref: { path: '/pumps/a', valuePath: 'status' } } });

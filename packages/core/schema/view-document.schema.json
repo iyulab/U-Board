@@ -365,7 +365,16 @@
       "properties": {
         "adapter": { "type": "string" },
         "ref": {},
-        "map": { "$ref": "#/$defs/valueMap" }
+        "map": { "$ref": "#/$defs/valueMap" },
+        "itemFields": {
+          "description": "For a value that is a list: the fields each item gains, by name — each the value of the item's from field, translated by map when there is one.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["from"],
+            "properties": { "from": { "type": "string" }, "map": { "$ref": "#/$defs/valueMap" } }
+          }
+        }
       }
     },
     "valueMap": {

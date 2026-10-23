@@ -362,7 +362,9 @@ export function BindingEditor({
     if (saveBlocked || !selectedAdapter) return;
     const next = { ...bindings };
     const map = mapFromDraft(draft);
-    next[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef(), ...(map && { map }) };
+    // What the form does not edit stays as it was: the fields a list's items gain.
+    const itemFields = editingPropPath !== null ? bindings?.[editingPropPath]?.itemFields : undefined;
+    next[draft.propPath] = { adapter: selectedAdapter.id, ref: draftRef(), ...(map && { map }), ...(itemFields && { itemFields }) };
     if (editingPropPath !== null && editingPropPath !== draft.propPath) {
       delete next[editingPropPath];
     }

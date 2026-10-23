@@ -1,5 +1,5 @@
 export type * from './document-types.js';
-export { resolveWidget, applyValueMap } from './adapter.js';
+export { resolveWidget, applyValueMap, withItemFields } from './adapter.js';
 export type {
   Resolved,
   ResolvedNode,

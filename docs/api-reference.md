@@ -303,6 +303,22 @@ interface ValueRange {
 
   A map has `values`, `ranges` or both. It applies to a value that is shown (`live` or `stale`),
   before it reaches the prop. `applyValueMap(map, value)` is the same lookup for a host's own code.
+- `itemFields` — for a value that is a list (the rows a `list` or a `table` shows), the fields each item gains, by
+  name: `{ "<name>": { from, map? } }`, each the value of the item's `from` field, translated by `map` when there is
+  one. A row keeps the source's words and gains the tone the widget colours it by; a field the widget reads by another
+  name (`label`) is the source's field under that name. Applied after `map`; an item that is not an object is left as
+  it is. `withItemFields(fields, value)` is the same for a host's own code.
+
+  ```ts
+  bindings: {
+    data: {
+      adapter: 'plant',
+      ref: { path: '/pumps', valuePath: '/value' },
+      itemFields: { tone: { from: 'state', map: { values: { run: 'ok', trip: 'alarm' }, otherwise: 'off' } } },
+    },
+  },
+  props: { data: [], mapping: { primary: 'name', secondary: 'state', tone: 'tone' } },
+  ```
 
 Bind the same source field twice to show it and color by it — the raw value as the text, the mapped
 one as the tone (a `status` widget draws an item only when it has a `label`, so the label is set as a

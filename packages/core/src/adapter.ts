@@ -1,4 +1,4 @@
-import type { Binding, Widget, ValueMap } from './view-document.js';
+import type { Binding, ItemField, Widget, ValueMap } from './view-document.js';
 
 /**
  * A pluggable resolver for one specific external system's values (docs/concepts.md — "Adapter").
@@ -177,7 +177,8 @@ export async function resolveBindings(
         // `value` it carries is meaningless — so the author's placeholder stays.
         if (resolved.quality !== 'disconnected') {
           readings[propPath] = resolved.value;
-          const value = accept(propPath, binding.map ? applyValueMap(binding.map, resolved.value) : resolved.value);
+          const mapped = binding.map ? applyValueMap(binding.map, resolved.value) : resolved.value;
+          const value = accept(propPath, binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped);
           if (value !== undefined) setPath(props, propPath, value);
         }
         quality[propPath] = resolved.quality;
@@ -205,6 +206,16 @@ export function applyValueMap(map: ValueMap, value: unknown): unknown {
     if (range) return range.value;
   }
   return 'otherwise' in map ? map.otherwise : value;
+}
+
+/** A list `value` whose items have gained `fields` (`Binding.itemFields`): each the value of the item's `from` field,
+ *  mapped when the field has a map. A value that is not a list, and an item that is not an object, are left as they are. */
+export function withItemFields(fields: Record<string, ItemField>, value: unknown): unknown {
+  if (!Array.isArray(value) || !isObject(fields)) return value;
+  const entries = Object.entries(fields).filter(([, f]) => isObject(f) && typeof f.from === 'string');
+  return value.map(item => (isObject(item) && !Array.isArray(item)
+    ? { ...item, ...Object.fromEntries(entries.map(([name, f]) => [name, f.map ? applyValueMap(f.map, item[f.from]) : item[f.from]])) }
+    : item));
 }
 
 /** Whether `n` falls in `range` — `min` included, `max` not. A range with no numeric bound holds nothing. */

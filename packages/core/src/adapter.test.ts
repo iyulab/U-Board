@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveWidget, applyValueMap } from './adapter';
+import { resolveWidget, applyValueMap, withItemFields } from './adapter';
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { Widget } from './view-document';
 
@@ -328,6 +328,20 @@ describe('value maps', () => {
 
   it('only looks up an entry the map itself has — never one inherited from Object', () => {
     expect(applyValueMap({ values: { Fault: 'error' } }, 'toString')).toBe('toString');
+  });
+
+  it('gives each item of a bound list the fields its rows are coloured by, beside the source words', async () => {
+    const plant = new InMemoryAdapter('plant', {
+      rows: { value: [{ id: 'P1', state: 'run' }, { id: 'P2', state: 'trip' }, 'note'], quality: 'live' },
+    });
+    const widget: Widget = {
+      type: 'list',
+      props: { data: [] },
+      bindings: { data: { adapter: 'plant', ref: 'rows', itemFields: { tone: { from: 'state', map: { values: { run: 'ok', trip: 'alarm' }, otherwise: 'off' } } } } },
+    };
+    expect((await resolveWidget(widget, [plant])).props.data).toEqual([{ id: 'P1', state: 'run', tone: 'ok' }, { id: 'P2', state: 'trip', tone: 'alarm' }, 'note']);
+    expect(withItemFields({ tone: { from: 'state', map: { values: {} } } }, 'not a list')).toBe('not a list');
+    expect(withItemFields({ label: { from: 'id' } }, [{ id: 'P1' }])).toEqual([{ id: 'P1', label: 'P1' }]);
   });
 
   it('maps a bound value before it reaches the props, live or stale, and leaves a disconnected one alone', async () => {

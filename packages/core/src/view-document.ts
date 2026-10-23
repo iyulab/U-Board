@@ -439,8 +439,22 @@ export interface Binding {
    * core binding surface — each adapter defines and interprets its own reference shape. */
   ref: unknown;
   /** Translates the source's value into the one the prop takes — a data source speaks its own
-   * vocabulary (`"Fault"`, `3`), a widget prop its own (a status level). Applied to a value that is
+   * vocabulary (`"Fault"`, `3`), a widget prop its own (a status tone). Applied to a value that is
    * shown (`live` or `stale`) before it reaches the prop. Omitted: the value is used as it comes. */
+  map?: ValueMap;
+  /** For a value that is a list — rows a list or a table shows — the fields each item gains, by name: each the value
+   * of the item's `from` field, translated by `map` when there is one. A row's state in the source's words (`"trip"`)
+   * becomes the tone the widget colours the row by, beside the words themselves; a field the widget reads by another
+   * name (`label`) is the source's field under that name. Applied after `map`; an item that is not an object is left as
+   * it is. */
+  itemFields?: Record<string, ItemField>;
+}
+
+/** A field each item of a list value gains: see `Binding.itemFields`. */
+export interface ItemField {
+  /** The item's field the value is read from. */
+  from: string;
+  /** Translates it, as `Binding.map` does a value. Omitted: the value as it is. */
   map?: ValueMap;
 }
 

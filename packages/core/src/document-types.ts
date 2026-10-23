@@ -21,6 +21,7 @@ export type {
   ConnectorArrow,
   Widget,
   Binding,
+  ItemField,
   ValueMap,
   ValueRange,
   StateRule,
