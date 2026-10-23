@@ -524,17 +524,17 @@ describe('PropertyPanel bindings', () => {
     expect(screen.getByLabelText('Value path')).toHaveValue('status');
   });
 
-  it("keeps the fields a list's items gain when its binding is edited", () => {
+  it("keeps what the form does not edit — the fields a list's items gain, a text — when its binding is edited", () => {
     const onChange = vi.fn();
     const itemFields = { tone: { from: 'state', map: { values: { run: 'ok' }, otherwise: 'off' } } };
-    const node = statusNode({ data: { adapter: 'connector-1', ref: { path: '/pumps', valuePath: '/value' }, itemFields } });
+    const node = statusNode({ data: { adapter: 'connector-1', ref: { path: '/pumps', valuePath: '/value' }, itemFields, text: '{{name}}' } });
     render(<PropertyPanel node={node} adapters={[new FakeHttpAdapter()]} onChange={onChange} />);
 
     fireEvent.click(screen.getByText('Edit'));
     fireEvent.change(screen.getByLabelText('Path'), { target: { value: '/pumps/all' } });
     fireEvent.click(screen.getByText('Save binding'));
 
-    expect(onChange.mock.calls[0][0].bindings).toEqual({ data: { adapter: 'connector-1', ref: { path: '/pumps/all', valuePath: '/value' }, itemFields } });
+    expect(onChange.mock.calls[0][0].bindings).toEqual({ data: { adapter: 'connector-1', ref: { path: '/pumps/all', valuePath: '/value' }, itemFields, text: '{{name}}' } });
   });
 
   it('keeps the items a list is kept to when its binding is edited, and reads the whole list once asked', () => {

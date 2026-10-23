@@ -47,6 +47,23 @@ describe('resolveWidget', () => {
     expect(resolved.quality).toEqual({ value: 'live' });
   });
 
+  it('reads a field inside the value an adapter resolved with "at", and nothing there as an address it does not have', async () => {
+    const host = new InMemoryAdapter('host', { 'asset-7': { value: { temp: 41.5, state: { mode: 'run' } }, quality: 'live' } });
+    const widget: Widget = {
+      type: 'metric',
+      props: { data: { value: 0, label: '' } },
+      bindings: {
+        'data.value': { adapter: 'host', ref: 'asset-7', at: '/temp' },
+        'data.label': { adapter: 'host', ref: 'asset-7', at: '/state/mode', map: { values: { run: 'Running' } } },
+        'data.unit': { adapter: 'host', ref: 'asset-7', at: '/unit' },
+      },
+    };
+    const resolved = await resolveWidget(widget, [host]);
+    expect(resolved.props).toEqual({ data: { value: 41.5, label: 'Running' } });
+    expect(resolved.quality).toEqual({ 'data.value': 'live', 'data.label': 'live', 'data.unit': 'disconnected' });
+    expect(resolved.reasons).toEqual({ 'data.unit': 'address' });
+  });
+
   it('passes through a stale last-known value from the adapter without collapsing it to disconnected', async () => {
     const cmms = new InMemoryAdapter('cmms', {
       'pump-a.runningState': { value: 'running (last known)', quality: 'stale' },

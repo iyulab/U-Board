@@ -8,6 +8,14 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A binding can read a field inside the value its adapter resolved: `at: "/temp"`, a JSON Pointer applied before `map`
+  — an adapter that gives one object per reference no longer needs a reference per field. Nothing there reads
+  `disconnected` with reason `address`. The validator and the JSON Schema take the field.
+- The board language's second version reads an adapter that is not an HTTP connector by its own reference:
+  `{ "from": "<adapter>", "ref": … }` instead of a `path` — one item, its fields under `fields` (`at: ""` when the item
+  is the value itself), and nothing of a request's (`list`, `key`, `where`, `time`, `fresh`, `now`, `zone`): the
+  adapter says itself how current its value is. The conversion of a first-version document carries such bindings
+  across instead of leaving them out.
 - A `./board-v2` entry: the board language's second version — its types, its JSON Schema, its check, the view
   document it is drawn as, and the conversion of a first-version document. Not stable before the release that makes it
   the stored format.
@@ -50,6 +58,11 @@ All notable changes to this package are documented here. The format follows
   write the new words.
 - Requires `@iyulab/u-widgets` 0.40, whose `form` widget draws its fields with `<formdown-ui>` and loads it only when a
   form is first drawn, and `@canvas-kit/viewer` 0.6.1, where dragging to pan no longer selects overlay text.
+
+### Fixed
+
+- Editing a binding in the binding form kept the fields its list items gain but dropped its `text`; it now keeps
+  everything the form does not edit.
 
 ## [0.33.1] - 2026-10-21
 

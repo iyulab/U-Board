@@ -1,5 +1,6 @@
 import type { Binding, ItemField, Widget, ValueMap } from './view-document.js';
 import { formatValue, parseTemplate } from './elements/template.js';
+import { getByPointer } from './json-patch.js';
 
 /**
  * A pluggable resolver for one specific external system's values (docs/concepts.md — "Adapter").
@@ -176,9 +177,20 @@ export async function resolveBindings(
         // Only a reading that has a value to show replaces the static one: `live` is current,
         // `stale` is the last-known value by definition. A `disconnected` reading has none — any
         // `value` it carries is meaningless — so the author's placeholder stays.
+        // `at` reads inside the value; nothing there means the binding points at what the source does not have.
+        let read = resolved.value;
+        if (binding.at !== undefined && resolved.quality !== 'disconnected') {
+          try {
+            read = getByPointer(resolved.value, binding.at);
+          } catch {
+            quality[propPath] = 'disconnected';
+            reasons[propPath] = 'address';
+            return;
+          }
+        }
         if (resolved.quality !== 'disconnected') {
-          readings[propPath] = resolved.value;
-          const mapped = binding.map ? applyValueMap(binding.map, resolved.value) : resolved.value;
+          readings[propPath] = read;
+          const mapped = binding.map ? applyValueMap(binding.map, read) : read;
           const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
           const value = accept(propPath, typeof binding.text === 'string' ? writeText(binding.text, gained) : gained);
           if (value !== undefined) setPath(props, propPath, value);

@@ -344,6 +344,17 @@ describe('validateViewDocument', () => {
   });
 });
 
+describe('binding at', () => {
+  const doc = (binding: unknown) => ({ kind: 'canvas', background: {}, connectors: [], nodes: [{ id: 'a', x: 0, y: 0, anchored: false, widget: { type: 'metric', bindings: { 'data.value': binding } } }] });
+
+  it('takes where the value is inside what the adapter resolved, as a JSON Pointer', () => {
+    expect(validateViewDocument(doc({ adapter: 'host', ref: 'asset-7', at: '/temp' }), { strict: true })).toEqual([]);
+    expect(validateViewDocument(doc({ adapter: 'host', ref: 'asset-7', at: 'temp' }))).toEqual([
+      { path: '/nodes/0/widget/bindings/data.value/at', message: 'expected where the value is inside what the adapter resolved — a JSON Pointer starting with "/"' },
+    ]);
+  });
+});
+
 describe('state rules', () => {
   const bound = { type: 'status', bindings: { 'data.value': { adapter: 'plant', ref: '/p1' } } };
   const node = (states: unknown, widget: unknown = bound) => ({ kind: 'canvas', background: {}, connectors: [], nodes: [{ id: 'a', x: 0, y: 0, anchored: false, widget, states }] });

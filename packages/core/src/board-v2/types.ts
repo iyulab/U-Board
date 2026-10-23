@@ -42,7 +42,8 @@ export type StateRule = 'raw' | ValueMapping;
 
 /** What a field of a data item means. The value itself stays as the source sends it. */
 export interface Field {
-  /** Where the value lives in the item (a JSON Pointer), when it is not `/<field name>`. */
+  /** Where the value lives in the item (a JSON Pointer), when it is not `/<field name>` — `""` for an adapter's value
+   *  that is itself the value (`ref`). */
   at?: string;
   label?: string;
   unit?: string;
@@ -63,12 +64,18 @@ export interface RequestTime {
   step?: number;
 }
 
-/** Where a set of values comes from — read once, for every part that shows them. */
+/**
+ * Where a set of values comes from — read once, for every part that shows them. An HTTP connector is asked a `path`; any
+ * other adapter is given its own `ref` and answers one item (an object of fields, or a value a field reads with `at: ""`)
+ * and how current it is — so a `ref` read takes only `fields`.
+ */
 export interface Query {
-  /** The connector. */
+  /** The connector, or the adapter. */
   from: string;
   /** The request, relative to the connector — `{{now:yyyyMMdd}}`-style places take the request's time. */
-  path: string;
+  path?: string;
+  /** What an adapter that is not an HTTP connector reads — its own reference, as it defines it. */
+  ref?: unknown;
   /** A JSON Pointer to the list of items in the answer; absent: the answer is one item. */
   list?: string;
   /** The field that names each item — parts address one as `<data>[<key>]`. */

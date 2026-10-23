@@ -292,6 +292,9 @@ interface ValueRange {
 - `adapter` — the `id` of the `Adapter` that should resolve this binding.
 - `ref` — the adapter-specific reference to a value (for example, an asset id and field name).
   Opaque to the core binding surface; each adapter defines and interprets its own `ref` shape.
+- `at` — where the value is inside what the adapter resolved, a JSON Pointer (`/temp`): a field of an object an adapter
+  gives for one reference. Applied first, before `map`; when there is nothing there the prop keeps its static value and
+  the binding reads `disconnected` with reason `address`. Omitted, the whole value.
 - `map` — translates the source's value into the one the prop takes. A data source speaks its own
   vocabulary (`"Fault"`, `3`, a temperature); a widget prop takes its own (a status widget's tone).
   It is tried in order:

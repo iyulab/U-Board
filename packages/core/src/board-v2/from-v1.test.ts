@@ -92,17 +92,25 @@ describe('fromV1', () => {
     });
   });
 
-  it('draws a placeholder as its text, and leaves out a binding that reads no HTTP connector, saying so', () => {
+  it('draws a placeholder as its text, and reads a binding to another adapter by its own reference', () => {
     const { board, notes, unsupported } = fromV1(canvas([
       node('p', { type: 'status', props: { data: { label: 'New node', level: 'neutral', value: 'unbound' } } }),
-      node('g', { type: 'gauge', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-a.load' } } }, 200),
+      node('g', { type: 'gauge', props: { data: { value: 0, label: 'Pump A' } }, bindings: { 'data.value': { adapter: 'demo-cmms', ref: 'pump-a.load' } } }, 200),
+      node('h', { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'host', ref: { asset: 7 }, at: '/temp' } } }, 400),
     ]));
     expect(unsupported).toEqual([]);
-    expect(board.parts).toEqual({ p: { as: 'label', title: 'New node' }, g: { as: 'label', title: 'gauge' } });
-    expect(notes).toEqual([
-      'p: a status bound to nothing is drawn as its text',
-      'g: the binding of data.value to "demo-cmms" reads no HTTP connector — left out',
-      'g: a gauge bound to nothing is drawn as its text',
+    expect(notes).toEqual(['p: a status bound to nothing is drawn as its text']);
+    expect(board.data).toEqual({
+      load: { from: 'demo-cmms', ref: 'pump-a.load', fields: { value: { at: '', label: 'Pump A' } } },
+      host: { from: 'host', ref: { asset: 7 }, fields: { temp: {} } },
+    });
+    expect(board.parts).toEqual({ p: { as: 'label', title: 'New node' }, g: { as: 'gauge', of: 'load', show: 'value', title: 'Pump A' }, h: { as: 'stat', of: 'host', show: 'temp' } });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.kind === 'canvas' && drawn.nodes.map(n => n.widget.bindings?.['data.value'])).toEqual([
+      undefined,
+      { adapter: 'demo-cmms', ref: 'pump-a.load' },
+      { adapter: 'host', ref: { asset: 7 }, at: '/temp' },
     ]);
   });
 

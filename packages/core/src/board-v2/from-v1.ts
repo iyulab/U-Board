@@ -191,12 +191,8 @@ function partOf(node: Node, reads: Reads, elements: Elements, notes: string[], u
   const options = isObject(props.options) ? props.options : {};
 
   if (widget.type.startsWith('element:')) return elementPart(node.id, widget, reads, elements, notes, unsupported);
-  // A widget bound to nothing that reads anything shows only the text it was given — a placeholder.
-  const live = Object.entries(bindings).filter(([, b]) => isHttpRef(b.ref));
-  for (const [key, b] of Object.entries(bindings)) {
-    if (!isHttpRef(b.ref)) notes.push(`${node.id}: the binding of ${key} to "${b.adapter}" reads no HTTP connector — left out`);
-  }
-  if (live.length === 0) {
+  // A widget bound to nothing shows only the text it was given — a placeholder.
+  if (Object.keys(bindings).length === 0) {
     const words = [data.label, data.title, props.title].find(w => typeof w === 'string' && w.trim() !== '') as string | undefined;
     notes.push(`${node.id}: a ${widget.type} bound to nothing is drawn as its text`);
     return { as: 'label', title: words ?? widget.type };
@@ -262,7 +258,7 @@ function chartOf(widget: Widget, reads: Reads, unsupported: string[]): Part | un
 /** A widget's tone binding as the state of the field it shows — when it reads where its value binding does. */
 function tone(reads: Reads, binding: Binding | undefined, value: Binding, read: { of: string; field: string }, unsupported: string[], what: string) {
   if (!binding) return;
-  const where = (b: Binding) => (isHttpRef(b.ref) ? JSON.stringify([b.adapter, { ...b.ref, valuePath: toPointer(b.ref.valuePath ?? '') }]) : undefined);
+  const where = sameValue;
   if (where(binding) === undefined || where(binding) !== where(value)) { unsupported.push(`a ${what} toned by another field than it shows`); return; }
   const state = binding.map === undefined ? 'raw' : mappingOf(binding.map);
   if (state === undefined) { unsupported.push(`a ${what}'s tone map that is not a mapping of words`); return; }
@@ -279,7 +275,6 @@ function elementPart(id: string, widget: Widget, reads: Reads, elements: Element
   const bind: Record<string, string> = {};
   let of: string | undefined;
   for (const [prop, binding] of Object.entries(bindings)) {
-    if (!isHttpRef(binding.ref)) { notes.push(`${id}: the binding of ${prop} to "${binding.adapter}" reads no HTTP connector — left out`); continue; }
     if (prop.includes('.')) { unsupported.push('an element bound inside a prop'); return undefined; }
     if (binding.text !== undefined || binding.itemFields !== undefined) { unsupported.push('an element prop bound with a text or item fields'); return undefined; }
     const toned = binding.map !== undefined && mapsTo(binding.map, w => (TONES as readonly string[]).includes(w));
@@ -299,6 +294,13 @@ function elementPart(id: string, widget: Widget, reads: Reads, elements: Element
     ...(Object.keys(fixed).length > 0 ? { props: fixed } : {}),
     ...(Object.keys(bind).length > 0 ? { bind } : {}),
   };
+}
+
+/** What a binding reads, the same for two bindings that read the same value — whatever they map it to. */
+function sameValue(b: Binding): string {
+  return isHttpRef(b.ref)
+    ? JSON.stringify([b.adapter, { ...b.ref, valuePath: toPointer(b.ref.valuePath ?? '') }])
+    : JSON.stringify(['ref', b.adapter, b.ref, b.at ?? '']);
 }
 
 /** Whether every word a value map gives — its values, its ranges' and its `otherwise` — is a word `test` takes. */
@@ -379,8 +381,7 @@ function linkOf(connector: Connector, ctx: Context): Link | undefined {
     if (!['label', 'style.stroke', 'style.dash'].includes(key)) { unsupported.push(`a connector bound at ${key}`); return undefined; }
   }
   if (bindings.label) {
-    if (!isHttpRef(bindings.label.ref)) notes.push(`${connector.id}: the binding of label to "${bindings.label.adapter}" reads no HTTP connector — left out`);
-    else {
+    {
       // A label written around its value (`{{value | fixed:1}} Mbps`) keeps its text, the field in the value's place and
       // its digits as the field's format.
       const pattern = connector.label?.includes('{{') ? connector.label : undefined;
@@ -430,7 +431,7 @@ function lineState(connector: Connector, ctx: Context): Record<string, string> |
   const { notes, unsupported, statuses, appearance } = ctx;
   const style = connector.style ?? {};
   const { 'style.stroke': stroke, 'style.dash': dash } = connector.bindings ?? {};
-  const where = (b: Binding) => (isHttpRef(b.ref) ? JSON.stringify([b.adapter, { ...b.ref, valuePath: toPointer(b.ref.valuePath ?? '') }]) : undefined);
+  const where = sameValue;
   const bound = [stroke, dash].filter((b): b is Binding => b !== undefined);
   if (bound.some(b => where(b) === undefined) || new Set(bound.map(where)).size > 1) { unsupported.push('a connector coloured and dashed by different fields'); return undefined; }
   if (bound.some(b => b.map === undefined || (b.map.ranges ?? []).length > 0)) { unsupported.push('a connector coloured by a value that is not a tone'); return undefined; }
@@ -541,7 +542,8 @@ class Reads {
 
   /** The data and field a binding reads one value of. */
   read(binding: Binding, meaning: Meaning, state?: Field['state']): { of: string; field: string } | undefined {
-    if (!isHttpRef(binding.ref)) return undefined;
+    if (!isHttpRef(binding.ref)) return this.readRef(binding, meaning, state);
+    if (binding.at !== undefined) { this.unsupported.push('an HTTP reference read inside its value with "at"'); return undefined; }
     const ref = binding.ref;
     if (ref.items) { this.unsupported.push('a value read of the items a list keeps'); return undefined; }
     const name = this.query(binding.adapter, ref, ref.item?.list);
@@ -558,9 +560,23 @@ class Reads {
     return field === undefined ? undefined : { of, field };
   }
 
+  /** An adapter's own reference (not an HTTP connector's): a read of one item, the value at `at` in it — the whole
+   *  item when there is none — one of its fields. */
+  private readRef(binding: Binding, meaning: Meaning, state?: Field['state']): { of: string; field: string } | undefined {
+    const key = JSON.stringify(['ref', binding.adapter, binding.ref]);
+    let name = this.names.get(key);
+    if (name === undefined) {
+      name = unique(typeof binding.ref === 'string' ? nameOf(binding.ref.replace(/[.:]/g, '/')) : binding.adapter, this.data);
+      this.names.set(key, name);
+      this.data[name] = { from: binding.adapter, ref: binding.ref };
+    }
+    const field = this.field(this.data[name]!, binding.at ?? '', binding.map, meaning, state);
+    return field === undefined ? undefined : { of: name, field };
+  }
+
   /** The data a binding reads a whole list of. */
   readList(binding: Binding): string | undefined {
-    if (!isHttpRef(binding.ref)) return undefined;
+    if (!isHttpRef(binding.ref)) { this.unsupported.push('a list read of an adapter that is not an HTTP connector'); return undefined; }
     if (binding.map !== undefined || binding.itemFields !== undefined || binding.text !== undefined) {
       this.unsupported.push('a list read with a value map or item fields');
       return undefined;
@@ -708,6 +724,7 @@ function toPointer(path: string): string {
 
 /** A field's name from where it lives: its last step, in letters, digits, `_` and `-`. */
 function fieldName(pointer: string): string {
+  if (pointer === '') return 'value';
   const last = pointer.split('/').at(-1)!.replace(/~1/g, '/').replace(/~0/g, '~');
   const name = last.replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '');
   return name === '' || /^\d/.test(name) ? `v${name}` : name;

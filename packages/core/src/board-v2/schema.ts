@@ -66,7 +66,7 @@ export function boardV2Schema(): Schema {
         type: 'object',
         additionalProperties: false,
         properties: {
-          at: { type: 'string', pattern: '^/', description: 'Where the value lives in an item, when it is not /<field name>.' },
+          at: { type: 'string', pattern: '^(/.*)?$', description: 'Where the value lives in an item, when it is not /<field name> — "" when an adapter’s item is the value.' },
           label: { type: 'string' },
           unit: { type: 'string' },
           digits: { type: 'integer', minimum: 0 },
@@ -77,11 +77,16 @@ export function boardV2Schema(): Schema {
       },
       query: {
         type: 'object',
-        required: ['from', 'path'],
+        required: ['from'],
+        oneOf: [
+          { required: ['path'] },
+          { required: ['ref'], not: { anyOf: ['list', 'key', 'where', 'time', 'answerTime', 'fresh', 'now', 'zone'].map(k => ({ required: [k] })) } },
+        ],
         additionalProperties: false,
         properties: {
-          from: { type: 'string', minLength: 1, description: 'The connector.' },
+          from: { type: 'string', minLength: 1, description: 'The connector, or the adapter.' },
           path: { type: 'string', pattern: '^/', description: 'The request — {{now:yyyyMMdd}}-style places take the request time.' },
+          ref: { description: 'What an adapter that is not an HTTP connector reads, as it defines it: one item, its fields under fields (at "" when the item is the value). Takes nothing but fields.' },
           list: { type: 'string', description: 'A JSON Pointer to the list of items in the answer.' },
           key: { type: 'string', description: 'The field that names each item: parts address one as <data>[<key>].' },
           where: map({ type: ['string', 'number', 'boolean'] }, 'Only the items whose fields equal these values.'),

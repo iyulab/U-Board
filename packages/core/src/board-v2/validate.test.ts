@@ -313,10 +313,23 @@ describe('validateBoardV2', () => {
     expect(issues(board)).toEqual([
       '/statuses/down/tone: "red" is not a tone — use ok · info · watch · warn · alarm · off · idle · accent · past · now · next',
       '/statuses/slow/emphasis: "glow" is not an emphasis — use invert · hatch · stamp · blink',
-      '/data/bad/path: a data read needs "path": the request, starting with "/"',
+      '/data/bad/path: a data read needs "path": the request, starting with "/" — or "ref" for an adapter that is not an HTTP connector',
       '/data/bad/where: "where" keeps the items of a "list" whose fields equal its values: { "field": value }',
       '/data/bad/now/step: "step" is how often the source has new data, in seconds (more than 0)',
     ]);
+  });
+
+  it('takes an adapter’s own reference as one item that says itself how current it is', () => {
+    const read = (q: Record<string, unknown>, show = 'load') => issues({ version: 2, data: { pump: { from: 'cmms', ref: 'pump-a', ...q } }, parts: { s: { as: 'stat', of: 'pump', show } }, layout: { kind: 'grid', items: ['s'] } });
+    expect(read({ fields: { load: { unit: '%' } } })).toEqual([]);
+    expect(read({ fields: { load: { at: '' } } })).toEqual([]);
+    expect(read({ path: '/pumps' })).toEqual(['/data/pump/path: a data read is either asked a "path" (an HTTP connector) or given a "ref" (another adapter) — not both']);
+    expect(read({ list: '/value', fresh: 60 })).toEqual([
+      '/data/pump/list: a "ref" read answers one item and says itself how current it is — "list" belongs to a "path" read',
+      '/data/pump/fresh: a "ref" read answers one item and says itself how current it is — "fresh" belongs to a "path" read',
+    ]);
+    expect(issues({ version: 2, data: { q: { from: 'gov', path: '/x', fields: { v: { at: '' } } } }, parts: { s: { as: 'stat', of: 'q', show: 'v' } }, layout: { kind: 'grid', items: ['s'] } }))
+      .toEqual(['/data/q/fields/v/at: "at" is where the value lives in an item, starting with "/"']);
   });
 
   it('takes the time an answer says its whole list is of, only for a list', () => {

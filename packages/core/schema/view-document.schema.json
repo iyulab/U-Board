@@ -365,6 +365,11 @@
       "properties": {
         "adapter": { "type": "string" },
         "ref": {},
+        "at": {
+          "description": "Where the value is inside what the adapter resolved, a JSON Pointer — a field of an object an adapter gives for one reference.",
+          "type": "string",
+          "pattern": "^/"
+        },
         "map": { "$ref": "#/$defs/valueMap" },
         "text": {
           "description": "The value written into a text: each {{field}} a field of the value, in a template element's value grammar ({{flow | fixed:1}}).",

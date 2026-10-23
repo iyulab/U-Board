@@ -11,7 +11,7 @@ import type { HttpRef } from '../http-ref.js';
 import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
-import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Meter, Part, Place, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
+import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
 
 /** Something in a board the picture model does not draw yet. */
 export class PictureError extends Error {
@@ -50,11 +50,18 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     return m[2] === undefined ? { query: m[1]! } : { query: m[1]!, item: m[2] };
   };
 
-  /** Where a binding reads: the request, the item, the value in it, and how current it must be. */
-  const refFor = (query: string, item: string | undefined, field: string | undefined, at: string): HttpRef => {
+  /** Where a binding reads: the adapter, and its reference — for an HTTP connector the request, the item, the value in it
+   *  and how current it must be; for another adapter its own reference and where in its item the value is. */
+  const readFor = (query: string, item: string | undefined, field: string | undefined, at: string): Pick<Binding, 'adapter' | 'ref' | 'at'> => {
     const q = data[query]!;
     const valueAt = field === undefined ? undefined : q.fields?.[field]?.at ?? `/${field}`;
-    const ref: HttpRef = { path: q.path };
+    if (q.ref !== undefined) return { adapter: q.from, ref: q.ref, ...(valueAt ? { at: valueAt } : {}) };
+    return { adapter: q.from, ref: refFor(q, query, item, field, valueAt, at) };
+  };
+
+  /** An HTTP connector's reference: the request, the item, the value in it, and how current it must be. */
+  const refFor = (q: Query, query: string, item: string | undefined, field: string | undefined, valueAt: string | undefined, at: string): HttpRef => {
+    const ref: HttpRef = { path: q.path! };
     if (item !== undefined) {
       if (q.key !== undefined) {
         ref.item = { list: q.list!, where: { ...q.where, [q.key]: item } };
@@ -180,8 +187,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       return `{{${shown}${digits}}}`;
     });
     return {
-      adapter: q.from,
-      ref: refFor(reads.query, reads.item, undefined, at),
+      ...readFor(reads.query, reads.item, undefined, at),
       ...(Object.keys(gained).length > 0 ? { itemFields: gained } : {}),
       text: written,
     };
@@ -203,7 +209,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     const bindings: Record<string, Binding> = {};
     const bind = (key: string, field: string | undefined, map?: ValueMap) => {
       if (query === undefined) return;
-      bindings[key] = { adapter: data[query]!.from, ref: refFor(query, item, field, at), ...(map ? { map } : {}) };
+      bindings[key] = { ...readFor(query, item, field, at), ...(map ? { map } : {}) };
     };
     const field = (name: string) => fieldOf(query, name);
     const formatOf = (f: Field) => f.format ?? (f.digits !== undefined ? `number:${f.digits}` : undefined);
@@ -597,7 +603,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     let label = link.label;
     if (link.of !== undefined) {
       const { query, item } = target(link.of);
-      const binding = (field: string, map?: ValueMap): Binding => ({ adapter: data[query]!.from, ref: refFor(query, item, field, at), ...(map ? { map } : {}) });
+      const binding = (field: string, map?: ValueMap): Binding => ({ ...readFor(query, item, field, at), ...(map ? { map } : {}) });
       const rule = link.show !== undefined ? fieldOf(query, link.show).state : undefined;
       if (rule !== undefined) {
         const maps = stateMaps(rule);

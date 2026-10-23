@@ -438,6 +438,10 @@ export interface Binding {
   /** The adapter-specific reference to a value (e.g. an asset id and field name). Opaque to the
    * core binding surface — each adapter defines and interprets its own reference shape. */
   ref: unknown;
+  /** Where the value is inside what the adapter resolved, as a JSON Pointer (`/load`) — a field of an object an adapter
+   * gives for one reference. Applied first, before `map`; a value with nothing there is not shown and reads
+   * `disconnected` with reason `address`. Omitted: the whole value. */
+  at?: string;
   /** Translates the source's value into the one the prop takes — a data source speaks its own
    * vocabulary (`"Fault"`, `3`), a widget prop its own (a status tone). Applied to a value that is
    * shown (`live` or `stale`) before it reaches the prop. Omitted: the value is used as it comes. */
