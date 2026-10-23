@@ -341,6 +341,7 @@ describe('validateBoardV2', () => {
       layout: { kind: 'grid', items: ['g'] },
     };
     expect(issues(board)).toEqual(['/parts/g/bind/a: "summary.queue" reads "summary", but this part reads "gate" — a part binds only fields of what it reads; show "summary" with a part of its own (in a group they sit together)']);
+    expect(issues({ ...board, parts: { g: { ...board.parts.g, bind: { a: '190' } } } })).toEqual(['/parts/g/bind/a: "190" is a fixed value — it goes in "props"; "bind" names a field of "gate"']);
   });
 
   it('places a part once — an each part makes one per item by itself', () => {

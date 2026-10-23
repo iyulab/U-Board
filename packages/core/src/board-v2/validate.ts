@@ -342,6 +342,11 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     for (const [prop, ref] of Object.entries(part.bind)) {
       const bindAt = `${at}/bind/${prop}`;
       if (!(prop in declared)) { fail(bindAt, `"${String(name)}" has no prop "${prop}" — ${holes}`); continue; }
+      // A number is a fixed value, not a field — a field's name starts with a letter.
+      if (typeof ref === 'number' || (typeof ref === 'string' && /^-?\d+(\.\d+)?$/.test(ref))) {
+        fail(bindAt, `"${String(ref)}" is a fixed value — it goes in "props"; "bind" names a field of "${reads}"`);
+        continue;
+      }
       const m = typeof ref === 'string' ? /^([\w-]+)(?:\.(status|tone))?$/.exec(ref) : null;
       if (!m) {
         // "<other data>.<field>": a part reads one data — its own "of" (or its group's).
