@@ -10,7 +10,7 @@ export const snapshot: SampleSnapshot = {
   capturedAt: '2026-10-22T10:40:30.000Z',
   responses: {
     shop: {
-      '/shop/now': { value: { name: '누리 코인빨래방', date: '10월 22일 목요일', hours: '24시간 무인' }, time: '오후 7:40', updatedAt: at },
+      '/shop/now': { time: '오후 7:40', updatedAt: at },
       '/shop/washers': {
         value: [
           { no: '세탁 1', state: 'run', word: '헹굼', left: '32분 남음', p: 30 },
@@ -41,6 +41,8 @@ export const snapshot: SampleSnapshot = {
           { label: '꺼내기 대기', value: '2대' },
           { label: '오늘 이용', value: '62회' },
         ],
+        // The shop the figures are of — the panel's heading reads it from the same answer.
+        shop: { name: '누리 코인빨래방', date: '10월 22일 목요일', hours: '24시간 무인' },
         updatedAt: at,
       },
       '/shop/hours': {

@@ -189,7 +189,7 @@ const nodes: Node[] = [
   node('shop', 1000, 24, 560, 250, {
     type: 'element:shop',
     props: { s: {}, items: [] },
-    bindings: { s: bind('/shop/now', '/value'), items: bind('/shop/figures', '/value') },
+    bindings: { s: bind('/shop/figures', '/shop'), items: bind('/shop/figures', '/value') },
   }),
   node('uses', 1000, 290, 560, 500, {
     type: 'element:uses',

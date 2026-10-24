@@ -4,8 +4,8 @@ import { snapshot } from '../snapshots/microgrid.js';
 
 // A site's microgrid as its energy management system sees it: the solar array, the battery, the building and the car
 // chargers it feeds, and the utility grid, all meeting at the switchboard. Each line carries the power flowing on it —
-// its arrow points the way it flows (the battery charging or discharging, the grid importing or exporting), its width
-// grows with the power, and a line with nothing on it is dashed. Beside it the day: how much of the site's use the sun
+// its width grows with the power, and a line with nothing on it is dashed; which way it flows (the battery charging or
+// discharging, the grid importing or exporting) the battery's and the grid's cards say. Beside it the day: how much of the site's use the sun
 // covered, what came from and went to the grid, and the solar output against the load since morning. No public source
 // carries a site's power flows, so the values are example data written for the board.
 
@@ -129,9 +129,6 @@ const essNode: Node = {
   },
 };
 
-/** Which way power flows on a line, as the meter reports it: `forward` from its first end to its second, `reverse`
- *  back, `idle` nothing. */
-const ARROW = { values: { forward: 'end', reverse: 'start' }, otherwise: 'none' };
 const DASH = { values: { idle: 'dashed' }, otherwise: 'solid' };
 /** The more power, the wider the line. */
 const WIDTH = { ranges: [{ min: 150, value: 7 }, { min: 60, value: 4.5 }, { min: 5, value: 2.5 }], otherwise: 1.5 };
@@ -143,10 +140,9 @@ const flow = (id: string, from: string, to: string, stroke: string, labelAt?: nu
   toNodeId: to,
   label: '{{value | fixed:0}} kW',
   ...(labelAt !== undefined && { labelAt }),
-  style: { stroke, strokeWidth: 2.5, arrow: 'end', route: 'orthogonal' },
+  style: { stroke, strokeWidth: 2.5, route: 'orthogonal' },
   bindings: {
     label: bindAsset(id, 'kw'),
-    'style.arrow': bindAsset(id, 'dir', ARROW),
     'style.dash': bindAsset(id, 'dir', DASH),
     'style.strokeWidth': bindAsset(id, 'kw', WIDTH),
   },
@@ -224,7 +220,7 @@ const SIDE: Node[] = [
 
 const DECORATIONS: Shape[] = [
   { id: 'title', type: 'text', x: 24, y: 22, text: '마이크로그리드 에너지 흐름', fontSize: 24, fill: '#17252b' },
-  { id: 'note', type: 'text', x: 24, y: 56, text: '선마다 지금 흐르는 전력 — 화살표는 흐르는 방향, 굵기는 크기, 점선은 멈춤 · 예시 데이터', fontSize: 13, fill: '#5b6b70' },
+  { id: 'note', type: 'text', x: 24, y: 56, text: '선마다 지금 흐르는 전력 — 굵기는 크기, 점선은 멈춤 · 방향은 ESS · 계통 카드 · 예시 데이터', fontSize: 13, fill: '#5b6b70' },
   { id: 'site', type: 'rect', x: 30, y: 92, width: 940, height: 680, stroke: '#9aa6ae', strokeWidth: 1.5, dash: 'dashed', label: '사이트', labelSize: 14, labelFill: '#3d4a52' },
   { id: 'side', type: 'rect', x: SIDE_X - 16, y: 72, width: 282, height: 632, stroke: '#d6dedb', strokeWidth: 1, label: '오늘', labelSize: 14, labelFill: '#3d4a52' },
 ];
@@ -246,8 +242,8 @@ export const microgrid: SamplePack = {
   domain: 'energy',
   styles: ['operations'],
   summary: {
-    ko: '태양광·ESS·건물 부하·전기차 충전·한전 계통이 수배전반에서 만나는 사이트에서, 선마다 지금 흐르는 전력을 화살표 방향(충전과 방전, 수전과 역송)·굵기·점선(멈춤)으로, 옆에는 오늘 자립률과 계통에서 받고 보낸 양, 아침부터의 태양광과 부하. 예시 데이터입니다.',
-    en: 'Solar, a battery, the building, car chargers and the utility grid meeting at the switchboard, each line showing the power on it now — its arrow the way it flows (charging or discharging, importing or exporting), its width the amount, dashed when idle; beside it the day’s self-sufficiency, what came from and went to the grid, and solar output against the load since morning. Example data.',
+    ko: '태양광·ESS·건물 부하·전기차 충전·한전 계통이 수배전반에서 만나는 사이트에서, 선마다 지금 흐르는 전력을 굵기·점선(멈춤)으로, 충전과 방전 · 수전과 역송은 ESS · 계통 카드에, 옆에는 오늘 자립률과 계통에서 받고 보낸 양, 아침부터의 태양광과 부하. 예시 데이터입니다.',
+    en: 'Solar, a battery, the building, car chargers and the utility grid meeting at the switchboard, each line showing the power on it now — its width the amount, dashed when idle, which way it flows (charging or discharging, importing or exporting) on the battery’s and the grid’s cards; beside it the day’s self-sufficiency, what came from and went to the grid, and solar output against the load since morning. Example data.',
   },
   connectors: [EMS],
   document,

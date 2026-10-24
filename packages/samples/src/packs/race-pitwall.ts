@@ -224,7 +224,7 @@ const nodes: Node[] = [
   node('strategy', 560, 750, 680, 300, {
     type: 'element:strategy',
     props: { cars: [], lap: 0, laps: 0 },
-    bindings: { cars: bind('/timing/strategy', '/value'), lap: bind('/timing/race', '/lap'), laps: bind('/timing/race', '/laps') },
+    bindings: { cars: bind('/timing/strategy', '/value'), lap: bind('/timing/strategy', '/lap'), laps: bind('/timing/strategy', '/laps') },
   }),
   node('laps', 1260, 750, 630, 300, {
     type: 'chart.line',

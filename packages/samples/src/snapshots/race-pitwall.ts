@@ -60,6 +60,9 @@ export const snapshot: SampleSnapshot = {
           { code: 'KIM', stints: [{ tyre: 'M', laps: 39, planned: false }, { tyre: 'H', laps: 18, planned: true }], note: '이번 랩 끝 피트 — 하드로 끝까지' },
           { code: 'PRK', stints: [{ tyre: 'M', laps: 14, planned: false }, { tyre: 'H', laps: 20, planned: false }, { tyre: 'S', laps: 23, planned: false }], note: '소프트 4랩째 — 7위에서 추격' },
         ],
+        // The race's lap, as the strategy feed carries it — the plan is drawn against it.
+        lap: 38,
+        laps: 57,
         updatedAt: at,
       },
       '/timing/laps': { value: LAPS.map(([lap, kim, park]) => ({ lap: `L${lap}`, kim, park })), updatedAt: at },

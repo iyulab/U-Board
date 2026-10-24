@@ -83,17 +83,17 @@ function at(node: { width: number; height: number }, lat: number, lng: number): 
 }
 
 /** Bike stations on the drawing, by their id in the source (`SBIKE_SPOT_ID`) and where they stand. */
-export const BIKE_STATIONS: { id: string; lat: number; lng: number }[] = [
-  { id: 'ST-119', lat: 37.5717697, lng: 126.9746628 },
-  { id: 'ST-1611', lat: 37.5698929, lng: 126.9775696 },
-  { id: 'ST-121', lat: 37.5725594, lng: 126.9783325 },
-  { id: 'ST-977', lat: 37.565052, lng: 126.9734039 },
-  { id: 'ST-3297', lat: 37.5655785, lng: 126.9770203 },
-  { id: 'ST-3090', lat: 37.5757141, lng: 126.9805069 },
+export const BIKE_STATIONS: { id: string; name: string; lat: number; lng: number }[] = [
+  { id: 'ST-119', name: '303. 광화문역 1번출구 앞', lat: 37.5717697, lng: 126.9746628 },
+  { id: 'ST-1611', name: '458. 광화문역 5번출구', lat: 37.5698929, lng: 126.9775696 },
+  { id: 'ST-121', name: '305. 종로구청 옆', lat: 37.5725594, lng: 126.9783325 },
+  { id: 'ST-977', name: '391. 시립미술관', lat: 37.565052, lng: 126.9734039 },
+  { id: 'ST-3297', name: '6058. 시청역 2번출구', lat: 37.5655785, lng: 126.9770203 },
+  { id: 'ST-3090', name: '4719. 종로문화원 건너편', lat: 37.5757141, lng: 126.9805069 },
 ];
 const STATION = { width: 160, height: 52 };
 
-function bikeStation({ id, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
+function bikeStation({ id, name, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
   const field = (name: string, map?: Binding['map']) => bindItem('/SBIKE_STTS', { SBIKE_SPOT_ID: id }, `/${name}`, map);
   return {
     id: `bike-${id}`,
@@ -102,9 +102,9 @@ function bikeStation({ id, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
     anchored: true,
     widget: {
       type: 'status',
-      props: { data: { label: '따릉이', value: '', tone: 'idle' } },
+      // A station is fixed by its id, so its name is written here as the source gives it.
+      props: { data: { label: name, value: '', tone: 'idle' } },
       bindings: {
-        'data.label': field('SBIKE_SPOT_NM'),
         'data.value': field('SBIKE_PARKING_CNT'),
         'data.tone': field('SBIKE_PARKING_CNT', BIKES_LEVEL),
       },

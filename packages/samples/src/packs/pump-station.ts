@@ -132,7 +132,7 @@ const tank: ElementDefinition = {
     <i class="mark high"></i><i class="mark low"></i>
     <span class="value">{{level}}%</span>
   </div>
-  <figcaption><b>{{name}}</b>{{#alarmText}} <span class="alarm">{{alarmText}}</span>{{/alarmText}}</figcaption>
+  <figcaption><b>{{name}}</b> <span class="alarm">{{alarmText}}</span></figcaption>
 </figure>`,
   style: `.tank{margin:0;height:100%;display:grid;grid-template-rows:1fr auto;gap:4px;--c:var(--u-widget-text-secondary)}
 .vessel{position:relative;border:2px solid var(--u-widget-border);border-top:none;border-radius:0 0 10px 10px;overflow:hidden;background:var(--u-widget-surface)}
@@ -145,7 +145,8 @@ const tank: ElementDefinition = {
 .tank.high .mark.high,.tank.low .mark.low{border-top-color:var(--u-widget-negative)}
 figcaption{font-size:12px;text-align:center;color:var(--u-widget-text-secondary)}
 figcaption b{color:var(--u-widget-text);font-size:13px}
-.alarm{color:var(--u-widget-negative);font-weight:600}`,
+.alarm{color:var(--u-widget-negative);font-weight:600}
+.tank.normal .alarm{display:none}`,
   size: { width: 150, height: 200 },
 };
 
@@ -196,9 +197,9 @@ const tankItem = ({ id, name, high, low }: (typeof TANKS)[number]): GridItem => 
     props: { name, level: 0, high, low },
     bindings: {
       level: bindItem('/station/tanks', id, '/level'),
-      // One reading, read three ways: the level, whether it is past an alarm limit, and that in words.
+      // One reading, read three ways: the level, whether it is past an alarm limit, and that in words (shown only past one).
       alarm: bindItem('/station/tanks', id, '/level', { ranges: [{ min: high, value: 'high' }, { max: low, value: 'low' }], otherwise: 'normal' }),
-      alarmText: bindItem('/station/tanks', id, '/level', { ranges: [{ min: high, value: '고수위' }, { max: low, value: '저수위' }], otherwise: '' }),
+      alarmText: bindItem('/station/tanks', id, '/level', { ranges: [{ min: high, value: '고수위' }, { max: low, value: '저수위' }], otherwise: '정상' }),
     },
   },
 });

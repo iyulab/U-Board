@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SAMPLE_PACKS, isInstallable, type LiveSampleConnector, type SamplePack } from '@iyulab/u-board-samples';
-import { fromV1 } from '@iyulab/u-board/board-v2';
 import * as api from './api-client.js';
 import type { ConnectorSummary } from './api-client.js';
 import { createBoardFromSample, keysToAsk, loadSamplePacks, MissingSampleKeyError, sampleHosts } from './sample-boards.js';
@@ -55,6 +54,7 @@ describe('a sample on a source that asks each user for a key', () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     await expect(createBoardFromSample('w1', pack, 'x', { [source.key]: ' ' })).rejects.toBeInstanceOf(MissingSampleKeyError);
     expect(api.createConnector).not.toHaveBeenCalled();
+    expect(api.createConnector).not.toHaveBeenCalled();
     expect(api.createBoard).not.toHaveBeenCalled();
   });
 
@@ -72,11 +72,12 @@ describe('a sample on a source that asks each user for a key', () => {
     expect(Object.values(document.data ?? {}).map(read => read.from)).toContain('mine');
   });
 
-  it('stores a sample the second version cannot carry whole as it is', async () => {
+  it('refuses a sample the second version cannot carry whole rather than storing part of it', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
-    const whole = (await loadSamplePacks()).find(p => fromV1(p.document).unsupported.length > 0)!;
-    await createBoardFromSample('w1', whole, 'x', Object.fromEntries(keysToAsk(whole, []).map(c => [c.key, 'k'])));
-    const { document } = vi.mocked(api.updateBoard).mock.calls[0][2] as { document: { version?: number } };
-    expect(document.version).toBeUndefined();
+    const pack = (await loadSamplePacks()).find(p => p.document.kind === 'canvas')!;
+    const captioned = { ...pack, document: { ...pack.document, nodes: (pack.document as { nodes: object[] }).nodes.map(n => ({ ...n, caption: 'x' })) } } as typeof pack;
+    await expect(createBoardFromSample('w1', captioned, 'x', Object.fromEntries(keysToAsk(pack, []).map(c => [c.key, 'k'])))).rejects.toThrow(/does not convert whole/);
+    expect(api.createConnector).not.toHaveBeenCalled();
+    expect(api.createBoard).not.toHaveBeenCalled();
   });
 });

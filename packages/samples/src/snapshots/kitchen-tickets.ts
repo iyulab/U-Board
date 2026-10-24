@@ -12,7 +12,6 @@ export const snapshot: SampleSnapshot = {
   capturedAt: '2026-10-22T03:24:05.000Z',
   responses: {
     kitchen: {
-      '/kitchen/now': { value: { name: '누리 한식당 · 주방', date: '2026-10-22 (목)', time: '12:24' }, updatedAt: at },
       '/kitchen/tickets': {
         value: {
           t1: { no: 'A-118', where: '테이블 7', state: 'new', age: '00:40', word: '대기', printed: '12:23 출력', lines: '2  김치찌개\n1  제육볶음\n   - 덜 맵게\n3  공기밥' },
@@ -40,6 +39,8 @@ export const snapshot: SampleSnapshot = {
           { label: '지연(15분+)', value: '3건' },
           { label: '레일 위', value: '6장' },
         ],
+        // The kitchen the totals are of — the panel's heading reads it from the same answer.
+        kitchen: { name: '누리 한식당 · 주방', date: '2026-10-22 (목)', time: '12:24' },
         updatedAt: at,
       },
       '/kitchen/cooking': {

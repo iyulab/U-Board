@@ -152,7 +152,7 @@ const nodes: Node[] = [
   node('totals', 790, 610, 330, 340, {
     type: 'element:totals',
     props: { s: {}, items: [] },
-    bindings: { s: bind('/kitchen/now', '/value'), items: bind('/kitchen/totals', '/value') },
+    bindings: { s: bind('/kitchen/totals', '/kitchen'), items: bind('/kitchen/totals', '/value') },
   }),
   node('cooking', 1150, 610, 410, 340, {
     type: 'chart.line',
