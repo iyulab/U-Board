@@ -4,15 +4,66 @@
 // else of the board changes.
 
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
-import { GRID_DEFAULT_SPAN, type GridView, type Node, type ViewDocument } from '../view-document.js';
+import { GRID_DEFAULT_SPAN, isCanvasItem, type CanvasView, type GridView, type Node, type ViewDocument } from '../view-document.js';
 import type { BoardV2, CanvasLayout, GridItem, Place, Shape, Trigger } from '../board-v2/types.js';
 
 /**
- * Whether the editor lays this board out: a canvas, or a grid of parts alone — a grid holding a grid or a canvas of
- * its own is laid out across rows its picture flattens, which the editor does not say back yet.
+ * Whether the editor lays this board out: a canvas, or a grid of parts and canvases — a grid holding a grid of its own
+ * is laid out across rows its picture flattens, which the editor does not say back yet.
  */
 export function layoutEditable(board: BoardV2): boolean {
-  return board.layout.kind === 'canvas' || board.layout.items.every(entry => typeof entry === 'string' || Array.isArray(entry));
+  return board.layout.kind === 'canvas' || board.layout.items.every(entry => typeof entry === 'string' || Array.isArray(entry) || entry.grid === undefined);
+}
+
+/** The id the picture draws a grid's canvas cell — entry `i` of its items — with; what it draws in the cell is named
+ *  past `<id>:`. */
+export function cellId(i: number): string {
+  return `cell-${i}`;
+}
+
+/** The grid entry a canvas cell's id names, if the board has a canvas there. */
+export function cellIndex(board: BoardV2, id: string): number | undefined {
+  const match = /^cell-(\d+)$/.exec(id);
+  if (board.layout.kind !== 'grid' || match === null) return undefined;
+  const entry = board.layout.items[Number(match[1])];
+  return typeof entry === 'object' && !Array.isArray(entry) && entry.canvas !== undefined ? Number(match[1]) : undefined;
+}
+
+/** The canvas of grid entry `i` as a board of its own — the board, that canvas its layout — for the canvas editor. */
+export function cellBoard(board: BoardV2, i: number): BoardV2 | undefined {
+  if (board.layout.kind !== 'grid') return undefined;
+  const entry = board.layout.items[i];
+  if (typeof entry !== 'object' || Array.isArray(entry) || entry.canvas === undefined) return undefined;
+  return { ...board, layout: { kind: 'canvas', ...entry.canvas } };
+}
+
+/** The board with grid entry `i`'s canvas — and its parts, triggers and all the rest — as `cell` (one `cellBoard` gave,
+ *  edited) has them. */
+export function withCell(board: BoardV2, i: number, cell: BoardV2): BoardV2 {
+  if (board.layout.kind !== 'grid' || cell.layout.kind !== 'canvas') return board;
+  const { kind: _kind, ...canvas } = cell.layout;
+  const items = board.layout.items.map((entry, j) => (j === i && typeof entry === 'object' && !Array.isArray(entry) ? { ...entry, canvas } : entry));
+  return { ...cell, layout: { ...board.layout, items } };
+}
+
+/** What a grid's picture draws in its canvas cell `i`, as a canvas of its own — ids past the cell's prefix, as
+ *  `cellBoard` names them. */
+export function cellPicture(picture: ViewDocument, i: number): CanvasView | undefined {
+  if (picture.kind !== 'grid') return undefined;
+  const id = cellId(i);
+  const item = picture.items.find(it => it.id === id);
+  if (item === undefined || !isCanvasItem(item)) return undefined;
+  const own = (s: string) => (s.startsWith(`${id}:`) ? s.slice(id.length + 1) : s);
+  const { kind: _kind, items: _items, triggers: _triggers, ...look } = picture;
+  const { nodes, connectors, decorations, ...canvas } = item.canvas;
+  return {
+    ...look,
+    kind: 'canvas',
+    ...canvas,
+    nodes: nodes.map(node => ({ ...node, id: own(node.id) })),
+    connectors: connectors.map(c => ({ ...c, id: own(c.id), fromNodeId: own(c.fromNodeId), toNodeId: own(c.toNodeId) })),
+    ...(decorations !== undefined ? { decorations: decorations.map(d => ({ ...d, id: own(d.id) })) } : {}),
+  };
 }
 
 /** The id the picture draws a board's own link with — `link.<id>`. */
@@ -85,6 +136,7 @@ export function placesItself(board: BoardV2, id: string): boolean {
   if (lineOf(board, id) !== undefined) return true;
   const [part, key, ...rest] = id.split('/');
   if (board.layout.kind === 'grid') {
+    if (cellIndex(board, id) !== undefined) return true;
     const each = board.parts[part!]?.each !== undefined;
     return rest.length === 0 && (key === undefined ? !each : each) && board.layout.items.some(entry => entryId(entry) === part);
   }
@@ -169,13 +221,17 @@ export function withPictureLayout(board: BoardV2, before: ViewDocument, after: V
 }
 
 /**
- * A grid of parts as its picture `after` lays it out: the parts in the order they now come (an `each` part where its
- * first item is), each taking the columns its item was given — one of an `each` part's items setting them all — and
- * a part deleted gone with the triggers that named it. A part the picture did not draw (an `each` part whose data has
- * no items now) keeps its place.
+ * A grid of parts and canvases as its picture `after` lays it out: the entries in the order they now come (an `each`
+ * part where its first item is), each taking the columns its item was given — one of an `each` part's items setting
+ * them all — and an entry deleted gone: a part with the triggers that named it, a canvas with the parts placed on it.
+ * A part the picture did not draw (an `each` part whose data has no items now) keeps its place.
  */
 function withGridLayout(board: BoardV2, before: GridView, after: GridView): BoardV2 {
   if (board.layout.kind !== 'grid' || !layoutEditable(board)) return board;
+  // An entry by the id its item is drawn with: a part's (an `each` part's, its items'), a canvas's `cell-<i>`.
+  const entries = board.layout.items;
+  const keyOf = (entry: GridItem, i: number) => (typeof entry === 'object' && !Array.isArray(entry) && entry.canvas !== undefined ? cellId(i) : entryId(entry));
+  const byKey = new Map(entries.map((entry, i) => [keyOf(entry, i), entry]));
   const partOf = (id: string) => id.split('/')[0]!;
   const spanWas = new Map(before.items.map(item => [item.id, item.span ?? GRID_DEFAULT_SPAN]));
   const span = new Map<string, number>();
@@ -188,20 +244,31 @@ function withGridLayout(board: BoardV2, before: GridView, after: GridView): Boar
   const order = [...new Set(after.items.map(item => partOf(item.id)))];
   const gone = [...drawn].filter(part => !span.has(part));
   // A part not drawn now keeps its place among the others: it goes back after the drawn part it followed, or first.
-  const entries = board.layout.items;
-  const entryOf = (part: string): GridItem => (span.get(part) === GRID_DEFAULT_SPAN ? part : [part, span.get(part)!]);
+  // An entry keeps its form — a part with a height, a canvas — taking only its columns from the picture.
+  const entryOf = (key: string): GridItem => {
+    const entry = byKey.get(key)!;
+    const columns = span.get(key)!;
+    if (typeof entry === 'string' || Array.isArray(entry)) return columns === GRID_DEFAULT_SPAN ? key : [key, columns];
+    const { span: _span, ...rest } = entry;
+    return columns === GRID_DEFAULT_SPAN && entry.span === undefined ? rest : { ...rest, span: columns };
+  };
   /** The entries of parts not drawn that come straight after entry `at` (-1: before the first). */
   const following = (at: number): GridItem[] => {
     const out: GridItem[] = [];
-    for (let i = at + 1; i < entries.length && !drawn.has(entryId(entries[i]!)); i++) out.push(entries[i]!);
+    for (let i = at + 1; i < entries.length && !drawn.has(keyOf(entries[i]!, i)); i++) out.push(entries[i]!);
     return out;
   };
   const items: GridItem[] = [...following(-1)];
-  for (const part of order) items.push(entryOf(part), ...following(entries.findIndex(entry => entryId(entry) === part)));
+  for (const key of order) items.push(entryOf(key), ...following(entries.findIndex((entry, i) => keyOf(entry, i) === key)));
   if (gone.length === 0 && JSON.stringify(items) === JSON.stringify(board.layout.items)) return board;
+  // A canvas deleted takes the parts placed on it.
+  const goneParts = gone.flatMap(key => {
+    const entry = byKey.get(key)!;
+    return typeof entry === 'object' && !Array.isArray(entry) && entry.canvas !== undefined ? Object.keys(entry.canvas.place) : [key];
+  });
   const parts = { ...board.parts };
-  for (const part of gone) delete parts[part];
-  const triggers = gone.length > 0 ? board.triggers?.filter(t => !mentions(t, named(gone))) : board.triggers;
+  for (const part of goneParts) delete parts[part];
+  const triggers = goneParts.length > 0 ? board.triggers?.filter(t => !mentions(t, named(goneParts))) : board.triggers;
   return { ...board, parts, layout: { ...board.layout, items }, ...(triggers !== undefined ? { triggers } : {}) };
 }
 

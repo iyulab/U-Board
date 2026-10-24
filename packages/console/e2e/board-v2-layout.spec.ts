@@ -105,4 +105,39 @@ test('moves, sizes, orders and deletes the parts of boards in the second version
   expect(laidOut.layout).toEqual({ kind: 'grid', items: [['b', 8], 'a'] });
   expect(Object.keys(laidOut.parts)).toEqual(['a', 'b']);
   expect(laidOut.parts.b).toEqual({ as: 'header', title: 'Second, wider' });
+
+  // A grid with a canvas in a cell: the cell widened in the grid, then opened in the canvas editor and its part moved
+  // there — saved as the cell's own place, the grid's other entries as they were.
+  const cells = await (await page.request.post(`/api/workspaces/${workspaceId}/boards`, { data: { name: 'Cell V2' } })).json();
+  const cellsAt = `/api/workspaces/${workspaceId}/boards/${cells.id}`;
+  expect((await page.request.put(cellsAt, {
+    data: { document: {
+      version: 2,
+      parts: { head: { as: 'header', title: 'Plant' }, valve: { as: 'label', title: 'V1' } },
+      layout: { kind: 'grid', items: ['head', { canvas: { size: [600, 300], place: { valve: [40, 40, 160, 80] } }, span: 6, height: 320 }] },
+    } },
+  })).ok()).toBe(true);
+  await page.goto(`/boards/${cells.id}/edit`);
+  await page.getByRole('button', { name: /^2\. / }).click();
+  await page.getByLabel('너비(12열 중)').selectOption('8');
+  await page.getByRole('button', { name: '캔버스 편집' }).click();
+  await expect(page.getByRole('button', { name: '← 그리드' })).toBeVisible();
+  const valve = page.locator('[data-testid="designer-overlay-valve"]');
+  await expect(valve).toBeVisible();
+  const v = (await valve.boundingBox())!;
+  await page.mouse.move(v.x + v.width / 2, v.y + v.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(v.x + v.width / 2 + 60, v.y + v.height / 2 + 30, { steps: 5 });
+  await page.mouse.move(v.x + v.width / 2 + 120, v.y + v.height / 2 + 60, { steps: 5 });
+  await page.mouse.up();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('저장됨')).toBeVisible();
+  const placed = (await (await page.request.get(cellsAt)).json()).document;
+  expect(placed.layout.items[0]).toBe('head');
+  expect(placed.layout.items[1].span).toBe(8);
+  expect(placed.layout.items[1].height).toBe(320);
+  expect(placed.layout.items[1].canvas.place.valve[0]).toBeGreaterThan(40);
+  expect(placed.layout.items[1].canvas.place.valve[1]).toBeGreaterThan(40);
+  await page.getByRole('button', { name: '← 그리드' }).click();
+  await expect(page.getByRole('button', { name: /^2\. / })).toBeVisible();
 });

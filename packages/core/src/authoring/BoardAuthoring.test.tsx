@@ -71,6 +71,23 @@ describe('BoardAuthoring', () => {
     expect(onSave.mock.calls[0]![0].parts['part-3']).toEqual({ as: 'header', title: 'New part' });
   });
 
+  it('opens a grid’s canvas cell in the canvas editor — a part added there placed on the cell — and goes back to the grid', async () => {
+    const onSave = vi.fn();
+    const withCell: BoardV2 = { ...board, layout: { kind: 'grid', items: ['head', { canvas: { size: [400, 200], place: {} }, span: 8 }] } };
+    render(<BoardAuthoring initialBoard={withCell} adapters={[]} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: /^2\. / }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit canvas' }));
+    expect(screen.getByRole('button', { name: '← Grid' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Add part' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0]![0].layout.items[1]).toEqual({ canvas: { size: [400, 200], place: { 'part-3': [88, 88, 160, 60] } }, span: 8 });
+    expect(onSave.mock.calls[0]![0].parts['part-3']).toEqual({ as: 'label', title: 'New part' });
+    fireEvent.click(screen.getByRole('button', { name: '← Grid' }));
+    expect(screen.queryByRole('button', { name: '← Grid' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^2\. / })).toBeInTheDocument();
+  });
+
   it('sets the board’s data in its panel with nothing selected — its sources the adapters, looked at through them', async () => {
     const onSave = vi.fn();
     const resolve = vi.fn(async () => ({ value: { count: 3, shift: 'B' }, quality: 'live' as const }));

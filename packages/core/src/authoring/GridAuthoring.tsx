@@ -273,7 +273,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 labels={labels}
               />
               {movable && (layoutOnly?.panel?.(selected.id) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)}
-              {!movable && isCanvasItem(selected) && onEditCanvas && (
+              {isCanvasItem(selected) && onEditCanvas && (
                 <button type="button" className="ub-action ub-action--primary" onClick={() => onEditCanvas(selected.id)}>
                   {labels.editCanvas}
                 </button>

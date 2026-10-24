@@ -24,7 +24,7 @@ import { TriggersEditor } from './TriggersEditor.js';
 import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
-import { LINK, layoutEditable, linkOf, placesItself, shapeOf, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
+import { LINK, cellBoard, cellIndex, cellPicture, layoutEditable, linkOf, placesItself, shapeOf, withCell, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 import { recordEdit, redo, startHistory, undo, type DocumentHistory } from './document-history.js';
 import { useEditKeys } from './use-edit-keys.js';
 
@@ -58,12 +58,22 @@ export interface BoardAuthoringProps {
  * are moved, sized, ordered and deleted — each edit said again in the board's layout (`withPictureLayout`) — and a
  * selected part's title, kind, data and fields set in its panel, with what the board's check finds there. A setting the
  * board cannot be drawn with keeps the last picture it could, and says why. Undo, Redo, Save and Export are the
- * board's. A grid holding grids or canvases of its own (`layoutEditable`) is shown as its viewers see it.
+ * board's. A grid's canvas cell opens in the canvas editor; a grid holding a grid of its own (`layoutEditable`) is shown
+ * as its viewers see it.
  */
 export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
   const labels = useLabels(labelsProp);
   const [history, setHistory] = useState<DocumentHistory<BoardV2>>(() => startHistory(initialBoard));
   const board = history.present;
+  // A grid's canvas cell open in the canvas editor — its entry — and the board as that editor sees it: the cell's canvas
+  // as the layout, what it changes written back into the cell.
+  const [cell, setCell] = useState<number | undefined>(undefined);
+  const inCell = cell !== undefined && cellBoard(board, cell) !== undefined ? cell : undefined;
+  const scope = (b: BoardV2) => (inCell !== undefined ? (cellBoard(b, inCell) ?? b) : b);
+  const unscope = (b: BoardV2, scoped: BoardV2) => (inCell !== undefined ? withCell(b, inCell, scoped) : scoped);
+  const scoped = scope(board);
+  /** Where the layout the canvas editor edits sits in the board — for the findings about it. */
+  const layoutAt = inCell !== undefined ? `/layout/items/${inCell}/canvas` : '/layout';
   const [lastSaved, setLastSaved] = useState(initialBoard);
   const isDirty = board !== lastSaved;
   const [mode, setModeState] = useState<AuthoringMode>(initialMode);
@@ -104,8 +114,10 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
   const pictureOf = (h: DocumentHistory<BoardV2>) => drawnOf(h, keysOf);
   const drawing = useMemo(() => drawnOf(history, keysOf), [history, keysOf]);
   const picture = drawing.picture;
-  const movable = useMemo(() => (id: string) => placesItself(board, id), [board]);
-  const ownPiece = useMemo(() => (id: string) => linkOf(board, id) !== undefined || shapeOf(board, id) !== undefined, [board]);
+  /** What the canvas editor shows: the board's canvas, or the canvas cell open. */
+  const canvasDoc: CanvasView | undefined = inCell !== undefined ? cellPicture(picture, inCell) : picture.kind === 'canvas' ? picture : undefined;
+  const movable = (id: string) => placesItself(scoped, id);
+  const ownPiece = (id: string) => linkOf(scoped, id) !== undefined || shapeOf(scoped, id) !== undefined;
   const findings = useMemo(() => {
     const check = checkBoardV2(board);
     return [...check.issues, ...check.advice];
@@ -150,10 +162,10 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             hint={labels.layoutOnlyHint}
             labels={labels}
           />
-          {board.layout.kind === 'canvas' && (
+          {scoped.layout.kind === 'canvas' && (
             <BackgroundField
-              layout={board.layout}
-              onChange={layout => setEdit((h, typingIn) => recordEdit(h, { ...h.present, layout }, typingIn))}
+              layout={scoped.layout}
+              onChange={layout => setEdit((h, typingIn) => recordEdit(h, unscope(h.present, { ...scope(h.present), layout }), typingIn))}
               labels={labels}
             />
           )}
@@ -194,40 +206,40 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
         </>
       );
     }
-    const shape = shapeOf(board, selected);
+    const shape = shapeOf(scoped, selected);
     if (shape !== undefined) {
       return (
         <ShapePanel
           key={shape}
           id={shape}
-          board={board}
+          board={scoped}
           onChange={next =>
             setEdit((h, typingIn) => {
-              const layout = h.present.layout;
-              if (layout.kind !== 'canvas') return h;
-              return recordEdit(h, { ...h.present, layout: { ...layout, shapes: { ...layout.shapes, [shape]: next } } }, typingIn);
+              const own = scope(h.present);
+              if (own.layout.kind !== 'canvas') return h;
+              return recordEdit(h, unscope(h.present, { ...own, layout: { ...own.layout, shapes: { ...own.layout.shapes, [shape]: next } } }), typingIn);
             })
           }
-          findings={findings.filter(f => f.path === `/layout/shapes/${shape}` || f.path.startsWith(`/layout/shapes/${shape}/`))}
+          findings={findings.filter(f => f.path === `${layoutAt}/shapes/${shape}` || f.path.startsWith(`${layoutAt}/shapes/${shape}/`))}
           labels={labels}
         />
       );
     }
-    const link = linkOf(board, selected);
+    const link = linkOf(scoped, selected);
     if (link !== undefined) {
       return (
         <LinkPanel
           key={link}
           id={link}
-          board={board}
+          board={scoped}
           onChange={next =>
             setEdit((h, typingIn) => {
-              const layout = h.present.layout;
-              if (layout.kind !== 'canvas') return h;
-              return recordEdit(h, { ...h.present, layout: { ...layout, links: { ...layout.links, [link]: next } } }, typingIn);
+              const own = scope(h.present);
+              if (own.layout.kind !== 'canvas') return h;
+              return recordEdit(h, unscope(h.present, { ...own, layout: { ...own.layout, links: { ...own.layout.links, [link]: next } } }), typingIn);
             })
           }
-          findings={findings.filter(f => f.path === `/layout/links/${link}` || f.path.startsWith(`/layout/links/${link}/`))}
+          findings={findings.filter(f => f.path === `${layoutAt}/links/${link}` || f.path.startsWith(`${layoutAt}/links/${link}/`))}
           labels={labels}
         />
       );
@@ -267,35 +279,45 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
     if (!onSave) setLastSaved(board);
   };
 
-  /** A new part, titled and of a kind that reads no data until its panel sets one — placed where a canvas has room at its
-   *  top left, or last in a grid. */
+  /** A new part, titled and of a kind that reads no data until its panel sets one — placed where a canvas (or the canvas
+   *  cell open) has room at its top left, or last in a grid. */
   const addPart = () =>
     setEdit((h, typingIn) => {
       const present = h.present;
       let n = Object.keys(present.parts).length + 1;
       while (`part-${n}` in present.parts) n++;
       const id = `part-${n}`;
-      const layout = present.layout;
-      if (layout.kind === 'canvas') {
+      const own = scope(present);
+      if (own.layout.kind === 'canvas') {
+        const layout = own.layout;
         const step = 24 * (n - 1);
         const x = Math.min(40 + step, Math.max(0, layout.size[0] - 160));
         const y = Math.min(40 + step, Math.max(0, layout.size[1] - 60));
-        return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'label', title: labels.newPartTitle } }, layout: { ...layout, place: { ...layout.place, [id]: [x, y, 160, 60] } } }, typingIn);
+        return recordEdit(h, unscope(present, { ...own, parts: { ...own.parts, [id]: { as: 'label', title: labels.newPartTitle } }, layout: { ...layout, place: { ...layout.place, [id]: [x, y, 160, 60] } } }), typingIn);
       }
+      const layout = present.layout;
+      if (layout.kind !== 'grid') return h;
       return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'header', title: labels.newPartTitle } }, layout: { ...layout, items: [...layout.items, id] } }, typingIn);
     });
 
   /** A frame or a text on a canvas board, at its top left. */
-  const addShape = (kind: 'box' | 'text' | 'line') => setEdit((h, typingIn) => recordEdit(h, withNewShape(h.present, kind, labels.shapeNewText).board, typingIn));
+  const addShape = (kind: 'box' | 'text' | 'line') => setEdit((h, typingIn) => recordEdit(h, unscope(h.present, withNewShape(scope(h.present), kind, labels.shapeNewText).board), typingIn));
 
   const documentActions = (
     <>
+      {inCell !== undefined && (
+        <div className="ub-authoring__group" style={GROUP_STYLE}>
+          <button type="button" className="ub-action" onClick={() => setCell(undefined)}>
+            {labels.backToGrid}
+          </button>
+        </div>
+      )}
       {mode === 'edit' && layoutEditable(board) && (
         <div className="ub-authoring__group" style={GROUP_STYLE}>
           <button type="button" className="ub-action" onClick={addPart}>
             {labels.partAdd}
           </button>
-          {board.layout.kind === 'canvas' && (
+          {scoped.layout.kind === 'canvas' && (
             <>
               <button type="button" className="ub-action" onClick={() => addShape('box')}>
                 {labels.shapeAddBox}
@@ -339,15 +361,19 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             {labels.boardNotDrawn.replace('{reason}', drawing.error)}
           </p>
         )}
-        {picture.kind === 'canvas' && layoutEditable(board) ? (
+        {canvasDoc !== undefined && layoutEditable(board) ? (
           <CanvasAuthoring
-            doc={picture}
+            key={inCell === undefined ? 'board' : `cell-${inCell}`}
+            doc={canvasDoc}
             updateDoc={update =>
               setEdit((h, typingIn) => {
-                const before = pictureOf(h).picture as CanvasView;
-                return recordEdit(h, withPictureLayout(h.present, before, update(before)), typingIn);
+                const drawn = pictureOf(h).picture;
+                const before = inCell !== undefined ? cellPicture(drawn, inCell) : drawn.kind === 'canvas' ? drawn : undefined;
+                if (before === undefined) return h;
+                return recordEdit(h, unscope(h.present, withPictureLayout(scope(h.present), before, update(before))), typingIn);
               })
             }
+            inCell={inCell !== undefined}
             mode={mode}
             onModeChange={setMode}
             documentActions={documentActions}
@@ -363,8 +389,8 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
               movable,
               panel,
               connect: (from, to) => {
-                const made = withNewLink(board, from, to);
-                setEdit((h, typingIn) => recordEdit(h, made.board, typingIn));
+                const made = withNewLink(scoped, from, to);
+                setEdit((h, typingIn) => recordEdit(h, unscope(h.present, withNewLink(scope(h.present), from, to).board), typingIn));
                 return `${LINK}${made.id}`;
               },
               deletable: ownPiece,
@@ -391,6 +417,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             clock={clock}
             triggerHosting={{ boardId, onTrigger, onNavigate, linkOrigins }}
             layoutOnly={{ movable, panel }}
+            onEditCanvas={id => setCell(cellIndex(board, id))}
           />
         ) : (
           <ViewerPage

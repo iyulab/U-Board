@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { toViewDocument } from '../board-v2/picture.js';
 import type { BoardV2, CanvasLayout } from '../board-v2/types.js';
 import type { CanvasView, GridView } from '../view-document.js';
-import { LINK, SHAPE, layoutEditable, lineOf, linkOf, placesItself, shapeIn, shapeOf, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
+import { LINK, SHAPE, cellBoard, cellIndex, cellPicture, layoutEditable, lineOf, linkOf, placesItself, shapeIn, shapeOf, withCell, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 
 const board: BoardV2 = {
   version: 2,
@@ -172,6 +172,40 @@ describe('withPictureLayout — a grid', () => {
     expect(next.layout).toEqual({ kind: 'grid', items: ['title', ['pump', 6]] });
     expect(Object.keys(next.parts)).toEqual(['title', 'pump']);
     expect(next.triggers).toEqual([]);
+  });
+
+  describe('with a canvas in a cell', () => {
+    const plan: BoardV2 = {
+      ...grid,
+      parts: { ...grid.parts, valve: { as: 'label', title: 'V1' } },
+      layout: { kind: 'grid', items: ['title', { canvas: { size: [400, 200], place: { valve: [20, 30, 100, 40] }, links: { v: { from: 'valve', to: 'valve' } } }, span: 8, height: 240 }, ['count', 3]] },
+    };
+
+    it('lays the grid out, the canvas an entry the picture draws as `cell-<i>` keeping its form', () => {
+      const p = drawn(plan);
+      expect(items(p)).toEqual([['title', undefined], ['cell-1', 8], ['count', 3]]);
+      expect([layoutEditable(plan), placesItself(plan, 'cell-1'), cellIndex(plan, 'cell-1'), cellIndex(plan, 'cell-0')]).toEqual([true, true, 1, undefined]);
+      const moved = withPictureLayout(plan, p, { ...p, items: [p.items[1]!, { ...p.items[0]!, span: 4 }, { ...p.items[2]!, span: 12 }].map(i => (i.id === 'cell-1' ? { ...i, span: 12 } : i)) });
+      expect(moved.layout).toEqual({ kind: 'grid', items: [{ ...(plan.layout as { items: object[] }).items[1], span: 12 }, 'title', ['count', 12]] });
+    });
+
+    it('deletes a canvas with the parts placed on it', () => {
+      const p = drawn(plan);
+      const next = withPictureLayout(plan, p, { ...p, items: [p.items[0]!, p.items[2]!] });
+      expect(next.layout).toEqual({ kind: 'grid', items: ['title', ['count', 3]] });
+      expect(Object.keys(next.parts)).toEqual(['title', 'count', 'pump']);
+    });
+
+    it('opens as a canvas board of its own, what moves in it written back into the cell', () => {
+      const cell = cellBoard(plan, 1)!;
+      const before = cellPicture(drawn(plan), 1)!;
+      expect(before.nodes.map(n => n.id)).toEqual(['valve']);
+      expect(before.connectors.map(c => [c.id, c.fromNodeId])).toEqual([[`${LINK}v`, 'valve']]);
+      const after = { ...before, nodes: before.nodes.map(n => ({ ...n, x: 60 })) };
+      const next = withCell(plan, 1, withPictureLayout(cell, before, after));
+      expect(next.layout.kind === 'grid' && next.layout.items[1]).toEqual({ canvas: { size: [400, 200], place: { valve: [60, 30, 100, 40] }, links: { v: { from: 'valve', to: 'valve' } } }, span: 8, height: 240 });
+      expect([cellBoard(plan, 0), cellPicture(drawn(plan), 0)]).toEqual([undefined, undefined]);
+    });
   });
 
   it('does not lay out a grid holding a grid of its own', () => {
