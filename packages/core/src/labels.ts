@@ -168,6 +168,16 @@ export interface UBoardLabels {
   partStructured: string;
   /** A board whose settings leave it one that cannot be drawn: `{reason}`, where and why. */
   boardNotDrawn: string;
+  /** The board's statuses panel. `{name}`: a status's name. */
+  statusesHeading: string;
+  statusTone: string;
+  statusLabel: string;
+  statusGlyph: string;
+  statusEmphasis: string;
+  statusEmphasisNone: string;
+  statusRemove: string;
+  statusNew: string;
+  statusAdd: string;
   propertiesHeading: string;
   widgetType: string;
   /** The text a new node starts with: its label, and the value it shows until it is bound. */
@@ -547,6 +557,15 @@ export const DEFAULT_LABELS: UBoardLabels = {
   partWidgetOptions: 'Widget options',
   partStructured: 'Written as a structure — set it with the assistant, or in the board’s JSON.',
   boardNotDrawn: 'The board cannot be drawn as it is now — {reason}. The last board it could draw is shown.',
+  statusesHeading: 'Statuses',
+  statusTone: 'Tone',
+  statusLabel: 'Words',
+  statusGlyph: 'Mark',
+  statusEmphasis: 'Emphasis',
+  statusEmphasisNone: '(none)',
+  statusRemove: 'Remove {name}',
+  statusNew: 'New status',
+  statusAdd: 'Add status',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
   newNodeLabel: 'New node',

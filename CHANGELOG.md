@@ -15,7 +15,8 @@ do when upgrading. Each release's notes carry its section.
 
 - A board saved in the board language's second version opens in the console from the picture the server makes of it —
   the one its share link shows, with the items its data has now. Its parts are moved, sized and deleted on a canvas, or
-  ordered, widened and deleted on a grid, a selected part's title, kind, data, fields, options and triggers are set in its panel, and the
+  ordered, widened and deleted on a grid, a selected part's title, kind, data, fields, options and triggers are set in its panel, the board's statuses
+  in its own, and the
   board is saved in its own version; a grid that holds grids or canvases of its own is shown, not edited, for now. Reading a board through the API answers such a board with that picture beside its document. The
   assistant panel draws in the second version: it starts from the tools' rules, reads a kind's options before using
   it, changes the board a JSON Patch per step, and takes values only from the workspace's data sources.

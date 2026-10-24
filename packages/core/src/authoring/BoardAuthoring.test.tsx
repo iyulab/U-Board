@@ -3,6 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { BoardAuthoring } from './BoardAuthoring';
 import { PartPanel } from './PartPanel';
+import { StatusesPanel } from './StatusesPanel';
 import type { BoardV2 } from '../board-v2/types';
 
 vi.mock('@canvas-kit/designer', () => ({ KonvaDesigner: () => <div data-testid="konva-designer" /> }));
@@ -90,5 +91,36 @@ describe('BoardAuthoring — triggers', () => {
     expect(screen.getByRole('heading', { name: 'When the board opens' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /^2\. / }));
     expect(await screen.findByRole('heading', { name: 'Triggers' })).toBeInTheDocument();
+  });
+});
+
+describe('StatusesPanel', () => {
+  it('adds a status by name, sets its tone, words, mark and emphasis, and removes it — none left, none written', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<StatusesPanel statuses={undefined} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'tripped' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add status' }));
+    expect(onChange).toHaveBeenLastCalledWith({ tripped: { tone: 'info' } });
+    rerender(<StatusesPanel statuses={{ tripped: { tone: 'info' } }} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText('Tone'), { target: { value: 'alarm' } });
+    expect(onChange).toHaveBeenLastCalledWith({ tripped: { tone: 'alarm' } });
+    fireEvent.change(screen.getByLabelText('Mark'), { target: { value: '⚡' } });
+    expect(onChange).toHaveBeenLastCalledWith({ tripped: { tone: 'info', glyph: '⚡' } });
+    fireEvent.change(screen.getByLabelText('Emphasis'), { target: { value: 'blink' } });
+    expect(onChange).toHaveBeenLastCalledWith({ tripped: { tone: 'info', emphasis: 'blink' } });
+    fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'tripped' } });
+    expect(screen.getByRole('button', { name: 'Add status' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove tripped' }));
+    expect(onChange).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it('is the board’s panel with nothing selected, and its edits are the board’s', async () => {
+    const onSave = vi.fn();
+    render(<BoardAuthoring initialBoard={board} adapters={[]} onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText('New status'), { target: { value: 'busy' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add status' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0]![0].statuses).toEqual({ busy: { tone: 'info' } });
   });
 });

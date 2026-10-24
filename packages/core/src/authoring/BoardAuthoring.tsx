@@ -11,6 +11,7 @@ import { checkBoardV2 } from '../board-v2/check.js';
 import type { BoardV2 } from '../board-v2/types.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
 import { PartPanel } from './PartPanel.js';
+import { StatusesPanel } from './StatusesPanel.js';
 import { TriggersEditor } from './TriggersEditor.js';
 import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
@@ -102,6 +103,16 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
       return (
         <>
           <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>
+          <StatusesPanel
+            statuses={board.statuses}
+            onChange={statuses =>
+              setHistory(h => {
+                const { statuses: _gone, ...rest } = h.present;
+                return recordEdit(h, statuses ? { ...rest, statuses } : rest, null);
+              })
+            }
+            labels={labels}
+          />
           <TriggersEditor {...triggerEditing} labels={labels} />
         </>
       );

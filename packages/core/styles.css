@@ -307,6 +307,12 @@
   font-size: var(--_ub-font-sm);
 }
 
+.ub-panel__findings {
+  margin: var(--_ub-space-2) 0;
+  padding-left: var(--_ub-space-4);
+  font-size: var(--_ub-font-sm);
+}
+
 .ub-panel__bindings {
   margin: 0 0 var(--_ub-space-3);
   padding: 0;
