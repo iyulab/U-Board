@@ -261,6 +261,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
         <div className="ub-authoring__panel" style={{ flex: '0 0 var(--ub-panel-width, 320px)', minWidth: 0, overflowY: 'auto' }}>
           {selected ? (
             <>
+              {(!movable || movable(selected.id)) && (
               <GridItemPanel
                 item={selected}
                 isFirst={selectedIndex === 0}
@@ -272,6 +273,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 spanOnly={!!movable}
                 labels={labels}
               />
+              )}
               {movable && (layoutOnly?.panel?.(selected.id) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)}
               {isCanvasItem(selected) && onEditCanvas && (
                 <button type="button" className="ub-action ub-action--primary" onClick={() => onEditCanvas(selected.id)}>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { toViewDocument } from '../board-v2/picture.js';
 import type { BoardV2, CanvasLayout } from '../board-v2/types.js';
 import type { CanvasView, GridView } from '../view-document.js';
-import { LINK, SHAPE, cellBoard, cellIndex, cellPicture, layoutEditable, lineOf, linkOf, placesItself, shapeIn, shapeOf, withCell, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
+import { LINK, SHAPE, cellBoard, cellIndex, gridCellOf, layoutEditable, lineOf, linkOf, placesItself, shapeIn, shapeOf, withCell, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 
 const board: BoardV2 = {
   version: 2,
@@ -198,19 +198,47 @@ describe('withPictureLayout — a grid', () => {
 
     it('opens as a canvas board of its own, what moves in it written back into the cell', () => {
       const cell = cellBoard(plan, 1)!;
-      const before = cellPicture(drawn(plan), 1)!;
+      // Drawn as the editor draws a cell: without the board's triggers, which name parts outside it.
+      const before = picture({ ...cell, triggers: [] });
       expect(before.nodes.map(n => n.id)).toEqual(['valve']);
       expect(before.connectors.map(c => [c.id, c.fromNodeId])).toEqual([[`${LINK}v`, 'valve']]);
       const after = { ...before, nodes: before.nodes.map(n => ({ ...n, x: 60 })) };
       const next = withCell(plan, 1, withPictureLayout(cell, before, after));
       expect(next.layout.kind === 'grid' && next.layout.items[1]).toEqual({ canvas: { size: [400, 200], place: { valve: [60, 30, 100, 40] }, links: { v: { from: 'valve', to: 'valve' } } }, span: 8, height: 240 });
-      expect([cellBoard(plan, 0), cellPicture(drawn(plan), 0)]).toEqual([undefined, undefined]);
+      expect(cellBoard(plan, 0)).toBeUndefined();
     });
   });
 
-  it('does not lay out a grid holding a grid of its own', () => {
-    const nested: BoardV2 = { ...grid, layout: { kind: 'grid', items: ['title', { grid: ['count'], span: 4 }, ['pump', 4]] } };
-    expect(layoutEditable(nested)).toBe(false);
-    expect(placesItself(nested, 'title')).toBe(false);
+  describe('with a grid in a cell', () => {
+    const stacked: BoardV2 = {
+      ...grid,
+      parts: { ...grid.parts, a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' } },
+      layout: { kind: 'grid', items: [['title', 8], { grid: [['a', 6], ['b', 6], 'count'], span: 4 }] },
+    };
+
+    it('lays the outer grid out, the cell’s items standing for it — moved with it, not one by one', () => {
+      const p = drawn(stacked);
+      expect(items(p)).toEqual([['title', 8], ['a', 2], ['b', 2], ['count', 4]]);
+      expect([layoutEditable(stacked), placesItself(stacked, 'title'), placesItself(stacked, 'a'), gridCellOf(stacked, 'count'), gridCellOf(stacked, 'title')]).toEqual([true, true, false, 1, undefined]);
+      const moved = withPictureLayout(stacked, p, { ...p, items: [p.items[1]!, p.items[2]!, p.items[3]!, { ...p.items[0]!, span: 12 }] });
+      expect(moved.layout).toEqual({ kind: 'grid', items: [{ grid: [['a', 6], ['b', 6], 'count'], span: 4 }, ['title', 12]] });
+    });
+
+    it('opens as a grid board of its own — its items ordered, widened and deleted there — written back into the cell', () => {
+      const cell = cellBoard(stacked, 1)!;
+      const before = drawn({ ...cell, triggers: [] });
+      expect(items(before)).toEqual([['a', 6], ['b', 6], ['count', undefined]]);
+      const after = { ...before, items: [before.items[1]!, { ...before.items[0]!, span: 12 }] };
+      const next = withCell(stacked, 1, withPictureLayout(cell, before, after));
+      expect(next.layout).toEqual({ kind: 'grid', items: [['title', 8], { grid: [['b', 6], ['a', 12]], span: 4 }] });
+      expect(Object.keys(next.parts)).toEqual(['title', 'pump', 'a', 'b']);
+      expect(next.triggers).toEqual([]);
+    });
+
+    it('does not lay out a grid in a grid in a cell, which the picture does not draw', () => {
+      const deeper: BoardV2 = { ...stacked, layout: { kind: 'grid', items: [{ grid: [{ grid: ['a'] }], span: 4 }] } };
+      expect(layoutEditable(deeper)).toBe(false);
+    });
   });
+
 });

@@ -36,9 +36,10 @@ All notable changes to this package are documented here. The format follows
 - `Adapter.sample`: an adapter whose values are example data. A board that binds to one says «Example data» (the
   `exampleData` label) first in the line under it (`ub-viewer__example`) — in `ViewerPage`, whatever its `attribution`
   setting, and in the editors' view mode.
-- `BoardAuthoring` lays out a grid holding canvases in its cells: a cell is ordered, widened and deleted (with the parts
-  placed on it) as any entry, and opens in the canvas editor — its parts moved, sized, added and joined there, its shapes
-  and background set, all written back into the cell. A grid holding a grid of its own is still shown as viewers see it.
+- `BoardAuthoring` lays out a grid holding canvases and grids in its cells. A canvas cell is ordered, widened and
+  deleted (with the parts placed on it) as any entry, and opens in the canvas editor — its parts moved, sized, added
+  and joined there, its shapes and background set. A grid in a cell moves with its first item; one of its items opens it
+  as a grid of its own, ordered, widened and deleted there. What changes in a cell is written back into it.
 - `BoardAuthoring` adds a line to a canvas, and selects, moves, sizes and deletes a line or a path as a node — each
   point carried where it stands in the node's box — its panel setting a line's points (`20,20 220,20`) or a path's
   drawing, its tone, width and dash; they were drawn and left to the board's JSON.

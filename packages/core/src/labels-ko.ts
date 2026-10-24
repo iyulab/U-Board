@@ -15,6 +15,7 @@ export const KO_LABELS: UBoardLabels = {
   addCanvas: '캔버스 추가',
   editCanvas: '캔버스 편집',
   backToGrid: '← 그리드',
+  editGridCell: '칸 그리드 편집',
   wheelZoomHint: 'Ctrl (⌘) + 스크롤로 확대·축소',
   layoutWidth: '배치 폭',
   layoutWide: '넓게',

@@ -140,4 +140,27 @@ test('moves, sizes, orders and deletes the parts of boards in the second version
   expect(placed.layout.items[1].canvas.place.valve[1]).toBeGreaterThan(40);
   await page.getByRole('button', { name: '← 그리드' }).click();
   await expect(page.getByRole('button', { name: /^2\. / })).toBeVisible();
+
+  // A grid with a grid in a cell (what a first-version item spanning rows became): an item of the inner grid is not laid
+  // out alone in the outer grid — it opens the inner grid, ordered there and saved back into the cell.
+  const stacks = await (await page.request.post(`/api/workspaces/${workspaceId}/boards`, { data: { name: 'Stack V2' } })).json();
+  const stacksAt = `/api/workspaces/${workspaceId}/boards/${stacks.id}`;
+  expect((await page.request.put(stacksAt, {
+    data: { document: {
+      version: 2,
+      parts: { map: { as: 'header', title: 'Map' }, a: { as: 'header', title: 'A' }, b: { as: 'header', title: 'B' } },
+      layout: { kind: 'grid', items: [['map', 8], { grid: [['a', 6], ['b', 6]], span: 4 }] },
+    } },
+  })).ok()).toBe(true);
+  await page.goto(`/boards/${stacks.id}/edit`);
+  await page.getByRole('button', { name: /^2\. / }).click();
+  await expect(page.getByRole('button', { name: '뒤로' })).toHaveCount(0);
+  await page.getByRole('button', { name: '칸 그리드 편집' }).click();
+  await expect(page.getByRole('button', { name: '← 그리드' })).toBeVisible();
+  await page.getByRole('button', { name: /^1\. / }).click();
+  await page.getByRole('button', { name: '뒤로' }).click();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('저장됨')).toBeVisible();
+  const restacked = (await (await page.request.get(stacksAt)).json()).document;
+  expect(restacked.layout).toEqual({ kind: 'grid', items: [['map', 8], { grid: [['b', 6], ['a', 6]], span: 4 }] });
 });

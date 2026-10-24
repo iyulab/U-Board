@@ -22,6 +22,8 @@ export interface UBoardLabels {
   /** On a selected canvas cell: open its canvas in the canvas editor — and, there, back to the grid. */
   editCanvas: string;
   backToGrid: string;
+  /** Opens the grid a grid cell holds — the selected item's — in its own editor. */
+  editGridCell: string;
   /** The line a grid's canvas cell shows when the wheel scrolls past it — there the wheel zooms only with Ctrl or ⌘
    *  held. */
   wheelZoomHint: string;
@@ -549,6 +551,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   addCanvas: 'Add canvas',
   editCanvas: 'Edit canvas',
   backToGrid: '← Grid',
+  editGridCell: 'Edit the grid in this cell',
   wheelZoomHint: 'Ctrl (⌘) + scroll to zoom',
   layoutWidth: 'Layout width',
   layoutWide: 'Wide',

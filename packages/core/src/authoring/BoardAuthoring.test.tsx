@@ -88,6 +88,25 @@ describe('BoardAuthoring', () => {
     expect(screen.getByRole('button', { name: /^2\. / })).toBeInTheDocument();
   });
 
+  it('opens the grid a cell holds from one of its items — ordered there, written back into the cell — the item not laid out alone outside', async () => {
+    const onSave = vi.fn();
+    const stacked: BoardV2 = {
+      ...board,
+      parts: { ...board.parts, a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' } },
+      layout: { kind: 'grid', items: [['head', 8], { grid: [['a', 6], ['b', 6]], span: 4 }] },
+    };
+    render(<BoardAuthoring initialBoard={stacked} adapters={[]} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: /^2\. / }));
+    expect(screen.queryByRole('button', { name: 'Move later' })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit the grid in this cell' }));
+    expect(screen.getByRole('button', { name: '← Grid' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^1\. / }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move later' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0]![0].layout).toEqual({ kind: 'grid', items: [['head', 8], { grid: [['b', 6], ['a', 6]], span: 4 }] });
+  });
+
   it('sets the board’s data in its panel with nothing selected — its sources the adapters, looked at through them', async () => {
     const onSave = vi.fn();
     const resolve = vi.fn(async () => ({ value: { count: 3, shift: 'B' }, quality: 'live' as const }));

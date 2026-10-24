@@ -4,7 +4,7 @@ import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
 import { TONES } from '../tones.js';
 import { GROUP_STYLE } from '../ui-style.js';
-import { placedIn, type CanvasView, type GridView, type ViewDocument } from '../view-document.js';
+import { placedIn, type ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { ViewerPage, type ViewerPageProps } from '../viewer/ViewerPage.js';
 import { PictureError, dataReadOf, keyReadsOf, toViewDocument } from '../board-v2/picture.js';
@@ -24,7 +24,7 @@ import { TriggersEditor } from './TriggersEditor.js';
 import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
-import { LINK, cellBoard, cellIndex, cellPicture, layoutEditable, linkOf, placesItself, shapeOf, withCell, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
+import { LINK, cellBoard, cellIndex, gridCellOf, layoutEditable, linkOf, placesItself, shapeOf, withCell, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 import { recordEdit, redo, startHistory, undo, type DocumentHistory } from './document-history.js';
 import { useEditKeys } from './use-edit-keys.js';
 
@@ -58,22 +58,21 @@ export interface BoardAuthoringProps {
  * are moved, sized, ordered and deleted — each edit said again in the board's layout (`withPictureLayout`) — and a
  * selected part's title, kind, data and fields set in its panel, with what the board's check finds there. A setting the
  * board cannot be drawn with keeps the last picture it could, and says why. Undo, Redo, Save and Export are the
- * board's. A grid's canvas cell opens in the canvas editor; a grid holding a grid of its own (`layoutEditable`) is shown
- * as its viewers see it.
+ * board's. A grid's cell — a canvas, or a grid of its own — opens in its own editor, what changes there written back.
  */
 export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
   const labels = useLabels(labelsProp);
   const [history, setHistory] = useState<DocumentHistory<BoardV2>>(() => startHistory(initialBoard));
   const board = history.present;
-  // A grid's canvas cell open in the canvas editor — its entry — and the board as that editor sees it: the cell's canvas
-  // as the layout, what it changes written back into the cell.
+  // A grid's cell open in its own editor — its entry — and the board as that editor sees it: the cell (a canvas, or a
+  // grid) as the layout, what it changes written back into the cell.
   const [cell, setCell] = useState<number | undefined>(undefined);
   const inCell = cell !== undefined && cellBoard(board, cell) !== undefined ? cell : undefined;
   const scope = (b: BoardV2) => (inCell !== undefined ? (cellBoard(b, inCell) ?? b) : b);
   const unscope = (b: BoardV2, scoped: BoardV2) => (inCell !== undefined ? withCell(b, inCell, scoped) : scoped);
   const scoped = scope(board);
   /** Where the layout the canvas editor edits sits in the board — for the findings about it. */
-  const layoutAt = inCell !== undefined ? `/layout/items/${inCell}/canvas` : '/layout';
+  const layoutAt = inCell !== undefined ? `/layout/items/${inCell}/${scoped.layout.kind}` : '/layout';
   const [lastSaved, setLastSaved] = useState(initialBoard);
   const isDirty = board !== lastSaved;
   const [mode, setModeState] = useState<AuthoringMode>(initialMode);
@@ -114,8 +113,10 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
   const pictureOf = (h: DocumentHistory<BoardV2>) => drawnOf(h, keysOf);
   const drawing = useMemo(() => drawnOf(history, keysOf), [history, keysOf]);
   const picture = drawing.picture;
-  /** What the canvas editor shows: the board's canvas, or the canvas cell open. */
-  const canvasDoc: CanvasView | undefined = inCell !== undefined ? cellPicture(picture, inCell) : picture.kind === 'canvas' ? picture : undefined;
+  /** What the editor shows: the board, or the cell open — drawn as a board of its own. */
+  const shown: ViewDocument | null = inCell !== undefined ? drawCell(scoped, keysOf) : picture;
+  /** What was drawn before an edit, as the editor shows it. */
+  const shownOf = (h: DocumentHistory<BoardV2>) => (inCell !== undefined ? drawCell(scope(h.present), keysOf) : pictureOf(h).picture);
   const movable = (id: string) => placesItself(scoped, id);
   const ownPiece = (id: string) => linkOf(scoped, id) !== undefined || shapeOf(scoped, id) !== undefined;
   const findings = useMemo(() => {
@@ -244,9 +245,18 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
         />
       );
     }
+    // An item drawn from a grid in a cell is laid out in that grid: it opens from here.
+    const gridCell = inCell === undefined ? gridCellOf(board, selected) : undefined;
+    const openGrid = gridCell === undefined ? null : (
+      <button type="button" className="ub-action ub-action--primary" onClick={() => setCell(gridCell)}>
+        {labels.editGridCell}
+      </button>
+    );
     const id = selected.split('/')[0];
-    if (id === undefined || !(id in board.parts)) return null;
+    if (id === undefined || !(id in board.parts)) return openGrid;
     return (
+      <>
+      {openGrid}
       <PartPanel
         key={id}
         id={id}
@@ -256,6 +266,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
         triggers={targets.includes(selected) ? <TriggersEditor key={`triggers:${selected}`} node={selected} {...triggerEditing} labels={labels} /> : undefined}
         labels={labels}
       />
+      </>
     );
   };
 
@@ -361,15 +372,14 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             {labels.boardNotDrawn.replace('{reason}', drawing.error)}
           </p>
         )}
-        {canvasDoc !== undefined && layoutEditable(board) ? (
+        {shown?.kind === 'canvas' && layoutEditable(board) ? (
           <CanvasAuthoring
             key={inCell === undefined ? 'board' : `cell-${inCell}`}
-            doc={canvasDoc}
+            doc={shown}
             updateDoc={update =>
               setEdit((h, typingIn) => {
-                const drawn = pictureOf(h).picture;
-                const before = inCell !== undefined ? cellPicture(drawn, inCell) : drawn.kind === 'canvas' ? drawn : undefined;
-                if (before === undefined) return h;
+                const before = shownOf(h);
+                if (before?.kind !== 'canvas') return h;
                 return recordEdit(h, unscope(h.present, withPictureLayout(scope(h.present), before, update(before))), typingIn);
               })
             }
@@ -396,13 +406,15 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
               deletable: ownPiece,
             }}
           />
-        ) : picture.kind === 'grid' && layoutEditable(board) ? (
+        ) : shown?.kind === 'grid' && layoutEditable(board) ? (
           <GridAuthoring
-            doc={picture}
+            key={inCell === undefined ? 'board' : `cell-${inCell}`}
+            doc={shown}
             updateDoc={update =>
               setEdit((h, typingIn) => {
-                const before = pictureOf(h).picture as GridView;
-                return recordEdit(h, withPictureLayout(h.present, before, update(before)), typingIn);
+                const before = shownOf(h);
+                if (before?.kind !== 'grid') return h;
+                return recordEdit(h, unscope(h.present, withPictureLayout(scope(h.present), before, update(before))), typingIn);
               })
             }
             mode={mode}
@@ -417,7 +429,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             clock={clock}
             triggerHosting={{ boardId, onTrigger, onNavigate, linkOrigins }}
             layoutOnly={{ movable, panel }}
-            onEditCanvas={id => setCell(cellIndex(board, id))}
+            onEditCanvas={inCell === undefined ? id => setCell(cellIndex(board, id)) : undefined}
           />
         ) : (
           <ViewerPage
@@ -448,6 +460,19 @@ function draw(board: BoardV2, keysOf: (data: string) => string[]): { picture: Vi
     return { picture: toViewDocument(board, { keysOf }), error: null };
   } catch (error) {
     if (error instanceof PictureError) return { picture: null, error: error.message };
+    throw error;
+  }
+}
+
+/** A grid's cell as `cellBoard` gives it, drawn for its editor: without the board's triggers — they name parts all over
+ *  the board, most of them not in the cell — and without the board's check, which would find those parts placed nowhere
+ *  in it. Null when it cannot be drawn. */
+function drawCell(cell: BoardV2, keysOf: (data: string) => string[]): ViewDocument | null {
+  const { triggers: _triggers, ...drawn } = cell;
+  try {
+    return toViewDocument(drawn, { keysOf });
+  } catch (error) {
+    if (error instanceof PictureError) return null;
     throw error;
   }
 }
