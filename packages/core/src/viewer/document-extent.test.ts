@@ -31,15 +31,6 @@ describe('documentExtent', () => {
     expect(extent).toMatchObject({ y: 86, height: 18 });
   });
 
-  it('takes in the parts a component instance draws, where it draws them', () => {
-    const d = doc({
-      nodes: [node('n1', 0, 0, { width: 10, height: 10 })],
-      components: { card: { nodes: [{ id: 'a', x: 0, y: 0, width: 100, height: 50, widget: { type: 'uw-status' } }] } },
-      instances: [{ id: 'p', component: 'card', x: 500, y: 200, anchored: false }],
-    });
-    expect(documentExtent(d)).toEqual({ x: 0, y: 0, width: 600, height: 250 });
-  });
-
   it('spans nodes at their default footprint when they carry no size of their own', () => {
     const d = doc({ nodes: [node('n1', 10, 20), node('n2', 300, 400, { width: 50, height: 60 })] });
     expect(documentExtent(d)).toEqual({ x: 10, y: 20, width: 340, height: 440 });

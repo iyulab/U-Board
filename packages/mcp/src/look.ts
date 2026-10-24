@@ -1,10 +1,10 @@
 import type { Browser, Page } from 'playwright-core';
 import { getByPointer } from '@iyulab/u-board/domain';
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, expandComponents, instancePartId, nodeSize, type ViewDocument } from '@iyulab/u-board/picture';
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, nodeSize, type ViewDocument } from '@iyulab/u-board/picture';
 import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
-import { inDocument, placedParts } from './look-parts.js';
+import { placedParts } from './look-parts.js';
 
-export { inDocument, placedParts } from './look-parts.js';
+export { placedParts } from './look-parts.js';
 
 /** How a picture is taken: animations stopped at their start, so a blinking state is drawn on — a picture taken mid-blink
  *  would show a ring as missing, and the reader would build it again by other means. */
@@ -13,8 +13,8 @@ export const PICTURE = { type: 'png', animations: 'disabled' } as const;
 /** What `look` is asked for: a saved board, optionally one part of it, optionally on the other paper. */
 export interface LookRequest {
   board: string;
-  /** A JSON Pointer to a node, grid item, connector, decoration or component instance ("/nodes/3", "/items/0",
-   *  "/connectors/2", "/decorations/5", "/instances/1") — only that part. */
+  /** A JSON Pointer to a node, grid item, connector or decoration ("/nodes/3", "/items/0", "/connectors/2",
+   *  "/decorations/5") — only that part. */
   focus?: string;
   appearance?: 'light' | 'dark';
   width: number;
@@ -32,8 +32,7 @@ export interface LookReport {
   /** How big the board was drawn: scene px per screen px (1 = actual size), and the screen size of the picture. */
   scale?: number;
   picture: { width: number; height: number };
-  /** Parts that did not draw as written: an element's error or notice, a widget's content running past its box. A part
-   *  a component instance draws is reported at its node in the component, naming the instance. */
+  /** Parts that did not draw as written: an element's error or notice, a widget's content running past its box. */
   problems: Array<{ path?: string; message: string }>;
   /** How current the bound values are: how many parts — nodes, grid items, connectors — show each quality short of
    *  live (`stale`, `disconnected`). */
@@ -97,7 +96,7 @@ export class BrowserLooker implements Looker {
         ratio: request.focus ? 2 : 1,
         placed: placedParts(document),
         limit: MAX_CONTRAST_PROBLEMS,
-      }).then(found => found.map(problem => inDocument(document, problem)));
+      });
       return {
         image: png.toString('base64'),
         report: {
@@ -138,7 +137,7 @@ interface Scale {
 /** How the viewer placed the scene, read off a drawn node: its screen box against its scene box. */
 async function sceneScale(page: Page, document: ViewDocument): Promise<Scale | undefined> {
   if (document.kind !== 'canvas') return undefined;
-  for (const node of expandComponents(document).nodes) {
+  for (const node of document.nodes) {
     const box = await page.locator(`[data-node-id="${cssString(node.id)}"]`).first().boundingBox().catch(() => null);
     if (!box) continue;
     const factor = box.width / nodeSize(node, document.elements).width;
@@ -153,10 +152,9 @@ const MAX_CONTRAST_PROBLEMS = 10;
 
 async function focusClip(page: Page, document: ViewDocument, focus: string, scale: Scale | undefined) {
   const part = getByPointer(document, focus) as { id?: string; type?: string; x?: number; y?: number; width?: number; height?: number; text?: string; fontSize?: number } | undefined;
-  if (!part || typeof part !== 'object') throw new Error(`nothing at ${focus} — focus a node ("/nodes/3"), a grid item ("/items/0"), a connector ("/connectors/2"), a decoration ("/decorations/5") or an instance ("/instances/1")`);
+  if (!part || typeof part !== 'object') throw new Error(`nothing at ${focus} — focus a node ("/nodes/3"), a grid item ("/items/0"), a connector ("/connectors/2") or a decoration ("/decorations/5")`);
   let box: { x: number; y: number; width: number; height: number } | null = null;
   if (focus.startsWith('/nodes/') && part.id) box = await page.locator(`[data-node-id="${cssString(part.id)}"]`).first().boundingBox();
-  else if (/^\/instances\/\d+$/.test(focus) && part.id) box = await unionBox(page.locator(`[data-node-id^="${cssString(instancePartId(part.id, ''))}"]`));
   else if (focus.startsWith('/items/') && part.id) box = await page.locator(`[data-item-id="${cssString(part.id)}"]`).first().boundingBox();
   else if (focus.startsWith('/connectors/') && part.id) box = await page.locator(`[data-connector-id="${cssString(part.id)}"]`).first().boundingBox();
   else if (focus.startsWith('/decorations/') && scale && typeof part.x === 'number' && typeof part.y === 'number') {
@@ -179,18 +177,9 @@ async function focusClip(page: Page, document: ViewDocument, focus: string, scal
   return clip;
 }
 
-/** The box around every element `parts` finds — an instance's parts, together. */
-async function unionBox(parts: ReturnType<Page['locator']>): Promise<{ x: number; y: number; width: number; height: number } | null> {
-  const boxes = (await Promise.all((await parts.all()).map(part => part.boundingBox()))).filter(box => box !== null);
-  if (boxes.length === 0) return null;
-  const x = Math.min(...boxes.map(b => b.x));
-  const y = Math.min(...boxes.map(b => b.y));
-  return { x, y, width: Math.max(...boxes.map(b => b.x + b.width)) - x, height: Math.max(...boxes.map(b => b.y + b.height)) - y };
-}
-
 /** Elements that failed or were held back, and widgets whose content runs past their box. */
 async function problems(page: Page, doc: ViewDocument): Promise<LookReport['problems']> {
-  return (await page.evaluate(findProblems, placedParts(doc))).map(problem => inDocument(doc, problem));
+  return page.evaluate(findProblems, placedParts(doc));
 }
 
 async function quality(page: Page): Promise<Record<string, number>> {

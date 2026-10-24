@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillLabel, isLabelPattern, labelNamesValue, labelPatternError, shownLabel } from './connector-label.js';
+import { fillLabel, isLabelPattern, shownLabel } from './connector-label.js';
 
 describe('connector label patterns', () => {
   it('fills {{value}}, with fixed digits for a number or text that reads as one, and a dash for no value', () => {
@@ -20,13 +20,8 @@ describe('connector label patterns', () => {
     expect(shownLabel('N/A')).toBe('N/A');
   });
 
-  it('tells a pattern, what is wrong with one, and whether it has a place for the value — a parameter of that name taking it', () => {
+  it('tells a pattern from plain text', () => {
     expect(isLabelPattern('Mbps')).toBe(false);
     expect(isLabelPattern('{{value}}')).toBe(true);
-    expect(labelPatternError('{{value}} via {{name}}')).toContain('"{{name}}" names nothing');
-    expect(labelPatternError('{{value}} via {{name}}', new Set(['name']))).toBeUndefined();
-    expect(labelNamesValue('{{name}}', new Set(['name']))).toBe(false);
-    expect(labelNamesValue('{{value}}')).toBe(true);
-    expect(labelNamesValue('{{value}}', new Set(['value']))).toBe(false);
   });
 });

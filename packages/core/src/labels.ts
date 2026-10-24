@@ -12,13 +12,8 @@ export interface UBoardLabels {
   locale: string;
 
   // Toolbar
-  addNode: string;
-  /** A grid view's "add": the new item goes after the selected one, or at the end. */
-  addItem: string;
   /** What a grid cell holding a canvas is called — its tag in the editor. */
   canvasCell: string;
-  /** A grid view's "add a canvas": a cell holding a canvas, after the selected item or at the end. */
-  addCanvas: string;
   /** On a selected canvas cell: open its canvas in the canvas editor — and, there, back to the grid. */
   editCanvas: string;
   backToGrid: string;
@@ -33,15 +28,9 @@ export interface UBoardLabels {
   layoutWide: string;
   layoutMedium: string;
   layoutNarrow: string;
-  addRectDecoration: string;
-  addTextDecoration: string;
   /** Joins the two selected nodes with a line; `connectHint` says how to select them. */
   addConnector: string;
   connectHint: string;
-  /** Makes the selected nodes and decorations a component, drawn by an instance where they were; `makeComponentHint`
-   *  says what can be made one. */
-  makeComponent: string;
-  makeComponentHint: string;
   /** Deletes the selected parts (a node takes its lines with it). */
   deleteSelected: string;
   /** Steps back through the edits since the document was opened (Ctrl+Z), and forward again (Ctrl+Shift+Z or Ctrl+Y). */
@@ -81,10 +70,6 @@ export interface UBoardLabels {
   anchorsMoved: string;
   relocateAnchors: string;
   keepAnchors: string;
-  /** A node's anchor (`Node.anchored`), and the hint shown for an anchored node while the background has no
-   *  reference points to read its coordinate by. */
-  anchored: string;
-  anchorNeedsReferencePoints: string;
   /** The board's tone (`ViewDocument.appearance`): the picker's name and its two choices. */
   appearance: string;
   appearanceLight: string;
@@ -264,9 +249,6 @@ export interface UBoardLabels {
   dataAdd: string;
   propertiesHeading: string;
   widgetType: string;
-  /** The text a new node starts with: its label, and the value it shows until it is bound. */
-  newNodeLabel: string;
-  newNodeValue: string;
   staticProps: string;
   /** The widget form: its data and its options, a field's "bound" mark, a choice left to the widget's
    * own default, the JSON editor it folds the rest into, and how many options only that editor holds. */
@@ -482,31 +464,6 @@ export interface UBoardLabels {
   placeBottomStart: string;
   placeBottom: string;
   placeBottomEnd: string;
-  /** The text a new text decoration starts with. */
-  newTextDecoration: string;
-
-  // Component instance panel — `{component}` names the component it draws, `{count}` a number of parameters
-  instanceHeading: string;
-  instanceOf: string;
-  instanceOfMissing: string;
-  instanceParams: string;
-  instanceOtherParams: string;
-  instanceEditHint: string;
-  /** Draws the instance as parts of the board's own, and the hint saying what that does. */
-  detachInstance: string;
-  detachInstanceHint: string;
-  /** Opens the component the instance draws, to edit it as a board of its own. */
-  editComponent: string;
-
-  // Component panel — while a component is edited; `{component}` names it, `{count}` how many instances draw it
-  componentHeading: string;
-  componentInstances: string;
-  componentParams: string;
-  componentParamsHint: string;
-  componentParamsInvalid: string;
-  componentDone: string;
-  /** Said above the editor while a component is edited. */
-  componentEditing: string;
 
   // Connector (line) panel — `{from}`/`{to}` name the nodes it joins
   connectorHeading: string;
@@ -547,10 +504,7 @@ export function timeText(locale: string): (epochMs: number) => string {
 
 export const DEFAULT_LABELS: UBoardLabels = {
   locale: 'en',
-  addNode: 'Add node',
-  addItem: 'Add item',
   canvasCell: 'Canvas',
-  addCanvas: 'Add canvas',
   editCanvas: 'Edit canvas',
   backToGrid: '← Grid',
   editGridCell: 'Edit the grid in this cell',
@@ -559,12 +513,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   layoutWide: 'Wide',
   layoutMedium: 'Medium',
   layoutNarrow: 'Narrow',
-  addRectDecoration: 'Add rect decoration',
-  addTextDecoration: 'Add text decoration',
   addConnector: 'Connect nodes',
   connectHint: 'Select two nodes (Shift+click the second) to connect them.',
-  makeComponent: 'Make component',
-  makeComponentHint: 'Select the nodes and frames to draw again elsewhere — all anchored or all free.',
   deleteSelected: 'Delete',
   undo: 'Undo',
   partAdd: 'Add part',
@@ -592,8 +542,6 @@ export const DEFAULT_LABELS: UBoardLabels = {
   anchorsMoved: 'Anchored nodes no longer at the coordinates they had: {count}.',
   relocateAnchors: 'Put them back at their coordinates',
   keepAnchors: 'Leave them',
-  anchored: 'Anchored to a place on the background',
-  anchorNeedsReferencePoints: 'Give the background reference points (in the board settings) to place this node by coordinate.',
   appearance: 'Tone',
   appearanceLight: 'Light',
   appearanceDark: 'Dark',
@@ -729,8 +677,6 @@ export const DEFAULT_LABELS: UBoardLabels = {
   dataAdd: 'Add data',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
-  newNodeLabel: 'New node',
-  newNodeValue: 'Not bound',
   staticProps: 'Static props (JSON)',
   widgetData: 'Data',
   widgetOptions: 'Display',
@@ -904,25 +850,6 @@ export const DEFAULT_LABELS: UBoardLabels = {
   placeBottomStart: 'Bottom left',
   placeBottom: 'Bottom',
   placeBottomEnd: 'Bottom right',
-  newTextDecoration: 'Label',
-
-  instanceHeading: 'Component',
-  instanceOf: 'Draws the component "{component}".',
-  instanceOfMissing: 'Draws "{component}", which this board does not define — it draws nothing.',
-  instanceParams: 'Values',
-  instanceOtherParams: 'Values without a field here: {count} — edit them in the document source.',
-  instanceEditHint: 'Drag it to move it. What it draws is the component’s — a change there reaches every instance.',
-  detachInstance: 'Detach into parts',
-  detachInstanceHint: 'Draws it as the board’s own parts, its values filled in — they no longer follow the component.',
-  editComponent: 'Edit component',
-
-  componentHeading: 'Component "{component}"',
-  componentInstances: 'Drawn by {count} instance(s) — a change here reaches every one.',
-  componentParams: 'Parameters (JSON Schema)',
-  componentParamsHint: 'In any text of its parts, {{name}} takes a parameter’s value; a text that is only {{name}} takes the value itself.',
-  componentParamsInvalid: 'Expected a JSON object schema: { "type": "object", "properties": { … } }',
-  componentDone: 'Back to the board',
-  componentEditing: 'Editing the component "{component}" — every instance draws it.',
 
   connectorHeading: 'Line',
   connectorEnds: '{from} → {to}',

@@ -4,21 +4,24 @@ import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { widgetFields, withField } from './widget-fields.js';
 import { WidgetPropsForm } from './WidgetPropsForm.js';
-import { seedWidget } from './widget-catalog.js';
 import type { ElementDefinition, Widget } from '../view-document.js';
+
+const STATUS: Widget = { type: 'status', props: { data: { label: 'New node', tone: 'idle', value: 'Not bound' } } };
+const GAUGE: Widget = { type: 'gauge', props: { data: { value: 0 } } };
+const CHART_LINE: Widget = { type: 'chart.line', props: { data: [{ t: '00:00', value: 0 }], mapping: { x: 't', y: 'value' } } };
 
 const summary = (widget: Widget) => widgetFields(widget).fields.map(f => `${f.section}.${f.key}:${f.kind}`);
 
 describe('widgetFields', () => {
   it("offers a status widget's data fields, its tone and emphasis as choices, and its own mark as text", () => {
-    const { fields, otherOptions } = widgetFields(seedWidget('status'));
+    const { fields, otherOptions } = widgetFields(STATUS);
     expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual(['data.label:text', 'data.value:text', 'data.tone:choice', 'data.glyph:text', 'data.emphasis:choice']);
     expect(fields[2].choices).toContain('warn');
     expect(otherOptions).toBe(0);
   });
 
   it("offers a gauge's value and every option with a simple value, with the widget's defaults, and counts the rest", () => {
-    const { fields, otherOptions } = widgetFields(seedWidget('gauge'));
+    const { fields, otherOptions } = widgetFields(GAUGE);
     expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual([
       'data.value:number',
       'data.tone:choice',
@@ -41,14 +44,14 @@ describe('widgetFields', () => {
   });
 
   it("names each field as the widget library does, in the labels' language", () => {
-    const names = (locale?: string) => widgetFields(seedWidget('gauge'), locale).fields.map(f => f.label);
+    const names = (locale?: string) => widgetFields(GAUGE, locale).fields.map(f => f.label);
     expect(names()).toEqual(['Value', 'Tone', 'Minimum', 'Maximum', 'Unit', 'Label', 'Subtitle', 'Value format', 'Drawn as']);
     expect(names('ko-KR')).toEqual(['값', '상태 톤', '최솟값', '최댓값', '단위', '라벨', '부제', '값 서식', '그리는 꼴']);
-    expect(widgetFields(seedWidget('gauge')).fields[2].description).toBe('Minimum range value');
+    expect(widgetFields(GAUGE).fields[2].description).toBe('Minimum range value');
   });
 
   it('leaves data given as rows to the JSON editor', () => {
-    expect(summary(seedWidget('chart.line')).filter(f => f.startsWith('data.'))).toEqual([]);
+    expect(summary(CHART_LINE).filter(f => f.startsWith('data.'))).toEqual([]);
     expect(summary({ type: 'status', props: { data: [{ label: 'A', value: 'x' }] } }).filter(f => f.startsWith('data.'))).toEqual([]);
   });
 });

@@ -2,7 +2,6 @@ import { sizedNodes } from './node-size.js';
 import { captionBox, estimateTextWidth } from './caption-geometry.js';
 import { boxOf, labelChipOf, placeConnectors, segmentsOf } from './connector-geometry.js';
 import type { CanvasView, TextShape } from './view-document.js';
-import { expandComponents } from './components.js';
 import { DEFAULT_TEXT_SIZE, frameLabelBox, textDecorationBox } from './decoration-geometry.js';
 import type { ViewDocumentAdvice } from './lint-view-document.js';
 
@@ -31,13 +30,10 @@ export function textBox(text: TextShape): Box {
  * them (`placeConnectors`). The most damaging first, at most `limit` (by default {@link GEOMETRY_ADVICE_LIMIT}), then
  * the rest folded into one line that counts them by kind and carries how many it stands for (`count`).
  *
- * The board is judged as drawn, its component instances' parts with it. What lies within one instance is said at the
- * component — that is where it is fixed — once for all the instances it holds for; what involves an instance and
- * another part of the board is said at the instance, which moves. `base` is where the canvas sits in its document —
- * `/items/2/canvas` for a grid's canvas cell; the paths found, and those named in the messages, start there.
+ * `base` is where the canvas sits in its document — `/items/2/canvas` for a grid's canvas cell; the paths found, and
+ * those named in the messages, start there.
  */
-export function lintGeometry(saved: CanvasView, limit = GEOMETRY_ADVICE_LIMIT, base = ''): ViewDocumentAdvice[] {
-  const doc = expandComponents(saved);
+export function lintGeometry(doc: CanvasView, limit = GEOMETRY_ADVICE_LIMIT, base = ''): ViewDocumentAdvice[] {
   const sized = sizedNodes(doc);
   const nodes = sized.map((node, i) => ({ id: node.id, at: ref('nodes', i), box: boxOf(node) }));
   // A text decoration, or a frame's name — drawn in the decoration's place in the order, so a later one's background
@@ -86,7 +82,7 @@ export function lintGeometry(saved: CanvasView, limit = GEOMETRY_ADVICE_LIMIT, b
     }
   }
 
-  const said = inDocument(saved, found, base);
+  const said = inDocument(doc, found, base);
   const shown = said.slice(0, limit).map(({ path, message }) => ({ path, message }));
   if (said.length <= limit) return shown;
   const rest = new Map<string, number>();
@@ -116,80 +112,15 @@ interface Finding {
   message: (other: string, name: string) => string;
 }
 
-/**
- * Findings on the drawn board said at places in the board as saved. A part of the board's own is its own path. A
- * finding within one component instance is said at the component (`/components/<name>/…`) — once for all the
- * instances it holds for, naming them unless it holds for every one. One between an instance's part and another part
- * of the board is said at the instance, which moves, naming the part.
- */
-function inDocument(saved: CanvasView, found: readonly Finding[], base: string): Array<ViewDocumentAdvice & { kind: string }> {
-  const drawnFrom = origins(saved);
-  const drawn = expandComponents(saved);
-  const drawnAs = (r: Ref) => (drawn[r.list] ?? [])[r.index]?.id ?? '';
-  const where = (r: Ref) => {
-    const origin = drawnFrom[r.list][r.index];
-    if (!origin) return { own: `${base}/${r.list}/${r.index}${r.suffix}`, drawnAs: drawnAs(r) };
-    const instance = saved.instances![origin.instance];
-    const component = saved.components![instance.component];
-    return {
-      instance: origin.instance,
-      definition: `/components/${pointerSegment(instance.component)}/${r.list}/${origin.part}${r.suffix}`,
-      at: `/instances/${origin.instance}`,
-      part: (component[r.list] ?? [])[origin.part]?.id ?? '',
-      drawnAs: drawnAs(r),
-    };
-  };
-  const said: Array<ViewDocumentAdvice & { kind: string; instances?: number[]; component?: string }> = [];
-  const within = new Map<string, (typeof said)[number]>();
-  for (const finding of found) {
-    const at = where(finding.at);
-    const other = finding.other && where(finding.other);
-    if (at.own !== undefined) {
-      const otherPath = other ? (other.own ?? other.at!) : '';
-      said.push({ kind: finding.kind, path: at.own, message: finding.message(otherPath, other?.drawnAs ?? '') });
-    } else if (!other || (other.instance === at.instance && other.own === undefined)) {
-      // Within one instance a part is called by its id in the component, so every instance says the same.
-      const message = finding.message(other?.definition ?? '', other?.part ?? '');
-      const key = `${at.definition}\n${message}`;
-      const known = within.get(key);
-      if (known) known.instances!.push(at.instance!);
-      else {
-        const entry = { kind: finding.kind, path: at.definition!, message, instances: [at.instance!], component: saved.instances![at.instance!].component };
-        within.set(key, entry);
-        said.push(entry);
-      }
-    } else {
-      const otherPath = other.own ?? other.at!;
-      said.push({ kind: finding.kind, path: at.at!, message: `its part "${at.part}": ${finding.message(otherPath, other.drawnAs)}` });
-    }
-  }
-  return said.map(({ kind, path, message, instances, component }) => {
-    if (!instances) return { kind, path, message };
-    const all = saved.instances!.filter(instance => instance.component === component).length;
-    if (instances.length === all) return { kind, path, message };
-    const first = instances[0];
-    const more = instances.length > 1 ? ` and ${instances.length - 1} more` : '';
-    return { kind, path, message: `${message} — in the instance "${saved.instances![first].id}" (/instances/${first})${more}` };
-  });
-}
-
-/** For each part of the drawn board, in each list, the instance and the place in its component it comes from — none for
- *  the board's own parts. In the order `expandComponents` draws them. */
-function origins(saved: CanvasView): Record<Ref['list'], Array<{ instance: number; part: number } | undefined>> {
-  const lists = { nodes: [], connectors: [], decorations: [] } as Record<Ref['list'], Array<{ instance: number; part: number } | undefined>>;
-  for (const list of ['nodes', 'connectors', 'decorations'] as const) {
-    lists[list].push(...Array.from({ length: saved[list]?.length ?? 0 }, () => undefined));
-    (saved.instances ?? []).forEach((instance, i) => {
-      const component = saved.components?.[instance.component];
-      if (!component) return;
-      (component[list] ?? []).forEach((_, part) => lists[list].push({ instance: i, part }));
-    });
-  }
-  return lists;
-}
-
-function pointerSegment(segment: string): string {
-  return segment.replace(/~/g, '~0').replace(/\//g, '~1');
+/** Findings said at the paths of the parts they are about, each naming the other part by its path and id. */
+function inDocument(doc: CanvasView, found: readonly Finding[], base: string): Array<ViewDocumentAdvice & { kind: string }> {
+  const path = (r: Ref) => `${base}/${r.list}/${r.index}${r.suffix}`;
+  const id = (r: Ref) => (doc[r.list] ?? [])[r.index]?.id ?? '';
+  return found.map(finding => ({
+    kind: finding.kind,
+    path: path(finding.at),
+    message: finding.message(finding.other ? path(finding.other) : '', finding.other ? id(finding.other) : ''),
+  }));
 }
 
 /** Whether two boxes share some area — touching edges do not count. */

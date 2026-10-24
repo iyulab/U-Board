@@ -23,6 +23,8 @@ All notable changes to this package are documented here. The format follows
 - `edit_board`: a board's parts are addressed by id, so a rename or a removal is a patch at the part and at where the
   layout places it. The topics `canvas`, `data`, `elements`, `components`, `mixed`, `widgets` and `widget:<type>` —
   the rulebook and `kind:<name>` say what they said, in the board language.
+- `inDocument` (`./tools`), and a `look` focus on `/instances/<i>`: the picture a board is drawn as has no component
+  instances, so a problem `look` finds is already reported at the part it is about.
 
 ### Added
 

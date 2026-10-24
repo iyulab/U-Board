@@ -143,16 +143,3 @@ export function FieldControl({ field, value, write, bound = false, labels }: { f
       );
   }
 }
-
-/** A group of fields under `legend`, each read with `read` and written with `write` — what a component instance's
- *  parameter values are edited with, as an element's props are. */
-export function SchemaFieldset({ legend, fields, read, write, labels = DEFAULT_LABELS }: { legend: string; fields: readonly WidgetField[]; read: (field: WidgetField) => unknown; write: (field: WidgetField, value: unknown) => void; labels?: UBoardLabels }) {
-  return (
-    <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>
-      <legend>{legend}</legend>
-      {fields.map(field => (
-        <FieldControl key={field.path.join('.')} field={field} value={read(field)} write={value => value !== read(field) && write(field, value)} labels={labels} />
-      ))}
-    </fieldset>
-  );
-}

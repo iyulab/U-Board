@@ -1,16 +1,12 @@
-import { Scene, getObjectBounds } from '@canvas-kit/core';
-import type { CanvasView, ComponentInstance, Connector, Node, Shape, Widget } from '../view-document.js';
-import { DEFAULT_DECORATION_WIDTH, DEFAULT_DECORATION_HEIGHT } from '../layout-defaults.js';
+import { Scene } from '@canvas-kit/core';
+import type { CanvasView, Shape } from '../view-document.js';
 import { sizedNodes } from '../node-size.js';
-import { seedWidget } from './widget-catalog.js';
 import { decorationObjects } from '../renderer/decoration-drawing.js';
 import { captionObjects, connectorObjects } from '../renderer/connector-drawing.js';
-import { expandComponents } from '../components.js';
 
-/** A newly-added rect decoration's default border — distinct from a node placeholder's blue
- * (`NODE_PLACEHOLDER_STROKE` below) so an author can tell a structural frame apart from a widget
- * footprint at a glance. Also the fallback stroke a designer-mapped rect decoration uses below
- * when the document doesn't set its own. */
+/** The stroke a rect decoration is drawn with in the designer when the document does not set its own — distinct
+ * from a node placeholder's blue (`NODE_PLACEHOLDER_STROKE` below) so a structural frame reads apart from a widget
+ * footprint at a glance. */
 const DECORATION_STROKE = '#f59e0b';
 
 /** A node's placeholder fill/stroke in the designer canvas — the box being positioned, not the
@@ -30,32 +26,24 @@ const NODE_PLACEHOLDER_STROKE = '#3b82f6';
  * node's actual widget appearance. */
 const DECORATION_PLACEHOLDER_FILL = 'rgba(245, 158, 11, 0.08)';
 
-/** The box an instance is selected and moved by in the designer — over the parts it draws, which are locked: a press
- *  anywhere on them is a press on the instance. Filled so its whole area takes the press. */
-const INSTANCE_PLACEHOLDER_FILL = 'rgba(124, 58, 237, 0.06)';
-const INSTANCE_PLACEHOLDER_STROKE = '#7c3aed';
-
 /**
  * Projects a ViewDocument into a canvas-kit Scene the designer can render and let the author
  * drag: the background image (locked, drawn but not editable), the connectors (fixed: selected to edit
  * them, never dragged — they follow their nodes), and one `rect` per node, id'd by node id, standing in
  * for its widget's footprint. A scene object's id names its document part, after a `#` for a part's
- * pieces (`partOf`). A component instance's parts are drawn where they land, locked: they are edited in the
- * component, not where an instance draws them.
+ * pieces (`partOf`).
  */
-export function documentToScene(saved: CanvasView, movable?: (id: string) => boolean, selectable?: (id: string) => boolean): Scene {
+export function documentToScene(doc: CanvasView, movable?: (id: string) => boolean, selectable?: (id: string) => boolean): Scene {
   const scene = new Scene();
-  const doc = expandComponents(saved);
   // Only the nodes `movable` names — and the connectors and decorations `selectable` names — when a layout is all that
-  // is edited; else
-  // every part of the board's own.
+  // is edited; else every part of the board's own.
   const own = new Set(
     (movable
-      ? [...saved.nodes.filter(node => movable(node.id)), ...[...saved.connectors, ...(saved.decorations ?? [])].filter(piece => selectable?.(piece.id))]
-      : [...saved.nodes, ...saved.connectors, ...(saved.decorations ?? [])]
+      ? [...doc.nodes.filter(node => movable(node.id)), ...[...doc.connectors, ...(doc.decorations ?? [])].filter(piece => selectable?.(piece.id))]
+      : [...doc.nodes, ...doc.connectors, ...(doc.decorations ?? [])]
     ).map(part => part.id)
   );
-  // A part an instance draws, and every piece of it: drawn, never selected or moved.
+  // A part not edited here, and every piece of it: drawn, never selected or moved.
   const add = (object: Parameters<Scene['add']>[0]) => scene.add(object.id && !own.has(partOf(object.id)) ? { ...object, locked: true } : object);
 
   if (doc.background.image) {
@@ -85,15 +73,6 @@ export function documentToScene(saved: CanvasView, movable?: (id: string) => boo
     }
   }
 
-  // Each instance, as one: a box over what it draws (its parts are locked, so a press there is the box's), named by the
-  // instance's id, selected and dragged as a part — under the lines, so a line of the board's own to one of its parts is
-  // still picked where it runs over the instance.
-  for (const instance of saved.instances ?? []) {
-    const box = instanceBox(saved, instance);
-    // Moved, never resized or rotated: an instance has a place, its size is its component's.
-    if (box) scene.add({ type: 'rect', id: instance.id, ...box, fill: INSTANCE_PLACEHOLDER_FILL, stroke: INSTANCE_PLACEHOLDER_STROKE, strokeWidth: 1, fixedSize: true });
-  }
-
   // Follows its two nodes: selected to be edited, never dragged — moving a line or its label would move nothing.
   const nodes = sizedNodes(doc);
   for (const object of connectorObjects(nodes, doc.connectors, doc.appearance, { fixed: true }, doc.accent)) add(object);
@@ -113,23 +92,7 @@ export function documentToScene(saved: CanvasView, movable?: (id: string) => boo
     });
   }
 
-
   return scene;
-}
-
-/** The box around what `instance` draws on the board — its nodes and decorations where they land — or `null` when it
- *  draws nothing (a component the board does not define, or one without parts). */
-export function instanceBox(doc: CanvasView, instance: ComponentInstance): { x: number; y: number; width: number; height: number } | null {
-  const alone: CanvasView = { kind: 'canvas', background: {}, nodes: [], connectors: [], components: doc.components, instances: [instance] };
-  const drawn = expandComponents(alone);
-  const boxes = [
-    ...sizedNodes(drawn).map(node => ({ x: node.x, y: node.y, width: node.width, height: node.height })),
-    ...(drawn.decorations ?? []).flatMap(shape => decorationObjects(shape, doc.appearance).map(getObjectBounds)),
-  ];
-  if (boxes.length === 0) return null;
-  const x = Math.min(...boxes.map(b => b.x));
-  const y = Math.min(...boxes.map(b => b.y));
-  return { x, y, width: Math.max(...boxes.map(b => b.x + b.width)) - x, height: Math.max(...boxes.map(b => b.y + b.height)) - y };
 }
 
 /**
@@ -161,51 +124,7 @@ export function applySceneToDocument(doc: CanvasView, scene: Scene): CanvasView 
     return shape;
   });
 
-  // An instance moves by its box: where the box landed, less where the box sits from the instance's origin.
-  const instances = doc.instances?.map(instance => {
-    const obj = objectsById.get(instance.id);
-    const box = obj && obj.type === 'rect' ? instanceBox(doc, instance) : null;
-    if (!obj || !box || (obj.x === box.x && obj.y === box.y)) return instance;
-    return { ...instance, x: instance.x + obj.x - box.x, y: instance.y + obj.y - box.y };
-  });
-
-  return { ...doc, nodes, ...(decorations ? { decorations } : {}), ...(instances ? { instances } : {}) };
-}
-
-/** Appends a new node at `position` with a placeholder widget. Bindings are deliberately absent
- * — a newly added node starts unbound and is wired up afterward via the property panel. `value`
- * is included even though it's static and unbound: u-widgets' status widget renders nothing at
- * all when `data.value` is absent (it treats a valueless item as not an item), so a new node
- * needs a placeholder value to be visible before it's ever bound. */
-const NEW_NODE_BASE_OFFSET = 40;
-const NEW_NODE_CASCADE_STEP = 24;
-const NEW_NODE_CASCADE_WRAP = 8; // after this many nodes, the cascade wraps back to the base offset
-
-/** Where to place the next node the author adds, so repeated "Add node" clicks don't stack every
- * node exactly on top of the last one. Cascades diagonally by node count from `origin` — the scene
- * point at the top-left of what the author currently sees, so a node added while panned or zoomed
- * into part of a large background lands in view — wrapping so positions stay near it even after
- * many additions. The author can still drag it wherever they want. */
-export function nextNodePosition(doc: CanvasView, origin: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
-  const offset = (doc.nodes.length % NEW_NODE_CASCADE_WRAP) * NEW_NODE_CASCADE_STEP;
-  return { x: origin.x + NEW_NODE_BASE_OFFSET + offset, y: origin.y + NEW_NODE_BASE_OFFSET + offset };
-}
-
-/** Appends a new freely placed (not anchored) node at `position`. The id is the caller's, so it can select what it added (`newNodeId`) — as
- * with every part the editor adds. */
-export function addNode(doc: CanvasView, id: string, position: { x: number; y: number }, widget: Widget = seedWidget('status')): CanvasView {
-  const node: Node = {
-    id,
-    x: position.x,
-    y: position.y,
-    anchored: false,
-    widget,
-  };
-  return { ...doc, nodes: [...doc.nodes, node] };
-}
-
-export function newNodeId(): string {
-  return `node-${crypto.randomUUID()}`;
+  return { ...doc, nodes, ...(decorations ? { decorations } : {}) };
 }
 
 /** The document part a scene object draws: its id, or a part's own id before the `#` of one of its pieces (a
@@ -213,56 +132,4 @@ export function newNodeId(): string {
 export function partOf(objectId: string): string {
   const at = objectId.indexOf('#');
   return at === -1 ? objectId : objectId.slice(0, at);
-}
-
-/** Joins two nodes with a new connector, `from` to `to`, drawn the board's way until styled. The id is the caller's,
- * so it can select what it added (`newConnectorId`). */
-export function addConnector(doc: CanvasView, id: string, fromNodeId: string, toNodeId: string): CanvasView {
-  const connector: Connector = { id, fromNodeId, toNodeId };
-  return { ...doc, connectors: [...doc.connectors, connector] };
-}
-
-export function newConnectorId(): string {
-  return `connector-${crypto.randomUUID()}`;
-}
-
-/** Where to place the next decoration the author adds — same cascading-offset reasoning as
- * `nextNodePosition`, kept as its own function (rather than sharing a counter with nodes) so
- * adding several decorations in a row doesn't stack them on top of unrelated nodes placed at the
- * same cascade step. */
-export function nextDecorationPosition(doc: CanvasView, origin: { x: number; y: number } = { x: 0, y: 0 }): { x: number; y: number } {
-  const count = doc.decorations?.length ?? 0;
-  const offset = (count % NEW_NODE_CASCADE_WRAP) * NEW_NODE_CASCADE_STEP;
-  return { x: origin.x + NEW_NODE_BASE_OFFSET + offset, y: origin.y + NEW_NODE_BASE_OFFSET + offset };
-}
-
-/** Appends a new decoration at `position` with a default size/placeholder label — the "draw" step
- * of the authoring tool is just this plus the designer's existing drag/resize (`documentToScene`/
- * `applySceneToDocument` above), the same click-to-add-then-adjust pattern `addNode` already
- * establishes for widget nodes (docs/concepts.md — "Decoration"). The `decoration-` id prefix
- * (vs. `node-` for nodes) is cosmetic only — `applySceneToDocument` tells the two apart by
- * membership in `doc.nodes`/`doc.decorations`, not by parsing the id. The id is the caller's (`newDecorationId`). */
-export function addDecoration(doc: CanvasView, id: string, type: Shape['type'], position: { x: number; y: number }, text = 'Label'): CanvasView {
-  const shape: Shape =
-    type === 'rect'
-      ? { id, type: 'rect', x: position.x, y: position.y, width: DEFAULT_DECORATION_WIDTH, height: DEFAULT_DECORATION_HEIGHT, stroke: DECORATION_STROKE }
-      : { id, type: 'text', x: position.x, y: position.y, text };
-  return { ...doc, decorations: [...(doc.decorations ?? []), shape] };
-}
-
-export function newDecorationId(): string {
-  return `decoration-${crypto.randomUUID()}`;
-}
-
-/** `doc` with instance `id`'s parameter `name` set to `value` — or taken out, when `value` is `undefined`, so the
- *  parameter's default applies. */
-export function setInstanceParam(doc: CanvasView, id: string, name: string, value: unknown): CanvasView {
-  const instances = doc.instances?.map(instance => {
-    if (instance.id !== id) return instance;
-    const { [name]: _old, ...rest } = instance.params ?? {};
-    const params = value === undefined ? rest : { ...rest, [name]: value };
-    const { params: _params, ...bare } = instance;
-    return Object.keys(params).length > 0 ? { ...bare, params } : bare;
-  });
-  return instances ? { ...doc, instances } : doc;
 }

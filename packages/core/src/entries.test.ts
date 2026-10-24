@@ -26,7 +26,7 @@ describe('the entry points', () => {
       'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'CONNECTOR_ROUTES', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'FiringLimit',
       'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS', 'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn',
       'boardStateOf', 'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts',
-      'elementListeners', 'expandComponents', 'findHttpRefItem', 'firedBy', 'getByPointer', 'instancePartId', 'isCanvasItem', 'isHttpRef',
+      'elementListeners', 'findHttpRefItem', 'firedBy', 'getByPointer', 'isCanvasItem', 'isHttpRef',
       'isSourceErrorField', 'isTriggerLink', 'linkFor', 'lintViewDocument', 'nodeSize', 'parseSourceTime', 'placeAt', 'placedAt', 'placedIn',
       'readHttpRef', 'requestPath', 'requestTimeProblem', 'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading', 'sizedNodes',
       'sourceErrorIn', 'stateChanges', 'withItemFields', 'worstQuality', 'writeText',

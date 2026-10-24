@@ -4,7 +4,7 @@ import { bindingsIn } from './document-bindings';
 import { resolveDocument } from './resolve-document';
 import { lintViewDocument } from './lint-view-document';
 import type { Adapter, ResolvedBinding } from './adapter';
-import { cellAsCanvas, duplicateGridItem, idsIn, removeGridItem, withCellCanvas } from './editing/grid-editing';
+import { cellAsCanvas, removeGridItem, withCellCanvas } from './editing/grid-editing';
 
 // A grid whose cell holds a canvas — a mixed board: the spatial panel in one cell, cards around it.
 const bound = (ref: string) => ({ type: 'status', bindings: { 'data.value': { adapter: 'plant', ref } } });
@@ -64,17 +64,7 @@ describe('a grid cell holding a canvas', () => {
     expect(overlap?.message).toContain('/items/1/canvas/nodes/1');
   });
 
-  it('duplicates under fresh ids for every part, and its removal takes the triggers naming its nodes', () => {
-    const copy = duplicateGridItem(mixed(), 'plan', 'plan-2');
-    expect(copy.items.map(item => item.id)).toEqual(['kpi', 'plan', 'plan-2']);
-    const cell = copy.items[2];
-    if (!isCanvasItem(cell)) throw new Error('expected the canvas cell');
-    expect(cell.canvas.nodes.map(n => n.id)).toEqual(['pump-2', 'tank-2']);
-    expect(cell.canvas.connectors[0]).toMatchObject({ id: 'line-2', fromNodeId: 'pump-2', toNodeId: 'tank-2' });
-    expect(cell.canvas.decorations![0].id).toBe('hall-2');
-    expect(duplicateGridItem(mixed(), 'plan', 'tank')).toEqual(mixed());
-    expect([...idsIn(mixed())].sort()).toEqual(['hall', 'kpi', 'line', 'plan', 'pump', 'tank']);
-
+  it('is removed with the triggers naming its nodes', () => {
     const removed = removeGridItem(mixed(), 'plan');
     expect(removed.items.map(item => item.id)).toEqual(['kpi']);
     expect(removed.triggers).toBeUndefined();

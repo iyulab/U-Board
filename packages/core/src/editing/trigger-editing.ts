@@ -17,11 +17,6 @@ export function triggersWithout(triggers: readonly Trigger[] | undefined, parts:
   return kept.length > 0 ? kept : undefined;
 }
 
-/** The triggers on `node` — clicked, its element's events, its states entered or left — with their place in the list. */
-export function triggersOn(triggers: readonly Trigger[] | undefined, node: string): Array<{ trigger: Trigger; index: number }> {
-  return (triggers ?? []).flatMap((trigger, index) => ('node' in trigger.on && trigger.on.node === node ? [{ trigger, index }] : []));
-}
-
 /** `doc` with `trigger` added at the end of its triggers. */
 export function withTrigger<D extends ViewDocument>(doc: D, trigger: Trigger): D {
   return { ...doc, triggers: [...(doc.triggers ?? []), trigger] };

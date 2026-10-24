@@ -118,22 +118,6 @@ describe('resolveDocument', () => {
     expect((await resolveDocument(doc, [nms])).connectors.map(c => c.label)).toEqual(['820.4 Mbps', '↓ 96 Mbps', '— Mbps', '820.44']);
   });
 
-  it('keeps a component connector’s {{value}} for its binding while its parameters fill the rest', async () => {
-    const nms: Adapter = { id: 'nms', resolve: async ref => ({ value: ref === '/links/core' ? 412.3 : undefined, quality: 'live' }) };
-    const doc: CanvasView = {
-      kind: 'canvas', background: {}, nodes: [], connectors: [],
-      components: {
-        link: {
-          params: { type: 'object', required: ['name'], properties: { name: { type: 'string' } } },
-          nodes: [{ id: 'a', x: 0, y: 0, widget: { type: 'metric' } }, { id: 'b', x: 100, y: 0, widget: { type: 'metric' } }],
-          connectors: [{ id: 'l', fromNodeId: 'a', toNodeId: 'b', label: '{{name}} {{value | fixed:0}} Mbps · {{value}}', bindings: { label: { adapter: 'nms', ref: '/links/{{name}}' } } }],
-        },
-      },
-      instances: [{ id: 'i', component: 'link', x: 0, y: 0, anchored: false, params: { name: 'core' } }],
-    };
-    expect((await resolveDocument(doc, [nms])).connectors.map(c => c.label)).toEqual(['core 412 Mbps · 412.3']);
-  });
-
   it('turns a connector’s arrow by a value’s sign — a value map from ranges to arrows — and keeps the static one for a word it does not know', async () => {
     const flows: Record<string, ResolvedBinding> = { '/in': { value: 12.5, quality: 'live' }, '/out': { value: -3, quality: 'live' }, '/odd': { value: 'up', quality: 'live' } };
     const ems: Adapter = { id: 'ems', resolve: async ref => flows[ref as string] };

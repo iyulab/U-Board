@@ -7,48 +7,6 @@ const node = (id: string, x: number, y: number, size: Partial<Pick<Node, 'width'
 const text = (id: string, x: number, y: number, value: string, fontSize?: number): Shape => ({ id, type: 'text', x, y, text: value, ...(fontSize && { fontSize }) });
 const canvas = (parts: Partial<CanvasView>): CanvasView => ({ kind: 'canvas', background: {}, nodes: [], connectors: [], ...parts });
 
-describe('lintGeometry on component instances', () => {
-  // A component's nodes: a node without anchored, which its instance gives.
-  const card = (nodes: Node[]) => ({
-    params: { type: 'object' as const, properties: { name: { type: 'string' as const } } },
-    nodes: nodes.map(n => Object.fromEntries(Object.entries(n).filter(([key]) => key !== 'anchored')) as Omit<Node, 'anchored'>),
-  });
-  const instance = (id: string, x: number, name = id) => ({ id, component: 'card', x, y: 0, anchored: false, params: { name } });
-
-  it('says what instances draw over one another at the instance, which moves, naming the part', () => {
-    const doc = canvas({ components: { card: card([node('temp', 0, 0)]) }, instances: [instance('p1', 0), instance('p2', 100)] });
-    expect(lintGeometry(doc)).toEqual([
-      { path: '/instances/0', message: 'its part "temp": its box overlaps node "p2/temp" (/instances/1) — one widget draws over the other; move or resize one' },
-    ]);
-  });
-
-  it('says what lies within every instance once, at the component, where it is fixed', () => {
-    const doc = canvas({ components: { card: card([node('a', 0, 0), node('b', 50, 0)]) }, instances: [instance('p1', 0), instance('p2', 1000)] });
-    expect(lintGeometry(doc)).toEqual([
-      { path: '/components/card/nodes/0', message: 'its box overlaps node "b" (/components/card/nodes/1) — one widget draws over the other; move or resize one' },
-    ]);
-  });
-
-  it('names the instances a finding within holds for, when it is not every one', () => {
-    const parts = [node('a', 0, 0, { width: 40, height: 40 }), node('b', 60, 40, { width: 40, height: 40 })];
-    const doc = canvas({
-      components: { card: { ...card(parts), nodes: [{ ...card(parts).nodes[0], caption: '{{name}}' }, card(parts).nodes[1]] } },
-      instances: [instance('p1', 0, 'P1'), instance('p2', 1000, 'a name long enough to run under the next node')],
-    });
-    const found = lintGeometry(doc);
-    expect(found).toHaveLength(1);
-    expect(found[0].path).toBe('/components/card/nodes/0/caption');
-    expect(found[0].message).toMatch(/— in the instance "p2" \(\/instances\/1\)$/);
-  });
-
-  it('names an instance, by its path, in what is said about a part of the board’s own', () => {
-    const doc = canvas({ nodes: [node('hall', 0, 0)], components: { card: card([node('temp', 0, 0)]) }, instances: [instance('p1', 100)] });
-    expect(lintGeometry(doc)).toEqual([
-      { path: '/nodes/0', message: 'its box overlaps node "p1/temp" (/instances/0) — one widget draws over the other; move or resize one' },
-    ]);
-  });
-});
-
 describe('lintGeometry', () => {
   it('finds nothing on a board whose parts keep apart', () => {
     const doc = canvas({

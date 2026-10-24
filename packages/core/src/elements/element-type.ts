@@ -1,9 +1,6 @@
 /** A widget `type` that names an element of its document: `element:<name>`. */
 export const ELEMENT_TYPE_PREFIX = 'element:';
 
-/** An element's name: lowercase letters, digits and hyphens, starting with a letter, at most 40 characters. */
-export const ELEMENT_NAME = /^[a-z][a-z0-9-]{0,39}$/;
-
 /** The element a widget `type` names, or `undefined` when it names a prepared widget. */
 export function elementNameOf(type: string): string | undefined {
   return type.startsWith(ELEMENT_TYPE_PREFIX) ? type.slice(ELEMENT_TYPE_PREFIX.length) : undefined;

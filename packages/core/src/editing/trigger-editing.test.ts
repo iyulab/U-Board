@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { triggersWithout, triggersOn, withTrigger, replaceTrigger, removeTrigger } from './trigger-editing';
+import { triggersWithout, withTrigger, replaceTrigger, removeTrigger } from './trigger-editing';
 import { removeParts } from './part-removal';
 import { removeGridItem } from './grid-editing';
 import type { CanvasView, GridView, Trigger } from '../view-document';
@@ -33,7 +33,7 @@ describe('editing a board’s triggers', () => {
 
   it('adds, replaces and removes by index, and leaves no empty list', () => {
     const added = withTrigger(withTrigger(doc, click('a')), click('b'));
-    expect(triggersOn(added.triggers, 'b')).toEqual([{ trigger: click('b'), index: 1 }]);
+    expect(added.triggers).toEqual([click('a'), click('b')]);
     const replaced = replaceTrigger(added, 0, click('a', { action: 'focus', node: 'b' }));
     expect(replaced.triggers![0].do).toEqual([{ action: 'focus', node: 'b' }]);
     const removed = removeTrigger(removeTrigger(replaced, 1), 0);

@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { coordinateOf, placeAt } from '../anchor.js';
-import type { Background, Node, ReferencePoint } from '../view-document.js';
-import type { SizedNode } from '../node-size.js';
+import type { ReferencePoint } from '../view-document.js';
 import type { UBoardLabels } from '../labels.js';
 import { ERROR_STYLE } from '../ui-style.js';
 
@@ -17,78 +15,6 @@ function parsed(text: string): number | null {
 
 /** A coordinate as the field shows it — enough digits for a longitude to a metre, without a float's tail. */
 const shown = (value: number) => String(Number(value.toPrecision(10)));
-
-/**
- * Whether a node is anchored — placed at a place on the background rather than freely (`Node.anchored`) —
- * and, when the background has reference points, the coordinate it is anchored at: typed in, the node moves
- * there (its box's center), and moving the node changes it.
- */
-export function NodeAnchorFields({
-  node,
-  background,
-  onChange,
-  labels,
-}: {
-  /** Its box's size settled (`sizedNodes`) — the anchor is the box's center. */
-  node: SizedNode;
-  background: Background;
-  onChange: (change: Partial<Pick<Node, 'x' | 'y' | 'anchored'>>) => void;
-  labels: UBoardLabels;
-}) {
-  const coordinate = node.anchored ? coordinateOf(background, node) : null;
-  const atX = coordinate ? shown(coordinate.x) : '';
-  const atY = coordinate ? shown(coordinate.y) : '';
-  const [x, setX] = useState(atX);
-  const [y, setY] = useState(atY);
-  // The fields follow the node — dragged, resized, or another node selected — and are typed into between.
-  useEffect(() => {
-    setX(atX);
-    setY(atY);
-  }, [atX, atY]);
-
-  const place = () => {
-    // Only what was typed moves the node: leaving an untouched field must not re-place it by its rounding.
-    if (x === atX && y === atY) return;
-    const cx = parsed(x);
-    const cy = parsed(y);
-    if (cx === null || cy === null) return;
-    const at = placeAt(background, node, { x: cx, y: cy });
-    if (at) onChange(at);
-  };
-
-  return (
-    <>
-      <label className="ub-panel__field ub-panel__field--check">
-        <input type="checkbox" checked={node.anchored} onChange={e => onChange({ anchored: e.target.checked })} />
-        {labels.anchored}
-      </label>
-      {node.anchored &&
-        (coordinate ? (
-          <div className="ub-panel__map-row" style={ROW_STYLE}>
-            {[
-              { label: labels.coordinateX, value: x, set: setX },
-              { label: labels.coordinateY, value: y, set: setY },
-            ].map(field => (
-              <label key={field.label} className="ub-panel__field" style={FIELD_STYLE}>
-                {field.label}
-                <input
-                  type="number"
-                  step="any"
-                  style={NUMBER_STYLE}
-                  value={field.value}
-                  onChange={e => field.set(e.target.value)}
-                  onBlur={place}
-                  onKeyDown={e => e.key === 'Enter' && place()}
-                />
-              </label>
-            ))}
-          </div>
-        ) : (
-          <p className="ub-panel__hint">{labels.anchorNeedsReferencePoints}</p>
-        ))}
-    </>
-  );
-}
 
 type PointDraft = [string, string, string, string];
 

@@ -1,15 +1,5 @@
-import { isCanvasItem, placedIn, type CanvasView, type CellCanvas, type GridCanvasItem, type GridItem, type GridLayout, type GridView, type GridWidgetItem } from '../view-document.js';
+import { isCanvasItem, type CanvasView, type CellCanvas, type GridCanvasItem, type GridItem, type GridLayout, type GridView, type GridWidgetItem } from '../view-document.js';
 import { triggersWithout, withTriggers } from './trigger-editing.js';
-
-/** An id for a new grid item. */
-export const newGridItemId = (): string => `item-${crypto.randomUUID()}`;
-
-/** Adds `item` after the one with `afterId`, or at the end when there is none. */
-export function addGridItem(doc: GridView, item: GridItem, afterId?: string | null): GridView {
-  const at = afterId ? doc.items.findIndex(existing => existing.id === afterId) + 1 : 0;
-  const index = at > 0 ? at : doc.items.length;
-  return { ...doc, items: [...doc.items.slice(0, index), item, ...doc.items.slice(index)] };
-}
 
 /** What can change on a grid item: its room, and its widget and states or its canvas — whichever it holds. */
 export type GridItemChange = Partial<GridLayout & Pick<GridWidgetItem, 'widget' | 'states'> & Pick<GridCanvasItem, 'canvas'>>;
@@ -44,55 +34,11 @@ export function gridItemIndex(doc: GridView, id: string): number {
   return doc.items.findIndex(item => item.id === id);
 }
 
-/** A copy of the item with `id`, under `newId`, right after it — its widget, bindings and layout, or its canvas with
- *  every node, connector and decoration under an id of its own (ids are unique in the document); the triggers that
- *  name the original stay with it. */
-export function duplicateGridItem(doc: GridView, id: string, newId: string): GridView {
-  const item = doc.items.find(existing => existing.id === id);
-  if (!item || idsIn(doc).has(newId)) return doc;
-  const copy = { ...structuredClone(item), id: newId };
-  return addGridItem(doc, isCanvasItem(copy) ? { ...copy, canvas: withFreshIds(copy.canvas, idsIn(doc)) } : copy, id);
-}
-
 /** Removes the item with `id` — and, for a canvas, the triggers that name its nodes along with those naming it. */
 export function removeGridItem(doc: GridView, id: string): GridView {
   const item = doc.items.find(existing => existing.id === id);
   const gone = new Set([id, ...(item && isCanvasItem(item) ? item.canvas.nodes.map(node => node.id) : [])]);
   return withTriggers({ ...doc, items: doc.items.filter(existing => existing.id !== id) }, triggersWithout(doc.triggers, gone));
-}
-
-/** Every id a grid view uses — its items' and its canvas cells' nodes, connectors and decorations. */
-export function idsIn(doc: GridView): Set<string> {
-  const ids = new Set(doc.items.map(item => item.id));
-  for (const placed of placedIn(doc)) ids.add(placed.id);
-  for (const item of doc.items) {
-    if (!isCanvasItem(item)) continue;
-    for (const part of [...item.canvas.connectors, ...(item.canvas.decorations ?? [])]) ids.add(part.id);
-  }
-  return ids;
-}
-
-/** `canvas` with every id replaced by the first of `<id>-2`, `<id>-3`, … that `taken` does not have — its connectors
- *  following their nodes. */
-function withFreshIds(canvas: CellCanvas, taken: Set<string>): CellCanvas {
-  const renamed = new Map<string, string>();
-  const fresh = (id: string) => {
-    let n = 2;
-    while (taken.has(`${id}-${n}`)) n++;
-    const next = `${id}-${n}`;
-    taken.add(next);
-    renamed.set(id, next);
-    return next;
-  };
-  const nodes = canvas.nodes.map(node => ({ ...node, id: fresh(node.id) }));
-  const connectors = canvas.connectors.map(c => ({ ...c, id: fresh(c.id), fromNodeId: renamed.get(c.fromNodeId) ?? c.fromNodeId, toNodeId: renamed.get(c.toNodeId) ?? c.toNodeId }));
-  const decorations = canvas.decorations?.map(shape => ({ ...shape, id: fresh(shape.id) }));
-  return { ...canvas, nodes, connectors, ...(decorations && { decorations }) };
-}
-
-/** A new canvas cell under `id`: no background, nothing on it yet, two thirds of the width. */
-export function newCanvasItem(id: string): GridCanvasItem {
-  return { id, span: 8, canvas: { background: {}, nodes: [], connectors: [] } };
 }
 
 /** The canvas cell with `id` as a canvas board of its own — its spatial layer with what the board defines once —
@@ -105,7 +51,7 @@ export function cellAsCanvas(doc: GridView, id: string): CanvasView | null {
 }
 
 /** `doc` with the canvas cell `id` made `canvas`: the spatial layer goes to the cell, and what the board defines once
- *  — its elements, symbols, triggers, appearance and accent — to the board. Components stay with canvas boards. */
+ *  — its elements, symbols, triggers, appearance and accent — to the board. */
 export function withCellCanvas(doc: GridView, id: string, canvas: CanvasView): GridView {
   const { background, nodes, connectors, decorations } = canvas;
   const cell: CellCanvas = { background, nodes, connectors, ...(decorations && { decorations }) };

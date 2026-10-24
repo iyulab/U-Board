@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { addGridItem, gridItemIndex, moveGridItem, newGridItemId, removeGridItem, updateGridItem } from './grid-editing';
+import { gridItemIndex, moveGridItem, removeGridItem, updateGridItem } from './grid-editing';
 import type { GridView } from '../view-document';
 
 const widget = { type: 'gauge' };
@@ -7,14 +7,6 @@ const grid = (): GridView => ({ kind: 'grid', items: [{ id: 'a', widget }, { id:
 const ids = (doc: GridView) => doc.items.map(item => item.id);
 
 describe('grid editing', () => {
-  it('adds an item after the selected one, or at the end', () => {
-    const item = { id: 'new', widget: { type: 'status' } };
-    expect(ids(addGridItem(grid(), item, 'a'))).toEqual(['a', 'new', 'b', 'c']);
-    expect(ids(addGridItem(grid(), item))).toEqual(['a', 'b', 'c', 'new']);
-    expect(ids(addGridItem(grid(), item, 'gone'))).toEqual(['a', 'b', 'c', 'new']);
-    expect(newGridItemId()).not.toBe(newGridItemId());
-  });
-
   it('moves an item to a place — one earlier or later, or where it is dropped — and leaves it past either end', () => {
     expect(ids(moveGridItem(grid(), 'b', 0))).toEqual(['b', 'a', 'c']);
     expect(ids(moveGridItem(grid(), 'b', 2))).toEqual(['a', 'c', 'b']);

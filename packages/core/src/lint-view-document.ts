@@ -1,5 +1,4 @@
 import { isCanvasItem, placedAt, placedIn } from './view-document.js';
-import { componentWidgets, expandComponents, instancePartId } from './components.js';
 import type { StateRule, ViewDocument } from './view-document.js';
 import { ELEMENT_SIZE_BUDGET, SCRIPT_ELEMENT_BUDGET, elementNameOf } from './elements/element-type.js';
 import { lintGeometry } from './lint-geometry.js';
@@ -35,18 +34,16 @@ export function lintViewDocument(doc: ViewDocument, options: LintOptions = {}): 
       : doc.items.flatMap((item, i) => (isCanvasItem(item) ? lintGeometry({ kind: 'canvas', elements: doc.elements, ...item.canvas }, options.geometryLimit, `/items/${i}/canvas`) : []));
   const elements = doc.elements ?? {};
   const placed = new Map<string, number>();
-  // A component's node places its element once for each instance that draws it.
-  for (const { widget } of placedIn(expandComponents(doc))) {
+  for (const { widget } of placedIn(doc)) {
     const name = elementNameOf(widget.type);
     if (name !== undefined) placed.set(name, (placed.get(name) ?? 0) + 1);
   }
-  const inComponents = new Set(componentWidgets(doc).flatMap(widget => elementNameOf(widget.type) ?? []));
 
   let scripts = 0;
   for (const [name, definition] of Object.entries(elements)) {
     const path = `/elements/${name}`;
     const count = placed.get(name) ?? 0;
-    if (count === 0 && !inComponents.has(name)) advice.push({ path, message: 'no node or grid item places this element — remove it, or place it' });
+    if (count === 0) advice.push({ path, message: 'no node or grid item places this element — remove it, or place it' });
     if (definition.render === 'script') scripts += count;
     const size = (definition.template?.length ?? 0) + (definition.script?.length ?? 0) + (definition.style?.length ?? 0);
     if (size > ELEMENT_SIZE_BUDGET) {
@@ -57,8 +54,7 @@ export function lintViewDocument(doc: ViewDocument, options: LintOptions = {}): 
     advice.push({ path: '', message: `${scripts} script elements are placed — over ${SCRIPT_ELEMENT_BUDGET}, each a frame of its own; draw what needs no code as template elements` });
   }
 
-  // The states a part's map names, and advice for a look of one it never names — at the part's path, or at the
-  // component node's for a part an instance draws (each node once).
+  // The states a part's map names, and advice for a look of one it never names, at the part's path.
   const namedStates = (rule: StateRule | undefined, at: string) => {
     const named = new Set<string>(
       rule
@@ -78,16 +74,6 @@ export function lintViewDocument(doc: ViewDocument, options: LintOptions = {}): 
   };
   const statesOf = new Map<string, Set<string>>();
   for (const { placed, at } of placedAt(doc)) statesOf.set(placed.id, namedStates(placed.states, at));
-  if (doc.kind === 'canvas') {
-    const byComponent = new Map<string, Set<string>[]>();
-    for (const [name, component] of Object.entries(doc.components ?? {})) {
-      byComponent.set(name, component.nodes.map((node, j) => namedStates(node.states, `/components/${name}/nodes/${j}`)));
-    }
-    for (const instance of doc.instances ?? []) {
-      const named = byComponent.get(instance.component);
-      doc.components?.[instance.component]?.nodes.forEach((node, j) => statesOf.set(instancePartId(instance.id, node.id), named![j]));
-    }
-  }
 
   // A trigger waiting for a state its part is never in never fires.
   const never = (node: string, state: string, path: string) => {

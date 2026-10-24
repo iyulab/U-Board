@@ -1,6 +1,5 @@
 import { useId, useState } from 'react';
 import { isTriggerLink, placedIn, type Trigger, type TriggerAction, type TriggerEvent, type ViewDocument } from '../view-document.js';
-import { expandComponents } from '../components.js';
 import { partNamer } from './part-names.js';
 import { stateNames } from './StatesEditor.js';
 import { removeTrigger, replaceTrigger, withTrigger } from '../editing/trigger-editing.js';
@@ -311,9 +310,9 @@ function optionName(part: string, nameOf: ((part: string) => string) | undefined
   return name === part ? part : `${name} (${part})`;
 }
 
-/** The parts a trigger may name are the board's as drawn — the parts its component instances draw among them. */
+/** The parts a trigger may name are the parts the board places. */
 export function triggerEditing<D extends ViewDocument>(doc: D, updateDoc: (update: (current: D) => D) => void, locale?: string): TriggerEditing {
-  const placed = placedIn(expandComponents(doc));
+  const placed = placedIn(doc);
   return {
     triggers: doc.triggers,
     parts: placed.map(part => part.id),

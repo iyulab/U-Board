@@ -1,6 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { KO_LABELS, ViewerPage, type Adapter, type ViewDocument } from '@iyulab/u-board';
-import { countQualityMarks, findProblems, inDocument, placedParts, type LookRequest, type LookResult, type Looker } from '@iyulab/u-board-mcp/tools';
+import { countQualityMarks, findProblems, placedParts, type LookRequest, type LookResult, type Looker } from '@iyulab/u-board-mcp/tools';
 
 /** What the board is drawn with — the editor's own: its data sources, its clock, where its elements may load from. */
 export interface LookSetting {
@@ -55,7 +55,7 @@ export class InPageLooker implements Looker {
       );
       await drawn(stage);
       await new Promise(resolve => setTimeout(resolve, SETTLE_MS));
-      const problems = findProblems(placedParts(document), stage).map(problem => inDocument(document, problem));
+      const problems = findProblems(placedParts(document), stage);
       return {
         report: {
           picture: { width: request.width, height: request.height },

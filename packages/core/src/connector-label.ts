@@ -16,24 +16,6 @@ export function isLabelPattern(label: string | undefined): label is string {
   return typeof label === 'string' && label.includes('{{');
 }
 
-/** What is wrong with a label pattern, or undefined when it reads. In a component, `params` are the names its
- *  parameters fill before the value is read. */
-export function labelPatternError(label: string, params: ReadonlySet<string> = new Set()): string | undefined {
-  const parsed = parseTemplate(label);
-  if (!parsed.ok) return parsed.error;
-  for (const node of parsed.nodes) {
-    if (node.kind === 'section') return 'a connector label takes no sections — only {{value}} or {{value | fixed:N}}';
-    if (node.kind === 'value' && node.path !== 'value' && !params.has(node.path)) return `"{{${node.path}}}" names nothing — a connector label names its bound value as {{value}}`;
-  }
-  return undefined;
-}
-
-/** Whether a label pattern has a place for the bound value — `{{value}}`, which a parameter of that name takes instead. */
-export function labelNamesValue(label: string, params: ReadonlySet<string> = new Set()): boolean {
-  const parsed = parseTemplate(label);
-  return !params.has('value') && parsed.ok && parsed.nodes.some(node => node.kind === 'value' && node.path === 'value');
-}
-
 /** A label pattern with the value in its place — `undefined` (no value to show) reads as `—`. A pattern that does
  *  not read is shown as it is, as an unbound label would be. */
 export function fillLabel(label: string, value: unknown): string {

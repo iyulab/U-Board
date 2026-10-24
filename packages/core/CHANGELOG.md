@@ -27,6 +27,11 @@ All notable changes to this package are documented here. The format follows
 - Requires `@iyulab/u-widgets` 0.42: a `status` item's state is `data.tone` (`ok` · `warn` · `alarm` · `idle` · …), a
   `metric`'s is `data.tone`, a chart's axis format is a string (`xFormat: 'time'`), and an item's own mark is drawn.
   Requires `@canvas-kit/viewer` 0.6.1, where dragging to pan no longer selects overlay text.
+- `@iyulab/u-board/picture` no longer exports `expandComponents`, `instancePartId` or `ExpandedView`, nor the types
+  `ComponentDefinition`, `ComponentNode` and `ComponentInstance`; `CanvasView` has no `components` or `instances` — the
+  picture a board is drawn as has no components.
+- `UBoardLabels` drops the keys of the editor parts that are gone (components and instances, the add toolbar, node
+  anchoring) — a labels object that sets them is no longer typed against them.
 
 ### Added
 
