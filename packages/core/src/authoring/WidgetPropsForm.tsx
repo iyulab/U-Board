@@ -72,7 +72,8 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS, ele
 
 /** The control for one field: `value` is its value now, `write` sets it (`undefined` takes it out), `bound` marks a value
  *  a binding fills. A typed value is written when the control is left (or a choice is made), not on every keystroke. */
-function FieldControl({ field, value, write, bound = false, labels }: { field: WidgetField; value: unknown; write: (value: unknown) => void; bound?: boolean; labels: UBoardLabels }) {
+/** The control of one field: a text, a number, a check box or a choice, named as the widget library names it. */
+export function FieldControl({ field, value, write, bound = false, labels }: { field: WidgetField; value: unknown; write: (value: unknown) => void; bound?: boolean; labels: UBoardLabels }) {
   const name = (
     <span className="ub-panel__field-name" title={field.description}>
       {field.label} <code>{field.key}</code>

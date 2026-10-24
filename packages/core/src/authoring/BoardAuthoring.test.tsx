@@ -67,3 +67,19 @@ describe('BoardAuthoring', () => {
     expect(screen.getByRole('button', { name: /^2\. / })).toBeInTheDocument();
   });
 });
+
+describe('PartPanel — its kind’s options', () => {
+  const listed: BoardV2 = { ...board, parts: { rows: { as: 'list', of: 'pumps', show: 'flow', state: 'state', meter: { field: 'flow' } } } as BoardV2['parts'] };
+
+  it('sets the options the board reads itself by a field’s name, and the widget’s with their own controls', () => {
+    const onChange = vi.fn();
+    render(<PartPanel id="rows" board={listed} onChange={onChange} />);
+    fireEvent.change(screen.getByRole('combobox', { name: 'primary' }), { target: { value: 'state' } });
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ primary: 'state' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'max' }), { target: { value: '5' } });
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ max: 5 }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /compact/ }));
+    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({ compact: true }));
+    expect(screen.queryByText('maxItems')).toBeNull();
+  });
+});

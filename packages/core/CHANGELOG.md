@@ -25,7 +25,8 @@ All notable changes to this package are documented here. The format follows
 - `BoardAuthoring`: the authoring surface of a board in the language's second version — drawn from its picture, its
   parts moved, sized and deleted on a canvas as on any board, each edit said again in the board's layout (and a deleted
   part's links and triggers removed with it), and on a grid of parts ordered, widened and deleted (an item of a part
-  made per item widening the part); a selected part's title, kind, data (and item) and fields set in its panel, with
+  made per item widening the part); a selected part's title, kind, data (and item), fields and its kind's options (the
+  board's own by a field's name, the widget's with the controls the widget library describes) set in its panel, with
   what the board's check finds there — a setting the board cannot be drawn with keeps the last board it could draw,
   and says why. Undo, Redo, Save and Export are the board's. A part's other options, and a grid that holds grids or
   canvases of its own (`layoutEditable`), are not edited there yet.

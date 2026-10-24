@@ -1,7 +1,9 @@
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { FIELD_STYLE } from '../ui-style.js';
-import { PART_KINDS } from '../board-v2/kinds.js';
+import { PART_KINDS, partKind } from '../board-v2/kinds.js';
+import { widgetFields } from './widget-fields.js';
+import { FieldControl } from './WidgetPropsForm.js';
 import type { BoardFinding } from '../board-v2/check.js';
 import type { BoardV2, Part } from '../board-v2/types.js';
 
@@ -19,10 +21,16 @@ export interface PartPanelProps {
 /** `<data>` or `<data>[<key>]`, as a part names what it reads. */
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
+/** The widget's options a kind's own option stands for — a list's `max` is the widget's `maxItems`, its `variant` the
+ *  widget's `layout` — offered once, in the kind's words. */
+const STANDS_FOR: Readonly<Record<string, readonly string[]>> = { list: ['maxItems', 'layout'] };
+
 /**
  * The panel of a part of a board in the language's second version: its title, its kind, what it reads (a data read,
- * and one item of it by key) and which fields it shows. A setting left empty goes from the part, so the board keeps
- * only what was set. A part made per item reads the items its `each` names, shown and not changed here.
+ * and one item of it by key), which fields it shows, then its kind's options — those the board reads itself (a field's
+ * name, offered from what the part reads; one written as a structure is shown, and set by the assistant or the JSON),
+ * and the widget's, with the controls the widget library describes. A setting left empty goes from the part, so the
+ * board keeps only what was set. A part made per item reads the items its `each` names, shown and not changed here.
  */
 export function PartPanel({ id, board, onChange, findings = [], labels = DEFAULT_LABELS }: PartPanelProps) {
   const part = board.parts[id] ?? {};
@@ -37,6 +45,12 @@ export function PartPanel({ id, board, onChange, findings = [], labels = DEFAULT
   const reads = typeof part.each === 'string' ? part.each : data;
   const fields = Object.keys(board.data?.[reads]?.fields ?? {});
   const show = part.show === undefined ? '' : Array.isArray(part.show) ? part.show.join(', ') : part.show;
+  const kind = partKind(part.as ?? (part.use !== undefined ? board.presets?.[part.use]?.as : undefined) ?? '');
+  const widgetOptions = useMemo(
+    () => (kind?.widget === undefined ? [] : widgetFields({ type: kind.widget, props: {} }, labels.locale).fields.filter(f => f.section === 'options' && kind.options.includes(f.key) && !STANDS_FOR[kind.kind]?.includes(f.key))),
+    [kind, labels.locale]
+  );
+  const own = (kind?.own ?? []).filter(key => !['size', 'parts', 'place'].includes(key));
   const writeOf = (nextData: string, nextKey: string) => set('of', nextData === '' ? undefined : nextKey.trim() === '' ? nextData : `${nextData}[${nextKey.trim()}]`);
   return (
     <div className="ub-panel ub-panel--part">
@@ -99,6 +113,46 @@ export function PartPanel({ id, board, onChange, findings = [], labels = DEFAULT
             </option>
           ))}
         </datalist>
+      )}
+      {own.length > 0 && (
+        <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>
+          <legend>{labels.partOwnOptions}</legend>
+          {own.map(key => {
+            const value = (part as Record<string, unknown>)[key];
+            const structured = value !== undefined && typeof value !== 'string' && typeof value !== 'number';
+            return (
+              <div key={key} className="ub-panel__field" style={FIELD_STYLE}>
+                <code aria-hidden="true">{key}</code>
+                <input
+                  type="text"
+                  aria-label={key}
+                  list={fields.length > 0 ? fieldList : undefined}
+                  value={structured ? JSON.stringify(value) : value === undefined ? '' : String(value)}
+                  readOnly={structured}
+                  title={structured ? labels.partStructured : undefined}
+                  onChange={e => {
+                    const text = e.target.value.trim();
+                    set(key as keyof typeof part, text !== '' && /^-?\d+(\.\d+)?$/.test(text) && key === 'max' ? Number(text) : text);
+                  }}
+                />
+              </div>
+            );
+          })}
+        </fieldset>
+      )}
+      {widgetOptions.length > 0 && (
+        <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>
+          <legend>{labels.partWidgetOptions}</legend>
+          {widgetOptions.map(field => (
+            <FieldControl
+              key={field.key}
+              field={field}
+              value={(part as Record<string, unknown>)[field.key]}
+              write={value => set(field.key as keyof typeof part, value)}
+              labels={labels}
+            />
+          ))}
+        </fieldset>
       )}
       {findings.length > 0 && (
         <ul className="ub-panel__findings" role="alert">

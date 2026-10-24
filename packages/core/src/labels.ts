@@ -161,6 +161,11 @@ export interface UBoardLabels {
   partShow: string;
   /** A part made per item of `{data}`. */
   partEach: string;
+  /** The groups of a part's kind's options: the ones the board reads itself, and the widget's. */
+  partOwnOptions: string;
+  partWidgetOptions: string;
+  /** An option written as a structure — not edited in a text box. */
+  partStructured: string;
   /** A board whose settings leave it one that cannot be drawn: `{reason}`, where and why. */
   boardNotDrawn: string;
   propertiesHeading: string;
@@ -538,6 +543,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   partItemAll: 'every item',
   partShow: 'Shows (fields, by commas)',
   partEach: 'One part per item of {data}.',
+  partOwnOptions: 'Options of its kind',
+  partWidgetOptions: 'Widget options',
+  partStructured: 'Written as a structure — set it with the assistant, or in the board’s JSON.',
   boardNotDrawn: 'The board cannot be drawn as it is now — {reason}. The last board it could draw is shown.',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
