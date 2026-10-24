@@ -49,6 +49,14 @@ describe('PartPanel', () => {
 });
 
 describe('BoardAuthoring', () => {
+  it('lays out a part per item of a list the board reads through its adapters, which it reads the items with', async () => {
+    const each: BoardV2 = { ...board, parts: { pump: { as: 'stat', each: 'pumps', show: 'flow' } }, layout: { kind: 'grid', items: ['pump'] } };
+    const resolve = vi.fn(async () => ({ value: [{ id: 'P1', flow: 1 }, { id: 'P2', flow: 2 }], quality: 'live' as const }));
+    const { container } = render(<BoardAuthoring initialBoard={each} adapters={[{ id: 'plant', resolve }]} />);
+    await waitFor(() => expect([...container.querySelectorAll<HTMLElement>('[data-item-id]')].map(item => item.dataset.itemId)).toEqual(['pump/P1', 'pump/P2']));
+    expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ path: '/pumps' }));
+  });
+
   it('sets a selected part’s settings in its panel and saves the board in its version', async () => {
     const onSave = vi.fn();
     render(<BoardAuthoring initialBoard={board} adapters={[]} onSave={onSave} />);

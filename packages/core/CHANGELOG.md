@@ -22,7 +22,13 @@ All notable changes to this package are documented here. The format follows
   catalog written when this package is built, so a server can validate boards without the widget library installed.
   `BoardDocument` is what a board stores while boards move to it (a document in either version), and
   `documentKind(document)` the kind of view either lays out.
-- `BoardAuthoring`: the authoring surface of a board in the language's second version — drawn from its picture, its
+- `BoardView` (in `./viewer`): a board as it is stored — in either version of the board language — drawn in the
+  application that hosts it, its values and the items a grid lays out a part per item of read through the host's own
+  adapters, with no U-Board server. `pictureOf(board, read)`, `readKeys` and `readerOf(adapters)` in `./board-v2` make
+  the same view document anywhere a board is drawn — a server reads through its data sources, an application through
+  its adapters.
+- `BoardAuthoring`: the authoring surface of a board in the language's second version — the items a grid lays out a
+  part per item of read through its `adapters` when the board opens and when what they are read by changes — drawn from its picture, its
   parts moved, sized and deleted on a canvas as on any board, each edit said again in the board's layout (and a deleted
   part's links and triggers removed with it), and on a grid of parts ordered, widened and deleted (an item of a part
   made per item widening the part); a selected part's title, kind, data (and item), fields and its kind's options (the

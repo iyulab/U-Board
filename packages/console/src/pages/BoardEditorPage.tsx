@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { AuthoringView, BoardAuthoring, KO_LABELS, ViewerPage, layoutEditable, placedIn, type AuthoringMode, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { AuthoringView, BoardAuthoring, BoardView, KO_LABELS, layoutEditable, type AuthoringMode, type Adapter } from '@iyulab/u-board';
 import { documentKind, isBoardV2, type BoardDocument } from '@iyulab/u-board/board-v2';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
@@ -28,11 +28,9 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   // never finishes, in a browser where such code holds the whole page.
   const [searchParams] = useSearchParams();
   const scriptsOff = searchParams.get('scripts') === 'off';
-  // The board as stored, and what it is drawn from: the document itself for a first-version board, which the editor
-  // edits; the picture the server makes for a board in the language's second version, which is shown, not edited, until
-  // the editor writes that version.
+  // The board as stored — in either version of the board language; the editor draws it as any host does, through the
+  // workspace's data sources.
   const [document, setDocument] = useState<BoardDocument | null>(null);
-  const [picture, setPicture] = useState<ViewDocument | undefined>();
   // The origins this installation lets a board's elements load from, as the server says with the board.
   const [elementOrigins, setElementOrigins] = useState<readonly string[]>([]);
   // Where the board's script elements' frames are served: the server says when each definition has an origin of its own.
@@ -78,7 +76,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       .then(board => {
         if (cancelled) return;
         setDocument(board.document);
-        setPicture(board.picture);
         setElementOrigins(board.elementOrigins ?? []);
         setElementFrames(board.elementFrames);
         revision.current = board.revision;
@@ -201,7 +198,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     try {
       const board = await getBoard(workspaceId, boardId!);
       setDocument(board.document);
-      setPicture(board.picture);
       revision.current = board.revision;
       setBoardName(board.name);
       setConflict(null);
@@ -220,7 +216,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     try {
       const board = await getBoard(workspaceId, boardId!);
       setDocument(board.document);
-      setPicture(board.picture);
       revision.current = board.revision;
       setBoardName(board.name);
       setSavedAt(new Date());
@@ -243,8 +238,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   // A board in the language's second version whose grid holds grids or canvases of its own is shown, not edited, until
   // the editor lays such a grid out.
   const shownOnly = isBoardV2(document) && !layoutEditable(document);
-  // The items each data read has now, as the server's picture lays them out — what the editor draws a grid's parts by.
-  const keys = picture ? itemKeys(document, picture) : undefined;
 
   // Always the same slot, so a change of state never moves the editor.
   const saveStatus = hasUnsavedChanges ? (
@@ -304,7 +297,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
           <BoardAuthoring
             key={`${boardId}:${editorGeneration}`}
             initialBoard={document}
-            keys={keys}
             initialMode={editorMode}
             onModeChange={setEditorMode}
             adapters={adapters}
@@ -318,10 +310,10 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
             elementFrames={elementFramesAt}
           />
         ) : isBoardV2(document) ? (
-          picture && (
-            <ViewerPage
+          (
+            <BoardView
               key={`${boardId}:${editorGeneration}`}
-              document={picture}
+              board={document}
               adapters={adapters}
               ariaLabel={boardName}
               labels={EDITOR_LABELS}
@@ -378,16 +370,4 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       )}
     </div>
   );
-}
-
-/** The keys of each data read's items as a picture lays them out: `<part>/<key>` is an item of a part made per item. */
-function itemKeys(board: BoardDocument, picture: ViewDocument): Record<string, string[]> | undefined {
-  if (!isBoardV2(board)) return undefined;
-  const keys: Record<string, string[]> = {};
-  for (const { id } of placedIn(picture)) {
-    const [part, key] = id.split('/');
-    const data = board.parts[part!]?.each;
-    if (data !== undefined && key !== undefined && !(keys[data] ??= []).includes(key)) keys[data].push(key);
-  }
-  return keys;
 }

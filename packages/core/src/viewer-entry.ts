@@ -1,6 +1,8 @@
 export type * from './document-types.js';
 export { ViewerPage } from './viewer/ViewerPage.js';
 export type { ViewerPageProps } from './viewer/ViewerPage.js';
+export { BoardView } from './viewer/BoardView.js';
+export type { BoardViewProps } from './viewer/BoardView.js';
 export type { BoardEvent } from './viewer/use-triggers.js';
 export { useResolvedDocument } from './viewer/useResolvedDocument.js';
 export type { UseResolvedDocumentOptions, UseResolvedDocumentResult } from './viewer/useResolvedDocument.js';

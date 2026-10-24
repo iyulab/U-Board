@@ -21,7 +21,7 @@ not `require`) and needs Node 22.12 or later.
 | Import | Contents | Depends on React / canvas |
 |---|---|---|
 | `@iyulab/u-board/domain` | View document types, the `Adapter` contract, `resolveDocument`, `validateViewDocument`/`parseViewDocument`, connection-quality text (`describeQuality`) | No |
-| `@iyulab/u-board/viewer` | Read-only `ViewerPage` and the `useResolvedDocument` hook | Yes |
+| `@iyulab/u-board/viewer` | Read-only `ViewerPage` and `BoardView`, and the `useResolvedDocument` hook | Yes |
 | `@iyulab/u-board` | Everything in `domain`, plus `AuthoringView` and `ViewerPage` | Yes |
 | `@iyulab/u-board/board-v2` | The board language's second version — its types, JSON Schema (`boardV2Schema`), check (`validateBoardV2`), drawing (`toViewDocument`) and the conversion of a first-version document (`fromV1`). Not stable yet: it may change in a minor release until it becomes the stored format | No (reads the widget catalog of `@iyulab/u-widgets`) |
 
@@ -77,6 +77,18 @@ import { ViewerPage } from '@iyulab/u-board/viewer';
   <ViewerPage document={doc} adapters={adapters} pollIntervalMs={30_000} />
 </div>;
 ```
+
+A board as it is stored — a document in either version of the board language — is shown with `BoardView`, which
+makes the view document itself, reading through the same adapters which items a grid lays out a part per item of:
+
+```tsx
+import { BoardView } from '@iyulab/u-board/viewer';
+
+<BoardView board={storedBoard} adapters={adapters} pollIntervalMs={30_000} />;
+```
+
+`pictureOf(board, read)` (from `@iyulab/u-board/board-v2`) makes that view document on its own — with
+`readerOf(adapters)`, or any function that reads a binding's adapter and reference.
 
 An adapter whose source asks to be credited sets `attribution` (`{ text, url? }`); the viewer names
 every credited source the board binds to on a line under it. `attribution={false}` leaves that line

@@ -6,7 +6,8 @@ import { GROUP_STYLE } from '../ui-style.js';
 import { placedIn, type CanvasView, type GridView, type ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { ViewerPage, type ViewerPageProps } from '../viewer/ViewerPage.js';
-import { PictureError, toViewDocument } from '../board-v2/picture.js';
+import { PictureError, keyReadsOf, toViewDocument } from '../board-v2/picture.js';
+import { readKeys, readerOf } from '../board-v2/draw.js';
 import { checkBoardV2 } from '../board-v2/check.js';
 import type { BoardV2 } from '../board-v2/types.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
@@ -22,8 +23,8 @@ import { recordEdit, redo, startHistory, undo, type DocumentHistory } from './do
 export interface BoardAuthoringProps {
   /** The board to edit, in the language's second version. */
   initialBoard: BoardV2;
-  /** The keys of each data read's items as they are now — what a grid lays out a part per item by. */
-  keys?: Readonly<Record<string, readonly string[]>>;
+  /** Where the board's values are read — also which items a grid laying out a part per item of a list lays out, read
+   *  when the board opens and whenever what the board reads them by changes. */
   adapters: readonly Adapter[];
   width?: number;
   height?: number;
@@ -49,7 +50,7 @@ export interface BoardAuthoringProps {
  * board cannot be drawn with keeps the last picture it could, and says why. Undo, Redo, Save and Export are the
  * board's. A grid holding grids or canvases of its own (`layoutEditable`) is shown as its viewers see it.
  */
-export function BoardAuthoring({ initialBoard, keys, adapters, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
+export function BoardAuthoring({ initialBoard, adapters, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
   const labels = useLabels(labelsProp);
   const [history, setHistory] = useState<DocumentHistory<BoardV2>>(() => startHistory(initialBoard));
   const board = history.present;
@@ -75,7 +76,8 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
 
-  const keysOf = useMemo(() => (data: string) => [...(keys?.[data] ?? [])], [keys]);
+  const keys = useItemKeys(board, adapters);
+  const keysOf = useMemo(() => (data: string) => [...(keys[data] ?? [])], [keys]);
   // What is drawn: the board, or — while a setting leaves it one that cannot be drawn — the newest board before it that
   // could be, with why the board is not.
   const pictureOf = (h: DocumentHistory<BoardV2>) => drawnOf(h, keysOf);
@@ -260,6 +262,30 @@ function draw(board: BoardV2, keysOf: (data: string) => string[]): { picture: Vi
     if (error instanceof PictureError) return { picture: null, error: error.message };
     throw error;
   }
+}
+
+/** The keys of the items each data list a part is made per item of has now, read through `adapters` — again only when
+ *  what they are read by changes (an edit elsewhere in the board reads nothing). While a setting leaves the board one
+ *  that cannot be drawn, the keys read last stay. */
+function useItemKeys(board: BoardV2, adapters: readonly Adapter[]): Record<string, string[]> {
+  const [keys, setKeys] = useState<Record<string, string[]>>({});
+  const read = useMemo(() => readerOf(adapters), [adapters]);
+  const by = useMemo(
+    () => (draw(board, () => []).picture === null ? null : JSON.stringify(keyReadsOf(board).map(r => [r, board.data?.[r.data]?.key]))),
+    [board]
+  );
+  // The board the keys are read from: the newest one that draws whose reads differ from the last.
+  const [source, setSource] = useState<{ by: string; board: BoardV2 }>({ by: '[]', board });
+  if (by !== null && by !== source.by) setSource({ by, board });
+  useEffect(() => {
+    if (source.by === '[]') return;
+    let current = true;
+    void readKeys(source.board, read).then(next => current && setKeys(next));
+    return () => {
+      current = false;
+    };
+  }, [source, read]);
+  return keys;
 }
 
 /** What the editor draws for a history: its board, or the newest one before it that draws, and why the board does not. */

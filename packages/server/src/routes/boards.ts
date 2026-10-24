@@ -8,8 +8,8 @@ import { requireWorkspaceMember } from '../middleware/require-workspace-role.js'
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from '../db/boards.js';
 import { elementFramesAddress } from '../element-frame.js';
 import { listConnectorsForWorkspace } from '../db/connectors.js';
-import { documentAdvice, documentIssues, documentKind, pictureOf, type BoardDocument } from '../board-document.js';
-import { isBoardV2 } from '@iyulab/u-board/board-v2';
+import { documentAdvice, documentIssues, documentKind, type BoardDocument } from '../board-document.js';
+import { isBoardV2, pictureOf } from '@iyulab/u-board/board-v2';
 import type { ResolveState } from '../resolve-connector.js';
 import { upstreamReader } from '../upstream-reader.js';
 

@@ -183,7 +183,7 @@ describe('BoardEditorPage', () => {
     await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('w1', 'b2'));
   });
 
-  it('shows a board in the language’s second version whose grid holds a grid of its own from the picture the server made', async () => {
+  it('shows a board in the language’s second version whose grid holds a grid of its own as any host draws it — through the workspace’s data sources', async () => {
     const board = { version: 2 as const, parts: { t: { as: 'header', title: 'Plant' } }, layout: { kind: 'grid' as const, items: [{ grid: ['t'], span: 12 }] } };
     const picture = { kind: 'grid' as const, items: [{ id: 't', span: 12, widget: { type: 'header', props: { data: { title: 'Plant' } } } }] };
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: board, picture, updatedAt: 't', revision: 1 });
