@@ -28,18 +28,19 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
       data: { name: 'Mock Plant API', baseUrl: mockBaseUrl, authType: 'none' },
     })).json();
     const board = await (await page.request.post(`/api/workspaces/${workspaceId}/boards`, { data: { name: 'Many Bindings' } })).json();
-    const nodes = Array.from({ length: BINDINGS }, (_, i) => ({
-      id: `n${i}`, x: 40 + (i % 4) * 180, y: 40 + Math.floor(i / 4) * 120, anchored: false,
-      widget: { type: 'status', props: { data: { label: `Asset ${i}` } }, bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${i}.Status` } } } },
-    }));
-    // One more node bound past the end of the collection: the source answers, but not with what
-    // this binding points at — the viewer must say so rather than show an empty widget as fine.
-    nodes.push({
-      id: 'missing', x: 40, y: 420, anchored: false,
-      widget: { type: 'status', props: { data: { label: 'Missing' } }, bindings: { 'data.value': { adapter: connector.id, ref: { path: '/assets', valuePath: `value.${BINDINGS}.Status` } } } },
-    });
+    // A part per asset, each a field of the one read — and one more past the end of the collection: the source
+    // answers, but not with what that field points at — the viewer must say so rather than show an empty part as fine.
+    const fields: Record<string, { at: string; label: string }> = {};
+    const parts: Record<string, { as: string; of: string; show: string[] }> = {};
+    const place: Record<string, [number, number, number, number]> = {};
+    for (let i = 0; i <= BINDINGS; i++) {
+      const id = i < BINDINGS ? `n${i}` : 'missing';
+      fields[id] = { at: `/value/${i}/Status`, label: i < BINDINGS ? `Asset ${i}` : 'Missing' };
+      parts[id] = { as: 'stat-list', of: 'assets', show: [id] };
+      place[id] = i < BINDINGS ? [40 + (i % 4) * 180, 40 + Math.floor(i / 4) * 120, 160, 100] : [40, 420, 160, 100];
+    }
     const saved = await page.request.put(`/api/workspaces/${workspaceId}/boards/${board.id}`, {
-      data: { document: { kind: 'canvas', background: {}, nodes, connectors: [] } },
+      data: { document: { version: 2, data: { assets: { from: connector.id, path: '/assets', fields } }, parts, layout: { kind: 'canvas', size: [800, 600], place } } },
     });
     expect(saved.ok()).toBe(true);
     const { token } = await (await page.request.post(`/api/workspaces/${workspaceId}/boards/${board.id}/share-tokens`)).json();

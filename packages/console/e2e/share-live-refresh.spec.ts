@@ -29,24 +29,18 @@ test('an open shared board follows its source, says when its link expires, and o
     const board = await (await page.request.post(`/api/workspaces/${workspaceId}/boards`, { data: { name: 'Pump House' } })).json();
     const saved = await page.request.put(`/api/workspaces/${workspaceId}/boards/${board.id}`, {
       data: {
+        // Pump A's status, toned by its own value — the board in the language's second version.
         document: {
-          kind: 'canvas', background: {}, connectors: [],
-          nodes: [{
-            id: 'pump-a', x: 40, y: 40, anchored: false,
-            widget: {
-              type: 'status',
-              props: { data: { label: 'Pump A', tone: 'idle', value: '?' } },
-              bindings: {
-                'data.value': { adapter: connector.id, ref: { path: '/plant', valuePath: '/value/0/Status' } },
-                // the same field again, translated into the widget's tone
-                'data.tone': {
-                  adapter: connector.id,
-                  ref: { path: '/plant', valuePath: '/value/0/Status' },
-                  map: { values: { Running: 'ok', Fault: 'alarm' }, otherwise: 'idle' },
-                },
-              },
+          version: 2,
+          data: {
+            plant: {
+              from: connector.id,
+              path: '/plant',
+              fields: { status: { at: '/value/0/Status', label: 'Pump A', state: { Running: 'ok', Fault: 'alarm', '*': 'idle' } } },
             },
-          }],
+          },
+          parts: { 'pump-a': { as: 'stat-list', of: 'plant', show: ['status'] } },
+          layout: { kind: 'canvas', size: [400, 300], place: { 'pump-a': [40, 40, 160, 100] } },
         },
       },
     });
