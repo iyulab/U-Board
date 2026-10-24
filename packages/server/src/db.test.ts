@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { PGlite } from '@electric-sql/pglite';
-import { createDb, SCHEMA_SQL } from './db.js';
+import { createDb, openPglite, SCHEMA_SQL } from './db.js';
 
 describe('createDb', () => {
   it('creates all eleven tables on an in-memory (PGlite) database', async () => {
@@ -20,6 +20,22 @@ describe('createDb', () => {
       'workspace_users',
       'workspaces',
     ]);
+  });
+
+  it('on start, a stored link that says "arrow": true says "end" — wherever the link is, and not inside words', async () => {
+    const pglite = new PGlite();
+    const db = await openPglite(pglite);
+    await db.query(`INSERT INTO workspaces (id, name, created_at) VALUES ('w1','W', now())`);
+    const board = {
+      parts: { a: { as: 'label', title: 'the "arrow": true is words here' } },
+      layout: { kind: 'grid', items: [{ canvas: { size: [10, 10], place: {}, links: { l: { from: 'a', to: 'a', arrow: true } } } }] },
+    };
+    await db.query(`INSERT INTO boards (id, workspace_id, name, document, created_at, updated_at) VALUES ('b1','w1','B',$1, now(), now())`, [JSON.stringify(board)]);
+    await openPglite(pglite);
+    const { rows } = await db.query<{ document: string }>(`SELECT document FROM boards WHERE id = 'b1'`);
+    const stored = JSON.parse(rows[0]!.document);
+    expect(stored.layout.items[0].canvas.links.l.arrow).toBe('end');
+    expect(stored.parts.a.title).toBe('the "arrow": true is words here');
   });
 
   it('indexes boards.workspace_id, the column listBoardsForWorkspace filters on', async () => {

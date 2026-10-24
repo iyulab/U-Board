@@ -69,6 +69,9 @@ ALTER TABLE boards ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'canvas';
 -- it, and the record of moving boards from the earlier document format goes with that format.
 DROP TABLE IF EXISTS board_migrations;
 UPDATE boards SET document = (document::jsonb - 'version')::text WHERE document LIKE '%"version"%' AND document::jsonb ? 'version';
+-- A link's arrowheads are words: a stored link that says "arrow": true (its end) says "end". A quote inside a JSON
+-- string is escaped, so the pattern meets only the key itself.
+UPDATE boards SET document = regexp_replace(document, '"arrow"[[:space:]]*:[[:space:]]*true', '"arrow":"end"', 'g') WHERE document ~ '"arrow"[[:space:]]*:[[:space:]]*true';
 
 CREATE TABLE IF NOT EXISTS connectors (
   id TEXT PRIMARY KEY,
