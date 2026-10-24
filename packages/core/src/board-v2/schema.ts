@@ -46,6 +46,7 @@ export function boardV2Schema(): Schema {
       presets: map(ref('part'), 'Settings a part takes with "use"; its own settings win.'),
       parts: map(ref('part'), 'What the board shows, by id — never where.'),
       layout: { ...ref('layout'), description: 'Where the parts go: a canvas (placed by coordinates) or a grid (in order, by span).' },
+      triggers: { type: 'array', items: ref('trigger'), description: 'What the board does when something happens on it: on an event, when a part is in a status, do actions — show, move and tell only.' },
     },
     $defs: {
       tone: { enum: [...TONES], description: 'The tone a status is drawn in.' },
@@ -252,6 +253,41 @@ export function boardV2Schema(): Schema {
           radius: { type: 'number', minimum: 0 },
           shadow: { enum: ['none', 'soft', 'hard'] },
           density: { enum: ['regular', 'compact'] },
+        },
+      },
+      trigger: {
+        type: 'object',
+        required: ['on', 'do'],
+        additionalProperties: false,
+        properties: {
+          on: {
+            description: 'A part clicked, an event an element raises, a part entering or leaving a status (of `field`, or its own state), the board opened.',
+            oneOf: [
+              { type: 'object', additionalProperties: false, required: ['event', 'part'], properties: { event: { const: 'click' }, part: { type: 'string' } } },
+              { type: 'object', additionalProperties: false, required: ['event', 'part', 'name'], properties: { event: { const: 'element' }, part: { type: 'string' }, name: { type: 'string' } } },
+              { type: 'object', additionalProperties: false, required: ['event', 'part', 'status'], properties: { event: { enum: ['enter', 'leave'] }, part: { type: 'string' }, field: { type: 'string' }, status: { type: 'string' } } },
+              { type: 'object', additionalProperties: false, required: ['event'], properties: { event: { const: 'open' } } },
+            ],
+          },
+          when: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['part', 'status'],
+            description: 'Only while the part is in one of these statuses.',
+            properties: { part: { type: 'string' }, field: { type: 'string' }, status: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' }, minItems: 1 }] } },
+          },
+          do: {
+            type: 'array',
+            minItems: 1,
+            items: {
+              oneOf: [
+                { type: 'object', additionalProperties: false, required: ['action', 'url'], properties: { action: { const: 'open-link' }, url: { type: 'string', description: 'https://… or a path here; {{part}}, {{status}} and {{board}} are filled in.' } } },
+                { type: 'object', additionalProperties: false, required: ['action', 'part'], properties: { action: { const: 'focus' }, part: { type: 'string' } } },
+                { type: 'object', additionalProperties: false, required: ['action', 'name'], properties: { action: { const: 'emit' }, name: { type: 'string' } } },
+                { type: 'object', additionalProperties: false, required: ['action', 'board'], properties: { action: { const: 'go-to-board' }, board: { type: 'string' } } },
+              ],
+            },
+          },
         },
       },
       element: {

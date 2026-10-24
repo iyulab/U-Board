@@ -5,6 +5,7 @@
 // parts — their kinds, what they read, how they are reused — and every layout with its shapes and links.
 
 import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
+import { isTriggerLink } from '../view-document.js';
 import { BOARD_LANGUAGE_VERSION, EMPHASES, FRAMES, TONES } from './types.js';
 
 /**
@@ -39,7 +40,7 @@ const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i 
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
 /** What a board says at its top, in the order it is written. */
-const BOARD_SECTIONS = ['version', 'board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout'] as const;
+const BOARD_SECTIONS = ['version', 'board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout', 'triggers'] as const;
 
 /** The types an element's prop may be. */
 const PROP_TYPES = ['number', 'string', 'boolean', 'list', 'object'];
@@ -593,6 +594,67 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
 
   if (isObj(layout)) {
     for (const [id, { at }] of ids) if (!placed.has(id)) fail(at, `"${id}" is not placed — put it in the layout, or remove it`);
+  }
+
+  // ── triggers ──
+  /** The part a trigger names: one of the board's, or an item of an `each` part (`<part>/<key>`). */
+  const targetOf = (id: unknown, at: string): Obj | undefined => {
+    const [head, ...rest] = typeof id === 'string' ? id.split('/') : [];
+    const found = head !== undefined ? ids.get(head)?.part : undefined;
+    if (found && (found.each === undefined ? rest.length === 0 : rest.length === 1 && rest[0] !== '')) return found;
+    fail(at, found?.each !== undefined
+      ? `"${head}" is a part per item of "${String(found.each)}" — a trigger names one item: "${head}/<key>"`
+      : `no part "${String(id)}" — parts: ${list(ids.keys())}`);
+    return undefined;
+  };
+  /** A part's status: of `field`, or of its own state — a status card's, or what its `state` option names. */
+  const checkStatusOf = (holder: Obj, at: string, status: unknown) => {
+    const part = targetOf(holder.part, `${at}/part`);
+    if (part) {
+      const reads = typeof part.of === 'string' ? OF.exec(part.of)?.[1] : typeof part.each === 'string' ? part.each : undefined;
+      if (holder.field === undefined) {
+        if (part.as !== 'status-card' && part.state === undefined) {
+          fail(`${at}/field`, `a ${String(part.as)} has no state of its own — say whose state: "field": "<a field of what it reads, with a state>"`);
+        }
+      } else if (typeof holder.field !== 'string' || reads === undefined || fieldOf(reads, holder.field)?.state === undefined) {
+        fail(`${at}/field`, `"${String(holder.field)}" has no "state" in /data/${reads ?? '…'}/fields — a status is a field's state`);
+      }
+    }
+    for (const [i, name] of (Array.isArray(status) ? status : [status]).entries()) {
+      if (!isStatus(name)) fail(Array.isArray(status) ? `${at}/status/${i}` : `${at}/status`, `"${String(name)}" is not a status — ${statusHint()}`);
+    }
+  };
+  const triggers = board.triggers;
+  if (triggers !== undefined && !Array.isArray(triggers)) fail('/triggers', 'triggers are a list: [{ "on": …, "do": [ … ] }]');
+  for (const [i, t] of (Array.isArray(triggers) ? triggers : []).entries()) {
+    const at = `/triggers/${i}`;
+    if (!isObj(t)) { fail(at, 'a trigger is { "on": { "event": … }, "when"?: …, "do": [ … ] }'); continue; }
+    const on = isObj(t.on) ? t.on : undefined;
+    if (!on) fail(`${at}/on`, 'a trigger says what it reacts to: "on": { "event": "click" | "element" | "enter" | "leave" | "open", … }');
+    else if (on.event === 'click') targetOf(on.part, `${at}/on/part`);
+    else if (on.event === 'element') {
+      targetOf(on.part, `${at}/on/part`);
+      if (typeof on.name !== 'string' || on.name === '') fail(`${at}/on/name`, 'an element event is named: "name": "<the event the element raises>"');
+    } else if (on.event === 'enter' || on.event === 'leave') checkStatusOf(on, `${at}/on`, on.status);
+    else if (on.event !== 'open') fail(`${at}/on/event`, `"${String(on.event)}" is not an event — click · element · enter · leave · open`);
+    if (t.when !== undefined) {
+      if (!isObj(t.when)) fail(`${at}/when`, '"when" is { "part", "field"?, "status": "<status>" | [ … ] }');
+      else checkStatusOf(t.when, `${at}/when`, t.when.status);
+    }
+    if (!Array.isArray(t.do) || t.do.length === 0) { fail(`${at}/do`, 'a trigger does something: "do": [{ "action": "open-link" | "focus" | "emit" | "go-to-board", … }]'); continue; }
+    for (const [j, a] of t.do.entries()) {
+      const actionAt = `${at}/do/${j}`;
+      if (!isObj(a)) { fail(actionAt, 'an action is { "action": … }'); continue; }
+      if (a.action === 'open-link') {
+        if (!isTriggerLink(a.url)) fail(`${actionAt}/url`, 'a link is an https:// address or a path here ("/…")');
+        else for (const [, name] of a.url.matchAll(HOLE)) {
+          if (!['part', 'status', 'board'].includes(name!.trim())) fail(`${actionAt}/url`, `a link fills in {{part}}, {{status}} and {{board}} — not {{${name}}}`);
+        }
+      } else if (a.action === 'focus') targetOf(a.part, `${actionAt}/part`);
+      else if (a.action === 'emit') { if (typeof a.name !== 'string' || a.name === '') fail(`${actionAt}/name`, 'an event is named: "name": "<event>"'); }
+      else if (a.action === 'go-to-board') { if (typeof a.board !== 'string' || a.board === '') fail(`${actionAt}/board`, '"board" is the id of another board of this workspace'); }
+      else fail(`${actionAt}/action`, `"${String(a.action)}" is not an action — open-link · focus · emit · go-to-board`);
+    }
   }
   return issues;
 }

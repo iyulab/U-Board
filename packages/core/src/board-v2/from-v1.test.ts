@@ -420,3 +420,27 @@ describe('fromV1', () => {
     expect(fromV1({ kind: 'grid', items: [] }).unsupported).toEqual([]);
   });
 });
+
+describe('fromV1 — triggers', () => {
+  const pump = node('pump', { type: 'metric', props: { data: { value: 1 } } });
+  it('carries a trigger across onto the part its node became, a link filling in the part and its status', () => {
+    const { board, unsupported } = fromV1(canvas([pump], {
+      triggers: [
+        { on: { event: 'click', node: 'pump' }, do: [{ action: 'focus', node: 'pump' }, { action: 'open-link', url: '/x/{{node}}/{{state}}' }, { action: 'go-to-board', board: 'b2' }] },
+        { on: { event: 'open' }, do: [{ action: 'emit', name: 'opened' }] },
+      ],
+    }));
+    expect(unsupported).toEqual([]);
+    expect(board.triggers).toEqual([
+      { on: { event: 'click', part: 'pump' }, do: [{ action: 'focus', part: 'pump' }, { action: 'open-link', url: '/x/{{part}}/{{status}}' }, { action: 'go-to-board', board: 'b2' }] },
+      { on: { event: 'open' }, do: [{ action: 'emit', name: 'opened' }] },
+    ]);
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+  });
+
+  it('reports a trigger on a node’s state, whose states are not converted', () => {
+    const { board, unsupported } = fromV1(canvas([pump], { triggers: [{ on: { event: 'enter', node: 'pump', state: 'fault' }, do: [{ action: 'emit', name: 'x' }] }] }));
+    expect(unsupported).toEqual(["a trigger on a part's state"]);
+    expect(board.triggers).toBeUndefined();
+  });
+});

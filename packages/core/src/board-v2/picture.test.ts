@@ -371,3 +371,40 @@ describe('the picture model of a v2 board', () => {
     expect(() => toViewDocument(b)).toThrow(new PictureError('/parts/s', '"pm10" of every item of "air" is not one value — read the list, or a field of one item'));
   });
 });
+
+describe('the picture model of a v2 board — triggers', () => {
+  const parts = {
+    card: { as: 'status-card', of: 'pumps[P1]', show: ['state', 'flow'] },
+    pump: { as: 'status-card', each: 'pumps', show: ['state'] },
+  } as BoardV2['parts'];
+  const layout = { kind: 'canvas', size: [800, 400], place: { card: [10, 10, 200, 100], pump: { P1: [220, 10, 200, 100], P2: [430, 10, 200, 100] } } } as BoardV2['layout'];
+
+  it('runs a board’s triggers on the nodes its parts are drawn as, naming a part’s status from its state field', () => {
+    const b: BoardV2 = {
+      ...board(parts, layout),
+      triggers: [
+        { on: { event: 'click', part: 'card' }, when: { part: 'card', status: 'tripped' }, do: [{ action: 'emit', name: 'card' }, { action: 'open-link', url: '/x?p={{part}}&s={{status}}' }] },
+        { on: { event: 'enter', part: 'pump/P2', status: 'tripped' }, do: [{ action: 'focus', part: 'pump/P2' }] },
+        { on: { event: 'click', part: 'pump/P9' }, do: [{ action: 'emit', name: 'gone' }] },
+      ],
+    };
+    const doc = view(b, { pumps: ['P1', 'P2'] });
+    expect(doc.triggers).toEqual([
+      { on: { event: 'click', node: 'card' }, when: { node: 'card', state: 'tripped' }, do: [{ action: 'emit', name: 'card' }, { action: 'open-link', url: '/x?p={{node}}&s={{state}}' }] },
+      { on: { event: 'enter', node: 'pump/P2', state: 'tripped' }, do: [{ action: 'focus', node: 'pump/P2' }] },
+    ]);
+    // The status a trigger reads is the card's state, named by the board's statuses from the raw value.
+    expect(nodeOf(doc, 'card').states).toEqual({ from: 'data.tone', map: { values: { run: 'running', trip: 'tripped' }, otherwise: 'off' } });
+    expect(nodeOf(doc, 'pump/P2').states?.from).toBe('data.tone');
+    expect(nodeOf(doc, 'pump/P1').states).toBeUndefined();
+    // A trigger on an item its data does not have now (P9) is left out; one in a grid is drawn only with the items it has.
+    const grid: BoardV2 = { ...b, layout: { kind: 'grid', items: ['card', 'pump'] } };
+    expect(toViewDocument(grid, { keysOf: () => [] }).triggers).toEqual([doc.triggers![0]]);
+    expect(toViewDocument(grid, { keysOf: () => ['P2'] }).triggers).toEqual(doc.triggers);
+  });
+
+  it('refuses a trigger on a status a part does not show', () => {
+    const b: BoardV2 = { ...board(parts, layout), triggers: [{ on: { event: 'enter', part: 'card', field: 'rpm', status: 'tripped' }, do: [{ action: 'emit', name: 'x' }] }] };
+    expect(() => toViewDocument(b, { keysOf: () => ['P1'] })).toThrow(new PictureError('/triggers/0/on/field', '"card" does not show "rpm"\'s status — a trigger reads a status the part shows'));
+  });
+});

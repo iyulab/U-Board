@@ -49,7 +49,7 @@ A board is one JSON object. Say once where values come from and what they mean (
 where (\`layout\`); statuses and the look are said once for the board. Everything is addressed by id; there is one way
 to write each thing.
 
-${['version', 'board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout'].filter(k => k in (schema.properties ?? {})).map(k => `- \`${k}\`${schema.properties![k]!.description ? ` — ${schema.properties![k]!.description}` : ''}`).join('\n')}`,
+${['version', 'board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout', 'triggers'].filter(k => k in (schema.properties ?? {})).map(k => `- \`${k}\`${schema.properties![k]!.description ? ` — ${schema.properties![k]!.description}` : ''}`).join('\n')}`,
 
     `## data — read once, give meaning once
 
@@ -107,6 +107,16 @@ Use a built-in whenever one shows the thing — a title, a status and a few valu
 — every \`{{hole}}\` is a declared prop (\`number\` · \`string\` · \`boolean\` · \`list\` · \`object\`). A part places it with
 \`"as": "element", "element": "tank"\`, fixed \`props\` and \`bind\` (\`{ "level": "<field>", "tone": "<field>.tone" }\`). The look is \`board.skin\` — fonts, a
 palette and a frame (${code(FRAMES)}) — once for the board; parts never set fonts or colours.`,
+
+    `## triggers — what the board does
+
+A trigger is \`{ "on", "when"?, "do": [ … ] }\`. \`on\` a part clicked (\`{ "event": "click", "part" }\`), an event its element
+raises (\`"element"\` with \`name\`), a part entering or leaving a status (\`"enter"\` · \`"leave"\` with \`status\`, and the
+\`field\` whose state it is unless the part has its own — a status card's, a \`state\` option's) or the board opened
+(\`"open"\`); \`when\` keeps it to a part in one of the statuses; \`do\` opens a link (\`open-link\`, \`url\` with \`{{part}}\` ·
+\`{{status}}\` · \`{{board}}\` filled in), brings a part into view (\`focus\`), hands the host an event (\`emit\`) or asks for
+another board (\`go-to-board\`). A part made per item is named per item (\`"pumps/P1"\`). Triggers only show, move and
+tell — they write to nothing the board reads.`,
 
     `## Rules
 

@@ -22,6 +22,10 @@ All notable changes to this package are documented here. The format follows
   catalog written when this package is built, so a server can validate boards without the widget library installed.
   `BoardDocument` is what a board stores while boards move to it (a document in either version), and
   `documentKind(document)` the kind of view either lays out.
+- The board language's second version has `triggers`, as the first version has them: on a part clicked, an event its
+  element raises, a part entering or leaving a status (of its own state, or of a `field`), or the board opened; when a
+  part is in a status; open a link, bring a part into view, hand the host an event or ask for another board. A part
+  made per item is named `<part>/<key>`. A first-version board's triggers carry across, except one on a node's state.
 - In the board language's second version a status's `glyph` marks what shows it — a status card's badge, a stat list's
   values, a list's rows — not only the legend (drawn by `@iyulab/u-widgets` with item glyphs; an earlier widget library
   draws the tone's mark).

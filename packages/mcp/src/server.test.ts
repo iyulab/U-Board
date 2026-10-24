@@ -298,10 +298,10 @@ describe('u-board-mcp', () => {
     });
 
     it('says it cannot be read here when it uses what the second version does not have yet', async () => {
-      server.boards.set('old', { name: 'Old', revision: 6, document: { ...first, triggers: [{ on: { event: 'open' }, do: [{ action: 'emit', name: 'hi' }] }] } as ViewDocument });
+      server.boards.set('old', { name: 'Old', revision: 6, document: { ...first, triggers: [{ on: { event: 'enter', node: 'g', state: 'high' }, do: [{ action: 'emit', name: 'hi' }] }] } as ViewDocument });
       const { value, isError } = await call('get_board', { board: 'old' });
       expect(isError).toBe(true);
-      expect(value).toMatchObject({ status: 409, code: 'FIRST_VERSION_BOARD', message: expect.stringContaining('triggers') });
+      expect(value).toMatchObject({ status: 409, code: 'FIRST_VERSION_BOARD', message: expect.stringContaining("a trigger on a part's state") });
     });
   });
 

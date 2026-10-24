@@ -29,7 +29,7 @@ describe('validateBoardV2', () => {
   it('asks for the version, and names the sections a board has', () => {
     expect(issues({ ...canvas({}), version: 1 })).toEqual(['/version: a board in this language says "version": 2']);
     expect(issues({ ...canvas({}), nodes: [] })).toEqual([
-      '/nodes: a board has no "nodes" — its sections are version, board, statuses, symbols, elements, data, presets, parts, layout',
+      '/nodes: a board has no "nodes" — its sections are version, board, statuses, symbols, elements, data, presets, parts, layout, triggers',
     ]);
   });
 
@@ -356,5 +356,43 @@ describe('validateBoardV2', () => {
     expect(read({ list: '/value', answerTime: 'updatedAt' })).toEqual(['/data/q/answerTime: "answerTime" is where the answer holds its time, a JSON Pointer starting with "/"']);
     expect(read({ time: '/observedAt' })).toEqual(['/data/q/time: "time" names the field holding when the source observed the item — "observedAt", not a JSON Pointer; a field that lives deeper says where with its "at"']);
     expect(read({ answerTime: '/updatedAt' })).toEqual(['/data/q/answerTime: without a "list" the answer is the item — its time is "time"']);
+  });
+});
+
+describe('validateBoardV2 — triggers', () => {
+  const parts = {
+    card: { as: 'status-card', of: 'equipment[PR-01]', show: 'state' },
+    t: { as: 'stat', of: 'totals', show: 'count' },
+    eq: { as: 'status-card', each: 'equipment', show: 'state' },
+  };
+  const withTriggers = (triggers: unknown) => {
+    const b = canvas(parts);
+    return { ...b, layout: { ...b.layout, place: { ...b.layout.place, eq: { 'PR-01': [200, 10, 150, 70] } } }, triggers };
+  };
+
+  it('takes triggers on the parts, statuses and actions a board has', () => {
+    expect(issues(withTriggers([
+      { on: { event: 'click', part: 'card' }, when: { part: 'card', status: ['alarm', 'warn'] }, do: [{ action: 'emit', name: 'card-details' }] },
+      { on: { event: 'enter', part: 'eq/PR-02', status: 'alarm' }, do: [{ action: 'focus', part: 'eq/PR-02' }, { action: 'open-link', url: '/boards/{{board}}?part={{part}}&status={{status}}' }] },
+      { on: { event: 'open' }, do: [{ action: 'go-to-board', board: 'b2' }] },
+    ]))).toEqual([]);
+  });
+
+  it('names what is wrong in a trigger, where it is', () => {
+    expect(issues(withTriggers([
+      { on: { event: 'click', part: 'pump' }, do: [] },
+      { on: { event: 'enter', part: 't', status: 'busy' }, do: [{ action: 'open-link', url: 'javascript:alert(1)' }] },
+      { on: { event: 'click', part: 'eq' }, when: { part: 'card', field: 'count', status: 'ok' }, do: [{ action: 'open-link', url: '/x/{{node}}' }, { action: 'write' }] },
+    ]))).toEqual([
+      '/triggers/0/on/part: no part "pump" — parts: card, t, eq',
+      '/triggers/0/do: a trigger does something: "do": [{ "action": "open-link" | "focus" | "emit" | "go-to-board", … }]',
+      '/triggers/1/on/field: a stat has no state of its own — say whose state: "field": "<a field of what it reads, with a state>"',
+      expect.stringMatching(/^\/triggers\/1\/on\/status: "busy" is not a status — /),
+      '/triggers/1/do/0/url: a link is an https:// address or a path here ("/…")',
+      '/triggers/2/on/part: "eq" is a part per item of "equipment" — a trigger names one item: "eq/<key>"',
+      '/triggers/2/when/field: "count" has no "state" in /data/equipment/fields — a status is a field\'s state',
+      '/triggers/2/do/0/url: a link fills in {{part}}, {{status}} and {{board}} — not {{node}}',
+      '/triggers/2/do/1/action: "write" is not an action — open-link · focus · emit · go-to-board',
+    ]);
   });
 });

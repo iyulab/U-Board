@@ -6,12 +6,12 @@
 // The board is taken as valid (`validateBoardV2` first): what is wrong in it is reported there, with where and how to
 // write it instead. What the picture model cannot draw yet is a `PictureError`.
 
-import type { Binding, CellCanvas, Connector, ElementDefinition, GridItem, GridLayout, ItemField, Node, Shape as ViewShape, ValueMap, ValueRange, ViewDocument, Widget } from '../view-document.js';
+import { placedIn, type Binding, type CellCanvas, type Connector, type ElementDefinition, type GridItem, type GridLayout, type ItemField, type Node, type Shape as ViewShape, type Trigger as ViewTrigger, type TriggerAction as ViewTriggerAction, type ValueMap, type ValueRange, type ViewDocument, type Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
-import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, ValueMapping } from './types.js';
+import type { BoardV2, CanvasLayout, ElementDefinition as V2ElementDefinition, Field, GridItem as V2GridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
 
 /** A weight as the value map a connector's width binding takes: bands as ranges, a map as values and `otherwise`. */
 function weightMap(weight: { bands?: number[]; map?: Record<string, number> }): ValueMap {
@@ -56,6 +56,8 @@ export interface PictureOptions {
 
 /** The tone and the words a raw value maps to, through a field's `state`. */
 interface StateMaps {
+  /** The status each raw value is in, by name — what a trigger compares. */
+  named: ValueMap<string>;
   tone: ValueMap<string>;
   status: ValueMap<string>;
   emphasis?: ValueMap<string>;
@@ -214,6 +216,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     const status = merge(mapOf(mapping, w => statuses[w]?.label ?? (w in statuses ? w : '')), withTones && { values: Object.fromEntries(TONES.map(t => [t, ''])) });
     const emphasised = Object.values(statuses).some(s => s.emphasis !== undefined);
     return {
+      named: merge(mapOf(mapping, w => w), withTones),
       tone,
       status,
       ...(emphasised ? { emphasis: merge(mapOf(mapping, w => statuses[w]?.emphasis ?? '')) } : {}),
@@ -274,6 +277,9 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
   const resolve = (part: Part): Part => (part.use !== undefined ? { ...presets[part.use], ...part } : part);
 
   /** The widget a part is drawn with, reading `query[item]` — or the whole of `query` when there is no item. */
+  /** For each part (by its pointer), the binding key its fields' states are read at — what a trigger reads a status by. */
+  const stateKeys = new Map<string, Map<string, string>>();
+
   const widgetFor = (raw: Part, at: string, reads?: { query: string; item?: string }): Widget => {
     const part = resolve(raw);
     const { as, use: _use, of: _of, each: _each, title, show, ...options } = part;
@@ -296,6 +302,9 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       if (rule === undefined) return;
       const maps = stateMaps(rule);
       bind(`${prefix}tone`, name, maps.tone);
+      const keys = stateKeys.get(at) ?? new Map<string, string>();
+      if (!keys.has(name)) keys.set(name, `${prefix}tone`);
+      stateKeys.set(at, keys);
       if (takes.words) bind(`${prefix}status`, name, maps.status);
       if (takes.emphasis && maps.emphasis) bind(`${prefix}emphasis`, name, maps.emphasis);
       if (takes.glyph && maps.glyph) bind(`${prefix}glyph`, name, maps.glyph);
@@ -842,12 +851,79 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
   const head = board.board ?? {};
   const look = { ...(head.theme !== undefined ? { appearance: head.theme } : {}), ...(head.accent !== undefined ? { accent: head.accent } : {}) };
   const layout = board.layout;
-  if (layout.kind === 'canvas') {
-    const canvas = canvasOf(layout, '/layout');
-    return { kind: 'canvas', background: background(layout), ...canvas, ...look, ...withElements() };
+  const drawn: ViewDocument = layout.kind === 'canvas'
+    ? { kind: 'canvas', background: background(layout), ...canvasOf(layout, '/layout'), ...look, ...withElements() }
+    : { kind: 'grid', items: gridItems(layout.items, '/layout/items'), ...look, ...withElements() };
+  return withTriggers(drawn);
+
+  // ── triggers ──
+
+  /**
+   * The board's triggers as the viewer runs them, on the nodes its parts are drawn as. A part a trigger reads a status
+   * of is given the state rule that names it: the reading of the field's state binding, in the board's status names.
+   */
+  function withTriggers(doc: ViewDocument): ViewDocument {
+    const triggers = board.triggers ?? [];
+    if (triggers.length === 0) return doc;
+    // A node by the part it draws: its id past a canvas cell's prefix — a part, or an item of an `each` part.
+    const nodes = new Map(placedIn(doc).map(placed => [placed.id.slice(placed.id.lastIndexOf(':') + 1), placed]));
+    // An item of an `each` part is drawn only while its data has it: a trigger on one that is not there now is left out.
+    const absent = new Error('absent');
+    const nodeFor = (part: string, at: string) => {
+      const placed = nodes.get(part);
+      if (placed) return placed;
+      if (part.includes('/')) throw absent;
+      throw new PictureError(at, `"${part}" is not drawn on this board`);
+    };
+    const ruled = new Map<string, string>();
+    /** The node of `part`, given the state rule for `field` (or the part's own state). */
+    const stateOf = (holder: { part: string; field?: string }, at: string) => {
+      const placed = nodeFor(holder.part, `${at}/part`);
+      const partId = holder.part.split('/')[0]!;
+      const part = resolve(board.parts[partId]!);
+      const own = part.as === 'status-card'
+        ? (part.state as string | undefined) ?? (Array.isArray(part.show) ? part.show : part.show === undefined ? [] : [part.show]).find(n => fieldOfPart(part, n).state !== undefined)
+        : (part.state as string | undefined);
+      const field = holder.field ?? own;
+      const key = field === undefined ? undefined : stateKeys.get(`/parts/${partId}`)?.get(field);
+      if (field === undefined || key === undefined) {
+        throw new PictureError(`${at}/${holder.field !== undefined ? 'field' : 'part'}`, `"${holder.part}" does not show ${field !== undefined ? `"${field}"'s` : 'a'} status — a trigger reads a status the part shows`);
+      }
+      if (ruled.has(placed.id) && ruled.get(placed.id) !== field) {
+        throw new PictureError(at, `"${holder.part}"'s triggers read one field's status — "${ruled.get(placed.id)}" and "${field}"`);
+      }
+      ruled.set(placed.id, field);
+      placed.states = { from: key, map: stateMaps(fieldOfPart(part, field).state!).named };
+      return placed.id;
+    };
+    const drawnTriggers = triggers.flatMap((t: Trigger, i): ViewTrigger[] => {
+      try {
+        return [drawnTrigger(t, i)];
+      } catch (error) {
+        if (error === absent) return [];
+        throw error;
+      }
+    });
+    return { ...doc, triggers: drawnTriggers };
+
+    function drawnTrigger(t: Trigger, i: number): ViewTrigger {
+      const at = `/triggers/${i}`;
+      const on: ViewTrigger['on'] = t.on.event === 'open' ? { event: 'open' }
+        : t.on.event === 'click' ? { event: 'click', node: nodeFor(t.on.part, `${at}/on/part`).id }
+          : t.on.event === 'element' ? { event: 'element', node: nodeFor(t.on.part, `${at}/on/part`).id, name: t.on.name }
+            : { event: t.on.event, node: stateOf(t.on, `${at}/on`), state: t.on.status };
+      const actions = t.do.map((a, j): ViewTriggerAction => a.action === 'focus' ? { action: 'focus', node: nodeFor(a.part, `${at}/do/${j}/part`).id }
+        : a.action === 'open-link' ? { action: 'open-link', url: a.url.replace(/\{\{\s*part\s*\}\}/g, '{{node}}').replace(/\{\{\s*status\s*\}\}/g, '{{state}}') }
+          : a);
+      return { on, ...(t.when !== undefined ? { when: { node: stateOf(t.when, `${at}/when`), state: t.when.status } } : {}), do: actions };
+    }
   }
-  const items = gridItems(layout.items, '/layout/items');
-  return { kind: 'grid', items, ...look, ...withElements() };
+
+  /** A field of what a part reads. */
+  function fieldOfPart(part: Part, name: string): Field {
+    const of = part.of ?? part.each;
+    return of === undefined ? {} : fieldOf(target(of).query, name);
+  }
 }
 
 /** What a part reads: a data read, and the item when it names one. */

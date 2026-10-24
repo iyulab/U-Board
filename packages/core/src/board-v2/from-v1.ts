@@ -7,8 +7,8 @@ import { expandComponents, instanceParts } from '../components.js';
 import { isHttpRef, type HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { THEME_PALETTE, isThemeColor } from '../theme-colors.js';
-import type { Binding, CanvasView, CellCanvas, ComponentDefinition, Connector, ElementDefinition, GridView, GridWidgetItem, Node, PropsSchema, Shape as V1Shape, ValueMap, ViewDocument, Widget } from '../view-document.js';
-import { TONES, type BoardV2, type CanvasLayout, type ElementDefinition as V2Element, type Field, type GridItem as V2GridItem, type Link, type Part, type Place, type Query, type Shape, type Status, type Tone, type ValueMapping } from './types.js';
+import type { Binding, CanvasView, CellCanvas, ComponentDefinition, Connector, ElementDefinition, GridView, GridWidgetItem, Node, PropsSchema, Shape as V1Shape, Trigger as V1Trigger, ValueMap, ViewDocument, Widget } from '../view-document.js';
+import { TONES, type BoardV2, type Trigger, type CanvasLayout, type ElementDefinition as V2Element, type Field, type GridItem as V2GridItem, type Link, type Part, type Place, type Query, type Shape, type Status, type Tone, type ValueMapping } from './types.js';
 import { isFigure } from './picture.js';
 
 /** A converted board, what changed on the way, and what has no place in the second version yet. */
@@ -31,7 +31,6 @@ export function fromV1(doc: ViewDocument): V1Conversion {
   const statuses: Record<string, Status> = {};
   const presets: Record<string, Part> = {};
   const ctx: Context = { reads, elements, parts, presets, statuses, notes, unsupported, appearance: doc.appearance };
-  if ((doc.triggers ?? []).length > 0) unsupported.push('triggers');
 
   // Every binding first: a data read is shared by the parts that read it, so its key is known only once all are seen.
   const canvases: CellCanvas[] = doc.kind === 'canvas' ? [doc] : doc.items.flatMap(item => ('canvas' in item ? [item.canvas] : []));
@@ -61,6 +60,8 @@ export function fromV1(doc: ViewDocument): V1Conversion {
     parts,
     layout,
   };
+  const triggers = (doc.triggers ?? []).flatMap(t => triggerOf(t, parts, unsupported));
+  if (triggers.length > 0) board.triggers = triggers;
   return { board, notes: [...new Set(notes)], unsupported: [...new Set(unsupported)] };
 }
 
@@ -979,4 +980,30 @@ function isObject(v: unknown): v is Record<string, unknown> {
 
 function str(v: unknown): string | undefined {
   return typeof v === 'string' && v !== '' ? v : undefined;
+}
+
+/**
+ * A first-version trigger in the second version: a node is the part it was converted to, a link fills in `{{part}}` and
+ * `{{status}}` where it filled in `{{node}}` and `{{state}}`. A trigger on a node's state has no place — the node's
+ * states are not converted — and neither has one on a part inside a component.
+ */
+function triggerOf(t: V1Trigger, parts: Record<string, Part>, unsupported: string[]): Trigger[] {
+  if (t.when !== undefined || t.on.event === 'enter' || t.on.event === 'leave') {
+    unsupported.push("a trigger on a part's state");
+    return [];
+  }
+  const nodes = [...('node' in t.on ? [t.on.node] : []), ...t.do.flatMap(a => (a.action === 'focus' ? [a.node] : []))];
+  if (nodes.some(node => !(node in parts))) {
+    unsupported.push('a trigger on a part inside a component');
+    return [];
+  }
+  const on: Trigger['on'] = t.on.event === 'click' ? { event: 'click', part: t.on.node }
+    : t.on.event === 'element' ? { event: 'element', part: t.on.node, name: t.on.name }
+      : { event: 'open' };
+  return [{
+    on,
+    do: t.do.map(a => (a.action === 'focus' ? { action: 'focus', part: a.node }
+      : a.action === 'open-link' ? { action: 'open-link', url: a.url.replace(/\{\{\s*node\s*\}\}/g, '{{part}}').replace(/\{\{\s*state\s*\}\}/g, '{{status}}') }
+        : a)),
+  }];
 }

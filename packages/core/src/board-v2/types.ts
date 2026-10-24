@@ -236,6 +236,33 @@ export interface ElementDefinition {
   props?: Record<string, 'number' | 'string' | 'boolean' | 'list' | 'object'>;
 }
 
+/**
+ * Something that happens on a board: a part clicked (or activated from the keyboard), an event an element raises, a
+ * part entering or leaving a status, the board opened. A part's status is the state of one of its fields — `field`, or
+ * the part's own state (a status card's, a part's `state` option) when left out.
+ */
+export type TriggerEvent =
+  | { event: 'click'; part: string }
+  | { event: 'element'; part: string; name: string }
+  | { event: 'enter' | 'leave'; part: string; field?: string; status: string }
+  | { event: 'open' };
+
+/** What a trigger does: open a link (`{{part}}`, `{{status}}` and `{{board}}` filled in), bring a part into view, hand
+ *  the host page an event, or ask the host to show another board of the same workspace. */
+export type TriggerAction =
+  | { action: 'open-link'; url: string }
+  | { action: 'focus'; part: string }
+  | { action: 'emit'; name: string }
+  | { action: 'go-to-board'; board: string };
+
+/** `on` an event, only `when` a part is in one of the statuses (if given), `do` the actions in order. Triggers only show,
+ *  move and tell — nothing a trigger does writes to the systems the board reads. */
+export interface Trigger {
+  on: TriggerEvent;
+  when?: { part: string; field?: string; status: string | string[] };
+  do: TriggerAction[];
+}
+
 /** A board in the language's second version. */
 export interface BoardV2 {
   version: typeof BOARD_LANGUAGE_VERSION;
@@ -248,4 +275,5 @@ export interface BoardV2 {
   presets?: Record<string, Part>;
   parts: Record<string, Part>;
   layout: Layout;
+  triggers?: Trigger[];
 }
