@@ -865,7 +865,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
   const withElements = () => ({
     ...(Object.keys(elements).length > 0 ? { elements } : {}),
     ...(board.symbols !== undefined && Object.keys(board.symbols).length > 0
-      ? { symbols: Object.fromEntries(Object.entries(board.symbols).map(([name, sym]) => [name, { ...(sym.viewBox !== undefined ? { viewBox: sym.viewBox } : {}), markup: `<path d="${sym.path ?? ''}"/>` }])) }
+      ? { symbols: Object.fromEntries(Object.entries(board.symbols).map(([name, sym]) => [name, { ...(sym.viewBox !== undefined ? { viewBox: sym.viewBox } : {}), markup: `<path d="${(sym.path ?? '').replace(/[&"<>]/g, c => `&#${c.charCodeAt(0)};`)}"/>` }])) }
       : {}),
   });
   const head = board.board ?? {};

@@ -317,6 +317,27 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('holds an element’s markup and CSS, and a symbol’s path, to what the renderer draws — refused with where', () => {
+    const elements = {
+      ok: { template: '<svg viewBox="0 0 10 10"><use href="#pump"/><rect width="{{w}}" height="2"/></svg>', style: '.a{fill:var(--u-widget-primary)}', props: { w: 'number' } },
+      bad: { template: '<div onclick="go()"><script>x()</script><img src="https://evil.example.com/a.png"></div>', style: '.a{background:url(https://evil.example.com/b.png)}' },
+      open: { template: '<b>{{#rows}}</b>', props: { rows: 'list' } },
+    };
+    const found = issues({ ...canvas({}), symbols: { pump: { path: 'M0 0 h10 v10 z', viewBox: '0 0 10 10' } }, elements });
+    expect(found.filter(f => f.startsWith('/elements/ok'))).toEqual([]);
+    const bad = found.filter(f => f.startsWith('/elements/bad/template'));
+    expect(bad.some(f => /onclick/.test(f))).toBe(true);
+    expect(bad.some(f => /script/.test(f))).toBe(true);
+    expect(bad.some(f => /evil\.example\.com/.test(f))).toBe(true);
+    expect(found.some(f => f.startsWith('/elements/bad/style:') && /evil\.example\.com/.test(f))).toBe(true);
+    expect(found.some(f => f.startsWith('/elements/open/template:'))).toBe(true);
+    // A path is path data and a viewBox four numbers: nothing that closes the attribute a symbol is drawn into.
+    expect(issues({ ...canvas({}), symbols: { a: { path: 'M0 0" onload="x' }, b: { path: 'M0 0z', viewBox: '0 0 big' } } })).toEqual([
+      '/symbols/a/path: a symbol’s path is SVG path data — commands (M L H V C S Q T A Z), numbers and separators only',
+      '/symbols/b/viewBox: a viewBox is four numbers — "0 0 24 24"',
+    ]);
+  });
+
   it('takes an element that runs a script in a frame — a template or a script, one of them; what it loads an https:// origin', () => {
     const script = 'ub.onProps(function (p) { document.body.textContent = p.value; });';
     expect(issues({ ...canvas({}), elements: { counter: { script, style: 'body{margin:0}', resources: ['https://cdn.example.com'], props: { value: 'number' } } } })).toEqual([]);

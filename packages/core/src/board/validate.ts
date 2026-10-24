@@ -7,6 +7,9 @@
 import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
 import { isTriggerLink } from '../view-document.js';
 import { EMPHASES, FRAMES, TONES } from './types.js';
+import { checkStyle, checkTemplateMarkup } from '../elements/markup-policy.js';
+import { VIEW_BOX } from '../elements/symbols.js';
+import { parseTemplate } from '../elements/template.js';
 
 /**
  * A problem in a board: where (a JSON Pointer) and what to write instead. A `hint` is advice — the board is right as
@@ -187,6 +190,11 @@ export function validateBoard(board: unknown): BoardIssue[] {
     const at = `/symbols/${name}`;
     if (!/^[a-z][a-z0-9-]*$/.test(name)) fail(at, `a symbol's name is lowercase letters, digits and "-", starting with a letter — not "${name}"`);
     if (!isObj(symbol) || typeof symbol.path !== 'string') fail(`${at}/path`, 'a symbol is { "viewBox"?, "path": "M … Z" } — an SVG path in its own coordinates');
+    // Path data only: commands, numbers and separators — nothing that closes the attribute it is drawn into.
+    else if (!/^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\-\s]*$/.test(symbol.path)) fail(`${at}/path`, 'a symbol\u2019s path is SVG path data — commands (M L H V C S Q T A Z), numbers and separators only');
+    if (isObj(symbol) && symbol.viewBox !== undefined && (typeof symbol.viewBox !== 'string' || !VIEW_BOX.test(symbol.viewBox))) {
+      fail(`${at}/viewBox`, 'a viewBox is four numbers — "0 0 24 24"');
+    }
   }
 
   // ── elements ──
@@ -205,6 +213,12 @@ export function validateBoard(board: unknown): BoardIssue[] {
     for (const [prop, type] of Object.entries(props)) {
       if (!PROP_TYPES.includes(type as string)) fail(`${at}/props/${prop}`, `"${String(type)}" is not a prop type — ${PROP_TYPES.join(' · ')}`);
     }
+    // Its CSS is held to the markup policy — a template's loads nothing, a script's only from its resources.
+    const loads = run && Array.isArray(el.resources) ? el.resources.filter((r): r is string => typeof r === 'string') : [];
+    if (el.style !== undefined) {
+      if (typeof el.style !== 'string') fail(`${at}/style`, 'an element\u2019s style is a string of CSS');
+      else for (const issue of checkStyle(el.style, loads)) fail(`${at}/style`, issue.message);
+    }
     if (run) {
       // What a script loads is named, and only from an https:// origin.
       if (el.resources !== undefined && (!Array.isArray(el.resources) || el.resources.some(r => typeof r !== 'string' || !/^https:\/\/[^/\s]+$/.test(r)))) {
@@ -214,6 +228,10 @@ export function validateBoard(board: unknown): BoardIssue[] {
     }
     if (el.resources !== undefined) fail(`${at}/resources`, 'a template element loads nothing — resources are a script element\u2019s');
     if (typeof el.template !== 'string') continue;
+    // The markup is read as the renderer reads it: a template that does not parse, or that the markup policy refuses
+    // (a script, a frame, an event handler, a URL off the element), is an error here — not something dropped unseen.
+    for (const issue of checkTemplateMarkup(el.template, [])) fail(`${at}/template`, issue.message);
+    const holeIssues = issues.length;
     // A hole is a prop — or, inside a list's section ({{#items}} … {{/items}}), a field of its item or {{.}}, the item
     // itself. Nothing is computed in it.
     let sections = 0;
@@ -228,6 +246,9 @@ export function validateBoard(board: unknown): BoardIssue[] {
       }
       if (body.startsWith('#') || body.startsWith('^')) sections++;
     }
+    // A hole said wrong is said above, in the board's words; what else does not parse (a section left open) is said here.
+    const parsed = parseTemplate(el.template);
+    if (!parsed.ok && issues.length === holeIssues) fail(`${at}/template`, `${parsed.error} (at character ${parsed.offset})`);
     if (!DRAWING.test(el.template + (typeof el.style === 'string' ? el.style : '')) && Object.keys(props).length <= 4) {
       issues.push({
         at,

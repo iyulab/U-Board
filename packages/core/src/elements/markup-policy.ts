@@ -1,9 +1,9 @@
 import { maskTemplateValues } from './template.js';
 
 /**
- * What a `template` element's markup and CSS may contain — one table, read by the document validator
- * (which reports what breaks it, with where) and by the renderer (which drops what breaks it, so a
- * document that skipped validation still draws nothing it should not).
+ * What a `template` element's markup and CSS may contain — one table, read by the board check
+ * (`validateBoard`, which reports what breaks it, with where) and by the renderer (which drops what breaks
+ * it, so a board that skipped the check still draws nothing it should not).
  *
  * Markup: the tags below, any attribute except an event handler, and URLs only to a fragment of the
  * markup itself (`#id`), to an inline image (`data:image/…`) or to an origin the element declares in
