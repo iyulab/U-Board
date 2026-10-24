@@ -82,6 +82,9 @@ test('takes hosts and repositories from the allowlist it is given, ignoring case
   assert.deepEqual(scanWith('a.md', 'see docs.example.kr and https://github.com/org/repo', allow), []);
   assert.deepEqual(scanWith('a.md', 'https://github.com/org/other', allow).map(v => v.rule), ['github-repo']);
   assert.deepEqual(scanWith('a.md', 'see docs.example.kr', allowlist()).map(v => v.rule), ['host']);
+  // The top-level domains reserved never to resolve are examples too — a name of that kind names no deployment.
+  assert.deepEqual(scanWith('a.md', 'https://static.invalid/x, plant.test, api.example and localhost', allowlist()), []);
+  assert.deepEqual(scanWith('a.md', 'https://invalid.kr', allowlist()).map(v => v.rule), ['host']);
 });
 
 test('reads the repository from a GitHub link that carries a fragment or query', () => {

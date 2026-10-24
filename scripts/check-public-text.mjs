@@ -22,8 +22,9 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
-// Reserved for documentation (RFC 2606 / RFC 6761) and loopback.
-const EXAMPLE_HOST = /(^|\.)example\.(com|org|net)$|^localhost$|^127\.0\.0\.1$|^0\.0\.0\.0$/;
+// Reserved for documentation (RFC 2606 / RFC 6761): the example second-level domains and the top-level domains that never
+// resolve (`.test`, `.example`, `.invalid`, `.localhost`) — and loopback.
+const EXAMPLE_HOST = /(^|\.)example\.(com|org|net)$|(^|\.)(test|example|invalid|localhost)$|^127\.0\.0\.1$|^0\.0\.0\.0$/;
 
 const CONFIG_FILE = 'public-text.json';
 
