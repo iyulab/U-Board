@@ -6,9 +6,11 @@ import { GROUP_STYLE } from '../ui-style.js';
 import type { CanvasView, GridView, ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { ViewerPage, type ViewerPageProps } from '../viewer/ViewerPage.js';
-import { toViewDocument } from '../board-v2/picture.js';
+import { PictureError, toViewDocument } from '../board-v2/picture.js';
+import { checkBoardV2 } from '../board-v2/check.js';
 import type { BoardV2 } from '../board-v2/types.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
+import { PartPanel } from './PartPanel.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
 import { layoutEditable, placesItself, withPictureLayout } from './board-layout.js';
@@ -39,9 +41,10 @@ export interface BoardAuthoringProps {
 
 /**
  * The authoring surface of a board in the language's second version: the board drawn from its picture, where its parts
- * are moved, sized, ordered and deleted — each edit said again in the board's layout (`withPictureLayout`), nothing
- * else of the board touched. Undo, Redo, Save and Export are the board's. A part's settings are not edited here yet,
- * nor a grid holding grids or canvases of its own (`layoutEditable`) — such a board is shown as its viewers see it.
+ * are moved, sized, ordered and deleted — each edit said again in the board's layout (`withPictureLayout`) — and a
+ * selected part's title, kind, data and fields set in its panel, with what the board's check finds there. A setting the
+ * board cannot be drawn with keeps the last picture it could, and says why. Undo, Redo, Save and Export are the
+ * board's. A grid holding grids or canvases of its own (`layoutEditable`) is shown as its viewers see it.
  */
 export function BoardAuthoring({ initialBoard, keys, adapters, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
   const labels = useLabels(labelsProp);
@@ -70,9 +73,31 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
   }, [isDirty, onDirtyChange]);
 
   const keysOf = useMemo(() => (data: string) => [...(keys?.[data] ?? [])], [keys]);
-  const pictureOf = (b: BoardV2): ViewDocument => toViewDocument(b, { keysOf });
-  const picture = useMemo(() => toViewDocument(board, { keysOf }), [board, keysOf]);
+  // What is drawn: the board, or — while a setting leaves it one that cannot be drawn — the newest board before it that
+  // could be, with why the board is not.
+  const pictureOf = (h: DocumentHistory<BoardV2>) => drawnOf(h, keysOf);
+  const drawing = useMemo(() => drawnOf(history, keysOf), [history, keysOf]);
+  const picture = drawing.picture;
   const movable = useMemo(() => (id: string) => placesItself(board, id), [board]);
+  const findings = useMemo(() => {
+    const check = checkBoardV2(board);
+    return [...check.issues, ...check.advice];
+  }, [board]);
+  /** The panel of the part a selected node or item draws — a part made per item, or one inside a group, is its part. */
+  const panel = (selected: string | null) => {
+    const id = selected?.split('/')[0];
+    if (id === undefined || !(id in board.parts)) return null;
+    return (
+      <PartPanel
+        key={id}
+        id={id}
+        board={board}
+        onChange={part => setHistory(h => recordEdit(h, { ...h.present, parts: { ...h.present.parts, [id]: part } }, null))}
+        findings={findings.filter(f => f.path === `/parts/${id}` || f.path.startsWith(`/parts/${id}/`))}
+        labels={labels}
+      />
+    );
+  };
 
   const handleSave = async () => {
     if (!onSave) return handleExport();
@@ -122,12 +147,17 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>
       <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        {drawing.error && (
+          <p role="alert" className="ub-authoring__error">
+            {labels.boardNotDrawn.replace('{reason}', drawing.error)}
+          </p>
+        )}
         {picture.kind === 'canvas' && layoutEditable(board) ? (
           <CanvasAuthoring
             doc={picture}
             updateDoc={update =>
               setHistory(h => {
-                const before = pictureOf(h.present) as CanvasView;
+                const before = pictureOf(h).picture as CanvasView;
                 return recordEdit(h, withPictureLayout(h.present, before, update(before)), null);
               })
             }
@@ -142,14 +172,14 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
             labels={labels}
             clock={clock}
             triggerHosting={{ boardId, onTrigger, onNavigate, linkOrigins }}
-            layoutOnly={{ movable }}
+            layoutOnly={{ movable, panel }}
           />
         ) : picture.kind === 'grid' && layoutEditable(board) ? (
           <GridAuthoring
             doc={picture}
             updateDoc={update =>
               setHistory(h => {
-                const before = pictureOf(h.present) as GridView;
+                const before = pictureOf(h).picture as GridView;
                 return recordEdit(h, withPictureLayout(h.present, before, update(before)), null);
               })
             }
@@ -164,7 +194,7 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
             labels={labels}
             clock={clock}
             triggerHosting={{ boardId, onTrigger, onNavigate, linkOrigins }}
-            layoutOnly={{ movable }}
+            layoutOnly={{ movable, panel }}
           />
         ) : (
           <ViewerPage
@@ -185,4 +215,27 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
       </div>
     </ElementHost>
   );
+}
+
+/** A board drawn — when its language takes it and it draws — or why not. */
+function draw(board: BoardV2, keysOf: (data: string) => string[]): { picture: ViewDocument; error: null } | { picture: null; error: string } {
+  const issue = checkBoardV2(board).issues[0];
+  if (issue) return { picture: null, error: `${issue.path}: ${issue.message}` };
+  try {
+    return { picture: toViewDocument(board, { keysOf }), error: null };
+  } catch (error) {
+    if (error instanceof PictureError) return { picture: null, error: error.message };
+    throw error;
+  }
+}
+
+/** What the editor draws for a history: its board, or the newest one before it that draws, and why the board does not. */
+function drawnOf(history: DocumentHistory<BoardV2>, keysOf: (data: string) => string[]): { picture: ViewDocument; error: string | null } {
+  const now = draw(history.present, keysOf);
+  if (now.picture) return now;
+  for (const before of [...history.past].reverse()) {
+    const drawn = draw(before, keysOf).picture;
+    if (drawn) return { picture: drawn, error: now.error };
+  }
+  return { picture: toViewDocument(history.present, { keysOf }), error: now.error };
 }

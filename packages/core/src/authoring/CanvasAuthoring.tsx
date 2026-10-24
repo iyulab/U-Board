@@ -524,7 +524,7 @@ function CanvasEditor({
             editor and preview — which give way (`minWidth: 0`) — were squeezed to a sliver. */}
         <div className="ub-authoring__panel" style={{ flex: '0 0 var(--ub-panel-width, 320px)', minWidth: 0, overflowY: 'auto' }}>
           {movable ? (
-            <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>
+            (layoutOnly?.panel?.(selectedIds.length === 1 ? selectedIds[0]! : null) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)
           ) : selectedIds.length > 1 ? (
             <p className="ub-panel__hint">{labels.multipleSelected.replace('{count}', String(selectedIds.length))}</p>
           ) : selectedConnector ? (

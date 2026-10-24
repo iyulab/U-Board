@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 // Boards written in the board language's second version, opened in the editor: a canvas board's parts are moved and
-// deleted on the canvas as on any board, a grid board's widened and ordered in the panel, and what is saved is the board
-// in its own version — a part placed where it was dropped, a deleted one gone with the link that named it.
+// deleted on the canvas as on any board, a grid board's widened, ordered and retitled in the panel, and what is saved is
+// the board in its own version — a part placed where it was dropped, a deleted one gone with the link that named it.
 test('moves, sizes, orders and deletes the parts of boards in the second version, and saves each in that version', async ({ page }) => {
   const signup = await page.request.post('/api/auth/signup', {
     data: { email: 'e2e-board-v2-layout@test.com', password: 'p4ssword!', name: 'E2E Board V2 Layout' },
@@ -67,9 +67,13 @@ test('moves, sizes, orders and deletes the parts of boards in the second version
   await page.getByRole('button', { name: /^2\. / }).click();
   await page.getByLabel('너비(12열 중)').selectOption('8');
   await page.getByRole('button', { name: '앞으로' }).click();
+  // The part's own panel, under its place: its title set where it is selected.
+  await expect(page.getByRole('heading', { name: '부품 b' })).toBeVisible();
+  await page.getByLabel('제목', { exact: true }).fill('Second, wider');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
   const laidOut = (await (await page.request.get(gridAt)).json()).document;
   expect(laidOut.layout).toEqual({ kind: 'grid', items: [['b', 8], 'a'] });
   expect(Object.keys(laidOut.parts)).toEqual(['a', 'b']);
+  expect(laidOut.parts.b).toEqual({ as: 'header', title: 'Second, wider' });
 });

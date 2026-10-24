@@ -149,6 +149,20 @@ export interface UBoardLabels {
   multipleSelected: string;
   /** The panel of an editor that edits where the parts are and nothing else (a board in the language's second version). */
   layoutOnlyHint: string;
+  /** A part's panel (a board in the language's second version): its heading (`{id}`) and fields. */
+  partHeading: string;
+  partTitle: string;
+  partKind: string;
+  partFromPreset: string;
+  partOf: string;
+  partOfNone: string;
+  partItem: string;
+  partItemAll: string;
+  partShow: string;
+  /** A part made per item of `{data}`. */
+  partEach: string;
+  /** A board whose settings leave it one that cannot be drawn: `{reason}`, where and why. */
+  boardNotDrawn: string;
   propertiesHeading: string;
   widgetType: string;
   /** The text a new node starts with: its label, and the value it shows until it is bound. */
@@ -513,7 +527,18 @@ export const DEFAULT_LABELS: UBoardLabels = {
   duplicateItem: 'Duplicate item',
   removeItem: 'Remove item',
   multipleSelected: '{count} items selected — select one to edit it.',
-  layoutOnlyHint: 'Move and resize parts here, or delete them. Their settings are edited by the assistant for now.',
+  layoutOnlyHint: 'Move and resize parts here, or delete them. Select one to edit it.',
+  partHeading: 'Part {id}',
+  partTitle: 'Title',
+  partKind: 'Kind',
+  partFromPreset: '(from its preset)',
+  partOf: 'Reads',
+  partOfNone: '(nothing)',
+  partItem: 'Item (key)',
+  partItemAll: 'every item',
+  partShow: 'Shows (fields, by commas)',
+  partEach: 'One part per item of {data}.',
+  boardNotDrawn: 'The board cannot be drawn as it is now — {reason}. The last board it could draw is shown.',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
   newNodeLabel: 'New node',
