@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { AuthoringView, BoardAuthoring, BoardView, KO_LABELS, layoutEditable, type AuthoringMode, type Adapter } from '@iyulab/u-board';
-import { documentKind, isBoardV2, type BoardDocument } from '@iyulab/u-board/board-v2';
+import { BoardAuthoring, BoardView, KO_LABELS, type AuthoringMode, type Adapter } from '@iyulab/u-board';
+import { documentKind, fromV1, isBoardV2, type BoardDocument } from '@iyulab/u-board/board-v2';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, apiClock, ApiError,
@@ -117,7 +117,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   }
 
   function handleBackClick(e: MouseEvent) {
-    // AuthoringView's unsaved-changes guard is a native `beforeunload` listener, which only
+    // BoardAuthoring's unsaved-changes guard is a native `beforeunload` listener, which only
     // fires on a real page navigation — a client-side <Link> navigation would bypass it
     // silently, so this link needs its own guard for the in-app case.
     if (hasUnsavedChanges && !window.confirm('저장되지 않은 변경 사항이 있습니다. 목록으로 돌아갈까요?')) {
@@ -237,9 +237,9 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   // The server serves the frames the board's script elements run in under this address — none while opened with scripts
   // off, so no element code runs.
   const elementFramesAt = scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`);
-  // A board in the language's second version whose grid holds grids or canvases of its own is shown, not edited, until
-  // the editor lays such a grid out.
-  const shownOnly = isBoardV2(document) && !layoutEditable(document);
+  // A board still stored in the language's first version — one the move at start-up could not carry — is shown, not
+  // edited: a board is saved only in the second version. What keeps it there is said.
+  const keptFirst = isBoardV2(document) ? undefined : fromV1(document).unsupported;
 
   // Always the same slot, so a change of state never moves the editor.
   const saveStatus = hasUnsavedChanges ? (
@@ -287,15 +287,16 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         </Alert>
       )}
       {overwriteArmed && <Alert>저장하면 다른 사람이 그사이 저장한 내용을 내 변경으로 덮어씁니다.</Alert>}
-      {shownOnly && (
+      {keptFirst && (
         <p className="ub-editor-note" role="status">
-          이 보드는 그리드 칸 안에 그리드나 캔버스를 둔 보드 언어 2판 보드라 지금은 보기만 됩니다 — 그 배치 편집을 준비하고
-          있습니다. 고치려면 ✦ AI 비서에게 말하세요.
+          이 보드는 보드 언어 1판으로 저장돼 있고 새 판으로 옮기지 못해 보기만 됩니다
+          {keptFirst.length > 0 && <> — 옮기지 못한 것: {keptFirst.join(', ')}</>}. 편집하려면 새 보드로 다시 만드세요(✦ AI
+          비서가 이 보드를 보고 새 보드에 그릴 수 있습니다).
         </p>
       )}
       <div className="ub-editor-body">
       <div className="ub-editor-canvas">
-        {isBoardV2(document) && !shownOnly ? (
+        {isBoardV2(document) ? (
           <BoardAuthoring
             key={`${boardId}:${editorGeneration}`}
             initialBoard={document}
@@ -312,31 +313,12 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
             elementOrigins={elementOrigins}
             elementFrames={elementFramesAt}
           />
-        ) : isBoardV2(document) ? (
-          (
-            <BoardView
-              key={`${boardId}:${editorGeneration}`}
-              board={document}
-              adapters={adapters}
-              ariaLabel={boardName}
-              labels={EDITOR_LABELS}
-              clock={apiClock.now}
-              boardId={boardId}
-              onNavigate={handleNavigate}
-              elementOrigins={elementOrigins}
-              elementFrames={elementFramesAt}
-            />
-          )
         ) : (
-          <AuthoringView
+          <BoardView
             key={`${boardId}:${editorGeneration}`}
-            initialDocument={document}
-            initialMode={editorMode}
-            onModeChange={setEditorMode}
+            board={document}
             adapters={adapters}
-            connectorLabels={connectorLabels}
-            onDirtyChange={handleDirtyChange}
-            onSave={handleSave}
+            ariaLabel={boardName}
             labels={EDITOR_LABELS}
             clock={apiClock.now}
             boardId={boardId}

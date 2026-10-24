@@ -35,7 +35,7 @@ function renderPage(boardId = 'b1') {
   );
 }
 
-const EMPTY_DOC = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
+const EMPTY_DOC = { version: 2 as const, parts: {}, layout: { kind: 'canvas' as const, size: [1280, 720] as [number, number], place: {} } };
 
 describe('BoardEditorPage', () => {
   it('loads the board and renders the editor with a Save button', async () => {
@@ -87,7 +87,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     renderPage();
 
-    await userEvent.click(await screen.findByText('사각형 장식 추가'));
+    await userEvent.click(await screen.findByText('틀 추가'));
 
     expect(await screen.findByText('저장되지 않은 변경 사항')).toBeInTheDocument();
   });
@@ -97,7 +97,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2', revision: 2 });
     renderPage();
 
-    await userEvent.click(await screen.findByText('사각형 장식 추가'));
+    await userEvent.click(await screen.findByText('틀 추가'));
     await screen.findByText('저장되지 않은 변경 사항');
     await userEvent.click(screen.getByText('저장', { exact: true }));
 
@@ -110,7 +110,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockRejectedValue(new Error('network down'));
     renderPage();
 
-    await userEvent.click(await screen.findByText('사각형 장식 추가'));
+    await userEvent.click(await screen.findByText('틀 추가'));
     await userEvent.click(screen.getByText('저장', { exact: true }));
 
     await screen.findByRole('alert');
@@ -122,11 +122,11 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't2', revision: 2 });
     renderPage();
 
-    await userEvent.click(await screen.findByText('사각형 장식 추가'));
+    await userEvent.click(await screen.findByText('틀 추가'));
     await userEvent.click(screen.getByText('저장', { exact: true }));
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('저장됨'));
 
-    await userEvent.click(screen.getByText('텍스트 장식 추가'));
+    await userEvent.click(screen.getByText('글 추가'));
 
     expect(screen.queryByText('저장됨')).not.toBeInTheDocument();
     expect(screen.getByText('저장되지 않은 변경 사항')).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
     renderPage();
-    await userEvent.click(await screen.findByText('사각형 장식 추가'));
+    await userEvent.click(await screen.findByText('틀 추가'));
     await screen.findByText('저장되지 않은 변경 사항');
 
     await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
@@ -160,7 +160,7 @@ describe('BoardEditorPage', () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     renderPage();
-    await userEvent.click(await screen.findByText('사각형 장식 추가'));
+    await userEvent.click(await screen.findByText('틀 추가'));
     await screen.findByText('저장되지 않은 변경 사항');
 
     await userEvent.click(screen.getByRole('link', { name: '◂ 보드 목록으로' }));
@@ -170,9 +170,10 @@ describe('BoardEditorPage', () => {
 
   it('opens the board a trigger asks for, in View', async () => {
     const linked = {
-      kind: 'grid' as const,
-      items: [{ id: 'a', widget: { type: 'text' } }],
-      triggers: [{ on: { event: 'click' as const, node: 'a' }, do: [{ action: 'go-to-board' as const, board: 'b2' }] }],
+      version: 2 as const,
+      parts: { a: { as: 'label', title: 'A' } },
+      layout: { kind: 'grid' as const, items: ['a'] },
+      triggers: [{ on: { event: 'click' as const, part: 'a' }, do: [{ action: 'go-to-board' as const, board: 'b2' }] }],
     };
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: linked, updatedAt: 't', revision: 1 });
     renderPage();
@@ -183,14 +184,12 @@ describe('BoardEditorPage', () => {
     await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('w1', 'b2'));
   });
 
-  it('shows a board in the language’s second version whose grid holds a grid of its own as any host draws it — through the workspace’s data sources', async () => {
-    const board = { version: 2 as const, parts: { t: { as: 'header', title: 'Plant' } }, layout: { kind: 'grid' as const, items: [{ grid: ['t'], span: 12 }] } };
-    const picture = { kind: 'grid' as const, items: [{ id: 't', span: 12, widget: { type: 'header', props: { data: { title: 'Plant' } } } }] };
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: board, picture, updatedAt: 't', revision: 1 });
+  it('shows a board still stored in the first version — one the move could not carry — and says what keeps it there', async () => {
+    const kept = { kind: 'canvas' as const, background: {}, connectors: [], nodes: [{ id: 'n', x: 0, y: 0, anchored: false, caption: 'Pump', widget: { type: 'text', props: { data: { text: 'P' } } } }] };
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: kept, updatedAt: 't', revision: 1 });
     renderPage();
 
-    expect(await screen.findByText(/지금은 보기만 됩니다/)).toBeInTheDocument();
-    expect(await screen.findByLabelText('Floor 1')).toBeInTheDocument();
+    expect(await screen.findByText(/새 판으로 옮기지 못해 보기만 됩니다/)).toHaveTextContent('a node caption');
     expect(screen.queryByText('저장')).not.toBeInTheDocument();
   });
 
@@ -299,7 +298,7 @@ describe('BoardEditorPage connector wiring', () => {
 });
 
 describe('BoardEditorPage share panel', () => {
-  const DOC = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
+  const DOC = { version: 2 as const, parts: {}, layout: { kind: 'canvas' as const, size: [800, 600] as [number, number], place: {} } };
 
   it('hides the entire share panel for a non-owner, and never calls listShareTokens', async () => {
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: DOC, updatedAt: 't', revision: 1 });
@@ -473,21 +472,8 @@ describe('BoardEditorPage share panel', () => {
 });
 
 describe('BoardEditorPage binding editor wiring', () => {
-  it('passes connector display names (not raw ids) down to the binding editor', async () => {
-    const doc = {
-      kind: 'canvas' as const,
-      background: {},
-      nodes: [
-        {
-          id: 'n1',
-          x: 0,
-          y: 0,
-          anchored: false,
-          widget: { type: 'status' as const, props: { data: { label: 'A', tone: 'info' as const, value: 'x' } } },
-        },
-      ],
-      connectors: [],
-    };
+  it('names the workspace’s data sources by their names in the board’s data panel', async () => {
+    const doc = { version: 2 as const, data: { plant: { from: 'c1', path: '/plant' } }, parts: {}, layout: { kind: 'canvas' as const, size: [800, 600] as [number, number], place: {} } };
     vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: doc, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({
       connectors: [{ id: 'c1', name: 'Plant API', type: 'http', baseUrl: 'https://plant.example.com', authType: 'none', updatedAt: 't' }],
@@ -495,34 +481,15 @@ describe('BoardEditorPage binding editor wiring', () => {
     renderPage();
 
     await screen.findByText('저장');
-    fireEvent.click(screen.getByText('select-n1'));
-
     expect(await screen.findByRole('option', { name: 'Plant API' })).toBeInTheDocument();
   });
 
   it('with no data source, says where one comes from instead of offering a stand-in', async () => {
-    const doc = {
-      kind: 'canvas' as const,
-      background: {},
-      nodes: [
-        {
-          id: 'n1',
-          x: 0,
-          y: 0,
-          anchored: false,
-          widget: { type: 'status' as const, props: { data: { label: 'A', tone: 'info' as const, value: 'x' } } },
-        },
-      ],
-      connectors: [],
-    };
-    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: doc, updatedAt: 't', revision: 1 });
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'A', document: EMPTY_DOC, updatedAt: 't', revision: 1 });
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     renderPage();
 
     await screen.findByText('저장');
-    fireEvent.click(screen.getByText('select-n1'));
-
     expect(await screen.findByText(/«데이터소스»에서 추가하면/)).toHaveTextContent('«샘플에서 시작»');
-    expect(screen.queryByLabelText('데이터소스')).not.toBeInTheDocument();
   });
 });

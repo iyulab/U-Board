@@ -81,6 +81,8 @@ export function DataPanel({ data = {}, onChange, sources, look, statuses = [], l
           {labels.dataAdd}
         </button>
       </div>
+      {/* With no source to read from, where one comes from — the add button stays off until there is one. */}
+      {sources.length === 0 && <p className="ub-panel__hint">{labels.noDataSources}</p>}
     </div>
   );
 }

@@ -33,9 +33,10 @@ interface BoardRow {
 /**
  * Moves every board stored in the board language's first version to the second (`fromV1`) — once: a board moved is in
  * the second version and is not read again. A board the second version does not carry whole (`unsupported`, or a
- * conversion that does not pass the language's check) is left as it is and reported, and is not tried again until it
- * is saved anew (its revision changes). Each outcome is recorded in `board_migrations`, a moved board's first-version
- * document with it, so a move is put back from the record. A board saved while it is being moved keeps that save: the
+ * conversion that does not pass the language's check) is left as it is and reported — and tried again at every start,
+ * since a first-version board is no longer saved (its revision does not change) while the conversion grows. Each
+ * outcome is recorded once in `board_migrations` (a board kept for the same reasons at the same revision is not
+ * recorded again), a moved board's first-version document with it, so a move is put back from the record. A board saved while it is being moved keeps that save: the
  * move is written only over the revision it read, and counts as the board's next save.
  */
 export async function migrateFirstVersionBoards(db: DbClient, now: () => string = () => new Date().toISOString()): Promise<BoardMigrationReport> {
@@ -45,8 +46,7 @@ export async function migrateFirstVersionBoards(db: DbClient, now: () => string 
     // megabytes) stays where it is.
     const { rows } = await tx.query<BoardRow>(
       `SELECT b.id, b.workspace_id, b.name, b.document, b.revision FROM boards b
-       WHERE (b.document::jsonb ->> 'version') IS DISTINCT FROM '2'
-         AND NOT EXISTS (SELECT 1 FROM board_migrations m WHERE m.board_id = b.id AND m.revision = b.revision AND m.outcome = 'kept')`
+       WHERE (b.document::jsonb ->> 'version') IS DISTINCT FROM '2'`
     );
     const report: BoardMigrationReport = { migrated: 0, kept: [] };
     for (const row of rows) {
@@ -56,7 +56,12 @@ export async function migrateFirstVersionBoards(db: DbClient, now: () => string 
       const conversion = fromV1(document as ViewDocument);
       const unsupported = conversion.unsupported.length > 0 ? conversion.unsupported : documentIssues(conversion.board).map(issue => `${issue.path}: ${issue.message}`);
       if (unsupported.length > 0) {
-        await record(tx, row.id, revision, 'kept', null, unsupported, now());
+        const known = await tx.query(`SELECT 1 FROM board_migrations WHERE board_id = $1 AND revision = $2 AND outcome = 'kept' AND notes = $3`, [
+          row.id,
+          revision,
+          JSON.stringify(unsupported),
+        ]);
+        if (known.rows.length === 0) await record(tx, row.id, revision, 'kept', null, unsupported, now());
         report.kept.push({ boardId: row.id, workspaceId: row.workspace_id, name: row.name, unsupported });
         continue;
       }

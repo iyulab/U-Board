@@ -56,19 +56,22 @@ describe('moving stored boards to the board language’s second version', () => 
     expect((await db.query(`SELECT 1 FROM board_migrations`)).rows).toHaveLength(1);
   });
 
-  it('leaves a board it does not carry whole as it is, names it with what it uses, and tries it again only once it is saved anew', async () => {
+  it('leaves a board it does not carry whole as it is, names it with what it uses, and tries it again at every start', async () => {
     const kept = await storedV1(notCarried, 'Line 1');
     const report = await migrateFirstVersionBoards(db);
     expect(report.migrated).toBe(0);
     expect(report.kept).toEqual([{ boardId: kept.id, workspaceId, name: 'Line 1', unsupported: [expect.stringContaining('states')] }]);
     expect((await findBoard(db, workspaceId, kept.id))!.document).toEqual(notCarried);
 
-    expect(await migrateFirstVersionBoards(db)).toEqual({ migrated: 0, kept: [] });
+    // Tried again, kept again for the same reasons — recorded once.
+    expect((await migrateFirstVersionBoards(db)).kept).toHaveLength(1);
+    expect((await db.query(`SELECT 1 FROM board_migrations WHERE board_id = $1`, [kept.id])).rows).toHaveLength(1);
     // The board list says it stays, with what keeps it.
     expect((await listBoardsForWorkspace(db, workspaceId)).find(b => b.id === kept.id)!.firstVersion).toEqual([expect.stringContaining('states')]);
 
-    // Saved anew without what kept it: moved on the next start.
-    await updateBoard(db, workspaceId, kept.id, { document: carried as never });
+    // Once the conversion carries it — here, what kept it gone from the stored board at the same revision, as a
+    // conversion grown since would — it is moved on the next start, with no save between.
+    await db.query(`UPDATE boards SET document = $1 WHERE id = $2`, [JSON.stringify(carried), kept.id]);
     expect((await migrateFirstVersionBoards(db)).migrated).toBe(1);
     expect((await listBoardsForWorkspace(db, workspaceId)).find(b => b.id === kept.id)!.firstVersion).toBeUndefined();
   });

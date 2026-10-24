@@ -18,6 +18,12 @@ do when upgrading. Each release's notes carry its section.
   (`fromV1` in `@iyulab/u-board/board-v2`). A board stored in the first version before, which the move at start-up could
   not carry, stays readable as it is. Upgrading: a script or an integration that writes first-version documents converts
   them before saving.
+- **A board still in the first version opens as its viewers see it**, with what keeps it there and that a new board is
+  how to edit it — the console no longer opens the first version's editor. The move at start-up tries such a board again
+  at every start (it used to wait for the board to be saved anew, which no longer happens), so one the conversion has
+  grown to carry since moves on the next start — the conversion now carries a line's arrow at its start, a line made
+  invisible for a value, one value drawn in different tones, a node's state rings, the items of a list told apart by
+  two fields, and script elements.
 
 ## [0.27.0] - 2026-10-24
 
