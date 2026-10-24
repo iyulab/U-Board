@@ -14,8 +14,8 @@ do when upgrading. Each release's notes carry its section.
 ### Changed
 
 - A board saved in the board language's second version opens in the console from the picture the server makes of it —
-  the one its share link shows, with the items its data has now — and is shown, not edited, until the editor writes
-  that version. Reading a board through the API answers such a board with that picture beside its document. The
+  the one its share link shows, with the items its data has now. On a canvas its parts are moved, sized and deleted and
+  the board is saved in its own version; a grid board is shown, not edited, until the editor lays out a grid of it. Reading a board through the API answers such a board with that picture beside its document. The
   assistant panel draws in the second version: it starts from the tools' rules, reads a kind's options before using
   it, changes the board a JSON Patch per step, and takes values only from the workspace's data sources.
 - A board's `form` widget draws its fields with `<formdown-ui>` (`@iyulab/u-widgets` 0.40): every rule a field declares

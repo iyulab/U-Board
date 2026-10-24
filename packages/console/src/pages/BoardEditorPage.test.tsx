@@ -194,6 +194,19 @@ describe('BoardEditorPage', () => {
     expect(screen.queryByText('저장')).not.toBeInTheDocument();
   });
 
+  it('edits where the parts of a canvas board in the second version are, and saves the board in that version', async () => {
+    const board = { version: 2 as const, parts: { t: { as: 'label', title: 'Plant' } }, layout: { kind: 'canvas' as const, size: [400, 300] as [number, number], place: { t: [10, 10] as [number, number] } } };
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: board, picture: { kind: 'canvas', background: {}, nodes: [], connectors: [] }, updatedAt: 't', revision: 3 });
+    vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', updatedAt: 't', revision: 4 });
+    renderPage();
+
+    expect(await screen.findByText(/부품을 옮기고 크기를 바꾸거나 지울 수 있습니다/)).toBeInTheDocument();
+    expect(screen.queryByText(/보기만 됩니다/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '노드 추가' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
+    expect(api.updateBoard).toHaveBeenCalledWith('w1', 'b1', { document: board }, 3);
+  });
+
   it('shows an error instead of getting stuck on the loading placeholder when the board fails to load', async () => {
     vi.mocked(api.getBoard).mockRejectedValue(new Error('network down'));
     renderPage();

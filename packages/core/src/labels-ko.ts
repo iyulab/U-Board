@@ -93,6 +93,7 @@ export const KO_LABELS: UBoardLabels = {
   duplicateItem: '항목 복제',
   removeItem: '항목 삭제',
   multipleSelected: '{count}개 선택됨 — 하나를 선택하면 편집할 수 있습니다.',
+  layoutOnlyHint: '여기서는 부품을 옮기고 크기를 바꾸거나 지울 수 있습니다. 부품의 설정은 지금은 AI 비서로 고칩니다.',
   propertiesHeading: '속성',
   widgetType: '위젯 타입',
   newNodeLabel: '새 노드',

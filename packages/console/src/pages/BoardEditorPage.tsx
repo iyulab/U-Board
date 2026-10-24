@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { AuthoringView, KO_LABELS, ViewerPage, type AuthoringMode, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { AuthoringView, BoardAuthoring, KO_LABELS, ViewerPage, placedIn, type AuthoringMode, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import { documentKind, isBoardV2, type BoardDocument } from '@iyulab/u-board/board-v2';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
@@ -158,13 +158,13 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       </div>
     );
 
-  function handleSave(doc: ViewDocument): Promise<void> {
+  function handleSave(doc: BoardDocument): Promise<void> {
     const save = saving.current.catch(() => {}).then(() => saveNow(doc));
     saving.current = save;
     return save;
   }
 
-  async function saveNow(doc: ViewDocument) {
+  async function saveNow(doc: BoardDocument) {
     try {
       const saved = await updateBoard(workspaceId, boardId!, { document: doc }, revision.current);
       revision.current = saved.revision;
@@ -181,7 +181,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         setSaveError('저장 실패');
       }
       setSavedAt(null);
-      // Rethrow so `AuthoringView`'s unsaved-changes guard knows this save didn't actually
+      // Rethrow so the editor's unsaved-changes guard knows this save didn't actually
       // happen — it awaits `onSave` and only clears the beforeunload warning on success.
       throw err;
     }
@@ -240,7 +240,10 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   // The server serves the frames the board's script elements run in under this address — none while opened with scripts
   // off, so no element code runs.
   const elementFramesAt = scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`);
-  const secondVersion = isBoardV2(document);
+  // A board in the language's second version on a grid is shown, not edited, until the editor lays out a grid of it.
+  const shownOnly = isBoardV2(document) && document.layout.kind === 'grid';
+  // The items each data read has now, as the server's picture lays them out — what the editor draws a grid's parts by.
+  const keys = picture ? itemKeys(document, picture) : undefined;
 
   // Always the same slot, so a change of state never moves the editor.
   const saveStatus = hasUnsavedChanges ? (
@@ -288,15 +291,32 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         </Alert>
       )}
       {overwriteArmed && <Alert>저장하면 다른 사람이 그사이 저장한 내용을 내 변경으로 덮어씁니다.</Alert>}
-      {secondVersion && (
+      {shownOnly && (
         <p className="ub-editor-note" role="status">
-          이 보드는 보드 언어 2판으로 저장돼 있어 지금은 보기만 됩니다 — 2판 편집기를 준비하고 있습니다. 고치려면 ✦ AI 비서에게
-          말하세요.
+          이 그리드 보드는 보드 언어 2판으로 저장돼 있어 지금은 보기만 됩니다 — 그리드 배치 편집을 준비하고 있습니다. 고치려면
+          ✦ AI 비서에게 말하세요.
         </p>
       )}
       <div className="ub-editor-body">
       <div className="ub-editor-canvas">
-        {isBoardV2(document) ? (
+        {isBoardV2(document) && !shownOnly ? (
+          <BoardAuthoring
+            key={`${boardId}:${editorGeneration}`}
+            initialBoard={document}
+            keys={keys}
+            initialMode={editorMode}
+            onModeChange={setEditorMode}
+            adapters={adapters}
+            onDirtyChange={handleDirtyChange}
+            onSave={handleSave}
+            labels={EDITOR_LABELS}
+            clock={apiClock.now}
+            boardId={boardId}
+            onNavigate={handleNavigate}
+            elementOrigins={elementOrigins}
+            elementFrames={elementFramesAt}
+          />
+        ) : isBoardV2(document) ? (
           picture && (
             <ViewerPage
               key={`${boardId}:${editorGeneration}`}
@@ -357,4 +377,16 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       )}
     </div>
   );
+}
+
+/** The keys of each data read's items as a picture lays them out: `<part>/<key>` is an item of a part made per item. */
+function itemKeys(board: BoardDocument, picture: ViewDocument): Record<string, string[]> | undefined {
+  if (!isBoardV2(board)) return undefined;
+  const keys: Record<string, string[]> = {};
+  for (const { id } of placedIn(picture)) {
+    const [part, key] = id.split('/');
+    const data = board.parts[part!]?.each;
+    if (data !== undefined && key !== undefined && !(keys[data] ??= []).includes(key)) keys[data].push(key);
+  }
+  return keys;
 }

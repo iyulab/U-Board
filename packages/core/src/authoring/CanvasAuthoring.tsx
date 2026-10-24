@@ -129,6 +129,7 @@ function CanvasEditor({
   component,
   onEditComponent,
   inCell = false,
+  layoutOnly,
 }: CanvasAuthoringProps & { component?: ComponentScope; onEditComponent?: (name: string) => void }) {
   const previewValues = component?.previewValues;
   // Read when a result is drawn, not watched: a new function on every render must not re-resolve.
@@ -187,7 +188,8 @@ function CanvasEditor({
   // The document as it was opened — this editor is mounted afresh for each document opened — which is what
   // fits into view; not each edit.
   const [openedDoc] = useState(doc);
-  const scene = useMemo(() => documentToScene(doc), [doc]);
+  const movable = layoutOnly?.movable;
+  const scene = useMemo(() => documentToScene(doc, movable), [doc, movable]);
   const extent = useMemo(() => documentExtent(doc), [doc]);
   // The widgets the viewer would draw, laid over the nodes being edited — display-only, so a press on
   // one reaches the node beneath — each with its widget type named above it. Where and how big each is
@@ -299,7 +301,7 @@ function CanvasEditor({
 
   const handleDelete = () => {
     if (selectedIds.length === 0) return;
-    const ids = selectedIds;
+    const ids = movable ? selectedIds.filter(movable) : selectedIds;
     updateDoc(prev => removeParts(prev, ids));
     designerRef.current?.select([]);
     setSelectedIds([]);
@@ -442,6 +444,8 @@ function CanvasEditor({
       )}
       <div className="ub-authoring__toolbar" style={TOOLBAR_STYLE}>
         <div className="ub-authoring__group" style={GROUP_STYLE}>
+          {!movable && (
+            <>
           <button type="button" className="ub-action" onClick={handleAddNode}>
             {labels.addNode}
           </button>
@@ -458,6 +462,8 @@ function CanvasEditor({
             <button type="button" className="ub-action" onClick={handleMakeComponent} disabled={!canMake} title={canMake ? undefined : labels.makeComponentHint}>
               {labels.makeComponent}
             </button>
+          )}
+            </>
           )}
           <button type="button" className="ub-action" onClick={handleDelete} disabled={selectedIds.length === 0}>
             {labels.deleteSelected}
@@ -517,7 +523,9 @@ function CanvasEditor({
         {/* A fixed width: sized by its content, the form's inline fields would widen the panel until the
             editor and preview — which give way (`minWidth: 0`) — were squeezed to a sliver. */}
         <div className="ub-authoring__panel" style={{ flex: '0 0 var(--ub-panel-width, 320px)', minWidth: 0, overflowY: 'auto' }}>
-          {selectedIds.length > 1 ? (
+          {movable ? (
+            <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>
+          ) : selectedIds.length > 1 ? (
             <p className="ub-panel__hint">{labels.multipleSelected.replace('{count}', String(selectedIds.length))}</p>
           ) : selectedConnector ? (
             <ConnectorPanel
@@ -599,8 +607,8 @@ function CanvasEditor({
             />
           )}
           {/* The board's elements and symbols are edited on the board, where every use of them is. */}
-          {selectedIds.length === 0 && !component && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
-          {selectedIds.length === 0 && !component && <SymbolsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
+          {selectedIds.length === 0 && !component && !movable && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
+          {selectedIds.length === 0 && !component && !movable && <SymbolsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
         </div>
       </div>
     </>

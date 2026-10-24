@@ -209,7 +209,7 @@ export function getBoard(workspaceId: string, boardId: string) {
 export function updateBoard(
   workspaceId: string,
   boardId: string,
-  input: { name?: string; document?: ViewDocument },
+  input: { name?: string; document?: BoardDocument },
   revision?: number
 ) {
   return request<{ id: string; name: string; updatedAt: string; revision: number }>(`/workspaces/${workspaceId}/boards/${boardId}`, {

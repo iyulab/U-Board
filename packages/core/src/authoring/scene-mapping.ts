@@ -43,10 +43,11 @@ const INSTANCE_PLACEHOLDER_STROKE = '#7c3aed';
  * pieces (`partOf`). A component instance's parts are drawn where they land, locked: they are edited in the
  * component, not where an instance draws them.
  */
-export function documentToScene(saved: CanvasView): Scene {
+export function documentToScene(saved: CanvasView, movable?: (id: string) => boolean): Scene {
   const scene = new Scene();
   const doc = expandComponents(saved);
-  const own = new Set([...saved.nodes, ...saved.connectors, ...(saved.decorations ?? [])].map(part => part.id));
+  // Only the nodes `movable` names, when a layout is all that is edited; else every part of the board's own.
+  const own = new Set((movable ? saved.nodes.filter(node => movable(node.id)) : [...saved.nodes, ...saved.connectors, ...(saved.decorations ?? [])]).map(part => part.id));
   // A part an instance draws, and every piece of it: drawn, never selected or moved.
   const add = (object: Parameters<Scene['add']>[0]) => scene.add(object.id && !own.has(partOf(object.id)) ? { ...object, locked: true } : object);
 

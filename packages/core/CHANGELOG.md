@@ -22,6 +22,10 @@ All notable changes to this package are documented here. The format follows
   catalog written when this package is built, so a server can validate boards without the widget library installed.
   `BoardDocument` is what a board stores while boards move to it (a document in either version), and
   `documentKind(document)` the kind of view either lays out.
+- `BoardAuthoring`: the authoring surface of a board in the language's second version — drawn from its picture, its
+  parts moved, sized and deleted on a canvas as on any board, each edit said again in the board's layout (and a deleted
+  part's links and triggers removed with it); Undo, Redo, Save and Export are the board's. A part's settings, and a
+  grid's layout, are not edited there yet.
 - The board language's second version has `triggers`, as the first version has them: on a part clicked, an event its
   element raises, a part entering or leaving a status (of its own state, or of a `field`), or the board opened; when a
   part is in a status; open a link, bring a part into view, hand the host an event or ask for another board. A part

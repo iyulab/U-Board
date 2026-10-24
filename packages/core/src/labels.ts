@@ -147,6 +147,8 @@ export interface UBoardLabels {
   /** Shown instead of a property panel while several items are selected; `{count}` is replaced by
    * how many. */
   multipleSelected: string;
+  /** The panel of an editor that edits where the parts are and nothing else (a board in the language's second version). */
+  layoutOnlyHint: string;
   propertiesHeading: string;
   widgetType: string;
   /** The text a new node starts with: its label, and the value it shows until it is bound. */
@@ -511,6 +513,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   duplicateItem: 'Duplicate item',
   removeItem: 'Remove item',
   multipleSelected: '{count} items selected — select one to edit it.',
+  layoutOnlyHint: 'Move and resize parts here, or delete them. Their settings are edited by the assistant for now.',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
   newNodeLabel: 'New node',

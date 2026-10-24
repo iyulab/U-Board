@@ -29,6 +29,12 @@ export interface KindEditorProps<D extends ViewDocument> {
   clock: () => number;
   /** What the board's triggers hand the host in View — Edit runs none (a click there selects). */
   triggerHosting: TriggerHosting;
+  /**
+   * Only where the parts are is edited — the document is drawn from another one (a board in the language's second
+   * version), which keeps everything else: parts are moved, sized and deleted, nothing is added, and no part's settings
+   * are shown. `movable` says which parts the other document places itself.
+   */
+  layoutOnly?: { movable: (id: string) => boolean };
 }
 
 /** The host's side of a board's triggers — `ViewerPage`'s props of the same names. */
