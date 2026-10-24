@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-10-24
+
 ### Added
 
 - **Boards stored in the board language's first version move to the second when the server starts** — once, each
