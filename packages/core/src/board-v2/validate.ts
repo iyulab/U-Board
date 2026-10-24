@@ -165,6 +165,9 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
       }
       if (f.digits !== undefined && !(Number.isInteger(f.digits) && (f.digits as number) >= 0)) fail(`${fieldAt}/digits`, '"digits" is a whole number of decimal places');
       if (f.format !== undefined && typeof f.format !== 'string') fail(`${fieldAt}/format`, 'a format is a string, as the widgets write values: "number:1", "percent", "time" …');
+      if (typeof f.format === 'string' && /^percent\b/.test(f.format) && typeof f.unit === 'string' && /^\s*[%％]\s*$/.test(f.unit)) {
+        issues.push({ at: `${fieldAt}/unit`, message: '"percent" writes the % sign itself — the value shows it twice; leave "unit" out', hint: true });
+      }
       if (f.state !== undefined && f.state !== 'raw') checkMapping(f.state, `${fieldAt}/state`, 'state');
       if (f.names !== undefined) checkMapping(f.names, `${fieldAt}/names`, 'names');
     }

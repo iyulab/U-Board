@@ -201,6 +201,14 @@ describe('validateBoardV2', () => {
     ]);
   });
 
+  it('advises leaving out a % unit on a field the percent format writes — the value would show the sign twice', () => {
+    const board = { ...canvas({}), data: { line: { from: 'plant', path: '/line', fields: { oee: { format: 'percent', unit: '%' }, load: { format: 'number:1', unit: '%' } } } } };
+    expect(validateBoardV2(board).filter(i => i.hint).map(i => `${i.at}: ${i.message}`)).toEqual([
+      '/data/line/fields/oee/unit: "percent" writes the % sign itself — the value shows it twice; leave "unit" out',
+    ]);
+    expect(issues(board)).toEqual([]);
+  });
+
   it('checks what a field means: a state names statuses, names take the same two forms', () => {
     const board = {
       ...canvas({}),
