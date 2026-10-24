@@ -384,6 +384,73 @@ describe('fromV1', () => {
     expect(unsupported).toEqual(['a connector coloured and dashed by different fields']);
   });
 
+  it('runs a line with its arrow at the start from its other end, and draws a line made invisible for a value idle', () => {
+    const metric = (id: string, x: number) => node(id, { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } }, x);
+    const { board, notes, unsupported } = fromV1(canvas([metric('A', 0), metric('B', 300)], {
+      connectors: [
+        { id: 'ship', fromNodeId: 'A', toNodeId: 'B', style: { arrow: 'start', route: 'curved' } },
+        { id: 'link', fromNodeId: 'A', toNodeId: 'B', bindings: { 'style.stroke': { adapter: 'plant', ref: equipment('A', '/pass'), map: { values: { contact: 'ok' }, otherwise: 'transparent' } } } },
+      ],
+    }));
+    expect(unsupported).toEqual([]);
+    expect(board.layout.kind === 'canvas' && board.layout.links).toEqual({
+      ship: { from: 'B', to: 'A', arrow: true, route: 'curved' },
+      link: { from: 'A', to: 'B', show: 'pass', of: 'equipment[A]' },
+    });
+    expect(board.data!.equipment!.fields!.pass).toEqual({ state: { contact: 'ok', '*': 'idle' } });
+    expect(notes).toEqual([
+      'ship: its arrow at the start is drawn by running the line from its other end, its curve bowing the other way',
+      'link: drawn idle where it was not drawn (transparent) — a link is always drawn',
+    ]);
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+  });
+
+  it('names a value’s status by its tone too when another line draws the same value in another tone', () => {
+    const metric = (id: string, x: number) => node(id, { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } }, x);
+    const section = (id: string, stroke: string) => ({
+      id, fromNodeId: 'A', toNodeId: 'B', style: { stroke },
+      bindings: { 'style.dash': { adapter: 'plant', ref: equipment(id, '/state'), map: { values: { late: 'dashed' }, otherwise: 'solid' } } },
+    });
+    const { board, unsupported } = fromV1(canvas([metric('A', 0), metric('B', 300)], { connectors: [section('S1', 'info'), section('S2', 'warn')] }));
+    expect(unsupported).toEqual([]);
+    expect(board.statuses).toEqual({ late: { tone: 'info', emphasis: 'hatch' }, 'late-warn': { tone: 'warn', emphasis: 'hatch' } });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+  });
+
+  it('draws a node’s state rings as the tone it takes, a blinking one as a status of the board', () => {
+    const tile = (states: Node['states']) => ({
+      ...node('gu', { type: 'status', props: { data: { label: 'Jung-gu', value: '', tone: 'idle' } }, bindings: {
+        'data.value': { adapter: 'plant', ref: equipment('gu', '/pm10') },
+        'data.tone': { adapter: 'plant', ref: equipment('gu', '/grade'), map: { values: { '1': 'info', '2': 'ok', '3': 'warn', '4': 'alarm' }, otherwise: 'idle' } },
+      } }),
+      states,
+    });
+    const rings = { from: 'data.tone', map: { values: { '1': 'good', '4': 'very-bad' } }, looks: { good: { outline: '#2f7fd8' }, 'very-bad': { outline: '#d03b3b', blink: true } } };
+    const { board, notes, unsupported } = fromV1(canvas([tile(rings)]));
+    expect(unsupported).toEqual([]);
+    expect(board.statuses).toEqual({ 'very-bad': { tone: 'alarm', emphasis: 'blink' } });
+    expect(Object.values(board.data!.equipment!.fields!).find(f => f.state !== undefined)!.state).toEqual({ '1': 'info', '2': 'ok', '3': 'warn', '4': 'very-bad', '*': 'idle' });
+    expect(notes).toContain('gu: its state ring is drawn as its tone, a blinking one as a status');
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    // A ring in another tone than the node's, or a state that hides the node, has no place.
+    expect(fromV1(canvas([tile({ ...rings, looks: { good: { outline: '#d03b3b' } } })])).unsupported).toEqual(['node states drawn in another tone than the node']);
+    expect(fromV1(canvas([tile({ ...rings, looks: { good: { hidden: true } } })])).unsupported).toEqual(['node states']);
+  });
+
+  it('reads the items of a list told apart by two fields once per value of one, the other naming them', () => {
+    const next = (id: string, line: string, way: string) => node(id, { type: 'metric', props: { data: { value: 0 } }, bindings: {
+      'data.value': { adapter: 'metro', ref: { path: '/arrivals/hall', item: { list: '/list', where: { line, way } }, valuePath: '/minutes' } },
+    } });
+    const { board, unsupported } = fromV1(canvas([next('a', '1', 'up'), next('b', '1', 'down'), next('c', '2', 'up'), next('d', '2', 'down')]));
+    expect(unsupported).toEqual([]);
+    expect(board.data).toEqual({
+      'hall-1': { from: 'metro', path: '/arrivals/hall', list: '/list', key: 'way', where: { line: '1' }, fields: { minutes: {} } },
+      'hall-2': { from: 'metro', path: '/arrivals/hall', list: '/list', key: 'way', where: { line: '2' }, fields: { minutes: {} } },
+    });
+    expect([board.parts.a!.of, board.parts.d!.of]).toEqual(['hall-1[up]', 'hall-2[down]']);
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+  });
+
   it('lays a grid out item by item, an item spanning rows beside a grid in a cell of the items that fill them', () => {
     const metric = (id: string) => ({ id, widget: { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } } });
     const { board, notes, unsupported } = fromV1({

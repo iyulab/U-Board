@@ -85,14 +85,14 @@ interface Context {
 function canvasOf(canvas: CellCanvas, ctx: Context): Omit<CanvasLayout, 'kind'> {
   const { reads, elements, parts, notes, unsupported } = ctx;
   const place: Record<string, Place> = {};
-  for (const node of canvas.nodes) {
+  for (const node of canvas.nodes.map(n => withStates(n, ctx))) {
+    if (node === undefined) continue;
     const part = partOf(node, reads, elements, notes, unsupported);
     if (part === undefined) continue;
     parts[node.id] = part;
     const own = elements.sizeOf(node.widget.type);
     place[node.id] = [node.x, node.y, node.width ?? own?.width ?? DEFAULT_NODE_WIDTH, node.height ?? own?.height ?? DEFAULT_NODE_HEIGHT];
     if (node.caption !== undefined) unsupported.push('a node caption');
-    if (node.states !== undefined) unsupported.push('node states');
   }
   if ('instances' in canvas) instancesOf(canvas as CanvasView, place, ctx);
   const links: Record<string, Link> = {};
@@ -168,9 +168,9 @@ function gridOf(grid: GridView, ctx: Context): V2GridItem[] {
     const item = items[i]!;
     const extra = item.height !== undefined ? { height: item.height } : {};
     if ('canvas' in item) return { canvas: canvasOf(item.canvas, ctx), span: spans[i]!, ...extra };
-    const part = partOf(item as GridWidgetItem as unknown as Node, ctx.reads, ctx.elements, ctx.notes, ctx.unsupported);
+    const node = withStates(item as GridWidgetItem as unknown as Node, ctx);
+    const part = node === undefined ? undefined : partOf(node, ctx.reads, ctx.elements, ctx.notes, ctx.unsupported);
     if (part === undefined) return undefined;
-    if (item.states !== undefined) ctx.unsupported.push('node states');
     ctx.parts[item.id] = part;
     return item.height !== undefined ? { id: item.id, span: spans[i]!, ...extra } : [item.id, spans[i]!];
   };
@@ -454,6 +454,43 @@ function tone(reads: Reads, binding: Binding | undefined, value: Binding, read: 
   reads.setState(read, state, unsupported);
 }
 
+/** A node with its states folded into the state of the field its tone reads, or the node as it is without states:
+ *  each state's ring drawn as the tone the node already takes for those values, a blinking one as a status of the
+ *  board by the state's name, its tone with the `blink` emphasis. States read from another binding than the node's
+ *  tone, a ring in another tone than the node's, a range or a hidden part have no such place — reported unsupported. */
+function withStates(node: Node, ctx: Context): Node | undefined {
+  const rule = node.states;
+  if (rule === undefined) return node;
+  const bindings = node.widget.bindings ?? {};
+  const toneKey = ['data.tone', 'data.level'].find(k => k in bindings);
+  const toneBinding = toneKey === undefined ? undefined : bindings[toneKey];
+  const looks = rule.looks ?? {};
+  const raws = Object.keys(rule.map.values ?? {});
+  const plain = toneBinding?.map !== undefined && (toneBinding.map.ranges ?? []).length === 0;
+  if (rule.from !== toneKey || !plain || (rule.map.ranges ?? []).length > 0 || rule.map.otherwise !== undefined || Object.values(looks).some(l => l.hidden)) {
+    ctx.unsupported.push('node states');
+    return undefined;
+  }
+  const toneOf = (raw: string) => String(toneBinding!.map!.values?.[raw] ?? toneBinding!.map!.otherwise ?? '');
+  const values: Record<string, string> = { ...(toneBinding!.map!.values as Record<string, string> | undefined) };
+  for (const raw of raws) {
+    const state = rule.map.values![raw]!;
+    const look = looks[state];
+    const tone = toneOf(raw);
+    const ring = look?.outline === undefined ? tone : nearestTone(look.outline, ctx.appearance);
+    if (ring !== tone || !(TONES as readonly string[]).includes(tone)) { ctx.unsupported.push('node states drawn in another tone than the node'); return undefined; }
+    if (look?.blink) {
+      const status: Status = { tone: tone as Tone, emphasis: 'blink' };
+      if (state in ctx.statuses && JSON.stringify(ctx.statuses[state]) !== JSON.stringify(status)) { ctx.unsupported.push('one status drawn two ways'); return undefined; }
+      ctx.statuses[state] = status;
+      values[raw] = state;
+    }
+  }
+  ctx.notes.push(`${node.id}: its state ring is drawn as its tone${Object.values(looks).some(l => l.blink) ? ', a blinking one as a status' : ''}`);
+  const { states: _states, ...rest } = node;
+  return { ...rest, widget: { ...node.widget, bindings: { ...bindings, [toneKey!]: { ...toneBinding!, map: { ...toneBinding!.map, values } } } } };
+}
+
 /** A node drawing one of the board's elements: its name, its fixed props, and each bound prop as a field — its value, its
  *  words, or the tone of its state. */
 function elementPart(id: string, widget: Widget, reads: Reads, elements: Elements, notes: string[], unsupported: string[]): Part | undefined {
@@ -620,7 +657,13 @@ function linkOf(connector: Connector, ctx: Context): Link | undefined {
     if (style.dash === 'dotted') notes.push(`${connector.id}: a dotted line is drawn dashed`);
   }
   if (style.arrow === 'end') link.arrow = true;
-  else if (style.arrow !== undefined && style.arrow !== 'none') { unsupported.push(`a connector with its arrow at ${style.arrow}`); return undefined; }
+  else if (style.arrow === 'start') {
+    // An arrow at its start is the line run from its other end — the second version says which way a line points one
+    // way, from → to. A curve bows to the left of the way it runs, so it bows the other way.
+    [link.from, link.to] = [connector.toNodeId, connector.fromNodeId];
+    link.arrow = true;
+    notes.push(`${connector.id}: its arrow at the start is drawn by running the line from its other end${style.route === 'curved' ? ', its curve bowing the other way' : ''}`);
+  } else if (style.arrow !== undefined && style.arrow !== 'none') { unsupported.push(`a connector with its arrow at ${style.arrow}`); return undefined; }
   if (style.route !== undefined && style.route !== 'straight') link.route = style.route;
   if (connector.labelAt !== undefined || connector.labelSize !== undefined) notes.push(`${connector.id}: its label's place and size take the board's`);
   return link;
@@ -646,9 +689,12 @@ function lineState(connector: Connector, ctx: Context): Record<string, string> |
   const state: Record<string, string> = {};
   for (const raw of [...raws, undefined]) {
     const colour = at(stroke, raw, style.stroke);
-    const tone = colour === undefined ? 'idle' : nearestTone(colour, appearance);
+    // A line made invisible for a value has no place in the second version, which always draws a link: it is drawn idle.
+    const clear = colour !== undefined && ['transparent', 'none'].includes(colour.trim().toLowerCase());
+    const tone = colour === undefined || clear ? 'idle' : nearestTone(colour, appearance);
     if (tone === undefined) { unsupported.push('a connector coloured by a value that is not a tone'); return undefined; }
-    if (colour !== undefined && !(TONES as readonly string[]).includes(colour.trim().toLowerCase())) notes.push(`${connector.id}: its colour ${colour} is drawn in the nearest tone, ${tone}`);
+    if (clear) notes.push(`${connector.id}: drawn idle where it was not drawn (${colour}) — a link is always drawn`);
+    else if (colour !== undefined && !(TONES as readonly string[]).includes(colour.trim().toLowerCase())) notes.push(`${connector.id}: its colour ${colour} is drawn in the nearest tone, ${tone}`);
     // Only a bound dash is a state's form; a fixed one stays the link's own.
     const form = dash === undefined ? 'solid' : (at(dash, raw, style.dash) ?? 'solid');
     const emphasis = form === 'dashed' ? 'hatch' : form === 'dotted' ? 'blink' : undefined;
@@ -657,6 +703,8 @@ function lineState(connector: Connector, ctx: Context): Record<string, string> |
       // A value that is itself a tone's name (`idle`), or every other value, names its status by its form too.
       word = raw !== undefined && !(TONES as readonly string[]).includes(raw) ? raw : `${raw ?? tone}-${emphasis}`;
       const status: Status = { tone, emphasis };
+      // One value drawn in another tone on another line (each line's own colour) is a status of its own, named by both.
+      if (word in statuses && JSON.stringify(statuses[word]) !== JSON.stringify(status)) word = `${word}-${tone}`;
       if (word in statuses && JSON.stringify(statuses[word]) !== JSON.stringify(status)) { unsupported.push('one status drawn two ways'); return undefined; }
       statuses[word] = status;
     }
@@ -838,12 +886,18 @@ class Reads {
   /** The name of the data read a reference is part of, made on first use. */
   private query(adapter: string, ref: HttpRef, list: string | undefined): string {
     const key = readKey(adapter, ref, list);
-    const known = this.names.get(key);
+    const all = (this.seen.get(key) ?? [ref]).flatMap(r => (r.item ? [r.item.where] : []));
+    // Items told apart by two fields are read once per value of one of them, which each read keeps to — the other names
+    // the items of each read.
+    const by = ref.item === undefined ? undefined : splitField(all);
+    const value = by === undefined ? undefined : String(ref.item!.where[by]);
+    const sub = by === undefined ? key : JSON.stringify([key, value]);
+    const known = this.names.get(sub);
     if (known !== undefined) return known;
-    const name = unique(nameOf(ref.path), this.data);
-    this.names.set(key, name);
+    const name = unique(by === undefined ? nameOf(ref.path) : `${nameOf(ref.path)}-${nameOf(value!) === 'data' ? 'part' : nameOf(value!)}`, this.data);
+    this.names.set(sub, name);
     const q: Query = { from: adapter, path: ref.path };
-    const items = (this.seen.get(key) ?? [ref]).flatMap(r => (r.item ? [r.item.where] : []));
+    const items = by === undefined ? all : all.filter(w => String(w[by]) === value);
     if (list !== undefined) q.list = list;
     if (items.length > 0) {
       // The field the items differ by names them; the fields they share keep the list to them.
@@ -915,6 +969,17 @@ class Reads {
 }
 
 /** What makes two references one read: the connector, the request and how it is timed, and the list. */
+/** The field to read a list's items apart by when they differ by exactly two: the one with fewer values (the first, on a
+ *  tie) — undefined when they differ by one or none, or by more than two. */
+function splitField(items: Record<string, unknown>[]): string | undefined {
+  if (items.length === 0) return undefined;
+  const fields = [...new Set(items.flatMap(w => Object.keys(w)))];
+  if (items.some(w => fields.some(f => !(f in w)))) return undefined;
+  const counts = fields.map(f => [f, new Set(items.map(w => String(w[f]))).size] as const).filter(([, n]) => n > 1);
+  if (counts.length !== 2) return undefined;
+  return counts[1]![1] < counts[0]![1] ? counts[1]![0] : counts[0]![0];
+}
+
 function readKey(adapter: string, ref: HttpRef, list: string | undefined): string {
   return JSON.stringify([adapter, ref.path, list ?? null, ref.requestTime ?? null, ref.timeZone ?? null, ref.maxAgeSeconds ?? null]);
 }

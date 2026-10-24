@@ -23,7 +23,11 @@ All notable changes to this package are documented here. The format follows
   `BoardDocument` is what a board stores while boards move to it (a document in either version), and
   `documentKind(document)` the kind of view either lays out. An option a kind reads itself in place of one of its widget's has that one name —
   a list's `max` and `variant`, never the widget's `maxItems` and `layout` (the check says which to write; a first-version
-  document's list options come across renamed).
+  document's list options come across renamed). The conversion also carries across a connector with its arrow at the
+  start (run from its other end), a connector made invisible for a value (drawn idle, noted), one value drawn in
+  different tones on different lines (a status per tone), a node's state rings in the tone it already takes (a blinking
+  one as a status with the `blink` emphasis), and the items of one list told apart by two fields (one read per value of
+  one, the other the key).
 - `BoardView` (in `./viewer`): a board as it is stored — in either version of the board language — drawn in the
   application that hosts it, its values and the items a grid lays out a part per item of read through the host's own
   adapters, with no U-Board server. `pictureOf(board, read)`, `readKeys`, `dataReadOf` and `readerOf(adapters)` in `./board-v2` make
