@@ -22,6 +22,9 @@ All notable changes to this package are documented here. The format follows
   catalog written when this package is built, so a server can validate boards without the widget library installed.
   `BoardDocument` is what a board stores while boards move to it (a document in either version), and
   `documentKind(document)` the kind of view either lays out.
+- In the board language's second version a status's `glyph` marks what shows it — a status card's badge, a stat list's
+  values, a list's rows — not only the legend (drawn by `@iyulab/u-widgets` with item glyphs; an earlier widget library
+  draws the tone's mark).
 
 - An HTTP connector reference can read every item of a list whose fields match: `items: { list, where }` — the rows a
   list or a table shows, kept to the part of a list they are about (one pollutant out of a list of all of them), in the

@@ -96,6 +96,26 @@ describe('the picture model of a v2 board', () => {
     });
   });
 
+  it('marks a value with its status’s glyph where the widget draws a mark — none bound when no status names one', () => {
+    const marked: BoardV2 = { ...board(
+      {
+        card: { as: 'status-card', of: 'pumps[P2]', show: ['state'] },
+        rows: { as: 'stat-list', of: 'pumps[P2]', show: ['flow'], state: 'state' },
+        list: { as: 'list', of: 'pumps', show: ['id'], state: 'state' },
+      },
+      { kind: 'grid', items: ['card', 'rows', 'list'] },
+    ), statuses: { running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped', glyph: '⚡' } } };
+    const doc = view(marked);
+    expect(drawn(nodeOf(doc, 'card').widget).data).toMatchObject({ tone: 'alarm', status: 'Tripped', glyph: '⚡' });
+    expect(drawn(nodeOf(doc, 'rows').widget).data).toEqual([expect.objectContaining({ tone: 'alarm', glyph: '⚡' })]);
+    const list = nodeOf(doc, 'list').widget;
+    expect(list.props).toMatchObject({ mapping: { tone: 'state$tone', glyph: 'state$glyph' } });
+    expect((drawn(list).data as Array<Record<string, unknown>>).map(r => [r['state$tone'], r['state$glyph']])).toEqual([['ok', ''], ['alarm', '⚡']]);
+
+    const plain = view(board({ card: { as: 'status-card', of: 'pumps[P2]', show: ['state'] } }, { kind: 'grid', items: ['card'] }));
+    expect(nodeOf(plain, 'card').widget.bindings!['data.glyph']).toBeUndefined();
+  });
+
   it('draws stats, a stat list, a gauge and a chart in a grid, each in the order and span the layout gives', () => {
     const doc = view(board(
       {

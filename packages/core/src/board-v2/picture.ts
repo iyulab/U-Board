@@ -59,6 +59,8 @@ interface StateMaps {
   tone: ValueMap<string>;
   status: ValueMap<string>;
   emphasis?: ValueMap<string>;
+  /** The mark of each status that names one — none when no status does, and the widget marks by tone. */
+  glyph?: ValueMap<string>;
 }
 
 /** Where a binding reads: the adapter, and its reference — for an HTTP connector the request, the item, the value in it
@@ -196,6 +198,9 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     return { values, ...(otherwise !== undefined ? { otherwise } : {}) };
   };
 
+  /** Whether any status names a mark of its own — what a widget then draws for it, in place of its tone's. */
+  const glyphed = Object.values(statuses).some(s => s.glyph !== undefined);
+
   /** How a field's state colours and names a value: the status of each raw value, as a tone and as words. */
   const stateMaps = (rule: StateRule): StateMaps => {
     // "raw": the value already is a status name — a declared status, or a tone.
@@ -208,7 +213,12 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     // A bare tone has no words of its own — the widget names it in its locale.
     const status = merge(mapOf(mapping, w => statuses[w]?.label ?? (w in statuses ? w : '')), withTones && { values: Object.fromEntries(TONES.map(t => [t, ''])) });
     const emphasised = Object.values(statuses).some(s => s.emphasis !== undefined);
-    return { tone, status, ...(emphasised ? { emphasis: merge(mapOf(mapping, w => statuses[w]?.emphasis ?? '')) } : {}) };
+    return {
+      tone,
+      status,
+      ...(emphasised ? { emphasis: merge(mapOf(mapping, w => statuses[w]?.emphasis ?? '')) } : {}),
+      ...(glyphed ? { glyph: merge(mapOf(mapping, w => statuses[w]?.glyph ?? '')) } : {}),
+    };
   };
 
   // ── the board's own drawings ──
@@ -280,14 +290,15 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
     const formatOf = (f: Field) => f.format ?? (f.digits !== undefined ? `number:${f.digits}` : undefined);
     /** A field's value bound at `key`, in its words when it names them. */
     const bindValue = (key: string, name: string) => bind(key, name, field(name).names ? mapOf(field(name).names!, w => w) : undefined);
-    /** A field's state bound at `<prefix>tone`, and at its words and emphasis where the widget takes them. */
-    const bindState = (prefix: string, name: string, takes: { words?: boolean; emphasis?: boolean } = {}) => {
+    /** A field's state bound at `<prefix>tone`, and at its words, emphasis and mark where the widget takes them. */
+    const bindState = (prefix: string, name: string, takes: { words?: boolean; emphasis?: boolean; glyph?: boolean } = {}) => {
       const rule = field(name).state;
       if (rule === undefined) return;
       const maps = stateMaps(rule);
       bind(`${prefix}tone`, name, maps.tone);
       if (takes.words) bind(`${prefix}status`, name, maps.status);
       if (takes.emphasis && maps.emphasis) bind(`${prefix}emphasis`, name, maps.emphasis);
+      if (takes.glyph && maps.glyph) bind(`${prefix}glyph`, name, maps.glyph);
     };
     /**
      * The whole list bound at `key`, each item gaining `gained` — a row's tone from its state (`<field>$tone`), a field
@@ -297,12 +308,14 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
       bind(key, undefined);
       if (bindings[key] && Object.keys(gained).length > 0) bindings[key] = { ...bindings[key]!, itemFields: gained };
     };
-    /** The fields a row gains for `name`: its tone when the field has a state, its words when it names them. */
+    /** The fields a row gains for `name`: its tone (and mark) when the field has a state, its words when it names them. */
     const rowFields = (name: string | undefined): Record<string, ItemField> => {
       if (name === undefined) return {};
       const f = field(name);
+      const maps = f.state !== undefined ? stateMaps(f.state) : undefined;
       return {
-        ...(f.state !== undefined ? { [`${name}$tone`]: { from: key(name), map: stateMaps(f.state).tone } } : {}),
+        ...(maps ? { [`${name}$tone`]: { from: key(name), map: maps.tone } } : {}),
+        ...(maps?.glyph ? { [`${name}$glyph`]: { from: key(name), map: maps.glyph } } : {}),
         ...(f.names !== undefined ? { [`${name}$name`]: { from: key(name), map: mapOf(f.names, w => w) } } : {}),
       };
     };
@@ -348,7 +361,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         const rows = fields.map((name, i) => {
           const f = field(name);
           bindValue(`data.${i}.value`, name);
-          bindState(`data.${i}.`, f.state !== undefined || state === undefined ? name : state);
+          bindState(`data.${i}.`, f.state !== undefined || state === undefined ? name : state, { glyph: true });
           const format = formatOf(f);
           return { label: f.label ?? name, value: '', ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}) };
         });
@@ -359,7 +372,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
         // against its range; a subtitle and a note are texts, as a title is.
         const { meter, note, subtitle, state, ...rest } = options as { meter?: Meter; note?: string; subtitle?: string; state?: string };
         const stateField = state ?? fields.find(n => field(n).state !== undefined);
-        if (stateField) bindState('data.', stateField, { words: true, emphasis: true });
+        if (stateField) bindState('data.', stateField, { words: true, emphasis: true, glyph: true });
         const readings = fields.filter(n => n !== stateField).map((name, i) => {
           const f = field(name);
           bindValue(`data.readings.${i}.value`, name);
@@ -446,6 +459,7 @@ export function toViewDocument(board: BoardV2, options: PictureOptions = {}): Vi
           ...(badge !== undefined ? { badge: shown(badge) } : {}),
           ...(time !== undefined ? { time: key(time) } : {}),
           ...(tone !== undefined ? { tone: `${tone}$tone` } : {}),
+          ...(tone !== undefined && glyphed ? { glyph: `${tone}$glyph` } : {}),
         };
         const listOptions = { ...rest, ...(max !== undefined ? { maxItems: max } : {}), ...(variant === 'tiles' ? { layout: 'tiles' } : {}) };
         return {
