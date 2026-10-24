@@ -19,6 +19,14 @@ do when upgrading. Each release's notes carry its section.
   The console edits every board with the board editor, and the board list no longer marks boards in an earlier format.
   At start-up a stored board that still names a language version (`"version"`) drops it, and the record of the earlier
   format's one-time move goes.
+- Saving a board refuses what the renderer would choke on or drop unseen, with where: a key the board has no place
+  for, an accent that is not a colour, a background that is not an image address, markup or CSS the element policy
+  refuses, a link to a part not drawn on its canvas, a trigger that could never run, and fields of the wrong type.
+  An element no part draws, and a status a trigger waits for that its field never takes, come back as advice.
+- A board's state (`GET /api/share/boards/:id/state`) names the status of every part that shows one, not only of the
+  parts a trigger reads.
+- A link's arrowheads point either way, or follow a field — a flow that reverses (`arrow`: `"end"` · `"start"` ·
+  `"both"`, or `{ "field", "map" | "bands" }`); the link panel chooses among them.
 
 ## [0.27.0] - 2026-10-24
 

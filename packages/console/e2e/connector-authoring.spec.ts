@@ -37,12 +37,14 @@ test('joins two parts with a link, edits its label and arrow, keeps it across a 
   await expect(page.getByText('2개 선택됨 — 하나를 선택하면 편집할 수 있습니다.')).toBeVisible();
   await connect.click();
 
-  // The new link is selected at once, so its panel opens. It is drawn with an arrowhead, as a flow is — taken off here.
+  // The new link is selected at once, so its panel opens. It is drawn with an arrowhead at its end, as a flow is —
+  // turned both ways here.
   await expect(page.getByRole('heading', { name: '연결선 part-1 → part-2' })).toBeVisible();
   await page.getByLabel('라벨', { exact: true }).fill('12 kW');
   await page.getByLabel('라벨', { exact: true }).press('Tab');
-  await expect(page.getByLabel('화살표')).toBeChecked();
-  await page.getByLabel('화살표').uncheck();
+  const arrow = page.getByRole('combobox', { name: '화살표' });
+  await expect(arrow).toHaveValue('end');
+  await arrow.selectOption('both');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
   await page.reload();
@@ -51,7 +53,7 @@ test('joins two parts with a link, edits its label and arrow, keeps it across a 
   await clickScenePoint(page, { x: 302, y: 82 });
   await expect(page.getByRole('heading', { name: '연결선 part-1 → part-2' })).toBeVisible();
   await expect(page.getByLabel('라벨', { exact: true })).toHaveValue('12 kW');
-  await expect(page.getByLabel('화살표')).not.toBeChecked();
+  await expect(page.getByRole('combobox', { name: '화살표' })).toHaveValue('both');
 
   // A part deleted with the Delete key takes the link that names it along.
   await clickScenePoint(page, { x: 484, y: 94 });
