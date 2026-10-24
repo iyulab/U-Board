@@ -33,9 +33,10 @@ export interface KindEditorProps<D extends ViewDocument> {
    * Only where the parts are is edited — the document is drawn from another one (a board in the language's second
    * version), which keeps everything else: parts are moved, sized and deleted, nothing is added, and no part's settings
    * are shown — `panel`, when given, draws the panel for what is selected (`null`: nothing, or more than one). `movable`
-   * says which parts the other document places itself.
+   * says which parts the other document places itself; `connect`, when given, joins two of them, first to second, and
+   * answers the id the connector is drawn with — what may be deleted besides is what the other document draws itself.
    */
-  layoutOnly?: { movable: (id: string) => boolean; panel?: (selected: string | null) => ReactNode };
+  layoutOnly?: { movable: (id: string) => boolean; panel?: (selected: string | null) => ReactNode; connect?: (from: string, to: string) => string; deletable?: (id: string) => boolean };
 }
 
 /** The host's side of a board's triggers — `ViewerPage`'s props of the same names. */

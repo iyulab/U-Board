@@ -45,7 +45,36 @@ test('moves, sizes, orders and deletes the parts of boards in the second version
   expect(moved.layout.place.title.slice(1)).toEqual([40, 160, 100]);
   expect(moved.layout.place.note).toEqual([500, 300, 160, 100]);
 
-  // Select the second part and delete it: it goes, and so does the link that named it.
+  // Select both parts and join them: a second link, drawn at once and selected, its label set in its panel.
+  const title = (await page.locator('[data-testid="designer-overlay-title"]').boundingBox())!;
+  const noteBox = (await page.locator('[data-testid="designer-overlay-note"]').boundingBox())!;
+  await page.mouse.click(title.x + title.width / 2, title.y + title.height / 2);
+  await page.keyboard.down('Shift');
+  await page.mouse.click(noteBox.x + noteBox.width / 2, noteBox.y + noteBox.height / 2);
+  await page.keyboard.up('Shift');
+  await expect(page.getByRole('button', { name: '연결선 추가' })).toBeEnabled();
+  await page.getByRole('button', { name: '연결선 추가' }).click();
+  await expect(page.getByRole('heading', { name: '연결선 title → note' })).toBeVisible();
+  await page.getByLabel('라벨', { exact: true }).fill('flow');
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('저장됨')).toBeVisible();
+  const joined = (await (await page.request.get(at)).json()).document;
+  expect(joined.layout.links).toEqual({ l: { from: 'title', to: 'note' }, 'link-2': { from: 'title', to: 'note', arrow: true, label: 'flow' } });
+
+  // A frame added to the canvas, selected and named in its panel, saved as the board's shape.
+  await page.getByRole('button', { name: '틀 추가' }).click();
+  // The canvas draws a frame with no DOM of its own: find it from the note part's overlay, which is at [500, 300, 160, 100].
+  const anchor = (await page.locator('[data-testid="designer-overlay-note"]').boundingBox())!;
+  const scale = anchor.width / 160;
+  await page.mouse.click(anchor.x + (30 - 500) * scale, anchor.y + (170 - 300) * scale);
+  await expect(page.getByRole('heading', { name: '도형 shape-1' })).toBeVisible();
+  await page.getByLabel('이름표', { exact: true }).fill('Zone A');
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('저장됨')).toBeVisible();
+  const framed = (await (await page.request.get(at)).json()).document;
+  expect(framed.layout.shapes).toEqual({ 'shape-1': { box: [20, 20, 240, 160], label: 'Zone A' } });
+
+  // Select the second part and delete it: it goes, and so do the links that named it.
   const note = (await page.locator('[data-testid="designer-overlay-note"]').boundingBox())!;
   await page.mouse.click(note.x + note.width / 2, note.y + note.height / 2);
   await page.getByRole('button', { name: '삭제', exact: true }).click();

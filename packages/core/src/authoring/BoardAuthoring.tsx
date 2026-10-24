@@ -14,11 +14,13 @@ import { CanvasAuthoring } from './CanvasAuthoring.js';
 import { PartPanel } from './PartPanel.js';
 import { StatusesPanel } from './StatusesPanel.js';
 import { DataPanel } from './DataPanel.js';
+import { LinkPanel } from './LinkPanel.js';
+import { ShapePanel } from './ShapePanel.js';
 import { TriggersEditor } from './TriggersEditor.js';
 import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
-import { layoutEditable, placesItself, withPictureLayout } from './board-layout.js';
+import { LINK, layoutEditable, linkOf, placesItself, shapeOf, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 import { recordEdit, redo, startHistory, undo, type DocumentHistory } from './document-history.js';
 
 export interface BoardAuthoringProps {
@@ -87,6 +89,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
   const drawing = useMemo(() => drawnOf(history, keysOf), [history, keysOf]);
   const picture = drawing.picture;
   const movable = useMemo(() => (id: string) => placesItself(board, id), [board]);
+  const ownPiece = useMemo(() => (id: string) => linkOf(board, id) !== undefined || shapeOf(board, id) !== undefined, [board]);
   const findings = useMemo(() => {
     const check = checkBoardV2(board);
     return [...check.issues, ...check.advice];
@@ -139,6 +142,44 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
           />
           <TriggersEditor {...triggerEditing} labels={labels} />
         </>
+      );
+    }
+    const shape = shapeOf(board, selected);
+    if (shape !== undefined) {
+      return (
+        <ShapePanel
+          key={shape}
+          id={shape}
+          board={board}
+          onChange={next =>
+            setHistory(h => {
+              const layout = h.present.layout;
+              if (layout.kind !== 'canvas') return h;
+              return recordEdit(h, { ...h.present, layout: { ...layout, shapes: { ...layout.shapes, [shape]: next } } }, null);
+            })
+          }
+          findings={findings.filter(f => f.path === `/layout/shapes/${shape}` || f.path.startsWith(`/layout/shapes/${shape}/`))}
+          labels={labels}
+        />
+      );
+    }
+    const link = linkOf(board, selected);
+    if (link !== undefined) {
+      return (
+        <LinkPanel
+          key={link}
+          id={link}
+          board={board}
+          onChange={next =>
+            setHistory(h => {
+              const layout = h.present.layout;
+              if (layout.kind !== 'canvas') return h;
+              return recordEdit(h, { ...h.present, layout: { ...layout, links: { ...layout.links, [link]: next } } }, null);
+            })
+          }
+          findings={findings.filter(f => f.path === `/layout/links/${link}` || f.path.startsWith(`/layout/links/${link}/`))}
+          labels={labels}
+        />
       );
     }
     const id = selected.split('/')[0];
@@ -194,6 +235,9 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
       return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'header', title: labels.newPartTitle } }, layout: { ...layout, items: [...layout.items, id] } }, null);
     });
 
+  /** A frame or a text on a canvas board, at its top left. */
+  const addShape = (kind: 'box' | 'text') => setHistory(h => recordEdit(h, withNewShape(h.present, kind, labels.shapeNewText).board, null));
+
   const canUndo = mode === 'edit' && history.past.length > 0;
   const canRedo = mode === 'edit' && history.future.length > 0;
   const documentActions = (
@@ -203,6 +247,16 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
           <button type="button" className="ub-action" onClick={addPart}>
             {labels.partAdd}
           </button>
+          {board.layout.kind === 'canvas' && (
+            <>
+              <button type="button" className="ub-action" onClick={() => addShape('box')}>
+                {labels.shapeAddBox}
+              </button>
+              <button type="button" className="ub-action" onClick={() => addShape('text')}>
+                {labels.shapeAddText}
+              </button>
+            </>
+          )}
         </div>
       )}
       <div className="ub-authoring__group" style={GROUP_STYLE}>
@@ -254,7 +308,16 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             labels={labels}
             clock={clock}
             triggerHosting={{ boardId, onTrigger, onNavigate, linkOrigins }}
-            layoutOnly={{ movable, panel }}
+            layoutOnly={{
+              movable,
+              panel,
+              connect: (from, to) => {
+                const made = withNewLink(board, from, to);
+                setHistory(h => recordEdit(h, made.board, null));
+                return `${LINK}${made.id}`;
+              },
+              deletable: ownPiece,
+            }}
           />
         ) : picture.kind === 'grid' && layoutEditable(board) ? (
           <GridAuthoring

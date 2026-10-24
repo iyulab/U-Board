@@ -189,7 +189,8 @@ function CanvasEditor({
   // fits into view; not each edit.
   const [openedDoc] = useState(doc);
   const movable = layoutOnly?.movable;
-  const scene = useMemo(() => documentToScene(doc, movable), [doc, movable]);
+  const deletable = layoutOnly?.deletable;
+  const scene = useMemo(() => documentToScene(doc, movable, deletable), [doc, movable, deletable]);
   const extent = useMemo(() => documentExtent(doc), [doc]);
   // The widgets the viewer would draw, laid over the nodes being edited — display-only, so a press on
   // one reaches the node beneath — each with its widget type named above it. Where and how big each is
@@ -279,6 +280,13 @@ function CanvasEditor({
   // Two nodes picked: they can be joined, first to second.
   const pair = selectedIds.length === 2 && selectedIds.every(id => doc.nodes.some(n => n.id === id)) ? selectedIds : null;
 
+  // A board drawn from another one joins two of its own parts through that one.
+  const ownPair = layoutOnly?.connect && pair && movable && pair.every(movable) ? pair : null;
+  const handleOwnConnect = () => {
+    if (!ownPair || !layoutOnly?.connect) return;
+    setPendingSelect(layoutOnly.connect(ownPair[0]!, ownPair[1]!));
+  };
+
   const handleConnect = () => {
     if (!pair) return;
     const id = newConnectorId();
@@ -301,7 +309,7 @@ function CanvasEditor({
 
   const handleDelete = () => {
     if (selectedIds.length === 0) return;
-    const ids = movable ? selectedIds.filter(movable) : selectedIds;
+    const ids = movable ? selectedIds.filter(id => movable(id) || !!layoutOnly?.deletable?.(id)) : selectedIds;
     updateDoc(prev => removeParts(prev, ids));
     designerRef.current?.select([]);
     setSelectedIds([]);
@@ -464,6 +472,11 @@ function CanvasEditor({
             </button>
           )}
             </>
+          )}
+          {movable && layoutOnly?.connect && (
+            <button type="button" className="ub-action" onClick={handleOwnConnect} disabled={!ownPair} title={ownPair ? undefined : labels.connectHint}>
+              {labels.addConnector}
+            </button>
           )}
           <button type="button" className="ub-action" onClick={handleDelete} disabled={selectedIds.length === 0}>
             {labels.deleteSelected}

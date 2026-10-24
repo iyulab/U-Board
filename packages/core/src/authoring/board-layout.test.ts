@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { toViewDocument } from '../board-v2/picture.js';
-import type { BoardV2 } from '../board-v2/types.js';
+import type { BoardV2, CanvasLayout } from '../board-v2/types.js';
 import type { CanvasView, GridView } from '../view-document.js';
-import { layoutEditable, placesItself, withPictureLayout } from './board-layout.js';
+import { LINK, SHAPE, layoutEditable, linkOf, placesItself, shapeOf, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 
 const board: BoardV2 = {
   version: 2,
@@ -67,6 +67,54 @@ describe('withPictureLayout', () => {
     expect(Object.keys((next.layout as { links: object }).links)).toEqual(['l2']);
     expect(next.triggers).toEqual([board.triggers![1]]);
     expect(withPictureLayout(board, p, without(['pump/P1']))).toBe(board);
+  });
+});
+
+describe('the links of a canvas board', () => {
+  it('are drawn as connectors the editor can name back, and deleting one on the canvas deletes the link', () => {
+    const before = picture(board);
+    expect(before.connectors.map(c => c.id)).toEqual(['link.l1', 'link.l2']);
+    expect(linkOf(board, 'link.l1')).toBe('l1');
+    expect(linkOf(board, 'link.nope')).toBeUndefined();
+    const after = { ...before, connectors: before.connectors.filter(c => c.id !== 'link.l1') };
+    const next = withPictureLayout(board, before, after);
+    expect(next.layout.kind === 'canvas' && next.layout.links).toEqual({ l2: { from: 'title', to: 'unit' } });
+    expect(next.parts).toEqual(board.parts);
+  });
+
+  it('gains a link from one part to another, with an arrowhead, under a new id', () => {
+    const { board: next, id } = withNewLink(board, 'title', 'count');
+    expect(id).toBe('link-3');
+    expect(next.layout.kind === 'canvas' && next.layout.links?.[id]).toEqual({ from: 'title', to: 'count', arrow: true });
+    expect(picture(next).connectors.map(c => c.id)).toContain(`${LINK}${id}`);
+  });
+});
+
+describe('the shapes of a canvas board', () => {
+  const framed: BoardV2 = { ...board, layout: { ...(board.layout as CanvasLayout), shapes: { zone: { box: [0, 0, 300, 200], label: 'Zone' }, note: { text: 'Hi', at: [10, 400] }, pipe: { line: [[0, 0], [100, 0]] } } } };
+
+  it('are the frames and texts — a line is a node of its own and is not one', () => {
+    expect(shapeOf(framed, `${SHAPE}zone`)).toBe('zone');
+    expect(shapeOf(framed, `${SHAPE}note`)).toBe('note');
+    expect(shapeOf(framed, `${SHAPE}pipe`)).toBeUndefined();
+  });
+
+  it('move, size and go as the canvas says, nothing else of the board changing', () => {
+    const before = picture(framed);
+    const after: CanvasView = {
+      ...before,
+      decorations: before.decorations!.flatMap(d => (d.id === `${SHAPE}note` ? [] : d.id === `${SHAPE}zone` && d.type === 'rect' ? [{ ...d, x: 20.4, y: 30, width: 320 }] : [d])),
+    };
+    const next = withPictureLayout(framed, before, after);
+    expect(next.layout.kind === 'canvas' && next.layout.shapes).toEqual({ zone: { box: [20, 30, 320, 200], label: 'Zone' }, pipe: { line: [[0, 0], [100, 0]] } });
+    expect(next.parts).toEqual(framed.parts);
+  });
+
+  it('gains a frame or a text at the top left, each under a new id', () => {
+    const box = withNewShape(board, 'box', 'Text');
+    expect(box.board.layout.kind === 'canvas' && box.board.layout.shapes?.[box.id]).toEqual({ box: [20, 20, 240, 160] });
+    const text = withNewShape(box.board, 'text', 'Text');
+    expect(text.board.layout.kind === 'canvas' && text.board.layout.shapes?.[text.id]).toEqual({ text: 'Text', at: [44, 44] });
   });
 });
 

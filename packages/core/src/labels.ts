@@ -154,6 +154,26 @@ export interface UBoardLabels {
   layoutOnlyHint: string;
   /** A part's panel (a board in the language's second version): its heading (`{id}`) and fields. */
   partHeading: string;
+  /** A link's panel on a board in the language's second version. `{from}`, `{to}`: the parts it joins. */
+  linkHeading: string;
+  /** A shape's panel, and adding a box or a text, on a canvas board in the language's second version. */
+  shapeHeading: string;
+  shapeAddBox: string;
+  shapeAddText: string;
+  shapeNewText: string;
+  shapeLabel: string;
+  shapeText: string;
+  shapeSize: string;
+  shapeWidth: string;
+  shapeTone: string;
+  linkLabel: string;
+  linkReads: string;
+  linkShows: string;
+  linkTone: string;
+  linkToneNone: string;
+  linkRoute: string;
+  linkArrow: string;
+  linkDash: string;
   partTitle: string;
   partKind: string;
   partFromPreset: string;
@@ -575,6 +595,24 @@ export const DEFAULT_LABELS: UBoardLabels = {
   multipleSelected: '{count} items selected — select one to edit it.',
   layoutOnlyHint: 'Move and resize parts here, or delete them. Select one to edit it.',
   partHeading: 'Part {id}',
+  linkHeading: 'Link {from} → {to}',
+  shapeHeading: 'Shape {id}',
+  shapeAddBox: 'Add frame',
+  shapeAddText: 'Add text',
+  shapeNewText: 'Text',
+  shapeLabel: 'Label',
+  shapeText: 'Text',
+  shapeSize: 'Font size',
+  shapeWidth: 'Line width',
+  shapeTone: 'Tone',
+  linkLabel: 'Label',
+  linkReads: 'Reads (an item, for its status)',
+  linkShows: 'Status field',
+  linkTone: 'Tone without a status',
+  linkToneNone: '(idle)',
+  linkRoute: 'Route',
+  linkArrow: 'Arrowhead',
+  linkDash: 'Dashed',
   partTitle: 'Title',
   partKind: 'Kind',
   partFromPreset: '(from its preset)',

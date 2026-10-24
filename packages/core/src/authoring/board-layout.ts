@@ -5,7 +5,7 @@
 
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { GRID_DEFAULT_SPAN, type GridView, type Node, type ViewDocument } from '../view-document.js';
-import type { BoardV2, CanvasLayout, GridItem, Place, Trigger } from '../board-v2/types.js';
+import type { BoardV2, CanvasLayout, GridItem, Place, Shape, Trigger } from '../board-v2/types.js';
 
 /**
  * Whether the editor lays this board out: a canvas, or a grid of parts alone — a grid holding a grid or a canvas of
@@ -13,6 +13,49 @@ import type { BoardV2, CanvasLayout, GridItem, Place, Trigger } from '../board-v
  */
 export function layoutEditable(board: BoardV2): boolean {
   return board.layout.kind === 'canvas' || board.layout.items.every(entry => typeof entry === 'string' || Array.isArray(entry));
+}
+
+/** The id the picture draws a board's own link with — `link.<id>`. */
+export const LINK = 'link.';
+
+/** The link of a canvas board a picture connector `id` draws, if it is one of the board's own (not a group's). */
+export function linkOf(board: BoardV2, id: string): string | undefined {
+  if (board.layout.kind !== 'canvas' || !id.startsWith(LINK)) return undefined;
+  const link = id.slice(LINK.length);
+  return board.layout.links?.[link] !== undefined ? link : undefined;
+}
+
+/** The id the picture draws a board's own shape with — `shape.<id>`. */
+export const SHAPE = 'shape.';
+
+/** The shape of a canvas board a picture decoration `id` draws, if it is one of the board's own boxes or texts (a line
+ *  or a path is drawn as a node of its own and edited in the board's JSON). */
+export function shapeOf(board: BoardV2, id: string): string | undefined {
+  if (board.layout.kind !== 'canvas' || !id.startsWith(SHAPE)) return undefined;
+  const shape = board.layout.shapes?.[id.slice(SHAPE.length)];
+  return shape !== undefined && (shape.box !== undefined || shape.at !== undefined) ? id.slice(SHAPE.length) : undefined;
+}
+
+/** The board with a new shape — a box, or a text — at the canvas's top left, stepped from the shapes it has, and its id. */
+export function withNewShape(board: BoardV2, kind: 'box' | 'text', text: string): { board: BoardV2; id: string } {
+  if (board.layout.kind !== 'canvas') return { board, id: '' };
+  const shapes = board.layout.shapes ?? {};
+  let n = Object.keys(shapes).length + 1;
+  while (`shape-${n}` in shapes) n++;
+  const id = `shape-${n}`;
+  const step = 24 * (n - 1);
+  const shape: Shape = kind === 'box' ? { box: [20 + step, 20 + step, 240, 160] } : { text, at: [20 + step, 20 + step] };
+  return { board: { ...board, layout: { ...board.layout, shapes: { ...shapes, [id]: shape } } }, id };
+}
+
+/** The board with a new link from part `from` to part `to` — drawn with an arrowhead, as a flow is — and its id. */
+export function withNewLink(board: BoardV2, from: string, to: string): { board: BoardV2; id: string } {
+  if (board.layout.kind !== 'canvas') return { board, id: '' };
+  const links = board.layout.links ?? {};
+  let n = Object.keys(links).length + 1;
+  while (`link-${n}` in links) n++;
+  const id = `link-${n}`;
+  return { board: { ...board, layout: { ...board.layout, links: { ...links, [id]: { from, to, arrow: true } } } }, id };
 }
 
 /** Whether the picture node or item `id` is one the board places itself: a part, or an item of an `each` part — not a
@@ -49,6 +92,30 @@ export function withPictureLayout(board: BoardV2, before: ViewDocument, after: V
     const [part, key] = id.split('/') as [string, string | undefined];
     const at = placeOf(old, node);
     layout.place[part] = key === undefined ? at : { ...(layout.place[part] as Record<string, Place>), [key]: at };
+    changed = true;
+  }
+
+  // A shape of the board's own moved, sized or deleted on the canvas: its decoration (`shape.<id>`).
+  const shapesNow = new Map((after.decorations ?? []).map(d => [d.id, d]));
+  for (const old of before.decorations ?? []) {
+    const id = shapeOf(board, old.id);
+    if (id === undefined) continue;
+    const now = shapesNow.get(old.id);
+    const shapes = { ...layout.shapes };
+    const size = (d: typeof old) => (d.type === 'rect' ? `${d.width}x${d.height}` : '');
+    if (now === undefined) delete shapes[id];
+    else if (now.x === old.x && now.y === old.y && size(now) === size(old)) continue;
+    else if (now.type === 'rect' && shapes[id]!.box !== undefined) shapes[id] = { ...shapes[id]!, box: [Math.round(now.x), Math.round(now.y), Math.round(now.width), Math.round(now.height)] };
+    else shapes[id] = { ...shapes[id]!, at: [Math.round(now.x), Math.round(now.y)] };
+    layout.shapes = shapes;
+    changed = true;
+  }
+
+  // A link deleted on the canvas: its connector (`link.<id>`, the board's own links) gone from the picture.
+  const nowLinks = new Set(after.connectors.map(c => c.id));
+  const linksGone = before.connectors.map(c => c.id).filter(id => !nowLinks.has(id) && id.startsWith(LINK) && layout.links?.[id.slice(LINK.length)] !== undefined);
+  if (linksGone.length > 0) {
+    layout.links = Object.fromEntries(Object.entries(layout.links!).filter(([id]) => !linksGone.includes(`${LINK}${id}`)));
     changed = true;
   }
 

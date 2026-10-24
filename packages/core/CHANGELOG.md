@@ -31,7 +31,10 @@ All notable changes to this package are documented here. The format follows
   its adapters.
 - `emptyBoard(kind)` in `./board-v2`: a board with no parts yet, laying out a canvas or a grid — what a new board starts as.
 - `BoardAuthoring`: the authoring surface of a board in the language's second version — parts added (on a canvas at its
-  top left, in a grid last; a label or a header to set in its panel), the items a grid lays out a
+  top left, in a grid last; a label or a header to set in its panel), two parts of a canvas joined by a link (with an
+  arrowhead) and a link selected, set in its panel (its label, the item and field whose status it takes, its tone,
+  route, arrowhead and dash) and deleted, frames and texts added to a canvas, moved, sized, set in their panel (words,
+  tone, line or size) and deleted, the items a grid lays out a
   part per item of read through its `adapters` when the board opens and when what they are read by changes — drawn from its picture, its
   parts moved, sized and deleted on a canvas as on any board, each edit said again in the board's layout (and a deleted
   part's links and triggers removed with it), and on a grid of parts ordered, widened and deleted (an item of a part
