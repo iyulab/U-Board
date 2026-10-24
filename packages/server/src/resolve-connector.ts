@@ -1,4 +1,4 @@
-import { PATH_KEY_PLACEHOLDER, type Connector } from './db/connectors.js';
+import { PATH_KEY_PLACEHOLDER, type Connector, type HttpConnector, type StaticConnector } from './db/connectors.js';
 import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
 import { isHttpRef, readHttpRef, requestPath, resolvedReading, sourceErrorIn, type HttpRef, type QualityReason, type ResolvedBinding } from '@iyulab/u-board/domain';
 import { HttpStatusError } from './http-status-error.js';
@@ -169,6 +169,7 @@ export function buildResolveTarget(
   ref: Pick<HttpRef, 'path' | 'timeZone' | 'requestTime'>,
   now = Date.now()
 ): URL | null {
+  if (connector.type === 'static') return staticTarget(ref.path);
   let target: URL;
   let base: URL;
   try {
@@ -187,7 +188,43 @@ export function buildResolveTarget(
   return target;
 }
 
-function clientCredentialsOf(connector: Connector): ClientCredentials {
+/** Where a static source's answers are addressed: a namespace of their own, never requested — it keeps a static read
+ *  shared, cached and logged by its path exactly as an HTTP read is by its URL. */
+const STATIC_ORIGIN = 'https://static.invalid';
+
+/** The address of the answer a static source keeps at `path` — its query left out, as a static source answers the
+ *  same at a path whatever is asked there — or `null` for a path that is not one as written (one with `..` or `.`
+ *  segments, which would name another). The path as written is the key: time places are not filled in. */
+export function staticTarget(path: string): URL | null {
+  const bare = path.split('?')[0]!;
+  try {
+    const target = new URL(STATIC_ORIGIN + bare);
+    return staticPathOf(target) === bare ? target : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The path, as its owner stored it, that a static target addresses. */
+function staticPathOf(target: URL): string {
+  try {
+    return decodeURIComponent(target.pathname);
+  } catch {
+    return target.pathname;
+  }
+}
+
+/** What a static source answers at `target`: the answer stored at its path — or, with none there, the failure an HTTP
+ *  source's «not found» is, so a binding to a path the source does not have reads as a wrong address. */
+async function staticBody(connector: StaticConnector, target: URL): Promise<unknown> {
+  const path = staticPathOf(target);
+  if (!Object.hasOwn(connector.answers, path)) {
+    throw new StageError('request', new HttpStatusError(404, `no answer is stored at ${path}`));
+  }
+  return connector.answers[path];
+}
+
+function clientCredentialsOf(connector: HttpConnector): ClientCredentials {
   if (!connector.oauthTokenUrl || !connector.oauthClientId || !connector.authValue) {
     throw new Error('connector is missing its OAuth client credentials');
   }
@@ -201,7 +238,7 @@ function clientCredentialsOf(connector: Connector): ClientCredentials {
   };
 }
 
-async function authHeaders(connector: Connector, tokens: ClientCredentialsTokens): Promise<Record<string, string>> {
+async function authHeaders(connector: HttpConnector, tokens: ClientCredentialsTokens): Promise<Record<string, string>> {
   switch (connector.authType) {
     case 'bearer':
       return { Authorization: `Bearer ${connector.authValue}` };
@@ -251,7 +288,7 @@ function unreadable(contentType: string, text: string): StageError {
 
 /** An answer the source gave with success but in which it says it failed (`Connector.sourceError`) — its words,
  *  with the connector's secret taken out should the source echo the request back. */
-function sourceReported(connector: Connector, said: string, body: unknown): StageError {
+function sourceReported(connector: HttpConnector, said: string, body: unknown): StageError {
   const words = withoutSecret(connector, said);
   const error = new StageError('response', new Error(words), 'source');
   error.excerpt = excerptOf(body);
@@ -316,7 +353,7 @@ function parameterName(pair: string): string {
   }
 }
 
-function requestUrl(connector: Connector, target: URL): URL {
+function requestUrl(connector: HttpConnector, target: URL): URL {
   if (connector.authValue === undefined) return target;
   if (connector.authType === 'query' && connector.authParamName) {
     // Appended to the query as the binding wrote it, rather than through `searchParams`, which would
@@ -343,7 +380,7 @@ function requestUrl(connector: Connector, target: URL): URL {
  * rejected (401) gets one fresh token and one retry — the authorization server may revoke a token
  * before the expiry it advertised. */
 async function fetchBody(
-  connector: Connector,
+  connector: HttpConnector,
   target: URL,
   tokens: ClientCredentialsTokens,
   fetchFn: typeof fetch,
@@ -412,7 +449,9 @@ export async function resolveConnectorValue(
     sweepExpiredReads(state);
     const readTimeoutMs = state.readTimeoutMs ?? DEFAULT_READ_TIMEOUT_MS;
     const started: UpstreamRead = {
-      result: fetchBody(connector, target, state.tokens, state.fetch, readTimeoutMs).then(body => ({ body, readAt: Date.now() })),
+      result: (connector.type === 'static' ? staticBody(connector, target) : fetchBody(connector, target, state.tokens, state.fetch, readTimeoutMs)).then(
+        body => ({ body, readAt: Date.now() })
+      ),
       keepMs: windowMs,
     };
     state.reads.set(requestKey, started);
@@ -478,6 +517,15 @@ export async function resolveConnectorValue(
   }
 }
 
+/** Reads `ref` from `connector` — an HTTP source over the network, a static one from what it stores — through the one
+ *  path every read takes (`resolveConnectorValue`), or `undefined` when `ref` is not something this source may be
+ *  asked: not a valid reference, or one that would leave the source's address. */
+export function readSource(connector: Connector, ref: unknown, state: ResolveState): Promise<ResolvedBinding> | undefined {
+  if (!isValidRef(ref)) return undefined;
+  const target = buildResolveTarget(connector, ref);
+  return target ? resolveConnectorValue(connector, target, ref, state) : undefined;
+}
+
 /** What a resolve answers while the first read of a slow source is still out: the last value it served, as `stale`
  *  — a read is under way, nothing has failed — or, with none (or one past the stale age limit), `pending`. */
 function stillReading(cached: CachedValue | undefined, state: ResolveState): ResolvedBinding {
@@ -508,8 +556,9 @@ export async function testConnector(
     if (target) {
       // The start of what came back, so the owner sees whether it is the data or an error the source
       // answered with success (some report a bad key or an empty query in a 200 body).
+      if (connector.type === 'static') return { ok: true, excerpt: excerptOf(await staticBody(connector, target)) };
       return { ok: true, excerpt: withoutSecret(connector, excerptOf(await fetchBody(connector, target, tokens, fetchFn, timeoutMs))) };
-    } else if (connector.authType === 'oauth2-client-credentials') {
+    } else if (connector.type === 'http' && connector.authType === 'oauth2-client-credentials') {
       try {
         await tokens.get(clientCredentialsOf(connector));
       } catch (err) {
@@ -525,12 +574,12 @@ export async function testConnector(
       reason: failure.reason,
       ...(failure.status !== undefined && { status: failure.status }),
       message: failure.message,
-      ...(failure.excerpt !== undefined && { excerpt: withoutSecret(connector, failure.excerpt) }),
+      ...(failure.excerpt !== undefined && { excerpt: connector.type === 'http' ? withoutSecret(connector, failure.excerpt) : failure.excerpt }),
     };
   }
 }
 
 /** `text` with the connector's secret taken out, should the source echo the request back in what a test shows. */
-function withoutSecret(connector: Connector, text: string): string {
+function withoutSecret(connector: HttpConnector, text: string): string {
   return connector.authValue ? text.split(connector.authValue).join('…') : text;
 }

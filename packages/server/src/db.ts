@@ -69,8 +69,9 @@ CREATE TABLE IF NOT EXISTS connectors (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('http')),
-  base_url TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('http', 'static')),
+  -- An HTTP source's address; a static source has none.
+  base_url TEXT,
   auth_type TEXT NOT NULL CHECK (auth_type IN ('none', 'bearer', 'header', 'query', 'path', 'oauth2-client-credentials')),
   auth_header_name TEXT,
   auth_param_name TEXT,
@@ -83,6 +84,9 @@ CREATE TABLE IF NOT EXISTS connectors (
   oauth_client_id TEXT,
   oauth_scope TEXT,
   oauth_client_auth TEXT CHECK (oauth_client_auth IN ('basic', 'body')),
+  -- A static source's answers by request path, and whether they are example data.
+  answers JSONB,
+  sample BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -100,8 +104,19 @@ ALTER TABLE connectors ADD COLUMN IF NOT EXISTS attribution_text TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS attribution_url TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE connectors ADD COLUMN IF NOT EXISTS source_error JSONB;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS answers JSONB;
+ALTER TABLE connectors ADD COLUMN IF NOT EXISTS sample BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE connectors ALTER COLUMN base_url DROP NOT NULL;
 DO $$
 BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'connectors'::regclass AND conname = 'connectors_type_check'
+      AND pg_get_constraintdef(oid) LIKE '%''static''%'
+  ) THEN
+    ALTER TABLE connectors DROP CONSTRAINT IF EXISTS connectors_type_check;
+    ALTER TABLE connectors ADD CONSTRAINT connectors_type_check CHECK (type IN ('http', 'static'));
+  END IF;
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
     WHERE conrelid = 'connectors'::regclass AND conname = 'connectors_auth_type_check'

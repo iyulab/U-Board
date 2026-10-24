@@ -25,10 +25,33 @@ export interface ConnectorOAuthSettings {
   oauthClientAuth?: ClientAuthMethod;
 }
 
-export interface Connector extends ConnectorOAuthSettings {
+/** What every data source has: its name, how it is credited, and what it answers. */
+interface ConnectorBase {
   id: string;
   workspaceId: string;
   name: string;
+  /** How the source is credited under a board that shows its data. */
+  attribution?: Attribution;
+  /** What the source answers and where — its paths and what each holds, written by its owner for whoever binds to it
+   *  (a person, or an assistant that cannot guess a path). */
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The answers a static data source gives, by request path (`/equipment`) — what an HTTP source would answer there. */
+export type StaticAnswers = Record<string, unknown>;
+
+/** A data source of the workspace that answers what its owner stored, by path — example data, or a reference table that
+ *  lives nowhere else. A board reads it as it reads an HTTP source (`from` + `path`), so it is changed for a live one by
+ *  `from` alone. `sample` says its answers are example data, which a board says where it shows them. */
+export interface StaticConnector extends ConnectorBase {
+  type: 'static';
+  answers: StaticAnswers;
+  sample: boolean;
+}
+
+export interface HttpConnector extends ConnectorBase, ConnectorOAuthSettings {
   type: 'http';
   baseUrl: string;
   authType: ConnectorAuthType;
@@ -36,18 +59,17 @@ export interface Connector extends ConnectorOAuthSettings {
   /** The query parameter a `query` connector sends its secret as. */
   authParamName?: string;
   authValue?: string;
-  /** How the source is credited under a board that shows its data. */
-  attribution?: Attribution;
-  /** What the source answers and where — its paths and what each holds, written by its owner for whoever binds to it
-   *  (a person, or an assistant that cannot guess a path). */
-  description?: string;
   /** Where the source says, in an answer it gives with success, that it failed. */
   sourceError?: SourceErrorField;
-  createdAt: string;
-  updatedAt: string;
 }
 
-export interface ConnectorSummary extends ConnectorOAuthSettings {
+/** A data source of a workspace: one called over HTTP, or one that answers what it stores. */
+export type Connector = HttpConnector | StaticConnector;
+
+/** A static source as it is listed: everything, its answers included — they are not a secret. */
+export type StaticConnectorSummary = Omit<StaticConnector, 'workspaceId' | 'createdAt'>;
+
+export interface HttpConnectorSummary extends ConnectorOAuthSettings {
   id: string;
   name: string;
   type: 'http';
@@ -61,7 +83,11 @@ export interface ConnectorSummary extends ConnectorOAuthSettings {
   updatedAt: string;
 }
 
+export type ConnectorSummary = HttpConnectorSummary | StaticConnectorSummary;
+
 interface OAuthColumns {
+  answers: StaticAnswers | null;
+  sample: boolean;
   description: string | null;
   source_error: SourceErrorField | null;
   attribution_text: string | null;
@@ -77,7 +103,7 @@ interface ConnectorRow extends OAuthColumns {
   workspace_id: string;
   name: string;
   type: string;
-  base_url: string;
+  base_url: string | null;
   auth_type: string;
   auth_header_name: string | null;
   auth_param_name: string | null;
@@ -90,7 +116,7 @@ interface ConnectorSummaryRow extends OAuthColumns {
   id: string;
   name: string;
   type: string;
-  base_url: string;
+  base_url: string | null;
   auth_type: string;
   auth_header_name: string | null;
   auth_param_name: string | null;
@@ -110,83 +136,67 @@ function oauthSettingsFromRow(row: OAuthColumns): ConnectorOAuthSettings {
   };
 }
 
+/** A static source from its row — what it has besides what every source has. */
+function staticFromRow(row: OAuthColumns): Pick<StaticConnector, 'type' | 'answers' | 'sample'> {
+  return { type: 'static', answers: row.answers ?? {}, sample: row.sample };
+}
+
 function rowToConnector(row: ConnectorRow, secrets: SecretBox): Connector {
-  return {
+  const base = {
     id: row.id,
     workspaceId: row.workspace_id,
     name: row.name,
-    type: row.type as 'http',
-    baseUrl: row.base_url,
+    attribution: attributionFromRow(row),
+    description: row.description ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+  if (row.type === 'static') return { ...base, ...staticFromRow(row) };
+  return {
+    ...base,
+    type: 'http',
+    baseUrl: row.base_url ?? '',
     authType: row.auth_type as ConnectorAuthType,
     authHeaderName: row.auth_header_name ?? undefined,
     authParamName: row.auth_param_name ?? undefined,
     authValue: row.auth_value === null ? undefined : secrets.open(row.auth_value),
-    attribution: attributionFromRow(row),
-    description: row.description ?? undefined,
     sourceError: row.source_error ?? undefined,
     ...oauthSettingsFromRow(row),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
   };
 }
 
-export async function createConnector(
-  db: DbClient,
-  input: {
-    workspaceId: string;
-    name: string;
-    baseUrl: string;
-    authType: ConnectorAuthType;
-    authHeaderName?: string;
-    authParamName?: string;
-    authValue?: string;
-    attribution?: Attribution;
-    description?: string;
-    sourceError?: SourceErrorField;
-    actorUserId: string;
-  } & ConnectorOAuthSettings,
-  secrets: SecretBox = UNSEALED
-): Promise<Connector> {
+/** A new connector, as it is created — everything but what the store gives it (its id and times). An HTTP one need not
+ *  say its type. */
+export type NewConnector = NewHttpConnector | NewStaticConnector;
+export type NewHttpConnector = Omit<HttpConnector, 'id' | 'type' | 'createdAt' | 'updatedAt'> & { type?: 'http' };
+export type NewStaticConnector = Omit<StaticConnector, 'id' | 'createdAt' | 'updatedAt'>;
+
+export async function createConnector(db: DbClient, input: NewConnector & { actorUserId: string }, secrets: SecretBox = UNSEALED): Promise<Connector> {
   const now = new Date().toISOString();
-  const connector: Connector = {
-    id: randomUUID(),
-    workspaceId: input.workspaceId,
-    name: input.name,
-    type: 'http',
-    baseUrl: input.baseUrl,
-    authType: input.authType,
-    authHeaderName: input.authHeaderName,
-    authParamName: input.authParamName,
-    authValue: input.authValue,
-    attribution: input.attribution,
-    description: input.description,
-    sourceError: input.sourceError,
-    oauthTokenUrl: input.oauthTokenUrl,
-    oauthClientId: input.oauthClientId,
-    oauthScope: input.oauthScope,
-    oauthClientAuth: input.oauthClientAuth,
-    createdAt: now,
-    updatedAt: now,
-  };
+  const { actorUserId, ...settings } = input;
+  const connector: Connector =
+    settings.type === 'static' ? { ...settings, id: randomUUID(), createdAt: now, updatedAt: now } : { ...settings, type: 'http', id: randomUUID(), createdAt: now, updatedAt: now };
+  const http = connector.type === 'http' ? connector : undefined;
   await db.withTransaction(async tx => {
     await tx.query(
       `INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, auth_header_name, auth_value,
          oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, created_at, updated_at, auth_param_name,
-         attribution_text, attribution_url, description, source_error)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+         attribution_text, attribution_url, description, source_error, answers, sample)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
       [
-        connector.id, connector.workspaceId, connector.name, connector.type, connector.baseUrl,
-        connector.authType, connector.authHeaderName ?? null, connector.authValue === undefined ? null : secrets.seal(connector.authValue),
-        connector.oauthTokenUrl ?? null, connector.oauthClientId ?? null, connector.oauthScope ?? null,
-        connector.oauthClientAuth ?? null, connector.createdAt, connector.updatedAt, connector.authParamName ?? null,
+        connector.id, connector.workspaceId, connector.name, connector.type, http?.baseUrl ?? null,
+        http?.authType ?? 'none', http?.authHeaderName ?? null, http?.authValue === undefined ? null : secrets.seal(http.authValue),
+        http?.oauthTokenUrl ?? null, http?.oauthClientId ?? null, http?.oauthScope ?? null,
+        http?.oauthClientAuth ?? null, connector.createdAt, connector.updatedAt, http?.authParamName ?? null,
         connector.attribution?.text ?? null, connector.attribution?.url ?? null, connector.description ?? null,
-        connector.sourceError === undefined ? null : JSON.stringify(connector.sourceError),
+        http?.sourceError === undefined ? null : JSON.stringify(http.sourceError),
+        connector.type === 'static' ? JSON.stringify(connector.answers) : null, connector.type === 'static' && connector.sample,
       ]
     );
     await recordAuditEvent(tx, {
       action: 'connector.created',
       workspaceId: connector.workspaceId,
-      actorUserId: input.actorUserId,
+      actorUserId,
       target: { id: connector.id, name: connector.name },
     });
   });
@@ -196,15 +206,22 @@ export async function createConnector(
 export async function listConnectorsForWorkspace(db: DbClient, workspaceId: string): Promise<ConnectorSummary[]> {
   const { rows } = await db.query<ConnectorSummaryRow>(
     `SELECT id, name, type, base_url, auth_type, auth_header_name, auth_param_name, attribution_text, attribution_url, description, source_error,
-            oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, updated_at
+            oauth_token_url, oauth_client_id, oauth_scope, oauth_client_auth, answers, sample, updated_at
      FROM connectors WHERE workspace_id = $1`,
     [workspaceId]
   );
-  return rows.map(r => ({
+  return rows.map((r): ConnectorSummary => r.type === 'static' ? {
     id: r.id,
     name: r.name,
-    type: r.type as 'http',
-    baseUrl: r.base_url,
+    ...staticFromRow(r),
+    attribution: attributionFromRow(r),
+    description: r.description ?? undefined,
+    updatedAt: r.updated_at,
+  } : {
+    id: r.id,
+    name: r.name,
+    type: 'http',
+    baseUrl: r.base_url ?? '',
     authType: r.auth_type as ConnectorAuthType,
     authHeaderName: r.auth_header_name ?? undefined,
     authParamName: r.auth_param_name ?? undefined,
@@ -213,7 +230,7 @@ export async function listConnectorsForWorkspace(db: DbClient, workspaceId: stri
     sourceError: r.source_error ?? undefined,
     ...oauthSettingsFromRow(r),
     updatedAt: r.updated_at,
-  }));
+  });
 }
 
 export async function findConnector(db: DbClient, workspaceId: string, connectorId: string, secrets: SecretBox = UNSEALED): Promise<Connector | undefined> {
@@ -280,28 +297,37 @@ export interface ConnectorChanges {
   /** `undefined` leaves the stored OAuth settings alone; `null` clears them (the connector is
    * leaving OAuth); an object replaces them as a set. */
   oauth?: ConnectorOAuthSettings | null;
+  /** A static source's: `undefined` leaves them alone. */
+  answers?: StaticAnswers;
+  sample?: boolean;
 }
 
 /** The connector `existing` becomes with `changes` applied — what an update stores, and what a
  *  connection test tries before anything is stored. */
 export function applyConnectorChanges(existing: Connector, changes: ConnectorChanges): Connector {
+  const common = {
+    name: changes.name ?? existing.name,
+    attribution: changes.attribution === undefined ? existing.attribution : (changes.attribution ?? undefined),
+    description: changes.description === undefined ? existing.description : (changes.description ?? undefined),
+    updatedAt: new Date().toISOString(),
+  };
+  if (existing.type === 'static') {
+    return { ...existing, ...common, answers: changes.answers ?? existing.answers, sample: changes.sample ?? existing.sample };
+  }
   const oauthSource = changes.oauth === undefined ? existing : (changes.oauth ?? {});
   return {
     ...existing,
-    name: changes.name ?? existing.name,
+    ...common,
     baseUrl: changes.baseUrl ?? existing.baseUrl,
     authType: changes.authType ?? existing.authType,
     authHeaderName: changes.authHeaderName === undefined ? existing.authHeaderName : (changes.authHeaderName ?? undefined),
     authParamName: changes.authParamName === undefined ? existing.authParamName : (changes.authParamName ?? undefined),
-    attribution: changes.attribution === undefined ? existing.attribution : (changes.attribution ?? undefined),
-    description: changes.description === undefined ? existing.description : (changes.description ?? undefined),
     sourceError: changes.sourceError === undefined ? existing.sourceError : (changes.sourceError ?? undefined),
     authValue: changes.authValue === undefined ? existing.authValue : (changes.authValue ?? undefined),
     oauthTokenUrl: oauthSource.oauthTokenUrl,
     oauthClientId: oauthSource.oauthClientId,
     oauthScope: oauthSource.oauthScope,
     oauthClientAuth: oauthSource.oauthClientAuth,
-    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -320,11 +346,18 @@ export async function updateConnector(
 function changedSettings(before: Connector, after: Connector): string {
   const changed: string[] = [];
   if (after.name !== before.name) changed.push('name');
-  if (after.baseUrl !== before.baseUrl) changed.push('base_url');
+  if (before.type === 'http' && after.type === 'http' && after.baseUrl !== before.baseUrl) changed.push('base_url');
   if (JSON.stringify(after.attribution) !== JSON.stringify(before.attribution)) changed.push('attribution');
   if (after.description !== before.description) changed.push('description');
+  if (before.type === 'static' || after.type === 'static') {
+    if (before.type === 'static' && after.type === 'static') {
+      if (JSON.stringify(after.answers) !== JSON.stringify(before.answers)) changed.push('answers');
+      if (after.sample !== before.sample) changed.push('sample');
+    }
+    return changed.join(',');
+  }
   if (JSON.stringify(after.sourceError) !== JSON.stringify(before.sourceError)) changed.push('source_error');
-  const auth = (c: Connector) =>
+  const auth = (c: HttpConnector) =>
     [c.authType, c.authHeaderName, c.authParamName, c.authValue, c.oauthTokenUrl, c.oauthClientId, c.oauthScope, c.oauthClientAuth].join('\u0000');
   if (auth(after) !== auth(before)) changed.push('auth');
   return changed.join(',');
@@ -345,17 +378,20 @@ async function updateConnectorIn(
   if (!locked[0]) return undefined;
   const existing = rowToConnector(locked[0], secrets);
   const updated = applyConnectorChanges(existing, changes);
+  const http = updated.type === 'http' ? updated : undefined;
   await db.query(
     `UPDATE connectors SET name = $1, base_url = $2, auth_type = $3, auth_header_name = $4, auth_value = $5,
        oauth_token_url = $6, oauth_client_id = $7, oauth_scope = $8, oauth_client_auth = $9, updated_at = $10,
-       auth_param_name = $13, attribution_text = $14, attribution_url = $15, description = $16, source_error = $17
+       auth_param_name = $13, attribution_text = $14, attribution_url = $15, description = $16, source_error = $17,
+       answers = $18, sample = $19
      WHERE id = $11 AND workspace_id = $12`,
     [
-      updated.name, updated.baseUrl, updated.authType, updated.authHeaderName ?? null, updated.authValue === undefined ? null : secrets.seal(updated.authValue),
-      updated.oauthTokenUrl ?? null, updated.oauthClientId ?? null, updated.oauthScope ?? null, updated.oauthClientAuth ?? null,
-      updated.updatedAt, connectorId, workspaceId, updated.authParamName ?? null,
+      updated.name, http?.baseUrl ?? null, http?.authType ?? 'none', http?.authHeaderName ?? null, http?.authValue === undefined ? null : secrets.seal(http.authValue),
+      http?.oauthTokenUrl ?? null, http?.oauthClientId ?? null, http?.oauthScope ?? null, http?.oauthClientAuth ?? null,
+      updated.updatedAt, connectorId, workspaceId, http?.authParamName ?? null,
       updated.attribution?.text ?? null, updated.attribution?.url ?? null, updated.description ?? null,
-      updated.sourceError === undefined ? null : JSON.stringify(updated.sourceError),
+      http?.sourceError === undefined ? null : JSON.stringify(http.sourceError),
+      updated.type === 'static' ? JSON.stringify(updated.answers) : null, updated.type === 'static' && updated.sample,
     ]
   );
   const detail = changedSettings(existing, updated);

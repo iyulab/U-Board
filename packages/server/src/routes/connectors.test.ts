@@ -8,7 +8,10 @@ import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
-import { findConnector } from '../db/connectors.js';
+import { findConnector as findAnyConnector, type HttpConnector } from '../db/connectors.js';
+
+/** The sources these tests make are HTTP ones. */
+const findConnector = async (...args: Parameters<typeof findAnyConnector>) => (await findAnyConnector(...args)) as HttpConnector | undefined;
 import { secretBox } from '../secret-box.js';
 
 const SECRET = 'test-secret-at-least-16-chars';

@@ -2,7 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { DbClient } from '../db.js';
 import { createTestDb } from '../test-support/test-db.js';
 import { createWorkspace } from './workspaces.js';
-import { createConnector, listConnectorsForWorkspace, findConnector, updateConnector, deleteConnector, sealStoredConnectorSecrets } from './connectors.js';
+import { createConnector, listConnectorsForWorkspace, findConnector as findAnyConnector, updateConnector as updateAnyConnector, deleteConnector, sealStoredConnectorSecrets, type HttpConnector } from './connectors.js';
+
+/** The sources these tests make are HTTP ones. */
+const findConnector = async (...args: Parameters<typeof findAnyConnector>) => (await findAnyConnector(...args)) as HttpConnector | undefined;
+const updateConnector = async (...args: Parameters<typeof updateAnyConnector>) => (await updateAnyConnector(...args)) as HttpConnector | undefined;
 import { secretBox, isSealed, SecretUnreadableError } from '../secret-box.js';
 
 let db: DbClient;

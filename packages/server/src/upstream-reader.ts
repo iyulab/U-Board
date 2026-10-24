@@ -1,7 +1,7 @@
 import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { AppConfig } from './app.js';
 import { findConnector, type Connector } from './db/connectors.js';
-import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from './resolve-connector.js';
+import { readSource, type ResolveState } from './resolve-connector.js';
 
 export const DISCONNECTED: ResolvedBinding = { value: undefined, quality: 'disconnected' };
 
@@ -18,11 +18,10 @@ export function upstreamReader(config: Pick<AppConfig, 'db' | 'secrets'>, resolv
     return connectors.get(id)!;
   };
   return async (connectorId: string, ref: unknown): Promise<ResolvedBinding> => {
-    if (!isValidRef(ref)) return DISCONNECTED;
     const connector = await connectorOf(connectorId);
-    const target = connector && buildResolveTarget(connector, ref);
-    if (!connector || !target) return DISCONNECTED;
-    const { message: _message, ...served } = await resolveConnectorValue(connector, target, ref, resolveState);
+    const read = connector && readSource(connector, ref, resolveState);
+    if (!read) return DISCONNECTED;
+    const { message: _message, ...served } = await read;
     return served;
   };
 }

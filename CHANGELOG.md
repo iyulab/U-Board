@@ -11,6 +11,16 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- Static data sources: a workspace data source of `type: "static"` answers what its owner stored, by request path
+  (`answers: { "/equipment": [ … ] }`, a query ignored, at most 512 KiB), the way an HTTP source answers there — so a
+  board reads it with `from` and `path` as it reads any source, and is moved to a live one by changing `from` alone. A
+  share link, a board's picture, its state and the editor read it through the same path as an HTTP source; a path it
+  has no answer at reads as a wrong address. `sample: true` says its answers are example data. A program with an API
+  token may create one — its answers are not a credential. Upgrading needs nothing: the connectors table takes the new
+  columns at start, and every existing source stays an HTTP one.
+
 ### Changed
 
 - A new board — from the console or the API — is made in the board language's second version: an empty canvas (or grid) to add

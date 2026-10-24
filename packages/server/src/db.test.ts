@@ -115,6 +115,32 @@ describe('createDb', () => {
     const constraints = await pglite.query(`SELECT 1 FROM pg_constraint WHERE conrelid = 'connectors'::regclass AND conname = 'connectors_auth_type_check'`);
     expect(constraints.rows).toHaveLength(1);
   });
+  it('upgrades a connectors table from before static sources: addresses become optional, rows kept, idempotently', async () => {
+    const pglite = new PGlite();
+    await pglite.exec(SCHEMA_SQL);
+    // Its earlier shape: every source an HTTP one with an address, no answers.
+    await pglite.exec(`
+      ALTER TABLE connectors DROP COLUMN answers, DROP COLUMN sample;
+      ALTER TABLE connectors ALTER COLUMN base_url SET NOT NULL;
+      ALTER TABLE connectors DROP CONSTRAINT connectors_type_check;
+      ALTER TABLE connectors ADD CONSTRAINT connectors_type_check CHECK (type IN ('http'));
+      INSERT INTO workspaces (id, name, created_at) VALUES ('w1', 'W', now());
+      INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, created_at, updated_at)
+        VALUES ('c1', 'w1', 'Old', 'http', 'https://a.example.com', 'none', 't', 't');
+    `);
+
+    await pglite.exec(SCHEMA_SQL);
+    await pglite.exec(SCHEMA_SQL); // a second start against the upgraded database is a no-op
+
+    const old = await pglite.query(`SELECT type, base_url, sample FROM connectors WHERE id = 'c1'`);
+    expect(old.rows).toEqual([{ type: 'http', base_url: 'https://a.example.com', sample: false }]);
+    await pglite.exec(`
+      INSERT INTO connectors (id, workspace_id, name, type, base_url, auth_type, answers, sample, created_at, updated_at)
+      VALUES ('c2', 'w1', 'Example', 'static', NULL, 'none', '{"/plant": {"shift": "B"}}', TRUE, 't', 't');
+    `);
+    await expect(pglite.exec(`UPDATE connectors SET type = 'ftp' WHERE id = 'c1'`)).rejects.toThrow(/connectors_type_check/);
+  });
+
   it('gives an installation from before instance roles one operator — its first account — idempotently', async () => {
     const pglite = new PGlite();
     await pglite.exec(SCHEMA_SQL);

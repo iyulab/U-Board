@@ -14,10 +14,14 @@ import {
   type ConnectorChanges,
   type ConnectorOAuthSettings,
   type ConnectorSummary,
+  type HttpConnector,
+  type NewHttpConnector,
+  type NewStaticConnector,
+  type StaticAnswers,
   PATH_KEY_PLACEHOLDER,
 } from '../db/connectors.js';
 import { isSourceErrorField, type Attribution, type SourceErrorField } from '@iyulab/u-board/domain';
-import { isValidRef, buildResolveTarget, resolveConnectorValue, testConnector, forgetConnector, type ResolveState } from '../resolve-connector.js';
+import { isValidRef, buildResolveTarget, readSource, staticTarget, testConnector, forgetConnector, type ResolveState } from '../resolve-connector.js';
 
 const OAUTH = 'oauth2-client-credentials';
 const AUTH_TYPES = new Set(['none', 'bearer', 'header', 'query', 'path', OAUTH]);
@@ -53,6 +57,23 @@ function parseDescription(value: unknown): string | null | undefined | false {
   if (value === undefined || value === null) return value;
   if (typeof value !== 'string' || value.trim().length > DESCRIPTION_MAX_LENGTH) return false;
   return value.trim() === '' ? null : value.trim();
+}
+
+/** The most a static source may store, its answers written as JSON — reference tables and example data, not a
+ *  database. */
+export const STATIC_ANSWERS_MAX_BYTES = 512 * 1024;
+
+/** The settings only an HTTP source has — none of which a static source takes. */
+const HTTP_ONLY = ['baseUrl', 'authType', 'authHeaderName', 'authParamName', 'authValue', 'oauthTokenUrl', 'oauthClientId', 'oauthScope', 'oauthClientAuth', 'sourceError'];
+
+/** A request's `answers`: `undefined` when absent (leave them), the answers to store, or `false` when they are not —
+ *  an object of answers by path, each path one as written (`/equipment`, no query or `..`), and no more than
+ *  `STATIC_ANSWERS_MAX_BYTES` written out. */
+function parseAnswers(value: unknown): StaticAnswers | undefined | false {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  for (const path of Object.keys(value)) if (!path.startsWith('/') || path.includes('?') || staticTarget(path) === null) return false;
+  return Buffer.byteLength(JSON.stringify(value)) <= STATIC_ANSWERS_MAX_BYTES ? (value as StaticAnswers) : false;
 }
 
 /** A request's `sourceError`: `undefined` when absent (leave it), `null` to clear it, the setting to store, or `false`
@@ -95,7 +116,7 @@ function authFieldSatisfied(provided: unknown, stored: string | undefined): bool
   return typeof provided === 'string' && provided.trim() !== '';
 }
 
-function validateAuthFields(body: any, existing?: Connector): string | null {
+function validateAuthFields(body: any, existing?: HttpConnector): string | null {
   if (!AUTH_TYPES.has(body.authType)) return 'INVALID_INPUT';
   if (body.authType === 'header') {
     // Only fall back to a stored header name if the connector is *currently* header-auth —
@@ -129,7 +150,7 @@ function validateAuthFields(body: any, existing?: Connector): string | null {
  * fields win, omitted ones keep what an OAuth connector already had. The client authentication
  * method defaults to HTTP Basic, the one every authorization server must support (RFC 6749
  * §2.3.1); a blank scope means "no scope parameter". */
-function oauthSettings(body: any, existing?: Connector): ConnectorOAuthSettings {
+function oauthSettings(body: any, existing?: HttpConnector): ConnectorOAuthSettings {
   const stored = existing?.authType === OAUTH ? existing : undefined;
   const scope = body.oauthScope === undefined ? stored?.oauthScope : body.oauthScope;
   return {
@@ -140,9 +161,11 @@ function oauthSettings(body: any, existing?: Connector): ConnectorOAuthSettings 
   };
 }
 
-/** A new connector's settings from a create request (everything but its name), or the error code
- *  the request is refused with. */
-function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' | 'name' | 'type' | 'createdAt' | 'updatedAt'> | string {
+/** A new connector's settings from a create request (everything but its name and workspace), or the error code the
+ *  request is refused with: an HTTP source (`type` `http` or none) or a static one. */
+function newConnectorSettings(body: any): Omit<NewHttpConnector, 'workspaceId' | 'name'> | Omit<NewStaticConnector, 'workspaceId' | 'name'> | string {
+  if (body.type === 'static') return newStaticSettings(body);
+  if (body.type !== undefined && body.type !== 'http') return 'INVALID_INPUT';
   if (!parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
   const authError = validateAuthFields(body);
   if (authError) return authError;
@@ -154,6 +177,7 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
   const sourceError = parseSourceError(body.sourceError);
   if (sourceError === false) return 'INVALID_INPUT';
   return {
+    type: 'http',
     baseUrl: body.baseUrl,
     attribution: attribution ?? undefined,
     description: description ?? undefined,
@@ -166,7 +190,22 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
   };
 }
 
-/** The change an update request makes to `existing`, or the error code it is refused with. Auth
+/** A new static source's settings: its answers (none yet: `{}`), whether they are example data, its credit and
+ *  description — and nothing an HTTP source has. */
+function newStaticSettings(body: any): Omit<NewStaticConnector, 'workspaceId' | 'name'> | string {
+  if (HTTP_ONLY.some(key => body[key] !== undefined)) return 'INVALID_INPUT';
+  const answers = parseAnswers(body.answers);
+  if (answers === false) return 'INVALID_INPUT';
+  if (body.sample !== undefined && typeof body.sample !== 'boolean') return 'INVALID_INPUT';
+  const attribution = parseAttribution(body.attribution);
+  if (attribution === false) return 'INVALID_INPUT';
+  const description = parseDescription(body.description);
+  if (description === false) return 'INVALID_INPUT';
+  return { type: 'static', answers: answers ?? {}, sample: body.sample === true, attribution: attribution ?? undefined, description: description ?? undefined };
+}
+
+/** The change an update request makes to `existing`, or the error code it is refused with. A source keeps its type.
+ *  A static source's: its name, answers, example flag, credit and description. An HTTP one's — auth
  *  validation runs against the merged state: `{authType: 'bearer'}` with no `authValue` is valid
  *  when a secret is already stored (a rename that leaves the secret alone) and invalid when there
  *  is none to fall back on. By `authType`:
@@ -177,6 +216,18 @@ function newConnectorSettings(body: any): Omit<Connector, 'id' | 'workspaceId' |
  *  Leaving OAuth for any other type clears the OAuth settings along with it. */
 function connectorChanges(body: any, existing: Connector): ConnectorChanges | string {
   if (body.name !== undefined && (typeof body.name !== 'string' || body.name.trim() === '')) return 'INVALID_INPUT';
+  if (body.type !== undefined && body.type !== existing.type) return 'INVALID_INPUT';
+  if (existing.type === 'static') {
+    if (HTTP_ONLY.some(key => body[key] !== undefined)) return 'INVALID_INPUT';
+    const answers = parseAnswers(body.answers);
+    if (answers === false) return 'INVALID_INPUT';
+    if (body.sample !== undefined && typeof body.sample !== 'boolean') return 'INVALID_INPUT';
+    const attribution = parseAttribution(body.attribution);
+    if (attribution === false) return 'INVALID_INPUT';
+    const description = parseDescription(body.description);
+    if (description === false) return 'INVALID_INPUT';
+    return { name: body.name, attribution, description, answers, sample: body.sample };
+  }
   if (body.baseUrl !== undefined && !parseBaseUrl(body.baseUrl)) return 'INVALID_INPUT';
   const attribution = parseAttribution(body.attribution);
   if (attribution === false) return 'INVALID_INPUT';
@@ -200,8 +251,8 @@ function connectorChanges(body: any, existing: Connector): ConnectorChanges | st
 
 /** `changes`, unless they would leave a `path` connector without `{key}` in its base URL — a base URL
  *  edit alone reaches here too, and the key would then go nowhere. */
-function pathKeyKept(changes: ConnectorChanges, existing: Connector): ConnectorChanges | string {
-  const merged = applyConnectorChanges(existing, changes);
+function pathKeyKept(changes: ConnectorChanges, existing: HttpConnector): ConnectorChanges | string {
+  const merged = applyConnectorChanges(existing, changes) as HttpConnector;
   return keyPlaceMatches(merged.authType, merged.baseUrl) ? changes : 'INVALID_INPUT';
 }
 
@@ -212,6 +263,10 @@ function keyPlaceMatches(authType: string, baseUrl: string): boolean {
 }
 
 function toSummary(connector: Connector): ConnectorSummary {
+  if (connector.type === 'static') {
+    const { workspaceId: _workspaceId, createdAt: _createdAt, ...summary } = connector;
+    return summary;
+  }
   const { workspaceId: _workspaceId, authValue: _authValue, createdAt: _createdAt, ...summary } = connector;
   return summary;
 }
@@ -282,10 +337,12 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
         return;
       }
       const now = new Date().toISOString();
-      candidate = { id: 'connection-test', workspaceId, name: '', type: 'http', createdAt: now, updatedAt: now, ...settings };
+      candidate = settings.type === 'static'
+        ? { id: 'connection-test', workspaceId, name: '', createdAt: now, updatedAt: now, ...settings }
+        : { id: 'connection-test', workspaceId, name: '', createdAt: now, updatedAt: now, ...settings, type: 'http' };
     }
     // Without a path there is nothing to call but an OAuth token endpoint.
-    if (body.path === undefined && candidate.authType !== OAUTH) {
+    if (body.path === undefined && (candidate.type === 'static' || candidate.authType !== OAUTH)) {
       res.status(400).json({ code: 'PATH_REQUIRED' });
       return;
     }
@@ -354,18 +411,12 @@ export function createConnectorsRouter(config: AppConfig, resolveState: ResolveS
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    const ref = req.body?.ref;
-    if (!isValidRef(ref)) {
+    const read = readSource(connector, req.body?.ref, resolveState);
+    if (!read) {
       res.status(400).json({ code: 'INVALID_INPUT' });
       return;
     }
-    const target = buildResolveTarget(connector, ref);
-    if (!target) {
-      res.status(400).json({ code: 'INVALID_INPUT' });
-      return;
-    }
-    const result = await resolveConnectorValue(connector, target, ref, resolveState);
-    res.status(200).json(result);
+    res.status(200).json(await read);
   });
 
   return router;
