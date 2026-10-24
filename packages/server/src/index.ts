@@ -16,6 +16,7 @@ import { elementFrameOriginFromEnv, elementOriginsFromEnv } from './element-fram
 import { exitOnStopSignal } from './shutdown.js';
 import { secretBox, SecretUnreadableError } from './secret-box.js';
 import { sealStoredConnectorSecrets } from './db/connectors.js';
+import { migrateFirstVersionBoards } from './db/board-migration.js';
 import { productVersion } from './version.js';
 
 const databaseUrl = process.env.UBOARD_DATABASE_URL ?? './u-board-data';
@@ -113,6 +114,13 @@ try {
       'start with that key (to replace it, set it as UBOARD_SECRETS_KEY_PREVIOUS next to the new one), ' +
       'or (if it is lost) clear the credentials so owners can enter them again: UPDATE connectors SET auth_value = NULL'
   );
+}
+// Boards stored in the board language's first version move to the second once; one it does not carry whole stays and is
+// named, with what it uses — a board the console still opens as it is.
+const moved = await migrateFirstVersionBoards(db);
+if (moved.migrated > 0) console.log(`[server] moved ${moved.migrated} board(s) to the board language's second version`);
+for (const kept of moved.kept) {
+  console.warn(`[server] board ${kept.boardId} stays in the first version — the second does not carry: ${kept.unsupported.join('; ')}`);
 }
 scheduleAuditPurge(db, auditRetentionDays);
 const app = createApp({

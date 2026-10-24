@@ -15,7 +15,7 @@ import './BoardsListPage.css';
 import { Loading } from '../design-system/Loading.js';
 import { Timestamp } from '../format-time.js';
 
-type BoardSummary = { id: string; name: string; kind: ViewKind; updatedAt: string };
+type BoardSummary = { id: string; name: string; kind: ViewKind; updatedAt: string; firstVersion?: string[] };
 
 /** What each kind of board is called, and what it is for — said where a board is made. */
 const KIND_NAMES: Record<ViewKind, string> = { canvas: '캔버스', grid: '그리드' };
@@ -152,6 +152,8 @@ export function BoardsListPage({ workspaceId }: { workspaceId: string }) {
               <span className="ub-board-card__meta">
                 {KIND_NAMES[b.kind]} · 수정 <Timestamp value={b.updatedAt} />
               </span>
+              {/* The move to the board language's second version left it in the first: it opens in that editor. */}
+              {b.firstVersion && <Badge variant="warning">이전 판</Badge>}
               <div className="ub-board-card__footer">
                 <Button variant="danger" aria-label={`${b.name} 삭제`} onClick={() => handleDelete(b.id)}>삭제</Button>
               </div>

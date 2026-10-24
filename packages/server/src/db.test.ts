@@ -3,7 +3,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { createDb, SCHEMA_SQL } from './db.js';
 
 describe('createDb', () => {
-  it('creates all ten tables on an in-memory (PGlite) database', async () => {
+  it('creates all eleven tables on an in-memory (PGlite) database', async () => {
     const db = await createDb(':memory:');
     const { rows } = await db.query<{ table_name: string }>(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`
@@ -11,6 +11,7 @@ describe('createDb', () => {
     expect(rows.map(r => r.table_name)).toEqual([
       'api_tokens',
       'audit_events',
+      'board_migrations',
       'board_share_tokens',
       'boards',
       'connectors',

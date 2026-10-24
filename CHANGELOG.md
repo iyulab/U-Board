@@ -13,6 +13,12 @@ do when upgrading. Each release's notes carry its section.
 
 ### Added
 
+- **Boards stored in the board language's first version move to the second when the server starts** — once, each
+  that the second version carries whole. One it does not carry yet stays as it is, still opens in the first version's
+  editor, is named in the server log with what keeps it, carries an «이전 판» badge in the console's board list, and is
+  tried again once it is saved anew. Every move is recorded with the document it replaced (`board_migrations`), so it
+  can be put back. Upgrading needs nothing: the table is made at start, and a moved board counts one more save — an
+  editor still open on it is asked to reload before it saves over it.
 - Static data sources: a workspace data source of `type: "static"` answers what its owner stored, by request path
   (`answers: { "/equipment": [ … ] }`, a query ignored, at most 512 KiB), the way an HTTP source answers there — so a
   board reads it with `from` and `path` as it reads any source, and is moved to a live one by changing `from` alone. A

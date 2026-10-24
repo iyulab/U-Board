@@ -185,7 +185,8 @@ export function createWorkspace(name: string) {
 }
 
 export function listBoards(workspaceId: string) {
-  return request<{ boards: { id: string; name: string; kind: ViewKind; updatedAt: string }[] }>(`/workspaces/${workspaceId}/boards`);
+  // `firstVersion`: the board stays in the board language's first version, and what of it the second does not carry.
+  return request<{ boards: { id: string; name: string; kind: ViewKind; updatedAt: string; firstVersion?: string[] }[] }>(`/workspaces/${workspaceId}/boards`);
 }
 
 /** Creates a board with an empty document of `kind` — a canvas unless told otherwise. */

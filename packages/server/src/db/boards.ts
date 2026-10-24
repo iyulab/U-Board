@@ -67,15 +67,19 @@ export async function createBoard(db: DbClient, input: { workspaceId: string; na
   return board;
 }
 
+/** The workspace's boards, each with its kind — and, for one the move to the board language's second version left in
+ *  the first (`board_migrations`, at its revision now), what keeps it there (`firstVersion`). */
 export async function listBoardsForWorkspace(
   db: DbClient,
   workspaceId: string
-): Promise<Array<{ id: string; name: string; kind: ViewKind; updatedAt: string }>> {
-  const { rows } = await db.query<{ id: string; name: string; kind: ViewKind; updated_at: string }>(
-    `SELECT id, name, kind, updated_at FROM boards WHERE workspace_id = $1`,
+): Promise<Array<{ id: string; name: string; kind: ViewKind; updatedAt: string; firstVersion?: string[] }>> {
+  const { rows } = await db.query<{ id: string; name: string; kind: ViewKind; updated_at: string; kept: string[] | null }>(
+    `SELECT b.id, b.name, b.kind, b.updated_at, m.notes AS kept FROM boards b
+     LEFT JOIN board_migrations m ON m.board_id = b.id AND m.revision = b.revision AND m.outcome = 'kept'
+     WHERE b.workspace_id = $1`,
     [workspaceId]
   );
-  return rows.map(r => ({ id: r.id, name: r.name, kind: r.kind, updatedAt: r.updated_at }));
+  return rows.map(r => ({ id: r.id, name: r.name, kind: r.kind, updatedAt: r.updated_at, ...(r.kept ? { firstVersion: r.kept } : {}) }));
 }
 
 export async function findBoard(db: DbClient, workspaceId: string, boardId: string): Promise<Board | undefined> {

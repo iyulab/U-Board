@@ -65,6 +65,20 @@ ALTER TABLE boards ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 1;
 -- every document — a document can hold a background image of megabytes. Every board before grid views was a canvas.
 ALTER TABLE boards ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'canvas';
 
+-- What moving the stored boards to the board language's second version did to each (\`migrateFirstVersionBoards\`): moved
+-- (\`migrated\`, with the first-version document it replaced, to put back) or left as it was (\`kept\`, with what the
+-- second version does not carry) — at the revision it was read at, so a board left is tried again once saved anew.
+CREATE TABLE IF NOT EXISTS board_migrations (
+  id TEXT PRIMARY KEY,
+  board_id TEXT NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+  revision INTEGER NOT NULL,
+  outcome TEXT NOT NULL CHECK (outcome IN ('migrated', 'kept')),
+  before_document TEXT,
+  notes JSONB NOT NULL,
+  migrated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_board_migrations_board ON board_migrations(board_id, revision);
+
 CREATE TABLE IF NOT EXISTS connectors (
   id TEXT PRIMARY KEY,
   workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,

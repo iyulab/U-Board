@@ -50,6 +50,18 @@ describe('BoardsListPage', () => {
     expect(api.listBoards).toHaveBeenCalledWith('w1');
   });
 
+  it('marks a board the move to the board language’s second version left in the first', async () => {
+    vi.mocked(api.listBoards).mockResolvedValue({
+      boards: [
+        { id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: '2026-08-20T00:00:00.000Z', firstVersion: ['node states'] },
+        { id: 'b2', name: 'Floor 2', kind: 'canvas', updatedAt: '2026-08-20T00:00:00.000Z' },
+      ],
+    });
+    renderPage();
+    expect(await screen.findByText('Floor 2')).toBeInTheDocument();
+    expect(screen.getAllByText('이전 판')).toHaveLength(1);
+  });
+
   it('says when each board was last changed, in readable words rather than raw ISO text', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: '2026-08-20T00:00:00.000Z' }] });
     renderPage();
