@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
-import { FIELD_STYLE } from '../ui-style.js';
+import { ERROR_STYLE, FIELD_STYLE } from '../ui-style.js';
 import { TONES, type BoardV2, type Shape, type Tone } from '../board-v2/types.js';
 import type { BoardFinding } from '../board-v2/check.js';
 
@@ -12,9 +13,57 @@ export interface ShapePanelProps {
   labels?: UBoardLabels;
 }
 
+/** A line's points as written — `20,20 220,20`: two or more `x,y` by spaces — or `undefined` when they are not. */
+export function parsePoints(text: string): [number, number][] | undefined {
+  const pairs = text.trim().split(/\s+/).filter(pair => pair !== '');
+  if (pairs.length < 2) return undefined;
+  const points: [number, number][] = [];
+  for (const pair of pairs) {
+    const [x, y, ...rest] = pair.split(',').map(Number);
+    if (rest.length > 0 || !Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+    points.push([x!, y!]);
+  }
+  return points;
+}
+
+/** A line's points, or a path's drawing, as its panel edits them — a line's written only once they read. */
+function LineFields({ shape, onChange, labels }: { shape: Shape; onChange: (shape: Shape) => void; labels: UBoardLabels }) {
+  const [points, setPoints] = useState(() => (shape.line ?? []).map(([x, y]) => `${x},${y}`).join(' '));
+  if (shape.path !== undefined) {
+    return (
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.shapePath}
+        <textarea rows={3} spellCheck={false} value={shape.path} onChange={e => onChange({ ...shape, path: e.target.value })} />
+      </label>
+    );
+  }
+  const read = parsePoints(points);
+  return (
+    <label className="ub-panel__field" style={FIELD_STYLE}>
+      {labels.shapePoints}
+      <input
+        type="text"
+        value={points}
+        aria-invalid={!read}
+        onChange={e => {
+          setPoints(e.target.value);
+          const next = parsePoints(e.target.value);
+          if (next) onChange({ ...shape, line: next });
+        }}
+      />
+      {!read && (
+        <span role="alert" style={ERROR_STYLE}>
+          {labels.shapePointsInvalid}
+        </span>
+      )}
+    </label>
+  );
+}
+
 /**
- * The panel of a shape of a canvas board in the language's second version — a frame (a box, with a label at its top)
- * or a text: its words, its tone, and a frame's line or a text's size. Where it is and how large is set on the canvas. A
+ * The panel of a shape of a canvas board in the language's second version — a frame (a box, with a label at its top),
+ * a text, or a line or a path: its words (a line's points, a path's drawing), its tone, and a frame's or a line's line or
+ * a text's size. Where it is and how large is set on the canvas. A
  * setting left empty goes from the shape.
  */
 export function ShapePanel({ id, board, onChange, findings = [], labels = DEFAULT_LABELS }: ShapePanelProps) {
@@ -31,9 +80,13 @@ export function ShapePanel({ id, board, onChange, findings = [], labels = DEFAUL
     </label>
   );
   const box = shape.box !== undefined;
+  const drawn = shape.line !== undefined || shape.path !== undefined;
   return (
     <div className="ub-panel ub-panel--shape">
       <h2 className="ub-panel__heading">{labels.shapeHeading.replace('{id}', id)}</h2>
+      {drawn ? (
+        <LineFields shape={shape} onChange={onChange} labels={labels} />
+      ) : (
       <label className="ub-panel__field" style={FIELD_STYLE}>
         {box ? labels.shapeLabel : labels.shapeText}
         <input
@@ -42,6 +95,7 @@ export function ShapePanel({ id, board, onChange, findings = [], labels = DEFAUL
           onChange={e => (box ? set({ label: e.target.value }) : onChange({ ...shape, text: e.target.value }))}
         />
       </label>
+      )}
       <label className="ub-panel__field" style={FIELD_STYLE}>
         {labels.shapeTone}
         <select value={shape.tone ?? ''} onChange={e => set({ tone: (e.target.value || undefined) as Tone | undefined })}>
@@ -53,7 +107,7 @@ export function ShapePanel({ id, board, onChange, findings = [], labels = DEFAUL
           ))}
         </select>
       </label>
-      {box ? (
+      {box || drawn ? (
         <>
           {number(labels.shapeWidth, shape.width, width => set({ width }))}
           <label className="ub-panel__field ub-panel__field--check">

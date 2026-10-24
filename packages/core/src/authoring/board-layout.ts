@@ -28,23 +28,43 @@ export function linkOf(board: BoardV2, id: string): string | undefined {
 /** The id the picture draws a board's own shape with — `shape.<id>`. */
 export const SHAPE = 'shape.';
 
-/** The shape of a canvas board a picture decoration `id` draws, if it is one of the board's own boxes or texts (a line
- *  or a path is drawn as a node of its own and edited in the board's JSON). */
+/** The shape of a canvas board a picture piece `id` draws, if it is one of the board's own — a box or a text (drawn as a
+ *  decoration), or a line or a path (drawn as a node of its own). */
 export function shapeOf(board: BoardV2, id: string): string | undefined {
   if (board.layout.kind !== 'canvas' || !id.startsWith(SHAPE)) return undefined;
-  const shape = board.layout.shapes?.[id.slice(SHAPE.length)];
-  return shape !== undefined && (shape.box !== undefined || shape.at !== undefined) ? id.slice(SHAPE.length) : undefined;
+  return board.layout.shapes?.[id.slice(SHAPE.length)] !== undefined ? id.slice(SHAPE.length) : undefined;
 }
 
-/** The board with a new shape — a box, or a text — at the canvas's top left, stepped from the shapes it has, and its id. */
-export function withNewShape(board: BoardV2, kind: 'box' | 'text', text: string): { board: BoardV2; id: string } {
+/** The line or path of a canvas board a picture node `id` draws, if it is one. */
+export function lineOf(board: BoardV2, id: string): string | undefined {
+  const shape = shapeOf(board, id);
+  const drawn = shape !== undefined && board.layout.kind === 'canvas' ? board.layout.shapes![shape]! : undefined;
+  return drawn && (drawn.line !== undefined || drawn.path !== undefined) ? shape : undefined;
+}
+
+/** A line or path moved and sized as its node was, from box `from` to box `to`: each point where it stands in the box. */
+export function shapeIn(shape: Shape, from: { x: number; y: number; width: number; height: number }, to: { x: number; y: number; width: number; height: number }): Shape {
+  const sx = from.width === 0 ? 1 : to.width / from.width;
+  const sy = from.height === 0 ? 1 : to.height / from.height;
+  const px = (x: number) => Math.round(to.x + (x - from.x) * sx);
+  const py = (y: number) => Math.round(to.y + (y - from.y) * sy);
+  let k = 0;
+  if (shape.line !== undefined) return { ...shape, line: shape.line.map(([x, y]) => [px(x), py(y)]) };
+  if (shape.path !== undefined) return { ...shape, path: shape.path.replace(/-?\d*\.?\d+/g, n => String(k++ % 2 === 0 ? px(Number(n)) : py(Number(n)))) };
+  return shape;
+}
+
+/** The board with a new shape — a box, a text, or a line — at the canvas's top left, stepped from the shapes it has, and its
+ *  id. */
+export function withNewShape(board: BoardV2, kind: 'box' | 'text' | 'line', text: string): { board: BoardV2; id: string } {
   if (board.layout.kind !== 'canvas') return { board, id: '' };
   const shapes = board.layout.shapes ?? {};
   let n = Object.keys(shapes).length + 1;
   while (`shape-${n}` in shapes) n++;
   const id = `shape-${n}`;
   const step = 24 * (n - 1);
-  const shape: Shape = kind === 'box' ? { box: [20 + step, 20 + step, 240, 160] } : { text, at: [20 + step, 20 + step] };
+  const shape: Shape =
+    kind === 'box' ? { box: [20 + step, 20 + step, 240, 160] } : kind === 'line' ? { line: [[20 + step, 20 + step], [220 + step, 20 + step]] } : { text, at: [20 + step, 20 + step] };
   return { board: { ...board, layout: { ...board.layout, shapes: { ...shapes, [id]: shape } } }, id };
 }
 
@@ -62,6 +82,7 @@ export function withNewLink(board: BoardV2, from: string, to: string): { board: 
  *  part inside a group, which moves with its group. */
 export function placesItself(board: BoardV2, id: string): boolean {
   if (!layoutEditable(board)) return false;
+  if (lineOf(board, id) !== undefined) return true;
   const [part, key, ...rest] = id.split('/');
   if (board.layout.kind === 'grid') {
     const each = board.parts[part!]?.each !== undefined;
@@ -89,6 +110,13 @@ export function withPictureLayout(board: BoardV2, before: ViewDocument, after: V
   for (const [id, node] of now) {
     const old = was.get(id);
     if (!old || !placesItself(board, id) || sameBox(old, node)) continue;
+    const line = lineOf(board, id);
+    if (line !== undefined) {
+      const box = (n: Node) => ({ x: n.x, y: n.y, width: n.width ?? old.width ?? 0, height: n.height ?? old.height ?? 0 });
+      layout.shapes = { ...layout.shapes, [line]: shapeIn(layout.shapes![line]!, box(old), box(node)) };
+      changed = true;
+      continue;
+    }
     const [part, key] = id.split('/') as [string, string | undefined];
     const at = placeOf(old, node);
     layout.place[part] = key === undefined ? at : { ...(layout.place[part] as Record<string, Place>), [key]: at };
@@ -119,7 +147,13 @@ export function withPictureLayout(board: BoardV2, before: ViewDocument, after: V
     changed = true;
   }
 
-  const gone = [...was.keys()].filter(id => !now.has(id) && !id.includes('/') && placesItself(board, id));
+  const removed = [...was.keys()].filter(id => !now.has(id) && placesItself(board, id));
+  for (const line of removed.flatMap(id => lineOf(board, id) ?? [])) {
+    const { [line]: _gone, ...rest } = layout.shapes!;
+    layout.shapes = rest;
+    changed = true;
+  }
+  const gone = removed.filter(id => !id.includes('/') && lineOf(board, id) === undefined);
   for (const part of gone) {
     delete parts[part];
     delete layout.place[part];

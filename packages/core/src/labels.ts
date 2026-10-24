@@ -162,6 +162,11 @@ export interface UBoardLabels {
   shapeHeading: string;
   shapeAddBox: string;
   shapeAddText: string;
+  shapeAddLine: string;
+  /** A line's points and a path's drawing, as its panel sets them. */
+  shapePoints: string;
+  shapePointsInvalid: string;
+  shapePath: string;
   shapeNewText: string;
   shapeLabel: string;
   shapeText: string;
@@ -632,6 +637,10 @@ export const DEFAULT_LABELS: UBoardLabels = {
   shapeHeading: 'Shape {id}',
   shapeAddBox: 'Add frame',
   shapeAddText: 'Add text',
+  shapeAddLine: 'Add line',
+  shapePoints: 'Points (x,y — by spaces)',
+  shapePointsInvalid: 'Write two points or more as x,y, by spaces: 20,20 220,20.',
+  shapePath: 'Path (M · L · C · Q · Z, absolute)',
   shapeNewText: 'Text',
   shapeLabel: 'Label',
   shapeText: 'Text',

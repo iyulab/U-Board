@@ -52,7 +52,20 @@ test('adds a text and a frame to a canvas, selects each by clicking it, names th
   await expect(page.getByLabel('이름표', { exact: true })).toHaveValue('1번 베이');
   await expect(page.getByLabel('점선')).toBeChecked();
 
-  // 빈 영역에서 끌어 상자로 두 도형을 함께 고르면, 한 항목의 패널 대신 선택 개수를 알린다
+  // A line, cascaded to (68, 68)–(268, 68): drawn as a node of its own, selected by a click on it, its points set in its
+  // panel.
+  await page.getByRole('button', { name: '선 도형 추가' }).click();
+  const line = page.getByTestId('designer-overlay-shape.shape-3');
+  await expect(line).toBeAttached();
+  const lineBox = (await line.boundingBox())!;
+  await page.mouse.click(lineBox.x + lineBox.width / 2, lineBox.y + lineBox.height / 2);
+  await expect(page.getByRole('heading', { name: '도형 shape-3' })).toBeVisible();
+  await expect(page.getByLabel('점(x,y — 빈칸으로)')).toHaveValue('68,68 268,68');
+  await page.getByLabel('점(x,y — 빈칸으로)').fill('68,68 268,68 268,140');
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('저장됨')).toBeVisible();
+
+  // 빈 영역에서 끌어 상자로 세 도형을 함께 고르면, 한 항목의 패널 대신 선택 개수를 알린다
   // (열 때 fit에 16px 여백이 있어 편집기 모서리는 비어 있다).
   const editor = (await page.getByRole('application', { name: '편집기' }).boundingBox())!;
   await page.mouse.move(editor.x + 2, editor.y + 2);
@@ -60,5 +73,5 @@ test('adds a text and a frame to a canvas, selects each by clicking it, names th
   await page.mouse.move(editor.x + editor.width / 2, editor.y + editor.height / 2, { steps: 4 });
   await page.mouse.move(editor.x + editor.width - 2, editor.y + editor.height - 2, { steps: 4 });
   await page.mouse.up();
-  await expect(page.getByText('2개 선택됨 — 하나를 선택하면 편집할 수 있습니다.')).toBeVisible();
+  await expect(page.getByText('3개 선택됨 — 하나를 선택하면 편집할 수 있습니다.')).toBeVisible();
 });

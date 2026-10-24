@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { toViewDocument } from '../board-v2/picture.js';
 import type { BoardV2, CanvasLayout } from '../board-v2/types.js';
 import type { CanvasView, GridView } from '../view-document.js';
-import { LINK, SHAPE, layoutEditable, linkOf, placesItself, shapeOf, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
+import { LINK, SHAPE, layoutEditable, lineOf, linkOf, placesItself, shapeIn, shapeOf, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 
 const board: BoardV2 = {
   version: 2,
@@ -93,10 +93,27 @@ describe('the links of a canvas board', () => {
 describe('the shapes of a canvas board', () => {
   const framed: BoardV2 = { ...board, layout: { ...(board.layout as CanvasLayout), shapes: { zone: { box: [0, 0, 300, 200], label: 'Zone' }, note: { text: 'Hi', at: [10, 400] }, pipe: { line: [[0, 0], [100, 0]] } } } };
 
-  it('are the frames and texts — a line is a node of its own and is not one', () => {
+  it('are the frames, texts and lines — a line drawn as a node of its own, which the board places itself', () => {
     expect(shapeOf(framed, `${SHAPE}zone`)).toBe('zone');
     expect(shapeOf(framed, `${SHAPE}note`)).toBe('note');
-    expect(shapeOf(framed, `${SHAPE}pipe`)).toBeUndefined();
+    expect(shapeOf(framed, `${SHAPE}pipe`)).toBe('pipe');
+    expect(lineOf(framed, `${SHAPE}pipe`)).toBe('pipe');
+    expect(lineOf(framed, `${SHAPE}zone`)).toBeUndefined();
+    expect(placesItself(framed, `${SHAPE}pipe`)).toBe(true);
+  });
+
+  it('move and size a line as its node is — each point where it stands in the box — and delete it with its node', () => {
+    const before = picture(framed);
+    const node = before.nodes.find(n => n.id === `${SHAPE}pipe`)!;
+    const moved: CanvasView = { ...before, nodes: before.nodes.map(n => (n === node ? { ...n, x: n.x + 50, y: n.y + 10, width: n.width! * 2 } : n)) };
+    const next = withPictureLayout(framed, before, moved);
+    const pipe = next.layout.kind === 'canvas' ? next.layout.shapes!.pipe! : undefined;
+    expect(pipe!.line![0]).toEqual([50 + (0 - node.x) * 2 + node.x, 10]);
+    expect(pipe!.line![1]![0] - pipe!.line![0]![0]).toBe(200);
+    const deleted = withPictureLayout(framed, before, { ...before, nodes: before.nodes.filter(n => n !== node) });
+    expect(deleted.layout.kind === 'canvas' && deleted.layout.shapes).toEqual({ zone: framed.layout.kind === 'canvas' && framed.layout.shapes!.zone, note: { text: 'Hi', at: [10, 400] } });
+    expect(deleted.parts).toEqual(framed.parts);
+    expect(shapeIn({ path: 'M0 0 L10 20' }, { x: 0, y: 0, width: 10, height: 20 }, { x: 5, y: 5, width: 20, height: 20 })).toEqual({ path: 'M5 5 L25 25' });
   });
 
   it('move, size and go as the canvas says, nothing else of the board changing', () => {
@@ -110,7 +127,9 @@ describe('the shapes of a canvas board', () => {
     expect(next.parts).toEqual(framed.parts);
   });
 
-  it('gains a frame or a text at the top left, each under a new id', () => {
+  it('gains a frame, a text or a line at the top left, each under a new id', () => {
+    const line = withNewShape(board, 'line', 'Text');
+    expect(line.board.layout.kind === 'canvas' && line.board.layout.shapes?.[line.id]).toEqual({ line: [[20, 20], [220, 20]] });
     const box = withNewShape(board, 'box', 'Text');
     expect(box.board.layout.kind === 'canvas' && box.board.layout.shapes?.[box.id]).toEqual({ box: [20, 20, 240, 160] });
     const text = withNewShape(box.board, 'text', 'Text');

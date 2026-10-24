@@ -286,7 +286,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
     });
 
   /** A frame or a text on a canvas board, at its top left. */
-  const addShape = (kind: 'box' | 'text') => setEdit((h, typingIn) => recordEdit(h, withNewShape(h.present, kind, labels.shapeNewText).board, typingIn));
+  const addShape = (kind: 'box' | 'text' | 'line') => setEdit((h, typingIn) => recordEdit(h, withNewShape(h.present, kind, labels.shapeNewText).board, typingIn));
 
   const documentActions = (
     <>
@@ -302,6 +302,9 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
               </button>
               <button type="button" className="ub-action" onClick={() => addShape('text')}>
                 {labels.shapeAddText}
+              </button>
+              <button type="button" className="ub-action" onClick={() => addShape('line')}>
+                {labels.shapeAddLine}
               </button>
             </>
           )}

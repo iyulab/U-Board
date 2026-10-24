@@ -32,6 +32,9 @@ All notable changes to this package are documented here. The format follows
 - `Adapter.sample`: an adapter whose values are example data. A board that binds to one says «Example data» (the
   `exampleData` label) first in the line under it (`ub-viewer__example`) — in `ViewerPage`, whatever its `attribution`
   setting, and in the editors' view mode.
+- `BoardAuthoring` adds a line to a canvas, and selects, moves, sizes and deletes a line or a path as a node — each
+  point carried where it stands in the node's box — its panel setting a line's points (`20,20 220,20`) or a path's
+  drawing, its tone, width and dash; they were drawn and left to the board's JSON.
 - `BoardAuthoring`'s data panel sets the finer points of a request read under one fold: its items by their fields
   (`where`, written `kind=PM10, floor=2`), the field or the place in the answer with when they were observed (`time`,
   `answerTime`), how long a value stays current (`fresh`), the source's time zone (`zone`), the time its request asks
