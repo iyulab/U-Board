@@ -5,7 +5,7 @@ import { DataPanel } from './DataPanel';
 import type { Query } from '../board-v2/types';
 
 const data: Record<string, Query> = {
-  pumps: { from: 'plant', path: '/pumps', list: '/value', key: 'id', fields: { flow: { unit: 'm³/h', state: { stop: 0 } as never } } },
+  pumps: { from: 'plant', path: '/pumps', list: '/value', key: 'id', fields: { flow: { unit: 'm³/h', state: { stop: 'off' } } } },
 };
 const sources = [{ id: 'plant', label: 'Plant API' }, { id: 'weather' }];
 
@@ -21,10 +21,11 @@ describe('DataPanel', () => {
     expect(onChange).toHaveBeenLastCalledWith({ pumps: withoutKey });
   });
 
-  it('sets the meaning of a field, adds and removes fields, and shows a state it does not edit', () => {
+  it('sets the meaning of a field, adds and removes fields, and shows its status mapping to edit', () => {
     const onChange = vi.fn();
     render(<DataPanel data={data} sources={sources} onChange={onChange} />);
-    expect(screen.getByText(/Written as a structure/)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('map');
+    expect(screen.getByLabelText('Value 1')).toHaveValue('stop');
     fireEvent.change(screen.getByLabelText('Decimal places'), { target: { value: '1' } });
     expect(onChange).toHaveBeenLastCalledWith({ pumps: { ...data.pumps, fields: { flow: { ...data.pumps!.fields!.flow, digits: 1 } } } });
     fireEvent.change(screen.getByLabelText('New field'), { target: { value: 'rpm' } });

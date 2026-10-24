@@ -32,6 +32,9 @@ All notable changes to this package are documented here. The format follows
 - `Adapter.sample`: an adapter whose values are example data. A board that binds to one says «Example data» (the
   `exampleData` label) first in the line under it (`ub-viewer__example`) — in `ViewerPage`, whatever its `attribution`
   setting, and in the editors' view mode.
+- `BoardAuthoring`'s data panel sets a field's status — the value already a status name, a status by value (`*` for any
+  other) or number bands, offering the board's statuses and the tones — and the words its values are shown as, where
+  they were shown and left to the assistant or the board's JSON.
 - `BoardAuthoring` sets the board's tone and accent (`board.theme`, `board.accent`) in its panel with nothing selected; undoes
   with Ctrl+Z (⌘Z) and redoes with Ctrl+Shift+Z or Ctrl+Y anywhere in the editor but a field being typed into, a run of
   typing in one field one step, as `AuthoringView` does; and with two or more pieces of a canvas selected, says how many

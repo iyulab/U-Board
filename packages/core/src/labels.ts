@@ -217,6 +217,20 @@ export interface UBoardLabels {
   dataFieldDigits: string;
   dataFieldFormat: string;
   dataFieldRemove: string;
+  /** A field's status — how its value is doing — and the words it is shown as, as the data panel sets them. */
+  dataFieldState: string;
+  dataFieldNames: string;
+  mappingNone: string;
+  mappingRaw: string;
+  mappingMap: string;
+  mappingBands: string;
+  /** `{n}`: the row's number. */
+  mappingFrom: string;
+  mappingTo: string;
+  mappingAddRow: string;
+  mappingOtherwise: string;
+  mappingBandsText: string;
+  mappingBandsInvalid: string;
   dataFieldNew: string;
   dataFieldAdd: string;
   /** Read the data now and list the fields its item has. */
@@ -654,6 +668,18 @@ export const DEFAULT_LABELS: UBoardLabels = {
   dataFieldDigits: 'Decimal places',
   dataFieldFormat: 'Format',
   dataFieldRemove: 'Remove field {name}',
+  dataFieldState: 'Status',
+  dataFieldNames: 'Words',
+  mappingNone: '(none)',
+  mappingRaw: 'The value is a status name',
+  mappingMap: 'By value',
+  mappingBands: 'Number bands',
+  mappingFrom: 'Value {n}',
+  mappingTo: 'Name {n}',
+  mappingAddRow: 'Add a value',
+  mappingOtherwise: 'Any other value',
+  mappingBandsText: 'Names and bounds in turn (ok, 1, warn, 5, alarm)',
+  mappingBandsInvalid: 'Write names and rising numbers in turn, from a name: ok, 1, warn, 5, alarm.',
   dataFieldNew: 'New field',
   dataFieldAdd: 'Add field',
   dataLook: 'Look at the data',

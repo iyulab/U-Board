@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Adapter } from '../adapter.js';
 import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
+import { TONES } from '../tones.js';
 import { GROUP_STYLE } from '../ui-style.js';
 import { placedIn, type CanvasView, type GridView, type ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
@@ -160,6 +161,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             data={board.data}
             sources={sources}
             look={look}
+            statuses={[...new Set([...Object.keys(board.statuses ?? {}), ...TONES])]}
             onChange={data =>
               setEdit((h, typingIn) => {
                 const { data: _gone, ...rest } = h.present;

@@ -44,6 +44,12 @@ test('reads a data source into a board and shows one of its fields in a part, fr
     await page.getByRole('button', { name: 'status 더하기' }).click();
     await expect(page.getByRole('group', { name: 'status' })).toBeVisible();
     await page.getByLabel('단위').fill('state');
+    // 그 필드의 상태 — 원천의 값마다: running은 ok, 그 밖은 off.
+    await page.getByRole('combobox', { name: '상태' }).selectOption('map');
+    await page.getByRole('button', { name: '값 추가' }).first().click();
+    await page.getByLabel('값 1', { exact: true }).fill('running');
+    await page.getByLabel('이름 1', { exact: true }).fill('ok');
+    await page.getByLabel('그 밖의 값').first().fill('off');
 
     // 부품 하나 — 그 패널에서 제목을 비우고 읽는 데이터와 보일 필드를 정하면 편집기에 제자리로 그려진 부품이 원천의 값을 보인다.
     await page.getByRole('button', { name: '부품 추가' }).click();
@@ -70,7 +76,7 @@ test('reads a data source into a board and shows one of its fields in a part, fr
     const { activeWorkspaceId: workspaceId } = await (await page.request.get('/api/workspaces/me')).json();
     const document = (await (await page.request.get(`/api/workspaces/${workspaceId}/boards/${at}`)).json()).document;
     expect(document.version).toBe(2);
-    expect(document.data.plant).toMatchObject({ path: '/status', fields: { status: { unit: 'state' } } });
+    expect(document.data.plant).toMatchObject({ path: '/status', fields: { status: { unit: 'state', state: { running: 'ok', '*': 'off' } } } });
     expect(document.parts['part-1']).toEqual({ as: 'label', of: 'plant', show: 'status' });
   } finally {
     mockServer.close();

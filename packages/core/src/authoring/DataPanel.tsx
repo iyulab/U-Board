@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
 import type { Field, Query } from '../board-v2/types.js';
+import { MappingEditor } from './MappingEditor.js';
 
 /** A data source a board may read from, as its host names it — one of the adapters the host gives. */
 export interface DataSource {
@@ -17,6 +18,8 @@ export interface DataPanelProps {
   sources: readonly DataSource[];
   /** Reads one of the board's data as the board reads it whole: the list, or the one item. Omitted, there is no looking. */
   look?: (name: string) => Promise<unknown>;
+  /** The board's statuses, by name — what a field's status maps to. */
+  statuses?: readonly string[];
   labels?: UBoardLabels;
 }
 
@@ -42,7 +45,7 @@ function tidy<T extends object>(value: T): T {
  * data now and offers the fields it found. A field's value names and state are written as structures and shown, not
  * edited, here.
  */
-export function DataPanel({ data = {}, onChange, sources, look, labels = DEFAULT_LABELS }: DataPanelProps) {
+export function DataPanel({ data = {}, onChange, sources, look, statuses = [], labels = DEFAULT_LABELS }: DataPanelProps) {
   const [name, setName] = useState('');
   const write = (next: Record<string, Query>) => onChange(Object.keys(next).length > 0 ? next : undefined);
   const set = (key: string, change: Partial<Query>) => write({ ...data, [key]: tidy({ ...data[key]!, ...change }) });
@@ -59,7 +62,7 @@ export function DataPanel({ data = {}, onChange, sources, look, labels = DEFAULT
     <div className="ub-panel ub-panel--data">
       <h2 className="ub-panel__heading">{labels.dataHeading}</h2>
       {Object.entries(data).map(([key, query]) => (
-        <DataRead key={key} name={key} query={query} sources={sources} look={look} labels={labels} set={change => set(key, change)} setField={(field, change) => setField(key, field, change)} remove={() => remove(key)} />
+        <DataRead key={key} name={key} query={query} sources={sources} look={look} statuses={statuses} labels={labels} set={change => set(key, change)} setField={(field, change) => setField(key, field, change)} remove={() => remove(key)} />
       ))}
       <div className="ub-panel__actions" style={GROUP_STYLE}>
         <label className="ub-panel__field" style={FIELD_STYLE}>
@@ -84,6 +87,7 @@ export function DataPanel({ data = {}, onChange, sources, look, labels = DEFAULT
 
 interface DataReadProps {
   name: string;
+  statuses: readonly string[];
   query: Query;
   sources: readonly DataSource[];
   look?: (name: string) => Promise<unknown>;
@@ -93,7 +97,7 @@ interface DataReadProps {
   remove: () => void;
 }
 
-function DataRead({ name, query, sources, look, labels, set, setField, remove }: DataReadProps) {
+function DataRead({ name, query, sources, look, statuses, labels, set, setField, remove }: DataReadProps) {
   const [field, setFieldName] = useState('');
   const [found, setFound] = useState<string[] | 'reading' | null>(null);
   const fields = query.fields ?? {};
@@ -142,7 +146,20 @@ function DataRead({ name, query, sources, look, labels, set, setField, remove }:
               <input type="number" min={0} step={1} value={f.digits ?? ''} onChange={e => setField(fieldName, { digits: e.target.value === '' ? undefined : Number(e.target.value) })} />
             </label>
             {text(labels.dataFieldFormat, f.format, format => setField(fieldName, { format }))}
-            {(f.names !== undefined || f.state !== undefined) && <p className="ub-panel__hint">{labels.partStructured}</p>}
+            <MappingEditor
+              legend={labels.dataFieldState}
+              value={f.state}
+              raw
+              names={statuses}
+              onChange={state => setField(fieldName, { state })}
+              labels={labels}
+            />
+            <MappingEditor
+              legend={labels.dataFieldNames}
+              value={f.names}
+              onChange={names => setField(fieldName, { names: names === 'raw' ? undefined : names })}
+              labels={labels}
+            />
             <button type="button" className="ub-action" onClick={() => setField(fieldName, null)}>
               {labels.dataFieldRemove.replace('{name}', fieldName)}
             </button>

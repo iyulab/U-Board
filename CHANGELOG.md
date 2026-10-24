@@ -40,6 +40,8 @@ do when upgrading. Each release's notes carry its section.
   in the second version when that carries all of it, and as the sample is otherwise. The editor of such a board sets its tone and
   accent with nothing selected, undoes and redoes with Ctrl+Z and Ctrl+Shift+Z (or Ctrl+Y) — what is typed in one field in one go
   being one step — and says how many parts are selected when there is more than one.
+- The editor's data panel sets how a field's value is doing (a status by value or by number bands) and the words it is
+  shown as, which only the assistant or the board's JSON could before.
 - A board saved in the board language's second version opens in the console drawn from its data as any host draws it, with
   the items its data has now. Parts are added, and moved, sized and deleted on a canvas, or ordered, widened and deleted
   on a grid, a selected part's title, kind, data, fields, options and triggers are set in its panel, the board's data
