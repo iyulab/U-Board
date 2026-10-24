@@ -20,6 +20,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Removed
 
+- `UBoardClient.getPicture` (`./tools`): `getBoard` answers a second-version board with its picture (`Board.picture`),
+  read from the workspace's board route rather than the share route.
 - `edit_board`: a board's parts are addressed by id, so a rename or a removal is a patch at the part and at where the
   layout places it. The topics `canvas`, `data`, `elements`, `components`, `mixed`, `widgets` and `widget:<type>` —
   the rulebook and `kind:<name>` say what they said, for the second version.
