@@ -49,7 +49,7 @@ export function PartPanel({ id, board, onChange, findings = [], triggers, labels
     () => (kind?.widget === undefined ? [] : widgetFields({ type: kind.widget, props: {} }, labels.locale).fields.filter(f => f.section === 'options' && kind.options.includes(f.key))),
     [kind, labels.locale]
   );
-  const own = (kind?.own ?? []).filter(key => !['size', 'parts', 'place'].includes(key));
+  const own = (kind?.own ?? []).filter(key => !['size', 'parts', 'place'].includes(key) && !(kind?.kind === 'element' && ['element', 'props', 'bind'].includes(key)));
   const writeOf = (nextData: string, nextKey: string) => set('of', nextData === '' ? undefined : nextKey.trim() === '' ? nextData : `${nextData}[${nextKey.trim()}]`);
   return (
     <div className="ub-panel ub-panel--part">
@@ -113,6 +113,7 @@ export function PartPanel({ id, board, onChange, findings = [], triggers, labels
           ))}
         </datalist>
       )}
+      {kind?.kind === 'element' && <ElementPartFields part={part} board={board} onChange={onChange} labels={labels} fieldList={fields.length > 0 ? fieldList : undefined} />}
       {own.length > 0 && (
         <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>
           <legend>{labels.partOwnOptions}</legend>
@@ -162,5 +163,74 @@ export function PartPanel({ id, board, onChange, findings = [], triggers, labels
         </ul>
       )}
     </div>
+  );
+}
+
+interface ElementPartFieldsProps {
+  part: Part;
+  board: BoardV2;
+  onChange: (part: Part) => void;
+  labels: UBoardLabels;
+  fieldList: string | undefined;
+}
+
+/**
+ * An element part's drawing: which of the board's elements, and each prop it takes — bound to a field of what the
+ * part reads (`<field>`, or its status `<field>.status` or tone `<field>.tone`), or fixed. A prop that takes a list or
+ * a record is fixed only in the board's JSON.
+ */
+function ElementPartFields({ part, board, onChange, labels, fieldList }: ElementPartFieldsProps) {
+  const name = typeof part.element === 'string' ? part.element : '';
+  const props = board.elements?.[name]?.props ?? {};
+  const bind = (part.bind ?? {}) as Record<string, string>;
+  const fixed = (part.props ?? {}) as Record<string, unknown>;
+  /** The part with its bound and fixed props as given — an empty set of either left out. */
+  const write = (nextBind: Record<string, unknown>, nextFixed: Record<string, unknown>) => {
+    const { bind: _b, props: _p, ...rest } = part;
+    onChange({ ...rest, ...(Object.keys(nextFixed).length > 0 ? { props: nextFixed } : {}), ...(Object.keys(nextBind).length > 0 ? { bind: nextBind } : {}) });
+  };
+  return (
+    <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>
+      <legend>{labels.elementProps}</legend>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.boardElements}
+        <select value={name} onChange={e => onChange({ ...part, element: e.target.value })}>
+          {name === '' && <option value="">—</option>}
+          {Object.keys(board.elements ?? {}).map(element => (
+            <option key={element} value={element}>
+              {element}
+            </option>
+          ))}
+        </select>
+      </label>
+      {Object.entries(props).map(([prop, type]) => {
+        const structured = type === 'list' || type === 'object';
+        const value = bind[prop] ?? (fixed[prop] === undefined ? '' : String(fixed[prop]));
+        return (
+          <div key={prop} className="ub-panel__field" style={FIELD_STYLE}>
+            <code aria-hidden="true">
+              {prop} · {type}
+            </code>
+            <input
+              type="text"
+              aria-label={prop}
+              list={fieldList}
+              value={structured && prop in fixed ? JSON.stringify(fixed[prop]) : value}
+              readOnly={structured && prop in fixed}
+              onChange={e => {
+                const text = e.target.value.trim();
+                const { [prop]: _b, ...restBind } = bind;
+                const { [prop]: _f, ...restFixed } = fixed;
+                // A field's name (or its status, its tone) binds the prop; a value of the prop's type fixes it.
+                const asFixed = type === 'number' && /^-?\d+(\.\d+)?$/.test(text) ? Number(text) : type === 'boolean' && /^(true|false)$/.test(text) ? text === 'true' : undefined;
+                if (text === '') write(restBind, restFixed);
+                else if (asFixed !== undefined || (type === 'string' && text.startsWith('"'))) write(restBind, { ...restFixed, [prop]: asFixed ?? text.replace(/^"|"$/g, '') });
+                else write({ ...restBind, [prop]: text }, restFixed);
+              }}
+            />
+          </div>
+        );
+      })}
+    </fieldset>
   );
 }

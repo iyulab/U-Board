@@ -17,6 +17,7 @@ import { DataPanel } from './DataPanel.js';
 import { LinkPanel } from './LinkPanel.js';
 import { ShapePanel } from './ShapePanel.js';
 import { BackgroundField } from './BackgroundField.js';
+import { BoardElementsPanel } from './BoardElementsPanel.js';
 import { TriggersEditor } from './TriggersEditor.js';
 import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
@@ -149,6 +150,16 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             labels={labels}
           />
           <TriggersEditor {...triggerEditing} labels={labels} />
+          <BoardElementsPanel
+            board={board}
+            onChange={elements =>
+              setHistory(h => {
+                const { elements: _gone, ...rest } = h.present;
+                return recordEdit(h, elements ? { ...rest, elements } : rest, null);
+              })
+            }
+            labels={labels}
+          />
         </>
       );
     }

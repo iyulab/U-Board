@@ -267,6 +267,10 @@ export interface UBoardLabels {
   elementProblems: string;
   removeElement: string;
   removeElementPlaced: string;
+  /** An element prop of a board in the language's second version, by name: removed, and a new one. `{name}`: the prop. */
+  elementPropRemove: string;
+  elementPropNew: string;
+  elementPropAdd: string;
   /** The board's symbols: their list, and the editor of one. */
   symbolsHeading: string;
   symbolsHint: string;
@@ -692,6 +696,9 @@ export const DEFAULT_LABELS: UBoardLabels = {
   elementProblems: 'Problems',
   removeElement: 'Delete element',
   removeElementPlaced: 'Placed {count} times — change or remove those widgets first.',
+  elementPropRemove: 'Remove {name}',
+  elementPropNew: 'New prop',
+  elementPropAdd: 'Add prop',
   symbolsHeading: 'Symbols',
   symbolsHint: 'Drawings the elements share — an element places one with <use href="#name"/>.',
   addSymbol: 'New symbol',
