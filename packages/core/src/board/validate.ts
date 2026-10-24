@@ -12,6 +12,7 @@ import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor } from '../css-color.js';
 import { THEME_COLORS, isThemeColor } from '../theme-colors.js';
 import { parseTemplate } from '../elements/template.js';
+import { unknownKeys } from './schema-keys.js';
 
 /**
  * A problem in a board: where (a JSON Pointer) and what to write instead. A `hint` is advice — the board is right as
@@ -198,7 +199,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
   // ── symbols ──
   for (const [name, symbol] of Object.entries(isObj(board.symbols) ? board.symbols : {})) {
     const at = `/symbols/${name}`;
-    if (!/^[a-z][a-z0-9-]*$/.test(name)) fail(at, `a symbol's name is lowercase letters, digits and "-", starting with a letter — not "${name}"`);
+    if (!/^[a-z][a-z0-9-]{0,39}$/.test(name)) fail(at, `a symbol's name is lowercase letters, digits and "-", starting with a letter, at most 40 — not "${name}"`);
     if (!isObj(symbol) || typeof symbol.path !== 'string') fail(`${at}/path`, 'a symbol is { "viewBox"?, "path": "M … Z" } — an SVG path in its own coordinates');
     // Path data only: commands, numbers and separators — nothing that closes the attribute it is drawn into.
     else if (!/^[MmLlHhVvCcSsQqTtAaZz0-9eE.,+\-\s]*$/.test(symbol.path)) fail(`${at}/path`, 'a symbol\u2019s path is SVG path data — commands (M L H V C S Q T A Z), numbers and separators only');
@@ -211,7 +212,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
   const elements = isObj(board.elements) ? board.elements : {};
   for (const [name, el] of Object.entries(elements)) {
     const at = `/elements/${name}`;
-    if (!/^[a-z][a-z0-9-]*$/.test(name)) fail(at, `an element's name is lowercase letters, digits and "-", starting with a letter — not "${name}"`);
+    if (!/^[a-z][a-z0-9-]{0,39}$/.test(name)) fail(at, `an element's name is lowercase letters, digits and "-", starting with a letter, at most 40 — not "${name}"`);
     else if (name.startsWith('u-board-')) fail(at, `"u-board-" names U-Board's own drawings — name "${name}" otherwise`);
     const drawn = isObj(el) && typeof el.template === 'string';
     const run = isObj(el) && typeof el.script === 'string';
@@ -727,6 +728,15 @@ export function validateBoard(board: unknown): BoardIssue[] {
       } else if (typeof holder.field !== 'string' || reads === undefined || fieldOf(reads, holder.field)?.state === undefined) {
         fail(`${at}/field`, `"${String(holder.field)}" has no "state" in /data/${reads ?? '…'}/fields — a status is a field's state`);
       }
+      // A status the field's state never names: the trigger would never run — said, not refused (the map may grow).
+      const field = typeof holder.field === 'string' ? holder.field : typeof part.state === 'string' ? part.state : undefined;
+      const rule = field !== undefined && reads !== undefined ? fieldOf(reads, field)?.state : undefined;
+      const named = Array.isArray(rule) ? rule.filter(v => typeof v === 'string') : isObj(rule) ? Object.values(rule) : undefined;
+      for (const name of Array.isArray(status) ? status : [status]) {
+        if (named && typeof name === 'string' && isStatus(name) && !named.includes(name)) {
+          issues.push({ at: `${at}/status`, message: `"${String(holder.part)}" is never in "${name}" — its "${field}" names: ${[...new Set(named.map(String))].join(', ')}`, hint: true });
+        }
+      }
     }
     if (Array.isArray(status) && !list) fail(`${at}/status`, 'a part enters or leaves one status at a time — name one; to act on several, add a trigger for each');
     else if (Array.isArray(status) && status.length === 0) fail(`${at}/status`, 'a list of statuses names at least one — the trigger would never run');
@@ -744,7 +754,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     else if (on.event === 'click') targetOf(on.part, `${at}/on/part`);
     else if (on.event === 'element') {
       targetOf(on.part, `${at}/on/part`);
-      if (typeof on.name !== 'string' || on.name === '') fail(`${at}/on/name`, 'an element event is named: "name": "<the event the element raises>"');
+      if (typeof on.name !== 'string' || on.name === '' || on.name.length > 64) fail(`${at}/on/name`, 'an element event is named, 1 to 64 characters: "name": "<the event the element raises>"');
     } else if (on.event === 'enter' || on.event === 'leave') checkStatusOf(on, `${at}/on`, on.status);
     else if (on.event !== 'open') fail(`${at}/on/event`, `"${String(on.event)}" is not an event — click · element · enter · leave · open`);
     if (t.when !== undefined) {
@@ -761,10 +771,31 @@ export function validateBoard(board: unknown): BoardIssue[] {
           if (!['part', 'status', 'board'].includes(name!.trim())) fail(`${actionAt}/url`, `a link fills in {{part}}, {{status}} and {{board}} — not {{${name}}}`);
         }
       } else if (a.action === 'focus') targetOf(a.part, `${actionAt}/part`);
-      else if (a.action === 'emit') { if (typeof a.name !== 'string' || a.name === '') fail(`${actionAt}/name`, 'an event is named: "name": "<event>"'); }
-      else if (a.action === 'go-to-board') { if (typeof a.board !== 'string' || a.board === '') fail(`${actionAt}/board`, '"board" is the id of another board of this workspace'); }
+      else if (a.action === 'emit') { if (typeof a.name !== 'string' || a.name === '' || a.name.length > 64) fail(`${actionAt}/name`, 'an event is named, 1 to 64 characters: "name": "<event>"'); }
+      else if (a.action === 'go-to-board') { if (typeof a.board !== 'string' || a.board === '' || a.board.length > 100) fail(`${actionAt}/board`, '"board" is the id of another board of this workspace'); }
       else fail(`${actionAt}/action`, `"${String(a.action)}" is not an action — open-link · focus · emit · go-to-board`);
     }
+  }
+
+  // ── an element no part draws: kept and never shown ──
+  const drawn = new Set<string>();
+  const drawers = (node: unknown): void => {
+    if (Array.isArray(node)) node.forEach(drawers);
+    else if (isObj(node)) {
+      if (node.as === 'element' && typeof node.element === 'string') drawn.add(node.element);
+      Object.values(node).forEach(drawers);
+    }
+  };
+  drawers(board.parts);
+  drawers(board.presets);
+  for (const name of Object.keys(elements)) {
+    if (!drawn.has(name)) issues.push({ at: `/elements/${name}`, message: `no part draws "${name}" — add a part { "as": "element", "element": "${name}" }, or remove it`, hint: true });
+  }
+
+  // ── keys the board has no place for — kept and never drawn — where nothing above has said so ──
+  const said = new Set(issues.map(i => i.at));
+  for (const { at, key, known } of unknownKeys(board)) {
+    if (!said.has(at)) fail(at, `"${key}" has no place here — it would be kept but never drawn; this holds ${known.length > 0 ? known.join(', ') : 'nothing more'}`);
   }
   return issues;
 }

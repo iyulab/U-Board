@@ -308,12 +308,13 @@ describe('validateBoard', () => {
       '/elements/sums/template: "{{count}}" — a hole is a prop this element declares (rows); compute with CSS calc() on a prop, not inside the braces',
     ]);
     expect(issues({ ...canvas({}), symbols: { L1: { path: 'M0 0h1v1z' }, pump: { markup: '<path/>' } } })).toEqual([
-      `/symbols/L1: a symbol's name is lowercase letters, digits and "-", starting with a letter — not "L1"`,
+      `/symbols/L1: a symbol's name is lowercase letters, digits and "-", starting with a letter, at most 40 — not "L1"`,
       '/symbols/pump/path: a symbol is { "viewBox"?, "path": "M … Z" } — an SVG path in its own coordinates',
+      '/symbols/pump/markup: "markup" has no place here — it would be kept but never drawn; this holds viewBox, path',
     ]);
     expect(issues({ ...canvas({}), elements: { 'u-board-dial': { template: '<svg/>' }, Dial: { template: '<svg/>' } } })).toEqual([
       `/elements/u-board-dial: "u-board-" names U-Board's own drawings — name "u-board-dial" otherwise`,
-      `/elements/Dial: an element's name is lowercase letters, digits and "-", starting with a letter — not "Dial"`,
+      `/elements/Dial: an element's name is lowercase letters, digits and "-", starting with a letter, at most 40 — not "Dial"`,
     ]);
   });
 
@@ -401,6 +402,40 @@ describe('validateBoard', () => {
     ]);
     const inner = issues({ ...canvas({ g: { as: 'group', size: [100, 60], parts: { 'x/y': { as: 'label', title: 'X' } }, place: { 'x/y': [0, 0] } } }), layout: { kind: 'canvas', size: [200, 200], place: { g: [0, 0] } } });
     expect(inner).toEqual(['/parts/g/parts/x/y: a part id has no "/" — "/" joins a group and its parts ("<group>/x-y")']);
+  });
+
+  it('reports a key the board has no place for, wherever it is — it would be kept but never drawn', () => {
+    const found = issues({
+      ...canvas({ a: { as: 'label', title: 'A' } }),
+      statuses: { hot: { tone: 'alarm', color: 'red' } },
+      layout: { kind: 'canvas', size: [100, 100], place: { a: [0, 0] }, nodes: [], shapes: { s: { box: [0, 0, 5, 5], fill: '#fff' } } },
+      triggers: [{ on: { event: 'open' }, do: [{ action: 'emit', name: 'x', target: 'y' }] }],
+    });
+    expect(found.filter(f => /has no place here/.test(f)).map(f => f.split(':')[0]).sort()).toEqual([
+      '/layout/nodes', '/layout/shapes/s/fill', '/statuses/hot/color', '/triggers/0/do/0/target',
+    ]);
+    expect(found).toContain('/statuses/hot/color: "color" has no place here — it would be kept but never drawn; this holds tone, label, glyph, emphasis');
+  });
+
+  it('advises, without refusing, an element no part draws and a status a trigger waits for that its field never takes', () => {
+    const hints = (board: unknown) => validateBoard(board).filter(i => i.hint).map(i => `${i.at}: ${i.message}`);
+    const elements = { used: { template: '<svg><circle r="3"/></svg>' }, spare: { template: '<svg><circle r="3"/></svg>' } };
+    expect(hints({ ...canvas({ u: { as: 'element', element: 'used' } }), elements })).toEqual([
+      '/elements/spare: no part draws "spare" — add a part { "as": "element", "element": "spare" }, or remove it',
+    ]);
+    const k = { as: 'status-card', of: 'pump', show: ['state'] };
+    const pump = { from: 'plant', path: '/pump', fields: { state: { state: { run: 'ok', '*': 'alarm' } } } };
+    const never = hints({ ...canvas({ k }), data: { ...data, pump }, triggers: [{ on: { event: 'enter', part: 'k', field: 'state', status: 'warn' }, do: [{ action: 'emit', name: 'x' }] }] });
+    expect(never).toHaveLength(1);
+    expect(never[0]).toMatch(/^\/triggers\/0\/on\/status: "k" is never in "warn" — its "state" names: /);
+  });
+
+  it('keeps names to their lengths: events 64, board ids 100, element and symbol names 40', () => {
+    const long = (n: number) => 'x'.repeat(n);
+    const t = (action: Record<string, unknown>) => issues({ ...canvas({}), triggers: [{ on: { event: 'open' }, do: [action] }] });
+    expect(t({ action: 'emit', name: long(65) })).toEqual(['/triggers/0/do/0/name: an event is named, 1 to 64 characters: "name": "<event>"']);
+    expect(t({ action: 'go-to-board', board: long(101) })).toEqual(['/triggers/0/do/0/board: "board" is the id of another board of this workspace']);
+    expect(issues({ ...canvas({}), elements: { [`e${long(40)}`]: { template: '<svg/>' } } })[0]).toMatch(/at most 40/);
   });
 
   it('runs a trigger that can run: a part enters one status at a time, and waits for at least one', () => {
