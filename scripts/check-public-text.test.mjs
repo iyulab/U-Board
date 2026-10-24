@@ -29,6 +29,11 @@ test('flags any other host, with or without a scheme', () => {
   assert.deepEqual(rules('docs/x.md', 'See HTTPS://Board.Somewhere.IO/x'), ['host']);
 });
 
+test('reads the host of a percent-encoded URL as decoded', () => {
+  assert.deepEqual(rules('src/a.ts', 'background: "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E"'), []);
+  assert.deepEqual(rules('src/a.ts', 'next=https%3A%2F%2Fapi.internal-corp.kr%2Fv1'), ['host']);
+});
+
 test('limits GitHub links to the allowed public repositories', () => {
   assert.deepEqual(rules('README.md', 'https://github.com/iyulab/U-Board/issues'), []);
   assert.deepEqual(rules('README.md', 'https://github.com/iyulab/u-widgets'), []);

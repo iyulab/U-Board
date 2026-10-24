@@ -61,8 +61,13 @@ describe('a connector’s attribution', () => {
     const { body: credited } = await create({ attribution: CREDIT });
     const { body: plain } = await create({ name: 'Plain' });
     const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Air' });
-    const bound = (adapter: string, i: number) => ({ id: `n${i}`, x: 0, y: 0, anchored: false, widget: { type: 'metric', bindings: { 'data.value': { adapter, ref: { path: '/a' } } } } });
-    await updateBoard(db, workspaceId, board.id, { document: { kind: 'canvas', background: {}, connectors: [], nodes: [bound(credited.id, 0), bound(plain.id, 1)] } });
+    await updateBoard(db, workspaceId, board.id, {
+      document: {
+        data: { credited: { from: credited.id, path: '/a' }, plain: { from: plain.id, path: '/a' } },
+        parts: { n0: { as: 'stat', of: 'credited', show: 'value' }, n1: { as: 'stat', of: 'plain', show: 'value' } },
+        layout: { kind: 'grid', items: ['n0', 'n1'] },
+      },
+    });
     const { body: link } = await request(app).post(`/api/workspaces/${workspaceId}/boards/${board.id}/share-tokens`).set('Cookie', ownerCookie);
 
     const { body } = await request(app).get(`/api/share/boards/${board.id}`).set('Authorization', `Bearer ${link.token}`);

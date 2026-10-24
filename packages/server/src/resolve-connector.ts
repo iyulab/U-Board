@@ -1,6 +1,7 @@
 import { PATH_KEY_PLACEHOLDER, type Connector, type HttpConnector, type StaticConnector } from './db/connectors.js';
 import { ClientCredentialsTokens, type ClientCredentials } from './oauth-client-credentials.js';
-import { isHttpRef, readHttpRef, requestPath, resolvedReading, sourceErrorIn, type HttpRef, type QualityReason, type ResolvedBinding } from '@iyulab/u-board/domain';
+import { type QualityReason, type ResolvedBinding } from '@iyulab/u-board/domain';
+import { isHttpRef, readHttpRef, requestPath, resolvedReading, sourceErrorIn, type HttpRef } from '@iyulab/u-board/picture';
 import { HttpStatusError } from './http-status-error.js';
 import { CONNECTOR_ADDRESS_REFUSED } from './connector-network.js';
 
@@ -144,7 +145,7 @@ function describeFailure(err: unknown): string {
 
 /** An HTTP connector binding's reference — the core's, read the same way here as wherever else a board
  *  is shown (`readHttpRef`). */
-export type { HttpRef } from '@iyulab/u-board/domain';
+export type { HttpRef } from '@iyulab/u-board/picture';
 
 /** Whether `ref` is a reference this proxy may request — the core's `isHttpRef`, which also keeps the
  *  request on the connector's origin (a path that does not start with a single `/` could be read as URL

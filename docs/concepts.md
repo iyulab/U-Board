@@ -1,160 +1,83 @@
 # Concepts
 
-> For exact types, method signatures, and a runnable example, see
-> [`api-reference.md`](api-reference.md).
+> For exact types, signatures, and a runnable example, see [`api-reference.md`](api-reference.md).
 
-**View** — the unit an author creates and a viewer opens. A view has a kind, which determines
-what it can contain and how it's authored.
+**Board** — the unit an author creates and a viewer opens: one JSON document in the board language. It says where its
+values come from and what they mean (**data**), what it shows (**parts**) and where (**layout**), and declares its
+statuses and its look once. Everything a person picks is addressed by id within its own map, and there is one way to
+write each thing. A board is what is written, stored, versioned and shared; the editor, the viewer, the server and an
+AI assistant all read and write the same document.
 
-**Kind** — the authoring/rendering mode a view is created as: a **canvas view** places widgets by
-position over a background, a **grid view** lays them out in order. Different kinds have different
-capabilities; a view is of one kind — a grid's cell may hold a canvas (see **Composition**), but the
-view is still a grid. Both carry widgets the same way — an id and a widget — so
-bindings, data quality and the property panel are shared; only how a widget is placed differs. The
-viewer shows both kinds and the editor edits both: a canvas by dragging nodes over the background, a
-grid as its items in order — added after the one selected, moved earlier or later, each given its
-widths and height — with the layout seen at a wide, medium or narrow width.
+**Data** — a read from a system U-Board does not own, named once and read once for every part that shows it: a request
+to an HTTP connector (`path`), or a reference an adapter of the host's defines (`ref`). It may hold a list of items, one
+of which a part names by its key (`pumps[P1]`). Data stays as the source sends it; what a value means — its label, unit,
+digits, the words it is shown as, and its **state** — is said in the read's **fields**. U-Board reads through a data read;
+it never stores the value. A value carries its connection quality — `live` (the source was reached just now), `stale`
+(the value shown is not current: the source could not be reached and the last-known value is shown, or the source's
+latest value is older than the read expects of it), or `disconnected` (no value has been reached) — and, when the
+adapter can tell, the reason it is not live: the source unreachable, credentials refused, the value not found at the
+source, an answer it cannot read, rate limiting, or the source behind on its own updates. This is deliberately narrower
+than a full alarm model (priority, acknowledgement, shelving) — that belongs to the system a board reads, not to the
+board.
 
-**Grid view** — widgets in order, left to right and then top to bottom, in rows of 12 columns. Each
-**grid item** takes a span of columns (4 when left out), optionally a different span where the
-board is narrower, optionally a number of rows it spans (`rowSpan` — a map or large panel beside a column of
-smaller cards, which the items after it fill in order; from medium width up), and optionally a fixed height —
-otherwise the widget's own (an element's, its definition's `size.height`, as the least it takes: without a fixed
-height an item stretches to its row and to the rows it spans, and at narrow width, one item per row, it is its own
-height again). Give a height only where a card needs one; a panel beside a column of cards fills it by its `rowSpan`.
-There is no position:
-the same document reads at any width, and where an item goes follows from the ones before it.
-The width that counts is the board's own — the container it is shown in, not the window: one item
-per row below 600 pixels, 6 columns (each item's medium span) below 1024, 12 above. A row is as
-tall as its tallest item, and each item sits on a cell of its own with its data quality marked as
-a canvas node's is. A grid has no pan or zoom; it scrolls when it is taller than its container.
+**State and status** — how a value is doing, as a name: a field's `state` maps its raw values (`"trip"`) or bands of
+numbers (from 80 up) to one of the board's **statuses** (`down`). A status is declared once for the board — the tone it
+is drawn in (one of eleven: `ok`, `info`, `watch`, `warn`, `alarm`, `off`, `idle`, `accent`, and `past`, `now`, `next`
+for places in a sequence), its words, a mark, and an emphasis that adds a second channel besides colour — and everything
+that shows the field takes it: a status card, a stat list, a link's colour, a marker. A state comes from the current
+reading alone: it remembers nothing, so a delay ("over the limit for five minutes") or a latch is not a state.
 
-**Composition** — a grid item may hold a **canvas** instead of a widget: a background, nodes on it,
-connectors between them and decorations — the spatial panel of a mixed board, with the cards around it
-laid out by the grid. The canvas lives in the same document (one share link, one revision), and only
-its spatial layer does: the board's elements, symbols and triggers stay on the board, and every id —
-of an item, or of a node, connector or decoration in any cell — is unique in the document, so a
-trigger names a cell's node as it names an item. A connector joins two nodes of the same cell. The
-canvas is drawn fitted to its cell; without a `height` the cell keeps the canvas's proportions. It pans
-and zooms within its cell — drag, the keys and its zoom buttons — while the wheel scrolls the grid past
-it, zooming only with Ctrl (⌘) held. In the editor, **Add canvas** adds one and **Edit canvas** opens
-it in the canvas editor — what the board defines once is edited there for the whole board.
+**Part** — what is shown, of which data, with which fields — never where. Its kind (`as`) is a built-in drawn by the
+widget library ([`@iyulab/u-widgets`](https://github.com/iyulab/u-widgets) — a status card, a stat, a list, a table, a
+gauge, a chart …), one of the board's own (a marker, a label, a legend, a group), or an element the board defines. A
+**preset** holds settings parts share; `each` makes one part per item of a list, with the ids `<part>/<key>`. A **group**
+draws several parts together on a small canvas of its own — a pump's card, level and valve — its parts addressed
+`<group>/<part>`.
 
-**Background** — the media (an image, or none) a canvas view is drawn over. The system does not
-attach domain meaning to a background — what it depicts is left to the author's and viewer's
-interpretation.
+**Layout** — where the parts go, per view kind. A **canvas** places parts by coordinates over a drawing of a fixed size:
+an optional **background** image, **shapes** (a labelled box, a text, a line, a path) that are purely visual, and
+**links** between two parts — a line that can carry a field's status as its colour and form, a label from a field, and a
+width from an amount. A **grid** lays parts out in order on rows of twelve columns, each taking a span, reflowing to the
+width of the board's own container (one item per row below 600 pixels, six columns below 1024, twelve above); a grid
+cell can hold a canvas of its own — the spatial panel of a mixed board, the cards around it — or a grid that stacks
+what it holds. Both kinds place the same parts the same way, so data, statuses and the panels that set a part are
+shared; only where a part goes differs.
 
-**Appearance** — the board's tone: `light` (the default) or `dark`. It is set by the author to
-match the background — a dark drawing, or a dark board with none — and the board's paper and the
-widgets on it follow it, so their text reads against the background. Like the background it says
-nothing about what the board depicts, and it does not follow the viewer's theme: the board looks
-the same to everyone who opens it.
+**Background** — the image a canvas is drawn over, or none. The system does not attach domain meaning to a background —
+whether it depicts a floor plan, a map or a diagram is left to the author's and viewer's interpretation.
 
-**Node** — a positioned point in a canvas view that carries a widget. A node can be anchored to a
-fixed coordinate or placed without an anchor. It has a box (`width` × `height`; left out, the `size` of the element it places, else 160 × 100 — `nodeSize` and `DEFAULT_NODE_WIDTH` × `DEFAULT_NODE_HEIGHT` in `@iyulab/u-board/domain`) and may have a `caption` — a name drawn under the box, outside it, so the box can stay the size of an icon while its name is as long as it needs; its widget is
-drawn inside that box, fitted to it: a chart fills it — compactly when the box is small — a gauge or
-an image scales down, and a table or a list scrolls within it. The box the author drew is what the
-board shows; a widget never spills over a neighbouring node.
+**Look** — the board's `theme` (light, the default, or dark — set to match the background, not the viewer's theme: the
+board looks the same to everyone who opens it), its `accent` colour, and its **skin**: fonts, a palette and the frame a
+part is drawn in, said once for the board. No part sets fonts or colours of its own.
 
-**Connector** — a line drawn between two nodes, used when the relationship between them needs to
-be shown (for example, a network link). It runs from the edge of one node's box to the edge of the other's;
-it may carry a `label` (shown at its middle, or where `labelAt` says from 0 at the `fromNodeId` end to 1 at the
-`toNodeId` end — a link's throughput; `labelSize` sets its font size in scene units, 11 when left out, for a board
-drawn large such as a kiosk) and a `style` (`stroke`, `strokeWidth`, `dash`: `solid`, `dashed` or `dotted`,
-`arrow`: `none`, `end` — pointing at `toNodeId` —, `start` or `both`; `route`: `straight`, `orthogonal` — out of the
-side facing the other node, one right-angle turn at the middle of the gap, into the other's facing side, as pipes and
-wiring are drawn — or `curved`, bowing to the left of the way it runs from `fromNodeId` toward `toNodeId`, as flows on a
-map are drawn, so two connectors running opposite ways between the same nodes bow apart). Connectors joining the same two nodes are drawn side by side. Its label and style can be **bound** like a widget's props (`bindings` on `label`, `style.stroke`,
-`style.strokeWidth`, `style.dash`, `style.arrow`) — a link's throughput as its label, its load as its width, which way
-power flows by its sign (a value map from ranges to arrows); a label not showing a current value is rimmed amber
-(stale) or grey (disconnected).
-
-**Decoration** — a purely visual shape (a rectangle or a text label) placed on a canvas view to
-express structure — grouping related nodes inside a labeled frame, for example. A frame can carry
-its own name (`label`, placed inside it by `labelAt`), rounded corners (`radius`) and a line style
-(`dash`); a text is placed by the point of it its position names (`anchor`) and can sit on a
-`background`. A decoration carries no widget and no binding; like a background, the system does
-not interpret what it depicts.
-
-**Accent** — a board's own primary colour (`accent`), which its widgets and elements fill and
-highlight with in place of the theme's: a brand colour set once for the board rather than in each
-widget.
-
-**Widget** — the visual content a node displays (a chart, a status indicator, a numeric value,
-and so on). A prepared widget is rendered by an external library the view consumes, not by the
-canvas layer itself; an element is one the board defines itself.
-
-**Element** — what a board draws when no prepared widget does: a plant symbol, a custom gauge, a
-tank's level. The board defines it once, by name, and places it on any number of nodes or grid
-items as a widget of type `element:<name>`, each with its own props — bound like any widget's. A
-**template element** is HTML or SVG markup with `{{prop}}` values and its own CSS, drawn in an
-isolated part of the page: its CSS reaches only its own markup, the page's does not reach in, and
-only the board's theme passes through (`--u-widget-*` CSS variables — the colours the prepared widgets use). Its
-root fills the element's box, and every size in it includes its padding and border (`box-sizing: border-box`), so
-`height: 100%` with padding still fits. Nothing it draws reaches past that box — a shadow, an outline or a badge set
-outside the edge is cut off — so an element that wants a shadow draws itself smaller than its box and leaves the room.
-A board's **symbols** — SVG drawings it defines once, by name — reach every template element that places
-one with `<use href="#name">`, so a plant's symbol set is drawn the same everywhere — its parts' own look written in
-the symbol (`fill="none"`, `stroke="currentColor"`): a `<use>` draws its symbol in a tree of its own, which the
-element's CSS selectors do not reach, so only what the parts inherit (colour, stroke, CSS variables) comes from
-around the `<use>`. It runs no script. A **script element** runs code in a sandboxed frame that cannot reach the page,
-the viewer's session or the network. An element loads nothing from another origin unless it
-declares the origin and the host allows it. Its definition describes its props as a JSON Schema,
-so a tool — or an AI — writing a board knows what it takes.
-
-**Component** — a group of parts a canvas board draws more than once: a machine card of a frame, three widgets and
-the line between two of them, drawn for each of twenty machines. The board defines it once, by name (`components`) —
-its nodes, connectors between them and decorations, placed from its own origin — and an **instance** (`instances`)
-draws it at a point with a value for each **parameter** it declares. In any text of its parts, `{{name}}` stands for
-a parameter’s value — inside a binding’s `ref` as much as in a label — so the twenty cards read twenty machines. The
-board keeps the component, not copies: a change to the definition reaches every instance. Each part an instance draws
-has the id `<instance id>/<part id>`, by which a connector of the board, a trigger or the board state names it. The
-values come only from the instances the board lists, so a share link reads what the definition names and nothing a
-viewer chooses. An element is drawn inside its node; a component’s parts take part in the layout and the lines like
-the board’s own.
-
-**Binding** — a reference from a widget to a value in an external system. U-Board reads through a
-binding; it does not store the value it resolves to. A resolved binding carries a connection
-quality alongside its value — `live` (the adapter reached the source just now), `stale` (the
-value shown is not current: the adapter couldn't reach the source and shows the last-known value, or
-the source's latest value is older than the binding expects of it), or `disconnected` (no value has
-been reached) — and, when the adapter can tell, the reason it is not live (the source unreachable,
-credentials refused, the bound value not found at the source, an answer it cannot read, rate
-limiting, or the source behind on its own updates). A binding can also translate the value it reads into the one its widget takes —
-the source's own words (`Fault`) or numbers (a temperature) into a status tone — by exact values
-and numeric ranges the author sets; U-Board attaches no meaning to either side of that table.
-This is deliberately narrower than a full alarm
-model (priority, acknowledgement, shelving) — that belongs to the system a binding points at, not
-to the binding surface itself.
-
-**State** — a name a part (a node or a grid item) is in, read from one of its widget’s bindings: the source’s value
-looked up in the part’s `states` map (`"Fault"` → `fault`, 80 or more → `hot`). Each state may have a look — a ring of
-colour around the part, blinking, or the part hidden — drawn around it, so the frame’s connection-quality border stays
-readable. A state comes from the current reading alone: it remembers nothing, so a delay (“over the limit for five
-minutes”) or a latch is not a state.
-
-**Board state** — what a board shows now, part by part: each part’s state, the worst connection quality of its bindings
-and why, and how old its data is — no values. It is published beside the board’s definition and never written into it:
-a viewer hands it to its host (`onBoardState`), a U-Board server answers it on request, and an assistant reads it with
-`board_state`. It says when it was computed; a state nobody has computed lately says nothing about now.
+**Element** — what a board draws when no built-in does: a plant symbol, a custom gauge, a tank's level. The board
+defines it once, by name, and places it with parts `as: "element"`, each binding its props to fields of what it reads.
+A **template element** is HTML or SVG markup with `{{prop}}` holes and its own CSS, drawn in an isolated part of the
+page: its CSS reaches only its own markup, the page's does not reach in, and only the board's theme passes through
+(`--u-widget-*` CSS variables). Nothing is computed inside the holes — numbers become a drawing through CSS `calc()` —
+and it runs no script. A **script element** runs code in a sandboxed frame that cannot reach the page, the viewer's
+session or the network; its props arrive as messages. An element loads nothing from another origin unless it declares
+the origin and the host allows it. A board's **symbols** — SVG drawings defined once — are drawn by markers and by any
+template element that places one.
 
 **Trigger** — what a board does when something happens on it, in a viewer: `on` an event (a part clicked, an event an
-element raises, a part entering or leaving a state, the board opened), only `when` a part is in a given state if the
+element raises, a part entering or leaving a status, the board opened), only `when` a part is in a given status if the
 trigger says so, `do` its actions in order — open a link, bring a part into view, hand the page the board is on an event,
 or ask that page to show another board. Triggers only show, move and tell: nothing a trigger does writes to the systems a
-board reads. Each trigger fires at most once a second, so a value hovering at a range’s edge cannot drive it without end.
-An editor runs none while editing — a click there selects.
+board reads. Each trigger fires at most once a second. An editor runs none while editing — a click there selects.
 
-**Adapter** — a pluggable package that resolves bindings against one specific external system. The
-core binding surface is generic; system-specific knowledge lives in an adapter, not in the core.
+**Adapter** — what reads a board's data from one external system. The core reading surface is generic; system-specific
+knowledge lives in an adapter, not in the core. The hosted server's HTTP connector is one; a host application gives the
+viewer its own.
 
-**Editor / Renderer** — the two halves of the system. The editor authors a view document; the
-renderer displays one. They do not share a runtime.
+**Picture** — the board drawn: its parts turned into widgets with their places and bindings, the model the renderer
+draws from. Nobody writes one — it is made from the board and the items its lists have now. A server computes a board's
+state on it, and an assistant looks at it.
 
-**Anchor** — a fixed coordinate a node is placed at, used when the background represents real
-space that the position should correspond to. A background that declares two of its points and the
-coordinates they stand for makes each anchored node's place a coordinate — the center of its box, read
-through those points.
+**Board state** — what a board shows now, part by part: each part's status, the worst connection quality of its data
+and why, and how old its data is — no values. It is published beside the board and never written into it: a viewer hands
+it to its host, a U-Board server answers it on request, and an assistant reads it with `board_state`. It says when it
+was computed; a state nobody has computed lately says nothing about now.
 
-**View document** — the saved output of authoring a view: layout, bindings, and widget
-references, in a format the renderer can read without the editor present.
+**Editor / Renderer** — the two halves of the system. The editor authors a board; the renderer displays one. They do not
+share a runtime.

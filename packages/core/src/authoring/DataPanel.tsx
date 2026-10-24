@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { ERROR_STYLE, FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
-import type { Field, Query } from '../board-v2/types.js';
+import type { Field, Query } from '../board/types.js';
 import { MappingEditor } from './MappingEditor.js';
 
 /** A data source a board may read from, as its host names it — one of the adapters the host gives. */

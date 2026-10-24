@@ -8,7 +8,7 @@ network diagram, a map, or a freeform layout — and embed the result anywhere o
 The board above runs live at the top of [board.u-platform.kr](https://board.u-platform.kr/) — the
 library's own viewer, reading a sample source inside the page — and
 [board.u-platform.kr/try/](https://board.u-platform.kr/try/) opens the authoring view on the same
-board, kept in the browser and exported as a file an installation imports. The
+board, kept in the browser and exported as a file. The
 [gallery](https://board.u-platform.kr/gallery/) shows boards drawn with U-Board, each with its definition and data
 as JSON, and the [playground](https://board.u-platform.kr/playground/) draws any of them as that JSON is edited.
 iyulab also operates a demo instance at [board-app.u-platform.kr](https://board-app.u-platform.kr/), where invited accounts can
@@ -56,39 +56,36 @@ error.
 
 ## Status
 
-This project is in early development. The rendering pipeline (canvas-kit + u-widgets), the
-authoring UI (set the background image; add/drag/resize nodes and rect/text decorations; join two
-nodes with a line and edit its label, look, arrowheads and bindings; delete what is selected; undo
-and redo any edit; a
-property panel for editing the selected node's widget type, static props, and data bindings,
-including a path explorer for HTTP-shaped adapter responses and a value map that turns a source's
-words or numbers — by exact value or numeric range — into what the widget takes; a frame decoration's
-name, corners and line style, and a text decoration's words, anchor and background; the board's accent
-colour; reference points that make an anchored node's place a coordinate, kept when the background image is redone), export/import of the document as a file (beside the host's own
-Save, when it has one), and a read-only viewer mode are implemented and browser-verified. The editor and
-the viewer fill their container, open with the board fitted into view, and pan and zoom by pointer
-or keyboard.
-Besides the canvas view there is a grid view — widgets in order on a 12-column grid, laid out to the
-viewer's width — edited, saved and shared the same way. A grid cell can hold a canvas, and an item can span
-rows: a plan or map beside a column of cards, the mixed board of a situation room. A board can define its own **elements** for what no
-prepared widget draws: markup and CSS drawn in an isolated root, or a script run in a sandboxed frame with no
-network, which is stopped when it stops answering. They are placed like widgets, their props get controls from
-their schema in the property panel, and their definitions are listed and edited in the editor with a template
-previewed as it is typed. A board's **symbols** — SVG drawings defined once — are placed by any of its template
-elements, and edited beside them. An AI assistant reads and draws a workspace's boards from outside, through the MCP
+This project is in early development. A board is one JSON document in the board language — where its values
+come from and what they mean, what it shows, and where — checked by one validator with a published JSON Schema and
+drawn by the rendering pipeline (canvas-kit + u-widgets). The authoring UI (`BoardAuthoring`) draws the board as its
+viewers see it and edits it in place: parts moved, sized, ordered, joined by links and deleted on the canvas or the
+grid, undo and redo of any edit; panels for a selected part (its kind, what it reads, its fields and its kind's
+options, with the controls the widget library describes), a link, a shape, the board's data reads (reading a source to
+offer the fields its items have), its statuses, its elements and its triggers, and — with nothing selected — the board's
+background, theme and accent; what the board's check finds is shown where it applies, and a setting the board cannot
+be drawn with keeps the last picture it could, saying why. The board is exported as a file beside the host's own Save,
+when it has one, and an Edit / View switch shows it as a shared link does. The editor and the viewer fill their
+container, open with the board fitted into view, and pan and zoom by pointer or keyboard.
+Besides the canvas there is a grid — parts in order on a 12-column grid, laid out to the viewer's width — edited, saved
+and shared the same way. A grid cell can hold a canvas, or a grid of its own: a plan or map beside a column of cards,
+the mixed board of a situation room. A board can define its own **elements** for what no built-in draws: markup and
+CSS drawn in an isolated root, or a script run in a sandboxed frame with no network, which is stopped when it stops
+answering — placed by parts like any built-in, their props bound to fields, their definitions edited in the editor. A
+board's **symbols** — SVG drawings defined once — are drawn by its markers and its template elements. An AI assistant reads and draws a workspace's boards from outside, through the MCP
 server [`@iyulab/u-board-mcp`](packages/mcp/README.md) and a workspace API token: JSON Patch on a board's
 revision, a data source's response summarized by its shape, advice on what would be drawn over what, a picture of
 the board as its viewers see it (`look`), and compact answers ([`docs/mcp.md`](docs/mcp.md)). The console's board
 editor has a chat panel that draws with the same tools, against a model endpoint each person sets in it.
-Binding to a real external data source is implemented and deployed — a generic HTTP(S) connector
+Reading a real external data source is implemented and deployed — a generic HTTP(S) connector
 adapter (with SSRF-safe origin pinning, and either a static credential — a bearer token, a header, or a key in the address (a query parameter or a
 path segment, put in only when the request is sent) — or OAuth 2.0
 client credentials with cached, auto-renewed access tokens) is wired into both the authoring UI
-and the read-only embed viewer. It picks a value out of a JSON response with an RFC 6901 JSON
-Pointer — or out of a list item named by its fields — reads the time the source says it observed the
-value, shows a source that has fallen behind its own updates as stale, reports why a binding is not
+and the read-only embed viewer. A board's data read names a list in a JSON response by an RFC 6901 JSON
+Pointer and its items by a key field, reads the time the source says it observed a value, shows a source
+that has fallen behind its own updates as stale, reports why a value is not
 live (source unreachable, credentials refused, value not found at the source, an answer it cannot
-read, rate limited, the source behind), and the embed viewer resolves all of a board's bindings in one
+read, rate limited, the source behind), and the embed viewer resolves all of a board's reads in one
 request, again every 30 seconds while it is open — and shows the board as saved again within the same
 interval. A connector's settings can be tried before they are saved, its credentials are kept on the server
 sealed under an installation key, and the addresses connectors may
@@ -110,7 +107,7 @@ in [`CHANGELOG.md`](CHANGELOG.md); an operator sees the installed version in the
 
 | Workspace | Package | What it is |
 |---|---|---|
-| `packages/core` | `@iyulab/u-board` (npm) | The library: view document schema, adapter contract, binding resolution, the canvas rendering pipeline, the authoring UI and the read-only viewer. Everything below this section documents it. |
+| `packages/core` | `@iyulab/u-board` (npm) | The library: the board language and its schema, the adapter contract, drawing a board, the canvas rendering pipeline, the authoring UI and the read-only viewer. Everything below this section documents it. |
 | `packages/mcp` | `@iyulab/u-board-mcp` (npm) | An MCP server through which an AI assistant reads and draws a workspace's boards and data sources with a workspace API token — see [`docs/mcp.md`](docs/mcp.md). |
 | `packages/server` | private | HTTP API for workspaces, members and invitations, accounts (sign-in, password, deletion), the installation's operators, boards, data connectors, share links, and the activity record. Stores data in Postgres. |
 | `packages/console` | private | Web console for that API: sign-in and account, members and the activity record, board editing (with the authoring UI above), connectors with a connection test, issuing share links, and an installation page for operators. Its sidebar carries the U-Platform affiliation. |
@@ -126,62 +123,54 @@ and testing the whole workspace.
 
 ## Domain layer
 
-The renderer-agnostic core — the view document schema, the adapter contract, and binding
-resolution — is available as a package entry point independent of the authoring UI and canvas
-rendering pipeline described below. It is published to npm as
-[`@iyulab/u-board`](https://www.npmjs.com/package/@iyulab/u-board); import it from the
-`/domain` subpath to leave the React and canvas stack out entirely:
+The board language — its types, check and JSON Schema — the adapter contract, and drawing a board as the picture a
+renderer reads are available as a package entry point independent of the authoring UI and the canvas rendering
+pipeline described below. It is published to npm as [`@iyulab/u-board`](https://www.npmjs.com/package/@iyulab/u-board);
+import it from the `/domain` subpath to leave the React and canvas stack out entirely:
 
 ```sh
 npm install @iyulab/u-board react react-dom
 ```
 
 ```ts
-import { resolveDocument, type ViewDocument, type Adapter } from '@iyulab/u-board/domain';
+import { checkBoard, pictureOf, readerOf, type Adapter, type Board } from '@iyulab/u-board/domain';
 
-const doc: ViewDocument = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+const board: Board = { parts: {}, layout: { kind: 'canvas', size: [1280, 720], place: {} } };
 const adapters: Adapter[] = [/* your Adapter implementations */];
 
-const resolved = await resolveDocument(doc, adapters);
+const { issues } = checkBoard(board);                       // [] — nothing to refuse
+const picture = await pictureOf(board, readerOf(adapters));  // what the renderer draws
 ```
 
-`resolveDocument` is the single entry point a renderer calls to turn a saved `ViewDocument` into
-something paintable — it has no opinion on canvas-kit, u-widgets, or any other rendering concern.
-See [`docs/concepts.md`](docs/concepts.md) for the vocabulary (`ViewDocument`, `Binding`,
-`Adapter`) and [`docs/architecture.md`](docs/architecture.md) for how this layer fits the rest of
-the system. **See [`docs/api-reference.md`](docs/api-reference.md) for the full type reference and
-a runnable example that implements an `Adapter` and inspects `resolveDocument`'s result.** The
-package is ESM-only and needs Node 22.12 or later.
+A board is what is written, stored and sent; its picture (`@iyulab/u-board/picture` — `resolveDocument`,
+`boardStateOf`) is what a renderer, a server or an assistant reads off it, with no opinion on canvas-kit, u-widgets, or
+any other rendering concern. See [`docs/concepts.md`](docs/concepts.md) for the vocabulary (board, data, part, layout,
+status, adapter) and [`docs/architecture.md`](docs/architecture.md) for how this layer fits the rest of the system.
+**See [`docs/api-reference.md`](docs/api-reference.md) for the full reference and a runnable example that implements an
+`Adapter` and draws a board.** The package is ESM-only and needs Node 22.12 or later.
 
 ## Authoring UI
 
-`AuthoringView` — a canvas-kit designer for setting the background image (a PNG, JPEG, WebP, GIF or
-SVG file of up to 4 MB, kept inside the document), adding/dragging/resizing nodes and decorations, joining two
-selected nodes with a connector and deleting the selection (a node takes its connectors along), paired
-with a property panel for editing the selected node's widget type, static props, and data bindings
-(including a path explorer that walks an HTTP adapter's response tree and writes a JSON Pointer
-to the picked value — and, for a value inside a list, can name the list item by one of its fields, such
-as an id, instead of its position, since sources reorder their lists), the selected connector's direction, label
-and where it sits, colour, width, dash, arrowheads and bindings, the selected text
-decoration's label, or — with nothing selected — the board's own background and tone — is exported from the package's main entry point alongside the read-only
-`ViewerPage`. An adapter that lists its references (`Adapter.references()`) is bound by picking
-one from that list; any other takes an HTTP connector reference. The background and the connector
-lines stay put while nodes and decorations are edited:
+`BoardAuthoring` — the board drawn as its viewers see it, its parts moved, sized, ordered, joined and deleted on a
+canvas-kit designer (or in order on a grid), beside a panel for what is selected: a part's kind, what it reads, its
+fields and its kind's options; a link's ends, status, label, route and arrow; a shape; and, with nothing selected, the
+board's background, theme and accent, its data reads, statuses, elements and triggers. A grid's cell opens in its own
+editor. Undo, Redo, Save (`onSave`, when the host gives one) and Export are the board's. It is exported from the
+package's main entry point:
 
 ```ts
-import { AuthoringView, type Adapter } from '@iyulab/u-board';
+import { BoardAuthoring, type Adapter, type Board } from '@iyulab/u-board';
 ```
 
-The board is edited with each widget drawn in place, and an Edit / View switch shows it as a shared
-link does, pan and zoom kept; without a `width`/`height` the board fills the parent beside the
-property panel, so give the parent a definite height. The [package README](packages/core/README.md) covers sizing
-and view controls.
+An Edit / View switch shows the board as a shared link does, pan and zoom kept; without a `width`/`height` the board
+fills the parent beside the panel, so give the parent a definite height. The [package README](packages/core/README.md)
+covers sizing and view controls.
 
-Unlike the domain layer above, this surface depends on canvas-kit and renders to the DOM directly —
-a host application embeds it as-is rather than building its own authoring UI against the domain
-layer. `ViewerPage` alone (with none of the authoring UI's weight) is also available from the
-lighter `@iyulab/u-board/viewer` entry point, for a host that only needs to render, not author. See
-[`docs/architecture.md`](docs/architecture.md) for how this fits the editor/renderer split.
+Unlike the domain layer above, this surface depends on canvas-kit and renders to the DOM directly — a host application
+embeds it as-is rather than building its own authoring UI against the domain layer. `BoardView` alone (with none of
+the authoring UI's weight) is also available from the lighter `@iyulab/u-board/viewer` entry point, for a host that only
+needs to render, not author. See [`docs/architecture.md`](docs/architecture.md) for how this fits the editor/renderer
+split.
 
 ## Documentation
 
@@ -192,7 +181,7 @@ lighter `@iyulab/u-board/viewer` entry point, for a host that only needs to rend
 | What's in scope, what's out | [`docs/scope.md`](docs/scope.md) |
 | System structure | [`docs/architecture.md`](docs/architecture.md) |
 | Core concepts and terms | [`docs/concepts.md`](docs/concepts.md) |
-| Domain layer API reference | [`docs/api-reference.md`](docs/api-reference.md) |
+| Board language and API reference | [`docs/api-reference.md`](docs/api-reference.md) |
 | Running the server, console and share viewer | [`docs/self-hosting.md`](docs/self-hosting.md) |
 | Shaping an API a board reads | [`docs/data-sources.md`](docs/data-sources.md) |
 | Drawing boards with an AI assistant (MCP) | [`docs/mcp.md`](docs/mcp.md) |

@@ -1,11 +1,11 @@
-export type * from './document-types.js';
+// A board drawn in its host (`BoardView`), and a picture the server made drawn as given (`ViewerPage`).
+export type { Adapter, Attribution, ConnectionQuality, QualityReason, ResolvedBinding } from './adapter.js';
+export type { ViewDocument } from './view-document.js';
 export { ViewerPage } from './viewer/ViewerPage.js';
 export type { ViewerPageProps } from './viewer/ViewerPage.js';
 export { BoardView } from './viewer/BoardView.js';
 export type { BoardViewProps } from './viewer/BoardView.js';
 export type { BoardEvent } from './viewer/use-triggers.js';
-export { useResolvedDocument } from './viewer/useResolvedDocument.js';
-export type { UseResolvedDocumentOptions, UseResolvedDocumentResult } from './viewer/useResolvedDocument.js';
 export { DEFAULT_LABELS, timeText } from './labels.js';
 export { KO_LABELS } from './labels-ko.js';
 export type { UBoardLabels } from './labels.js';

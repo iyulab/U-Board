@@ -143,7 +143,11 @@ describe('a board bound through such a connector', () => {
     const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Air' });
     const ref = { path: '/air?sidoName=Seoul', valuePath: '/items/0/pm10' };
     await updateBoard(db, workspaceId, board.id, {
-      document: { kind: 'canvas', background: {}, connectors: [], nodes: [{ id: 'n', x: 0, y: 0, anchored: false, widget: { type: 'metric', bindings: { 'data.value': { adapter: created.id, ref } } } }] },
+      document: {
+        data: { air: { from: created.id, path: ref.path, list: '/items' } },
+        parts: { n: { as: 'stat', of: 'air[0]', show: 'pm10' } },
+        layout: { kind: 'grid', items: ['n'] },
+      },
     });
     const { body: link } = await request(app).post(`/api/workspaces/${workspaceId}/boards/${board.id}/share-tokens`).set('Cookie', ownerCookie);
     const shared = await request(app).get(`/api/share/boards/${board.id}`).set('Authorization', `Bearer ${link.token}`);

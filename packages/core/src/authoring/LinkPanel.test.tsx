@@ -2,10 +2,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { LinkPanel } from './LinkPanel';
-import type { BoardV2 } from '../board-v2/types';
+import type { Board } from '../board/types';
 
-const board: BoardV2 = {
-  version: 2,
+const board: Board = {
   parts: { a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' } },
   layout: { kind: 'canvas', size: [400, 200], place: { a: [0, 0], b: [200, 0] }, links: { l: { from: 'a', to: 'b', arrow: true } } },
 };

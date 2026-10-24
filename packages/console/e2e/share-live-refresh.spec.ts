@@ -29,9 +29,8 @@ test('an open shared board follows its source, says when its link expires, and o
     const board = await (await page.request.post(`/api/workspaces/${workspaceId}/boards`, { data: { name: 'Pump House' } })).json();
     const saved = await page.request.put(`/api/workspaces/${workspaceId}/boards/${board.id}`, {
       data: {
-        // Pump A's status, toned by its own value — the board in the language's second version.
+        // Pump A's status, toned by its own value.
         document: {
-          version: 2,
           data: {
             plant: {
               from: connector.id,

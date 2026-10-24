@@ -2,10 +2,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { ShapePanel, parsePoints } from './ShapePanel';
-import type { BoardV2 } from '../board-v2/types';
+import type { Board } from '../board/types';
 
-const board: BoardV2 = {
-  version: 2,
+const board: Board = {
   parts: {},
   layout: { kind: 'canvas', size: [400, 200], place: {}, shapes: { zone: { box: [0, 0, 200, 100], label: 'Zone A' }, note: { text: 'Hi', at: [0, 150] }, pipe: { line: [[0, 0], [100, 0]] }, duct: { path: 'M0 0 L50 50' } } },
 };

@@ -15,16 +15,16 @@ what it shows. Nothing here is specific to one product; a board reads any source
 - **Credentials** a server can hold: none, a bearer token, a header of your choice, a key in the query or
   in the path, or OAuth 2.0 client credentials (RFC 6749 §4.4 — form body or HTTP Basic; the token is
   reused until it expires and requested again once on a `401`).
-- **A value anywhere in the answer**, by JSON Pointer (`/value/0/load`), or an **item of a list picked by
-  its fields** (`{ "list": "/value", "where": { "id": "PR-01" } }`) so a reordered list still gives the
-  same item. A whole array or object can be bound too — a table or a chart takes it as it is, as rows or
-  as one array per field — or **the items of a list whose fields match** (`"items": { "list": "/value",
-  "where": { "kind": "PM10" } }`), the rows of one kind out of a list of all of them.
-- **When the value was observed**, from a field of the answer, and **how old it may normally be**. With
-  both, a board shows each value's age and marks a source that has fallen behind.
+- **A list anywhere in the answer**, by JSON Pointer (`"list": "/value"`), its **items named by a key field**
+  (`"key": "id"` — a part reads `pumps[PR-01]`) so a reordered list still gives the same item, and kept to **the
+  items whose fields match** (`"where": { "kind": "PM10" }`), the rows of one kind out of a list of all of them. An
+  answer that is one object is read as one item. A table or a chart reads a list whole, as its rows; a part reads the
+  fields of one item, each at its own name or where its field says (`"at": "/load/now"`).
+- **When the value was observed**, from a field of the item (`time`) or of the answer (`answerTime`), and **how old
+  it may normally be** (`fresh`). With both, a board shows each value's age and marks a source that has fallen behind.
 
 A board asks again every 30 seconds while it is open. The server reads the same address once for any
-number of open screens within 10 seconds — or, for a binding that says how old its value may be, within an
+number of open screens within 10 seconds — or, for a read that says how old its value may be, within an
 eighth of that age. There is no push: a board is a status display, and polling is how it stays current.
 
 ## Values with no source yet: a static source
@@ -69,7 +69,7 @@ assistant with `create_source` — its answers are not a credential.
 11. **Errors as errors** — a refused key, a rejected query or a spent quota answered with `401`, `400` or `429`,
     not with `200`. A source that answers them with `200` and a status in the body can still be read: its data
     source says where that status is (the console's «응답 속 오류 위치», `sourceError` through the API), and its
-    bindings then fail with what the source said instead of reading as a value missing from the answer.
+    reads then fail with what the source said instead of reading as a value missing from the answer.
 
 What a board does with the answer — the reasons it gives when a value is not current, and the types a
 custom adapter returns instead of the HTTP connector — is in [`api-reference.md`](api-reference.md)

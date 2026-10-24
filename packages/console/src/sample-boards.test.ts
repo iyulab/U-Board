@@ -64,20 +64,11 @@ describe('a sample on a source that asks each user for a key', () => {
     expect(api.createConnector).not.toHaveBeenCalled();
   });
 
-  it('stores the board in the language’s second version, reading the data source made for it', async () => {
+  it('stores the board, reading the data source made for it', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [mine] });
     await createBoardFromSample('w1', pack, 'x');
-    const { document } = vi.mocked(api.updateBoard).mock.calls[0][2] as { document: { version?: number; data?: Record<string, { from: string }> } };
-    expect(document.version).toBe(2);
+    const { document } = vi.mocked(api.updateBoard).mock.calls[0][2] as { document: { data?: Record<string, { from: string }> } };
     expect(Object.values(document.data ?? {}).map(read => read.from)).toContain('mine');
   });
 
-  it('refuses a sample the second version cannot carry whole rather than storing part of it', async () => {
-    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
-    const pack = (await loadSamplePacks()).find(p => p.document.kind === 'canvas')!;
-    const captioned = { ...pack, document: { ...pack.document, nodes: (pack.document as { nodes: object[] }).nodes.map(n => ({ ...n, caption: 'x' })) } } as typeof pack;
-    await expect(createBoardFromSample('w1', captioned, 'x', Object.fromEntries(keysToAsk(pack, []).map(c => [c.key, 'k'])))).rejects.toThrow(/does not convert whole/);
-    expect(api.createConnector).not.toHaveBeenCalled();
-    expect(api.createBoard).not.toHaveBeenCalled();
-  });
 });

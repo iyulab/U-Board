@@ -154,17 +154,17 @@ A trigger that asks to show another board does nothing in a share link: a link o
 A link serves the board's document, its values, and the credit each of its data sources carries (shown
 under the board) — never a data source's address or credentials. A source that takes its key in the
 address (a query parameter, or `{key}` in the connector's base URL) keeps it in the connector, which puts
-it into the request only when the request is sent; a key typed into a binding's request path would be
-part of the document, and the binding form warns about one.
+it into the request only when the request is sent; a key typed into a data read's `path` would be
+part of the board.
 
 An open board keeps itself current: every 30 seconds it asks for all of its values in one request,
 and a link that expires while it is open turns into an expiry notice. A board saved again while it is
 open is shown as saved within the same 30 seconds — each answer says which revision of the board it is
-for; a board with no bindings asks for the board itself instead, with `If-None-Match`, and gets a `304`
+for; a board that reads no data asks for the board itself instead, with `If-None-Match`, and gets a `304`
 while it is unchanged — so either way an open screen costs one request every 30 seconds. Many screens showing the same
 board do not multiply the load on a data source — the server answers requests for the same source
-URL from one read for 10 seconds, and forgets it as soon as the connector's settings change. A binding
-that says how old its source's value may normally be (`maxAgeSeconds` — a source that publishes hourly
+URL from one read for 10 seconds, and forgets it as soon as the connector's settings change. A data read
+that says how old its source's value may normally be (`fresh` — a source that publishes hourly
 is current while up to a couple of hours old) is read from one read for an eighth of that: an hourly
 source is asked about every fifteen minutes however many screens show it, which keeps a daily request
 quota (often 1,000–10,000 calls for public open-data keys) in reach. If the

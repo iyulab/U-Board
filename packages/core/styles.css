@@ -196,20 +196,6 @@
   color: var(--_ub-text-muted);
 }
 
-.ub-authoring__source {
-  margin-top: var(--_ub-space-3);
-  font-size: var(--_ub-font-sm);
-}
-
-.ub-authoring__source pre {
-  max-height: 24rem;
-  overflow: auto;
-  padding: var(--_ub-space-2);
-  border-radius: var(--_ub-radius-sm);
-  background: var(--_ub-subtle);
-  font-size: var(--_ub-font-xs);
-}
-
 /* ── Property and decoration panels ──────────────────────────────────── */
 
 .ub-panel__heading {
@@ -280,22 +266,6 @@
   font-weight: 400;
 }
 
-.ub-panel__advanced {
-  margin: 0 0 var(--_ub-space-2);
-  font-size: var(--_ub-font-sm);
-}
-
-.ub-panel__advanced > summary {
-  margin-bottom: var(--_ub-space-2);
-  cursor: pointer;
-  color: var(--_ub-text-muted);
-}
-
-.ub-panel__json {
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: var(--_ub-font-sm);
-}
-
 .ub-panel__hint {
   margin: 0 0 var(--_ub-space-2);
   font-size: var(--_ub-font-sm);
@@ -313,38 +283,9 @@
   font-size: var(--_ub-font-sm);
 }
 
-.ub-panel__bindings {
-  margin: 0 0 var(--_ub-space-3);
-  padding: 0;
-  list-style: none;
-}
-
-.ub-panel__binding {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--_ub-space-1) var(--_ub-space-2);
-  padding: var(--_ub-space-2) 0;
-  border-bottom: 1px solid var(--_ub-border);
-  font-size: var(--_ub-font-sm);
-}
-
-.ub-panel__binding-path {
-  padding: 0 var(--_ub-space-1);
-  border-radius: 4px;
-  background: var(--_ub-subtle);
-  font-size: var(--_ub-font-xs);
-}
-
 .ub-panel__binding-tag {
   font-size: var(--_ub-font-xs);
   color: var(--_ub-text-muted);
-}
-
-.ub-panel__binding .ub-action {
-  min-height: 26px;
-  padding-inline: var(--_ub-space-2);
-  font-size: var(--_ub-font-xs);
 }
 
 .ub-panel__value-map {
@@ -374,43 +315,7 @@
   margin-top: var(--_ub-space-2);
 }
 
-.ub-panel__preview {
-  margin: var(--_ub-space-2) 0 0;
-  font-size: var(--_ub-font-sm);
-}
-
-.ub-panel__quality {
-  font-size: var(--_ub-font-xs);
-}
-
 /* ── Response explorer ───────────────────────────────────────────────── */
-
-.ub-json-tree {
-  margin: var(--_ub-space-2) 0;
-  padding: var(--_ub-space-2);
-  max-height: 16rem;
-  overflow: auto;
-  border: 1px solid var(--_ub-border);
-  border-radius: var(--_ub-radius-sm);
-  font-size: var(--_ub-font-sm);
-}
-
-.ub-json-tree__leaf {
-  padding: 1px var(--_ub-space-1);
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--_ub-text);
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: var(--_ub-font-xs);
-  text-align: left;
-  cursor: pointer;
-}
-
-.ub-json-tree__leaf:hover {
-  background: var(--_ub-accent-subtle);
-}
-
 /* ── Viewer ──────────────────────────────────────────────────────────── */
 
 .ub-viewer__toolbar {

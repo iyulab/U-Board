@@ -1,5 +1,6 @@
 import type { Browser, Page } from 'playwright-core';
-import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, expandComponents, getByPointer, instancePartId, nodeSize, type ViewDocument } from '@iyulab/u-board/domain';
+import { getByPointer } from '@iyulab/u-board/domain';
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, expandComponents, instancePartId, nodeSize, type ViewDocument } from '@iyulab/u-board/picture';
 import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
 import { inDocument, placedParts } from './look-parts.js';
 

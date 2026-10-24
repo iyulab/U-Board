@@ -12,11 +12,6 @@ export interface Adapter {
   readonly id: string;
   /** Resolves one binding's opaque `ref` to its current value. */
   resolve(ref: unknown): Promise<ResolvedBinding>;
-  /** The references this adapter resolves, when it has a known set of them — a sample's keys, the
-   * fields of a store inside the host app, a broker's topics. Given, the binding form of
-   * `AuthoringView` offers them to pick from and binds the chosen `ref` string. Omitted, the form
-   * takes an HTTP connector reference: a request path and a JSON Pointer into its response. */
-  references?(): Promise<readonly AdapterReference[]>;
   /** Where this adapter's data comes from, as its source asks to be named — an agency and its open-data
    * portal, a weather service. A viewer names it under every board that binds to this adapter, since a
    * source's license often makes that a condition of use. Omitted, nothing is shown. */
@@ -32,13 +27,6 @@ export interface Attribution {
   text: string;
   /** Where it links — the source's site or the dataset's page. http(s) only; anything else is shown as text. */
   url?: string;
-}
-
-/** One reference an adapter offers (`Adapter.references`): the `ref` a binding stores, and how to
- * name it to an author when the reference itself says too little. */
-export interface AdapterReference {
-  ref: string;
-  label?: string;
 }
 
 /** How current a resolved binding's value is (docs/concepts.md — "Binding"). `live` — the

@@ -1,10 +1,11 @@
-import { isHttpRef, readHttpRef, resolvedReading, type Adapter, type Attribution, type ResolvedBinding } from '@iyulab/u-board/domain';
+import type { Adapter, Attribution, ResolvedBinding } from '@iyulab/u-board/domain';
+import { isHttpRef, readHttpRef, resolvedReading } from '@iyulab/u-board/picture';
 import type { SampleConnector, SamplePack } from './sample-pack.js';
 
 /**
  * Answers a sample's bindings from what its source said when the sample was recorded — for a page with no
  * server to read the live source through. A binding's `ref` is the HTTP connector's (`HttpRef`), read the way
- * the server reads it, so the same document reads the live source once an installation creates the
+ * the server reads it, so the same board reads the live source once an installation creates the
  * connector. Each value is `live` with the time the source says it observed it, or else the time it was
  * recorded: it is what the source reported then, and the page shows that time.
  */

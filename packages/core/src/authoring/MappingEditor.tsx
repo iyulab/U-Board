@@ -1,7 +1,7 @@
 import { useId, useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { ERROR_STYLE, FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
-import type { ValueMapping } from '../board-v2/types.js';
+import type { ValueMapping } from '../board/types.js';
 
 /** How a mapping is written: by value (a map, `*` for anything else), or by number bands. */
 type Form = 'map' | 'bands';

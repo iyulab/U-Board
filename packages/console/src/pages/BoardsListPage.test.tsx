@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { BoardsListPage } from './BoardsListPage.js';
-import type { BoardV2 } from '@iyulab/u-board/board-v2';
+import type { Board } from '@iyulab/u-board/domain';
 import * as api from '../api-client.js';
 import { formatDateTime } from '../format-time.js';
 
@@ -50,17 +50,6 @@ describe('BoardsListPage', () => {
     expect(api.listBoards).toHaveBeenCalledWith('w1');
   });
 
-  it('marks a board the move to the board language’s second version left in the first', async () => {
-    vi.mocked(api.listBoards).mockResolvedValue({
-      boards: [
-        { id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: '2026-08-20T00:00:00.000Z', firstVersion: ['node states'] },
-        { id: 'b2', name: 'Floor 2', kind: 'canvas', updatedAt: '2026-08-20T00:00:00.000Z' },
-      ],
-    });
-    renderPage();
-    expect(await screen.findByText('Floor 2')).toBeInTheDocument();
-    expect(screen.getAllByText('이전 판')).toHaveLength(1);
-  });
 
   it('says when each board was last changed, in readable words rather than raw ISO text', async () => {
     vi.mocked(api.listBoards).mockResolvedValue({ boards: [{ id: 'b1', name: 'Floor 1', kind: 'canvas', updatedAt: '2026-08-20T00:00:00.000Z' }] });
@@ -246,9 +235,8 @@ describe('BoardsListPage', () => {
     expect(await screen.findByText('editor page')).toBeInTheDocument();
     expect(api.createConnector).toHaveBeenCalledWith('w1', expect.objectContaining({ authType: 'path', authValue: 'sample', attribution: expect.objectContaining({ text: expect.stringContaining('공공누리') }) }));
     expect(api.createBoard).toHaveBeenCalledWith('w1', '서울 도심 미세먼지');
-    // Stored in the board language's second version, its data read from the source made for it.
-    const document = vi.mocked(api.updateBoard).mock.calls[0][2].document as BoardV2;
-    expect(document.version).toBe(2);
+    // Its data read from the source made for it.
+    const document = vi.mocked(api.updateBoard).mock.calls[0][2].document as Board;
     expect([...new Set(Object.values(document.data ?? {}).map(read => read.from))]).toEqual(['new-서울시 실시간 대기환경']);
   });
 

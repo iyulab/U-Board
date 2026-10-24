@@ -40,7 +40,7 @@ describe('the assistant panel', () => {
       // The board API, on this origin, with the session.
       expect(init?.credentials).toBe('same-origin');
       const answer = (init?.method ?? 'GET') === 'GET'
-        ? { id: 'b1', name: 'B', revision: 3, updatedAt: 't', document: { version: 2, parts: {}, layout: { kind: 'grid', items: [] } } }
+        ? { id: 'b1', name: 'B', revision: 3, updatedAt: 't', document: { parts: {}, layout: { kind: 'grid', items: [] } } }
         : { id: 'b1', revision: 4, advice: [] };
       return new Response(JSON.stringify(answer), { headers: { 'Content-Type': 'application/json' } });
     });

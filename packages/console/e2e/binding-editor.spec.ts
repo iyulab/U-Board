@@ -75,7 +75,7 @@ test('reads a data source into a board and shows one of its fields in a part, fr
     const at = new URL(page.url()).pathname.match(/^\/boards\/([^/]+)\/edit$/)![1];
     const { activeWorkspaceId: workspaceId } = await (await page.request.get('/api/workspaces/me')).json();
     const document = (await (await page.request.get(`/api/workspaces/${workspaceId}/boards/${at}`)).json()).document;
-    expect(document.version).toBe(2);
+    expect(document).not.toHaveProperty('version');
     expect(document.data.plant).toMatchObject({ path: '/status', fields: { status: { unit: 'state', state: { running: 'ok', '*': 'off' } } } });
     expect(document.parts['part-1']).toEqual({ as: 'label', of: 'plant', show: 'status' });
   } finally {

@@ -1,7 +1,7 @@
-import type { ViewDocument, ViewKind } from '@iyulab/u-board';
-import type { HttpRef, ResolvedBinding } from '@iyulab/u-board';
+import type { ResolvedBinding } from '@iyulab/u-board';
 import { serverClock } from '@iyulab/u-board';
-import type { BoardDocument } from '@iyulab/u-board/board-v2';
+import type { Board } from '@iyulab/u-board/domain';
+import type { ViewDocument, ViewKind, HttpRef } from '@iyulab/u-board/picture';
 
 export class ApiError extends Error {
   /** `body` is the whole error response, for codes that carry more than the code — e.g. `LAST_OWNER`
@@ -185,8 +185,7 @@ export function createWorkspace(name: string) {
 }
 
 export function listBoards(workspaceId: string) {
-  // `firstVersion`: the board stays in the board language's first version, and what of it the second does not carry.
-  return request<{ boards: { id: string; name: string; kind: ViewKind; updatedAt: string; firstVersion?: string[] }[] }>(`/workspaces/${workspaceId}/boards`);
+  return request<{ boards: { id: string; name: string; kind: ViewKind; updatedAt: string }[] }>(`/workspaces/${workspaceId}/boards`);
 }
 
 /** Creates a board with an empty document of `kind` — a canvas unless told otherwise. */
@@ -197,10 +196,9 @@ export function createBoard(workspaceId: string, name: string, kind?: ViewKind) 
   });
 }
 
-/** A board as stored — in the board language's second version, or a first-version view document — and, for the
- *  second version, the picture its viewers draw it from (a first-version document is its own picture). */
+/** A board as stored, and the picture its viewers draw it from. */
 export function getBoard(workspaceId: string, boardId: string) {
-  return request<{ id: string; name: string; document: BoardDocument; picture?: ViewDocument; updatedAt: string; revision: number; elementOrigins?: string[]; elementFrames?: string }>(
+  return request<{ id: string; name: string; document: Board; picture: ViewDocument; updatedAt: string; revision: number; elementOrigins?: string[]; elementFrames?: string }>(
     `/workspaces/${workspaceId}/boards/${boardId}`
   );
 }
@@ -210,7 +208,7 @@ export function getBoard(workspaceId: string, boardId: string) {
 export function updateBoard(
   workspaceId: string,
   boardId: string,
-  input: { name?: string; document?: BoardDocument },
+  input: { name?: string; document?: Board },
   revision?: number
 ) {
   return request<{ id: string; name: string; updatedAt: string; revision: number }>(`/workspaces/${workspaceId}/boards/${boardId}`, {

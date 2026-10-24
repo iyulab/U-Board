@@ -5,10 +5,8 @@
 ## What U-Board is
 
 U-Board is authoring middleware for spatial, data-bound views. An author places a background (a
-floor plan image, a network diagram, a map, or nothing at all), positions nodes on it — anchored
-to a place on the background (read as a real coordinate once the background declares two reference
-points) or freely arranged — connects them where a relationship needs to be shown,
-and binds each node's widget to a live data source. The result is a view that can be embedded in
+floor plan image, a network diagram, a map, or nothing at all), places parts on it, links them where a
+relationship needs to be shown, and has each part show values read live from a data source. The result is a view that can be embedded in
 any web application.
 
 ## Role
@@ -17,7 +15,7 @@ U-Board is middleware, not a standalone product a user opens on its own. Another
 embeds a U-Board-authored view and supplies the data that view binds to. U-Board owns the view's
 layout and presentation; it does not own or store the data displayed in it. Values are read from
 the systems that own them when the view is shown — the hosted server keeps at most the last value
-it read for each binding, in memory, so a lapse shows as stale instead of blank.
+it read for each request, in memory, so a lapse shows as stale instead of blank.
 
 ## Editor and renderer are separate
 

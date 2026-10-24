@@ -17,7 +17,8 @@
       // reaching into src/ with relative paths. tsconfig.build.json's narrower "include" means
       // this never affects what actually ships in dist/lib.
       "@iyulab/u-board": ["./src/index.ts"],
-      "@iyulab/u-board/domain": ["./src/domain-entry.ts"]
+      "@iyulab/u-board/domain": ["./src/domain-entry.ts"],
+      "@iyulab/u-board/picture": ["./src/picture-entry.ts"]
     }
   },
   "include": ["src"]

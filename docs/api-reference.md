@@ -1,27 +1,27 @@
 # API Reference
 
-This is the reference for the domain layer's public surface — everything exported from the
-package entry point (see the root [`README.md`](../README.md#domain-layer) for how to install it).
-[`concepts.md`](concepts.md) explains what each of these terms *means*; this document gives the
-concrete shapes and a runnable example so a consumer — human or automated — can implement an
-`Adapter` and call `resolveDocument` without guessing.
+This is the reference for the library's public surface (see the root [`README.md`](../README.md#domain-layer) for how
+to install it). [`concepts.md`](concepts.md) explains what each term *means*; this document gives the concrete
+shapes and a runnable example, so a consumer — human or automated — can write a board, implement an `Adapter` and
+draw the board without guessing.
 
 ## Walkthrough
 
-A minimal end-to-end example: one `ViewDocument` with a single bound node, one `Adapter`
-implementation, and the resolved result a renderer would consume. It is an ES module (the package
+A minimal end-to-end example: one board with a single bound part, one `Adapter`
+implementation, and the resolved picture a renderer would consume. It is an ES module (the package
 ships ESM only) using top-level `await` — save it as `walkthrough.mts`, or in a project with
 `"type": "module"`, and run it with `npx tsx walkthrough.mts` (or plain `node` on a version that strips
 TypeScript types by default).
 
 ```ts
-import type { Adapter, ResolvedBinding, ViewDocument } from '@iyulab/u-board/domain';
-import { resolveDocument } from '@iyulab/u-board/domain';
+import type { Adapter, Board, ResolvedBinding } from '@iyulab/u-board/domain';
+import { pictureOf, readerOf } from '@iyulab/u-board/domain';
+import { resolveDocument } from '@iyulab/u-board/picture';
 
 // 1. An Adapter resolves this system's own reference shape to a value + connection quality.
 //    Nothing about `ref`'s shape is fixed by the core — each adapter defines and interprets it.
 export class ExampleAdapter implements Adapter {
-  readonly id = 'demo'; // matches the `adapter` field a Binding uses to select this Adapter
+  readonly id = 'demo'; // matches the `from` a data read names to select this Adapter
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {
     const key = ref as string;
@@ -32,91 +32,459 @@ export class ExampleAdapter implements Adapter {
   }
 }
 
-// 2. A ViewDocument node whose widget has one bound prop (`data.value`) and one static prop
-//    (`data.label`). `bindings` keys are dotted paths into `props` — resolution overwrites
-//    that path's value, everything else in `props` passes through untouched.
-export const doc: ViewDocument = {
-  kind: 'canvas',
-  background: {},
-  nodes: [
-    {
-      id: 'pump-a',
-      x: 0,
-      y: 0,
-      anchored: false,
-      widget: {
-        type: 'status',
-        props: { data: { label: 'Pump A' } },
-        bindings: { 'data.value': { adapter: 'demo', ref: 'pump-a.state' } },
-      },
-    },
-  ],
-  connectors: [],
+// 2. A board: one data read through that adapter, one part that shows it, and where the part is.
+export const board: Board = {
+  data: { pumpA: { from: 'demo', ref: 'pump-a.state' } },
+  parts: { 'pump-a': { as: 'stat', of: 'pumpA', title: 'Pump A' } },
+  layout: { kind: 'canvas', size: [400, 200], place: { 'pump-a': [0, 0, 160, 80] } },
 };
 
-// 3. resolveDocument runs every node's bindings against the given adapters and returns a
-//    ResolvedViewDocument — the same document shape, but every node's `widget` is now a
-//    ResolvedWidget: its bound props carry resolved values, and a `quality` map records how
-//    current each bound prop is.
-export const resolved = await resolveDocument(doc, [new ExampleAdapter()]);
+// 3. pictureOf draws the board as the renderer reads it — every part a widget bound to its read —
+//    and resolveDocument runs those bindings against the given adapters: every widget's bound props
+//    carry resolved values, and a `quality` map records how current each bound prop is.
+const picture = await pictureOf(board, readerOf([new ExampleAdapter()]));
+export const resolved = await resolveDocument(picture, [new ExampleAdapter()]);
 
-const [pumpA] = resolved.nodes;
-console.log(pumpA?.widget.props); //   { data: { label: 'Pump A', value: 'running' } }
+const [pumpA] = resolved.kind === 'canvas' ? resolved.nodes : [];
 console.log(pumpA?.widget.quality); // { 'data.value': 'live' }
 ```
 
 This exact file also lives at [`packages/core/src/examples/walkthrough.ts`](../packages/core/src/examples/walkthrough.ts),
-where a test (`walkthrough.test.ts`) re-runs it and asserts on the two values printed above — so if a future change to
-`resolveDocument`'s behavior or this package's exports makes either wrong, that test fails instead of
-this page silently drifting. A second test in the same file checks this code block is byte-identical
-to that source file, so the two can't quietly diverge from each other either.
+where a test (`walkthrough.test.ts`) re-runs it and asserts on the value printed above — so if a future change to
+drawing or resolving a board, or to this package's exports, makes it wrong, that test fails instead of this page
+silently drifting. A second test in the same file checks this code block is byte-identical to that source file, so
+the two can't quietly diverge from each other either.
 
-## Types
+## Entry points
 
-### `Adapter`
+| Import | Contents | React / canvas |
+|---|---|---|
+| `@iyulab/u-board/domain` | The board language — its types, `boardSchema`, `validateBoard`, `checkBoard`, `emptyBoard`, `sourceAdvice`, the part kinds, `boardRulebook` — drawing a board's picture (`pictureOf`, `readerOf`, `toViewDocument`), the `Adapter` contract, JSON Patch, connection-quality text | No — and no package at runtime |
+| `@iyulab/u-board/picture` | The picture a board is drawn as: `ViewDocument` and its parts, `resolveDocument`, `boardStateOf`, the trigger decisions, the HTTP connector's reference, element frames, `lintViewDocument` — what a server or an assistant reads off a drawn board | No — and no package at runtime |
+| `@iyulab/u-board/viewer` | `BoardView`, `ViewerPage` (a picture drawn as given), the labels, `serverClock` | Yes |
+| `@iyulab/u-board` | Everything in `domain` and `viewer`, plus `BoardAuthoring` | Yes |
+
+A board is what is written, stored and sent; the picture is what the renderer makes of it, and nobody writes one.
+
+## The board
+
+```ts
+interface Board {
+  board?: { title?: string; theme?: 'light' | 'dark'; accent?: string; skin?: Skin };
+  statuses?: Record<string, Status>;
+  symbols?: Record<string, { viewBox?: string; path?: string }>;
+  elements?: Record<string, ElementDefinition>;
+  data?: Record<string, Query>;
+  presets?: Record<string, Part>;
+  parts: Record<string, Part>;
+  layout: CanvasLayout | GridLayout;
+  triggers?: Trigger[];
+}
+```
+
+A board is one JSON object. It says once where its values come from and what they mean (`data`), what it shows
+(`parts`) and where (`layout`), and declares its statuses and its look once for the whole board. Everything a person
+picks is addressed by id — the key of its own map — and there is one way to write each thing. Coordinates appear only
+in a canvas layout. A worked board, valid as written, is exported as `RULEBOOK_EXAMPLE`:
+
+```json
+{
+  "statuses": { "running": { "tone": "ok", "label": "Running" }, "down": { "tone": "alarm", "label": "Down", "emphasis": "blink" } },
+  "data": {
+    "pumps": {
+      "from": "plant", "path": "/plant/pumps", "list": "/value", "key": "id", "time": "updatedAt", "fresh": 60,
+      "fields": { "state": { "state": { "run": "running", "trip": "down", "*": "off" } }, "flow": { "label": "Flow", "unit": "m³/h", "digits": 1 } }
+    },
+    "hourly": { "from": "plant", "path": "/plant/flow/hourly", "list": "/value" }
+  },
+  "parts": {
+    "P1": { "as": "status-card", "of": "pumps[P1]", "title": "Pump 1", "show": ["state", "flow"] },
+    "P2": { "as": "status-card", "of": "pumps[P2]", "title": "Pump 2", "show": ["state", "flow"] },
+    "flow": { "as": "chart.line", "of": "hourly", "title": "Flow by hour", "x": "hour", "y": "flow" }
+  },
+  "layout": {
+    "kind": "canvas", "size": [720, 360],
+    "place": { "P1": [40, 40, 200, 120], "P2": [440, 40, 200, 120], "flow": [40, 200, 640, 140] },
+    "shapes": { "title": { "text": "Pump station", "at": [40, 24] } },
+    "links": { "line": { "from": "P1", "to": "P2", "of": "pumps[P1]", "show": "state", "label": "{{flow}}", "arrow": true } }
+  }
+}
+```
+
+`emptyBoard(kind)` is a board of a canvas (1280 × 720) or a grid with nothing on it yet.
+
+### `board` — the look
+
+`title`, `theme` (`light`, the default, or `dark` — set to match the background, not the viewer's theme), `accent` —
+the board's own primary colour, which a header's banner and the `accent` tone draw with — and `skin`:
+
+```ts
+interface Skin {
+  font?: string;
+  display?: string;
+  mono?: string;
+  palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string };
+  frame?: 'card' | 'flat' | 'glow' | 'plate' | 'ticket' | 'postage' | 'tape';   // FRAMES
+  radius?: number;
+  shadow?: 'none' | 'soft' | 'hard';
+  density?: 'regular' | 'compact';
+}
+```
+
+`paper` · `ink` · `muted` · `rule` draw a framed part; `ground` is text on the board's background. Every built-in
+reads the skin; no part sets fonts or colours of its own.
+
+### `statuses`
+
+```ts
+interface Status { tone: Tone; label?: string; glyph?: string; emphasis?: Emphasis }
+```
+
+A board names its own statuses — the words a field's `state` gives (`running`, `down`) — each drawn in one of eleven
+tones (`TONES`: `ok` `info` `watch` `warn` `alarm` `off` `idle` `accent`, and the places in a sequence `past` `now`
+`next`), with its words, optionally a mark and an emphasis (`EMPHASES`) that adds a second channel besides colour.
+Anything showing a field with a state takes the status's colour, words and mark; a board never writes colours for
+statuses. A part `as: "legend"` shows the statuses the board uses.
+
+### `data` — where values come from, and what they mean
+
+```ts
+interface Query {
+  from: string;                 // the connector, or the adapter
+  path?: string;                // the request an HTTP connector is asked
+  ref?: unknown;                // what any other adapter reads, as it defines it
+  list?: string;                // a JSON Pointer to the list of items in the answer
+  key?: string;                 // the field that names each item
+  where?: Record<string, string | number | boolean>;
+  time?: string;                // the field holding when the source observed an item
+  answerTime?: string;          // where the answer says when it was observed as a whole
+  pivot?: { key: string; value: string };
+  fresh?: number;               // seconds a value may be old and still be current
+  now?: { delay?: number; step?: number };
+  zone?: string;                // the IANA time zone the source writes times in
+  fields?: Record<string, Field>;
+}
+
+interface Field {
+  at?: string;                  // where the value lives in the item, when not /<field name>
+  label?: string;
+  unit?: string;
+  digits?: number;
+  format?: string;              // the widget library's value format: 'number:1', 'percent', 'time' …
+  names?: ValueMapping;         // the words a raw value is shown as
+  state?: 'raw' | ValueMapping; // how the value is doing, as a status
+}
+
+type ValueMapping = Record<string, string> | (string | number)[];
+```
+
+A data read is read once, for every part that shows it. Data stays as the source sends it: names, units, digits and
+statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`) or one item of it
+(`"pumps[P1]"`, by its `key`; without a `key`, by its place in the list).
+
+- **An HTTP connector** is asked a `path`, relative to the connector's address — a path starting with one `/`, with
+  its query. `list` points at the items in the answer; `where` keeps the items whose fields equal those values
+  (`"12"` and `12` match) — the rows a list or a table is about. `pivot` reads a list of one row per name
+  (`{ "category": "T1H", "obsrValue": 3.1 }`) as one item: each row's `key` field names a field, its `value` field is
+  that field's value.
+- **Any other adapter** — one the host provides — is given its own `ref` and answers one item (an object of fields, or
+  a value a field reads with `at: ""`); a `ref` read takes only `fields`.
+- **Time.** `time` names the field (or a field declared with `at`) holding when the source observed an item, and
+  `answerTime` a JSON Pointer to the time of the answer as a whole — the time of a part reading the whole list. A time
+  is read as epoch seconds or milliseconds (a number, or a string of 10 or 13 digits), ISO 8601 and the variations
+  sources write (`2026-10-09 19:10`, `2026.10.09`, a missing offset, or an offset in hours alone such as `+09`), or
+  compact digits (`202610091900`, `20261009 1910`, `20261009`); a time without an offset is on `zone`'s clock (UTC when
+  absent). A field holding something else makes the read `disconnected` with reason `format`, and so does a time more
+  than five minutes after the read — a source cannot have observed it yet; the usual cause is a missing `zone`.
+- **`fresh`** — how old the source's value may normally be and still be current, as HTTP's `max-age` says of a
+  response. Older than this by its observed time, a value reads `stale` with reason `lagging`: the source's latest, but
+  behind. It also spaces the source's requests — a read answers later reads of the same request for an eighth of it —
+  which spends a daily request quota that much more slowly.
+- **A source asked for a given time.** `path` may hold time places, `{{now:yyyyMMdd}}` and `{{now:HHmm}}` — a pattern
+  of `yyyy` `MM` `dd` `HH` `mm` with `-` `.` `:` `_` `T` between — that each request fills in on `zone`'s clock, at the
+  time `now` names: the time the request is sent, `delay` seconds earlier — how long after a time the source has its
+  data — rounded down to a multiple of `step` seconds — how often it has new data — counted from midnight. A source
+  that publishes each hour's observations forty minutes after the hour is `{ "delay": 2400, "step": 3600 }`: at 13:31
+  it is asked for 12:00, at 13:41 for 13:00. Any other `{{…}}` in a path is refused.
+- **Mapping.** `state` and `names` take the same two forms: a map of raw values to names, `"*"` for anything else
+  (`{ "trip": "down", "*": "off" }`), or bands of numbers — the name below the first number, then from each number up
+  (`["ok", 70, "warn", 80, "alarm"]`). `state: "raw"` says the value already is a status name. A reading the mapping
+  names nothing for is in no status.
+
+### `parts` — what is shown, of which data
+
+```ts
+interface Part {
+  as?: string;                  // the kind
+  use?: string;                 // a preset whose settings this part takes; its own win
+  of?: string;                  // '<data>' for the whole, '<data>[<key>]' for one item
+  each?: string;                // a data list: one part per item, ids '<part>/<key>'
+  title?: string;
+  show?: string | string[];     // the fields it shows
+  [option: string]: unknown;    // the kind's options
+}
+```
+
+A part never says where it is — the layout does. `{{field}}` in a title or a label reads a field of what the part
+reads, `{{key}}` its item's key. `presets` hold settings parts share (`use`). `each: "<data>"` makes one part per item
+of a list, with the ids `<part>/<key>`; it takes no `of`, and the layout places it once — a grid lays out its items in
+order, a canvas places them item by item inside its entry.
+
+The kinds come from three places, listed with their options as `PART_KINDS` (`partKind(as)` finds one):
+
+- **General built-ins**, each drawn by a widget of [`@iyulab/u-widgets`](https://github.com/iyulab/u-widgets):
+  `status-card`, `header`, `stat`, `stat-list`, `list`, `table`, `bar-list`, `status-grid`, `gauge`. The board reads
+  some options itself, as fields of what the part reads — a `status-card`'s `meter` (`"<field>"`, or
+  `{ field, min?, max?, form?: 'bar' | 'ring' }`) and `state`, a `stat`'s `trend`, a `list`'s `primary` · `secondary` ·
+  `trailing` · `badge` · `time` — and hands any other option to the widget, which takes only those it lists.
+- **Charts** — every chart of the widget library (`chart.line`, `chart.bar` …), with their mapping options (`x`, `y`,
+  `label`, `value`, `group` …) naming fields of the rows they read.
+- **The board's own**: `marker` — a point on a canvas in its status, with a label (`shape`, or `symbol` naming one of
+  the board's symbols); `label` — a text, fixed or from a field; `legend` — the statuses in use; `group` — several
+  parts drawn together on a small canvas of their own (`size`, `parts`, `place`, `shapes`, `links`), its parts reading
+  the group's `of` unless they name their own and addressed `<group>/<part>`; `element` — a drawing of the board's
+  `elements` (`element`, fixed `props`, and `bind` from a prop to a field — `"<field>"`, its status `"<field>.status"`
+  or tone `"<field>.tone"`).
+
+### `layout` — where
+
+```ts
+interface CanvasLayout {
+  kind: 'canvas';
+  size: [number, number];
+  background?: string;                                     // an image's address, drawn at the canvas's size
+  place: Record<string, Place | Record<string, Place>>;    // an `each` part: by item key
+  shapes?: Record<string, Shape>;
+  links?: Record<string, Link>;
+}
+type Place = [number, number] | [number, number, number, number];   // [x, y] or [x, y, width, height]
+
+interface GridLayout { kind: 'grid'; items: GridItem[] }
+type GridItem =
+  | string                                                  // a part
+  | [string, number]                                        // [part, span]
+  | { id?: string; span?: number; height?: number; canvas?: Omit<CanvasLayout, 'kind'>; grid?: GridItem[] };
+```
+
+- **Canvas** — parts placed by coordinates over a drawing. A part placed without a size takes its kind's. `shapes` are
+  purely visual: a `box` (`[x, y, w, h]`, with a `label`), a `text` `at` a point (`size`), a `line` through points or a
+  `path` (absolute `M` · `L` · `C` · `Q` · `Z`), each with an optional `tone`, `width` and `dash`.
+- **Grid** — parts in order on a row of twelve columns, laid out to the width of the board's own container: one item
+  per row below 600 pixels, six columns below 1024, twelve above. An item takes a `span` of the twelve, and optionally
+  a fixed `height`; otherwise the widget's own. An item may hold a `canvas` of its own — the spatial panel of a mixed
+  board, drawn fitted to its cell — or a `grid`, whose items span the cell's twelve columns and stack.
+- **Links** join two parts:
+
+  ```ts
+  interface Link {
+    from: string; to: string;
+    of?: string;                 // the item it reads — for show, weight and {{field}} in its label
+    show?: string;               // the field whose status colours it
+    label?: string;              // fixed, or {{field}} of what it reads
+    tone?: Tone;                 // its colour when it shows no status — idle when absent
+    route?: 'straight' | 'orthogonal' | 'curved';
+    width?: number;
+    weight?: { field: string; bands?: number[]; map?: Record<string, number> };
+    dash?: boolean;
+    arrow?: boolean;             // an arrowhead at its end
+  }
+  ```
+
+  A link that shows a status takes its tone, and its emphasis as the line's form — `hatch` dashed, `blink` a moving
+  dash, `invert` thick. `orthogonal` runs with one turn between the two parts, as pipes and wiring are drawn;
+  `curved` bows to the left of the way it runs, as flows on a map are drawn. `weight` reads the width from a field —
+  an amount, not a status: bands from the width below the first number up (`[2, 8, 3.5, 15, 5]`), or a map of raw
+  values (`"*"` for the rest).
+
+Every part is placed by the layout — a part placed nowhere is refused.
+
+### `elements` and `symbols` — drawings no built-in makes
+
+```ts
+interface ElementDefinition {
+  template?: string;            // markup with {{prop}} holes
+  style?: string;               // CSS for its own markup only
+  script?: string;              // or code, run in a sandboxed frame
+  resources?: string[];         // the https:// origins a script loads from
+  props?: Record<string, 'number' | 'string' | 'boolean' | 'list' | 'object'>;
+}
+```
+
+An element is one of two: a **template** or a **script**. Names are lowercase letters, digits and hyphens; a part
+`{ "as": "element", "element": "tank", "bind": { "level": "level" } }` places one. Use a built-in whenever one shows
+the thing — a title, a status and a few values are a `status-card`, `stat` or `stat-list`.
+
+- **Template holes** — logic-less: `{{name}}` (a declared prop, or a dotted path into an `object` prop; every value
+  escaped), `{{#list}}…{{/list}}` (repeated for each item, or shown once for any other truthy value; inside it a name
+  is looked up in the item first and `{{.}}` is the item itself), `{{^flag}}…{{/flag}}` (shown when empty or false),
+  `{{! comment}}`. `{{inlet | fixed:1}}` shows a number with that many digits after the point (0–6),
+  `{{orders | grouped:0}}` the same with a comma every three digits. Nothing is computed inside the braces: numbers
+  become a drawing through CSS — `style="--level: {{level}}"` and `height: calc(var(--level) * 1%)`.
+- **Markup policy** — HTML text and structure tags, `img`, and SVG shapes, text, gradients, patterns, symbols and
+  filters. No `script`, `style`, `iframe`, `a`, form or `foreignObject`; no event handler attribute; a URL (`href`,
+  `src`, CSS `url()`) only to a fragment of the markup (`#id`) or an inline image (`data:image/…`); no `@import`. The
+  renderer applies the same policy again after filling the holes, so a value cannot add what the template did not.
+  A template element loads nothing from another origin.
+- **Theme** — the board's tone reaches the markup as CSS variables: `--u-widget-bg`, `--u-widget-surface`,
+  `--u-widget-text`, `--u-widget-text-secondary`, `--u-widget-border`, `--u-widget-primary`, `--u-widget-positive`,
+  `--u-widget-negative`, `--u-widget-warning`, `--u-widget-font-family`, `--u-widget-font-mono`. A template is drawn
+  in an isolated root of the page: its CSS reaches only its own markup, the page's does not reach in. Its root fills
+  the part's box, every size in it includes its padding and border, and nothing it draws reaches past that box.
+- **Symbols** — SVG drawings the board defines once (`{ "viewBox"?, "path": "M … Z" }`), drawn by a `marker`'s
+  `symbol` and by any template element with `<use href="#name">`, in the colour around it.
+
+**Script elements** run in a frame of their own: `<iframe sandbox="allow-scripts">`, whose document the board's
+server builds from the saved definition. The frame has an origin of its own — it cannot reach the page, its storage or
+the viewer's session — and no network: its data arrives as its props. Its code reads them through `ub`:
+
+```js
+ub.onProps((props, appearance) => draw(props));   // now, if props have arrived, and on every change
+ub.emit('open-details');                          // an event the board's triggers can listen for
+ub.reportError(error);                            // shown on the element's box
+```
+
+It loads from an origin only when it lists it in `resources` and the host allows it (`elementOrigins` on the viewer —
+none by default; a U-Board server sends the origins its installation allows with every board). The frame loads when
+the element nears the screen. A U-Board server serves the element's code with each loop bounded in time: a loop that
+runs a second without finishing throws, reported like any error. The page asks a running frame every two seconds
+whether it still answers, and removes one that has left a question unanswered for six seconds, with a notice on its
+box. That keeps the page usable where the browser runs the frame in a process of its own, as Chrome and Edge do with
+site isolation; a browser that runs it with the page (Firefox, Safari) is held by such code too — so an element's code
+must always return. A server that serves each definition from an origin of its own (`UBOARD_ELEMENT_FRAME_ORIGIN`)
+keeps the board's other script elements apart from it in Chrome and Edge. The console opens a board without running its
+script elements at `…/boards/<id>/edit?scripts=off`, to fix such code. The viewer's `elementFrames` says where the
+frames are served — `/api/element-frames/<board id>` on a U-Board server, which answers
+`/api/element-frames/<board id>/<element>/<definition hash>` only while the saved board defines that element exactly
+so (`{definition}` in the address is replaced by `elementFrameLabel(hash)`, for frames served from an origin per
+definition). Without `elementFrames`, a script element shows a notice in its box.
+
+### `triggers` — what the board does
+
+```ts
+interface Trigger {
+  on:
+    | { event: 'click'; part: string }                                  // clicked, or activated from the keyboard
+    | { event: 'element'; part: string; name: string }                  // its element raises `name`
+    | { event: 'enter' | 'leave'; part: string; field?: string; status: string }
+    | { event: 'open' };                                                // the board is first drawn
+  when?: { part: string; field?: string; status: string | string[] };   // only while the part is in one of these
+  do: Array<
+    | { action: 'open-link'; url: string }      // a new tab
+    | { action: 'focus'; part: string }         // bring a part into view
+    | { action: 'emit'; name: string }          // hand the host an event
+    | { action: 'go-to-board'; board: string }  // ask the host to show another board
+  >;
+}
+```
+
+A part's status is the state of one of its fields — `field`, or the part's own state (a status card's, a part's
+`state` option) when left out. A part made per item is named per item (`"pumps/P1"`). Triggers only show, move and
+tell: nothing a trigger does writes to the systems a board reads.
+
+- `open-link` opens an `https://` address or a path on the installation the board is served from (`/…`, never `//…`)
+  in a new tab, with no opener. `{{part}}`, `{{status}}` and `{{board}}` in it are filled in, each URL-encoded — a
+  part's values are not.
+- `enter` and `leave` fire on a change between two draws of one viewer, never on the first draw — `open` is for that.
+- A part with a `click` trigger becomes a button: Enter and Space press it. A drag that starts on it pans the board and
+  presses nothing.
+- An element raises an event with `ub.emit(name)` in a script element, or, in a template, from a region marked
+  `data-ub-event="name"` that is clicked; a marked region some trigger listens for is focusable and a button to
+  assistive technology, and Enter or Space raise its event.
+- Each trigger fires at most once a second, so a value hovering at a band's edge cannot drive it without end.
+
+The viewer runs them; `BoardAuthoring` runs them in View only. Both take the host's side:
+
+| Prop | |
+|---|---|
+| `boardId` | The board's id — what `{{board}}` becomes, and what the events it hands the host name. |
+| `onTrigger(event: BoardEvent)` | An `emit`: `{ name, board?, node?, state? }` — the event's name and the part and status it came from, never a value. |
+| `onNavigate({ board })` | A `go-to-board`. Without it, nothing happens: the viewer does not go anywhere on its own. |
+| `linkOrigins` | The origins an `open-link` may open besides this installation's paths. Left out: any `https` address. |
+
+## Checking a board
+
+A board that comes from outside your own code — a file, a request body, an assistant's output — is checked before
+anything stores or draws it. The hosted server applies the same check to every board it stores, and the MCP server's
+`validate` to every board it is given.
+
+```ts
+interface BoardIssue { at: string; message: string; hint?: true }
+function validateBoard(board: unknown): BoardIssue[];
+
+interface BoardFinding { path: string; message: string }
+interface BoardCheck { issues: BoardFinding[]; advice: BoardFinding[] }
+function checkBoard(board: unknown): BoardCheck;
+
+function boardSchema(): object;   // JSON Schema 2020-12
+```
+
+- `validateBoard` checks the language — every section, kind, option, field name, mapping, layout entry, link, element
+  definition (template holes, markup policy) and trigger — and answers every problem, each at an RFC 6901 JSON Pointer
+  into the board (`""` is the board itself), with what to do instead where there is something to say:
+
+  ```ts
+  validateBoard({ parts: { a: { as: 'stat', of: 'equipment/PR-01' } }, layout: { kind: 'grid', items: ['a'] } });
+  // → [{ at: '/parts/a/of', message: 'an item of data is written "equipment[PR-01]" — "/" is only in the ids of parts "each" makes' }]
+  ```
+
+  An entry with `hint: true` is advice, not a problem.
+- `checkBoard` is what a board meets before it is stored: the language, and then that it draws — a part the renderer
+  cannot draw is refused when it is written, not on the page that shows it. `issues` are what it is refused for; with
+  none, `advice` is what could be written better.
+- `sourceAdvice(board, sources)` — the data reads whose `from` names none of the given data sources (`{ id, name }`),
+  each saying which id to write when it names a source by its name. Advice, not a refusal: a source may be removed after
+  a board reads it.
+- `boardSchema()` — the same rules a JSON Schema can say, generated from the lists the validator reads.
+- `boardRulebook()` — the language as Markdown, for an assistant that writes boards: generated from the schema and the
+  part kinds, with `RULEBOOK_EXAMPLE`.
+
+## Drawing a board
+
+```ts
+type ValueReader = (adapter: string, ref: unknown) => Promise<{ value?: unknown }>;
+function readerOf(adapters: readonly Adapter[]): ValueReader;
+function pictureOf(board: Board, read: ValueReader): Promise<ViewDocument>;
+function toViewDocument(board: Board, options?: { keysOf?: (data: string) => readonly string[] }): ViewDocument;
+```
+
+The renderer draws a board through its picture (below). `pictureOf` makes it, reading through `read` which items a list
+has — a grid laying out a part per item lays out one item per key; a canvas names its items where it places them.
+`readerOf(adapters)` reads each reference through the adapter it names, and nothing for one there is none of. `toViewDocument`
+is the same without reading, given the keys; it throws `PictureError` (with the board pointer `at`) for a board that
+does not draw. `keyReadsOf(board)` lists the reads that give those keys, `keysIn(board, data, value)` the keys in a
+read value, `readKeys(board, read)` both, and `dataReadOf(board, data)` how a board reads one of its data whole.
+`elementDefinition(definition)` is an element as its picture draws it — what a server answers a script element's frame
+with.
+
+`BoardView` (from `@iyulab/u-board/viewer`) does all of this for a host, and redraws when the board changes.
+
+## The `Adapter` contract
 
 ```ts
 interface Adapter {
   readonly id: string;
   resolve(ref: unknown): Promise<ResolvedBinding>;
-  references?(): Promise<readonly AdapterReference[]>;
   readonly attribution?: Attribution;
+  readonly sample?: boolean;
 }
 
-interface AdapterReference {
-  ref: string;
-  label?: string;
-}
-
-interface Attribution {
-  text: string;
-  url?: string;
-}
+interface Attribution { text: string; url?: string }
 ```
 
-- `id` — matched against a [`Binding`](#binding)'s `adapter` field to select which `Adapter`
-  resolves it. A document can list bindings for several adapters; `resolveDocument` is given all
-  of them and routes each binding by this id.
-- `resolve(ref)` — resolves one binding's opaque `ref` to its current value. `ref` is whatever the
-  `Binding` that pointed at this adapter put there — the core places no constraint on its shape;
-  an adapter is free to expect a string, an object, anything its own integration needs. Returning
-  a rejected promise (a thrown error, a network timeout) is a valid outcome — `resolveWidget`
-  treats it the same as no matching adapter: the prop is left unresolved and its quality is
-  recorded as `disconnected`. One binding's adapter failing never fails the others. To say *why*
-  a binding has no value, return `{ value: undefined, quality: 'disconnected', reason }` instead of
-  rejecting: the reason reaches the renderer, and the widget keeps its static value.
-  The core does not look inside the source's answer — only the adapter knows whether the value a
-  `ref` points at was there, so reporting `address` when it was not is the adapter's job.
-- `references()` — optional: the references this adapter resolves, for an adapter with a known set
-  of them (a sample's keys, the fields of a store in the host app, a broker's topics). The binding
-  form of `AuthoringView` then offers them to pick from, shown by `label` when given, and binds the
-  chosen `ref` string. Without it, the form takes an HTTP connector reference — a request path and a
-  JSON Pointer into the response. It plays no part in resolving.
-- `attribution` — optional: how the adapter's source asks to be credited where its data is shown
-  (an agency and its open-data portal, a weather service — a license often makes it a condition of
-  use). `ViewerPage`, and `AuthoringView` in view mode, name the credit of every adapter a board's
-  bindings use, once each, on a line under the board; `url` becomes a link when it is http(s).
-  `ViewerPage`'s `attribution={false}` leaves the line out, for a host that shows it itself.
+- `id` — what a data read's `from` names to select this adapter. A board can read from several; the viewer is given all
+  of them and routes each read by this id.
+- `resolve(ref)` — reads one reference to its current value. For a read with a `path`, `ref` is the HTTP connector's
+  reference ([`HttpRef`](#httpref)); for a read with a `ref`, the board's own `ref`, whatever shape this adapter
+  defines. Returning a rejected promise (a thrown error, a network timeout) is a valid outcome, treated as no matching
+  adapter: the value is left unread and its quality is `disconnected`. One read failing never fails the others. To say
+  *why* there is no value, return `{ value: undefined, quality: 'disconnected', reason }` instead of rejecting. Only the
+  adapter knows whether the value a reference points at was there, so reporting `address` when it was not is its job.
+- `attribution` — optional: how the adapter's source asks to be credited where its data is shown (an agency and its
+  open-data portal — a license often makes it a condition of use). The viewer names the credit of every adapter a board
+  reads, once each, on a line under the board; `url` becomes a link when it is http(s). `attribution={false}` leaves the
+  line to the host.
+- `sample` — optional: the adapter's values are example data, not a live source's; a board that reads it says so on
+  that line, so no one reads made-up figures as real ones.
 
 ### `ResolvedBinding`
 
@@ -130,15 +498,13 @@ interface ResolvedBinding {
 }
 ```
 
-What an `Adapter.resolve()` call returns — the current value, how current it is, and, when it is
-not `live` and the adapter can tell, why. `reason` is ignored on a `live` reading. `observedAt`, when
-the adapter knows it, is when `value` was obtained from the source: the time of this reading for
-`live`, of the last successful one for `stale` — what tells a last-known value of seconds ago from
-one of days ago. It is ignored on a `disconnected` reading. The hosted HTTP connector reports it —
-the time the source gives when the binding's reference names one ([`HttpRef`](#httpref)), else the
-time it read the source. `message`, on a reading that is not `live`, says what went wrong in words for
-whoever can fix the binding or its data source — for `source`, what the source itself said. The hosted
-server sends it to signed-in members and to API tokens, never through a share link.
+What `Adapter.resolve()` returns — the current value, how current it is, and, when it is not `live` and the adapter can
+tell, why. `reason` is ignored on a `live` reading. `observedAt`, when the adapter knows it, is when `value` was obtained
+from the source: the time of this reading for `live`, of the last successful one for `stale` — what tells a last-known
+value of seconds ago from one of days ago. It is ignored on a `disconnected` reading. The hosted HTTP connector reports
+the time the source gives (the read's `time`), else the time it read the source. `message`, on a reading that is not
+`live`, says what went wrong in words for whoever can fix the read or its data source — for `source`, what the source
+itself said. The hosted server sends it to signed-in members and to API tokens, never through a share link.
 
 ### `ConnectionQuality`
 
@@ -147,17 +513,16 @@ type ConnectionQuality = 'live' | 'stale' | 'disconnected';
 ```
 
 - `live` — the adapter reached the source system just now.
-- `stale` — the value shown is not current: the adapter could not reach the source and shows a
-  previously-live value as last-known, or the source answered with its latest value and that is older
-  than the binding expects of it (reason `lagging`).
-- `disconnected` — no value has been reached (no matching adapter, the adapter rejected, the
-  source could not be reached, or it answered without the value the binding points at).
+- `stale` — the value shown is not current: the adapter could not reach the source and shows a previously-live value
+  as last-known, or the source answered with its latest value and that is older than the read expects of it (reason
+  `lagging`).
+- `disconnected` — no value has been reached (no matching adapter, the adapter rejected, the source could not be
+  reached, or it answered without the value the read points at).
 
 This is deliberately narrower than a full alarm model (priority, acknowledgement, shelving) — see
-[`concepts.md`](concepts.md) ("Binding"). A `stale` reading only ever comes from the adapter itself;
-`resolveWidget` has no memory of past calls and cannot infer staleness on its own — an adapter that
-wants to report `stale` must track "have I seen this value before, and can I still reach the
-source" itself.
+[`concepts.md`](concepts.md) ("Data"). A `stale` reading only ever comes from the adapter itself: resolving has no memory
+of past calls, so an adapter that wants to report `stale` tracks "have I seen this value before, and can I still reach
+the source" itself.
 
 ### `QualityReason`
 
@@ -165,30 +530,28 @@ source" itself.
 type QualityReason = 'transport' | 'auth' | 'address' | 'format' | 'source' | 'throttled' | 'lagging' | 'pending';
 ```
 
-Why a binding is not `live`, reported by the adapter when it can tell. Each names a different fix,
-so an operator reading "disconnected" knows where to look:
+Why a value is not `live`, reported by the adapter when it can tell. Each names a different fix, so an operator reading
+"disconnected" knows where to look:
 
 - `transport` — the source could not be reached (network, timeout, server error).
 - `auth` — the source refused the credentials.
-- `address` — the source answered, but not with what the binding points at (an unknown path, an
-  empty result, a renamed field). The binding needs attention, not the network.
-- `format` — the source answered in a form the binding cannot read: XML or HTML where JSON was needed,
-  or a value path into plain text. How the source is asked needs attention (many APIs answer JSON only
-  when asked, with a parameter such as `returnType=json`).
-- `source` — the source answered with success (HTTP 200) but said in its answer that it could not serve
-  the request: a key it does not accept, a query it rejects, a spent quota. What it said (`message`) is
-  the fix. The HTTP connector reports it for a data source whose owner said where the source writes such
-  a status ([`sourceErrorIn`](#sourceerrorin)).
+- `address` — the source answered, but not with what the read points at (an unknown path, an empty result, a renamed
+  field). The board needs attention, not the network.
+- `format` — the source answered in a form the read cannot use: XML or HTML where JSON was needed, or a time it cannot
+  read. How the source is asked needs attention (many APIs answer JSON only when asked, with a parameter such as
+  `returnType=json`).
+- `source` — the source answered with success (HTTP 200) but said in its answer that it could not serve the request: a
+  key it does not accept, a query it rejects, a spent quota. What it said (`message`) is the fix. The HTTP connector
+  reports it for a data source whose owner said where the source writes such a status
+  ([`sourceErrorIn`](#sourceerrorin)).
 - `throttled` — requests are being rate limited.
-- `lagging` — the source answered, but its latest value is older than the binding expects of it (the
-  HTTP connector's `maxAgeSeconds`): the source has stopped or fallen behind updating — neither the
-  network nor the binding needs attention.
-- `pending` — the source is being read and has not answered yet, with no earlier answer to show meanwhile: a slow
-  source, the first time a board reads it. Nothing needs fixing; the next refresh shows the value.
+- `lagging` — the source answered, but its latest value is older than the read's `fresh`: the source has stopped or
+  fallen behind updating — neither the network nor the board needs attention.
+- `pending` — the source is being read and has not answered yet, with no earlier answer to show meanwhile. Nothing
+  needs fixing; the next refresh shows the value.
 
-A reason annotates `quality`; it never changes it. A binding with no matching adapter, or whose
-adapter rejected, carries no reason — the core cannot tell a misconfiguration from a host that
-simply did not provide that adapter.
+A reason annotates `quality`; it never changes it. A value with no matching adapter, or whose adapter rejected, carries
+no reason — the core cannot tell a misconfiguration from a host that simply did not provide that adapter.
 
 ### Describing connection quality
 
@@ -212,12 +575,11 @@ function describeQuality(
 ): string | undefined;
 ```
 
-The words the shipped renderer uses, for a host that renders its own UI from a `ResolvedWidget`.
-`worstQuality` is the least current of a widget's bindings (`disconnected`, then `stale`, then
-`live`). `describeQuality(widget)` is one line of text for a `ResolvedWidget` — the renderer's
-tooltip and screen-reader announcement — or `undefined` when every binding is `live`. It names the
-cause when the adapter reported one and, for a `stale` value with an `observedAt`, how long ago it
-was obtained:
+The words the shipped renderer uses, for a host that renders its own UI from a resolved picture. `worstQuality` is the
+least current of a widget's bindings (`disconnected`, then `stale`, then `live`). `describeQuality(widget)` is one line
+of text for a `ResolvedWidget` — the renderer's tooltip and screen-reader announcement — or `undefined` when every
+binding is `live`. It names the cause when the adapter reported one and, for a `stale` value with an `observedAt`, how
+long ago it was obtained:
 
 ```ts
 describeQuality({ quality: { 'data.value': 'disconnected' }, reasons: { 'data.value': 'address' } });
@@ -230,504 +592,82 @@ describeQuality({
 // → 'stale — showing last known value (data source unreachable, 5 minutes ago)'
 ```
 
-The age is measured when the text is built (`now`, default `Date.now()`), so text that stays on
-screen should be rebuilt as the widget re-resolves — the shipped components do on every refresh.
-When several bindings are at fault, the text breaks them out per prop path, separated by `;`.
+The age is measured when the text is built (`now`, default `Date.now()`), so text that stays on screen should be rebuilt
+as the widget re-resolves — the shipped components do on every refresh. When several bindings are at fault, the text
+breaks them out per prop path, separated by `;`. `live` has no label on purpose: normal operation is not announced, only
+departures from it.
 
-`observedAt` is stamped on the source's side, so the age is only as right as the two clocks agree.
-On a machine whose clock may drift (a screen left running unattended), measure against the source's
-clock instead: the shipped components take it as `clock` (`ViewerPage`, `AuthoringView`), and
-`toCanvasKit` as `now`.
+The shipped renderer also marks a part whose headline value is not current with a few visible words on a tag just above
+its frame — for a screen nobody hovers over or listens to, such as a wall display. They come from `brief`: the cause when
+the adapter reported one ("Source behind" for `lagging`, "No reply from source" for `transport`), else the state, and for
+a `stale` value how long ago it was obtained — "Source behind · 3 minutes ago". Assistive technology hears the full
+`describeQuality` text instead. Pass `text` to describe quality in another language; `ageText(locale)` builds the `age`
+words from the platform's relative-time formatting — `ageText('ko')` reads "5분 전". The shipped components take the same
+words through their `labels` prop (`labels.qualityText`).
+
+`observedAt` is stamped on the source's side, so the age is only as right as the two clocks agree. On a machine whose
+clock may drift (a screen left running unattended), measure against the source's clock instead: the shipped components
+take it as `clock`.
 
 ```ts
 interface ServerClock {
   now: () => number; // the server's current time; this machine's until a response has carried a Date
   observe: (response: { headers: { get(name: string): string | null } }, sentAt: number) => void;
 }
-function serverClock(): ServerClock;
+function serverClock(): ServerClock;   // from @iyulab/u-board/viewer
 ```
 
-`serverClock()` estimates a server's clock from the `Date` header of its responses (RFC 9110): hand
-it each response with the `Date.now()` the request was sent at, and pass `now` on as the clock. A
-response without a readable `Date` changes nothing — a cross-origin response does not expose it
-unless the server lists it in `Access-Control-Expose-Headers`.
+`serverClock()` estimates a server's clock from the `Date` header of its responses (RFC 9110): hand it each response with
+the `Date.now()` the request was sent at, and pass `now` on as the clock. A response without a readable `Date` changes
+nothing — a cross-origin response does not expose it unless the server lists it in `Access-Control-Expose-Headers`.
 
-`live` has no label on purpose: normal operation is not announced, only departures from it.
-
-The shipped renderer also marks a node whose headline value is not current with a few visible words on
-a tag just above its frame — for a screen nobody hovers over or listens to, such as a wall display. They come from
-`brief`: the cause when the adapter reported one (`brief.reason` — "Source behind" for `lagging`, "No
-reply from source" for `transport`), else the state (`brief.quality`), and for a `stale` value how long
-ago it was obtained — "Source behind · 3 minutes ago". The frame's style shows how current the value is;
-the mark says why, because the cause decides whom an operator calls. Assistive technology hears the full
-`describeQuality` text instead.
-
-Pass `text` to describe quality in another language; it defaults to `DEFAULT_QUALITY_TEXT`.
-`ageText(locale)` builds the `age` words from the platform's relative-time formatting
-(`Intl.RelativeTimeFormat`) — `ageText('ko')` reads "5분 전". The
-shipped components take the same words through their `labels` prop (`labels.qualityText`).
-
-### `Binding`
+## Changing a board — `applyJsonPatch(board, patch)`
 
 ```ts
-interface Binding {
-  adapter: string;
-  ref: unknown;
-  map?: ValueMap;
-}
-
-interface ValueMap {
-  values?: Record<string, unknown>;
-  ranges?: ValueRange[];
-  otherwise?: unknown;
-}
-
-interface ValueRange {
-  min?: number;
-  max?: number;
-  value: unknown;
-}
+function applyJsonPatch<T>(document: T, patch: unknown): T;   // patch: JsonPatchOperation[]
+function getByPointer(document: unknown, pointer: string): unknown;
 ```
 
-- `adapter` — the `id` of the `Adapter` that should resolve this binding.
-- `ref` — the adapter-specific reference to a value (for example, an asset id and field name).
-  Opaque to the core binding surface; each adapter defines and interprets its own `ref` shape.
-- `at` — where the value is inside what the adapter resolved, a JSON Pointer (`/temp`): a field of an object an adapter
-  gives for one reference. Applied first, before `map`; when there is nothing there the prop keeps its static value and
-  the binding reads `disconnected` with reason `address`. Omitted, the whole value.
-- `map` — translates the source's value into the one the prop takes. A data source speaks its own
-  vocabulary (`"Fault"`, `3`, a temperature); a widget prop takes its own (a status widget's tone).
-  It is tried in order:
-  1. `values` — a source value is looked up by its text (`"Fault"`, `"3"`, `"true"`, `"null"`).
-  2. `ranges` — a number, or text that reads as one (`"92.5"`), takes the first range it falls in:
-     from `min` up to but not including `max`, so adjacent ranges meet without overlapping. A missing
-     bound leaves that end open; a range gives at least one.
-  3. `otherwise` — or, when there is none, the value passes through unchanged.
+A board is changed on the server by a JSON Patch (RFC 6902) against its revision. `applyJsonPatch` applies one —
+entirely or not at all, a new value, the given board untouched; a failing operation throws `JsonPatchError` with its
+`index`. A `replace` keeps a member where it stands among the others. `getByPointer` reads the value at an RFC 6901
+JSON Pointer.
 
-  A map has `values`, `ranges` or both. It applies to a value that is shown (`live` or `stale`),
-  before it reaches the prop. `applyValueMap(map, value)` is the same lookup for a host's own code.
-- `itemFields` — for a value that is a list (the rows a `list` or a `table` shows), the fields each item gains, by
-  name: `{ "<name>": { from, map? } }`, each the value of the item's `from` field, translated by `map` when there is
-  one. A row keeps the source's words and gains the tone the widget colours it by; a field the widget reads by another
-  name (`label`) is the source's field under that name; an object value — one item read alone — gains them as an item
-  does. Applied after `map`; an item that is not an object is left as it is. `withItemFields(fields, value)` is the same
-  for a host's own code.
-- `text` — the value written into a text: each `{{field}}` a field of the value (the item it read, an object), in the
-  value grammar of a template element — `{{draft | fixed:1}}`, `{{teu | grouped:0}}`, `{{.}}` the value itself; a
-  field the value does not have is empty. A title of words and readings — `"Berth 1 · {{vessel}}"` — read from one item.
-  Applied last, after `itemFields`, so a text shows the words a field gained. `writeText(text, value)` is the same for a
-  host's own code.
+## The picture — `@iyulab/u-board/picture`
 
-  ```ts
-  bindings: {
-    data: {
-      adapter: 'plant',
-      ref: { path: '/pumps', valuePath: '/value' },
-      itemFields: { tone: { from: 'state', map: { values: { run: 'ok', trip: 'alarm' }, otherwise: 'off' } } },
-    },
-  },
-  props: { data: [], mapping: { primary: 'name', secondary: 'state', tone: 'tone' } },
-  ```
+The picture is what the renderer draws: a board turned into widgets with their places and bindings. Nobody writes one —
+`pictureOf` makes it — but a server computing a board's state, or an assistant looking at what a board draws, reads it.
+It reaches no package at runtime.
 
-Bind the same source field twice to show it and color by it — the raw value as the text, the mapped
-one as the tone (a `status` widget draws an item only when it has a `label`, so the label is set as a
-static prop):
+### `ViewDocument`
 
 ```ts
-props: { data: { label: 'Pump A' } },
-bindings: {
-  'data.value': { adapter: 'plant', ref: { path: '/pumps/a', valuePath: '/status' } },
-  'data.tone': {
-    adapter: 'plant',
-    ref: { path: '/pumps/a', valuePath: '/status' },
-    map: { values: { Running: 'ok', Fault: 'alarm' }, otherwise: 'idle' },
-  },
-}
+type ViewDocument = CanvasView | GridView;   // told apart by `kind`
 ```
 
-A measurement becomes a tone the same way, by bands — a bearing temperature that warns from 70 and
-alarms from 80:
+A `CanvasView` holds a background, `nodes` (each `{ id, x, y, width?, height?, widget }`), `connectors` between them and
+`decorations`; a `GridView` holds `items` in order — each a widget, or a `canvas` of its own. Ids are the board's: a
+part's id, `<part>/<key>` for a part made per item, `<group>/<part>` inside a group. `placedIn(picture)` returns every
+placed widget of either kind (`placedAt` with its JSON Pointer); `isCanvasItem` tells a grid's canvas cell from a widget.
+`nodeSize(node)` is the box of a node placed without one (`DEFAULT_NODE_WIDTH` × `DEFAULT_NODE_HEIGHT`, or its
+element's).
 
 ```ts
-'data.tone': {
-  adapter: 'plant',
-  ref: { path: '/pumps/a', valuePath: '/bearingTemp' },
-  map: { ranges: [{ min: 80, value: 'alarm' }, { min: 70, max: 80, value: 'warn' }], otherwise: 'ok' },
-}
+interface Widget { type: string; props?: Record<string, unknown>; bindings?: Record<string, Binding> }
+interface Binding { adapter: string; ref: unknown; at?: string; map?: ValueMap; itemFields?: Record<string, ItemField>; text?: string }
 ```
 
-### States — `StateRule`
+A widget's `type` is a widget of the widget library, or a drawing of U-Board's own (`element:<name>`); `bindings` map a
+dotted path into `props` (`'data.value'`) to where its value is read. At resolution each value is written into `props`
+at its path — copying, never mutating — so the static `props` keep the defaults for what is unbound or `disconnected`.
+A binding's `map` is the board's mapping as the picture writes it (`applyValueMap(map, value)`), `itemFields` what each
+row of a list gains (`withItemFields`), `text` a value written into a text (`writeText`).
 
-A node or a grid item can name the state it is in, read from one of its widget’s bindings, and say how each state is
-shown:
+### `resolveDocument(picture, adapters)`
 
 ```ts
-interface StateRule {
-  from: string; // a key of widget.bindings
-  map: ValueMap<string>; // values, ranges, otherwise — each gives a state's name
-  looks?: Record<string, StateLook>;
-}
-interface StateLook {
-  outline?: string; // a ring of this colour around the part — a theme name ('negative') follows the board's tone
-  blink?: boolean; // the ring (or the part, without one) blinks — not under prefers-reduced-motion
-  hidden?: boolean; // the part is not drawn; connectors to it are
-}
-
-// on a node or a grid item, beside its widget:
-states: {
-  from: 'data.value',
-  map: { values: { Fault: 'fault', Running: 'running' }, ranges: [{ min: 80, value: 'hot' }] },
-  looks: { fault: { outline: 'negative', blink: true } },
-}
-```
-
-- The map reads the source’s value — before the binding’s own `map` — as a prop’s value map does: `values` by text, then
-  `ranges`, then `otherwise`.
-- A reading the map names nothing for is no state, never the reading itself; so is a binding that read no value
-  (`disconnected`).
-- A look draws around the part’s frame; the frame’s border keeps showing connection quality. A state without a look is
-  still named: the frame carries `data-state`, and its title and announcement say the state first.
-
-### `HttpRef`
-
-```ts
-interface HttpRef {
-  path: string;
-  item?: { list: string; where: Record<string, string | number | boolean> };
-  items?: { list: string; where: Record<string, string | number | boolean> };
-  valuePath?: string;
-  observedAtPath?: string;
-  timeZone?: string;
-  maxAgeSeconds?: number;
-  requestTime?: { delaySeconds?: number; stepSeconds?: number };
-}
-```
-
-The reference the hosted HTTP connector reads, and the one the authoring view's binding form writes
-for an adapter that lists no references of its own. Implement this shape to have the form fill it in.
-
-- `path` — the request, relative to the connector's base URL: a path starting with a single `/`,
-  with its query. It may hold time places, `{{now:yyyyMMdd}}` and `{{now:HHmm}}` — a pattern of `yyyy`
-  `MM` `dd` `HH` `mm` with `-` `.` `:` `_` `T` between — for a source asked for the data of a given
-  time rather than for its latest; each request fills them in (see `requestTime`). Any other `{{…}}`
-  makes the reference invalid.
-- `item` — one element of the list at the JSON Pointer `list`: the first whose fields equal every one
-  in `where` (`"12"` and `12` match). Sources reorder their lists, so a position would name another
-  element.
-- `items` — every element of the list at `list` whose fields equal every one in `where`, in the
-  source's order: the rows a list or a table shows, kept to the part of the list they are about (one
-  pollutant of a list of all of them). The value is that array, empty when none matches. It goes alone —
-  with no `item`, `valuePath` or `observedAtPath` (each row has a time of its own).
-- `valuePath` — an RFC 6901 JSON Pointer to the value, inside `item` when there is one, else inside
-  the whole response. Absent or `''`: the whole of it.
-- `observedAtPath` — a JSON Pointer, read where `valuePath` is, to the time the source says it
-  observed the value. A source that publishes its readings on a schedule says how old they are this
-  way: an hourly measurement fetched at :50 is fifty minutes old. Absent, or the field empty: the
-  value counts as observed when it was read.
-- `timeZone` — the IANA time zone (`Asia/Seoul`) a time without an offset is in, and the clock the
-  path's time places are read on. Absent: UTC.
-- `requestTime` — which time the path's time places name: the time the request is sent,
-  `delaySeconds` earlier — how long after a time the source has its data — rounded down to a multiple
-  of `stepSeconds` — how often it has new data — counted from midnight on `timeZone`'s clock. A source
-  that publishes each hour's observations forty minutes after the hour is
-  `{ delaySeconds: 2400, stepSeconds: 3600 }`: at 13:31 it is asked for 12:00, at 13:41 for 13:00.
-  Absent: the time the request is sent, to the minute. `requestPath(ref, now)` (from
-  `@iyulab/u-board/domain`) gives the request a reference makes at a time.
-- `maxAgeSeconds` — how old the source's value may normally be and still be current, as HTTP's
-  `max-age` says of a response. A source that publishes on a schedule, and late, has values that are
-  always some minutes old: an hourly measurement published forty minutes after the hour is up to two
-  hours old before the next one arrives. Older than this by the observed time, the reading is `stale`
-  with reason `lagging` — the source's latest, but behind. It also spaces the source's requests: a read
-  answers later resolves of the same request for an eighth of it (at least the installation's reuse
-  window), which spends a daily request quota that much more slowly. Absent: no age limit.
-
-The observed time is read as epoch seconds or milliseconds (a number, or a string of 10 or 13
-digits), ISO 8601 and the variations sources write (`2026-10-09 19:10`, `2026.10.09`, a missing
-offset, or an offset in hours alone such as `+09`), or compact digits (`202610091900`, `20261009 1910`,
-`20261009` — also when written as a number). A field that holds
-something else makes the binding `disconnected` with reason `format`; a time more than five minutes
-after the read does too, since a source cannot have observed it yet — the usual cause is a missing
-`timeZone`.
-
-`readHttpRef(body, ref, readAt, now?)` is that reading of a parsed response — the value, its observed
-time (epoch ms) and whether it is `lagging` at `now` (the read, by default), or why it failed (`address`: the response lacks what the reference names; `format`:
-it has it in a form the reference cannot read). `resolvedReading(reading)` turns a reading that found its
-value into the binding's result — `live`, or `stale` with reason `lagging` — so every reader of a reference
-reports it alike. `isHttpRef(ref)` checks the shape, and `parseSourceTime(raw, timeZone?)` reads one time.
-All are exported from `@iyulab/u-board/domain`.
-
-#### `sourceErrorIn`
-
-```ts
-interface SourceErrorField {
-  path: string;
-  ok?: string[];
-  messagePath?: string;
-}
-function sourceErrorIn(body: unknown, field: SourceErrorField): string | undefined;
-```
-
-Some sources answer a key they do not accept, a query they reject or a spent quota with success (HTTP 200)
-and a status of their own in the body. Read as data, that answer only says the bound value is missing. A data
-source's owner says where such a source writes its status, as a setting of the data source (the same for every
-request): `path`, a JSON Pointer to the status; `ok`, the statuses that mean success — absent when the source
-writes a status there only when it fails (`{ "path": "/code", "messagePath": "/message" }`), present when it
-always writes one (`{ "path": "/response/header/resultCode", "ok": ["00"], "messagePath": "/response/header/resultMsg" }`);
-and `messagePath`, a JSON Pointer to its words for the error. `sourceErrorIn` answers those words with the
-status (`"The key is not valid. (INFO-100)"`), or the status alone when the source gives no words, or
-`undefined` when the answer reports no error — an absent or `null` status says nothing, and statuses compare as
-text. The hosted HTTP connector checks every answer of such a data source this way and fails its bindings with
-reason `source` and that `message`. `isSourceErrorField(field)` checks the shape. Both are exported from
-`@iyulab/u-board/domain`.
-
-### `Widget`
-
-```ts
-interface Widget {
-  type: string;
-  props?: Record<string, unknown>;
-  bindings?: Record<string, Binding>;
-}
-```
-
-- `type` — identifies which widget kind to render (for example, a specific
-  [`@iyulab/u-widgets`](https://github.com/iyulab/u-widgets) element). Opaque to U-Board — it is
-  passed through to the renderer without interpretation.
-- `props` — static configuration in whatever shape that widget kind expects. The shipped renderer
-  passes `{ widget: type, ...props }` to u-widgets — the
-  [package README](../packages/core/README.md#widgets) lists the widgets the authoring UI offers and
-  their props.
-- A `type` of `element:<name>` places an element the document defines under `elements` (below):
-  U-Board draws it itself, and `props` are what its definition's props schema describes.
-- `bindings` — a map from a dotted path into `props` (e.g. `'data.value'`, or a nested path like
-  `'data.status'`, or an array element like `'items.1.value'`) to a `Binding`. At resolution time,
-  each entry's resolved value is written into `props` at that path — copying, never mutating, the
-  objects and arrays along the way — so the same static `props` object safely provides defaults for
-  any key that isn't bound, or whose binding is `disconnected`.
-
-### `ViewDocument` — `CanvasView` or `GridView`
-
-`ViewDocument` is a union told apart by `kind`. Narrow it before reading a kind's fields:
-
-```ts
-if (doc.kind === 'canvas') doc.nodes;   // CanvasView: background, nodes, connectors, decorations
-else doc.items;                         // GridView: items in order, each a GridItem
-```
-
-Both kinds place a `Placed` — `{ id, widget }`: a canvas `Node` adds a position, a `GridItem` adds the
-room it takes (`span` 1–12, absent 4; `spanMedium` 1–6 for a medium-width board, absent its share of
-the row it sits on at full width — a full row stays a full row; `height` in pixels, absent the widget's own). `placedIn(doc)` returns every placed
-widget of either kind, resolved or not — the walk to use for anything that looks at every binding.
-`resolveDocument` returns the same kind it is given (`ResolvedCanvasView`, `ResolvedGridView`).
-`emptyViewDocument(kind)` is a document of either kind with nothing on it yet. `ViewerPage` shows either kind and
-`AuthoringView` edits either (`onSave` receives a `ViewDocument`); importing
-a document of the other kind in the editor opens it in that kind's editor.
-
-`validateViewDocument` checks either kind, and ids are unique across the whole document. The same
-rules, apart from those its description names (id uniqueness, element references and props, the
-markup policy), are published as a JSON Schema (2020-12): `@iyulab/u-board/view-document.schema.json`.
-
-### Elements — `ElementDefinition`
-
-```ts
-interface ElementDefinition {
-  render: 'template' | 'script';
-  props?: PropsSchema;        // a JSON Schema object schema, in the subset below
-  template?: string;          // render: 'template' — HTML or SVG with {{values}}
-  script?: string;            // render: 'script'
-  style?: string;             // CSS for its own markup only
-  size?: { width: number; height: number };
-  resources?: string[];       // https origins it loads from, e.g. 'https://cdn.example.com'
-}
-```
-
-Either kind of view may carry `elements: Record<string, ElementDefinition>` — names of lowercase
-letters, digits and hyphens. A widget `{ type: 'element:pump', props: { state: 'run' } }` places one.
-
-```ts
-elements: {
-  pump: {
-    render: 'template',
-    props: { type: 'object', required: ['state'], properties: { state: { enum: ['run', 'stop', 'fault'] }, rpm: { type: 'number' } } },
-    template: '<svg viewBox="0 0 64 64"><circle class="{{state}}" cx="32" cy="32" r="26"/></svg><p>{{rpm}} rpm</p>',
-    style: '.run { fill: var(--u-widget-positive) } .fault { fill: var(--u-widget-negative) }',
-    size: { width: 140, height: 160 },
-  },
-}
-```
-
-- **Template values** — logic-less: `{{name}}` (a dotted path into the props, every value escaped),
-  `{{#list}}…{{/list}}` (repeated for each item, or shown once for any other truthy value; inside it
-  a name is looked up in the item first and `{{.}}` is the item itself), `{{^flag}}…{{/flag}}` (shown
-  when empty or false), `{{! comment}}`. `{{inlet | fixed:1}}` shows a number — or text that reads as
-  one — with that many digits after the point (0–6), so `24` and `24.25` read as `24.0` and `24.3`;
-  `{{orders | grouped:0}}` the same with a comma every three digits (`61,700`); anything else shows as it is. There is no unescaped output and no partial. Numbers become
-  a drawing through CSS: `style="--level: {{level}}"` and `height: calc(var(--level) * 1%)`.
-- **Markup policy** — HTML text and structure tags, `img`, and SVG shapes, text, gradients, patterns,
-  symbols and filters. No `script`, `style`, `iframe`, `a`, form or `foreignObject`; no event handler
-  attribute; a URL (`href`, `src`, CSS `url()`) only to a fragment of the markup (`#id`), an inline
-  image (`data:image/…`) or an origin in `resources`; no `@import`. The renderer applies the same
-  policy again after filling the values, so a value cannot add what the template did not.
-- **Theme** — the board's tone reaches the markup as CSS variables: `--u-widget-bg`, `--u-widget-surface`,
-  `--u-widget-text`, `--u-widget-text-secondary`, `--u-widget-border`, `--u-widget-primary`, `--u-widget-positive`,
-  `--u-widget-negative`, `--u-widget-warning`, `--u-widget-font-family`, `--u-widget-font-mono`.
-- **Props schema** — the keywords `type`, `enum`, `const`, `properties`, `required`, `items`,
-  `minimum`, `maximum`, `minLength`, `maxLength`, `title`, `description` and `default`; any other is
-  an error. A placed element's static props are checked against it; a prop a binding fills is
-  taken as given.
-- **Size** — in a grid, an item placing the element takes `size.height` when it gives none. On a
-  canvas the node's box is the layout, and the element fills it.
-- **Origins** — an element reaches an origin only when it lists it in `resources` and the host
-  allows it: `ViewerPage`'s `elementOrigins` (none by default). A U-Board server sends the origins its
-  installation allows with every board (`elementOrigins` in the board's answer, from
-  `UBOARD_ELEMENT_ORIGINS`).
-
-**Script elements** run in a frame of their own: `<iframe sandbox="allow-scripts">`, whose document the
-board's server builds from the saved definition. The frame has an origin of its own — it cannot reach
-the page, its storage or the viewer's session — and no network (`connect-src 'none'`): its data arrives
-as its props, through the board's bindings like any widget's. Its code reads them through `ub`:
-
-```js
-ub.onProps((props, appearance) => draw(props));   // now, if props have arrived, and on every change
-ub.reportError(error);                             // shown on the element's box
-```
-
-The board's theme is set on the frame's root as the same `--u-widget-*` variables; an uncaught error,
-or a load its policy blocks, is reported on the element's box as well. The frame loads when the element
-nears the screen. A U-Board server serves the element's code with each loop bounded in time: a loop that runs a
-second without finishing throws, reported like any error, and the frame lives on (a loop that awaits or yields is
-left as written). The page asks a running frame every two seconds whether it still answers, and removes one
-that has left a question unanswered for six seconds — code that never yields other than by a loop, such as a
-pattern that backtracks without end — with a notice on its box. That keeps the page usable where the browser runs the frame in a process of its own, as
-Chrome and Edge do with site isolation; a browser that runs it with the page (Firefox, Safari) is held by such code
-too. Either way the code keeps running in the browser until it is restarted, and the board's other script elements,
-which share its process, stop answering as well — so an element's code must always return; a server that serves each
-definition from an origin of its own (`UBOARD_ELEMENT_FRAME_ORIGIN`) keeps the others apart from it in Chrome and Edge. The console opens a
-board without running its script elements at `…/boards/<id>/edit?scripts=off`, to fix such code. `ViewerPage`'s and `AuthoringView`'s `elementFrames` says where the frames are served —
-`/api/element-frames/<board id>` on a U-Board server, which answers
-`/api/element-frames/<board id>/<element>/<definition hash>` (`elementDefinitionHash`) only while the
-saved board defines that element exactly so. `{definition}` in `elementFrames` is replaced by the definition's own
-label (`elementFrameLabel` — lowercase hex), for frames served from an origin per definition: a U-Board server with
-`UBOARD_ELEMENT_FRAME_ORIGIN` set gives that address as `elementFrames` with each board. Without `elementFrames`, a
-script element shows a notice in its box; an element edited in the editor is drawn again once the board is saved.
-
-### `Node`, `Connector`, `Background`, `Shape`
-
-These carry no resolution logic — see [`concepts.md`](concepts.md) for what each represents, and
-the exported TypeScript types themselves for the exact fields (`Node.anchored`,
-`Connector.fromNodeId`/`toNodeId`, `Background.image`, `Shape` (`RectShape`/`TextShape`, the
-`decorations` array's element type), `CanvasView.kind`/`nodes`/`connectors`/`decorations`/`appearance`).
-They are included in the walkthrough above for context, not repeated field-by-field here since
-none of them have a resolution-time contract to document.
-
-### Anchors and reference points
-
-```ts
-interface BackgroundImage {
-  src: string;
-  width: number;
-  height: number;
-  referencePoints?: [ReferencePoint, ReferencePoint];
-}
-
-interface ReferencePoint {
-  x: number; // a point of the image, in scene units
-  y: number;
-  coordinate: { x: number; y: number }; // what it stands for
-}
-```
-
-A background image can declare two of its points and the coordinates they stand for in the space it
-depicts — a floor plan's metres, a map's longitude and latitude. An anchored node's place is then a
-coordinate: its anchor is the center of its box (default-sized when it has none), read through the two
-points.
-
-- `coordinateOf(background, node)` — the coordinate a node is anchored at.
-- `placeAt(background, node, coordinate)` — where a node goes (`x`/`y`) for its anchor to be at a
-  coordinate.
-
-Each returns `null` for a background without reference points. Each axis maps linearly between the two
-points, which differ on both axes in the image and in their coordinates (`validateViewDocument` checks
-it). U-Board does not interpret what the image depicts, and so applies no projection: an image drawn in
-a projection (a web map in Mercator, say) is read in that projection's coordinates, and a small area —
-a site, a few city blocks — is flat enough to draw in longitude and latitude directly. The node stores
-its scene `x`/`y` as before, so a renderer needs none of this.
-
-### `resolveDocument(doc, adapters)`
-
-```ts
-function resolveDocument(
-  doc: ViewDocument,
-  adapters: readonly Adapter[]
-): Promise<ResolvedViewDocument>;
-```
-
-The single entry point a renderer calls to go from a saved `ViewDocument` to something paintable.
-Resolves every widget's bindings — and on a canvas board every connector's (`resolveConnector`) — against the given
-`adapters` and returns a `ResolvedViewDocument` — it has no opinion on canvas-kit, u-widgets, or any other rendering
-concern (see [`architecture.md`](architecture.md)).
-
-A connector binds its `label` and `style` (`CONNECTOR_BINDABLE`: `label`, `style.stroke`, `style.strokeWidth`,
-`style.dash`, `style.arrow`) with the same binding shape as a widget's. A value is taken only in the form its path
-draws — a label as text (a number as it reads), a width as a positive number, a dash as one of `STROKE_DASHES`, an
-arrow as one of `CONNECTOR_ARROWS`, a colour as text — otherwise the static value stays, as for a disconnected
-binding. A bound label whose text names `{{value}}` is a pattern: the value fills that place and the rest stays —
-`label: "{{value | fixed:1}} Mbps"` reads `820.4 Mbps`, with the template element's `fixed:N` (0–6 digits after the
-point) or `grouped:N` (the same with a comma every three digits) — and `—` takes the value's place while there is none (and in the editor). In a component, its parameters fill
-their `{{name}}` first and `{{value}}` stays for the binding. A resolved connector carries `quality` per
-bound path.
-
-`bindingsIn(doc)` yields every binding a document declares, widgets' and connectors', with the JSON Pointer of what
-it fills — the one walk for whatever needs to know what a board reads. A component instance's bindings come as it
-reads them, its parameters filled in, with the pointer of the binding in the component and the instance's id
-(`instance`).
-
-### Components — `expandComponents(doc)`
-
-```ts
-interface ComponentDefinition {
-  params?: PropsSchema;          // the parameters it takes, as an element's props are described
-  nodes: ComponentNode[];        // a node without `anchored`, placed from the component's origin
-  connectors?: Connector[];      // between its own nodes
-  decorations?: Shape[];         // placed from its origin
-}
-
-interface ComponentInstance {
-  id: string;
-  component: string;             // a key of `components`
-  x: number;
-  y: number;
-  anchored: boolean;             // its nodes take it
-  params?: Record<string, unknown>;
-}
-```
-
-`expandComponents(doc)` is the board as it is drawn: each instance replaced by its component's parts, moved to the
-instance's origin, each with the id `instancePartId(instance, part)` — `<instance id>/<part id>` — and every
-`{{name}}` in their text filled with the instance's value, or the parameter's `default`. A text that is only
-`{{name}}` takes the value itself (a number stays a number); inside a longer text the value is written as text. The
-parts follow the board's own, in instance order, and the result has no components left, so expanding it again changes
-nothing. `resolveDocument` and `bindingsIn` expand first, so a renderer, the board state and a share link see the
-parts; an editor edits the component, not the parts an instance draws. A stored document's `nodes` and `connectors`
-are only the board's own: a program that walks them directly misses every instance's parts, which stay in
-`components` and `instances` until expanded — walk `expandComponents(doc)` instead.
-
-`validateViewDocument` checks a component as a small canvas of its own — its parts' ids unique among them, its
-connectors joining its own nodes, its texts naming only parameters it declares, no `/` in a part's id — and each
-instance against it: a component the board defines, only declared parameters in their declared types, a value for each
-one its parts use, part ids no other part of the board has. An element prop a parameter fills is checked once filled
-in, at the component's path, naming the instance.
-
-### `ResolvedViewDocument` / `ResolvedNode` / `ResolvedWidget`
-
-```ts
-interface ResolvedViewDocument extends Omit<ViewDocument, 'nodes'> {
-  nodes: ResolvedNode[];
-}
-
-interface ResolvedNode extends Omit<Node, 'widget'> {
-  widget: ResolvedWidget;
-}
+function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument>;
+function resolveWidget(widget: Widget, adapters: readonly Adapter[]): Promise<ResolvedWidget>;
 
 interface ResolvedWidget {
   type: string;
@@ -738,31 +678,22 @@ interface ResolvedWidget {
 }
 ```
 
-`resolveDocument`'s return value: the same document shape, with every node's `widget` replaced by
-a `ResolvedWidget`. `background` and `connectors` pass through unchanged — they carry no bindings.
+Resolves every widget's bindings — and on a canvas every connector's (`resolveConnector`) — against the given adapters,
+and returns the same picture with every `widget` a `ResolvedWidget`: its static `props` merged with every binding whose
+reading has a value to show (`live`, or `stale` with its last-known value), `quality` per bound prop path (only props
+that had a binding carry one), and the `reasons` and `observedAt` the adapters reported. A `disconnected` reading is never
+merged, even if the adapter returned a value. `bindingsIn(picture)` yields every binding with the JSON Pointer of what it
+fills — the one walk for whatever needs to know what a board reads.
 
-- `ResolvedWidget.type` — carried through unchanged from the source `Widget`.
-- `ResolvedWidget.props` — the widget's static `props` merged with every binding whose reading has
-  a value to show (`live`, or `stale` with its last-known value), at the dotted path each `Binding`
-  named. A `disconnected` reading is never merged, even if the adapter returned a `value`.
-- `ResolvedWidget.quality` — connection quality per bound prop path. A key is present only for
-  props that had a binding; a static-only prop carries no entry, since quality doesn't apply to
-  it. This is what a renderer reads to show an operator which values are live, stale, or
-  disconnected — see [`architecture.md`](architecture.md) for how the shipped renderer does this.
-- `ResolvedWidget.reasons` — the `QualityReason` per bound prop path, for bindings whose adapter
-  reported one on a non-`live` reading. Absent when none did.
-- `ResolvedWidget.observedAt` — when each `live` or `stale` value was obtained from its source,
-  per bound prop path, for bindings whose adapter reported it. Absent when none did.
-
-### `boardStateOf(doc, { now, revision? })`
+### `boardStateOf(resolved, { now, revision? })`
 
 ```ts
 function boardStateOf(doc: ResolvedViewDocument, options: { now: number; revision?: number }): BoardState;
 
 interface BoardState {
   evaluatedAt: string; // ISO 8601
-  revision?: number; // of the definition, when the caller knows it
-  parts: Record<string, PartState>; // by node or grid item id
+  revision?: number; // of the board, when the caller knows it
+  parts: Record<string, PartState>;
 }
 interface PartState {
   state?: string;
@@ -779,204 +710,80 @@ What a resolved board shows, part by part — no values. For example:
   "evaluatedAt": "2026-10-16T09:00:00.000Z",
   "revision": 7,
   "parts": {
-    "pump": { "state": "fault", "quality": "stale", "reason": "transport", "observedAt": "2026-10-16T08:40:00Z" },
+    "pump": { "state": "down", "quality": "stale", "reason": "transport", "observedAt": "2026-10-16T08:40:00Z" },
     "title": {}
   }
 }
 ```
 
-`ViewerPage` hands it to its host through `onBoardState` each time it draws new values (a view that has stopped updating
+The viewer hands it to its host through `onBoardState` each time it draws new values (a view that has stopped updating
 reports its parts `stale`); a U-Board server answers it at `GET /api/share/boards/:id/state`.
 
-### Triggers — `Trigger`
+### Triggers
 
-What a board does when something happens on it — `triggers` at the top level of either kind, run by a viewer:
+The decisions a viewer makes, as pure functions for a host that draws a picture its own way: `firedBy(triggers, event,
+states)` — the triggers an event fires, given the parts' states now; `stateChanges(before, now)` — the `leave` and
+`enter` events between two draws; `linkFor(url, { node, state, board }, { origins })` — the address an `open-link` opens,
+or `undefined` when it may not open; `elementListeners(triggers)` — by part, the element events triggers listen for;
+`FiringLimit` — once a second per trigger. In the picture a trigger names a part as `node` and a status as `state`.
+
+### `HttpRef`
 
 ```ts
-interface Trigger {
-  on:
-    | { event: 'click'; node: string } // the part is clicked, or activated from the keyboard
-    | { event: 'element'; node: string; name: string } // the part's element raises `name`
-    | { event: 'enter' | 'leave'; node: string; state: string } // the part's state changes
-    | { event: 'open' }; // the board is first drawn
-  when?: { node: string; state: string | string[] }; // only while that part is in one of these states
-  do: Array<
-    | { action: 'open-link'; url: string } // a new tab
-    | { action: 'focus'; node: string } // bring a part into view
-    | { action: 'emit'; name: string } // hand the host an event
-    | { action: 'go-to-board'; board: string } // ask the host to show another board
-  >;
+interface HttpRef {
+  path: string;
+  item?: { list: string; where: Record<string, string | number | boolean> };
+  items?: { list: string; where: Record<string, string | number | boolean> };
+  valuePath?: string;
+  observedAtPath?: string;
+  timeZone?: string;
+  maxAgeSeconds?: number;
+  requestTime?: { delaySeconds?: number; stepSeconds?: number };
 }
-
-triggers: [
-  { on: { event: 'click', node: 'pump' }, do: [{ action: 'open-link', url: '/maintenance?asset={{node}}' }] },
-  { on: { event: 'enter', node: 'pump', state: 'fault' }, do: [{ action: 'focus', node: 'pump' }, { action: 'emit', name: 'pump-fault' }] },
-]
 ```
 
-- `open-link` opens an `https://` address or a path on the installation the board is served from (`/…`, never `//…`)
-  in a new tab, with no opener. `{{node}}`, `{{state}}` and `{{board}}` in it are filled in, each URL-encoded — a
-  part’s values are not. A host narrows where links may go with `linkOrigins`.
-- `enter` and `leave` fire on a change between two draws of one viewer, never on the first draw — `open` is for that.
-- A part with a `click` trigger becomes a button: Enter and Space press it, and it is named by its `caption` (by its
-  id without one — give a clickable part a caption). A drag that starts on it pans the board and presses nothing.
-- An element raises an event with `ub.emit(name)` in a script element, or, in a template element’s markup, from a
-  region marked `data-ub-event="name"` that is clicked. A marked region some trigger listens for also takes the
-  keyboard: it is focusable and a button to assistive technology (unless the markup gives it its own `tabindex` or
-  `role`), and Enter or Space raise its event.
-- A trigger naming a part the board does not place does nothing; validation names its path.
-- Each trigger fires at most once a second.
+The reference a data read with a `path` becomes, and what the hosted HTTP connector reads — implement it in an adapter
+that stands in for one. `path` is the read's request; `item` one element of the list (by `key`, or a `pivot`'s row),
+`items` the elements `where` keeps, `valuePath` a JSON Pointer to the value inside the item or the answer;
+`observedAtPath`, `timeZone`, `maxAgeSeconds` and `requestTime` the read's `time`, `zone`, `fresh` and `now`.
+`readHttpRef(body, ref, readAt, now?)` reads a parsed response with it the way the hosted connector does — the value, its
+observed time and whether it is `lagging`, or why it failed (`address`, `format`); `resolvedReading(reading)` turns a
+reading that found its value into the binding's result; `requestPath(ref, now)` is the request a reference makes at a
+time; `isHttpRef(ref)` checks the shape; `parseSourceTime(raw, timeZone?)` reads one time.
 
-`ViewerPage` runs a board’s triggers; `AuthoringView` runs them in View only, and edits them — on the selected part in its
-property panel, the board’s own (`open`) in its board panel — as it edits a part’s states. Both take the host’s side:
-
-| Prop | |
-|---|---|
-| `boardId` | The board’s id — what `{{board}}` becomes, and what the events it hands the host name. |
-| `onTrigger(event: BoardEvent)` | An `emit`: `{ name, board?, node?, state? }` — the event’s name and the part and state it came from, never a value. |
-| `onNavigate({ board })` | A `go-to-board`. Without it, nothing happens: the viewer does not go anywhere on its own. |
-| `linkOrigins` | The origins an `open-link` may open besides this installation’s paths. Left out: any `https` address. |
-
-The share viewer posts each event to the page it is embedded in ([self-hosting.md](self-hosting.md) — Share links). The decisions are pure functions in
-`@iyulab/u-board/domain`, for a host that draws a board its own way: `firedBy(triggers, event, states)` — the
-triggers an event fires, given the parts’ states now; `stateChanges(before, now)` — the `leave` and `enter` events
-between two draws; `linkFor(url, { node, state, board }, { origins })` — the address an `open-link` opens, or
-`undefined` when it may not open; `elementListeners(triggers)` — by part, the element events triggers listen for;
-`FiringLimit` — once a second per trigger.
-
-### `resolveWidget(widget, adapters)`
+#### `sourceErrorIn`
 
 ```ts
-function resolveWidget(widget: Widget, adapters: readonly Adapter[]): Promise<ResolvedWidget>;
+interface SourceErrorField { path: string; ok?: string[]; messagePath?: string }
+function sourceErrorIn(body: unknown, field: SourceErrorField): string | undefined;
 ```
 
-The single-widget building block `resolveDocument` calls once per node. Exported directly for a
-consumer that resolves widgets outside the `ViewDocument`/`resolveDocument` flow (for example, a
-custom renderer resolving one widget at a time).
+Some sources answer a key they do not accept, a query they reject or a spent quota with success (HTTP 200) and a status
+of their own in the body. A data source's owner says where such a source writes its status, as a setting of the data
+source: `path`, a JSON Pointer to the status; `ok`, the statuses that mean success — absent when the source writes a
+status there only when it fails (`{ "path": "/code", "messagePath": "/message" }`), present when it always writes one
+(`{ "path": "/response/header/resultCode", "ok": ["00"], "messagePath": "/response/header/resultMsg" }`); and
+`messagePath`, a JSON Pointer to its words for the error. `sourceErrorIn` answers those words with the status, or the
+status alone, or `undefined` when the answer reports no error. The hosted HTTP connector checks every answer of such a
+data source this way and fails its reads with reason `source` and that `message`. `isSourceErrorField(field)` checks the
+shape.
 
-## Reading and checking documents
+### Element frames
 
-A `ViewDocument` that comes from outside your own code — a file the author picked, a request
-body — should be checked before anything renders it. These functions do that, and the hosted
-server applies the same check to every document it stores.
+`elementDefinitionHash(definition)` is the hash a script element's frame address carries, `elementFrameLabel(hash)` the
+label of an origin per definition, and `elementFrameHtml` · `elementFrameScripts` the document a server answers the
+frame with.
 
-### `validateViewDocument(value, options?)`
-
-```ts
-interface ViewDocumentIssue { path: string; message: string }
-function validateViewDocument(value: unknown, options?: { strict?: boolean }): ViewDocumentIssue[];
-```
-
-`validateViewDocument` checks every field the `ViewDocument` type promises — nodes, each widget
-and binding, connectors, decorations, the background — and returns every problem it finds, each
-located by an RFC 6901 JSON Pointer into the value
-(`""` is the value itself). An empty array means the value is a valid document.
-
-It checks structure, and the elements the document defines: a binding's `ref` belongs to its adapter
-and a prepared widget's `type`/`props` (and the values a binding's `map` gives) to its widget library,
-so their contents are not inspected. A connector joins two nodes the document has. Fields it does not
-know are ignored, so a document written by a newer version still opens. An element definition
-is held to the element contract (markup policy, props schema subset, `resources` origins), and a
-widget of type `element:<name>` must name a defined element and give props its schema accepts —
-each problem with what to do instead where there is something to say:
-
-```ts
-// → [{ path: '/elements/pump/template', message: '<script> is not allowed in a template — a template runs no script — use render: "script" for code' }]
-```
-
-```ts
-validateViewDocument({
-  kind: 'canvas', background: {}, connectors: [],
-  nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge', bindings: { value: null } } }],
-});
-// → [{ path: '/nodes/0/widget/bindings/value', message: 'expected a binding object ({ adapter, ref })' }]
-```
-
-**`strict`** is for a document about to be written — the hosted server saves with it, and so does the MCP server's
-`validate`. It also refuses what this version would keep but never draw: a field the format does not have — the
-issue names the fields that place has — and a decoration colour outside the forms every canvas reads: hex
-(`#1f6feb`, `#1f6feb33`), `rgb()`/`rgba()`, `hsl()`/`hsla()`, a CSS colour name, `transparent`, or `none` (paint
-nothing, the same as leaving the field out) — or a theme colour's name: a tone the widgets colour a state in (`ok`,
-`info`, `watch`, `warn`, `alarm`, `off`, `idle`, `past`, `now`, `next`), `positive`, `warning`, `negative`, or
-`accent` (the board's `accent`, else the theme's primary colour), drawn in the widgets' palette for the board's
-`appearance`, so a state's ring and a gauge mean the same green and a dark board needs no second set of colours. The
-board's `accent` itself takes a colour, not a name. A CSS variable is refused — a canvas has no stylesheet to resolve it.
-
-```ts
-validateViewDocument(doc, { strict: true });
-// → [{ path: '/connectors/0/color', message: 'a connector has no "color" — it would be kept but never drawn. A connector has: id, fromNodeId, toNodeId, label, labelAt, labelSize, style, bindings. …' }]
-```
-
-### `lintViewDocument(doc, options?)`
+### `lintViewDocument(picture, options?)`
 
 ```ts
 interface ViewDocumentAdvice { path: string; message: string; count?: number }
 function lintViewDocument(doc: ViewDocument, options?: { geometryLimit?: number }): ViewDocumentAdvice[];
 ```
 
-Advice on a valid document — none of it stops it being saved or drawn. On a canvas board, first where parts would
-be drawn over one another: two nodes whose boxes overlap (a node without a size counts at 160 × 100), a text
-decoration under a node (nodes draw over decorations), a connector running through a text, two texts running into
-each other — a text's box estimated as one line, 0.6 × its font size per character. At most 30 of these
-(`geometryLimit`; `Infinity` lists them all), then one line counting the rest by kind, whose `count` says how many it
-stands for — so the advice comes to the sum of the counts, one for a line without one. The board is judged as drawn,
-its component instances' parts with it: what lies within one instance is said at the component (`/components/<name>/…`)
-— once, naming the instances it holds for unless it holds for every one — and what involves an instance and another part
-is said at the instance (`/instances/<i>`), naming its part. Then an element defined but placed
-nowhere, more than 30 script elements on one board (each runs in a frame of its own), an element whose
-markup, script and CSS together pass 32 KB.
-
-### `parseViewDocument(text)` / `InvalidViewDocumentError`
-
-```ts
-function parseViewDocument(text: string): ViewDocument;
-class InvalidViewDocumentError extends Error { readonly issues: ViewDocumentIssue[] }
-```
-
-Parses JSON **text** (for example a file's contents — not an already-parsed object) and validates
-it. Throws `InvalidViewDocumentError` when the text is not JSON or the result is not a valid
-document; the message names the first problem, and `issues` lists them all.
-
-### Changing a document — `applyJsonPatch(doc, patch)` / `documentPatch(before, after)`
-
-```ts
-function applyJsonPatch<T>(document: T, patch: unknown): T;   // patch: JsonPatchOperation[]
-function documentPatch(before: unknown, after: unknown): JsonPatchOperation[];
-```
-
-A board is changed on the server by a JSON Patch (RFC 6902) against its revision. `applyJsonPatch` applies one —
-entirely or not at all, a new value, `document` untouched; a failing operation throws `JsonPatchError` with its
-`index`. A `replace` keeps a member where it stands among the others.
-
-`documentPatch` is the other way round: the patch that turns `before` into `after`, so a change made on a whole
-document — every use of a renamed element rewritten, a node removed with the lines to it — goes to the server as the
-few operations it made. It goes down to what changed: an object member by member; a list whose items all carry a
-distinct `id`, matched by id — removed items from the last, then each kept item where it now is, then new ones at the
-end (`/-`); a list without ids, index by index while its length stays. A list whose items changed order (or, without
-ids, its length) is replaced whole. `applyJsonPatch(before, documentPatch(before, after))` equals `after` as JSON —
-object members have no order there, so members written in another order send nothing, and an added one comes last.
-
-### Edits that change a board in more than one place — `applyEditCommands(doc, commands)`
-
-```ts
-type EditCommand =
-  | { command: 'rename-element'; from: string; to: string }    // every widget that places it follows
-  | { command: 'remove-element'; name: string }                // only while nothing places it
-  | { command: 'rename-symbol'; from: string; to: string }     // every markup that places it follows
-  | { command: 'remove-symbol'; name: string }                 // only while nothing places it
-  | { command: 'remove'; ids: string[] }                       // with the lines and triggers that name them
-  | { command: 'make-component'; ids: string[]; name: string; instance: string }
-  | { command: 'detach'; instance: string }                    // the instance becomes the board's own parts
-  | { command: 'rename-component'; from: string; to: string }  // its instances follow
-  | { command: 'remove-component'; name: string };             // with its instances
-function applyEditCommands<D extends ViewDocument>(doc: D, commands: readonly EditCommand[]): D;
-class EditCommandError extends Error { readonly index: number; readonly path: string }
-```
-
-The edits the editor makes with one action, for a program to make the same way: `remove` takes a node's connectors
-and the triggers and `focus` actions that name it (on a grid, an item's triggers); `make-component` moves the lines
-between the chosen nodes into the new component and points the board's other lines and triggers at the instance
-(`<instance>/<part>`); `remove-component` removes its instances, and what names their parts, with it. The commands run
-in order on a new document, all or nothing — one that cannot run (a name that is not defined or already taken, an
-element still placed, a part an instance draws) throws `EditCommandError` with its `index`, the `path` it is about and
-what to do instead. To save the result, send `documentPatch(doc, result)` against the revision `doc` came from.
+Advice on a drawn board — none of it stops it being saved or drawn. On a canvas, first where parts would be drawn over
+one another: two boxes that overlap, a text under a part, a link running through a text, two texts running into each
+other (a text's box estimated as one line, 0.6 × its font size per character). At most 30 of these (`geometryLimit`;
+`Infinity` lists them all), then one line counting the rest by kind, whose `count` says how many it stands for. Then
+more than 30 script elements on one board (each runs in a frame of its own), and an element whose markup, script and CSS
+together pass 32 KB. The paths are the picture's; an assistant reads them back to the board's parts by id.

@@ -38,9 +38,9 @@ an edge it did not cover, and the contract is revised then.
 
 A view is authored as a specific "kind" (for example, a spatial canvas view), and each kind owns
 its own authoring capabilities. A new kind can be added later without redesigning the kinds that
-already exist. Two kinds are planned: the canvas, where a widget sits at a coordinate and the view
-scales, and a grid, where widgets follow an order and reflow to the screen. They share widgets,
-bindings and the identity of what is placed; each keeps only its own record of where things go.
+already exist. There are two: the canvas, where a part sits at a coordinate and the view scales, and a
+grid, where parts follow an order and reflow to the screen. They share parts, data and the identity of
+what is placed; each keeps only its own record of where things go.
 
 **Cost**: the shared structure between kinds has to be drawn carefully up front — getting that
 boundary wrong makes the first kind's implementation quietly load-bearing for every kind added

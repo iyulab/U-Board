@@ -11,7 +11,6 @@ describe('createDb', () => {
     expect(rows.map(r => r.table_name)).toEqual([
       'api_tokens',
       'audit_events',
-      'board_migrations',
       'board_share_tokens',
       'boards',
       'connectors',

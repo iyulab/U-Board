@@ -1,4 +1,3 @@
-import { fromV1 } from '@iyulab/u-board/board-v2';
 import type { LiveSampleConnector, SamplePack } from '@iyulab/u-board-samples';
 import { createBoard, createConnector, listConnectors, updateBoard, type ConnectorSummary } from './api-client.js';
 
@@ -31,14 +30,11 @@ export function keysToAsk(pack: SamplePack, connectors: readonly ConnectorSummar
 
 /**
  * Creates a board from `pack` in the workspace: its data sources (or the workspace's existing ones for the
- * same address), then the board, in the board language's second version, with its reads pointed at them. A source that asks for the workspace's own
- * key is created with the one `keys` gives under its connector key (see `keysToAsk`). Returns the new board's id.
+ * same address), then the board, with its reads pointed at them. A source that asks for the workspace's own key is created with the one `keys` gives under its connector key (see `keysToAsk`). Returns the new board's id.
  */
 export async function createBoardFromSample(workspaceId: string, pack: SamplePack, name: string, keys: Readonly<Record<string, string>> = {}): Promise<string> {
-  // Stored in the board language's second version — every sample converts whole (the samples' conversion ratchet), and
-  // one that would not is refused, before any data source is made for it, rather than stored without some of its parts.
-  const { board: document, unsupported } = fromV1(pack.document);
-  if (unsupported.length > 0) throw new Error(`The sample ${pack.id} does not convert whole: ${unsupported.join(', ')}`);
+  // A copy: the reads are pointed at this workspace's data sources below, and the sample stays as it is.
+  const document = structuredClone(pack.board);
   const { connectors } = await listConnectors(workspaceId);
   const ids = new Map<string, string>();
   for (const sample of liveConnectors(pack)) {
@@ -52,8 +48,7 @@ export async function createBoardFromSample(workspaceId: string, pack: SamplePac
     if (ownKey && !value) throw new MissingSampleKeyError(sample);
     ids.set(sample.key, (await createConnector(workspaceId, { ...settings, ...(value !== undefined ? { authValue: value } : {}) })).id);
   }
-  // Its reads name this workspace's data sources: each read's `from` is the sample source's key, whether a widget's
-  // binding or a line's read it.
+  // Its reads name this workspace's data sources: each read's `from` is the sample source's key.
   for (const read of Object.values(document.data ?? {})) read.from = ids.get(read.from) ?? read.from;
   const board = await createBoard(workspaceId, name);
   await updateBoard(workspaceId, board.id, { document });

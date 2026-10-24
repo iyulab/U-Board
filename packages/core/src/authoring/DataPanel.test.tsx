@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { DataPanel, parseWhere } from './DataPanel';
-import type { Query } from '../board-v2/types';
+import type { Query } from '../board/types';
 
 const data: Record<string, Query> = {
   pumps: { from: 'plant', path: '/pumps', list: '/value', key: 'id', fields: { flow: { unit: 'm³/h', state: { stop: 'off' } } } },

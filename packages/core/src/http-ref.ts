@@ -1,8 +1,7 @@
 /**
- * The HTTP connector's binding reference — the `ref` the binding form writes when an adapter offers no
- * references of its own (`Adapter.references`) — and how a response is read with it. One reading for every
- * place that answers such a binding: the server's resolve proxy, a page replaying a recorded response, the
- * binding form's preview. Two readers of one reference that disagree would show an author one value and a
+ * The HTTP connector's binding reference — what a board's request read (`path`) is drawn as — and how a response is
+ * read with it. One reading for every place that answers such a binding: the server's resolve proxy, a page replaying
+ * a recorded response, the data panel's look at a read. Two readers of one reference that disagree would show an author one value and a
  * viewer another.
  */
 

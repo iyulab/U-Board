@@ -3,7 +3,8 @@
 // (`@iyulab/u-board/viewer`), so what a visitor sees is what an installation renders — nothing to
 // sign in to, no server to wake.
 
-import type { Adapter, AdapterReference, CanvasView, ResolvedBinding } from '@iyulab/u-board/viewer';
+import type { Adapter, ResolvedBinding } from '@iyulab/u-board/viewer';
+import type { Board, Field } from '@iyulab/u-board/domain';
 
 export interface SampleBoardText {
   plant: string;
@@ -35,82 +36,37 @@ function escapeXml(text: string): string {
   return text.replace(/[<>&"']/g, c => `&#${c.charCodeAt(0)};`);
 }
 
-export function sampleBoard(text: SampleBoardText): CanvasView {
-  const bind = (ref: string) => ({ adapter: SAMPLE_ADAPTER_ID, ref });
+export function sampleBoard(text: SampleBoardText): Board {
+  // Each reference answers one value: read whole, as the one field `value`.
+  const read = (ref: string, field: Field) => ({ from: SAMPLE_ADAPTER_ID, ref, fields: { value: { at: '', ...field } } });
   return {
-    kind: 'canvas',
-    background: { image: { src: floorPlan(text.plant), width: WIDTH, height: HEIGHT } },
-    nodes: [
-      {
-        id: 'pump-a',
-        x: 54,
-        y: 150,
-        width: 140,
-        height: 52,
-        anchored: true,
-        widget: {
-          type: 'status',
-          props: { data: { label: text.pump, tone: 'idle', value: '' } },
-          bindings: {
-            'data.value': { ...bind('pump-a.state'), map: { values: { running: text.running } } },
-            'data.tone': { ...bind('pump-a.state'), map: { values: { running: 'ok' }, otherwise: 'alarm' } },
-          },
-        },
+    statuses: { running: { tone: 'ok', label: text.running }, stopped: { tone: 'alarm' } },
+    data: {
+      pump: read('pump-a.state', { label: text.pump, state: { running: 'running', '*': 'stopped' } }),
+      load: read('pump-a.load', { label: text.load, unit: '%' }),
+      temperature: read('tank.temperature', { label: text.temp }),
+      pressure: read('line.pressure', { label: text.pressure }),
+      conveyor: read('conveyor.state', { label: text.conveyor }),
+    },
+    parts: {
+      'pump-a': { as: 'status-card', of: 'pump', title: text.pump, show: ['value'] },
+      'pump-a-load': { as: 'gauge', of: 'load', show: 'value', title: text.load, max: 100 },
+      temperature: { as: 'stat', of: 'temperature', show: 'value' },
+      pressure: { as: 'stat', of: 'pressure', show: 'value' },
+      conveyor: { as: 'stat', of: 'conveyor', show: 'value' },
+    },
+    layout: {
+      kind: 'canvas',
+      size: [WIDTH, HEIGHT],
+      background: floorPlan(text.plant),
+      place: {
+        'pump-a': [54, 150, 140, 52],
+        'pump-a-load': [46, 238, 120, 116],
+        temperature: [400, 46, 160, 52],
+        pressure: [176, 252, 128, 52],
+        conveyor: [400, 200, 128, 52],
       },
-      {
-        id: 'pump-a-load',
-        x: 46,
-        y: 238,
-        width: 120,
-        height: 116,
-        anchored: true,
-        widget: {
-          type: 'gauge',
-          props: { data: { value: 0 }, options: { min: 0, max: 100, unit: '%', subtitle: text.load } },
-          bindings: { 'data.value': bind('pump-a.load') },
-        },
-      },
-      {
-        id: 'temperature',
-        x: 400,
-        y: 46,
-        width: 160,
-        height: 52,
-        anchored: true,
-        widget: {
-          type: 'status',
-          props: { data: { label: text.temp, tone: 'idle', value: '' } },
-          bindings: { 'data.value': bind('tank.temperature') },
-        },
-      },
-      {
-        id: 'pressure',
-        x: 176,
-        y: 252,
-        width: 128,
-        height: 52,
-        anchored: true,
-        widget: {
-          type: 'status',
-          props: { data: { label: text.pressure, tone: 'idle', value: '' } },
-          bindings: { 'data.value': bind('line.pressure') },
-        },
-      },
-      {
-        id: 'conveyor',
-        x: 400,
-        y: 200,
-        width: 128,
-        height: 52,
-        anchored: true,
-        widget: {
-          type: 'status',
-          props: { data: { label: text.conveyor, tone: 'idle', value: '—' } },
-          bindings: { 'data.value': bind('conveyor.state') },
-        },
-      },
-    ],
-    connectors: [],
+    },
   };
 }
 
@@ -130,16 +86,8 @@ export class SampleAdapter implements Adapter {
   readonly id = SAMPLE_ADAPTER_ID;
   private readonly lastPressureAt: string;
 
-  /** `names` labels the references for the binding form — in the page's language. */
-  constructor(
-    private readonly now: () => number = Date.now,
-    private readonly names: Readonly<Record<string, string>> = {}
-  ) {
+  constructor(private readonly now: () => number = Date.now) {
     this.lastPressureAt = new Date(this.now() - 5 * 60_000).toISOString();
-  }
-
-  async references(): Promise<readonly AdapterReference[]> {
-    return SAMPLE_REFERENCES.map(ref => ({ ref, label: this.names[ref] }));
   }
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {

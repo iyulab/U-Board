@@ -7,10 +7,9 @@ import { createApp } from '../app.js';
 import { createUser } from '../db/users.js';
 import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { createConnector } from '../db/connectors.js';
-import { updateBoard } from '../db/boards.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
-import { RULEBOOK_EXAMPLE } from '@iyulab/u-board/board-v2';
+import { RULEBOOK_EXAMPLE } from '@iyulab/u-board/domain';
 
 const SECRET = 'test-secret-at-least-16-chars';
 let db: DbClient;
@@ -65,9 +64,9 @@ describe('boards routes', () => {
 
     const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(get.status).toBe(200);
-    expect(get.body.document).toEqual({ version: 2, parts: {}, layout: { kind: 'canvas', size: [1280, 720], place: {} } });
+    expect(get.body.document).toEqual({ parts: {}, layout: { kind: 'canvas', size: [1280, 720], place: {} } });
 
-    const newDoc = { version: 2, parts: { n1: { as: 'label', title: 'N1' } }, layout: { kind: 'canvas', size: [800, 600], place: { n1: [1, 2] } } };
+    const newDoc = { parts: { n1: { as: 'label', title: 'N1' } }, layout: { kind: 'canvas', size: [800, 600], place: { n1: [1, 2] } } };
     const update = await request(app)
       .put(`/api/workspaces/${workspaceId}/boards/${boardId}`)
       .set('Cookie', memberCookie)
@@ -89,9 +88,9 @@ describe('boards routes', () => {
     expect(create.status).toBe(201);
     expect(create.body.kind).toBe('grid');
     const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie);
-    expect(get.body.document).toEqual({ version: 2, parts: {}, layout: { kind: 'grid', items: [] } });
+    expect(get.body.document).toEqual({ parts: {}, layout: { kind: 'grid', items: [] } });
 
-    const canvas = { version: 2, parts: {}, layout: { kind: 'canvas', size: [800, 600], place: {} } };
+    const canvas = { parts: {}, layout: { kind: 'canvas', size: [800, 600], place: {} } };
     await request(app).put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie).send({ document: canvas });
     const list = await request(app).get(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie);
     expect(list.body.boards.find((b: { id: string }) => b.id === create.body.id).kind).toBe('canvas');
@@ -103,7 +102,7 @@ describe('boards routes', () => {
     expect(res.body.code).toBe('INVALID_INPUT');
   });
 
-  it('returns 400 INVALID_DOCUMENT when the PUT body is not a ViewDocument', async () => {
+  it('returns 400 INVALID_DOCUMENT when the PUT body is not a board', async () => {
     const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
     const res = await request(app)
       .put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`)
@@ -113,21 +112,9 @@ describe('boards routes', () => {
     expect(res.body.code).toBe('INVALID_DOCUMENT');
   });
 
-  it('refuses a first-version document — saying which version a board is stored in — and stores nothing', async () => {
-    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
-    const document = { kind: 'canvas', background: {}, connectors: [], nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'gauge' } }] };
-    const res = await request(app).put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie).send({ document });
-    expect(res.status).toBe(400);
-    expect(res.body.code).toBe('INVALID_DOCUMENT');
-    expect(res.body.issues).toEqual([{ path: '', message: expect.stringContaining('second version ("version": 2)') }]);
-    const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie);
-    expect(get.body.document.version).toBe(2);
-  });
-
   it('refuses a field the language does not have — it would be stored but never drawn', async () => {
     const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'A' });
     const document = {
-      version: 2,
       parts: { a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' } },
       layout: { kind: 'canvas', size: [400, 300], place: { a: [0, 0], b: [200, 0] }, links: { c: { from: 'a', to: 'b', color: 'blue' } } },
     };
@@ -261,7 +248,7 @@ describe('PATCH /boards/:boardId — a JSON Patch', () => {
     await request(app)
       .put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`)
       .set('Cookie', memberCookie)
-      .send({ document: { version: 2, parts: { a: { as: 'header', title: 'A' }, b: { as: 'header', title: 'B' } }, layout: { kind: 'grid', items: ['a', 'b'] } } });
+      .send({ document: { parts: { a: { as: 'header', title: 'A' }, b: { as: 'header', title: 'B' } }, layout: { kind: 'grid', items: ['a', 'b'] } } });
     return create.body.id as string;
   }
 
@@ -318,10 +305,9 @@ describe('PATCH /boards/:boardId — a JSON Patch', () => {
   });
 });
 
-describe("a board in the board language's second version", () => {
+describe('a board written in the board language', () => {
   const data = { totals: { from: 'plant', path: '/plant/totals' } };
   const board = (parts: Record<string, unknown>, more: Record<string, unknown> = {}) => ({
-    version: 2,
     data,
     parts,
     layout: { kind: 'grid', items: Object.keys(parts) },
@@ -329,7 +315,7 @@ describe("a board in the board language's second version", () => {
   });
 
   async function newBoard(): Promise<string> {
-    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'V2' });
+    const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'B' });
     return create.body.id as string;
   }
   const put = (boardId: string, document: unknown) =>
@@ -347,16 +333,10 @@ describe("a board in the board language's second version", () => {
     expect(list.body.boards.find((b: { id: string }) => b.id === boardId).kind).toBe('grid');
   });
 
-  it('is read with the picture its viewers draw it from — a first-version board, which is its own picture, with none', async () => {
+  it('is read with the picture its viewers draw it from', async () => {
     const boardId = await newBoard();
-    // A first-version board is only one stored before — written to the store, not saved through the API.
-    await updateBoard(db, workspaceId, boardId, { document: { kind: 'canvas', background: {}, nodes: [], connectors: [] } });
-    const first = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
-    expect(first.body.picture).toBeUndefined();
-
     await put(boardId, board({ t: { as: 'stat', of: 'totals', show: 'count' } }));
     const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
-    expect(get.body.document.version).toBe(2);
     expect(get.body.picture.kind).toBe('grid');
     expect(get.body.picture.items.map((i: { id: string }) => i.id)).toEqual(['t']);
   });
@@ -367,13 +347,6 @@ describe("a board in the board language's second version", () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('INVALID_DOCUMENT');
     expect(res.body.issues).toEqual([{ path: '/parts/t/as', message: expect.stringContaining('stat') }]);
-  });
-
-  it('reads any document that names a version as one, and says which version to name', async () => {
-    const boardId = await newBoard();
-    const res = await put(boardId, { ...board({ t: { as: 'stat', of: 'totals', show: 'count' } }), version: 3 });
-    expect(res.status).toBe(400);
-    expect(res.body.issues).toEqual([{ path: '/version', message: 'a board in this language says "version": 2' }]);
   });
 
   it('answers a save with the advice its language gives', async () => {

@@ -105,12 +105,11 @@ describe('a static data source', () => {
     expect(made.status).toBe(201);
   });
 
-  it('is what a board in the second version draws its items from, as it is drawn for the editor and a share link', async () => {
+  it('is what a board draws its items from, as it is drawn for the editor and a share link', async () => {
     const { body: source } = await create({ answers: { '/pumps': PUMPS }, sample: true });
     const { body: board } = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', ownerCookie).send({ name: 'Pumps', kind: 'grid' });
     const at = `/api/workspaces/${workspaceId}/boards/${board.id}`;
     const document = {
-      version: 2,
       data: { pumps: { from: source.id, path: '/pumps', list: '', key: 'id', fields: { flow: { unit: 'm³/h' } } } },
       parts: { pump: { as: 'stat', each: 'pumps', show: 'flow' } },
       layout: { kind: 'grid', items: ['pump'] },

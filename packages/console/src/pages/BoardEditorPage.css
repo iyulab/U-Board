@@ -82,10 +82,3 @@
     flex-direction: column;
   }
 }
-
-/* Why a board is shown and not edited here — a note, not an error. */
-.ub-editor-note {
-  margin: var(--ub-space-3) 0;
-  color: var(--ub-text-muted);
-  font-size: var(--ub-font-size-md);
-}

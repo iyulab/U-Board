@@ -1,7 +1,7 @@
 // The JSON playground's reading of what was typed, apart from the page so it can be tested: the two texts — a board's
 // definition and its data — parsed and checked, and every problem named by where it is.
 
-import { validateViewDocument, type ViewDocument } from '@iyulab/u-board/domain';
+import { checkBoard, type Board } from '@iyulab/u-board/domain';
 import type { SampleConnector, SampleSnapshot } from '@iyulab/u-board-samples';
 
 /** A board's data as the gallery publishes it (`data.json`): the sources it reads and what they answered. */
@@ -20,7 +20,7 @@ export interface Problem {
 }
 
 export interface Reading {
-  document?: ViewDocument;
+  board?: Board;
   data?: BoardData;
   problems: Problem[];
 }
@@ -58,13 +58,13 @@ function checkData(value: unknown, problems: Problem[]): BoardData | undefined {
 export function readPlayground(definitionText: string, dataText: string): Reading {
   const problems: Problem[] = [];
   const definition = parse(definitionText, 'definition', problems);
-  let document: ViewDocument | undefined;
+  let board: Board | undefined;
   if (definition !== undefined) {
-    const issues = validateViewDocument(definition);
+    const { issues } = checkBoard(definition);
     for (const issue of issues) problems.push({ in: 'definition', path: issue.path, message: issue.message });
-    if (issues.length === 0) document = definition as ViewDocument;
+    if (issues.length === 0) board = definition as Board;
   }
   const raw = parse(dataText, 'data', problems);
   const data = raw === undefined ? undefined : checkData(raw, problems);
-  return { document, data, problems };
+  return { board, data, problems };
 }

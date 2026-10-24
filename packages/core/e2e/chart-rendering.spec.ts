@@ -68,27 +68,6 @@ test('the demo document\'s chart.line node renders a canvas, not the "Unknown wi
   expect(text).not.toContain('Unknown widget');
 });
 
-// widget-catalog.ts's seedWidget() shape (what a freshly type-switched node gets before an
-// author touches anything) differs from the hand-authored sample data above — a shape mismatch
-// there wouldn't be caught by the tests above, and jsdom's unit suite can't tell a real render
-// from the "Unknown widget" fallback for canvas-based widgets either (same reason as the file
-// banner comment). App.tsx's `seed-gauge-check`/`seed-chart-line-check` demo nodes exist to close
-// exactly this gap (bindings-editor final review, 2026-08-25).
-test('the authoring seed shape for gauge renders through the real pipeline, not the "Unknown widget" fallback', async ({ page }) => {
-  const text = await overlayShadowText(page, 'designer-overlay-seed-gauge-check');
-  expect(text).not.toContain('Unknown widget');
-});
-
-test('the authoring seed shape for chart.line renders a canvas, not the "Unknown widget" fallback', async ({ page }) => {
-  const overlayTestId = 'designer-overlay-seed-chart-line-check';
-
-  const hasCanvas = await overlayShadowHas(page, overlayTestId, 'canvas');
-  expect(hasCanvas).toBe(true);
-
-  const text = await overlayShadowText(page, overlayTestId);
-  expect(text).not.toContain('Unknown widget');
-});
-
 /** On-screen heights of a node's box and of the widget drawn in it. */
 async function heights(page: Page, nodeId: string) {
   // The overlay is drawn after the scene: on a loaded machine it is not there yet when the page first answers.
@@ -112,7 +91,7 @@ test('a widget fills a node taller than its own default — the chart is as tall
 // fits the box rather than being cut by it — a gauge's whole dial is in view with nothing scrolled away,
 // and a chart keeps a plot to read rather than one pressed flat.
 test('a widget stays whole inside a node smaller than its own size', async ({ page }) => {
-  for (const id of ['seed-chart-line-check', 'seed-gauge-check']) {
+  for (const id of ['small-chart', 'small-gauge']) {
     const sizes = await heights(page, id);
     expect(Math.abs(sizes.widget - sizes.overlay), id).toBeLessThan(2);
   }
@@ -127,11 +106,11 @@ test('a widget stays whole inside a node smaller than its own size', async ({ pa
       }
       return null;
     };
-    const gaugeBox = overlay('seed-gauge-check').getBoundingClientRect();
-    const dial = deep(overlay('seed-gauge-check'), 'svg.gauge-svg')!.getBoundingClientRect();
-    const scroller = deep(overlay('seed-gauge-check'), '.gauge-container') as HTMLElement;
+    const gaugeBox = overlay('small-gauge').getBoundingClientRect();
+    const dial = deep(overlay('small-gauge'), 'svg.gauge-svg')!.getBoundingClientRect();
+    const scroller = deep(overlay('small-gauge'), '.gauge-container') as HTMLElement;
     type Grid = { coordinateSystem: { getRect(): { height: number } } };
-    const chart = deep(overlay('seed-chart-line-check'), 'uw-chart') as HTMLElement & {
+    const chart = deep(overlay('small-chart'), 'uw-chart') as HTMLElement & {
       _chart?: { getModel(): { getComponent(t: string): Grid } };
     };
     return {

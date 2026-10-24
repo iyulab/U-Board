@@ -1,4 +1,3 @@
-import { expandComponents, placedIn } from '@iyulab/u-board/domain';
 import type { Localized, SamplePack } from './sample-pack.js';
 import { isInstallable } from './sample-pack.js';
 
@@ -68,12 +67,10 @@ const BY_ID = new Map(ALL_TAGS.map(t => [t.id, t]));
 
 /** The traits read off a board: its data, its layout, and whether it draws connectors or elements of its own. */
 export function traitsOf(pack: SamplePack): Trait[] {
-  const { document } = pack;
-  const traits: Trait[] = [isInstallable(pack) ? 'open-data' : 'example', document.kind === 'canvas' ? 'canvas' : 'grid'];
-  if (document.kind === 'canvas' && document.connectors.length > 0) traits.push('connectors');
-  // A component's parts are the board's too.
-  const drawn = document.kind === 'canvas' ? expandComponents(document) : document;
-  if (placedIn(drawn).some(part => part.widget.type.startsWith('element:'))) traits.push('elements');
+  const { layout, parts } = pack.board;
+  const traits: Trait[] = [isInstallable(pack) ? 'open-data' : 'example', layout.kind];
+  if (layout.kind === 'canvas' && Object.keys(layout.links ?? {}).length > 0) traits.push('connectors');
+  if (Object.values(parts).some(part => part.as === 'element')) traits.push('elements');
   return traits;
 }
 

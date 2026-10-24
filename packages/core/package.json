@@ -26,7 +26,6 @@
   "types": "./dist/lib/index.d.ts",
   "files": [
     "dist/lib",
-    "schema",
     "styles.css",
     "LICENSE",
     "README.md",
@@ -45,12 +44,11 @@
       "types": "./dist/lib/domain-entry.d.ts",
       "import": "./dist/lib/domain-entry.js"
     },
-    "./board-v2": {
-      "types": "./dist/lib/board-v2-entry.d.ts",
-      "import": "./dist/lib/board-v2-entry.js"
+    "./picture": {
+      "types": "./dist/lib/picture-entry.d.ts",
+      "import": "./dist/lib/picture-entry.js"
     },
-    "./styles.css": "./styles.css",
-    "./view-document.schema.json": "./schema/view-document.schema.json"
+    "./styles.css": "./styles.css"
   },
   "scripts": {
     "dev": "vite",

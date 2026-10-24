@@ -41,7 +41,7 @@ open models drift into the English those answers are written in).
 | Tool | What it does |
 |---|---|
 | `describe` | Explains the board language to the assistant: `rules` first — how the tools change a board, then the language itself, generated from its schema (where values come from and what they mean, the statuses, the parts and their kinds, the layout per view kind, elements and the look) — then a kind of part in full (`kind:gauge`, several by commas) and the JSON Schema by pointer. |
-| `list_boards`, `get_board` | Reads boards — one part at a time, by JSON Pointer (`/parts/pump`). A board saved in the first version of the format is read converted, and the first change saves it in the second. |
+| `list_boards`, `get_board` | Reads boards — one part at a time, by JSON Pointer (`/parts/pump`). |
 | `create_board`, `patch_board`, `delete_board` | Makes a board, changes it with JSON Patch (RFC 6902) on a revision — each answer carries the new revision and advice — and deletes one for good. |
 | `rename_board` | Renames a board; its id — and so the links it is shared by and its history — stays. |
 | `validate` | Checks a board, or a board with a patch, without saving — exactly as saving does. |
@@ -70,6 +70,6 @@ open models drift into the English those answers are written in).
 - **It works with open models, not only hosted ones.** The tools' inputs declare their shape and never use the
   empty schema for an open object, which some open-model tool-call parsers rewrite values under; the same board
   has been drawn through it by a 27B open model served with an OpenAI-compatible API.
-- **Data comes through bindings only.** An element or widget never reaches a data source itself: a binding
-  names a source and a value in its response, and the server reads it, within the addresses the
-  installation allows.
+- **Data comes through data reads only.** An element or widget never reaches a data source itself: a board's
+  data read names a source and a request, its parts name the fields they show, and the server reads it, within
+  the addresses the installation allows.

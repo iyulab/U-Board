@@ -42,4 +42,4 @@ export type {
   ComponentNode,
   ComponentInstance,
 } from './view-document.js';
-export type { Adapter, AdapterReference, Attribution, ConnectionQuality, QualityReason, ResolvedBinding, ResolvedWidget } from './adapter.js';
+export type { Adapter, Attribution, ConnectionQuality, QualityReason, ResolvedBinding, ResolvedWidget } from './adapter.js';

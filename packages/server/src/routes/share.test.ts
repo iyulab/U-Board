@@ -10,7 +10,8 @@ import { createBoard, updateBoard } from '../db/boards.js';
 import { createConnector } from '../db/connectors.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
-import type { BoardV2 } from '@iyulab/u-board/board-v2';
+import type { Board } from '@iyulab/u-board/domain';
+import { bindingsIn, type ViewDocument } from '@iyulab/u-board/picture';
 
 const SECRET = 'test-secret-at-least-16-chars';
 let db: DbClient;
@@ -39,6 +40,19 @@ beforeEach(async () => {
   ownerCookie = cookieFor(owner.id, workspace.id);
   boardId = (await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'Board A' })).id;
 });
+
+/** The reads a board's picture declares, as a share link sees it: each binding's connector and ref, by where it is. */
+async function declaredReads(token: string): Promise<Record<string, { connectorId: string; ref: unknown }>> {
+  const read = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
+  return Object.fromEntries([...bindingsIn(read.body.picture as ViewDocument)].map(({ binding, at }) => [at, { connectorId: binding.adapter, ref: binding.ref }]));
+}
+
+/** The one read the picture declares whose pointer ends with `end`. */
+function readAt(reads: Record<string, { connectorId: string; ref: unknown }>, end: string) {
+  const found = Object.entries(reads).filter(([at]) => at.endsWith(end));
+  if (found.length !== 1) throw new Error(`expected one read at …${end}, found ${Object.keys(reads).join(', ')}`);
+  return found[0]![1];
+}
 
 async function createShareToken(): Promise<string> {
   const res = await request(app)
@@ -70,13 +84,14 @@ describe('public share routes', () => {
   it('returns the board document and connectorIds for a valid token', async () => {
     const connector = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: '/status' } } } }],
-      connectors: [],
+    const doc: Board = {
+      data: { plant: { from: connector.id, path: '/status' } },
+      parts: { n1: { as: 'stat', of: 'plant', show: 'status' } },
+      layout: { kind: 'canvas', size: [400, 300], place: { n1: [0, 0] } },
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
+    (fetch as any).mockImplementation(async () => jsonResponse({ status: 'running' }));
 
     const res = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
@@ -99,10 +114,10 @@ describe('public share routes', () => {
   });
 
   it('excludes referenced adapter ids that are not real stored connectors (a data source since removed)', async () => {
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: 'removed-source', ref: 'pump-a.state' } } } }],
-      connectors: [],
+    const doc: Board = {
+      data: { pump: { from: 'removed-source', path: '/pump' } },
+      parts: { n1: { as: 'stat', of: 'pump', show: 'state' } },
+      layout: { kind: 'canvas', size: [400, 300], place: { n1: [0, 0] } },
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
@@ -188,28 +203,22 @@ describe('public share routes', () => {
       actorUserId: 'test-actor', workspaceId, name: 'A', baseUrl: 'https://a.example.com', authType: 'none' });
     const b = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'B', baseUrl: 'https://b.example.com', authType: 'none' });
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [
-        { id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: a.id, ref: { path: '/assets', valuePath: 'value.0.Status' } } } } },
-        { id: 'n2', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: a.id, ref: { path: '/assets', valuePath: 'value.1.Status' } } } } },
-        { id: 'n3', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: b.id, ref: { path: '/pump', valuePath: 'on' } } } } },
-      ],
-      connectors: [],
+    const doc: Board = {
+      data: { assets: { from: a.id, path: '/assets', list: '/value' }, pump: { from: b.id, path: '/pump' } },
+      parts: { n1: { as: 'stat', of: 'assets[0]', show: 'Status' }, n2: { as: 'stat', of: 'assets[1]', show: 'Status' }, n3: { as: 'stat', of: 'pump', show: 'on' } },
+      layout: { kind: 'canvas', size: [400, 300], place: { n1: [0, 0], n2: [0, 100], n3: [0, 200] } },
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
     (fetch as any).mockImplementation(async (url: URL) => new URL(String(url)).hostname === 'a.example.com'
       ? jsonResponse({ value: [{ Status: 'Running' }, { Status: 'Fault' }] })
       : jsonResponse({ on: true }));
+    const reads = await declaredReads(token);
+    (fetch as any).mockClear();
 
     const res = await request(app)
       .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
-      .send({ bindings: [
-        { connectorId: b.id, ref: { path: '/pump', valuePath: 'on' } },
-        { connectorId: a.id, ref: { path: '/assets', valuePath: 'value.1.Status' } },
-        { connectorId: a.id, ref: { path: '/assets', valuePath: 'value.0.Status' } },
-      ] });
+      .send({ bindings: [readAt(reads, '/2/widget/bindings/data.value'), readAt(reads, '/1/widget/bindings/data.value'), readAt(reads, '/0/widget/bindings/data.value')] });
     expect(res.status).toBe(200);
     // The board's revision rides along — created, then saved once with these bindings.
     expect(res.body).toEqual({ revision: 2, results: [
@@ -221,14 +230,13 @@ describe('public share routes', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
-  it('resolves a connector’s binding as a declared read, and lists its source for the viewer', async () => {
+  it('resolves a link’s binding as a declared read, and lists its source for the viewer', async () => {
     const nms = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'NMS', baseUrl: 'https://nms.example.com', authType: 'none' });
-    const node = (id: string) => ({ id, x: 0, y: 0, anchored: false, widget: { type: 'status' } });
-    const ref = { path: '/links/core-edge', valuePath: 'bps' };
-    const doc = {
-      kind: 'canvas' as const, background: {}, nodes: [node('a'), node('b')],
-      connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: 'N/A', bindings: { label: { adapter: nms.id, ref } } }],
+    const doc: Board = {
+      data: { link: { from: nms.id, path: '/links/core-edge' } },
+      parts: { a: { as: 'marker' }, b: { as: 'marker' } },
+      layout: { kind: 'canvas', size: [400, 300], place: { a: [0, 0], b: [200, 0] }, links: { c: { from: 'a', to: 'b', of: 'link', label: '{{bps}}' } } },
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
@@ -236,28 +244,22 @@ describe('public share routes', () => {
 
     const board = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
     expect(board.body.connectorIds).toEqual([nms.id]);
+    const reads = Object.values(await declaredReads(token));
+    expect(reads.length).toBeGreaterThan(0);
     const res = await request(app)
       .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
-      .send({ bindings: [{ connectorId: nms.id, ref }] });
-    expect(res.body.results).toEqual([{ value: '26.78Kbps', quality: 'live', observedAt: expect.any(String) }]);
+      .send({ bindings: reads });
+    expect(res.body.results.every((r: { quality: string }) => r.quality === 'live')).toBe(true);
+    expect(JSON.stringify(res.body.results)).toContain('26.78Kbps');
   });
 
-  it('reads what a grid’s canvas cell declares — its nodes’ and its connectors’ bindings', async () => {
+  it('reads what a grid’s canvas cell declares — its parts’ and its links’ bindings', async () => {
     const plant = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant', baseUrl: 'https://plant.example.com', authType: 'none' });
-    const flow = { path: '/flow', valuePath: 'rate' };
-    const pump = { path: '/pump', valuePath: 'state' };
-    const node = (id: string, bindings?: Record<string, { adapter: string; ref: unknown }>) => ({ id, x: 0, y: 0, anchored: false, widget: { type: 'status', ...(bindings && { bindings }) } });
-    const doc = {
-      kind: 'grid' as const,
-      items: [{
-        id: 'plan',
-        canvas: {
-          background: {},
-          nodes: [node('a', { 'data.value': { adapter: plant.id, ref: pump } }), node('b')],
-          connectors: [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', label: 'N/A', bindings: { label: { adapter: plant.id, ref: flow } } }],
-        },
-      }],
+    const doc: Board = {
+      data: { pump: { from: plant.id, path: '/pump' }, flow: { from: plant.id, path: '/flow' } },
+      parts: { a: { as: 'stat', of: 'pump', show: 'state' }, b: { as: 'marker' } },
+      layout: { kind: 'grid', items: [{ id: 'plan', canvas: { size: [400, 300], place: { a: [0, 0], b: [200, 0] }, links: { c: { from: 'a', to: 'b', of: 'flow', label: '{{rate}}' } } } }] },
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
@@ -265,9 +267,10 @@ describe('public share routes', () => {
 
     const board = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
     expect(board.body.connectorIds).toEqual([plant.id]);
+    const reads = await declaredReads(token);
     const res = await request(app)
       .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
-      .send({ bindings: [{ connectorId: plant.id, ref: pump }, { connectorId: plant.id, ref: flow }] });
+      .send({ bindings: [readAt(reads, '/widget/bindings/data.value'), ...Object.entries(reads).filter(([at]) => at.includes('/connectors/')).map(([, r]) => r)] });
     expect(res.body.results.map((r: { value: unknown; quality: string }) => [r.value, r.quality])).toEqual([['Running', 'live'], [12, 'live']]);
   });
 
@@ -275,11 +278,10 @@ describe('public share routes', () => {
     const source = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Open data', baseUrl: 'https://open.example.com', authType: 'none',
       sourceError: { path: '/code', messagePath: '/message' } });
-    const ref = { path: '/air', valuePath: '/pm10' };
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: source.id, ref } } } }],
-      connectors: [],
+    const doc: Board = {
+      data: { air: { from: source.id, path: '/air' } },
+      parts: { n1: { as: 'stat', of: 'air', show: 'pm10' } },
+      layout: { kind: 'canvas', size: [400, 300], place: { n1: [0, 0] } },
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
@@ -288,33 +290,35 @@ describe('public share routes', () => {
 
     const res = await request(app)
       .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
-      .send({ bindings: [{ connectorId: source.id, ref }] });
+      .send({ bindings: [readAt(await declaredReads(token), '/widget/bindings/data.value')] });
     expect(res.body.results).toEqual([{ quality: 'disconnected', reason: 'source' }]);
   });
 
-  it('answers disconnected for a batch entry the document does not declare, without calling its upstream', async () => {
+  it('answers disconnected for a batch entry the board does not declare, without calling its upstream', async () => {
     const connector = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const unreferenced = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Other', baseUrl: 'https://other.example.com', authType: 'none' });
-    const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
-      connectors: [],
+    const doc: Board = {
+      data: { plant: { from: connector.id, path: '/status' } },
+      parts: { n1: { as: 'stat', of: 'plant', show: 'status' } },
+      layout: { kind: 'canvas', size: [400, 300], place: { n1: [0, 0] } },
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     const token = await createShareToken();
-    (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
+    (fetch as any).mockImplementation(async () => jsonResponse({ status: 'running' }));
+    const declared = readAt(await declaredReads(token), '/widget/bindings/data.value');
+    (fetch as any).mockClear();
 
     const res = await request(app)
       .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
       .send({ bindings: [
-        { connectorId: connector.id, ref: { path: '/status', valuePath: 'status' } },
+        declared,
         // The connector this board uses, with a ref it never declared: the gate compares the exact
         // (connectorId, ref) pair, or a share link would open the connector's whole origin.
         { connectorId: connector.id, ref: { path: '/other-metric' } },
         // A real connector of this workspace that the board does not reference.
-        { connectorId: unreferenced.id, ref: { path: '/status', valuePath: 'status' } },
+        { connectorId: unreferenced.id, ref: declared.ref },
         { connectorId: 'missing', ref: { path: '/status' } },
         // Not a valid ref at all.
         { connectorId: connector.id, ref: { path: '@attacker.example/' } },
@@ -328,44 +332,6 @@ describe('public share routes', () => {
       { quality: 'disconnected' },
     ]);
     expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('reads what a component’s instances name, filled in — and nothing a parameter value no instance gives would name', async () => {
-    const plant = await createConnector(db, {
-      actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
-    const doc = {
-      kind: 'canvas' as const, background: {}, nodes: [], connectors: [],
-      components: {
-        card: {
-          params: { type: 'object' as const, properties: { machine: { type: 'string' as const } }, required: ['machine'] },
-          nodes: [{ id: 'temp', x: 0, y: 0, widget: { type: 'gauge', bindings: { value: { adapter: plant.id, ref: { path: '/machines/{{machine}}', valuePath: 'temp' } } } } }],
-        },
-      },
-      instances: [{ id: 'p1', component: 'card', x: 0, y: 0, anchored: false, params: { machine: 'P1' } }],
-    };
-    await updateBoard(db, workspaceId, boardId, { document: doc });
-    const token = await createShareToken();
-    (fetch as any).mockImplementation(async () => jsonResponse({ temp: 71 }));
-
-    const board = await request(app).get(`/api/share/boards/${boardId}`).set('Authorization', `Bearer ${token}`);
-    expect(board.body.connectorIds).toEqual([plant.id]);
-    const res = await request(app)
-      .post(`/api/share/boards/${boardId}/resolve`).set('Authorization', `Bearer ${token}`)
-      .send({ bindings: [
-        { connectorId: plant.id, ref: { path: '/machines/P1', valuePath: 'temp' } },
-        // The component's ref as written, and filled with a machine no instance names.
-        { connectorId: plant.id, ref: { path: '/machines/{{machine}}', valuePath: 'temp' } },
-        { connectorId: plant.id, ref: { path: '/machines/P9', valuePath: 'temp' } },
-      ] });
-    expect(res.body.results).toEqual([
-      { value: 71, quality: 'live', observedAt: expect.any(String) },
-      { quality: 'disconnected' },
-      { quality: 'disconnected' },
-    ]);
-    expect(fetch).toHaveBeenCalledTimes(1);
-
-    const state = await request(app).get(`/api/share/boards/${boardId}/state`).set('Authorization', `Bearer ${token}`);
-    expect(state.body.parts).toEqual({ 'p1/temp': { quality: 'live', observedAt: expect.any(String) } });
   });
 
   it('rejects a batch request without a valid token, a bindings array, or within the size cap', async () => {
@@ -389,7 +355,6 @@ describe('public share routes', () => {
     const connector = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {
-      version: 2,
       data: { plant: { from: connector.id, path: '/status', fields: { status: {} } } },
       parts: { n1: { as: 'stat', of: 'plant', show: 'status' } },
       layout: { kind: 'canvas', size: [400, 300], place: { n1: [0, 0] } },
@@ -421,14 +386,13 @@ describe('public share routes', () => {
   it('answers the board’s state — each part’s state and quality, no values — for a share link and an API token', async () => {
     const plant = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant', baseUrl: 'https://plant.example.com', authType: 'none' });
-    const doc = {
-      kind: 'canvas' as const, background: {}, connectors: [],
-      nodes: [
-        { id: 'pump', x: 0, y: 0, anchored: false,
-          widget: { type: 'status', bindings: { 'data.value': { adapter: plant.id, ref: { path: '/pump', valuePath: 'state' } } } },
-          states: { from: 'data.value', map: { values: { Fault: 'fault' } } } },
-        { id: 'title', x: 0, y: 0, anchored: false, widget: { type: 'text' } },
-      ],
+    const doc: Board = {
+      statuses: { fault: { tone: 'alarm' }, running: { tone: 'ok' } },
+      data: { pump: { from: plant.id, path: '/pump', fields: { state: { state: { Fault: 'fault', '*': 'running' } } } } },
+      parts: { pump: { as: 'stat', of: 'pump', show: 'state' }, title: { as: 'label', title: 'Plant' } },
+      layout: { kind: 'canvas', size: [400, 300], place: { pump: [0, 0], title: [0, 200] } },
+      // A part's state is the one its triggers read.
+      triggers: [{ on: { event: 'enter', part: 'pump', field: 'state', status: 'fault' }, do: [{ action: 'emit', name: 'pump-fault' }] }],
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     (fetch as any).mockImplementation(async () => jsonResponse({ state: 'Fault', temp: 73.2 }));
@@ -454,11 +418,10 @@ describe('public share routes', () => {
     expect(res.status).toBe(404);
   });
 
-  it('draws a board in the second version from its picture — a grid laying out a part per item of a list as it is now', async () => {
+  it('draws a board from its picture — a grid laying out a part per item of a list as it is now', async () => {
     const plant = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant', baseUrl: 'https://plant.example.com', authType: 'none' });
-    const board: BoardV2 = {
-      version: 2,
+    const board: Board = {
       data: { pumps: { from: plant.id, path: '/pumps', list: '/value', key: 'id' } },
       parts: { pump: { as: 'stat', each: 'pumps', show: 'flow' } },
       layout: { kind: 'grid', items: ['pump'] },

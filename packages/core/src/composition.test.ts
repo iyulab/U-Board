@@ -1,10 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { isCanvasItem, placedAt, placedIn, type GridView } from './view-document';
-import { validateViewDocument } from './validate-view-document';
 import { bindingsIn } from './document-bindings';
 import { resolveDocument } from './resolve-document';
 import { lintViewDocument } from './lint-view-document';
-import { applyEditCommands } from './edit-commands';
 import type { Adapter, ResolvedBinding } from './adapter';
 import { cellAsCanvas, duplicateGridItem, idsIn, removeGridItem, withCellCanvas } from './editing/grid-editing';
 
@@ -30,26 +28,9 @@ const mixed = (): GridView => ({
 });
 
 describe('a grid cell holding a canvas', () => {
-  it('is a valid document, its nodes nameable by the board’s triggers', () => {
-    expect(validateViewDocument(mixed(), { strict: true })).toEqual([]);
+  it('tells a canvas cell from a widget cell', () => {
     expect(isCanvasItem(mixed().items[1])).toBe(true);
     expect(isCanvasItem(mixed().items[0])).toBe(false);
-  });
-
-  it('holds a widget or a canvas, not both, and only the spatial layer', () => {
-    const doc = mixed() as any;
-    doc.items[1].widget = { type: 'gauge' };
-    doc.items[1].canvas.components = {};
-    expect(validateViewDocument(doc, { strict: true }).map(issue => issue.path)).toEqual(['/items/1/widget', '/items/1/canvas/components']);
-  });
-
-  it('keeps ids unique across the document, and a connector within its cell', () => {
-    const doc = mixed() as any;
-    doc.items[0].id = 'tank';
-    doc.items.push({ id: 'other', canvas: { background: {}, nodes: [node('valve', 'v')], connectors: [{ id: 'c2', fromNodeId: 'valve', toNodeId: 'pump' }] } });
-    const issues = validateViewDocument(doc);
-    expect(issues.map(issue => issue.path)).toEqual(['/items/1/canvas/nodes/1/id', '/items/2/canvas/connectors/0/toNodeId']);
-    expect(issues[1].message).toBe('no node has the id "pump" — a connector joins two nodes of /items/2/canvas/nodes — the same cell');
   });
 
   it('is walked with the rest: its nodes placed, each binding at its path', () => {
@@ -91,7 +72,6 @@ describe('a grid cell holding a canvas', () => {
     expect(cell.canvas.nodes.map(n => n.id)).toEqual(['pump-2', 'tank-2']);
     expect(cell.canvas.connectors[0]).toMatchObject({ id: 'line-2', fromNodeId: 'pump-2', toNodeId: 'tank-2' });
     expect(cell.canvas.decorations![0].id).toBe('hall-2');
-    expect(validateViewDocument(copy, { strict: true })).toEqual([]);
     expect(duplicateGridItem(mixed(), 'plan', 'tank')).toEqual(mixed());
     expect([...idsIn(mixed())].sort()).toEqual(['hall', 'kpi', 'line', 'plan', 'pump', 'tank']);
 
@@ -113,16 +93,4 @@ describe('a grid cell holding a canvas', () => {
     expect(edited.items[0]).toEqual(mixed().items[0]);
   });
 
-  it('takes a cell’s parts in the remove command — a node with its lines and the triggers naming it', () => {
-    const after = applyEditCommands(mixed(), [{ command: 'remove', ids: ['pump', 'hall'] }]);
-    const cell = after.items[1];
-    if (after.kind !== 'grid' || !isCanvasItem(cell)) throw new Error('expected the grid and its canvas cell');
-    expect(cell.canvas.nodes.map(n => n.id)).toEqual(['tank']);
-    expect(cell.canvas.connectors).toEqual([]);
-    expect(cell.canvas.decorations).toEqual([]);
-    expect(after.triggers).toBeUndefined();
-    expect(validateViewDocument(after, { strict: true })).toEqual([]);
-    expect(() => applyEditCommands(mixed(), [{ command: 'remove', ids: ['nope'] }])).toThrow('no item, and no node, connector or decoration of a canvas cell, has the id "nope"');
-  });
 });
-

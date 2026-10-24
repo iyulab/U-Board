@@ -20,7 +20,8 @@ import {
   type StaticAnswers,
   PATH_KEY_PLACEHOLDER,
 } from '../db/connectors.js';
-import { isSourceErrorField, type Attribution, type SourceErrorField } from '@iyulab/u-board/domain';
+import { type Attribution } from '@iyulab/u-board/domain';
+import { isSourceErrorField, type SourceErrorField } from '@iyulab/u-board/picture';
 import { isValidRef, buildResolveTarget, readSource, staticTarget, testConnector, forgetConnector, type ResolveState } from '../resolve-connector.js';
 
 const OAUTH = 'oauth2-client-credentials';

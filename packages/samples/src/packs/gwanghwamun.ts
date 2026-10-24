@@ -1,8 +1,3 @@
-import { placeAt, type Background, type Binding, type GridItem, type GridView, type Node, type Widget } from '@iyulab/u-board/domain';
-import type { SampleConnector, SamplePack } from '../sample-pack.js';
-import { escapeXml, project, referencePoints, svgDataUrl, type AreaFrame } from '../frame.js';
-import { snapshot } from '../snapshots/gwanghwamun.js';
-
 // Gwanghwamun and Deoksugung as Seoul's real-time city data describes them every few minutes — a mixed board,
 // the way a city's situation room lays one out: how crowded the area is and the traffic across the top, the area's
 // plan in a wide cell with the public bikes docked at each station and the cars in the public car park where they
@@ -10,286 +5,459 @@ import { snapshot } from '../snapshots/gwanghwamun.js';
 // are the grid's cards, laid out to the screen's width. The sample key the source publishes reads this one place,
 // which is enough for the board to be real.
 
-const MAP: AreaFrame = { x: 0, y: 0, width: 680, height: 820, north: 37.5775, south: 37.563, west: 126.9692, east: 126.9844 };
-/** The plan's size and what it stands for; its `src` is drawn below. */
-const BACKGROUND: Background = { image: { src: '', width: MAP.width, height: MAP.height, referencePoints: referencePoints(MAP) } };
+import type { Board } from '@iyulab/u-board/domain';
+import type { SamplePack } from '../sample-pack.js';
+import { snapshot } from '../snapshots/gwanghwamun.js';
 
-export const SEOUL_CITY_DATA: SampleConnector = {
-  key: 'seoul-city-data',
-  name: '서울 실시간 도시데이터',
-  baseUrl: 'http://openapi.seoul.go.kr:8088/{key}',
-  authType: 'path',
-  authValue: 'sample',
-  // An error comes as `{ RESULT: { CODE: 'ERROR-500', MESSAGE } }` at the top; a service's own answer carries its
-  // status inside itself (or, for city data, under keys named `RESULT.CODE`), never at `/RESULT/CODE`.
-  sourceError: { path: '/RESULT/CODE', ok: ['INFO-000'], messagePath: '/RESULT/MESSAGE' },
-  attribution: { text: '서울특별시 서울 열린데이터광장 (공공누리 제1유형)', url: 'https://data.seoul.go.kr' },
-};
-
-/** The request: the city data of one place, by its name. */
-export const CITY_DATA_PATH = `/json/citydata/1/5/${encodeURIComponent('광화문·덕수궁')}`;
-
-/** The time zone the source writes its times in — `2026-10-09 19:10`, with no offset. */
-export const SEOUL_TIME_ZONE = 'Asia/Seoul';
-
-/** A part of the answer that says when it was observed: where it is, its time field there, and how old its
- *  values normally are — each part is measured on its own clock and published some minutes later. */
-interface Section {
-  at: string;
-  time: string;
-  maxAgeSeconds: number;
-}
-
-/** Estimated every five minutes, published about half an hour later. */
-const PEOPLE: Section = { at: '/LIVE_PPLTN_STTS/0', time: '/PPLTN_TIME', maxAgeSeconds: 60 * 60 };
-/** Updated every ten minutes or so, within minutes. */
-const WEATHER: Section = { at: '/WEATHER_STTS/0', time: '/WEATHER_TIME', maxAgeSeconds: 30 * 60 };
-/** Updated every five minutes, within minutes. */
-const ROADS: Section = { at: '/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA', time: '/ROAD_TRAFFIC_TIME', maxAgeSeconds: 20 * 60 };
-
-/** A field of `section`, observed when the section says — the people count every few minutes, the weather and
- *  traffic on their own clocks. */
-const bind = (section: Section, field: string, map?: Binding['map']): Binding => ({
-  adapter: SEOUL_CITY_DATA.key,
-  ref: {
-    path: CITY_DATA_PATH,
-    valuePath: `/CITYDATA${section.at}${field}`,
-    observedAtPath: `/CITYDATA${section.at}${section.time}`,
-    timeZone: SEOUL_TIME_ZONE,
-    maxAgeSeconds: section.maxAgeSeconds,
-  },
-  ...(map ? { map } : {}),
-});
-
-/** A field of one item of a list in the answer, named by the item's id — the source lists its stations and
- *  car parks in a different order from one read to the next, so a position would name another one. */
-const bindItem = (list: string, where: Record<string, string>, valuePath: string, map?: Binding['map']): Binding => ({
-  adapter: SEOUL_CITY_DATA.key,
-  ref: { path: CITY_DATA_PATH, item: { list: `/CITYDATA${list}`, where }, valuePath },
-  ...(map ? { map } : {}),
-});
-
-/** The source's own words for each level, in the colours its site gives them. */
-const CROWD_LEVEL = { values: { 여유: 'ok', 보통: 'idle', '약간 붐빔': 'warn', 붐빔: 'alarm' }, otherwise: 'idle' };
-const AIR_LEVEL = { values: { 좋음: 'info', 보통: 'ok', 나쁨: 'warn', 매우나쁨: 'alarm' }, otherwise: 'idle' };
-const TRAFFIC_LEVEL = { values: { 원활: 'ok', 서행: 'warn', 정체: 'alarm' }, otherwise: 'idle' };
-/** Bikes docked: none, a couple, or enough to take one. */
-const BIKES_LEVEL = { ranges: [{ max: 1, value: 'alarm' }, { min: 1, max: 3, value: 'warn' }, { min: 3, value: 'ok' }] };
-
-/** Where a node goes for its anchor — its box's center — to stand at a place on the map. */
-function at(node: { width: number; height: number }, lat: number, lng: number): { x: number; y: number } {
-  const { x, y } = placeAt(BACKGROUND, node, { x: lng, y: lat })!;
-  return { x: Math.round(x), y: Math.round(y) };
-}
-
-/** Bike stations on the drawing, by their id in the source (`SBIKE_SPOT_ID`) and where they stand. */
-export const BIKE_STATIONS: { id: string; name: string; lat: number; lng: number }[] = [
-  { id: 'ST-119', name: '303. 광화문역 1번출구 앞', lat: 37.5717697, lng: 126.9746628 },
-  { id: 'ST-1611', name: '458. 광화문역 5번출구', lat: 37.5698929, lng: 126.9775696 },
-  { id: 'ST-121', name: '305. 종로구청 옆', lat: 37.5725594, lng: 126.9783325 },
-  { id: 'ST-977', name: '391. 시립미술관', lat: 37.565052, lng: 126.9734039 },
-  { id: 'ST-3297', name: '6058. 시청역 2번출구', lat: 37.5655785, lng: 126.9770203 },
-  { id: 'ST-3090', name: '4719. 종로문화원 건너편', lat: 37.5757141, lng: 126.9805069 },
-];
-const STATION = { width: 160, height: 52 };
-
-function bikeStation({ id, name, lat, lng }: (typeof BIKE_STATIONS)[number]): Node {
-  const field = (name: string, map?: Binding['map']) => bindItem('/SBIKE_STTS', { SBIKE_SPOT_ID: id }, `/${name}`, map);
-  return {
-    id: `bike-${id}`,
-    ...at(STATION, lat, lng),
-    ...STATION,
-    anchored: true,
-    widget: {
-      type: 'status',
-      // A station is fixed by its id, so its name is written here as the source gives it.
-      props: { data: { label: name, value: '', tone: 'idle' } },
-      bindings: {
-        'data.value': field('SBIKE_PARKING_CNT'),
-        'data.tone': field('SBIKE_PARKING_CNT', BIKES_LEVEL),
-      },
+const board: Board = {
+  "data": {
+    "bikes": {
+      "from": "seoul-city-data",
+      "path": "/json/citydata/1/5/%EA%B4%91%ED%99%94%EB%AC%B8%C2%B7%EB%8D%95%EC%88%98%EA%B6%81",
+      "list": "/CITYDATA/SBIKE_STTS",
+      "key": "SBIKE_SPOT_ID",
+      "fields": {
+        "SBIKE_PARKING_CNT": {
+          "label": "303. 광화문역 1번출구 앞",
+          "state": [
+            "alarm",
+            1,
+            "warn",
+            3,
+            "ok"
+          ]
+        },
+        "SBIKE_PARKING_CNT-2": {
+          "label": "458. 광화문역 5번출구",
+          "at": "/SBIKE_PARKING_CNT",
+          "state": [
+            "alarm",
+            1,
+            "warn",
+            3,
+            "ok"
+          ]
+        },
+        "SBIKE_PARKING_CNT-3": {
+          "label": "305. 종로구청 옆",
+          "at": "/SBIKE_PARKING_CNT",
+          "state": [
+            "alarm",
+            1,
+            "warn",
+            3,
+            "ok"
+          ]
+        },
+        "SBIKE_PARKING_CNT-4": {
+          "label": "391. 시립미술관",
+          "at": "/SBIKE_PARKING_CNT",
+          "state": [
+            "alarm",
+            1,
+            "warn",
+            3,
+            "ok"
+          ]
+        },
+        "SBIKE_PARKING_CNT-5": {
+          "label": "6058. 시청역 2번출구",
+          "at": "/SBIKE_PARKING_CNT",
+          "state": [
+            "alarm",
+            1,
+            "warn",
+            3,
+            "ok"
+          ]
+        },
+        "SBIKE_PARKING_CNT-6": {
+          "label": "4719. 종로문화원 건너편",
+          "at": "/SBIKE_PARKING_CNT",
+          "state": [
+            "alarm",
+            1,
+            "warn",
+            3,
+            "ok"
+          ]
+        }
+      }
     },
-  };
-}
-
-/** 세종로 공영주차장, where it stands. Its gauge sits beside the spot, not on it — centered there it would cover
- *  the bike station next to it — so it is placed, not anchored. */
-const CAR_PARK = { lat: 37.57340269, lng: 126.97588429 };
-
-function carPark(): Node {
-  const spot = project(MAP, CAR_PARK.lat, CAR_PARK.lng);
-  // 세종로 공영주차장 — the car park in the area that reports how many cars are in it. The source lists it
-  // twice under one code, once without the count; `CUR_PRK_YN` picks the entry that has it.
-  const field = (name: string) => bindItem('/PRK_STTS', { PRK_CD: '171721', CUR_PRK_YN: 'Y' }, `/${name}`);
-  return {
-    id: 'car-park',
-    x: Math.round(spot.x - 170),
-    y: Math.round(spot.y - 60),
-    width: 150,
-    height: 120,
-    anchored: false,
-    widget: {
-      type: 'gauge',
-      props: { data: { value: 0, max: 1260 }, options: { unit: '대', subtitle: '세종로 공영주차장' } },
-      bindings: {
-        'data.value': field('CUR_PRK_CNT'),
-        'data.max': field('CPCTY'),
-        'options.subtitle': field('PRK_NM'),
+    "parking": {
+      "from": "seoul-city-data",
+      "path": "/json/citydata/1/5/%EA%B4%91%ED%99%94%EB%AC%B8%C2%B7%EB%8D%95%EC%88%98%EA%B6%81",
+      "list": "/CITYDATA/PRK_STTS",
+      "key": "CUR_PRK_YN",
+      "where": {
+        "PRK_CD": "171721"
       },
+      "fields": {
+        "CUR_PRK_CNT": {
+          "unit": "대"
+        },
+        "CPCTY": {},
+        "PRK_NM": {}
+      }
     },
-  };
-}
-
-/** A widget among the cards around the plan, in the room it takes. */
-const card = (id: string, span: number, spanMedium: number, widget: Widget): GridItem => ({ id, span, spanMedium, widget });
-
-/** Beside the plan, in a column: how crowded it is, and the roads. */
-const TOP: GridItem[] = [
-  card('crowd', 4, 3, {
-    type: 'status',
-    props: { data: { label: '지금 혼잡도', value: '', tone: 'idle' } },
-    bindings: { 'data.value': bind(PEOPLE, '/AREA_CONGEST_LVL'), 'data.tone': bind(PEOPLE, '/AREA_CONGEST_LVL', CROWD_LEVEL) },
-  }),
-  card('people', 4, 3, {
-    type: 'metric',
-    props: { data: { label: '추정 인구(최대)', value: 0, unit: '명' } },
-    bindings: { 'data.value': bind(PEOPLE, '/AREA_PPLTN_MAX') },
-  }),
-  card('traffic', 4, 3, {
-    type: 'status',
-    props: { data: { label: '도로 소통', value: '', tone: 'idle' } },
-    bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_IDX'), 'data.tone': bind(ROADS, '/ROAD_TRAFFIC_IDX', TRAFFIC_LEVEL) },
-  }),
-  card('speed', 4, 3, {
-    type: 'metric',
-    props: { data: { label: '평균 속도', value: 0, unit: 'km/h' } },
-    bindings: { 'data.value': bind(ROADS, '/ROAD_TRAFFIC_SPD') },
-  }),
-];
-
-/** Beside the plan: the crowd to come. */
-const FORECAST: GridItem = card('forecast', 4, 3, {
-  type: 'chart.line',
-  props: { title: '향후 12시간 인구 예측(최대)', data: [], mapping: { x: 'FCST_TIME', y: 'FCST_PPLTN_MAX' }, options: { xFormat: 'time' } },
-  bindings: { data: bind(PEOPLE, '/FCST_PPLTN') },
-});
-
-/** Below: the weather now and the day's temperature. */
-const WEATHER_CARDS: GridItem[] = [
-  card('temperature', 4, 2, {
-    type: 'metric',
-    props: { data: { label: '기온', value: 0, unit: '°C' } },
-    bindings: { 'data.value': bind(WEATHER, '/TEMP') },
-  }),
-  card('humidity', 4, 2, {
-    type: 'metric',
-    props: { data: { label: '습도', value: 0, unit: '%' } },
-    bindings: { 'data.value': bind(WEATHER, '/HUMIDITY') },
-  }),
-  card('fine-dust', 4, 2, {
-    type: 'status',
-    props: { data: { label: '미세먼지', value: '', tone: 'idle' } },
-    bindings: { 'data.value': bind(WEATHER, '/PM10_INDEX'), 'data.tone': bind(WEATHER, '/PM10_INDEX', AIR_LEVEL) },
-  }),
-  card('temperature-forecast', 12, 6, {
-    type: 'chart.line',
-    // The source writes each hour as digits (`202610092100`); the axis shows it as a date and time.
-    props: { title: '24시간 기온 예보(°C)', data: [], mapping: { x: 'FCST_DT', y: 'TEMP' }, options: { xFormat: 'time' } },
-    bindings: { data: bind(WEATHER, '/FCST24HOURS') },
-  }),
-];
-
-/** The drawing under the map: the main roads, the stream, the palaces and the square, as a site plan. */
-function drawing(): string {
-  const p = (lat: number, lng: number) => {
-    const { x, y } = project(MAP, lat, lng);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  };
-  const line = (points: [number, number][]) => points.map(([lat, lng]) => p(lat, lng)).join(' ');
-  const box = (north: number, west: number, south: number, east: number) => {
-    const a = project(MAP, north, west);
-    const b = project(MAP, south, east);
-    return `x="${a.x.toFixed(1)}" y="${a.y.toFixed(1)}" width="${(b.x - a.x).toFixed(1)}" height="${(b.y - a.y).toFixed(1)}"`;
-  };
-  const label = (lat: number, lng: number, text: string, size = 12, fill = '#5b6b70') => {
-    const { x, y } = project(MAP, lat, lng);
-    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" fill="${fill}" text-anchor="middle" font-family="sans-serif">${escapeXml(text)}</text>`;
-  };
-  const station = (lat: number, lng: number, name: string) => {
-    const { x, y } = project(MAP, lat, lng);
-    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="#ffffff" stroke="#2f6f9f" stroke-width="2.5"/>` +
-      `<text x="${(x + 10).toFixed(1)}" y="${(y + 4).toFixed(1)}" font-size="11" fill="#2f6f9f" font-family="sans-serif">${escapeXml(name)}</text>`;
-  };
-  const roads: [number, number][][] = [
-    [[37.576, 126.9692], [37.576, 126.9844]], // 율곡로·사직로
-    [[37.576, 126.9768], [37.5665, 126.9773], [37.563, 126.9757]], // 세종대로
-    [[37.5704, 126.9692], [37.5704, 126.9768]], // 새문안로
-    [[37.5703, 126.9772], [37.5703, 126.9844]], // 종로
-    [[37.5661, 126.9778], [37.5661, 126.9844]], // 을지로
-  ];
-  const scale = (200 / 1610) * MAP.height; // 200 m
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${MAP.width}" height="${MAP.height}" viewBox="0 0 ${MAP.width} ${MAP.height}">
-<rect width="${MAP.width}" height="${MAP.height}" fill="#eef2f0"/>
-<rect ${box(37.5775, 126.974, 37.5763, 126.98)} fill="#e3e8d8"/>
-<rect ${box(37.5668, 126.9732, 37.5648, 126.976)} rx="4" fill="#e3e8d8"/>
-<rect ${box(37.5755, 126.9763, 37.5715, 126.9772)} rx="3" fill="#cfe3c7"/>
-<ellipse cx="${project(MAP, 37.5655, 126.9781).x.toFixed(1)}" cy="${project(MAP, 37.5655, 126.9781).y.toFixed(1)}" rx="20" ry="16" fill="#cfe3c7"/>
-${roads.map(r => `<polyline points="${line(r)}" fill="none" stroke="#c9d2cf" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${line(r)}" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>`).join('\n')}
-<polyline points="${line([[37.5693, 126.9779], [37.5691, 126.981], [37.569, 126.9844]])}" fill="none" stroke="#9ccbe8" stroke-width="6" stroke-linecap="round"/>
-${label(37.5769, 126.977, '경복궁', 14, '#4b5a3f')}
-${label(37.5763, 126.9777, '광화문')}
-${label(37.5737, 126.9779, '광화문광장', 12, '#4b6b3f')}
-${label(37.5726, 126.9752, '세종문화회관')}
-${label(37.5711, 126.979, '교보빌딩')}
-${label(37.5697, 126.9805, '청계천', 12, '#2f7fa8')}
-${label(37.5668, 126.9789, '서울시청')}
-${label(37.5657, 126.9746, '덕수궁', 14, '#4b5a3f')}
-${label(37.5735, 126.9792, '종로구청')}
-${label(37.5763, 126.9715, '사직로')}
-${label(37.5708, 126.9714, '새문안로')}
-${label(37.5707, 126.9828, '종로')}
-${label(37.5665, 126.9828, '을지로')}
-${label(37.5683, 126.9764, '세종대로')}
-${station(37.5715, 126.9772, '광화문역')}
-${station(37.5657, 126.9771, '시청역')}
-${station(37.5758, 126.9735, '경복궁역')}
-<g font-family="sans-serif" font-size="11" fill="#5b6b70">
-<line x1="${MAP.x + 20}" y1="${MAP.y + MAP.height - 20}" x2="${(MAP.x + 20 + scale).toFixed(1)}" y2="${MAP.y + MAP.height - 20}" stroke="#5b6b70" stroke-width="2"/>
-<text x="${MAP.x + 20}" y="${MAP.y + MAP.height - 28}">200 m</text>
-<text x="${MAP.x + MAP.width - 20}" y="${MAP.y + MAP.height - 16}" text-anchor="end">약도 — 실제 지도가 아님 · 위가 북쪽</text>
-</g>
-</svg>`;
-  return svgDataUrl(svg);
-}
-
-/** The plan, as a canvas in a wide cell — in its own proportions, so the stations read at its size — spanning the rows
- *  of the column of cards beside it. */
-const PLAN: GridItem = {
-  id: 'plan',
-  span: 8,
-  spanMedium: 6,
-  rowSpan: 5,
-  canvas: {
-    background: { image: { ...BACKGROUND.image!, src: drawing() } },
-    nodes: [...BIKE_STATIONS.map(bikeStation), carPark()],
-    connectors: [],
+    "crowd": {
+      "from": "seoul-city-data",
+      "path": "/json/citydata/1/5/%EA%B4%91%ED%99%94%EB%AC%B8%C2%B7%EB%8D%95%EC%88%98%EA%B6%81",
+      "fields": {
+        "PPLTN_TIME": {
+          "at": "/CITYDATA/LIVE_PPLTN_STTS/0/PPLTN_TIME"
+        },
+        "AREA_CONGEST_LVL": {
+          "at": "/CITYDATA/LIVE_PPLTN_STTS/0/AREA_CONGEST_LVL",
+          "label": "지금 혼잡도",
+          "state": {
+            "여유": "ok",
+            "보통": "idle",
+            "약간 붐빔": "warn",
+            "붐빔": "alarm",
+            "*": "idle"
+          }
+        },
+        "AREA_PPLTN_MAX": {
+          "at": "/CITYDATA/LIVE_PPLTN_STTS/0/AREA_PPLTN_MAX",
+          "label": "추정 인구(최대)",
+          "unit": "명"
+        }
+      },
+      "time": "PPLTN_TIME",
+      "zone": "Asia/Seoul",
+      "fresh": 3600
+    },
+    "traffic": {
+      "from": "seoul-city-data",
+      "path": "/json/citydata/1/5/%EA%B4%91%ED%99%94%EB%AC%B8%C2%B7%EB%8D%95%EC%88%98%EA%B6%81",
+      "fields": {
+        "ROAD_TRAFFIC_TIME": {
+          "at": "/CITYDATA/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA/ROAD_TRAFFIC_TIME"
+        },
+        "ROAD_TRAFFIC_IDX": {
+          "at": "/CITYDATA/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA/ROAD_TRAFFIC_IDX",
+          "label": "도로 소통",
+          "state": {
+            "원활": "ok",
+            "서행": "warn",
+            "정체": "alarm",
+            "*": "idle"
+          }
+        },
+        "ROAD_TRAFFIC_SPD": {
+          "at": "/CITYDATA/ROAD_TRAFFIC_STTS/AVG_ROAD_DATA/ROAD_TRAFFIC_SPD",
+          "label": "평균 속도",
+          "unit": "km/h"
+        }
+      },
+      "time": "ROAD_TRAFFIC_TIME",
+      "zone": "Asia/Seoul",
+      "fresh": 1200
+    },
+    "crowd-forecast": {
+      "from": "seoul-city-data",
+      "path": "/json/citydata/1/5/%EA%B4%91%ED%99%94%EB%AC%B8%C2%B7%EB%8D%95%EC%88%98%EA%B6%81",
+      "list": "/CITYDATA/LIVE_PPLTN_STTS/0/FCST_PPLTN",
+      "zone": "Asia/Seoul",
+      "fresh": 3600,
+      "answerTime": "/CITYDATA/LIVE_PPLTN_STTS/0/PPLTN_TIME"
+    },
+    "weather": {
+      "from": "seoul-city-data",
+      "path": "/json/citydata/1/5/%EA%B4%91%ED%99%94%EB%AC%B8%C2%B7%EB%8D%95%EC%88%98%EA%B6%81",
+      "fields": {
+        "WEATHER_TIME": {
+          "at": "/CITYDATA/WEATHER_STTS/0/WEATHER_TIME"
+        },
+        "TEMP": {
+          "at": "/CITYDATA/WEATHER_STTS/0/TEMP",
+          "label": "기온",
+          "unit": "°C"
+        },
+        "HUMIDITY": {
+          "at": "/CITYDATA/WEATHER_STTS/0/HUMIDITY",
+          "label": "습도",
+          "unit": "%"
+        },
+        "PM10_INDEX": {
+          "at": "/CITYDATA/WEATHER_STTS/0/PM10_INDEX",
+          "label": "미세먼지",
+          "state": {
+            "좋음": "info",
+            "보통": "ok",
+            "나쁨": "warn",
+            "매우나쁨": "alarm",
+            "*": "idle"
+          }
+        }
+      },
+      "time": "WEATHER_TIME",
+      "zone": "Asia/Seoul",
+      "fresh": 1800
+    },
+    "weather-forecast": {
+      "from": "seoul-city-data",
+      "path": "/json/citydata/1/5/%EA%B4%91%ED%99%94%EB%AC%B8%C2%B7%EB%8D%95%EC%88%98%EA%B6%81",
+      "list": "/CITYDATA/WEATHER_STTS/0/FCST24HOURS",
+      "zone": "Asia/Seoul",
+      "fresh": 1800,
+      "answerTime": "/CITYDATA/WEATHER_STTS/0/WEATHER_TIME"
+    }
   },
+  "parts": {
+    "bike-ST-119": {
+      "as": "stat-list",
+      "of": "bikes[ST-119]",
+      "show": [
+        "SBIKE_PARKING_CNT"
+      ]
+    },
+    "bike-ST-1611": {
+      "as": "stat-list",
+      "of": "bikes[ST-1611]",
+      "show": [
+        "SBIKE_PARKING_CNT-2"
+      ]
+    },
+    "bike-ST-121": {
+      "as": "stat-list",
+      "of": "bikes[ST-121]",
+      "show": [
+        "SBIKE_PARKING_CNT-3"
+      ]
+    },
+    "bike-ST-977": {
+      "as": "stat-list",
+      "of": "bikes[ST-977]",
+      "show": [
+        "SBIKE_PARKING_CNT-4"
+      ]
+    },
+    "bike-ST-3297": {
+      "as": "stat-list",
+      "of": "bikes[ST-3297]",
+      "show": [
+        "SBIKE_PARKING_CNT-5"
+      ]
+    },
+    "bike-ST-3090": {
+      "as": "stat-list",
+      "of": "bikes[ST-3090]",
+      "show": [
+        "SBIKE_PARKING_CNT-6"
+      ]
+    },
+    "car-park": {
+      "as": "gauge",
+      "of": "parking[Y]",
+      "show": "CUR_PRK_CNT",
+      "subtitle": "세종로 공영주차장",
+      "max": 1260,
+      "title": "{{PRK_NM}}"
+    },
+    "crowd": {
+      "as": "stat-list",
+      "of": "crowd",
+      "show": [
+        "AREA_CONGEST_LVL"
+      ]
+    },
+    "people": {
+      "as": "stat",
+      "of": "crowd",
+      "show": "AREA_PPLTN_MAX"
+    },
+    "traffic": {
+      "as": "stat-list",
+      "of": "traffic",
+      "show": [
+        "ROAD_TRAFFIC_IDX"
+      ]
+    },
+    "speed": {
+      "as": "stat",
+      "of": "traffic",
+      "show": "ROAD_TRAFFIC_SPD"
+    },
+    "forecast": {
+      "as": "chart.line",
+      "of": "crowd-forecast",
+      "title": "향후 12시간 인구 예측(최대)",
+      "x": "FCST_TIME",
+      "y": "FCST_PPLTN_MAX",
+      "xFormat": "time"
+    },
+    "temperature": {
+      "as": "stat",
+      "of": "weather",
+      "show": "TEMP"
+    },
+    "humidity": {
+      "as": "stat",
+      "of": "weather",
+      "show": "HUMIDITY"
+    },
+    "fine-dust": {
+      "as": "stat-list",
+      "of": "weather",
+      "show": [
+        "PM10_INDEX"
+      ]
+    },
+    "temperature-forecast": {
+      "as": "chart.line",
+      "of": "weather-forecast",
+      "title": "24시간 기온 예보(°C)",
+      "x": "FCST_DT",
+      "y": "TEMP",
+      "xFormat": "time"
+    }
+  },
+  "layout": {
+    "kind": "grid",
+    "items": [
+      {
+        "canvas": {
+          "size": [
+            680,
+            820
+          ],
+          "background": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22680%22%20height%3D%22820%22%20viewBox%3D%220%200%20680%20820%22%3E%0A%3Crect%20width%3D%22680%22%20height%3D%22820%22%20fill%3D%22%23eef2f0%22%2F%3E%0A%3Crect%20x%3D%22214.7%22%20y%3D%220.0%22%20width%3D%22268.4%22%20height%3D%2267.9%22%20fill%3D%22%23e3e8d8%22%2F%3E%0A%3Crect%20x%3D%22178.9%22%20y%3D%22605.1%22%20width%3D%22125.3%22%20height%3D%22113.1%22%20rx%3D%224%22%20fill%3D%22%23e3e8d8%22%2F%3E%0A%3Crect%20x%3D%22317.6%22%20y%3D%22113.1%22%20width%3D%2240.3%22%20height%3D%22226.2%22%20rx%3D%223%22%20fill%3D%22%23cfe3c7%22%2F%3E%0A%3Cellipse%20cx%3D%22398.2%22%20cy%3D%22678.6%22%20rx%3D%2220%22%20ry%3D%2216%22%20fill%3D%22%23cfe3c7%22%2F%3E%0A%3Cpolyline%20points%3D%220.0%2C84.8%20680.0%2C84.8%22%20fill%3D%22none%22%20stroke%3D%22%23c9d2cf%22%20stroke-width%3D%2216%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpolyline%20points%3D%220.0%2C84.8%20680.0%2C84.8%22%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3Cpolyline%20points%3D%22340.0%2C84.8%20362.4%2C622.1%20290.8%2C820.0%22%20fill%3D%22none%22%20stroke%3D%22%23c9d2cf%22%20stroke-width%3D%2216%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpolyline%20points%3D%22340.0%2C84.8%20362.4%2C622.1%20290.8%2C820.0%22%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3Cpolyline%20points%3D%220.0%2C401.5%20340.0%2C401.5%22%20fill%3D%22none%22%20stroke%3D%22%23c9d2cf%22%20stroke-width%3D%2216%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpolyline%20points%3D%220.0%2C401.5%20340.0%2C401.5%22%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3Cpolyline%20points%3D%22357.9%2C407.2%20680.0%2C407.2%22%20fill%3D%22none%22%20stroke%3D%22%23c9d2cf%22%20stroke-width%3D%2216%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpolyline%20points%3D%22357.9%2C407.2%20680.0%2C407.2%22%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3Cpolyline%20points%3D%22384.7%2C644.7%20680.0%2C644.7%22%20fill%3D%22none%22%20stroke%3D%22%23c9d2cf%22%20stroke-width%3D%2216%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3Cpolyline%20points%3D%22384.7%2C644.7%20680.0%2C644.7%22%20fill%3D%22none%22%20stroke%3D%22%23ffffff%22%20stroke-width%3D%2212%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%0A%3Cpolyline%20points%3D%22389.2%2C463.7%20527.9%2C475.0%20680.0%2C480.7%22%20fill%3D%22none%22%20stroke%3D%22%239ccbe8%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22%2F%3E%0A%3Ctext%20x%3D%22348.9%22%20y%3D%2233.9%22%20font-size%3D%2214%22%20fill%3D%22%234b5a3f%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EA%B2%BD%EB%B3%B5%EA%B6%81%3C%2Ftext%3E%0A%3Ctext%20x%3D%22380.3%22%20y%3D%2267.9%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EA%B4%91%ED%99%94%EB%AC%B8%3C%2Ftext%3E%0A%3Ctext%20x%3D%22389.2%22%20y%3D%22214.9%22%20font-size%3D%2212%22%20fill%3D%22%234b6b3f%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EA%B4%91%ED%99%94%EB%AC%B8%EA%B4%91%EC%9E%A5%3C%2Ftext%3E%0A%3Ctext%20x%3D%22268.4%22%20y%3D%22277.1%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%84%B8%EC%A2%85%EB%AC%B8%ED%99%94%ED%9A%8C%EA%B4%80%3C%2Ftext%3E%0A%3Ctext%20x%3D%22438.4%22%20y%3D%22361.9%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EA%B5%90%EB%B3%B4%EB%B9%8C%EB%94%A9%3C%2Ftext%3E%0A%3Ctext%20x%3D%22505.5%22%20y%3D%22441.1%22%20font-size%3D%2212%22%20fill%3D%22%232f7fa8%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%B2%AD%EA%B3%84%EC%B2%9C%3C%2Ftext%3E%0A%3Ctext%20x%3D%22433.9%22%20y%3D%22605.1%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%84%9C%EC%9A%B8%EC%8B%9C%EC%B2%AD%3C%2Ftext%3E%0A%3Ctext%20x%3D%22241.6%22%20y%3D%22667.3%22%20font-size%3D%2214%22%20fill%3D%22%234b5a3f%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EB%8D%95%EC%88%98%EA%B6%81%3C%2Ftext%3E%0A%3Ctext%20x%3D%22447.4%22%20y%3D%22226.2%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%A2%85%EB%A1%9C%EA%B5%AC%EC%B2%AD%3C%2Ftext%3E%0A%3Ctext%20x%3D%22102.9%22%20y%3D%2267.9%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%82%AC%EC%A7%81%EB%A1%9C%3C%2Ftext%3E%0A%3Ctext%20x%3D%2298.4%22%20y%3D%22378.9%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%83%88%EB%AC%B8%EC%95%88%EB%A1%9C%3C%2Ftext%3E%0A%3Ctext%20x%3D%22608.4%22%20y%3D%22384.6%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%A2%85%EB%A1%9C%3C%2Ftext%3E%0A%3Ctext%20x%3D%22608.4%22%20y%3D%22622.1%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%9D%84%EC%A7%80%EB%A1%9C%3C%2Ftext%3E%0A%3Ctext%20x%3D%22322.1%22%20y%3D%22520.3%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%84%B8%EC%A2%85%EB%8C%80%EB%A1%9C%3C%2Ftext%3E%0A%3Ccircle%20cx%3D%22357.9%22%20cy%3D%22339.3%22%20r%3D%226%22%20fill%3D%22%23ffffff%22%20stroke%3D%22%232f6f9f%22%20stroke-width%3D%222.5%22%2F%3E%3Ctext%20x%3D%22367.9%22%20y%3D%22343.3%22%20font-size%3D%2211%22%20fill%3D%22%232f6f9f%22%20font-family%3D%22sans-serif%22%3E%EA%B4%91%ED%99%94%EB%AC%B8%EC%97%AD%3C%2Ftext%3E%0A%3Ccircle%20cx%3D%22353.4%22%20cy%3D%22667.3%22%20r%3D%226%22%20fill%3D%22%23ffffff%22%20stroke%3D%22%232f6f9f%22%20stroke-width%3D%222.5%22%2F%3E%3Ctext%20x%3D%22363.4%22%20y%3D%22671.3%22%20font-size%3D%2211%22%20fill%3D%22%232f6f9f%22%20font-family%3D%22sans-serif%22%3E%EC%8B%9C%EC%B2%AD%EC%97%AD%3C%2Ftext%3E%0A%3Ccircle%20cx%3D%22192.4%22%20cy%3D%2296.1%22%20r%3D%226%22%20fill%3D%22%23ffffff%22%20stroke%3D%22%232f6f9f%22%20stroke-width%3D%222.5%22%2F%3E%3Ctext%20x%3D%22202.4%22%20y%3D%22100.1%22%20font-size%3D%2211%22%20fill%3D%22%232f6f9f%22%20font-family%3D%22sans-serif%22%3E%EA%B2%BD%EB%B3%B5%EA%B6%81%EC%97%AD%3C%2Ftext%3E%0A%3Cg%20font-family%3D%22sans-serif%22%20font-size%3D%2211%22%20fill%3D%22%235b6b70%22%3E%0A%3Cline%20x1%3D%2220%22%20y1%3D%22800%22%20x2%3D%22121.9%22%20y2%3D%22800%22%20stroke%3D%22%235b6b70%22%20stroke-width%3D%222%22%2F%3E%0A%3Ctext%20x%3D%2220%22%20y%3D%22792%22%3E200%20m%3C%2Ftext%3E%0A%3Ctext%20x%3D%22660%22%20y%3D%22804%22%20text-anchor%3D%22end%22%3E%EC%95%BD%EB%8F%84%20%E2%80%94%20%EC%8B%A4%EC%A0%9C%20%EC%A7%80%EB%8F%84%EA%B0%80%20%EC%95%84%EB%8B%98%20%C2%B7%20%EC%9C%84%EA%B0%80%20%EB%B6%81%EC%AA%BD%3C%2Ftext%3E%0A%3C%2Fg%3E%0A%3C%2Fsvg%3E",
+          "place": {
+            "bike-ST-119": [
+              164,
+              298,
+              160,
+              52
+            ],
+            "bike-ST-1611": [
+              294,
+              404,
+              160,
+              52
+            ],
+            "bike-ST-121": [
+              329,
+              253,
+              160,
+              52
+            ],
+            "bike-ST-977": [
+              108,
+              678,
+              160,
+              52
+            ],
+            "bike-ST-3297": [
+              270,
+              648,
+              160,
+              52
+            ],
+            "bike-ST-3090": [
+              426,
+              75,
+              160,
+              52
+            ],
+            "car-park": [
+              129,
+              172,
+              150,
+              120
+            ]
+          }
+        },
+        "span": 8
+      },
+      {
+        "grid": [
+          [
+            "crowd",
+            12
+          ],
+          [
+            "people",
+            12
+          ],
+          [
+            "traffic",
+            12
+          ],
+          [
+            "speed",
+            12
+          ],
+          [
+            "forecast",
+            12
+          ]
+        ],
+        "span": 4
+      },
+      [
+        "temperature",
+        4
+      ],
+      [
+        "humidity",
+        4
+      ],
+      [
+        "fine-dust",
+        4
+      ],
+      [
+        "temperature-forecast",
+        12
+      ]
+    ]
+  }
 };
-
-const document: GridView = { kind: 'grid', items: [PLAN, ...TOP, FORECAST, ...WEATHER_CARDS] };
 
 export const gwanghwamun: SamplePack = {
-  id: 'gwanghwamun',
-  title: { ko: '광화문·덕수궁 실시간', en: 'Gwanghwamun, live' },
-  field: { ko: '도시·인파', en: 'City & crowds' },
-  kind: { ko: '지역 약도 + 카드(혼합)', en: 'Area plan among cards (mixed)' },
-  domain: 'public',
-  styles: ['operations'],
-  summary: {
-    ko: '도시 상황판처럼 — 지역 약도에 대여소마다 남은 따릉이와 공영주차장의 주차 대수를 서 있는 자리에, 옆 열에 혼잡도·인구·도로 소통과 인구 예측, 아래 날씨. 약도는 여러 줄에 걸친 그리드 칸 안의 캔버스입니다.',
-    en: 'Laid out like a city’s situation room — the area’s plan with the bikes left at each station and the cars in the public car park where they stand; beside it a column of the crowd, the roads and the crowd forecast; the weather below. The plan is a canvas in a grid cell spanning the column’s rows.',
+  id: "gwanghwamun",
+  title: {
+    "ko": "광화문·덕수궁 실시간",
+    "en": "Gwanghwamun, live"
   },
-  connectors: [SEOUL_CITY_DATA],
-  document,
+  field: {
+    "ko": "도시·인파",
+    "en": "City & crowds"
+  },
+  kind: {
+    "ko": "지역 약도 + 카드(혼합)",
+    "en": "Area plan among cards (mixed)"
+  },
+  domain: "public",
+  styles: [
+    "operations"
+  ],
+  summary: {
+    "ko": "도시 상황판처럼 — 지역 약도에 대여소마다 남은 따릉이와 공영주차장의 주차 대수를 서 있는 자리에, 옆 열에 혼잡도·인구·도로 소통과 인구 예측, 아래 날씨. 약도는 여러 줄에 걸친 그리드 칸 안의 캔버스입니다.",
+    "en": "Laid out like a city’s situation room — the area’s plan with the bikes left at each station and the cars in the public car park where they stand; beside it a column of the crowd, the roads and the crowd forecast; the weather below. The plan is a canvas in a grid cell spanning the column’s rows."
+  },
+  connectors: [
+    {
+      "key": "seoul-city-data",
+      "name": "서울 실시간 도시데이터",
+      "baseUrl": "http://openapi.seoul.go.kr:8088/{key}",
+      "authType": "path",
+      "authValue": "sample",
+      "sourceError": {
+        "path": "/RESULT/CODE",
+        "ok": [
+          "INFO-000"
+        ],
+        "messagePath": "/RESULT/MESSAGE"
+      },
+      "attribution": {
+        "text": "서울특별시 서울 열린데이터광장 (공공누리 제1유형)",
+        "url": "https://data.seoul.go.kr"
+      }
+    }
+  ],
+  board,
   snapshot,
 };

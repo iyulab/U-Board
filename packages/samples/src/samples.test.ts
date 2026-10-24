@@ -1,20 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import { checkSpec } from '@iyulab/u-widgets/tools';
-import { coordinateOf, expandComponents, isCanvasItem, isSourceErrorField, placedIn, resolveDocument, sizedNodes, sourceErrorIn, validateViewDocument, type CanvasView, type GridView, type Node } from '@iyulab/u-board/domain';
+import { checkBoard, pictureOf, readerOf } from '@iyulab/u-board/domain';
+import { isCanvasItem, isSourceErrorField, placedIn, resolveDocument, sizedNodes, sourceErrorIn, type CanvasView, type Node, type ViewDocument } from '@iyulab/u-board/picture';
 import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
-import { BIKE_STATIONS } from './packs/gwanghwamun.js';
 import { keepPointers } from './prune.js';
 
 const overlaps = (a: Node, b: Node) =>
   a.x < b.x + (b.width ?? 0) && b.x < a.x + (a.width ?? 0) && a.y < b.y + (b.height ?? 0) && b.y < a.y + (a.height ?? 0);
 
+// Each sample's board as the renderer draws it — with the items its recording lists.
+const pictures = new Map<string, ViewDocument>(
+  await Promise.all(SAMPLE_PACKS.map(async pack => [pack.id, await pictureOf(pack.board, readerOf(snapshotAdapters(pack)))] as const))
+);
+
 describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (_id, pack) => {
-  it('is a valid view document', () => {
-    expect(validateViewDocument(pack.document)).toEqual([]);
+  it('is a valid board', () => {
+    expect(checkBoard(pack.board).issues).toEqual([]);
   });
 
-  // A component's parts bind once in its definition and read once per instance: checked as drawn.
-  const drawn = pack.document.kind === 'canvas' ? expandComponents(pack.document) : pack.document;
+  const drawn = pictures.get(pack.id)!;
 
   it('binds only to its own connectors, each crediting its source', () => {
     const keys = new Set(pack.connectors.map(c => c.key));
@@ -45,7 +49,7 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
 
   it('reads every binding live from its recording', async () => {
     expect(Date.parse(pack.snapshot.capturedAt)).toBeGreaterThan(Date.parse('2026-01-01'));
-    const resolved = await resolveDocument(pack.document, snapshotAdapters(pack));
+    const resolved = await resolveDocument(drawn, snapshotAdapters(pack));
     for (const node of placedIn(resolved)) {
       for (const [prop, quality] of Object.entries(node.widget.quality)) expect(quality, `${node.id} ${prop}`).toBe('live');
     }
@@ -64,7 +68,7 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
   it('writes every prepared widget as the widget library reads it — no option it does not have, none of the wrong type', async () => {
     // The library ignores what it does not know, so a misnamed option (`stacked` for `stack`) drew a different chart
     // with no error anywhere. Checked on the values the board shows, read from its recording.
-    const resolved = await resolveDocument(pack.document, snapshotAdapters(pack));
+    const resolved = await resolveDocument(drawn, snapshotAdapters(pack));
     for (const node of placedIn(resolved)) {
       if (node.widget.type.startsWith('element:')) continue;
       const { valid, errors, warnings } = checkSpec({ widget: node.widget.type, ...node.widget.props });
@@ -87,7 +91,7 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
 
   // A canvas board, or each canvas cell of a grid — drawn over its own background.
   const canvases: CanvasView[] =
-    pack.document.kind === 'canvas' ? [drawn as CanvasView] : pack.document.items.filter(isCanvasItem).map(item => ({ kind: 'canvas', ...item.canvas }));
+    drawn.kind === 'canvas' ? [drawn] : drawn.items.filter(isCanvasItem).map(item => ({ kind: 'canvas', ...item.canvas }));
   it.runIf(canvases.some(canvas => canvas.background.image !== undefined))('places every node on its background, none over another', () => {
     for (const document of canvases.filter(canvas => canvas.background.image !== undefined)) {
       const { width, height } = document.background.image!;
@@ -102,7 +106,7 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
     }
   });
 
-  it.runIf(pack.document.kind === 'canvas' && pack.document.background.image === undefined)('places nothing over another part when there is no drawing', () => {
+  it.runIf(drawn.kind === 'canvas' && drawn.background.image === undefined)('places nothing over another part when there is no drawing', () => {
     const nodes = sizedNodes(drawn as CanvasView);
     for (const node of nodes) expect(Math.min(node.x, node.y), node.id).toBeGreaterThanOrEqual(0);
     for (const [i, a] of nodes.entries()) for (const b of nodes.slice(i + 1)) expect(overlaps(a, b), `${a.id} × ${b.id}`).toBe(false);
@@ -112,31 +116,15 @@ describe.each(SAMPLE_PACKS.map(pack => [pack.id, pack] as const))('sample %s', (
 describe('a list item bound by its fields', () => {
   it('reads the same item when the source lists them in another order', async () => {
     const pack = SAMPLE_PACKS.find(p => p.id === 'gwanghwamun')!;
-    const before = await resolveDocument(pack.document, snapshotAdapters(pack));
+    const picture = pictures.get(pack.id)!;
+    const before = await resolveDocument(picture, snapshotAdapters(pack));
     const reordered = structuredClone(pack.snapshot);
     for (const answer of Object.values(reordered.responses['seoul-city-data'])) {
       const city = (answer as { CITYDATA: { SBIKE_STTS: unknown[] } }).CITYDATA;
       city.SBIKE_STTS.reverse();
     }
-    const after = await resolveDocument(pack.document, snapshotAdapters({ ...pack, snapshot: reordered }));
+    const after = await resolveDocument(picture, snapshotAdapters({ ...pack, snapshot: reordered }));
     expect(placedIn(after).map(n => n.widget.props)).toEqual(placedIn(before).map(n => n.widget.props));
-  });
-});
-
-describe('a map whose anchors are coordinates', () => {
-  it('reads each bike station back at its longitude and latitude, within the rounding of its place on the drawing', () => {
-    const pack = SAMPLE_PACKS.find(p => p.id === 'gwanghwamun')!;
-    // The plan is a canvas in a grid cell — its anchors read against the cell's own drawing.
-    const plan = (pack.document as GridView).items.find(isCanvasItem)!;
-    for (const { id, lat, lng } of BIKE_STATIONS) {
-      const document: CanvasView = { kind: 'canvas', ...plan.canvas };
-      const node = sizedNodes(document).find(n => n.id === `bike-${id}`)!;
-      expect(node.anchored, id).toBe(true);
-      const coordinate = coordinateOf(document.background, node)!;
-      // Half a scene unit on this drawing is about a metre either way.
-      expect(Math.abs(coordinate.x - lng), id).toBeLessThan(0.00002);
-      expect(Math.abs(coordinate.y - lat), id).toBeLessThan(0.00002);
-    }
   });
 });
 

@@ -1,11 +1,11 @@
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { FIELD_STYLE } from '../ui-style.js';
-import { TONES, type BoardV2, type Link, type Tone } from '../board-v2/types.js';
-import type { BoardFinding } from '../board-v2/check.js';
+import { TONES, type Board, type Link, type Tone } from '../board/types.js';
+import type { BoardFinding } from '../board/check.js';
 
 export interface LinkPanelProps {
   id: string;
-  board: BoardV2;
+  board: Board;
   /** The link as the panel made it. */
   onChange: (link: Link) => void;
   findings?: readonly BoardFinding[];
@@ -15,7 +15,7 @@ export interface LinkPanelProps {
 const ROUTES = ['straight', 'orthogonal', 'curved'] as const;
 
 /**
- * The panel of a link of a canvas board in the language's second version: the parts it joins (set by joining them on
+ * The panel of a link of a canvas board: the parts it joins (set by joining them on
  * the canvas), its label, the item it reads and the field whose status it takes — its colour the status's tone, its line
  * the status's emphasis — and, fixed, its tone without a status, its route, arrowhead and dash. A setting left empty
  * goes from the link.

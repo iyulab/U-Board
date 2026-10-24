@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { applyJsonPatch, type ViewDocument } from '@iyulab/u-board/domain';
-import { isBoardV2, toViewDocument, type BoardV2 } from '@iyulab/u-board/board-v2';
+import { applyJsonPatch } from '@iyulab/u-board/domain';
+import type { ViewDocument } from '@iyulab/u-board/picture';
+import { emptyBoard, toViewDocument, type Board } from '@iyulab/u-board/domain';
 import { UBoardClient } from './client.js';
 import { createServer } from './server.js';
 import type { Looker } from './look.js';
 
 const line = { line: { from: 's1', path: '/line', fields: { temp: { unit: '°C' } } } };
 /** A grid board with one gauge — what the fake server holds as b1. */
-const gaugeBoard = (): BoardV2 => ({ version: 2, data: line, parts: { a: { as: 'gauge', of: 'line', show: 'temp' } }, layout: { kind: 'grid', items: ['a'] } });
+const gaugeBoard = (): Board => ({ data: line, parts: { a: { as: 'gauge', of: 'line', show: 'temp' } }, layout: { kind: 'grid', items: ['a'] } });
 /** A canvas board placing a stat at each box. */
-const canvasBoard = (place: Record<string, [number, number, number, number]>): BoardV2 => ({
-  version: 2,
+const canvasBoard = (place: Record<string, [number, number, number, number]>): Board => ({
   data: line,
   parts: Object.fromEntries(Object.keys(place).map(id => [id, { as: 'stat', of: 'line', show: 'temp' }])),
   layout: { kind: 'canvas', size: [1600, 900], place },
@@ -20,12 +20,11 @@ const canvasBoard = (place: Record<string, [number, number, number, number]>): B
 
 /** A U-Board server in miniature: one workspace, its boards, and every request it was sent. */
 function fakeServer() {
-  const boards = new Map<string, { name: string; document: BoardV2 | ViewDocument; revision: number }>([['b1', { name: 'Line 1', revision: 4, document: gaugeBoard() }]]);
+  const boards = new Map<string, { name: string; document: Board; revision: number }>([['b1', { name: 'Line 1', revision: 4, document: gaugeBoard() }]]);
   const requests: { method: string; path: string; headers: Record<string, string>; body?: unknown }[] = [];
   // The sources made through the tools, listed after the one the workspace starts with.
   const made: Record<string, unknown>[] = [];
   const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
-  const kindOf = (document: BoardV2 | ViewDocument) => (isBoardV2(document) ? document.layout.kind : document.kind);
 
   const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -36,7 +35,7 @@ function fakeServer() {
     if (headers.Authorization !== 'Bearer ubt_test') return json(401, { code: 'UNAUTHENTICATED' });
     if (url.pathname === '/api/token') return json(200, { workspace: { id: 'w1', name: 'Plant' }, scope: 'write', role: 'owner' });
     if (url.pathname === '/api/workspaces/w1/boards' && method === 'GET') {
-      return json(200, { boards: [...boards].map(([id, b]) => ({ id, name: b.name, kind: kindOf(b.document), updatedAt: 't' })) });
+      return json(200, { boards: [...boards].map(([id, b]) => ({ id, name: b.name, kind: b.document.layout.kind, updatedAt: 't' })) });
     }
     if (url.pathname === '/api/workspaces/w1/connectors' && method === 'GET') {
       return json(200, { connectors: [{ id: 's1', name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer' }, ...made] });
@@ -56,7 +55,7 @@ function fakeServer() {
       return json(200, { quality: 'live', value: { items: [{ id: 'P-101', temp: 61.5 }, { id: 'P-102', temp: 58 }] } });
     }
     if (url.pathname === '/api/workspaces/w1/boards' && method === 'POST') {
-      boards.set('b2', { name: body.name, revision: 1, document: body.kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', background: {}, nodes: [], connectors: [] } });
+      boards.set('b2', { name: body.name, revision: 1, document: emptyBoard(body.kind) });
       return json(201, { id: 'b2', revision: 1 });
     }
     if (url.pathname === '/api/share/boards/b1/state') {
@@ -68,9 +67,9 @@ function fakeServer() {
     const ifMatch = headers['If-Match'];
     if (ifMatch && ifMatch !== `"${board.revision}"`) return json(412, { code: 'BOARD_CHANGED', revision: board.revision });
     if (method === 'GET') {
-      // A board in the second version comes with the picture its viewers draw it from, as the server answers.
-      const picture = isBoardV2(board.document) ? toViewDocument(board.document, { keysOf: () => [] }) : undefined;
-      return json(200, { id, name: board.name, document: board.document, ...(picture && { picture }), revision: board.revision, updatedAt: 't' });
+      // A board comes with the picture its viewers draw it from, as the server answers.
+      const picture = toViewDocument(board.document, { keysOf: () => [] });
+      return json(200, { id, name: board.name, document: board.document, picture, revision: board.revision, updatedAt: 't' });
     }
     if (method === 'DELETE') {
       boards.delete(id);
@@ -226,7 +225,7 @@ describe('u-board-mcp', () => {
   });
 
   it('says a clean board is done', async () => {
-    server.boards.set('b4', { name: 'Clean', revision: 1, document: { version: 2, parts: {}, layout: { kind: 'grid', items: [] } } });
+    server.boards.set('b4', { name: 'Clean', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
     expect((await (await looking([{ message: 'x' }, { message: 'y' }])).look('b4')).report.status).toBe('not done — 2 problems to fix');
     expect((await (await looking()).look('b4')).report.status).toBe('done — nothing to fix');
   });
@@ -235,9 +234,9 @@ describe('u-board-mcp', () => {
     const wrappedOp = (await client.callTool({ name: 'patch_board', arguments: { board: 'b1', patch: [{ op: { op: 'add', path: '/x', value: 1 } }] } })) as { content: { text: string }[]; isError?: boolean };
     expect(wrappedOp.isError).toBe(true);
     expect(wrappedOp.content[0].text).toContain('wrapped in "op"');
-    const wrappedDoc = (await client.callTool({ name: 'validate', arguments: { document: { version: gaugeBoard() } } })) as { content: { text: string }[]; isError?: boolean };
+    const wrappedDoc = (await client.callTool({ name: 'validate', arguments: { document: { document: gaugeBoard() } } })) as { content: { text: string }[]; isError?: boolean };
     expect(wrappedDoc.isError).toBe(true);
-    expect(wrappedDoc.content[0].text).toContain('wrapped in "version"');
+    expect(wrappedDoc.content[0].text).toContain('wrapped in "document"');
     expect(server.requests.some(r => r.method !== 'GET')).toBe(false);
   });
 
@@ -272,7 +271,7 @@ describe('u-board-mcp', () => {
     const sent = server.requests.find(r => r.method === 'PATCH')!;
     expect(sent.headers['Content-Type']).toBe('application/json-patch+json');
     expect(sent.headers['If-Match']).toBe('"4"');
-    expect((server.boards.get('b1')!.document as BoardV2).parts.a).toEqual({ as: 'gauge', of: 'line', show: 'temp', title: 'Temp' });
+    expect((server.boards.get('b1')!.document as Board).parts.a).toEqual({ as: 'gauge', of: 'line', show: 'temp', title: 'Temp' });
   });
 
   it('says what to do when the board was saved since', async () => {
@@ -281,43 +280,12 @@ describe('u-board-mcp', () => {
     expect(value).toMatchObject({ status: 412, code: 'BOARD_CHANGED', revision: 4, hint: expect.stringContaining('get_board again') });
   });
 
-  describe('a board stored in the first version', () => {
-    const first: ViewDocument = { kind: 'grid', items: [{ id: 'a', widget: { type: 'gauge', props: { data: { value: 3 } } } }] };
-    beforeEach(() => {
-      server.boards.set('old', { name: 'Old', revision: 6, document: first });
-    });
-
-    it('reads converted, and says the first change saves it in the second', async () => {
-      const { value } = await call('get_board', { board: 'old' });
-      expect(value).toMatchObject({ kind: 'grid', stored: expect.stringContaining('first version'), document: { version: 2, layout: { kind: 'grid' } } });
-    });
-
-    it('saves a patch to it whole, in the second version, on the revision it was read at', async () => {
-      const { document } = (await call('get_board', { board: 'old' })).value;
-      const part = Object.keys(document.parts)[0];
-      const { isError } = await call('patch_board', { board: 'old', revision: 6, patch: [{ op: 'add', path: `/parts/${part}/title`, value: 'Gauge' }] });
-      expect(isError).toBe(false);
-      const sent = server.requests.find(r => r.method === 'PUT')!;
-      expect(sent.headers['If-Match']).toBe('"6"');
-      expect((sent.body as { document: BoardV2 }).document.version).toBe(2);
-      expect((server.boards.get('old')!.document as BoardV2).parts[part].title).toBe('Gauge');
-      expect(server.requests.some(r => r.method === 'PATCH')).toBe(false);
-    });
-
-    it('says it cannot be read here when it uses what the second version does not have yet', async () => {
-      server.boards.set('old', { name: 'Old', revision: 6, document: { ...first, triggers: [{ on: { event: 'enter', node: 'g', state: 'high' }, do: [{ action: 'emit', name: 'hi' }] }] } as ViewDocument });
-      const { value, isError } = await call('get_board', { board: 'old' });
-      expect(isError).toBe(true);
-      expect(value).toMatchObject({ status: 409, code: 'FIRST_VERSION_BOARD', message: expect.stringContaining("a trigger on a part's state") });
-    });
-  });
-
   it('makes a board with a first board, or an empty one of its kind', async () => {
     const document = gaugeBoard();
     expect((await call('create_board', { name: 'New', kind: 'grid', document })).value).toEqual({ id: 'b2', revision: 2, advice: [] });
     expect(server.boards.get('b2')!.document).toEqual(document);
     await call('create_board', { name: 'Blank', kind: 'canvas' });
-    expect(server.boards.get('b2')!.document).toEqual({ version: 2, parts: {}, layout: { kind: 'canvas', size: [1600, 900], place: {} } });
+    expect(server.boards.get('b2')!.document).toEqual({ parts: {}, layout: { kind: 'canvas', size: [1600, 900], place: {} } });
   });
 
   it('makes no board when its first board is refused — a retry leaves no empty boards behind', async () => {

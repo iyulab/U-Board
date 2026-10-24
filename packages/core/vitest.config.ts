@@ -9,6 +9,7 @@ export default defineConfig({
       // The subpath comes first: a string alias also matches as a prefix, so the bare package
       // name listed first would turn '@iyulab/u-board/domain' into 'src/index.ts/domain'.
       '@iyulab/u-board/domain': fileURLToPath(new URL('./src/domain-entry.ts', import.meta.url)),
+      '@iyulab/u-board/picture': fileURLToPath(new URL('./src/picture-entry.ts', import.meta.url)),
       '@iyulab/u-board': fileURLToPath(new URL('./src/index.ts', import.meta.url)),
     },
   },

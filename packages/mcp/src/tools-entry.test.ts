@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { toViewDocument, type Board } from '@iyulab/u-board/domain';
 import { boardTools, functionTool, UBoardClient } from './tools-entry.js';
 import { createServer } from './server.js';
 
@@ -37,8 +38,10 @@ describe('the board tools outside the MCP server', () => {
 
 describe('look without a picture', () => {
   it('answers the report alone, and says so — for a host that draws the board in a page it cannot photograph', async () => {
+    const board: Board = { data: { line: { from: 's1', path: '/line' } }, parts: { a: { as: 'stat', of: 'line', show: 'temp' } }, layout: { kind: 'grid', items: ['a'] } };
+    const picture = toViewDocument(board, { keysOf: () => [] });
     const api = new UBoardClient('https://board.example.com', { workspace: { id: 'w1', name: 'W' } }, async () =>
-      new Response(JSON.stringify({ id: 'b1', name: 'B', revision: 2, updatedAt: 't', document: { kind: 'grid', items: [{ id: 'a', widget: { type: 'metric', props: {} } }] } }))
+      new Response(JSON.stringify({ id: 'b1', name: 'B', revision: 2, updatedAt: 't', document: board, picture }))
     );
     const looker = {
       picture: false,
@@ -50,7 +53,7 @@ describe('look without a picture', () => {
     expect(answer.content.map(c => c.type)).toEqual(['text']);
     const report = JSON.parse((answer.content[0] as { text: string }).text);
     expect(report.status).toMatch(/^not done — 1 problem/);
-    // A board stored in the first version is drawn as it is, and what went wrong is said of its part.
+    // What went wrong in the picture is said of the board's part.
     expect(report.problems).toEqual([{ path: '/parts/a', message: 'its content runs past its box' }]);
   });
 });

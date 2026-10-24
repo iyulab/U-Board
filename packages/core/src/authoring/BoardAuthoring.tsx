@@ -7,10 +7,10 @@ import { GROUP_STYLE } from '../ui-style.js';
 import { placedIn, type ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { ViewerPage, type ViewerPageProps } from '../viewer/ViewerPage.js';
-import { PictureError, dataReadOf, keyReadsOf, toViewDocument } from '../board-v2/picture.js';
-import { readKeys, readerOf } from '../board-v2/draw.js';
-import { checkBoardV2 } from '../board-v2/check.js';
-import type { BoardV2 } from '../board-v2/types.js';
+import { PictureError, dataReadOf, keyReadsOf, toViewDocument } from '../board/picture.js';
+import { readKeys, readerOf } from '../board/draw.js';
+import { checkBoard } from '../board/check.js';
+import type { Board } from '../board/types.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
 import { PartPanel } from './PartPanel.js';
 import { StatusesPanel } from './StatusesPanel.js';
@@ -29,8 +29,8 @@ import { recordEdit, redo, startHistory, undo, type DocumentHistory } from './do
 import { useEditKeys } from './use-edit-keys.js';
 
 export interface BoardAuthoringProps {
-  /** The board to edit, in the language's second version. */
-  initialBoard: BoardV2;
+  /** The board to edit. */
+  initialBoard: Board;
   /** Where the board's values are read — also which items a grid laying out a part per item of a list lays out, read
    *  when the board opens and whenever what the board reads them by changes. */
   adapters: readonly Adapter[];
@@ -39,7 +39,7 @@ export interface BoardAuthoringProps {
   width?: number;
   height?: number;
   /** What Save does. Omitted, there is no Save — Export downloads the board. */
-  onSave?: (board: BoardV2) => void | Promise<void>;
+  onSave?: (board: Board) => void | Promise<void>;
   onDirtyChange?: (isDirty: boolean) => void;
   labels?: Partial<UBoardLabels>;
   clock?: () => number;
@@ -54,7 +54,7 @@ export interface BoardAuthoringProps {
 }
 
 /**
- * The authoring surface of a board in the language's second version: the board drawn from its picture, where its parts
+ * The authoring surface of a board: the board drawn from its picture, where its parts
  * are moved, sized, ordered and deleted — each edit said again in the board's layout (`withPictureLayout`) — and a
  * selected part's title, kind, data and fields set in its panel, with what the board's check finds there. A setting the
  * board cannot be drawn with keeps the last picture it could, and says why. Undo, Redo, Save and Export are the
@@ -62,14 +62,14 @@ export interface BoardAuthoringProps {
  */
 export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
   const labels = useLabels(labelsProp);
-  const [history, setHistory] = useState<DocumentHistory<BoardV2>>(() => startHistory(initialBoard));
+  const [history, setHistory] = useState<DocumentHistory<Board>>(() => startHistory(initialBoard));
   const board = history.present;
   // A grid's cell open in its own editor — its entry — and the board as that editor sees it: the cell (a canvas, or a
   // grid) as the layout, what it changes written back into the cell.
   const [cell, setCell] = useState<number | undefined>(undefined);
   const inCell = cell !== undefined && cellBoard(board, cell) !== undefined ? cell : undefined;
-  const scope = (b: BoardV2) => (inCell !== undefined ? (cellBoard(b, inCell) ?? b) : b);
-  const unscope = (b: BoardV2, scoped: BoardV2) => (inCell !== undefined ? withCell(b, inCell, scoped) : scoped);
+  const scope = (b: Board) => (inCell !== undefined ? (cellBoard(b, inCell) ?? b) : b);
+  const unscope = (b: Board, scoped: Board) => (inCell !== undefined ? withCell(b, inCell, scoped) : scoped);
   const scoped = scope(board);
   /** Where the layout the canvas editor edits sits in the board — for the findings about it. */
   const layoutAt = inCell !== undefined ? `/layout/items/${inCell}/${scoped.layout.kind}` : '/layout';
@@ -80,7 +80,6 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
     setModeState(next);
     onModeChange?.(next);
   };
-  const [fileError, setFileError] = useState<string | null>(null);
   // A view shows the board as it is: the edits are walked back and forth only while editing — by the buttons, or the
   // keys heard anywhere in the editor.
   const canUndo = mode === 'edit' && history.past.length > 0;
@@ -88,7 +87,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
   const { rootRef, typing } = useEditKeys(setHistory, canUndo, canRedo);
   /** An edit — one with what was typed in the same field before it while it answers typing there (document-history.ts),
    *  until focus moves on. Which field is read when the edit is made, before its update runs. */
-  const setEdit = (update: (h: DocumentHistory<BoardV2>, typingIn: HTMLElement | null) => DocumentHistory<BoardV2>) => {
+  const setEdit = (update: (h: DocumentHistory<Board>, typingIn: HTMLElement | null) => DocumentHistory<Board>) => {
     const typingIn = typing.current;
     setHistory(h => update(h, typingIn));
   };
@@ -110,17 +109,17 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
   const keysOf = useMemo(() => (data: string) => [...(keys[data] ?? [])], [keys]);
   // What is drawn: the board, or — while a setting leaves it one that cannot be drawn — the newest board before it that
   // could be, with why the board is not.
-  const pictureOf = (h: DocumentHistory<BoardV2>) => drawnOf(h, keysOf);
+  const pictureOf = (h: DocumentHistory<Board>) => drawnOf(h, keysOf);
   const drawing = useMemo(() => drawnOf(history, keysOf), [history, keysOf]);
   const picture = drawing.picture;
   /** What the editor shows: the board, or the cell open — drawn as a board of its own. */
   const shown: ViewDocument | null = inCell !== undefined ? drawCell(scoped, keysOf) : picture;
   /** What was drawn before an edit, as the editor shows it. */
-  const shownOf = (h: DocumentHistory<BoardV2>) => (inCell !== undefined ? drawCell(scope(h.present), keysOf) : pictureOf(h).picture);
+  const shownOf = (h: DocumentHistory<Board>) => (inCell !== undefined ? drawCell(scope(h.present), keysOf) : pictureOf(h).picture);
   const movable = (id: string) => placesItself(scoped, id);
   const ownPiece = (id: string) => linkOf(scoped, id) !== undefined || shapeOf(scoped, id) !== undefined;
   const findings = useMemo(() => {
-    const check = checkBoardV2(board);
+    const check = checkBoard(board);
     return [...check.issues, ...check.advice];
   }, [board]);
   // What a trigger may name: a part — one made per item, by item — as the board is drawn now.
@@ -136,12 +135,12 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
   const read = useMemo(() => readerOf(adapters), [adapters]);
   /** The board's own settings (`board` — its title, theme, accent and look) changed — one left empty goes, and so does
    *  `board` when nothing is left in it. */
-  const setBoardHead = (change: Partial<NonNullable<BoardV2['board']>>) =>
+  const setBoardHead = (change: Partial<NonNullable<Board['board']>>) =>
     setEdit((h, typingIn) => {
       const { board: head, ...rest } = h.present;
       const next: Record<string, unknown> = { ...head, ...change };
       for (const [key, value] of Object.entries(change)) if (value === undefined) delete next[key];
-      return recordEdit(h, Object.keys(next).length > 0 ? { ...rest, board: next as NonNullable<BoardV2['board']> } : rest, typingIn);
+      return recordEdit(h, Object.keys(next).length > 0 ? { ...rest, board: next as NonNullable<Board['board']> } : rest, typingIn);
     });
   /** One of the board's data read now, whole, as the board reads it. */
   const look = async (name: string) => {
@@ -382,20 +381,17 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
                 if (before?.kind !== 'canvas') return h;
                 return recordEdit(h, unscope(h.present, withPictureLayout(scope(h.present), before, update(before))), typingIn);
               })
-            }
-            inCell={inCell !== undefined}
+            }
             mode={mode}
             onModeChange={setMode}
-            documentActions={documentActions}
-            fileError={fileError}
-            onFileError={setFileError}
+            documentActions={documentActions}
             adapters={adapters}
             width={width}
             height={height}
             labels={labels}
             clock={clock}
             triggerHosting={{ boardId, onTrigger, onNavigate, linkOrigins }}
-            layoutOnly={{
+            parts={{
               movable,
               panel,
               connect: (from, to) => {
@@ -419,16 +415,14 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             }
             mode={mode}
             onModeChange={setMode}
-            documentActions={documentActions}
-            fileError={fileError}
-            onFileError={setFileError}
+            documentActions={documentActions}
             adapters={adapters}
             width={width}
             height={height}
             labels={labels}
             clock={clock}
             triggerHosting={{ boardId, onTrigger, onNavigate, linkOrigins }}
-            layoutOnly={{ movable, panel }}
+            parts={{ movable, panel }}
             onEditCanvas={inCell === undefined ? id => setCell(cellIndex(board, id)) : undefined}
           />
         ) : (
@@ -453,8 +447,8 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
 }
 
 /** A board drawn — when its language takes it and it draws — or why not. */
-function draw(board: BoardV2, keysOf: (data: string) => string[]): { picture: ViewDocument; error: null } | { picture: null; error: string } {
-  const issue = checkBoardV2(board).issues[0];
+function draw(board: Board, keysOf: (data: string) => string[]): { picture: ViewDocument; error: null } | { picture: null; error: string } {
+  const issue = checkBoard(board).issues[0];
   if (issue) return { picture: null, error: `${issue.path}: ${issue.message}` };
   try {
     return { picture: toViewDocument(board, { keysOf }), error: null };
@@ -467,7 +461,7 @@ function draw(board: BoardV2, keysOf: (data: string) => string[]): { picture: Vi
 /** A grid's cell as `cellBoard` gives it, drawn for its editor: without the board's triggers — they name parts all over
  *  the board, most of them not in the cell — and without the board's check, which would find those parts placed nowhere
  *  in it. Null when it cannot be drawn. */
-function drawCell(cell: BoardV2, keysOf: (data: string) => string[]): ViewDocument | null {
+function drawCell(cell: Board, keysOf: (data: string) => string[]): ViewDocument | null {
   const { triggers: _triggers, ...drawn } = cell;
   try {
     return toViewDocument(drawn, { keysOf });
@@ -480,7 +474,7 @@ function drawCell(cell: BoardV2, keysOf: (data: string) => string[]): ViewDocume
 /** The keys of the items each data list a part is made per item of has now, read through `adapters` — again only when
  *  what they are read by changes (an edit elsewhere in the board reads nothing). While a setting leaves the board one
  *  that cannot be drawn, the keys read last stay. */
-function useItemKeys(board: BoardV2, adapters: readonly Adapter[]): Record<string, string[]> {
+function useItemKeys(board: Board, adapters: readonly Adapter[]): Record<string, string[]> {
   const [keys, setKeys] = useState<Record<string, string[]>>({});
   const read = useMemo(() => readerOf(adapters), [adapters]);
   const by = useMemo(
@@ -488,7 +482,7 @@ function useItemKeys(board: BoardV2, adapters: readonly Adapter[]): Record<strin
     [board]
   );
   // The board the keys are read from: the newest one that draws whose reads differ from the last.
-  const [source, setSource] = useState<{ by: string; board: BoardV2 }>({ by: '[]', board });
+  const [source, setSource] = useState<{ by: string; board: Board }>({ by: '[]', board });
   if (by !== null && by !== source.by) setSource({ by, board });
   useEffect(() => {
     if (source.by === '[]') return;
@@ -502,7 +496,7 @@ function useItemKeys(board: BoardV2, adapters: readonly Adapter[]): Record<strin
 }
 
 /** What the editor draws for a history: its board, or the newest one before it that draws, and why the board does not. */
-function drawnOf(history: DocumentHistory<BoardV2>, keysOf: (data: string) => string[]): { picture: ViewDocument; error: string | null } {
+function drawnOf(history: DocumentHistory<Board>, keysOf: (data: string) => string[]): { picture: ViewDocument; error: string | null } {
   const now = draw(history.present, keysOf);
   if (now.picture) return now;
   for (const before of [...history.past].reverse()) {

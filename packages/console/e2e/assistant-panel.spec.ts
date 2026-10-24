@@ -3,8 +3,7 @@ import { test, expect, type Route } from '@playwright/test';
 
 // The chat panel against a model endpoint the test answers itself: a chat completions stream that reads the rules, makes
 // a source of example values (the workspace has none), draws a title and a figure from it on the open board, looks at it,
-// and answers — the panel's whole path but the model. The tools write the
-// board language's second version, so the board the editor reads again is one it shows from the server's picture.
+// and answers — the panel's whole path but the model.
 const ENDPOINT = 'https://models.example.com/v1';
 
 const sse = (...deltas: Array<Record<string, unknown>>) =>
@@ -73,8 +72,7 @@ test('the chat panel draws on the open board with a model the person sets, and t
   await expect(panel.getByText('예시 데이터로 오늘 매출을 그렸습니다.')).toBeVisible({ timeout: 30_000 });
   await expect(panel.getByText('보드에 그리기 · 변경 5개')).toBeVisible();
   await expect(panel.getByText('그려 보고 확인')).toBeVisible();
-  // The editor read the board again: now in the second version, it is drawn from the server's picture — the title the
-  // model drew is there, saved — and laid out in the editor of that version.
+  // The editor read the board again — the title the model drew is there, saved.
   await expect(page.getByRole('region', { name: '편집기' }).getByText('오늘 매출 현황')).toBeVisible();
   await expect(page.getByText('저장됨')).toBeVisible();
   await expect(page.getByText(/부품을 옮기고 크기를 바꾸거나 지울 수 있습니다/)).toBeVisible();

@@ -8,27 +8,29 @@ import { createApp } from '../app.js';
 import { createWorkspace } from '../db/workspaces.js';
 import { createUser } from '../db/users.js';
 import { createBoard, updateBoard } from '../db/boards.js';
-import { elementDefinitionHash, elementFrameLabel, elementFrameScripts, type ElementDefinition, type ViewDocument } from '@iyulab/u-board/domain';
-import { elementDefinition } from '@iyulab/u-board/board-v2';
+import { elementDefinitionHash, elementFrameLabel, elementFrameScripts, type ElementDefinition } from '@iyulab/u-board/picture';
+import { elementDefinition, type Board } from '@iyulab/u-board/domain';
 import { elementFrameOriginFromEnv, elementFramesAddress, elementOriginsFromEnv, frameHostLabel } from '../element-frame.js';
 
-const chart: ElementDefinition = {
-  render: 'script',
+// The elements as the board defines them, and the definition its picture draws — the one a frame is asked for by.
+const scripted = {
   script: 'ub.onProps(p => { document.body.textContent = p.value; }); // </script> stays inside',
   style: 'body { color: var(--u-widget-text) }',
   resources: ['https://cdn.example.com', 'https://fonts.example.com'],
+  props: { value: 'number' as const },
 };
-const dot: ElementDefinition = { render: 'template', template: '<b/>' };
+const chart: ElementDefinition = elementDefinition(scripted);
+const dot: ElementDefinition = elementDefinition({ template: '<b/>' });
 
 let db: DbClient;
 let app: express.Express;
 let boardId: string;
 
-async function boardWith(elements: Record<string, ElementDefinition>): Promise<string> {
+async function boardWith(elements: NonNullable<Board['elements']>): Promise<string> {
   const workspace = await createWorkspace(db, 'W');
   const user = await createUser(db, { email: `${workspace.id}@x.com`, passwordHash: 'h', name: 'U' });
   const board = await createBoard(db, { workspaceId: workspace.id, name: 'B', actorUserId: user.id, kind: 'grid' });
-  const document: ViewDocument = { kind: 'grid', items: [], elements };
+  const document: Board = { parts: {}, layout: { kind: 'grid', items: [] }, elements };
   await updateBoard(db, workspace.id, board.id, { document });
   return board.id;
 }
@@ -38,11 +40,12 @@ const sha = (text: string) => `'sha256-${createHash('sha256').update(text, 'utf8
 beforeEach(async () => {
   db = await createTestDb();
   app = createApp({ db, sessionSecret: 'test-secret-at-least-16-chars', elementOrigins: ['https://cdn.example.com'] });
-  boardId = await boardWith({ chart, dot });
+  boardId = await boardWith({ chart: scripted, dot: { template: '<b/>' } });
 });
 
 describe('GET /api/element-frames/:boardId/:name/:hash', () => {
-  it('serves a saved script element, named by its definition, with no credentials', async () => {
+  it('serves a saved script element, named by the definition its picture draws, with no credentials', async () => {
+    expect(chart).toEqual({ render: 'script', props: { type: 'object', properties: { value: { type: 'number' } } }, script: scripted.script, style: scripted.style, resources: scripted.resources });
     const res = await request(app).get(`/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`);
     expect(res.status).toBe(200);
     expect(res.type).toBe('text/html');
@@ -66,20 +69,6 @@ describe('GET /api/element-frames/:boardId/:name/:hash', () => {
     expect(res.get('X-Content-Type-Options')).toBe('nosniff');
   });
 
-  it('serves a script element of a board in the second version by the definition its picture draws — a template, never', async () => {
-    const { rows } = await db.query<{ workspace_id: string }>('SELECT workspace_id FROM boards WHERE id = $1', [boardId]);
-    const v2 = { script: chart.script!, style: chart.style!, resources: chart.resources!, props: { value: 'number' as const } };
-    await updateBoard(db, rows[0]!.workspace_id, boardId, {
-      document: { version: 2, parts: {}, layout: { kind: 'grid', items: [] }, elements: { chart: v2, dot: { template: '<b/>' } } },
-    });
-    const drawn = elementDefinition(v2);
-    expect(drawn).toEqual({ render: 'script', props: { type: 'object', properties: { value: { type: 'number' } } }, script: chart.script, style: chart.style, resources: chart.resources });
-    const res = await request(app).get(`/api/element-frames/${boardId}/chart/${await elementDefinitionHash(drawn)}`);
-    expect(res.status).toBe(200);
-    expect(res.text).toContain('window.ub');
-    expect((await request(app).get(`/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`)).status).toBe(404);
-    expect((await request(app).get(`/api/element-frames/${boardId}/dot/${await elementDefinitionHash(elementDefinition({ template: '<b/>' }))}`)).status).toBe(404);
-  });
 
   it('revalidates by entity tag', async () => {
     const path = `/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`;
@@ -90,8 +79,11 @@ describe('GET /api/element-frames/:boardId/:name/:hash', () => {
 
   it('answers 404 for a definition the board does not hold as named — an edit not saved, a template, an unknown board', async () => {
     const edited = await elementDefinitionHash({ ...chart, script: 'other()' });
+    // The board's own words for the element are not what its picture draws.
+    const asWritten = await elementDefinitionHash({ ...scripted, render: 'script' } as unknown as ElementDefinition);
     for (const path of [
       `/api/element-frames/${boardId}/chart/${edited}`,
+      `/api/element-frames/${boardId}/chart/${asWritten}`,
       `/api/element-frames/${boardId}/dot/${await elementDefinitionHash(dot)}`,
       `/api/element-frames/${boardId}/missing/${await elementDefinitionHash(chart)}`,
       `/api/element-frames/${boardId}/constructor/${await elementDefinitionHash(chart)}`,
@@ -102,7 +94,7 @@ describe('GET /api/element-frames/:boardId/:name/:hash', () => {
   });
 
   it('names a definition the same whatever order its keys were stored in', async () => {
-    const reordered = { resources: chart.resources, style: chart.style, script: chart.script, render: chart.render } as ElementDefinition;
+    const reordered = { resources: chart.resources, style: chart.style, props: chart.props, script: chart.script, render: chart.render } as ElementDefinition;
     expect(await elementDefinitionHash(reordered)).toBe(await elementDefinitionHash(chart));
   });
 });

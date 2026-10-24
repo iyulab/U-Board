@@ -16,7 +16,7 @@ export interface GridItemPanelProps {
   /** Left out, there is no Duplicate (an editor that adds nothing). */
   onDuplicate?: () => void;
   onRemove: () => void;
-  /** Only the columns it spans — what a board in the language's second version lays out. */
+  /** Only the columns it spans — what a board lays out. */
   spanOnly?: boolean;
   labels?: UBoardLabels;
 }

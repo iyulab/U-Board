@@ -2,7 +2,7 @@ import { DEFAULT_QUALITY_TEXT, type QualityText } from './quality-text.js';
 
 /**
  * Every piece of text the shipped authoring and viewer components show. English by default
- * (`DEFAULT_LABELS`); a host passes `labels` to `AuthoringView` or `ViewerPage` to show its own
+ * (`DEFAULT_LABELS`); a host passes `labels` to `BoardAuthoring`, `BoardView` or `ViewerPage` to show its own
  * language — any subset, the rest stays English.
  */
 export interface UBoardLabels {
@@ -46,7 +46,7 @@ export interface UBoardLabels {
   deleteSelected: string;
   /** Steps back through the edits since the document was opened (Ctrl+Z), and forward again (Ctrl+Shift+Z or Ctrl+Y). */
   undo: string;
-  /** Add a part to a board in the language's second version, and the title it starts with. */
+  /** Add a part to a board, and the title it starts with. */
   partAdd: string;
   newPartTitle: string;
   redo: string;
@@ -154,13 +154,13 @@ export interface UBoardLabels {
   /** Shown instead of a property panel while several items are selected; `{count}` is replaced by
    * how many. */
   multipleSelected: string;
-  /** The panel of an editor that edits where the parts are and nothing else (a board in the language's second version). */
+  /** The panel of an editor that edits where the parts are and nothing else. */
   layoutOnlyHint: string;
-  /** A part's panel (a board in the language's second version): its heading (`{id}`) and fields. */
+  /** A part's panel: its heading (`{id}`) and fields. */
   partHeading: string;
-  /** A link's panel on a board in the language's second version. `{from}`, `{to}`: the parts it joins. */
+  /** A link's panel on a board. `{from}`, `{to}`: the parts it joins. */
   linkHeading: string;
-  /** A shape's panel, and adding a box or a text, on a canvas board in the language's second version. */
+  /** A shape's panel, and adding a box or a text, on a canvas board. */
   shapeHeading: string;
   shapeAddBox: string;
   shapeAddText: string;
@@ -302,7 +302,7 @@ export interface UBoardLabels {
   elementProblems: string;
   removeElement: string;
   removeElementPlaced: string;
-  /** An element prop of a board in the language's second version, by name: removed, and a new one. `{name}`: the prop. */
+  /** An element prop of a board, by name: removed, and a new one. `{name}`: the prop. */
   elementPropRemove: string;
   elementPropNew: string;
   elementPropAdd: string;

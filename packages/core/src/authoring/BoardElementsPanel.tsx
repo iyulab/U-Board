@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
-import type { BoardV2, ElementDefinition } from '../board-v2/types.js';
+import type { Board, ElementDefinition } from '../board/types.js';
 
 type PropType = NonNullable<ElementDefinition['props']>[string];
 const PROP_TYPES: readonly PropType[] = ['number', 'string', 'boolean', 'list', 'object'];
 
 export interface BoardElementsPanelProps {
-  board: BoardV2;
+  board: Board;
   /** The board's elements as the panel made them — none left: `undefined`. */
   onChange: (elements: Record<string, ElementDefinition> | undefined) => void;
   labels?: UBoardLabels;
@@ -18,7 +18,7 @@ const usable = (name: string, taken: Readonly<Record<string, unknown>>) =>
   /^[a-z][a-z0-9-]*$/.test(name) && !name.startsWith('u-board-') && !Object.hasOwn(taken, name);
 
 /** The parts that draw element `name`. */
-const usesOf = (board: BoardV2, name: string) => Object.entries(board.parts).filter(([, part]) => part.as === 'element' && part.element === name).map(([id]) => id);
+const usesOf = (board: Board, name: string) => Object.entries(board.parts).filter(([, part]) => part.as === 'element' && part.element === name).map(([id]) => id);
 
 /**
  * The board's elements — drawings no built-in makes, each a template of markup with `{{prop}}` holes (or a script run in a

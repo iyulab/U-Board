@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { MappingEditor, parseBands } from './MappingEditor';
 import { BoardAuthoring } from './BoardAuthoring';
-import type { BoardV2 } from '../board-v2/types';
+import type { Board } from '../board/types';
 
 vi.mock('@canvas-kit/designer', () => ({ KonvaDesigner: () => <div data-testid="konva-designer" /> }));
 vi.mock('@canvas-kit/viewer', () => ({ Viewer: () => <div data-testid="viewer" /> }));
@@ -52,8 +52,7 @@ describe('MappingEditor', () => {
 
 describe('BoardAuthoring — a field’s status and words in the data panel', () => {
   it('sets a field’s status by value and its words, and saves them in the board', async () => {
-    const board: BoardV2 = {
-      version: 2,
+    const board: Board = {
       data: { plant: { from: 'plant', path: '/plant', fields: { state: {} } } },
       parts: { head: { as: 'header', title: 'Plant' } },
       layout: { kind: 'grid', items: ['head'] },

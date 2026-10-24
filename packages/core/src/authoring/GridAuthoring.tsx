@@ -6,15 +6,10 @@ import { GridBoard, GRID_MEDIUM_MIN_WIDTH, GRID_WIDE_MIN_WIDTH } from '../render
 import { AttributionLine, boardAttributions, showsExampleData } from '../viewer/attribution.js';
 import { focusPart, useTriggers } from '../viewer/use-triggers.js';
 import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
-import { PropertyPanel } from './PropertyPanel.js';
-import { triggerEditing } from './TriggersEditor.js';
-import { BoardPanel } from './BoardPanel.js';
-import { ElementsPanel } from './ElementsPanel.js';
-import { SymbolsPanel } from './SymbolsPanel.js';
 import { GridItemPanel } from './GridItemPanel.js';
-import { seedWidget, widgetTypeName } from './widget-catalog.js';
-import { addGridItem, duplicateGridItem, gridItemIndex, moveGridItem, newCanvasItem, newGridItemId, removeGridItem, updateGridItem } from '../editing/grid-editing.js';
-import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
+import { widgetTypeName } from './widget-catalog.js';
+import { gridItemIndex, moveGridItem, removeGridItem, updateGridItem } from '../editing/grid-editing.js';
+import { ModeSwitch, type KindEditorProps } from './editor-parts.js';
 
 /** The widths the editor can lay a grid out at — one inside each of the grid's three bands. */
 type LayoutWidth = 'wide' | 'medium' | 'narrow';
@@ -61,9 +56,9 @@ function shownCanvas(canvas: CellCanvas, resolved: ResolvedCellCanvas | undefine
 }
 
 /**
- * The editor of a grid view: its items in order, laid out as the viewer lays them out, beside a panel for the
- * selected item — its room and place, then its widget — or, with nothing selected, the board's settings. "Add
- * item" puts a new item after the selected one. The layout width lays the grid out as a medium or a narrow screen
+ * The grid of a board being edited, drawn from its picture: its items in order, laid out as the viewer lays them out,
+ * beside a panel for the selected item — its room and place, then what `parts.panel` draws for it — or, with nothing
+ * selected, what `parts.panel` draws for the board. The layout width lays the grid out as a medium or a narrow screen
  * will, so the author sees each.
  */
 export interface GridAuthoringProps extends KindEditorProps<GridView> {
@@ -71,8 +66,8 @@ export interface GridAuthoringProps extends KindEditorProps<GridView> {
   onEditCanvas?: (id: string) => void;
 }
 
-export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, adapters, width, height, connectorLabels, labels, clock, triggerHosting, onEditCanvas, layoutOnly }: GridAuthoringProps) {
-  const movable = layoutOnly?.movable;
+export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, adapters, width, height, labels, clock, triggerHosting, onEditCanvas, parts }: GridAuthoringProps) {
+  const { movable } = parts;
   const readClock = useEffectEvent(() => clock());
   const [preview, setPreview] = useState<{ doc: ResolvedGridView; now: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -116,25 +111,6 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
   const selectedIndex = doc.items.findIndex(item => item.id === selectedId);
   const selected = selectedIndex >= 0 ? doc.items[selectedIndex] : null;
 
-  const handleAddItem = () => {
-    const item = { id: newGridItemId(), widget: seedWidget('status', { label: labels.newNodeLabel, value: labels.newNodeValue }) };
-    updateDoc(current => addGridItem(current, item, selectedId));
-    setSelectedId(item.id);
-  };
-
-  const handleAddCanvas = () => {
-    const item = newCanvasItem(newGridItemId());
-    updateDoc(current => addGridItem(current, item, selectedId));
-    setSelectedId(item.id);
-  };
-
-  const handleDuplicate = () => {
-    if (!selected) return;
-    const id = newGridItemId();
-    updateDoc(current => duplicateGridItem(current, selected.id, id));
-    setSelectedId(id);
-  };
-
   const handleRemove = () => {
     if (!selected) return;
     updateDoc(current => removeGridItem(current, selected.id));
@@ -153,16 +129,6 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
   return (
     <>
       <div className="ub-authoring__toolbar" style={TOOLBAR_STYLE}>
-        {!movable && (
-          <div className="ub-authoring__group" style={GROUP_STYLE}>
-            <button type="button" className="ub-action" onClick={handleAddItem}>
-              {labels.addItem}
-            </button>
-            <button type="button" className="ub-action" onClick={handleAddCanvas}>
-              {labels.addCanvas}
-            </button>
-          </div>
-        )}
         {documentActions}
         <ModeSwitch mode={mode} onEdit={() => onModeChange('edit')} onView={handleViewMode} labels={labels} />
         {mode === 'edit' && (
@@ -175,7 +141,6 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
           </div>
         )}
       </div>
-      <FileError message={fileError} />
       <div className="ub-authoring__panes" style={{ display: 'flex', gap: 'var(--ub-space-4, 16px)', flex: 1, minHeight: 0 }}>
         <div className="ub-authoring__pane" style={paneStyle}>
           {mode === 'edit' ? (
@@ -206,14 +171,14 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                         aria-pressed={picked}
                         style={dropOn === item.id ? DROP_STYLE : picked ? PICKED_STYLE : PICK_STYLE}
                         onClick={() => setSelectedId(picked ? null : item.id)}
-                        draggable={!movable || movable(item.id)}
+                        draggable={movable(item.id)}
                         onDragStart={e => {
                           e.dataTransfer.effectAllowed = 'move';
                           e.dataTransfer.setData('text/plain', item.id);
                           setDragged(item.id);
                         }}
                         onDragOver={e => {
-                          if (!dragged || dragged === item.id || (movable && !movable(item.id))) return;
+                          if (!dragged || dragged === item.id || !movable(item.id)) return;
                           e.preventDefault();
                           e.dataTransfer.dropEffect = 'move';
                           setDropOn(item.id);
@@ -261,64 +226,28 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
         <div className="ub-authoring__panel" style={{ flex: '0 0 var(--ub-panel-width, 320px)', minWidth: 0, overflowY: 'auto' }}>
           {selected ? (
             <>
-              {(!movable || movable(selected.id)) && (
+              {movable(selected.id) && (
               <GridItemPanel
                 item={selected}
                 isFirst={selectedIndex === 0}
                 isLast={selectedIndex === doc.items.length - 1}
                 onChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
                 onMove={by => updateDoc(current => moveGridItem(current, selected.id, gridItemIndex(current, selected.id) + by))}
-                onDuplicate={movable ? undefined : handleDuplicate}
-                onRemove={handleRemove}
-                spanOnly={!!movable}
+                                onRemove={handleRemove}
+                spanOnly
                 labels={labels}
               />
               )}
-              {movable && (layoutOnly?.panel?.(selected.id) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)}
+              {(parts.panel(selected.id) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)}
               {isCanvasItem(selected) && onEditCanvas && (
                 <button type="button" className="ub-action ub-action--primary" onClick={() => onEditCanvas(selected.id)}>
                   {labels.editCanvas}
                 </button>
               )}
-              {!movable && !isCanvasItem(selected) && (
-                <PropertyPanel
-                  node={selected}
-                  adapters={adapters}
-                  connectorLabels={connectorLabels}
-                  onChange={widget => updateDoc(current => updateGridItem(current, selected.id, { widget }))}
-                  onPartChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
-                  triggers={triggerEditing(doc, updateDoc)}
-                  elements={doc.elements}
-                  labels={labels}
-                  clock={clock}
-                />
-              )}
             </>
-          ) : movable ? (
-            (layoutOnly?.panel?.(null) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)
           ) : (
-            <BoardPanel
-              appearance={doc.appearance ?? 'light'}
-              onAppearanceChange={appearance =>
-                updateDoc(current => {
-                  const { appearance: _appearance, ...rest } = current;
-                  return appearance === 'dark' ? { ...rest, appearance } : rest;
-                })
-              }
-              accent={doc.accent}
-              onAccentChange={accent =>
-                updateDoc(current => {
-                  const { accent: _accent, ...rest } = current;
-                  return accent === undefined ? rest : { ...rest, accent };
-                })
-              }
-              hint={labels.selectItem}
-              triggers={triggerEditing(doc, updateDoc)}
-              labels={labels}
-            />
+            (parts.panel(null) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)
           )}
-          {!selected && !movable && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
-          {!selected && !movable && <SymbolsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
         </div>
       </div>
     </>

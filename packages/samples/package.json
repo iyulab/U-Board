@@ -12,8 +12,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "capture": "tsx scripts/capture-snapshots.ts",
-    "v2-coverage": "tsx scripts/v2-coverage.ts"
+    "capture": "tsx scripts/capture-snapshots.ts"
   },
   "repository": {
     "type": "git",

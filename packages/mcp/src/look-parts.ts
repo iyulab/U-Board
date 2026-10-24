@@ -1,4 +1,4 @@
-import { instancePartId, placedAt, type ViewDocument } from '@iyulab/u-board/domain';
+import { instancePartId, placedAt, type ViewDocument } from '@iyulab/u-board/picture';
 
 // Where each part of a board is drawn on the page, and how a problem seen there reads in the document — for `look`,
 // wherever it draws the board (the MCP server's browser, or a page that draws it itself). Nothing here needs Node.

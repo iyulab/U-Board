@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
-import { EMPHASES, TONES, type Emphasis, type Status, type Tone } from '../board-v2/types.js';
+import { EMPHASES, TONES, type Emphasis, type Status, type Tone } from '../board/types.js';
 
 export interface StatusesPanelProps {
   statuses: Readonly<Record<string, Status>> | undefined;

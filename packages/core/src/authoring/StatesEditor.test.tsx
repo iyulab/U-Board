@@ -3,9 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { StatesEditor, stateNames } from './StatesEditor';
-import { PropertyPanel } from './PropertyPanel';
 import { DEFAULT_LABELS } from '../labels';
-import type { Placed, StateRule, Widget } from '../view-document';
+import type { StateRule, Widget } from '../view-document';
 
 const bound: Widget = { type: 'status', props: { data: { label: 'Pump' } }, bindings: { 'data.value': { adapter: 'plant', ref: { path: '/pump' } } } };
 
@@ -76,14 +75,3 @@ describe('StatesEditor', () => {
   });
 });
 
-describe('PropertyPanel and a part’s states', () => {
-  it('takes the states away with the binding they are read from, in one change', () => {
-    const part: Placed = { id: 'p', widget: bound, states: { from: 'data.value', map: { values: { Fault: 'fault' } } } };
-    const onChange = vi.fn();
-    const onPartChange = vi.fn();
-    render(<PropertyPanel node={part} adapters={[]} onChange={onChange} onPartChange={onPartChange} />);
-    fireEvent.click(screen.getByRole('button', { name: DEFAULT_LABELS.removeBinding.replace('{path}', 'data.value') }));
-    expect(onPartChange).toHaveBeenCalledWith({ widget: { ...bound, bindings: {} }, states: undefined });
-    expect(onChange).not.toHaveBeenCalled();
-  });
-});

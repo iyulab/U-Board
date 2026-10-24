@@ -40,7 +40,7 @@ test('a shared board with many bindings loads in one batch request', async ({ pa
       place[id] = i < BINDINGS ? [40 + (i % 4) * 180, 40 + Math.floor(i / 4) * 120, 160, 100] : [40, 420, 160, 100];
     }
     const saved = await page.request.put(`/api/workspaces/${workspaceId}/boards/${board.id}`, {
-      data: { document: { version: 2, data: { assets: { from: connector.id, path: '/assets', fields } }, parts, layout: { kind: 'canvas', size: [800, 600], place } } },
+      data: { document: { data: { assets: { from: connector.id, path: '/assets', fields } }, parts, layout: { kind: 'canvas', size: [800, 600], place } } },
     });
     expect(saved.ok()).toBe(true);
     const { token } = await (await page.request.post(`/api/workspaces/${workspaceId}/boards/${board.id}/share-tokens`)).json();

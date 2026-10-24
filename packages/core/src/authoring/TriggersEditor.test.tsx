@@ -4,7 +4,6 @@ import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { TriggersEditor, triggerEditing } from './TriggersEditor';
 import { DEFAULT_LABELS as L } from '../labels';
-import { validateViewDocument } from '../validate-view-document';
 import type { GridView } from '../view-document';
 
 const board = (): GridView => ({
@@ -62,7 +61,6 @@ describe('TriggersEditor on a part', () => {
     fireEvent.change(screen.getByLabelText(L.triggerFocusPart.replace('{n}', '1')), { target: { value: 'valve' } });
     const triggers = written(container);
     expect(triggers).toEqual([{ on: { event: 'enter', node: 'pump', state: 'fault' }, when: { node: 'pump', state: ['fault', 'hot'] }, do: [{ action: 'focus', node: 'valve' }] }]);
-    expect(validateViewDocument({ ...board(), triggers })).toEqual([]);
   });
 
   it('shows only the part’s triggers, and removes one', () => {

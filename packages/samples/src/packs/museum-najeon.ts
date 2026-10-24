@@ -1,8 +1,3 @@
-import type { Binding, CanvasView, ElementDefinition, Node, Widget } from '@iyulab/u-board/domain';
-import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
-import { svgDataUrl } from '../frame.js';
-import { snapshot } from '../snapshots/museum-najeon.js';
-
 // A craft museum's storage rooms drawn as lacquerware inlaid with mother-of-pearl (najeon): every room a black lacquer
 // box framed in pearl — its collection, temperature and relative humidity large, a pearl gauge with the room's allowed
 // humidity band and a marker where the air is now — and its state in a character, a word and the frame: 安 steady
@@ -10,179 +5,287 @@ import { snapshot } from '../snapshots/museum-najeon.js';
 // (dotted, dimmed). On the right the painting store's humidity over the last day against its band, and the day's log.
 // The museum and its rooms are made up, so the values are example data.
 
-export const MUSEUM: ExampleSampleConnector = {
-  key: 'museum',
-  name: '예시 박물관 수장고 환경 감시 API',
-  example: true,
-  attribution: { text: '예시 데이터 — 실제 박물관·수장고가 아닙니다' },
-};
+import type { Board } from '@iyulab/u-board/domain';
+import type { SamplePack } from '../sample-pack.js';
+import { snapshot } from '../snapshots/museum-najeon.js';
 
-/** The room sensors report every five minutes; twenty minutes without one is a sensor to check before the room is. */
-const MAX_AGE_SECONDS = 20 * 60;
-
-const bind = (path: string, valuePath: string): Binding => ({
-  adapter: MUSEUM.key,
-  ref: { path, valuePath, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-});
-
-const WIDTH = 1600;
-const HEIGHT = 1000;
-const LACQUER = '#120d0b';
-const LACQUER_LIGHT = '#1f1714';
-const PEARL_TEXT = '#efe7d6';
-const PEARL_DIM = '#a99f8c';
-const VERMILION = '#b8352a';
-/** Mother-of-pearl: the shimmer of the shell, pink through green to blue. */
-const PEARL = 'linear-gradient(135deg, #e9d2f4, #bfe8dc 26%, #f4c9da 50%, #c4d8f6 74%, #efe3c4)';
-const TEXT = '"Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
-const SERIF = '"Nanum Myeongjo", "Batang", "AppleMyungjo", serif';
-
-const BOX_W = 280;
-const BOX_H = 380;
-const ROOMS = ['seohwa', 'jikmul', 'mokchil', 'dojagi', 'geumsok', 'gogo'] as const;
-const boxAt = (i: number) => ({ x: 60 + (i % 3) * (BOX_W + 30), y: 120 + Math.floor(i / 3) * (BOX_H + 30) });
-
-// ── The lacquer ────────────────────────────────────────────────────────────────────────────────────────────────
-
-function drawing(): string {
-  // Arabesque vines (dangchomun) and chrysanthemums in shell along the edges: decoration that says nothing.
-  const vine = (x: number, y: number, flip: boolean) =>
-    `<g transform="translate(${x} ${y}) scale(${flip ? -1 : 1} 1)" fill="none" stroke="url(#shell)" stroke-width="3" opacity=".8"><path d="M0 0 C 60 -40, 120 40, 180 0 S 300 -40, 360 0 S 480 40, 540 0"/>${[
-      [90, -14],
-      [270, -14],
-      [450, -14],
-    ]
-      .map(([cx, cy]) => `<path d="M${cx} ${cy} c 10 -22, 34 -22, 30 -2 c -6 14, -24 12, -30 2" fill="url(#shell)" stroke="none"/>`)
-      .join('')}</g>`;
-  const flower = (cx: number, cy: number, r: number) =>
-    `<g transform="translate(${cx} ${cy})" fill="url(#shell)" opacity=".75">${Array.from({ length: 12 }, (_, i) => `<ellipse rx="${r * 0.22}" ry="${r * 0.5}" cy="${-r * 0.55}" transform="rotate(${i * 30})"/>`).join('')}<circle r="${r * 0.18}" fill="${LACQUER}"/></g>`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
-<defs>
-<linearGradient id="shell" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9d2f4"/><stop offset=".3" stop-color="#bfe8dc"/><stop offset=".55" stop-color="#f4c9da"/><stop offset=".8" stop-color="#c4d8f6"/><stop offset="1" stop-color="#efe3c4"/></linearGradient>
-<radialGradient id="sheen" cx=".35" cy=".25" r=".9"><stop offset="0" stop-color="${LACQUER_LIGHT}"/><stop offset="1" stop-color="${LACQUER}"/></radialGradient>
-</defs>
-<rect width="${WIDTH}" height="${HEIGHT}" fill="url(#sheen)"/>
-${vine(40, 985, false)}${vine(1000, 985, true)}
-${flower(30, 520, 18)}${flower(985, 945, 14)}
-<rect x="1010" y="30" width="560" height="940" rx="4" fill="${LACQUER_LIGHT}" stroke="url(#shell)" stroke-width="3"/>
-<rect x="1022" y="42" width="536" height="916" rx="2" fill="none" stroke="url(#shell)" stroke-width="1" opacity=".7"/>
-</svg>`;
-  return svgDataUrl(svg);
-}
-
-// ── Elements ───────────────────────────────────────────────────────────────────────────────────────────────────
-
-/** A storage room as a lacquer box framed in shell — read from `r`: name and collection, temperature and humidity, the
- *  allowed bands, a gauge (20–80 % RH) with the allowed band (`--lo`–`--hi`) and a marker (`--v`), and the state. */
-const room: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', required: ['r'], properties: { r: { type: 'object' } } },
-  template: `<article class="bx {{r.state}}"><header><h2>{{r.name}}</h2><small>{{r.items}}</small></header><div class="vals"><p><b>{{r.temp}}</b><span>℃</span></p><p><b>{{r.rh}}</b><span>%RH</span></p></div><div class="gauge" style="--v: {{r.rh}}; --lo: {{r.lo}}; --hi: {{r.hi}}"><div class="band"></div><div class="mark"></div></div><p class="std">기준 {{r.tband}}℃ · {{r.rhband}}%</p><p class="word"><i></i>{{r.word}}</p><p class="note">{{r.note}}</p></article>`,
-  style: `.bx{position:relative;height:100%;box-sizing:border-box;padding:18px 18px 14px;border:6px solid transparent;border-radius:6px;background:linear-gradient(160deg, ${LACQUER_LIGHT}, ${LACQUER}) padding-box, ${PEARL} border-box;font-family:${TEXT};color:${PEARL_TEXT};display:grid;grid-template-rows:auto auto auto auto 1fr auto;gap:8px}
-header{border-bottom:1px solid ${PEARL_DIM};padding-bottom:6px}
-h2{margin:0;font:700 28px ${SERIF};letter-spacing:.06em}
-small{font-size:12px;color:${PEARL_DIM}}
-.vals{display:flex;justify-content:space-between;align-items:baseline}
-.vals p{margin:0}
-.vals b{font:800 50px ${TEXT};letter-spacing:-1px}
-.vals span{font-size:13px;color:${PEARL_DIM};margin-left:2px}
-.gauge{position:relative;margin-top:6px;height:16px;border-radius:8px;background:#2b211d;box-shadow:inset 0 0 0 1px #3a2e28}
-.band{position:absolute;top:0;bottom:0;min-width:10px;left:calc((var(--lo) - 20) * 100% / 60);width:calc((var(--hi) - var(--lo)) * 100% / 60);border-radius:7px;background:${PEARL};opacity:.85}
-.mark{position:absolute;top:-5px;width:4px;height:24px;margin-left:-2px;left:calc((var(--v) - 20) * 100% / 60);background:${PEARL_TEXT};box-shadow:0 0 0 2px ${LACQUER}}
-.std{margin:0;font-size:12px;color:${PEARL_DIM}}
-.word{margin:0;align-self:end;justify-self:start;display:flex;align-items:center;gap:8px;padding:3px 14px;border:2px solid ${PEARL_TEXT};border-radius:3px;font-size:16px;font-weight:800}
-i{font:700 20px ${SERIF};font-style:normal}
-.note{margin:0;font-size:12px;line-height:1.45;color:${PEARL_DIM}}
-.ok i::before{content:"安"}.warn i::before{content:"注"}.alarm i::before{content:"離"}.check i::before{content:"檢"}
-.warn .word{border-style:dashed}
-.alarm{background:linear-gradient(160deg, ${LACQUER_LIGHT}, ${LACQUER}) padding-box, linear-gradient(135deg, ${VERMILION}, #e0705f 50%, ${VERMILION}) border-box}
-.alarm .word{background:${VERMILION};border-color:${VERMILION};color:#fff}
-.alarm .mark{background:${VERMILION};box-shadow:0 0 0 2px ${PEARL_TEXT}}
-.check .word{border-style:dotted}.check .vals,.check .gauge{opacity:.6}`,
-  size: { width: BOX_W, height: BOX_H },
-};
-
-/** The museum's name, with the four states as a key. */
-const banner: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', required: ['n'], properties: { n: { type: 'object' } } },
-  template: `<header class="bn"><h1>달빛 공예박물관 수장고</h1><p>보존 환경 · {{n.date}} {{n.time}}</p><ul><li>安 안정</li><li class="w">注 주의</li><li class="a">離 이탈</li><li class="c">檢 점검</li></ul></header>`,
-  style: `.bn{height:100%;display:flex;align-items:baseline;gap:20px;font-family:${TEXT};color:${PEARL_TEXT}}
-h1{margin:0;white-space:nowrap;font:700 32px ${SERIF};letter-spacing:.04em;background:${PEARL};-webkit-background-clip:text;background-clip:text;color:transparent}
-p{margin:0;white-space:nowrap;font-size:14px;color:${PEARL_DIM}}
-ul{margin:0 0 0 auto;padding:0;list-style:none;display:flex;gap:8px}
-li{white-space:nowrap;font-size:13px;font-weight:700;padding:1px 8px;border:1.5px solid ${PEARL_TEXT};border-radius:3px}
-.w{border-style:dashed}.a{background:${VERMILION};border-color:${VERMILION};color:#fff}.c{border-style:dotted;color:${PEARL_DIM}}`,
-  size: { width: 900, height: 80 },
-};
-
-/** The day's log of movements and checks — read from `items`. */
-const log: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['items'],
-    properties: { items: { type: 'array', items: { type: 'object', properties: { time: { type: 'string' }, room: { type: 'string' }, what: { type: 'string' }, state: { type: 'string' }, word: { type: 'string' } } } } },
+const board: Board = {
+  "board": {
+    "theme": "dark",
+    "accent": "#d9c9a3"
   },
-  template: `<section class="lg"><h2>오늘의 수장고 일지</h2><ol>{{#items}}<li class="{{state}}"><time>{{time}}</time><b>{{room}}</b><span>{{what}}</span><em>{{word}}</em></li>{{/items}}</ol></section>`,
-  style: `.lg{height:100%;box-sizing:border-box;padding:6px 10px;font-family:${TEXT};color:${PEARL_TEXT}}
-h2{margin:0 0 12px;font:700 24px ${SERIF};letter-spacing:.06em}
-ol{margin:0;padding:0;list-style:none;display:grid;gap:6px}
-li{display:grid;grid-template-columns:48px 52px 1fr 70px;gap:8px;align-items:baseline;font-size:13px;line-height:34px;border-bottom:1px solid #3a2e28}
-time{color:${PEARL_DIM};font-variant-numeric:tabular-nums}
-em{font-style:normal;font-weight:800;text-align:center;border:1.5px solid ${PEARL_TEXT};border-radius:3px;line-height:22px}
-li.alarm em{background:${VERMILION};border-color:${VERMILION};color:#fff}
-li.doing em{border-style:dashed}
-li.done{color:${PEARL_DIM}}li.done em{border-color:${PEARL_DIM}}
-li.todo em{border-style:dotted}`,
-  size: { width: 520, height: 400 },
-};
-
-// ── The board ──────────────────────────────────────────────────────────────────────────────────────────────────
-
-const node = (id: string, x: number, y: number, width: number, height: number, widget: Widget): Node => ({ id, x, y, width, height, anchored: false, widget });
-
-const nodes: Node[] = [
-  node('banner', 60, 24, 900, 80, { type: 'element:banner', props: { n: {} }, bindings: { n: bind('/museum/now', '/value') } }),
-  ...ROOMS.map((id, i) => {
-    const { x, y } = boxAt(i);
-    return node(`room-${id}`, x, y, BOX_W, BOX_H, { type: 'element:room', props: { r: {} }, bindings: { r: bind('/museum/rooms', `/value/${id}`) } });
-  }),
-  node('humidity', 1040, 56, 500, 440, {
-    type: 'chart.line',
-    props: {
-      title: '서화 수장고 상대습도 — 지난 24시간 (%)',
-      data: [],
-      mapping: { x: 'hour', y: ['rh', 'high', 'low'] },
-      options: { series: [{ label: '습도', color: '#e9dfc6' }, { label: '상한', color: VERMILION }, { label: '하한', color: '#7fa59f' }], echarts: { yAxis: { min: 40, max: 65 } } },
+  "elements": {
+    "banner": {
+      "template": "<header class=\"bn\"><h1>달빛 공예박물관 수장고</h1><p>보존 환경 · {{n.date}} {{n.time}}</p><ul><li>安 안정</li><li class=\"w\">注 주의</li><li class=\"a\">離 이탈</li><li class=\"c\">檢 점검</li></ul></header>",
+      "style": ".bn{height:100%;display:flex;align-items:baseline;gap:20px;font-family:\"Pretendard\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", sans-serif;color:#efe7d6}\nh1{margin:0;white-space:nowrap;font:700 32px \"Nanum Myeongjo\", \"Batang\", \"AppleMyungjo\", serif;letter-spacing:.04em;background:linear-gradient(135deg, #e9d2f4, #bfe8dc 26%, #f4c9da 50%, #c4d8f6 74%, #efe3c4);-webkit-background-clip:text;background-clip:text;color:transparent}\np{margin:0;white-space:nowrap;font-size:14px;color:#a99f8c}\nul{margin:0 0 0 auto;padding:0;list-style:none;display:flex;gap:8px}\nli{white-space:nowrap;font-size:13px;font-weight:700;padding:1px 8px;border:1.5px solid #efe7d6;border-radius:3px}\n.w{border-style:dashed}.a{background:#b8352a;border-color:#b8352a;color:#fff}.c{border-style:dotted;color:#a99f8c}",
+      "props": {
+        "n": "object"
+      }
     },
-    bindings: { data: bind('/museum/humidity', '/value') },
-  }),
-  node('log', 1030, 540, 520, 400, { type: 'element:log', props: { items: [] }, bindings: { items: bind('/museum/log', '/value') } }),
-];
-
-const document: CanvasView = {
-  kind: 'canvas',
-  appearance: 'dark',
-  accent: '#d9c9a3',
-  background: { image: { src: drawing(), width: WIDTH, height: HEIGHT } },
-  nodes,
-  connectors: [],
-  elements: { room, banner, log },
+    "room": {
+      "template": "<article class=\"bx {{r.state}}\"><header><h2>{{r.name}}</h2><small>{{r.items}}</small></header><div class=\"vals\"><p><b>{{r.temp}}</b><span>℃</span></p><p><b>{{r.rh}}</b><span>%RH</span></p></div><div class=\"gauge\" style=\"--v: {{r.rh}}; --lo: {{r.lo}}; --hi: {{r.hi}}\"><div class=\"band\"></div><div class=\"mark\"></div></div><p class=\"std\">기준 {{r.tband}}℃ · {{r.rhband}}%</p><p class=\"word\"><i></i>{{r.word}}</p><p class=\"note\">{{r.note}}</p></article>",
+      "style": ".bx{position:relative;height:100%;box-sizing:border-box;padding:18px 18px 14px;border:6px solid transparent;border-radius:6px;background:linear-gradient(160deg, #1f1714, #120d0b) padding-box, linear-gradient(135deg, #e9d2f4, #bfe8dc 26%, #f4c9da 50%, #c4d8f6 74%, #efe3c4) border-box;font-family:\"Pretendard\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", sans-serif;color:#efe7d6;display:grid;grid-template-rows:auto auto auto auto 1fr auto;gap:8px}\nheader{border-bottom:1px solid #a99f8c;padding-bottom:6px}\nh2{margin:0;font:700 28px \"Nanum Myeongjo\", \"Batang\", \"AppleMyungjo\", serif;letter-spacing:.06em}\nsmall{font-size:12px;color:#a99f8c}\n.vals{display:flex;justify-content:space-between;align-items:baseline}\n.vals p{margin:0}\n.vals b{font:800 50px \"Pretendard\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", sans-serif;letter-spacing:-1px}\n.vals span{font-size:13px;color:#a99f8c;margin-left:2px}\n.gauge{position:relative;margin-top:6px;height:16px;border-radius:8px;background:#2b211d;box-shadow:inset 0 0 0 1px #3a2e28}\n.band{position:absolute;top:0;bottom:0;min-width:10px;left:calc((var(--lo) - 20) * 100% / 60);width:calc((var(--hi) - var(--lo)) * 100% / 60);border-radius:7px;background:linear-gradient(135deg, #e9d2f4, #bfe8dc 26%, #f4c9da 50%, #c4d8f6 74%, #efe3c4);opacity:.85}\n.mark{position:absolute;top:-5px;width:4px;height:24px;margin-left:-2px;left:calc((var(--v) - 20) * 100% / 60);background:#efe7d6;box-shadow:0 0 0 2px #120d0b}\n.std{margin:0;font-size:12px;color:#a99f8c}\n.word{margin:0;align-self:end;justify-self:start;display:flex;align-items:center;gap:8px;padding:3px 14px;border:2px solid #efe7d6;border-radius:3px;font-size:16px;font-weight:800}\ni{font:700 20px \"Nanum Myeongjo\", \"Batang\", \"AppleMyungjo\", serif;font-style:normal}\n.note{margin:0;font-size:12px;line-height:1.45;color:#a99f8c}\n.ok i::before{content:\"安\"}.warn i::before{content:\"注\"}.alarm i::before{content:\"離\"}.check i::before{content:\"檢\"}\n.warn .word{border-style:dashed}\n.alarm{background:linear-gradient(160deg, #1f1714, #120d0b) padding-box, linear-gradient(135deg, #b8352a, #e0705f 50%, #b8352a) border-box}\n.alarm .word{background:#b8352a;border-color:#b8352a;color:#fff}\n.alarm .mark{background:#b8352a;box-shadow:0 0 0 2px #efe7d6}\n.check .word{border-style:dotted}.check .vals,.check .gauge{opacity:.6}",
+      "props": {
+        "r": "object"
+      }
+    },
+    "log": {
+      "template": "<section class=\"lg\"><h2>오늘의 수장고 일지</h2><ol>{{#items}}<li class=\"{{state}}\"><time>{{time}}</time><b>{{room}}</b><span>{{what}}</span><em>{{word}}</em></li>{{/items}}</ol></section>",
+      "style": ".lg{height:100%;box-sizing:border-box;padding:6px 10px;font-family:\"Pretendard\", \"Malgun Gothic\", \"Apple SD Gothic Neo\", sans-serif;color:#efe7d6}\nh2{margin:0 0 12px;font:700 24px \"Nanum Myeongjo\", \"Batang\", \"AppleMyungjo\", serif;letter-spacing:.06em}\nol{margin:0;padding:0;list-style:none;display:grid;gap:6px}\nli{display:grid;grid-template-columns:48px 52px 1fr 70px;gap:8px;align-items:baseline;font-size:13px;line-height:34px;border-bottom:1px solid #3a2e28}\ntime{color:#a99f8c;font-variant-numeric:tabular-nums}\nem{font-style:normal;font-weight:800;text-align:center;border:1.5px solid #efe7d6;border-radius:3px;line-height:22px}\nli.alarm em{background:#b8352a;border-color:#b8352a;color:#fff}\nli.doing em{border-style:dashed}\nli.done{color:#a99f8c}li.done em{border-color:#a99f8c}\nli.todo em{border-style:dotted}",
+      "props": {
+        "items": "list"
+      }
+    }
+  },
+  "data": {
+    "now": {
+      "from": "museum",
+      "path": "/museum/now",
+      "time": "updatedAt",
+      "fresh": 1200,
+      "fields": {
+        "value": {}
+      }
+    },
+    "rooms": {
+      "from": "museum",
+      "path": "/museum/rooms",
+      "time": "updatedAt",
+      "fresh": 1200,
+      "fields": {
+        "seohwa": {
+          "at": "/value/seohwa"
+        },
+        "jikmul": {
+          "at": "/value/jikmul"
+        },
+        "mokchil": {
+          "at": "/value/mokchil"
+        },
+        "dojagi": {
+          "at": "/value/dojagi"
+        },
+        "geumsok": {
+          "at": "/value/geumsok"
+        },
+        "gogo": {
+          "at": "/value/gogo"
+        }
+      }
+    },
+    "humidity": {
+      "from": "museum",
+      "path": "/museum/humidity",
+      "list": "/value",
+      "fresh": 1200,
+      "answerTime": "/updatedAt"
+    },
+    "log": {
+      "from": "museum",
+      "path": "/museum/log",
+      "time": "updatedAt",
+      "fresh": 1200,
+      "fields": {
+        "value": {}
+      }
+    }
+  },
+  "parts": {
+    "banner": {
+      "as": "element",
+      "element": "banner",
+      "of": "now",
+      "bind": {
+        "n": "value"
+      }
+    },
+    "room-seohwa": {
+      "as": "element",
+      "element": "room",
+      "of": "rooms",
+      "bind": {
+        "r": "seohwa"
+      }
+    },
+    "room-jikmul": {
+      "as": "element",
+      "element": "room",
+      "of": "rooms",
+      "bind": {
+        "r": "jikmul"
+      }
+    },
+    "room-mokchil": {
+      "as": "element",
+      "element": "room",
+      "of": "rooms",
+      "bind": {
+        "r": "mokchil"
+      }
+    },
+    "room-dojagi": {
+      "as": "element",
+      "element": "room",
+      "of": "rooms",
+      "bind": {
+        "r": "dojagi"
+      }
+    },
+    "room-geumsok": {
+      "as": "element",
+      "element": "room",
+      "of": "rooms",
+      "bind": {
+        "r": "geumsok"
+      }
+    },
+    "room-gogo": {
+      "as": "element",
+      "element": "room",
+      "of": "rooms",
+      "bind": {
+        "r": "gogo"
+      }
+    },
+    "humidity": {
+      "as": "chart.line",
+      "of": "humidity",
+      "title": "서화 수장고 상대습도 — 지난 24시간 (%)",
+      "x": "hour",
+      "y": [
+        "rh",
+        "high",
+        "low"
+      ],
+      "series": [
+        {
+          "label": "습도",
+          "color": "#e9dfc6"
+        },
+        {
+          "label": "상한",
+          "color": "#b8352a"
+        },
+        {
+          "label": "하한",
+          "color": "#7fa59f"
+        }
+      ],
+      "echarts": {
+        "yAxis": {
+          "min": 40,
+          "max": 65
+        }
+      }
+    },
+    "log": {
+      "as": "element",
+      "element": "log",
+      "of": "log",
+      "bind": {
+        "items": "value"
+      }
+    }
+  },
+  "layout": {
+    "kind": "canvas",
+    "size": [
+      1600,
+      1000
+    ],
+    "background": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%221000%22%20viewBox%3D%220%200%201600%201000%22%3E%0A%3Cdefs%3E%0A%3ClinearGradient%20id%3D%22shell%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23e9d2f4%22%2F%3E%3Cstop%20offset%3D%22.3%22%20stop-color%3D%22%23bfe8dc%22%2F%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%23f4c9da%22%2F%3E%3Cstop%20offset%3D%22.8%22%20stop-color%3D%22%23c4d8f6%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23efe3c4%22%2F%3E%3C%2FlinearGradient%3E%0A%3CradialGradient%20id%3D%22sheen%22%20cx%3D%22.35%22%20cy%3D%22.25%22%20r%3D%22.9%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231f1714%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23120d0b%22%2F%3E%3C%2FradialGradient%3E%0A%3C%2Fdefs%3E%0A%3Crect%20width%3D%221600%22%20height%3D%221000%22%20fill%3D%22url(%23sheen)%22%2F%3E%0A%3Cg%20transform%3D%22translate(40%20985)%20scale(1%201)%22%20fill%3D%22none%22%20stroke%3D%22url(%23shell)%22%20stroke-width%3D%223%22%20opacity%3D%22.8%22%3E%3Cpath%20d%3D%22M0%200%20C%2060%20-40%2C%20120%2040%2C%20180%200%20S%20300%20-40%2C%20360%200%20S%20480%2040%2C%20540%200%22%2F%3E%3Cpath%20d%3D%22M90%20-14%20c%2010%20-22%2C%2034%20-22%2C%2030%20-2%20c%20-6%2014%2C%20-24%2012%2C%20-30%202%22%20fill%3D%22url(%23shell)%22%20stroke%3D%22none%22%2F%3E%3Cpath%20d%3D%22M270%20-14%20c%2010%20-22%2C%2034%20-22%2C%2030%20-2%20c%20-6%2014%2C%20-24%2012%2C%20-30%202%22%20fill%3D%22url(%23shell)%22%20stroke%3D%22none%22%2F%3E%3Cpath%20d%3D%22M450%20-14%20c%2010%20-22%2C%2034%20-22%2C%2030%20-2%20c%20-6%2014%2C%20-24%2012%2C%20-30%202%22%20fill%3D%22url(%23shell)%22%20stroke%3D%22none%22%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%22translate(1000%20985)%20scale(-1%201)%22%20fill%3D%22none%22%20stroke%3D%22url(%23shell)%22%20stroke-width%3D%223%22%20opacity%3D%22.8%22%3E%3Cpath%20d%3D%22M0%200%20C%2060%20-40%2C%20120%2040%2C%20180%200%20S%20300%20-40%2C%20360%200%20S%20480%2040%2C%20540%200%22%2F%3E%3Cpath%20d%3D%22M90%20-14%20c%2010%20-22%2C%2034%20-22%2C%2030%20-2%20c%20-6%2014%2C%20-24%2012%2C%20-30%202%22%20fill%3D%22url(%23shell)%22%20stroke%3D%22none%22%2F%3E%3Cpath%20d%3D%22M270%20-14%20c%2010%20-22%2C%2034%20-22%2C%2030%20-2%20c%20-6%2014%2C%20-24%2012%2C%20-30%202%22%20fill%3D%22url(%23shell)%22%20stroke%3D%22none%22%2F%3E%3Cpath%20d%3D%22M450%20-14%20c%2010%20-22%2C%2034%20-22%2C%2030%20-2%20c%20-6%2014%2C%20-24%2012%2C%20-30%202%22%20fill%3D%22url(%23shell)%22%20stroke%3D%22none%22%2F%3E%3C%2Fg%3E%0A%3Cg%20transform%3D%22translate(30%20520)%22%20fill%3D%22url(%23shell)%22%20opacity%3D%22.75%22%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(0)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(30)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(60)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(90)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(120)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(150)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(180)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(210)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(240)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(270)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(300)%22%2F%3E%3Cellipse%20rx%3D%223.96%22%20ry%3D%229%22%20cy%3D%22-9.9%22%20transform%3D%22rotate(330)%22%2F%3E%3Ccircle%20r%3D%223.2399999999999998%22%20fill%3D%22%23120d0b%22%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%22translate(985%20945)%22%20fill%3D%22url(%23shell)%22%20opacity%3D%22.75%22%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(0)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(30)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(60)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(90)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(120)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(150)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(180)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(210)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(240)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(270)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(300)%22%2F%3E%3Cellipse%20rx%3D%223.08%22%20ry%3D%227%22%20cy%3D%22-7.700000000000001%22%20transform%3D%22rotate(330)%22%2F%3E%3Ccircle%20r%3D%222.52%22%20fill%3D%22%23120d0b%22%2F%3E%3C%2Fg%3E%0A%3Crect%20x%3D%221010%22%20y%3D%2230%22%20width%3D%22560%22%20height%3D%22940%22%20rx%3D%224%22%20fill%3D%22%231f1714%22%20stroke%3D%22url(%23shell)%22%20stroke-width%3D%223%22%2F%3E%0A%3Crect%20x%3D%221022%22%20y%3D%2242%22%20width%3D%22536%22%20height%3D%22916%22%20rx%3D%222%22%20fill%3D%22none%22%20stroke%3D%22url(%23shell)%22%20stroke-width%3D%221%22%20opacity%3D%22.7%22%2F%3E%0A%3C%2Fsvg%3E",
+    "place": {
+      "banner": [
+        60,
+        24,
+        900,
+        80
+      ],
+      "room-seohwa": [
+        60,
+        120,
+        280,
+        380
+      ],
+      "room-jikmul": [
+        370,
+        120,
+        280,
+        380
+      ],
+      "room-mokchil": [
+        680,
+        120,
+        280,
+        380
+      ],
+      "room-dojagi": [
+        60,
+        530,
+        280,
+        380
+      ],
+      "room-geumsok": [
+        370,
+        530,
+        280,
+        380
+      ],
+      "room-gogo": [
+        680,
+        530,
+        280,
+        380
+      ],
+      "humidity": [
+        1040,
+        56,
+        500,
+        440
+      ],
+      "log": [
+        1030,
+        540,
+        520,
+        400
+      ]
+    }
+  }
 };
 
 export const museumNajeon: SamplePack = {
-  id: 'museum-najeon',
-  title: { ko: '박물관 수장고 보존 환경 — 나전칠기', en: 'A museum’s storage rooms — lacquer inlaid with mother-of-pearl' },
-  field: { ko: '문화재 보존·수장고', en: 'Collections care and storage' },
-  kind: { ko: '수장고별 온습도', en: 'Temperature and humidity by room' },
-  domain: 'leisure',
-  styles: ['korean', 'craft'],
-  summary: {
-    ko: '공예박물관의 수장고 여섯을 나전칠기로 — 방마다 자개 테를 두른 검은 옻칠 함 하나: 소장품, 큰 온도와 상대습도, 자개 눈금자 위에 그 방이 허용하는 습도 띠와 지금 공기의 자리, 그리고 상태가 글자·낱말·테로 — 安 안정(자개 실선), 注 주의(점선), 離 이탈(주칠 빨강), 檢 점검(점점선·흐리게). 오른쪽에 서화 수장고의 지난 24시간 습도와 기준 띠, 오늘의 수장고 일지. 박물관과 수장고는 지어낸 것이라 예시 데이터입니다.',
-    en: 'A craft museum’s six storage rooms drawn as lacquerware inlaid with mother-of-pearl — a black lacquer box framed in shell for every room: its collection, temperature and relative humidity large, a pearl gauge with the humidity band the room allows and a marker where the air is now, and its state in a character, a word and the frame — 安 steady (a solid pearl frame), 注 watch (dashed), 離 out of band (vermilion lacquer), 檢 being checked (dotted, dimmed). On the right the painting store’s humidity over the last day against its band, and the day’s log of movements and checks. The museum and its rooms are made up. Example data.',
+  id: "museum-najeon",
+  title: {
+    "ko": "박물관 수장고 보존 환경 — 나전칠기",
+    "en": "A museum’s storage rooms — lacquer inlaid with mother-of-pearl"
   },
-  connectors: [MUSEUM],
-  document,
+  field: {
+    "ko": "문화재 보존·수장고",
+    "en": "Collections care and storage"
+  },
+  kind: {
+    "ko": "수장고별 온습도",
+    "en": "Temperature and humidity by room"
+  },
+  domain: "leisure",
+  styles: [
+    "korean",
+    "craft"
+  ],
+  summary: {
+    "ko": "공예박물관의 수장고 여섯을 나전칠기로 — 방마다 자개 테를 두른 검은 옻칠 함 하나: 소장품, 큰 온도와 상대습도, 자개 눈금자 위에 그 방이 허용하는 습도 띠와 지금 공기의 자리, 그리고 상태가 글자·낱말·테로 — 安 안정(자개 실선), 注 주의(점선), 離 이탈(주칠 빨강), 檢 점검(점점선·흐리게). 오른쪽에 서화 수장고의 지난 24시간 습도와 기준 띠, 오늘의 수장고 일지. 박물관과 수장고는 지어낸 것이라 예시 데이터입니다.",
+    "en": "A craft museum’s six storage rooms drawn as lacquerware inlaid with mother-of-pearl — a black lacquer box framed in shell for every room: its collection, temperature and relative humidity large, a pearl gauge with the humidity band the room allows and a marker where the air is now, and its state in a character, a word and the frame — 安 steady (a solid pearl frame), 注 watch (dashed), 離 out of band (vermilion lacquer), 檢 being checked (dotted, dimmed). On the right the painting store’s humidity over the last day against its band, and the day’s log of movements and checks. The museum and its rooms are made up. Example data."
+  },
+  connectors: [
+    {
+      "key": "museum",
+      "name": "예시 박물관 수장고 환경 감시 API",
+      "example": true,
+      "attribution": {
+        "text": "예시 데이터 — 실제 박물관·수장고가 아닙니다"
+      }
+    }
+  ],
+  board,
   snapshot,
 };

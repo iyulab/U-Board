@@ -1,44 +1,22 @@
-export type * from './document-types.js';
-export { resolveWidget, applyValueMap, withItemFields, writeText } from './adapter.js';
-export type {
-  Resolved,
-  ResolvedNode,
-  ResolvedGridItem,
-  ResolvedCanvasItem,
-  ResolvedCellCanvas,
-  ResolvedCanvasView,
-  ResolvedGridView,
-  ResolvedViewDocument,
-  ResolvedOf,
-} from './resolve-document.js';
-export { emptyViewDocument, placedIn, placedAt, isCanvasItem, isTriggerLink, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, CONNECTOR_ROUTES, PLACEMENTS, TRIGGER_EVENTS, TRIGGER_ACTIONS } from './view-document.js';
-export { bindingsIn } from './document-bindings.js';
-export { expandComponents, instancePartId } from './components.js';
-export type { ExpandedView } from './components.js';
-export { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from './layout-defaults.js';
-export { nodeSize, sizedNodes } from './node-size.js';
-export type { BoxSize, SizedNode } from './node-size.js';
-export { resolveDocument, resolveConnector } from './resolve-document.js';
-export { boardStateOf } from './board-state.js';
-export type { BoardState, PartState } from './board-state.js';
-export { firedBy, stateChanges, linkFor, elementListeners, FiringLimit } from './triggers.js';
-export type { FiredEvent } from './triggers.js';
-export { parseViewDocument, InvalidViewDocumentError } from './persistence/view-document-file.js';
-export { validateViewDocument } from './validate-view-document.js';
-export type { ViewDocumentIssue } from './validate-view-document.js';
-export { lintViewDocument } from './lint-view-document.js';
-export { elementFrameHtml, elementFrameScripts } from './elements/frame.js';
-export { elementDefinitionHash, elementFrameLabel } from './elements/definition-hash.js';
+// The board language: its shapes, its schema, its check, and the picture the renderer draws from a board — with the
+// adapter contract a host reads its data through. Reaches no package at runtime, so a server or an MCP process loads it.
+
+export type * from './board/types.js';
+export { EMPHASES, FRAMES, TONES } from './board/types.js';
+export { boardSchema } from './board/schema.js';
+export { validateBoard } from './board/validate.js';
+export type { BoardIssue } from './board/validate.js';
+export { checkBoard, emptyBoard, sourceAdvice } from './board/check.js';
+export type { BoardCheck, BoardFinding, KnownSource } from './board/check.js';
+export { PART_KINDS, partKind } from './board/kinds.js';
+export type { PartKind } from './board/kinds.js';
+export { toViewDocument, dataReadOf, elementDefinition, keyReadsOf, keysIn, PictureError } from './board/picture.js';
+export type { KeyRead, PictureOptions } from './board/picture.js';
+export { pictureOf, readKeys, readerOf } from './board/draw.js';
+export type { ValueReader } from './board/draw.js';
+export { boardRulebook, RULEBOOK_EXAMPLE } from './board/rulebook.js';
+export type { Adapter, Attribution, ConnectionQuality, QualityReason, ResolvedBinding } from './adapter.js';
 export { applyJsonPatch, getByPointer, JsonPatchError } from './json-patch.js';
-export { documentPatch } from './document-patch.js';
-export { applyEditCommands, EditCommandError, EDIT_COMMANDS } from './edit-commands.js';
-export type { EditCommand } from './edit-commands.js';
 export type { JsonPatchOperation } from './json-patch.js';
-export type { ElementFrameMessage } from './elements/frame.js';
-export type { LintOptions, ViewDocumentAdvice } from './lint-view-document.js';
 export { DEFAULT_QUALITY_TEXT, ageText, worstQuality, describeQuality } from './quality-text.js';
 export type { QualityText, QualitySummary, DescribeQualityOptions } from './quality-text.js';
-export { coordinateOf, placeAt } from './anchor.js';
-export type { Coordinate } from './anchor.js';
-export { isHttpRef, requestPath, requestTimeProblem, readHttpRef, resolvedReading, parseSourceTime, findHttpRefItem, isSourceErrorField, sourceErrorIn } from './http-ref.js';
-export type { HttpRef, HttpRefItem, HttpRefReading, HttpRefRequestTime, SourceErrorField } from './http-ref.js';

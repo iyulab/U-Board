@@ -1,7 +1,3 @@
-import type { Binding, CanvasView, Connector, ElementDefinition, Node, Shape } from '@iyulab/u-board/domain';
-import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
-import { snapshot } from '../snapshots/assembly-wip.js';
-
 // An assembly line read through the buffers between its stations: each station's state and cycle time against the
 // takt, and on the line from one station to the next how many bodies wait in that buffer out of what it holds. A
 // full buffer blocks the station before it, an empty one starves the station after it — those two are the only
@@ -9,190 +5,460 @@ import { snapshot } from '../snapshots/assembly-wip.js';
 // plan above, every buffer against its size below. No public source carries a line's buffers, so the values are
 // example data written for the board.
 
-export const MES: ExampleSampleConnector = {
-  key: 'mes',
-  name: '예시 MES API',
-  example: true,
-  attribution: { text: '예시 데이터 — 실제 라인이 아닙니다' },
-};
+import type { Board } from '@iyulab/u-board/domain';
+import type { SamplePack } from '../sample-pack.js';
+import { snapshot } from '../snapshots/assembly-wip.js';
 
-/** The line reports every takt; five minutes without a report is a source that has stopped. */
-const MAX_AGE_SECONDS = 5 * 60;
-
-const bindPath = (path: string, valuePath: string, map?: Binding['map']): Binding => ({
-  adapter: MES.key,
-  ref: { path, valuePath, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-  ...(map ? { map } : {}),
-});
-
-const bindItem = (path: string, id: string, field: string, map?: Binding['map']): Binding => ({
-  adapter: MES.key,
-  ref: { path, item: { list: '/value', where: { id } }, valuePath: `/${field}`, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-  ...(map ? { map } : {}),
-});
-
-const STATE_TEXT = { values: { running: '가동', blocked: '막힘 — 다음 버퍼 가득', starved: '대기 — 앞 버퍼 빔', stopped: '정지' }, otherwise: '알 수 없음' };
-
-/** The takt the line is planned at, seconds. */
-const TAKT = 60;
-
-/** A station: its name, its state with a mark, its cycle time against the takt, and a «병목» tag on the one holding
- *  the line back. Grey while it runs; amber when blocked or starved, red when stopped. */
-const station: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['name', 'state', 'stateText', 'cycleTime'],
-    properties: {
-      name: { type: 'string' },
-      state: { enum: ['running', 'blocked', 'starved', 'stopped', 'unknown'], default: 'unknown' },
-      stateText: { type: 'string' },
-      cycleTime: { type: 'number', minimum: 0, description: 'The last cycle, seconds.' },
-      bottleneck: { type: 'boolean', default: false },
-    },
+const board: Board = {
+  "elements": {
+    "station": {
+      "template": "<div class=\"st {{state}}\" role=\"img\" aria-label=\"{{name}} {{stateText}}, 사이클 {{cycleTime}}초{{#bottleneck}}, 병목{{/bottleneck}}\">\n  <b>{{name}}</b>{{#bottleneck}}<span class=\"tag\">병목</span>{{/bottleneck}}\n  <span class=\"state\"><i></i>{{stateText}}</span>\n  <span class=\"ct\">{{cycleTime | fixed:0}}<small> 초 / 택트 60</small></span>\n</div>",
+      "style": ".st{box-sizing:border-box;height:100%;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr auto;row-gap:4px;padding:10px 14px;\nborder:1px solid var(--u-widget-border);border-top:4px solid var(--c);border-radius:8px;background:var(--u-widget-surface);\nfont-family:var(--u-widget-font-family);color:var(--u-widget-text);--c:#8a96a0}\nb{font-size:15px;font-weight:600}\n.tag{align-self:start;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;border:1.5px solid var(--u-widget-text);color:var(--u-widget-text)}\n.state{grid-column:1/3;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--u-widget-text-secondary)}\ni{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}\n.ct{grid-column:1/3;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}\n.ct small{font-size:12px;font-weight:500;color:var(--u-widget-text-secondary)}\n.blocked,.starved{--c:var(--u-widget-warning)}\n.blocked .state,.starved .state{color:var(--u-widget-text);font-weight:600}\n.stopped{--c:var(--u-widget-negative)}\n.stopped .state{color:var(--u-widget-negative);font-weight:600}",
+      "props": {
+        "name": "string",
+        "state": "string",
+        "stateText": "string",
+        "cycleTime": "number",
+        "bottleneck": "boolean"
+      }
+    }
   },
-  template: `<div class="st {{state}}" role="img" aria-label="{{name}} {{stateText}}, 사이클 {{cycleTime}}초{{#bottleneck}}, 병목{{/bottleneck}}">
-  <b>{{name}}</b>{{#bottleneck}}<span class="tag">병목</span>{{/bottleneck}}
-  <span class="state"><i></i>{{stateText}}</span>
-  <span class="ct">{{cycleTime | fixed:0}}<small> 초 / 택트 ${TAKT}</small></span>
-</div>`,
-  style: `.st{box-sizing:border-box;height:100%;display:grid;grid-template-columns:1fr auto;grid-template-rows:auto 1fr auto;row-gap:4px;padding:10px 14px;
-border:1px solid var(--u-widget-border);border-top:4px solid var(--c);border-radius:8px;background:var(--u-widget-surface);
-font-family:var(--u-widget-font-family);color:var(--u-widget-text);--c:#8a96a0}
-b{font-size:15px;font-weight:600}
-.tag{align-self:start;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;border:1.5px solid var(--u-widget-text);color:var(--u-widget-text)}
-.state{grid-column:1/3;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--u-widget-text-secondary)}
-i{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
-.ct{grid-column:1/3;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
-.ct small{font-size:12px;font-weight:500;color:var(--u-widget-text-secondary)}
-.blocked,.starved{--c:var(--u-widget-warning)}
-.blocked .state,.starved .state{color:var(--u-widget-text);font-weight:600}
-.stopped{--c:var(--u-widget-negative)}
-.stopped .state{color:var(--u-widget-negative);font-weight:600}`,
-  size: { width: 220, height: 112 },
-};
-
-/** The stations in the order bodies flow, laid out in two rows that turn at the end of the first. */
-const STATIONS = [
-  { id: 'body-in', x: 60, y: 196 },
-  { id: 'welding', x: 520, y: 196 },
-  { id: 'paint', x: 980, y: 196 },
-  { id: 'trim-1', x: 980, y: 430 },
-  { id: 'trim-2', x: 520, y: 430 },
-  { id: 'final', x: 60, y: 430 },
-];
-
-const stationNode = ({ id, x, y }: (typeof STATIONS)[number]): Node => ({
-  id,
-  x,
-  y,
-  width: 220,
-  height: 112,
-  anchored: false,
-  widget: {
-    type: 'element:station',
-    props: { name: id, state: 'unknown', stateText: '—', cycleTime: 0, bottleneck: false },
-    bindings: {
-      name: bindItem('/line/stations', id, 'name'),
-      state: bindItem('/line/stations', id, 'state'),
-      stateText: bindItem('/line/stations', id, 'state', STATE_TEXT),
-      cycleTime: bindItem('/line/stations', id, 'cycleTime'),
-      bottleneck: bindItem('/line/stations', id, 'bottleneck'),
+  "data": {
+    "summary": {
+      "from": "mes",
+      "path": "/line/summary",
+      "time": "updatedAt",
+      "fresh": 300,
+      "fields": {
+        "unitsPerHour": {
+          "label": "시간당 생산 (목표 60)",
+          "unit": "대"
+        },
+        "unitsToday": {
+          "label": "오늘 생산 (계획 480)",
+          "unit": "대"
+        },
+        "wip": {
+          "label": "라인 재공",
+          "unit": "대"
+        },
+        "bottleneckName": {
+          "label": "병목 공정"
+        },
+        "lostMinutes": {
+          "label": "막힘·대기 손실 (오늘)",
+          "unit": "분"
+        }
+      }
     },
+    "stations": {
+      "from": "mes",
+      "path": "/line/stations",
+      "list": "/value",
+      "key": "id",
+      "time": "updatedAt",
+      "fresh": 300,
+      "fields": {
+        "name": {},
+        "state": {},
+        "state-2": {
+          "names": {
+            "running": "가동",
+            "blocked": "막힘 — 다음 버퍼 가득",
+            "starved": "대기 — 앞 버퍼 빔",
+            "stopped": "정지",
+            "*": "알 수 없음"
+          },
+          "at": "/state"
+        },
+        "cycleTime": {},
+        "bottleneck": {}
+      }
+    },
+    "buffers": {
+      "from": "mes",
+      "path": "/line/buffers",
+      "list": "/value",
+      "key": "id",
+      "time": "updatedAt",
+      "fresh": 300,
+      "answerTime": "/updatedAt",
+      "fields": {
+        "wip": {},
+        "state": {
+          "state": {
+            "full": "warn",
+            "empty": "warn",
+            "*": "idle"
+          }
+        }
+      }
+    }
   },
-});
-
-/** A buffer's colour: grey while it holds some, amber when full (it blocks the station before it) or empty (it
- *  starves the one after). */
-const BUFFER_COLOUR = { values: { full: 'warning', empty: 'warning' }, otherwise: '#8a96a0' };
-/** A buffer's line grows with what waits in it. */
-const BUFFER_WIDTH = { ranges: [{ min: 6, value: 6 }, { min: 3, value: 4 }, { min: 1, value: 2.5 }], otherwise: 1.5 };
-
-/** The buffer between two stations — the stations' ids joined — and how many bodies it holds. */
-const buffer = (from: string, to: string, capacity: number): Connector => {
-  const id = `${from}--${to}`;
-  return {
-    id,
-    fromNodeId: from,
-    toNodeId: to,
-    label: `{{value}} / ${capacity}대`,
-    style: { stroke: '#8a96a0', strokeWidth: 2, arrow: 'end' },
-    bindings: {
-      label: bindItem('/line/buffers', id, 'wip'),
-      'style.stroke': bindItem('/line/buffers', id, 'state', BUFFER_COLOUR),
-      'style.strokeWidth': bindItem('/line/buffers', id, 'wip', BUFFER_WIDTH),
+  "parts": {
+    "uph": {
+      "as": "stat",
+      "of": "summary",
+      "show": "unitsPerHour"
     },
-  };
-};
-
-const CONNECTORS: Connector[] = [
-  buffer('body-in', 'welding', 8),
-  buffer('welding', 'paint', 8),
-  buffer('paint', 'trim-1', 10),
-  buffer('trim-1', 'trim-2', 6),
-  buffer('trim-2', 'final', 6),
-];
-
-const figure = (id: string, i: number, widget: Node['widget']): Node => ({ id, x: 40 + i * 244, y: 78, width: 220, height: 66, anchored: false, widget });
-const metric = (label: string, valuePath: string, unit: string): Node['widget'] => ({
-  type: 'metric',
-  props: { data: { value: 0, label, unit } },
-  bindings: { 'data.value': bindPath('/line/summary', valuePath) },
-});
-
-const NODES: Node[] = [
-  figure('uph', 0, metric('시간당 생산 (목표 60)', '/unitsPerHour', '대')),
-  figure('today', 1, metric('오늘 생산 (계획 480)', '/unitsToday', '대')),
-  figure('wip', 2, metric('라인 재공', '/wip', '대')),
-  figure('bottleneck', 3, { type: 'metric', props: { data: { value: '—', label: '병목 공정' } }, bindings: { 'data.value': bindPath('/line/summary', '/bottleneckName') } }),
-  figure('lost', 4, metric('막힘·대기 손실 (오늘)', '/lostMinutes', '분')),
-  ...STATIONS.map(stationNode),
-  {
-    id: 'buffers',
-    x: 40,
-    y: 600,
-    width: 1180,
-    height: 170,
-    anchored: false,
-    widget: {
-      type: 'chart.bar',
-      props: {
-        title: '버퍼별 재공 — 지금과 크기 (대)',
-        data: [],
-        mapping: { x: 'name', y: ['wip', 'capacity'] },
-        options: { series: [{ label: '재공', color: '#4a555b' }, { label: '버퍼 크기', type: 'line', lineStyle: 'dashed', symbol: 'none', color: '#8a96a0' }] },
+    "today": {
+      "as": "stat",
+      "of": "summary",
+      "show": "unitsToday"
+    },
+    "wip": {
+      "as": "stat",
+      "of": "summary",
+      "show": "wip"
+    },
+    "bottleneck": {
+      "as": "stat",
+      "of": "summary",
+      "show": "bottleneckName"
+    },
+    "lost": {
+      "as": "stat",
+      "of": "summary",
+      "show": "lostMinutes"
+    },
+    "body-in": {
+      "as": "element",
+      "element": "station",
+      "of": "stations[body-in]",
+      "bind": {
+        "name": "name",
+        "state": "state",
+        "stateText": "state-2",
+        "cycleTime": "cycleTime",
+        "bottleneck": "bottleneck"
+      }
+    },
+    "welding": {
+      "as": "element",
+      "element": "station",
+      "of": "stations[welding]",
+      "bind": {
+        "name": "name",
+        "state": "state",
+        "stateText": "state-2",
+        "cycleTime": "cycleTime",
+        "bottleneck": "bottleneck"
+      }
+    },
+    "paint": {
+      "as": "element",
+      "element": "station",
+      "of": "stations[paint]",
+      "bind": {
+        "name": "name",
+        "state": "state",
+        "stateText": "state-2",
+        "cycleTime": "cycleTime",
+        "bottleneck": "bottleneck"
+      }
+    },
+    "trim-1": {
+      "as": "element",
+      "element": "station",
+      "of": "stations[trim-1]",
+      "bind": {
+        "name": "name",
+        "state": "state",
+        "stateText": "state-2",
+        "cycleTime": "cycleTime",
+        "bottleneck": "bottleneck"
+      }
+    },
+    "trim-2": {
+      "as": "element",
+      "element": "station",
+      "of": "stations[trim-2]",
+      "bind": {
+        "name": "name",
+        "state": "state",
+        "stateText": "state-2",
+        "cycleTime": "cycleTime",
+        "bottleneck": "bottleneck"
+      }
+    },
+    "final": {
+      "as": "element",
+      "element": "station",
+      "of": "stations[final]",
+      "bind": {
+        "name": "name",
+        "state": "state",
+        "stateText": "state-2",
+        "cycleTime": "cycleTime",
+        "bottleneck": "bottleneck"
+      }
+    },
+    "buffers": {
+      "as": "chart.bar",
+      "of": "buffers",
+      "title": "버퍼별 재공 — 지금과 크기 (대)",
+      "x": "name",
+      "y": [
+        "wip",
+        "capacity"
+      ],
+      "series": [
+        {
+          "label": "재공",
+          "color": "#4a555b"
+        },
+        {
+          "label": "버퍼 크기",
+          "type": "line",
+          "lineStyle": "dashed",
+          "symbol": "none",
+          "color": "#8a96a0"
+        }
+      ]
+    }
+  },
+  "layout": {
+    "kind": "canvas",
+    "size": [
+      1236,
+      770
+    ],
+    "place": {
+      "uph": [
+        40,
+        78,
+        220,
+        66
+      ],
+      "today": [
+        284,
+        78,
+        220,
+        66
+      ],
+      "wip": [
+        528,
+        78,
+        220,
+        66
+      ],
+      "bottleneck": [
+        772,
+        78,
+        220,
+        66
+      ],
+      "lost": [
+        1016,
+        78,
+        220,
+        66
+      ],
+      "body-in": [
+        60,
+        196,
+        220,
+        112
+      ],
+      "welding": [
+        520,
+        196,
+        220,
+        112
+      ],
+      "paint": [
+        980,
+        196,
+        220,
+        112
+      ],
+      "trim-1": [
+        980,
+        430,
+        220,
+        112
+      ],
+      "trim-2": [
+        520,
+        430,
+        220,
+        112
+      ],
+      "final": [
+        60,
+        430,
+        220,
+        112
+      ],
+      "buffers": [
+        40,
+        600,
+        1180,
+        170
+      ]
+    },
+    "shapes": {
+      "title": {
+        "text": "조립 라인 흐름과 재공",
+        "at": [
+          40,
+          20
+        ],
+        "size": 24,
+        "tone": "next"
       },
-      bindings: { data: bindPath('/line/buffers', '/value') },
+      "note": {
+        "text": "공정 사이 선 = 버퍼, 라벨은 기다리는 차체 수 · 가득 차거나 빈 버퍼만 색 · 택트 60초 · 예시 데이터",
+        "at": [
+          40,
+          52
+        ],
+        "size": 13,
+        "tone": "past"
+      }
     },
-  },
-];
-
-const DECORATIONS: Shape[] = [
-  { id: 'title', type: 'text', x: 40, y: 20, text: '조립 라인 흐름과 재공', fontSize: 24, fill: '#1f2a30' },
-  { id: 'note', type: 'text', x: 40, y: 52, text: `공정 사이 선 = 버퍼, 라벨은 기다리는 차체 수 · 가득 차거나 빈 버퍼만 색 · 택트 ${TAKT}초 · 예시 데이터`, fontSize: 13, fill: '#5b666c' },
-];
-
-const document: CanvasView = {
-  kind: 'canvas',
-  background: {},
-  nodes: NODES,
-  connectors: CONNECTORS,
-  decorations: DECORATIONS,
-  elements: { station },
+    "links": {
+      "body-in--welding": {
+        "from": "body-in",
+        "to": "welding",
+        "label": "{{wip}} / 8대",
+        "show": "state",
+        "weight": {
+          "field": "wip",
+          "bands": [
+            1.5,
+            1,
+            2.5,
+            3,
+            4,
+            6,
+            6
+          ]
+        },
+        "of": "buffers[body-in--welding]",
+        "width": 2,
+        "arrow": true
+      },
+      "welding--paint": {
+        "from": "welding",
+        "to": "paint",
+        "label": "{{wip}} / 8대",
+        "show": "state",
+        "weight": {
+          "field": "wip",
+          "bands": [
+            1.5,
+            1,
+            2.5,
+            3,
+            4,
+            6,
+            6
+          ]
+        },
+        "of": "buffers[welding--paint]",
+        "width": 2,
+        "arrow": true
+      },
+      "paint--trim-1": {
+        "from": "paint",
+        "to": "trim-1",
+        "label": "{{wip}} / 10대",
+        "show": "state",
+        "weight": {
+          "field": "wip",
+          "bands": [
+            1.5,
+            1,
+            2.5,
+            3,
+            4,
+            6,
+            6
+          ]
+        },
+        "of": "buffers[paint--trim-1]",
+        "width": 2,
+        "arrow": true
+      },
+      "trim-1--trim-2": {
+        "from": "trim-1",
+        "to": "trim-2",
+        "label": "{{wip}} / 6대",
+        "show": "state",
+        "weight": {
+          "field": "wip",
+          "bands": [
+            1.5,
+            1,
+            2.5,
+            3,
+            4,
+            6,
+            6
+          ]
+        },
+        "of": "buffers[trim-1--trim-2]",
+        "width": 2,
+        "arrow": true
+      },
+      "trim-2--final": {
+        "from": "trim-2",
+        "to": "final",
+        "label": "{{wip}} / 6대",
+        "show": "state",
+        "weight": {
+          "field": "wip",
+          "bands": [
+            1.5,
+            1,
+            2.5,
+            3,
+            4,
+            6,
+            6
+          ]
+        },
+        "of": "buffers[trim-2--final]",
+        "width": 2,
+        "arrow": true
+      }
+    }
+  }
 };
 
 export const assemblyWip: SamplePack = {
-  id: 'assembly-wip',
-  title: { ko: '조립 라인 흐름과 재공', en: 'Assembly line flow and WIP' },
-  field: { ko: '제조·생산', en: 'Manufacturing & production' },
-  kind: { ko: '없음 — 흐름도', en: 'None — flow diagram' },
-  domain: 'manufacturing',
-  styles: ['operations'],
-  summary: {
-    ko: '차체가 흐르는 순서대로 놓은 공정마다 상태와 택트 대비 사이클 시간을, 공정 사이 선에는 그 버퍼에서 기다리는 차체 수를 라벨로·굵기로. 가득 차 앞 공정을 막거나 비어 뒤 공정을 굶기는 버퍼만 색으로, 라인을 잡고 있는 공정에는 «병목». 위에는 생산 실적, 아래에는 버퍼별 재공. 예시 데이터입니다.',
-    en: 'Each station’s state and cycle time against the takt, in the order bodies flow, and on the line between two stations how many bodies wait in that buffer — as its label and its width. Only a buffer that is full (blocking the station before it) or empty (starving the one after) takes colour, and the station holding the line back is marked as its bottleneck. Output against plan above, every buffer against its size below. Example data.',
+  id: "assembly-wip",
+  title: {
+    "ko": "조립 라인 흐름과 재공",
+    "en": "Assembly line flow and WIP"
   },
-  connectors: [MES],
-  document,
+  field: {
+    "ko": "제조·생산",
+    "en": "Manufacturing & production"
+  },
+  kind: {
+    "ko": "없음 — 흐름도",
+    "en": "None — flow diagram"
+  },
+  domain: "manufacturing",
+  styles: [
+    "operations"
+  ],
+  summary: {
+    "ko": "차체가 흐르는 순서대로 놓은 공정마다 상태와 택트 대비 사이클 시간을, 공정 사이 선에는 그 버퍼에서 기다리는 차체 수를 라벨로·굵기로. 가득 차 앞 공정을 막거나 비어 뒤 공정을 굶기는 버퍼만 색으로, 라인을 잡고 있는 공정에는 «병목». 위에는 생산 실적, 아래에는 버퍼별 재공. 예시 데이터입니다.",
+    "en": "Each station’s state and cycle time against the takt, in the order bodies flow, and on the line between two stations how many bodies wait in that buffer — as its label and its width. Only a buffer that is full (blocking the station before it) or empty (starving the one after) takes colour, and the station holding the line back is marked as its bottleneck. Output against plan above, every buffer against its size below. Example data."
+  },
+  connectors: [
+    {
+      "key": "mes",
+      "name": "예시 MES API",
+      "example": true,
+      "attribution": {
+        "text": "예시 데이터 — 실제 라인이 아닙니다"
+      }
+    }
+  ],
+  board,
   snapshot,
 };

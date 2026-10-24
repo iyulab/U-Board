@@ -3,10 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { BoardElementsPanel } from './BoardElementsPanel';
 import { PartPanel } from './PartPanel';
-import type { BoardV2 } from '../board-v2/types';
+import type { Board } from '../board/types';
 
-const board: BoardV2 = {
-  version: 2,
+const board: Board = {
   data: { tank: { from: 'plant', path: '/tank', fields: { level: { unit: '%', state: [80, 'ok', 95, 'alarm'] } } } },
   elements: { gauge: { template: '<b>{{level}}</b>', props: { level: 'number', tone: 'string', marks: 'list' } } },
   parts: { t: { as: 'element', of: 'tank', element: 'gauge' }, l: { as: 'label', title: 'Tank' } },

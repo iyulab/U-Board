@@ -1,4 +1,5 @@
-import type { Adapter, Attribution, HttpRef, ResolvedBinding } from '@iyulab/u-board';
+import type { Adapter, Attribution, ResolvedBinding } from '@iyulab/u-board';
+import type { HttpRef } from '@iyulab/u-board/picture';
 import { resolveConnector } from './api-client.js';
 
 /** Delegates the actual HTTP call to the server's resolve proxy so a connector's credentials

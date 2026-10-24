@@ -1,7 +1,3 @@
-import type { Binding, CanvasView, Connector, ElementDefinition, Node, Shape } from '@iyulab/u-board/domain';
-import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
-import { snapshot } from '../snapshots/microgrid.js';
-
 // A site's microgrid as its energy management system sees it: the solar array, the battery, the building and the car
 // chargers it feeds, and the utility grid, all meeting at the switchboard. Each line carries the power flowing on it —
 // its width grows with the power, and a line with nothing on it is dashed; which way it flows (the battery charging or
@@ -9,243 +5,528 @@ import { snapshot } from '../snapshots/microgrid.js';
 // covered, what came from and went to the grid, and the solar output against the load since morning. No public source
 // carries a site's power flows, so the values are example data written for the board.
 
-export const EMS: ExampleSampleConnector = {
-  key: 'ems',
-  name: '예시 EMS API',
-  example: true,
-  attribution: { text: '예시 데이터 — 실제 사이트가 아닙니다' },
-};
+import type { Board } from '@iyulab/u-board/domain';
+import type { SamplePack } from '../sample-pack.js';
+import { snapshot } from '../snapshots/microgrid.js';
 
-/** The power meters report every minute; five minutes without one is a source that has stopped. */
-const MAX_AGE_SECONDS = 5 * 60;
-
-const bindAsset = (id: string, field: string, map?: Binding['map']): Binding => ({
-  adapter: EMS.key,
-  ref: { path: '/site/assets', item: { list: '/value', where: { id } }, valuePath: `/${field}`, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-  ...(map ? { map } : {}),
-});
-
-const bindSite = (valuePath: string): Binding => ({
-  adapter: EMS.key,
-  ref: { path: '/site/summary', valuePath, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-});
-
-const BOX = `box-sizing:border-box;height:100%;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:10px 14px;
-border:1px solid var(--u-widget-border);border-left:5px solid var(--c);border-radius:6px;background:var(--u-widget-surface);
-font-family:var(--u-widget-font-family);color:var(--u-widget-text);--c:var(--u-widget-text-secondary)`;
-const TEXT = `b{font-size:13px;font-weight:600;color:var(--u-widget-text-secondary)}
-.kw{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
-.kw small{font-size:12px;font-weight:500;color:var(--u-widget-text-secondary)}
-.n{font-size:12px;color:var(--u-widget-text-secondary)}`;
-
-/** One place power comes from or goes to: its name, the power on its line, a few words on what it is doing. */
-const asset: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['name', 'kw', 'note', 'tone'],
-    properties: {
-      name: { type: 'string' },
-      kw: { type: 'number', minimum: 0, description: 'Power on its line, kW.' },
-      note: { type: 'string' },
-      tone: { enum: ['sun', 'grid', 'load', 'bus'] },
+const board: Board = {
+  "statuses": {
+    "idle-hatch": {
+      "tone": "warn",
+      "emphasis": "hatch"
     },
-  },
-  template: `<div class="a {{tone}}" role="img" aria-label="{{name}} {{kw}} kW, {{note}}">
-  <b>{{name}}</b>
-  <span class="kw">{{kw | fixed:0}}<small> kW</small></span>
-  <span class="n">{{note}}</span>
-</div>`,
-  style: `.a{${BOX}}
-${TEXT}
-.sun{--c:#d89a00}
-.grid{--c:#6b7780}
-.load{--c:#4a555b}
-.bus{--c:var(--u-widget-text)}`,
-  size: { width: 200, height: 100 },
-};
-
-/** The battery: the power going in or out, which way, and how full it is. */
-const battery: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['name', 'kw', 'state', 'soc'],
-    properties: {
-      name: { type: 'string' },
-      kw: { type: 'number', minimum: 0, description: 'Power in or out, kW.' },
-      state: { type: 'string' },
-      soc: { type: 'number', minimum: 0, maximum: 100, description: 'State of charge, %.' },
+    "idle-hatch-idle": {
+      "tone": "idle",
+      "emphasis": "hatch"
     },
-  },
-  template: `<div class="a" style="--soc: {{soc}}" role="img" aria-label="{{name}} {{state}} {{kw}} kW, {{soc}}%">
-  <b>{{name}}</b>
-  <span class="kw">{{kw | fixed:0}}<small> kW</small></span>
-  <span class="n">{{state}} · 충전량 {{soc | fixed:0}}%</span>
-  <span class="bar"><span></span></span>
-</div>`,
-  style: `.a{${BOX};--c:#3f7fbf}
-${TEXT}
-.bar{height:5px;border-radius:3px;background:var(--u-widget-border);overflow:hidden}
-.bar span{display:block;height:100%;width:calc(var(--soc) * 1%);background:var(--c)}`,
-  size: { width: 200, height: 108 },
-};
-
-type AssetSpot = { id: string; name: string; x: number; y: number; tone: 'sun' | 'grid' | 'load' | 'bus' };
-const ASSETS: AssetSpot[] = [
-  { id: 'pv', name: '태양광 (300 kWp)', x: 400, y: 120, tone: 'sun' },
-  { id: 'grid', name: '한전 계통', x: 60, y: 384, tone: 'grid' },
-  { id: 'switchboard', name: '수배전반', x: 400, y: 384, tone: 'bus' },
-  { id: 'building', name: '건물 부하', x: 740, y: 290, tone: 'load' },
-  { id: 'ev', name: '전기차 충전', x: 740, y: 478, tone: 'load' },
-];
-
-const assetNode = ({ id, name, x, y, tone }: AssetSpot): Node => ({
-  id,
-  x,
-  y,
-  width: 200,
-  height: 100,
-  anchored: false,
-  widget: {
-    type: 'element:asset',
-    props: { name, kw: 0, note: '—', tone },
-    bindings: { kw: bindAsset(id, 'kw'), note: bindAsset(id, 'note') },
-  },
-});
-
-const ESS_STATE = { values: { forward: '충전 중', reverse: '방전 중' }, otherwise: '대기' };
-const essNode: Node = {
-  id: 'ess',
-  x: 400,
-  y: 640,
-  width: 200,
-  height: 108,
-  anchored: false,
-  widget: {
-    type: 'element:battery',
-    props: { name: 'ESS (500 kWh)', kw: 0, state: '대기', soc: 0 },
-    bindings: { kw: bindAsset('ess', 'kw'), state: bindAsset('ess', 'dir', ESS_STATE), soc: bindAsset('ess', 'socPct') },
-  },
-};
-
-const DASH = { values: { idle: 'dashed' }, otherwise: 'solid' };
-/** The more power, the wider the line. */
-const WIDTH = { ranges: [{ min: 150, value: 7 }, { min: 60, value: 4.5 }, { min: 5, value: 2.5 }], otherwise: 1.5 };
-
-/** A line from the switchboard's side — `forward` is the way the meter on `id` counts positive. */
-const flow = (id: string, from: string, to: string, stroke: string, labelAt?: number): Connector => ({
-  id: `flow-${id}`,
-  fromNodeId: from,
-  toNodeId: to,
-  label: '{{value | fixed:0}} kW',
-  ...(labelAt !== undefined && { labelAt }),
-  style: { stroke, strokeWidth: 2.5, route: 'orthogonal' },
-  bindings: {
-    label: bindAsset(id, 'kw'),
-    'style.dash': bindAsset(id, 'dir', DASH),
-    'style.strokeWidth': bindAsset(id, 'kw', WIDTH),
-  },
-});
-
-const CONNECTORS: Connector[] = [
-  flow('pv', 'pv', 'switchboard', '#d89a00'),
-  flow('grid', 'grid', 'switchboard', '#6b7780'),
-  flow('ess', 'switchboard', 'ess', '#3f7fbf'),
-  flow('building', 'switchboard', 'building', '#4a555b'),
-  flow('ev', 'switchboard', 'ev', '#4a555b'),
-];
-
-const SIDE_X = 1000;
-const SIDE: Node[] = [
-  {
-    id: 'self-sufficiency',
-    x: SIDE_X,
-    y: 100,
-    width: 250,
-    height: 150,
-    anchored: false,
-    widget: {
-      type: 'gauge',
-      props: { data: { value: 0 }, options: { min: 0, max: 100, unit: '%', subtitle: '오늘 자립률', thresholds: [{ to: 40, color: 'red' }, { to: 70, color: 'yellow' }, { to: 100, color: 'green' }] } },
-      bindings: { 'data.value': bindSite('/selfSufficiencyPct') },
+    "idle-hatch-info": {
+      "tone": "info",
+      "emphasis": "hatch"
     },
+    "idle-hatch-past": {
+      "tone": "past",
+      "emphasis": "hatch"
+    }
   },
-  {
-    id: 'pv-today',
-    x: SIDE_X,
-    y: 266,
-    width: 250,
-    height: 70,
-    anchored: false,
-    widget: { type: 'metric', props: { data: { label: '오늘 태양광 발전', value: 0, unit: 'kWh' } }, bindings: { 'data.value': bindSite('/pvKwhToday') } },
+  "elements": {
+    "asset": {
+      "template": "<div class=\"a {{tone}}\" role=\"img\" aria-label=\"{{name}} {{kw}} kW, {{note}}\">\n  <b>{{name}}</b>\n  <span class=\"kw\">{{kw | fixed:0}}<small> kW</small></span>\n  <span class=\"n\">{{note}}</span>\n</div>",
+      "style": ".a{box-sizing:border-box;height:100%;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:10px 14px;\nborder:1px solid var(--u-widget-border);border-left:5px solid var(--c);border-radius:6px;background:var(--u-widget-surface);\nfont-family:var(--u-widget-font-family);color:var(--u-widget-text);--c:var(--u-widget-text-secondary)}\nb{font-size:13px;font-weight:600;color:var(--u-widget-text-secondary)}\n.kw{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}\n.kw small{font-size:12px;font-weight:500;color:var(--u-widget-text-secondary)}\n.n{font-size:12px;color:var(--u-widget-text-secondary)}\n.sun{--c:#d89a00}\n.grid{--c:#6b7780}\n.load{--c:#4a555b}\n.bus{--c:var(--u-widget-text)}",
+      "props": {
+        "name": "string",
+        "kw": "number",
+        "note": "string",
+        "tone": "string"
+      }
+    },
+    "battery": {
+      "template": "<div class=\"a\" style=\"--soc: {{soc}}\" role=\"img\" aria-label=\"{{name}} {{state}} {{kw}} kW, {{soc}}%\">\n  <b>{{name}}</b>\n  <span class=\"kw\">{{kw | fixed:0}}<small> kW</small></span>\n  <span class=\"n\">{{state}} · 충전량 {{soc | fixed:0}}%</span>\n  <span class=\"bar\"><span></span></span>\n</div>",
+      "style": ".a{box-sizing:border-box;height:100%;display:flex;flex-direction:column;justify-content:center;gap:3px;padding:10px 14px;\nborder:1px solid var(--u-widget-border);border-left:5px solid var(--c);border-radius:6px;background:var(--u-widget-surface);\nfont-family:var(--u-widget-font-family);color:var(--u-widget-text);--c:var(--u-widget-text-secondary);--c:#3f7fbf}\nb{font-size:13px;font-weight:600;color:var(--u-widget-text-secondary)}\n.kw{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}\n.kw small{font-size:12px;font-weight:500;color:var(--u-widget-text-secondary)}\n.n{font-size:12px;color:var(--u-widget-text-secondary)}\n.bar{height:5px;border-radius:3px;background:var(--u-widget-border);overflow:hidden}\n.bar span{display:block;height:100%;width:calc(var(--soc) * 1%);background:var(--c)}",
+      "props": {
+        "name": "string",
+        "kw": "number",
+        "state": "string",
+        "soc": "number"
+      }
+    }
   },
-  {
-    id: 'import-today',
-    x: SIDE_X,
-    y: 350,
-    width: 120,
-    height: 70,
-    anchored: false,
-    widget: { type: 'metric', props: { data: { label: '계통에서', value: 0, unit: 'kWh' } }, bindings: { 'data.value': bindSite('/importKwhToday') } },
+  "data": {
+    "assets": {
+      "from": "ems",
+      "path": "/site/assets",
+      "list": "/value",
+      "key": "id",
+      "time": "updatedAt",
+      "fresh": 300,
+      "fields": {
+        "kw": {
+          "format": "number:0"
+        },
+        "note": {},
+        "dir": {
+          "names": {
+            "forward": "충전 중",
+            "reverse": "방전 중",
+            "*": "대기"
+          }
+        },
+        "socPct": {},
+        "dir-2": {
+          "at": "/dir",
+          "state": {
+            "idle": "idle-hatch",
+            "*": "warn"
+          }
+        },
+        "dir-3": {
+          "at": "/dir",
+          "state": {
+            "idle": "idle-hatch-idle",
+            "*": "idle"
+          }
+        },
+        "dir-4": {
+          "at": "/dir",
+          "state": {
+            "idle": "idle-hatch-info",
+            "*": "info"
+          }
+        },
+        "dir-5": {
+          "at": "/dir",
+          "state": {
+            "idle": "idle-hatch-past",
+            "*": "past"
+          }
+        }
+      }
+    },
+    "summary": {
+      "from": "ems",
+      "path": "/site/summary",
+      "time": "updatedAt",
+      "fresh": 300,
+      "fields": {
+        "selfSufficiencyPct": {
+          "unit": "%"
+        },
+        "pvKwhToday": {
+          "label": "오늘 태양광 발전",
+          "unit": "kWh"
+        },
+        "importKwhToday": {
+          "label": "계통에서",
+          "unit": "kWh"
+        },
+        "exportKwhToday": {
+          "label": "계통으로",
+          "unit": "kWh"
+        }
+      }
+    },
+    "history": {
+      "from": "ems",
+      "path": "/site/history",
+      "list": "/value",
+      "fresh": 300,
+      "answerTime": "/updatedAt"
+    }
   },
-  {
-    id: 'export-today',
-    x: SIDE_X + 130,
-    y: 350,
-    width: 120,
-    height: 70,
-    anchored: false,
-    widget: { type: 'metric', props: { data: { label: '계통으로', value: 0, unit: 'kWh' } }, bindings: { 'data.value': bindSite('/exportKwhToday') } },
-  },
-  {
-    id: 'history',
-    x: SIDE_X,
-    y: 436,
-    width: 250,
-    height: 250,
-    anchored: false,
-    widget: {
-      type: 'chart.line',
-      props: {
-        title: '태양광과 부하 (kW)',
-        data: [],
-        mapping: { x: 'time', y: ['pvKw', 'loadKw'] },
-        options: { xFormat: 'time', series: [{ label: '태양광', color: '#d89a00' }, { label: '부하', color: '#4a555b' }] },
+  "parts": {
+    "pv": {
+      "as": "element",
+      "element": "asset",
+      "of": "assets[pv]",
+      "props": {
+        "name": "태양광 (300 kWp)",
+        "tone": "sun"
       },
-      bindings: { data: { adapter: EMS.key, ref: { path: '/site/history', valuePath: '/value', observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS } } },
+      "bind": {
+        "kw": "kw",
+        "note": "note"
+      }
     },
+    "grid": {
+      "as": "element",
+      "element": "asset",
+      "of": "assets[grid]",
+      "props": {
+        "name": "한전 계통",
+        "tone": "grid"
+      },
+      "bind": {
+        "kw": "kw",
+        "note": "note"
+      }
+    },
+    "switchboard": {
+      "as": "element",
+      "element": "asset",
+      "of": "assets[switchboard]",
+      "props": {
+        "name": "수배전반",
+        "tone": "bus"
+      },
+      "bind": {
+        "kw": "kw",
+        "note": "note"
+      }
+    },
+    "building": {
+      "as": "element",
+      "element": "asset",
+      "of": "assets[building]",
+      "props": {
+        "name": "건물 부하",
+        "tone": "load"
+      },
+      "bind": {
+        "kw": "kw",
+        "note": "note"
+      }
+    },
+    "ev": {
+      "as": "element",
+      "element": "asset",
+      "of": "assets[ev]",
+      "props": {
+        "name": "전기차 충전",
+        "tone": "load"
+      },
+      "bind": {
+        "kw": "kw",
+        "note": "note"
+      }
+    },
+    "ess": {
+      "as": "element",
+      "element": "battery",
+      "of": "assets[ess]",
+      "props": {
+        "name": "ESS (500 kWh)"
+      },
+      "bind": {
+        "kw": "kw",
+        "state": "dir",
+        "soc": "socPct"
+      }
+    },
+    "self-sufficiency": {
+      "as": "gauge",
+      "of": "summary",
+      "show": "selfSufficiencyPct",
+      "min": 0,
+      "max": 100,
+      "subtitle": "오늘 자립률",
+      "thresholds": [
+        {
+          "to": 40,
+          "color": "red"
+        },
+        {
+          "to": 70,
+          "color": "yellow"
+        },
+        {
+          "to": 100,
+          "color": "green"
+        }
+      ]
+    },
+    "pv-today": {
+      "as": "stat",
+      "of": "summary",
+      "show": "pvKwhToday"
+    },
+    "import-today": {
+      "as": "stat",
+      "of": "summary",
+      "show": "importKwhToday"
+    },
+    "export-today": {
+      "as": "stat",
+      "of": "summary",
+      "show": "exportKwhToday"
+    },
+    "history": {
+      "as": "chart.line",
+      "of": "history",
+      "title": "태양광과 부하 (kW)",
+      "x": "time",
+      "y": [
+        "pvKw",
+        "loadKw"
+      ],
+      "xFormat": "time",
+      "series": [
+        {
+          "label": "태양광",
+          "color": "#d89a00"
+        },
+        {
+          "label": "부하",
+          "color": "#4a555b"
+        }
+      ]
+    }
   },
-];
-
-const DECORATIONS: Shape[] = [
-  { id: 'title', type: 'text', x: 24, y: 22, text: '마이크로그리드 에너지 흐름', fontSize: 24, fill: '#17252b' },
-  { id: 'note', type: 'text', x: 24, y: 56, text: '선마다 지금 흐르는 전력 — 굵기는 크기, 점선은 멈춤 · 방향은 ESS · 계통 카드 · 예시 데이터', fontSize: 13, fill: '#5b6b70' },
-  { id: 'site', type: 'rect', x: 30, y: 92, width: 940, height: 680, stroke: '#9aa6ae', strokeWidth: 1.5, dash: 'dashed', label: '사이트', labelSize: 14, labelFill: '#3d4a52' },
-  { id: 'side', type: 'rect', x: SIDE_X - 16, y: 72, width: 282, height: 632, stroke: '#d6dedb', strokeWidth: 1, label: '오늘', labelSize: 14, labelFill: '#3d4a52' },
-];
-
-const document: CanvasView = {
-  kind: 'canvas',
-  background: {},
-  nodes: [...ASSETS.map(assetNode), essNode, ...SIDE],
-  connectors: CONNECTORS,
-  decorations: DECORATIONS,
-  elements: { asset, battery },
+  "layout": {
+    "kind": "canvas",
+    "size": [
+      1250,
+      748
+    ],
+    "place": {
+      "pv": [
+        400,
+        120,
+        200,
+        100
+      ],
+      "grid": [
+        60,
+        384,
+        200,
+        100
+      ],
+      "switchboard": [
+        400,
+        384,
+        200,
+        100
+      ],
+      "building": [
+        740,
+        290,
+        200,
+        100
+      ],
+      "ev": [
+        740,
+        478,
+        200,
+        100
+      ],
+      "ess": [
+        400,
+        640,
+        200,
+        108
+      ],
+      "self-sufficiency": [
+        1000,
+        100,
+        250,
+        150
+      ],
+      "pv-today": [
+        1000,
+        266,
+        250,
+        70
+      ],
+      "import-today": [
+        1000,
+        350,
+        120,
+        70
+      ],
+      "export-today": [
+        1130,
+        350,
+        120,
+        70
+      ],
+      "history": [
+        1000,
+        436,
+        250,
+        250
+      ]
+    },
+    "shapes": {
+      "title": {
+        "text": "마이크로그리드 에너지 흐름",
+        "at": [
+          24,
+          22
+        ],
+        "size": 24,
+        "tone": "next"
+      },
+      "note": {
+        "text": "선마다 지금 흐르는 전력 — 굵기는 크기, 점선은 멈춤 · 방향은 ESS · 계통 카드 · 예시 데이터",
+        "at": [
+          24,
+          56
+        ],
+        "size": 13,
+        "tone": "past"
+      },
+      "site": {
+        "box": [
+          30,
+          92,
+          940,
+          680
+        ],
+        "label": "사이트",
+        "width": 1.5,
+        "dash": true
+      },
+      "side": {
+        "box": [
+          984,
+          72,
+          282,
+          632
+        ],
+        "label": "오늘",
+        "width": 1
+      }
+    },
+    "links": {
+      "flow-pv": {
+        "from": "pv",
+        "to": "switchboard",
+        "label": "{{kw}} kW",
+        "show": "dir-2",
+        "weight": {
+          "field": "kw",
+          "bands": [
+            1.5,
+            5,
+            2.5,
+            60,
+            4.5,
+            150,
+            7
+          ]
+        },
+        "of": "assets[pv]",
+        "width": 2.5,
+        "route": "orthogonal"
+      },
+      "flow-grid": {
+        "from": "grid",
+        "to": "switchboard",
+        "label": "{{kw}} kW",
+        "show": "dir-3",
+        "weight": {
+          "field": "kw",
+          "bands": [
+            1.5,
+            5,
+            2.5,
+            60,
+            4.5,
+            150,
+            7
+          ]
+        },
+        "of": "assets[grid]",
+        "width": 2.5,
+        "route": "orthogonal"
+      },
+      "flow-ess": {
+        "from": "switchboard",
+        "to": "ess",
+        "label": "{{kw}} kW",
+        "show": "dir-4",
+        "weight": {
+          "field": "kw",
+          "bands": [
+            1.5,
+            5,
+            2.5,
+            60,
+            4.5,
+            150,
+            7
+          ]
+        },
+        "of": "assets[ess]",
+        "width": 2.5,
+        "route": "orthogonal"
+      },
+      "flow-building": {
+        "from": "switchboard",
+        "to": "building",
+        "label": "{{kw}} kW",
+        "show": "dir-5",
+        "weight": {
+          "field": "kw",
+          "bands": [
+            1.5,
+            5,
+            2.5,
+            60,
+            4.5,
+            150,
+            7
+          ]
+        },
+        "of": "assets[building]",
+        "width": 2.5,
+        "route": "orthogonal"
+      },
+      "flow-ev": {
+        "from": "switchboard",
+        "to": "ev",
+        "label": "{{kw}} kW",
+        "show": "dir-5",
+        "weight": {
+          "field": "kw",
+          "bands": [
+            1.5,
+            5,
+            2.5,
+            60,
+            4.5,
+            150,
+            7
+          ]
+        },
+        "of": "assets[ev]",
+        "width": 2.5,
+        "route": "orthogonal"
+      }
+    }
+  }
 };
 
 export const microgrid: SamplePack = {
-  id: 'microgrid',
-  title: { ko: '마이크로그리드 에너지 흐름', en: 'Microgrid energy flow' },
-  field: { ko: '건물·에너지', en: 'Buildings & energy' },
-  kind: { ko: '없음 — 흐름도', en: 'None — flow diagram' },
-  domain: 'energy',
-  styles: ['operations'],
-  summary: {
-    ko: '태양광·ESS·건물 부하·전기차 충전·한전 계통이 수배전반에서 만나는 사이트에서, 선마다 지금 흐르는 전력을 굵기·점선(멈춤)으로, 충전과 방전 · 수전과 역송은 ESS · 계통 카드에, 옆에는 오늘 자립률과 계통에서 받고 보낸 양, 아침부터의 태양광과 부하. 예시 데이터입니다.',
-    en: 'Solar, a battery, the building, car chargers and the utility grid meeting at the switchboard, each line showing the power on it now — its width the amount, dashed when idle, which way it flows (charging or discharging, importing or exporting) on the battery’s and the grid’s cards; beside it the day’s self-sufficiency, what came from and went to the grid, and solar output against the load since morning. Example data.',
+  id: "microgrid",
+  title: {
+    "ko": "마이크로그리드 에너지 흐름",
+    "en": "Microgrid energy flow"
   },
-  connectors: [EMS],
-  document,
+  field: {
+    "ko": "건물·에너지",
+    "en": "Buildings & energy"
+  },
+  kind: {
+    "ko": "없음 — 흐름도",
+    "en": "None — flow diagram"
+  },
+  domain: "energy",
+  styles: [
+    "operations"
+  ],
+  summary: {
+    "ko": "태양광·ESS·건물 부하·전기차 충전·한전 계통이 수배전반에서 만나는 사이트에서, 선마다 지금 흐르는 전력을 굵기·점선(멈춤)으로, 충전과 방전 · 수전과 역송은 ESS · 계통 카드에, 옆에는 오늘 자립률과 계통에서 받고 보낸 양, 아침부터의 태양광과 부하. 예시 데이터입니다.",
+    "en": "Solar, a battery, the building, car chargers and the utility grid meeting at the switchboard, each line showing the power on it now — its width the amount, dashed when idle, which way it flows (charging or discharging, importing or exporting) on the battery’s and the grid’s cards; beside it the day’s self-sufficiency, what came from and went to the grid, and solar output against the load since morning. Example data."
+  },
+  connectors: [
+    {
+      "key": "ems",
+      "name": "예시 EMS API",
+      "example": true,
+      "attribution": {
+        "text": "예시 데이터 — 실제 사이트가 아닙니다"
+      }
+    }
+  ],
+  board,
   snapshot,
 };

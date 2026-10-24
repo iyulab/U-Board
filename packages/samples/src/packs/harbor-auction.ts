@@ -1,8 +1,3 @@
-import type { Binding, CanvasView, Connector, ElementDefinition, Node, Widget } from '@iyulab/u-board/domain';
-import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
-import { svgDataUrl } from '../frame.js';
-import { snapshot } from '../snapshots/harbor-auction.js';
-
 // A fishing harbour's dawn auction drawn as an ukiyo-e woodblock print: Prussian blue and indigo on warm washi, black
 // key-block outlines, the sky graded (bokashi) from blue into the paper, curling waves with claw-shaped foam, a
 // vermilion sun on the horizon and a vermilion seal. The sea is the top of the print, the harbour mouth between two
@@ -12,273 +7,462 @@ import { snapshot } from '../snapshots/harbor-auction.js';
 // figures, the auction's order and the boxes sold by the half hour. The harbour is made up, so the values are example
 // data.
 
-export const HARBOR: ExampleSampleConnector = {
-  key: 'harbor',
-  name: '예시 위판장 API',
-  example: true,
-  attribution: { text: '예시 데이터 — 실제 어항이 아닙니다' },
-};
+import type { Board } from '@iyulab/u-board/domain';
+import type { SamplePack } from '../sample-pack.js';
+import { snapshot } from '../snapshots/harbor-auction.js';
 
-/** The auction clerk's tablet answers every few minutes; a quarter of an hour of silence is a source that has stopped. */
-const MAX_AGE_SECONDS = 15 * 60;
-
-const bind = (path: string, valuePath: string): Binding => ({
-  adapter: HARBOR.key,
-  ref: { path, valuePath, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-});
-
-const WIDTH = 1600;
-const HEIGHT = 1000;
-const WASHI = '#f2e8d0';
-const PRUSSIAN = '#1f3f72';
-const INDIGO = '#14254a';
-const PALE = '#9fb6d3';
-const VERMILION = '#c9442c';
-const OCHRE = '#d8a948';
-const KEY = '#1b1a18';
-const SERIF = '"Noto Serif KR", "Nanum Myeongjo", "Batang", serif';
-
-const CARD = { width: 190, height: 96 };
-type BoatId = 's1' | 's2' | 'r1' | 'r2' | 'r3' | 'u1' | 'u2' | 'd1' | 'd2';
-const BOATS: Record<BoatId, [number, number]> = {
-  s1: [120, 150],
-  s2: [760, 190],
-  r1: [230, 390],
-  r2: [500, 340],
-  r3: [800, 410],
-  u1: [80, 660],
-  u2: [290, 660],
-  d1: [600, 660],
-  d2: [810, 660],
-};
-const RETURNING: BoatId[] = ['r1', 'r2', 'r3'];
-
-// ── The print ───────────────────────────────────────────────────────────────────────────────────────────────────
-
-/** One big curling wave: a body of Prussian blue, a pale lip and a row of foam claws along its crest. */
-function wave(x: number, y: number, w: number, h: number): string {
-  const claws = Array.from({ length: Math.max(3, Math.round(w / 34)) }, (_, i) => {
-    const cx = x + w * 0.18 + i * 30;
-    const cy = y - h * 0.62 + Math.sin(i * 0.9) * 6;
-    return `<path d="M ${cx} ${cy} q 7 -14 16 -4 q -7 -2 -8 8" fill="${WASHI}" stroke="${KEY}" stroke-width="1.6"/>`;
-  }).join('');
-  return `<path d="M ${x} ${y} C ${x + w * 0.15} ${y - h}, ${x + w * 0.7} ${y - h * 1.15}, ${x + w * 0.85} ${y - h * 0.55} C ${x + w * 0.78} ${y - h * 0.7}, ${x + w * 0.62} ${y - h * 0.6}, ${x + w * 0.66} ${y - h * 0.28} C ${x + w * 0.75} ${y - h * 0.1}, ${x + w * 0.92} ${y - h * 0.08}, ${x + w} ${y} Z" fill="${PRUSSIAN}" stroke="${KEY}" stroke-width="3"/>
-<path d="M ${x + w * 0.12} ${y - h * 0.45} C ${x + w * 0.3} ${y - h * 0.9}, ${x + w * 0.62} ${y - h * 0.98}, ${x + w * 0.8} ${y - h * 0.6}" fill="none" stroke="${PALE}" stroke-width="5"/>
-${claws}`;
-}
-
-function drawing(): string {
-  const ripples = Array.from({ length: 9 }, (_, i) => {
-    const y = 150 + i * 44;
-    return `<path d="M 40 ${y} q 30 -10 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0 t 60 0" fill="none" stroke="${PALE}" stroke-width="1.6" opacity=".55"/>`;
-  }).join('');
-  const roofTiles = Array.from({ length: 22 }, (_, i) => `<path d="M ${330 + i * 20} 838 v 22" stroke="${KEY}" stroke-width="1.5"/>`).join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
-<defs>
-<linearGradient id="bokashi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${PRUSSIAN}"/><stop offset="1" stop-color="${PRUSSIAN}" stop-opacity="0"/></linearGradient>
-<linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f6a9e"/><stop offset="1" stop-color="#6f92bb"/></linearGradient>
-<filter id="fibre"><feTurbulence type="fractalNoise" baseFrequency=".9 .08" numOctaves="2" seed="11"/><feColorMatrix values="0 0 0 0 .45  0 0 0 0 .38  0 0 0 0 .25  0 0 0 -1.6 1.05"/></filter>
-</defs>
-<rect width="${WIDTH}" height="${HEIGHT}" fill="${WASHI}"/>
-<rect x="40" y="40" width="1040" height="80" fill="url(#bokashi)"/>
-<circle cx="960" cy="112" r="34" fill="${VERMILION}"/>
-<rect x="40" y="112" width="1040" height="468" fill="url(#sea)" stroke="${KEY}" stroke-width="3"/>
-${ripples}
-${wave(40, 300, 260, 150)}${wave(900, 330, 180, 110)}${wave(56, 560, 150, 80)}
-<rect x="40" y="580" width="1040" height="220" fill="${PALE}" stroke="${KEY}" stroke-width="3"/>
-<path d="M 40 570 H 440 L 455 590 H 40 Z" fill="#8a8273" stroke="${KEY}" stroke-width="3"/>
-<path d="M 1080 570 H 650 L 635 590 H 1080 Z" fill="#8a8273" stroke="${KEY}" stroke-width="3"/>
-<rect x="430" y="532" width="16" height="44" fill="${WASHI}" stroke="${KEY}" stroke-width="2.5"/><rect x="430" y="532" width="16" height="12" fill="${VERMILION}"/>
-<rect x="640" y="532" width="16" height="44" fill="${WASHI}" stroke="${KEY}" stroke-width="2.5"/><rect x="640" y="532" width="16" height="12" fill="${INDIGO}"/>
-<rect x="40" y="800" width="1040" height="160" fill="${WASHI}" stroke="${KEY}" stroke-width="3"/>
-<path d="M 310 860 L 340 820 H 760 L 790 860 Z" fill="${INDIGO}" stroke="${KEY}" stroke-width="3"/>
-${roofTiles}
-<rect x="330" y="860" width="440" height="90" fill="#e6d6b0" stroke="${KEY}" stroke-width="3"/>
-<text x="520" y="92" fill="${WASHI}" font-size="22" font-family='${SERIF}' font-weight="700">동해 — 새벽 바다</text>
-<text x="56" y="940" fill="${INDIGO}" font-size="20" font-family='${SERIF}' font-weight="700">물양장 · 하역</text>
-<text x="1064" y="940" text-anchor="end" fill="${INDIGO}" font-size="20" font-family='${SERIF}' font-weight="700">얼음 창고 →</text>
-<rect width="${WIDTH}" height="${HEIGHT}" filter="url(#fibre)" opacity=".18"/>
-<rect x="18" y="18" width="1082" height="964" fill="none" stroke="${KEY}" stroke-width="2"/>
-</svg>`;
-  return svgDataUrl(svg);
-}
-
-// ── Elements ────────────────────────────────────────────────────────────────────────────────────────────────────
-
-/** A boat: its name, what it caught and where it is — read from `b`. */
-const boat: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', required: ['b'], properties: { b: { type: 'object' } } },
-  template: `<section class="bt {{b.state}}"><span>{{b.word}}</span><b>{{b.name}}</b><strong>{{b.catch}}</strong><small>{{b.note}}</small></section>`,
-  style: `.bt{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;padding:6px 10px 7px;background:${WASHI};border:3px solid ${KEY};font-family:${SERIF};color:${INDIGO}}
-span{align-self:flex-start;margin-bottom:auto;padding:0 8px;font-size:13px;font-weight:700;color:${WASHI};background:${KEY}}
-b{font-size:15px;font-weight:800}
-strong{font-size:16px;font-weight:700;line-height:1.2}
-small{font-size:12px}
-.sea{border-style:dashed;border-color:${INDIGO}}
-.sea span{background:${WASHI};color:${INDIGO};outline:2px dashed ${INDIGO}}
-.return{padding-left:24px;background:linear-gradient(90deg,${PRUSSIAN} 0 14px,rgba(31,63,114,.38) 14px,${WASHI} 70%);border-color:${PRUSSIAN}}
-.return span{background:${PRUSSIAN}}
-.unload{background:${INDIGO};color:${WASHI}}
-.unload span{background:${VERMILION}}
-.done{padding-right:30px;background:repeating-linear-gradient(135deg,rgba(184,134,40,.75) 0 5px,transparent 5px 10px) right/22px 100% no-repeat,#ecdcb2;color:#43341a;border-color:#7a6a4a}
-.done span{background:${OCHRE};color:${KEY}}`,
-  size: CARD,
-};
-
-/** Where the returning boats are headed: the harbour mouth between the two lighthouses. */
-const mouth: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', properties: {} },
-  template: `<div class="mo">방파제 입구</div>`,
-  style: `.mo{height:100%;box-sizing:border-box;display:grid;place-items:center;font:700 15px ${SERIF};color:${WASHI};background:${INDIGO};border:3px solid ${KEY}}`,
-  size: { width: 150, height: 38 },
-};
-
-/** The auction hall's sign: which floor the lot is on now. */
-const hall: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', required: ['lot'], properties: { lot: { type: 'string' } } },
-  template: `<div class="hl"><b>위판장</b><span>{{lot}}</span></div>`,
-  style: `.hl{height:100%;box-sizing:border-box;display:grid;place-items:center;align-content:center;gap:2px;font-family:${SERIF};color:${INDIGO}}
-b{font-size:26px;font-weight:800;letter-spacing:.3em}
-span{font-size:15px;font-weight:700;color:${VERMILION}}`,
-  size: { width: 360, height: 76 },
-};
-
-/** The print's cartouche: the title in a framed block, the sub-title and time beside it, and a vermilion seal. */
-const title: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', required: ['name'], properties: { name: { type: 'string' }, sub: { type: 'string' }, date: { type: 'string' }, time: { type: 'string' } } },
-  template: `<header class="tt"><h1>{{name}}</h1><p>{{sub}}<br/>{{date}}<br/><b>{{time}}</b></p><i>어항</i></header>`,
-  style: `.tt{position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:18px;padding:12px 16px;background:${WASHI};border:3px double ${KEY};outline:2px solid ${KEY};outline-offset:4px;font-family:${SERIF};color:${INDIGO}}
-h1{margin:0;padding:8px 6px;writing-mode:vertical-rl;font-size:25px;font-weight:800;line-height:1.1;background:#e6d6b0;border:2px solid ${KEY}}
-p{margin:0;font-size:17px;font-weight:600;line-height:1.55}
-b{font-size:30px;font-weight:800;color:${PRUSSIAN}}
-i{position:absolute;right:14px;bottom:14px;width:42px;height:42px;display:grid;place-items:center;font-style:normal;font-size:15px;font-weight:800;color:${WASHI};background:${VERMILION};border-radius:3px;transform:rotate(-4deg)}`,
-  size: { width: 460, height: 190 },
-};
-
-/** The morning's figures, each a block cut in indigo. */
-const figures: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['items'],
-    properties: { items: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, value: { type: 'string' }, note: { type: 'string' } } } } },
+const board: Board = {
+  "board": {
+    "theme": "light",
+    "accent": "#c9442c"
   },
-  template: `<dl class="fg">{{#items}}<div><dt>{{label}}</dt><dd>{{value}}</dd><small>{{note}}</small></div>{{/items}}</dl>`,
-  style: `.fg{margin:0;height:100%;box-sizing:border-box;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-family:${SERIF}}
-div{display:grid;align-content:center;padding:8px 10px;background:${INDIGO};color:${WASHI};border:2px solid ${KEY}}
-dt{font-size:13px;font-weight:700;color:${PALE}}
-dd{margin:2px 0;font-size:28px;font-weight:800}
-small{font-size:11px;color:${PALE}}`,
-  size: { width: 460, height: 100 },
-};
-
-/** The auction's order: sold lots carry a vermilion seal, the lot on the floor a bar, the rest wait in grey. */
-const lots: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['items'],
-    properties: {
-      items: {
-        type: 'array',
-        items: { type: 'object', properties: { fish: { type: 'string' }, boxes: { type: 'string' }, price: { type: 'string' }, state: { type: 'string' }, word: { type: 'string' } } },
-      },
+  "elements": {
+    "boat": {
+      "template": "<section class=\"bt {{b.state}}\"><span>{{b.word}}</span><b>{{b.name}}</b><strong>{{b.catch}}</strong><small>{{b.note}}</small></section>",
+      "style": ".bt{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:1px;padding:6px 10px 7px;background:#f2e8d0;border:3px solid #1b1a18;font-family:\"Noto Serif KR\", \"Nanum Myeongjo\", \"Batang\", serif;color:#14254a}\nspan{align-self:flex-start;margin-bottom:auto;padding:0 8px;font-size:13px;font-weight:700;color:#f2e8d0;background:#1b1a18}\nb{font-size:15px;font-weight:800}\nstrong{font-size:16px;font-weight:700;line-height:1.2}\nsmall{font-size:12px}\n.sea{border-style:dashed;border-color:#14254a}\n.sea span{background:#f2e8d0;color:#14254a;outline:2px dashed #14254a}\n.return{padding-left:24px;background:linear-gradient(90deg,#1f3f72 0 14px,rgba(31,63,114,.38) 14px,#f2e8d0 70%);border-color:#1f3f72}\n.return span{background:#1f3f72}\n.unload{background:#14254a;color:#f2e8d0}\n.unload span{background:#c9442c}\n.done{padding-right:30px;background:repeating-linear-gradient(135deg,rgba(184,134,40,.75) 0 5px,transparent 5px 10px) right/22px 100% no-repeat,#ecdcb2;color:#43341a;border-color:#7a6a4a}\n.done span{background:#d8a948;color:#1b1a18}",
+      "props": {
+        "b": "object"
+      }
     },
+    "mouth": {
+      "template": "<div class=\"mo\">방파제 입구</div>",
+      "style": ".mo{height:100%;box-sizing:border-box;display:grid;place-items:center;font:700 15px \"Noto Serif KR\", \"Nanum Myeongjo\", \"Batang\", serif;color:#f2e8d0;background:#14254a;border:3px solid #1b1a18}"
+    },
+    "hall": {
+      "template": "<div class=\"hl\"><b>위판장</b><span>{{lot}}</span></div>",
+      "style": ".hl{height:100%;box-sizing:border-box;display:grid;place-items:center;align-content:center;gap:2px;font-family:\"Noto Serif KR\", \"Nanum Myeongjo\", \"Batang\", serif;color:#14254a}\nb{font-size:26px;font-weight:800;letter-spacing:.3em}\nspan{font-size:15px;font-weight:700;color:#c9442c}",
+      "props": {
+        "lot": "string"
+      }
+    },
+    "legend": {
+      "template": "<ul class=\"lg\"><li><i class=\"s\"></i>조업 중</li><li><i class=\"r\"></i>귀항 중</li><li><i class=\"u\"></i>하역 중</li><li><i class=\"d\"></i>위판 끝</li></ul>",
+      "style": ".lg{height:100%;box-sizing:border-box;margin:0;padding:0 10px;list-style:none;display:flex;align-items:center;gap:16px;font:700 14px \"Noto Serif KR\", \"Nanum Myeongjo\", \"Batang\", serif;color:#14254a;background:#f2e8d0;border:2px solid #1b1a18}\nli{display:flex;align-items:center;gap:6px}\ni{width:22px;height:15px;border:2.5px solid #1b1a18;background:#f2e8d0}\n.s{border-style:dashed;border-color:#14254a}\n.r{background:linear-gradient(90deg,#1f3f72 40%,#f2e8d0)}\n.u{background:#14254a}\n.d{background:repeating-linear-gradient(135deg,rgba(216,169,72,.7) 0 3px,#f2e8d0 3px 6px)}"
+    },
+    "title": {
+      "template": "<header class=\"tt\"><h1>{{name}}</h1><p>{{sub}}<br/>{{date}}<br/><b>{{time}}</b></p><i>어항</i></header>",
+      "style": ".tt{position:relative;height:100%;box-sizing:border-box;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:18px;padding:12px 16px;background:#f2e8d0;border:3px double #1b1a18;outline:2px solid #1b1a18;outline-offset:4px;font-family:\"Noto Serif KR\", \"Nanum Myeongjo\", \"Batang\", serif;color:#14254a}\nh1{margin:0;padding:8px 6px;writing-mode:vertical-rl;font-size:25px;font-weight:800;line-height:1.1;background:#e6d6b0;border:2px solid #1b1a18}\np{margin:0;font-size:17px;font-weight:600;line-height:1.55}\nb{font-size:30px;font-weight:800;color:#1f3f72}\ni{position:absolute;right:14px;bottom:14px;width:42px;height:42px;display:grid;place-items:center;font-style:normal;font-size:15px;font-weight:800;color:#f2e8d0;background:#c9442c;border-radius:3px;transform:rotate(-4deg)}",
+      "props": {
+        "name": "string",
+        "sub": "string",
+        "date": "string",
+        "time": "string"
+      }
+    },
+    "figures": {
+      "template": "<dl class=\"fg\">{{#items}}<div><dt>{{label}}</dt><dd>{{value}}</dd><small>{{note}}</small></div>{{/items}}</dl>",
+      "style": ".fg{margin:0;height:100%;box-sizing:border-box;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-family:\"Noto Serif KR\", \"Nanum Myeongjo\", \"Batang\", serif}\ndiv{display:grid;align-content:center;padding:8px 10px;background:#14254a;color:#f2e8d0;border:2px solid #1b1a18}\ndt{font-size:13px;font-weight:700;color:#9fb6d3}\ndd{margin:2px 0;font-size:28px;font-weight:800}\nsmall{font-size:11px;color:#9fb6d3}",
+      "props": {
+        "items": "list"
+      }
+    },
+    "lots": {
+      "template": "<section class=\"lt\"><h3>경매 순서</h3><ol>{{#items}}<li class=\"{{state}}\"><b>{{fish}}</b><span>{{boxes}}</span><span>{{price}}</span><em>{{word}}</em></li>{{/items}}</ol></section>",
+      "style": ".lt{height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;gap:8px;font-family:\"Noto Serif KR\", \"Nanum Myeongjo\", \"Batang\", serif;color:#14254a}\nh3{margin:0;justify-self:start;padding:2px 12px;font-size:18px;font-weight:800;color:#f2e8d0;background:#1b1a18}\nol{margin:0;padding:0;list-style:none;display:grid;align-content:start;gap:4px}\nli{display:grid;grid-template-columns:90px 80px 1fr 96px;align-items:center;gap:8px;padding:6px 8px;border-bottom:2px solid #1b1a18;font-size:15px}\nb{font-size:17px;font-weight:800}\nem{justify-self:end;font-style:normal;font-size:13px;font-weight:700;padding:1px 8px}\n.done em{color:#f2e8d0;background:#c9442c;border-radius:3px}\n.done{color:#6b5a3a}\n.now{background:#14254a;color:#f2e8d0;border-left:8px solid #c9442c}\n.now em{color:#1b1a18;background:#f2e8d0}\n.wait{color:#7d7a72}\n.wait em{border:1.5px dashed #7d7a72}",
+      "props": {
+        "items": "list"
+      }
+    }
   },
-  template: `<section class="lt"><h3>경매 순서</h3><ol>{{#items}}<li class="{{state}}"><b>{{fish}}</b><span>{{boxes}}</span><span>{{price}}</span><em>{{word}}</em></li>{{/items}}</ol></section>`,
-  style: `.lt{height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;gap:8px;font-family:${SERIF};color:${INDIGO}}
-h3{margin:0;justify-self:start;padding:2px 12px;font-size:18px;font-weight:800;color:${WASHI};background:${KEY}}
-ol{margin:0;padding:0;list-style:none;display:grid;align-content:start;gap:4px}
-li{display:grid;grid-template-columns:90px 80px 1fr 96px;align-items:center;gap:8px;padding:6px 8px;border-bottom:2px solid ${KEY};font-size:15px}
-b{font-size:17px;font-weight:800}
-em{justify-self:end;font-style:normal;font-size:13px;font-weight:700;padding:1px 8px}
-.done em{color:${WASHI};background:${VERMILION};border-radius:3px}
-.done{color:#6b5a3a}
-.now{background:${INDIGO};color:${WASHI};border-left:8px solid ${VERMILION}}
-.now em{color:${KEY};background:${WASHI}}
-.wait{color:#7d7a72}
-.wait em{border:1.5px dashed #7d7a72}`,
-  size: { width: 460, height: 250 },
-};
-
-/** The key to the boat cards. */
-const legend: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', properties: {} },
-  template: `<ul class="lg"><li><i class="s"></i>조업 중</li><li><i class="r"></i>귀항 중</li><li><i class="u"></i>하역 중</li><li><i class="d"></i>위판 끝</li></ul>`,
-  style: `.lg{height:100%;box-sizing:border-box;margin:0;padding:0 10px;list-style:none;display:flex;align-items:center;gap:16px;font:700 14px ${SERIF};color:${INDIGO};background:${WASHI};border:2px solid ${KEY}}
-li{display:flex;align-items:center;gap:6px}
-i{width:22px;height:15px;border:2.5px solid ${KEY};background:${WASHI}}
-.s{border-style:dashed;border-color:${INDIGO}}
-.r{background:linear-gradient(90deg,${PRUSSIAN} 40%,${WASHI})}
-.u{background:${INDIGO}}
-.d{background:repeating-linear-gradient(135deg,rgba(216,169,72,.7) 0 3px,${WASHI} 3px 6px)}`,
-  size: { width: 420, height: 34 },
-};
-
-// ── The board ───────────────────────────────────────────────────────────────────────────────────────────────────
-
-const node = (id: string, x: number, y: number, width: number, height: number, widget: Widget): Node => ({ id, x, y, width, height, anchored: false, widget });
-
-const BOAT_IDS = Object.keys(BOATS) as BoatId[];
-
-const course = (id: BoatId): Connector => ({
-  id: `course-${id}`,
-  fromNodeId: `boat-${id}`,
-  toNodeId: 'mouth',
-  label: '{{value}}',
-  labelSize: 13,
-  style: { route: 'curved', stroke: INDIGO, strokeWidth: 3, dash: 'dashed', arrow: 'end' },
-  bindings: { label: bind('/harbor/eta', `/value/${id}`) },
-});
-
-const nodes: Node[] = [
-  ...BOAT_IDS.map(id =>
-    node(`boat-${id}`, BOATS[id][0], BOATS[id][1], CARD.width, CARD.height, { type: 'element:boat', props: { b: {} }, bindings: { b: bind('/harbor/boats', `/value/${id}`) } })
-  ),
-  node('mouth', 470, 530, 150, 38, { type: 'element:mouth', props: {} }),
-  node('hall', 370, 870, 360, 76, { type: 'element:hall', props: { lot: '' }, bindings: { lot: bind('/harbor/lots', '/value/1/word') } }),
-  node('legend', 60, 54, 420, 34, { type: 'element:legend', props: {} }),
-  node('title', 1120, 30, 460, 190, {
-    type: 'element:title',
-    props: { name: '', sub: '', date: '', time: '' },
-    bindings: { name: bind('/harbor/now', '/name'), sub: bind('/harbor/now', '/sub'), date: bind('/harbor/now', '/date'), time: bind('/harbor/now', '/time') },
-  }),
-  node('figures', 1120, 240, 460, 100, { type: 'element:figures', props: { items: [] }, bindings: { items: bind('/harbor/figures', '/value') } }),
-  node('lots', 1120, 360, 460, 250, { type: 'element:lots', props: { items: [] }, bindings: { items: bind('/harbor/lots', '/value') } }),
-  node('boxes', 1120, 630, 460, 330, {
-    type: 'chart.bar',
-    props: { title: '30분마다 위판한 상자', data: [], mapping: { x: 'hour', y: 'boxes' }, options: { series: [{ label: '상자', color: PRUSSIAN }] } },
-    bindings: { data: bind('/harbor/boxes', '/value') },
-  }),
-];
-
-const document: CanvasView = {
-  kind: 'canvas',
-  appearance: 'light',
-  accent: VERMILION,
-  background: { image: { src: drawing(), width: WIDTH, height: HEIGHT } },
-  nodes,
-  connectors: RETURNING.map(course),
-  elements: { boat, mouth, hall, title, figures, lots, legend },
+  "data": {
+    "boats": {
+      "from": "harbor",
+      "path": "/harbor/boats",
+      "time": "updatedAt",
+      "fresh": 900,
+      "fields": {
+        "s1": {
+          "at": "/value/s1"
+        },
+        "s2": {
+          "at": "/value/s2"
+        },
+        "r1": {
+          "at": "/value/r1"
+        },
+        "r2": {
+          "at": "/value/r2"
+        },
+        "r3": {
+          "at": "/value/r3"
+        },
+        "u1": {
+          "at": "/value/u1"
+        },
+        "u2": {
+          "at": "/value/u2"
+        },
+        "d1": {
+          "at": "/value/d1"
+        },
+        "d2": {
+          "at": "/value/d2"
+        }
+      }
+    },
+    "lots": {
+      "from": "harbor",
+      "path": "/harbor/lots",
+      "time": "updatedAt",
+      "fresh": 900,
+      "fields": {
+        "word": {
+          "at": "/value/1/word"
+        },
+        "value": {}
+      }
+    },
+    "now": {
+      "from": "harbor",
+      "path": "/harbor/now",
+      "time": "updatedAt",
+      "fresh": 900,
+      "fields": {
+        "name": {},
+        "sub": {},
+        "date": {},
+        "time": {}
+      }
+    },
+    "figures": {
+      "from": "harbor",
+      "path": "/harbor/figures",
+      "time": "updatedAt",
+      "fresh": 900,
+      "fields": {
+        "value": {}
+      }
+    },
+    "boxes": {
+      "from": "harbor",
+      "path": "/harbor/boxes",
+      "list": "/value",
+      "fresh": 900,
+      "answerTime": "/updatedAt"
+    },
+    "eta": {
+      "from": "harbor",
+      "path": "/harbor/eta",
+      "time": "updatedAt",
+      "fresh": 900,
+      "fields": {
+        "r1": {
+          "at": "/value/r1"
+        },
+        "r2": {
+          "at": "/value/r2"
+        },
+        "r3": {
+          "at": "/value/r3"
+        }
+      }
+    }
+  },
+  "parts": {
+    "boat-s1": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "s1"
+      }
+    },
+    "boat-s2": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "s2"
+      }
+    },
+    "boat-r1": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "r1"
+      }
+    },
+    "boat-r2": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "r2"
+      }
+    },
+    "boat-r3": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "r3"
+      }
+    },
+    "boat-u1": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "u1"
+      }
+    },
+    "boat-u2": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "u2"
+      }
+    },
+    "boat-d1": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "d1"
+      }
+    },
+    "boat-d2": {
+      "as": "element",
+      "element": "boat",
+      "of": "boats",
+      "bind": {
+        "b": "d2"
+      }
+    },
+    "mouth": {
+      "as": "element",
+      "element": "mouth"
+    },
+    "hall": {
+      "as": "element",
+      "element": "hall",
+      "of": "lots",
+      "bind": {
+        "lot": "word"
+      }
+    },
+    "legend": {
+      "as": "element",
+      "element": "legend"
+    },
+    "title": {
+      "as": "element",
+      "element": "title",
+      "of": "now",
+      "bind": {
+        "name": "name",
+        "sub": "sub",
+        "date": "date",
+        "time": "time"
+      }
+    },
+    "figures": {
+      "as": "element",
+      "element": "figures",
+      "of": "figures",
+      "bind": {
+        "items": "value"
+      }
+    },
+    "lots": {
+      "as": "element",
+      "element": "lots",
+      "of": "lots",
+      "bind": {
+        "items": "value"
+      }
+    },
+    "boxes": {
+      "as": "chart.bar",
+      "of": "boxes",
+      "title": "30분마다 위판한 상자",
+      "x": "hour",
+      "y": "boxes",
+      "series": [
+        {
+          "label": "상자",
+          "color": "#1f3f72"
+        }
+      ]
+    }
+  },
+  "layout": {
+    "kind": "canvas",
+    "size": [
+      1600,
+      1000
+    ],
+    "background": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%221000%22%20viewBox%3D%220%200%201600%201000%22%3E%0A%3Cdefs%3E%0A%3ClinearGradient%20id%3D%22bokashi%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%231f3f72%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%231f3f72%22%20stop-opacity%3D%220%22%2F%3E%3C%2FlinearGradient%3E%0A%3ClinearGradient%20id%3D%22sea%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%233f6a9e%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%236f92bb%22%2F%3E%3C%2FlinearGradient%3E%0A%3Cfilter%20id%3D%22fibre%22%3E%3CfeTurbulence%20type%3D%22fractalNoise%22%20baseFrequency%3D%22.9%20.08%22%20numOctaves%3D%222%22%20seed%3D%2211%22%2F%3E%3CfeColorMatrix%20values%3D%220%200%200%200%20.45%20%200%200%200%200%20.38%20%200%200%200%200%20.25%20%200%200%200%20-1.6%201.05%22%2F%3E%3C%2Ffilter%3E%0A%3C%2Fdefs%3E%0A%3Crect%20width%3D%221600%22%20height%3D%221000%22%20fill%3D%22%23f2e8d0%22%2F%3E%0A%3Crect%20x%3D%2240%22%20y%3D%2240%22%20width%3D%221040%22%20height%3D%2280%22%20fill%3D%22url(%23bokashi)%22%2F%3E%0A%3Ccircle%20cx%3D%22960%22%20cy%3D%22112%22%20r%3D%2234%22%20fill%3D%22%23c9442c%22%2F%3E%0A%3Crect%20x%3D%2240%22%20y%3D%22112%22%20width%3D%221040%22%20height%3D%22468%22%20fill%3D%22url(%23sea)%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M%2040%20150%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M%2040%20194%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M%2040%20238%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M%2040%20282%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M%2040%20326%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M%2040%20370%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M%2040%20414%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M%2040%20458%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%3Cpath%20d%3D%22M%2040%20502%20q%2030%20-10%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%20t%2060%200%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%221.6%22%20opacity%3D%22.55%22%2F%3E%0A%3Cpath%20d%3D%22M%2040%20300%20C%2079%20150%2C%20222%20127.5%2C%20261%20217.5%20C%20242.8%20195%2C%20201.2%20210%2C%20211.6%20258%20C%20235%20285%2C%20279.20000000000005%20288%2C%20300%20300%20Z%22%20fill%3D%22%231f3f72%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M%2071.2%20232.5%20C%20118%20165%2C%20201.2%20153%2C%20248%20210%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%225%22%2F%3E%0A%3Cpath%20d%3D%22M%2086.8%20207%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20116.8%20211.6999614577649%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20146.8%20212.84308578526918%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20176.8%20209.56427928140297%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20206.8%20204.34487734023088%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20236.8%20201.13481929400942%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20266.8%20202.36341307466407%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20296.8%20207.1008834029061%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20900%20330%20C%20927%20220%2C%201026%20203.5%2C%201053%20269.5%20C%201040.4%20253%2C%201011.6%20264%2C%201018.8%20299.2%20C%201035%20319%2C%201065.6%20321.2%2C%201080%20330%20Z%22%20fill%3D%22%231f3f72%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M%20921.6%20280.5%20C%20954%20231%2C%201011.6%20222.2%2C%201044%20264%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%225%22%2F%3E%0A%3Cpath%20d%3D%22M%20932.4%20261.8%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20962.4%20266.4999614577649%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20992.4%20267.6430857852692%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%201022.4%20264.364279281403%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%201052.4%20259.1448773402309%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%2056%20560%20C%2078.5%20480%2C%20161%20468%2C%20183.5%20516%20C%20173%20504%2C%20149%20512%2C%20155%20537.6%20C%20168.5%20552%2C%20194%20553.6%2C%20206%20560%20Z%22%20fill%3D%22%231f3f72%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M%2074%20524%20C%20101%20488%2C%20149%20481.6%2C%20176%20512%22%20fill%3D%22none%22%20stroke%3D%22%239fb6d3%22%20stroke-width%3D%225%22%2F%3E%0A%3Cpath%20d%3D%22M%2083%20510.4%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20113%20515.0999614577648%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20143%20516.2430857852692%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%3Cpath%20d%3D%22M%20173%20512.9642792814029%20q%207%20-14%2016%20-4%20q%20-7%20-2%20-8%208%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.6%22%2F%3E%0A%3Crect%20x%3D%2240%22%20y%3D%22580%22%20width%3D%221040%22%20height%3D%22220%22%20fill%3D%22%239fb6d3%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M%2040%20570%20H%20440%20L%20455%20590%20H%2040%20Z%22%20fill%3D%22%238a8273%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M%201080%20570%20H%20650%20L%20635%20590%20H%201080%20Z%22%20fill%3D%22%238a8273%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Crect%20x%3D%22430%22%20y%3D%22532%22%20width%3D%2216%22%20height%3D%2244%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%222.5%22%2F%3E%3Crect%20x%3D%22430%22%20y%3D%22532%22%20width%3D%2216%22%20height%3D%2212%22%20fill%3D%22%23c9442c%22%2F%3E%0A%3Crect%20x%3D%22640%22%20y%3D%22532%22%20width%3D%2216%22%20height%3D%2244%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%222.5%22%2F%3E%3Crect%20x%3D%22640%22%20y%3D%22532%22%20width%3D%2216%22%20height%3D%2212%22%20fill%3D%22%2314254a%22%2F%3E%0A%3Crect%20x%3D%2240%22%20y%3D%22800%22%20width%3D%221040%22%20height%3D%22160%22%20fill%3D%22%23f2e8d0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M%20310%20860%20L%20340%20820%20H%20760%20L%20790%20860%20Z%22%20fill%3D%22%2314254a%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Cpath%20d%3D%22M%20330%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20350%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20370%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20390%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20410%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20430%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20450%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20470%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20490%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20510%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20530%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20550%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20570%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20590%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20610%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20630%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20650%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20670%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20690%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20710%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20730%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%3Cpath%20d%3D%22M%20750%20838%20v%2022%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%221.5%22%2F%3E%0A%3Crect%20x%3D%22330%22%20y%3D%22860%22%20width%3D%22440%22%20height%3D%2290%22%20fill%3D%22%23e6d6b0%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%223%22%2F%3E%0A%3Ctext%20x%3D%22520%22%20y%3D%2292%22%20fill%3D%22%23f2e8d0%22%20font-size%3D%2222%22%20font-family%3D'%22Noto%20Serif%20KR%22%2C%20%22Nanum%20Myeongjo%22%2C%20%22Batang%22%2C%20serif'%20font-weight%3D%22700%22%3E%EB%8F%99%ED%95%B4%20%E2%80%94%20%EC%83%88%EB%B2%BD%20%EB%B0%94%EB%8B%A4%3C%2Ftext%3E%0A%3Ctext%20x%3D%2256%22%20y%3D%22940%22%20fill%3D%22%2314254a%22%20font-size%3D%2220%22%20font-family%3D'%22Noto%20Serif%20KR%22%2C%20%22Nanum%20Myeongjo%22%2C%20%22Batang%22%2C%20serif'%20font-weight%3D%22700%22%3E%EB%AC%BC%EC%96%91%EC%9E%A5%20%C2%B7%20%ED%95%98%EC%97%AD%3C%2Ftext%3E%0A%3Ctext%20x%3D%221064%22%20y%3D%22940%22%20text-anchor%3D%22end%22%20fill%3D%22%2314254a%22%20font-size%3D%2220%22%20font-family%3D'%22Noto%20Serif%20KR%22%2C%20%22Nanum%20Myeongjo%22%2C%20%22Batang%22%2C%20serif'%20font-weight%3D%22700%22%3E%EC%96%BC%EC%9D%8C%20%EC%B0%BD%EA%B3%A0%20%E2%86%92%3C%2Ftext%3E%0A%3Crect%20width%3D%221600%22%20height%3D%221000%22%20filter%3D%22url(%23fibre)%22%20opacity%3D%22.18%22%2F%3E%0A%3Crect%20x%3D%2218%22%20y%3D%2218%22%20width%3D%221082%22%20height%3D%22964%22%20fill%3D%22none%22%20stroke%3D%22%231b1a18%22%20stroke-width%3D%222%22%2F%3E%0A%3C%2Fsvg%3E",
+    "place": {
+      "boat-s1": [
+        120,
+        150,
+        190,
+        96
+      ],
+      "boat-s2": [
+        760,
+        190,
+        190,
+        96
+      ],
+      "boat-r1": [
+        230,
+        390,
+        190,
+        96
+      ],
+      "boat-r2": [
+        500,
+        340,
+        190,
+        96
+      ],
+      "boat-r3": [
+        800,
+        410,
+        190,
+        96
+      ],
+      "boat-u1": [
+        80,
+        660,
+        190,
+        96
+      ],
+      "boat-u2": [
+        290,
+        660,
+        190,
+        96
+      ],
+      "boat-d1": [
+        600,
+        660,
+        190,
+        96
+      ],
+      "boat-d2": [
+        810,
+        660,
+        190,
+        96
+      ],
+      "mouth": [
+        470,
+        530,
+        150,
+        38
+      ],
+      "hall": [
+        370,
+        870,
+        360,
+        76
+      ],
+      "legend": [
+        60,
+        54,
+        420,
+        34
+      ],
+      "title": [
+        1120,
+        30,
+        460,
+        190
+      ],
+      "figures": [
+        1120,
+        240,
+        460,
+        100
+      ],
+      "lots": [
+        1120,
+        360,
+        460,
+        250
+      ],
+      "boxes": [
+        1120,
+        630,
+        460,
+        330
+      ]
+    },
+    "links": {
+      "course-r1": {
+        "from": "boat-r1",
+        "to": "mouth",
+        "label": "{{r1}}",
+        "tone": "next",
+        "of": "eta",
+        "width": 3,
+        "dash": true,
+        "arrow": true,
+        "route": "curved"
+      },
+      "course-r2": {
+        "from": "boat-r2",
+        "to": "mouth",
+        "label": "{{r2}}",
+        "tone": "next",
+        "of": "eta",
+        "width": 3,
+        "dash": true,
+        "arrow": true,
+        "route": "curved"
+      },
+      "course-r3": {
+        "from": "boat-r3",
+        "to": "mouth",
+        "label": "{{r3}}",
+        "tone": "next",
+        "of": "eta",
+        "width": 3,
+        "dash": true,
+        "arrow": true,
+        "route": "curved"
+      }
+    }
+  }
 };
 
 export const harborAuction: SamplePack = {
-  id: 'harbor-auction',
-  title: { ko: '어항 새벽 위판장 — 우키요에 목판', en: 'A fishing harbour’s dawn auction — an ukiyo-e woodblock print' },
-  field: { ko: '수산·어항', en: 'Fisheries & harbours' },
-  kind: { ko: '어선 위치와 위판 진행', en: 'Where the boats are and how the auction runs' },
-  domain: 'agrifood',
-  styles: ['art'],
-  summary: {
-    ko: '어항의 새벽 위판 현황을 우키요에 목판화로 — 따뜻한 화지에 프러시안 블루와 남색, 검은 윤곽판, 위에서 종이로 번지는 하늘(보카시), 발톱 같은 물보라가 달린 큰 파도, 수평선의 붉은 해와 붉은 낙관. 위는 바다, 가운데는 두 방파제 사이 입구, 아래는 위판장이 있는 물양장 — 배마다 무엇을 잡았고 어디 있는지 카드로: 점선 테두리는 조업 중, 남색이 번진 카드는 귀항 중(방파제까지 남은 분을 따라가는 선에), 남색 단색은 하역 중, 엷은 황토 빗금은 위판 끝. 오른쪽에 위판 상자·입항 척수·평균 낙찰가, 경매 순서, 30분마다 위판한 상자. 어항은 지어낸 것이라 예시 데이터입니다.',
-    en: 'A fishing harbour’s dawn auction as an ukiyo-e woodblock print — Prussian blue and indigo on warm washi, black key-block outlines, a sky graded from blue into the paper, big curling waves with claw-shaped foam, a vermilion sun on the horizon and a vermilion seal. The sea at the top, the mouth between two breakwaters in the middle, the quay with the auction hall at the bottom; each boat is a card saying what it caught and where it is: a dashed outline still fishing, graded blue on its way in (its minutes to the breakwater on the line it follows), solid indigo unloading, a pale ochre hatch once its catch is sold. On the right the boxes sold, the boats in and the average price, the auction’s order and the boxes sold by the half hour. The harbour is made up. Example data.',
+  id: "harbor-auction",
+  title: {
+    "ko": "어항 새벽 위판장 — 우키요에 목판",
+    "en": "A fishing harbour’s dawn auction — an ukiyo-e woodblock print"
   },
-  connectors: [HARBOR],
-  document,
+  field: {
+    "ko": "수산·어항",
+    "en": "Fisheries & harbours"
+  },
+  kind: {
+    "ko": "어선 위치와 위판 진행",
+    "en": "Where the boats are and how the auction runs"
+  },
+  domain: "agrifood",
+  styles: [
+    "art"
+  ],
+  summary: {
+    "ko": "어항의 새벽 위판 현황을 우키요에 목판화로 — 따뜻한 화지에 프러시안 블루와 남색, 검은 윤곽판, 위에서 종이로 번지는 하늘(보카시), 발톱 같은 물보라가 달린 큰 파도, 수평선의 붉은 해와 붉은 낙관. 위는 바다, 가운데는 두 방파제 사이 입구, 아래는 위판장이 있는 물양장 — 배마다 무엇을 잡았고 어디 있는지 카드로: 점선 테두리는 조업 중, 남색이 번진 카드는 귀항 중(방파제까지 남은 분을 따라가는 선에), 남색 단색은 하역 중, 엷은 황토 빗금은 위판 끝. 오른쪽에 위판 상자·입항 척수·평균 낙찰가, 경매 순서, 30분마다 위판한 상자. 어항은 지어낸 것이라 예시 데이터입니다.",
+    "en": "A fishing harbour’s dawn auction as an ukiyo-e woodblock print — Prussian blue and indigo on warm washi, black key-block outlines, a sky graded from blue into the paper, big curling waves with claw-shaped foam, a vermilion sun on the horizon and a vermilion seal. The sea at the top, the mouth between two breakwaters in the middle, the quay with the auction hall at the bottom; each boat is a card saying what it caught and where it is: a dashed outline still fishing, graded blue on its way in (its minutes to the breakwater on the line it follows), solid indigo unloading, a pale ochre hatch once its catch is sold. On the right the boxes sold, the boats in and the average price, the auction’s order and the boxes sold by the half hour. The harbour is made up. Example data."
+  },
+  connectors: [
+    {
+      "key": "harbor",
+      "name": "예시 위판장 API",
+      "example": true,
+      "attribution": {
+        "text": "예시 데이터 — 실제 어항이 아닙니다"
+      }
+    }
+  ],
+  board,
   snapshot,
 };

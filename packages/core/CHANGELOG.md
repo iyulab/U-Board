@@ -6,128 +6,47 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
-### Added
-
-- A binding can read a field inside the value its adapter resolved: `at: "/temp"`, a JSON Pointer applied before `map`
-  — an adapter that gives one object per reference no longer needs a reference per field. Nothing there reads
-  `disconnected` with reason `address`. The validator and the JSON Schema take the field.
-- The board language's second version reads an adapter that is not an HTTP connector by its own reference:
-  `{ "from": "<adapter>", "ref": … }` instead of a `path` — one item, its fields under `fields` (`at: ""` when the item
-  is the value itself), and nothing of a request's (`list`, `key`, `where`, `time`, `fresh`, `now`, `zone`): the
-  adapter says itself how current its value is. The conversion of a first-version document carries such bindings
-  across instead of leaving them out.
-- The board language's second version defines script elements: `{ "script", "style"?, "resources"?, "props"? }` in
-  place of a template, run in the same sandboxed frame as before (no network beyond the `https://` origins it names and an
-  installation allows), drawn from the definition `elementDefinition` makes — exported from `./board-v2` so a server
-  answers the frame by the same definition. The conversion of a first-version document carries script elements across.
-- A `./board-v2` entry: the board language's second version — its types, its JSON Schema, its check, the view
-  document it is drawn as, and the conversion of a first-version document. Not stable before the release that makes it
-  the stored format. It loads no other package at runtime: the widget kinds it knows are a copy of the widget library's
-  catalog written when this package is built, so a server can validate boards without the widget library installed.
-  `BoardDocument` is what a board stores while boards move to it (a document in either version), and
-  `documentKind(document)` the kind of view either lays out. An option a kind reads itself in place of one of its widget's has that one name —
-  a list's `max` and `variant`, never the widget's `maxItems` and `layout` (the check says which to write; a first-version
-  document's list options come across renamed). The conversion also carries across a connector with its arrow at the
-  start (run from its other end), a connector made invisible for a value (drawn idle, noted), one value drawn in
-  different tones on different lines (a status per tone), a node's state rings in the tone it already takes (a blinking
-  one as a status with the `blink` emphasis), and the items of one list told apart by two fields (one read per value of
-  one, the other the key).
-- `BoardView` (in `./viewer`): a board as it is stored — in either version of the board language — drawn in the
-  application that hosts it, its values and the items a grid lays out a part per item of read through the host's own
-  adapters, with no U-Board server. `pictureOf(board, read)`, `readKeys`, `dataReadOf` and `readerOf(adapters)` in `./board-v2` make
-  the same view document anywhere a board is drawn — a server reads through its data sources, an application through
-  its adapters.
-- `Adapter.sample`: an adapter whose values are example data. A board that binds to one says «Example data» (the
-  `exampleData` label) first in the line under it (`ub-viewer__example`) — in `ViewerPage`, whatever its `attribution`
-  setting, and in the editors' view mode.
-- `BoardAuthoring` lays out a grid holding canvases and grids in its cells. A canvas cell is ordered, widened and
-  deleted (with the parts placed on it) as any entry, and opens in the canvas editor — its parts moved, sized, added
-  and joined there, its shapes and background set. A grid in a cell moves with its first item; one of its items opens it
-  as a grid of its own, ordered, widened and deleted there. What changes in a cell is written back into it.
-- `BoardAuthoring` adds a line to a canvas, and selects, moves, sizes and deletes a line or a path as a node — each
-  point carried where it stands in the node's box — its panel setting a line's points (`20,20 220,20`) or a path's
-  drawing, its tone, width and dash; they were drawn and left to the board's JSON.
-- `BoardAuthoring`'s data panel sets the finer points of a request read under one fold: its items by their fields
-  (`where`, written `kind=PM10, floor=2`), the field or the place in the answer with when they were observed (`time`,
-  `answerTime`), how long a value stays current (`fresh`), the source's time zone (`zone`), the time its request asks
-  for (`now`), and a long answer read as one item (`pivot`).
-- `BoardAuthoring`'s data panel sets a field's status — the value already a status name, a status by value (`*` for any
-  other) or number bands, offering the board's statuses and the tones — and the words its values are shown as, where
-  they were shown and left to the assistant or the board's JSON.
-- `BoardAuthoring` sets the board's tone and accent (`board.theme`, `board.accent`) in its panel with nothing selected; undoes
-  with Ctrl+Z (⌘Z) and redoes with Ctrl+Shift+Z or Ctrl+Y anywhere in the editor but a field being typed into, a run of
-  typing in one field one step, as `AuthoringView` does; and with two or more pieces of a canvas selected, says how many
-  rather than showing the board's panel.
-- `emptyBoard(kind)` in `./board-v2`: a board with no parts yet, laying out a canvas or a grid — what a new board starts as.
-- `BoardAuthoring`: the authoring surface of a board in the language's second version — parts added (on a canvas at its
-  top left, in a grid last; a label or a header to set in its panel), two parts of a canvas joined by a link (with an
-  arrowhead) and a link selected, set in its panel (its label, the item and field whose status it takes, its tone,
-  route, arrowhead and dash) and deleted, frames and texts added to a canvas, moved, sized, set in their panel (words,
-  tone, line or size) and deleted, a canvas's background image chosen (the canvas taking its size) or taken away,
-  the board's elements defined (a template, its CSS, its props by name and type — added by name, removed when no part
-  draws it) and an element part's drawing chosen, each prop bound to a field, its status or tone, or fixed, the items a grid lays out a
-  part per item of read through its `adapters` when the board opens and when what they are read by changes — drawn from its picture, its
-  parts moved, sized and deleted on a canvas as on any board, each edit said again in the board's layout (and a deleted
-  part's links and triggers removed with it), and on a grid of parts ordered, widened and deleted (an item of a part
-  made per item widening the part); a selected part's title, kind, data (and item), fields and its kind's options (the
-  board's own by a field's name, the widget's with the controls the widget library describes) and its triggers set in
-  its panel — with nothing selected, the board's data (each read's source among the adapters it is given, named by
-  `sourceLabels`, its request, list and key, and its fields' names, units, decimal places and formats — a read looked
-  at through its adapter offers the fields it found) and statuses (each a tone, words, a mark, an emphasis — added by name
-  and removed) and its own triggers — with what the board's check finds there — a setting the board cannot be drawn with keeps the last board it could draw,
-  and says why. Undo, Redo, Save and Export are the board's. A part's other options, and a grid that holds grids or
-  canvases of its own (`layoutEditable`), are not edited there yet.
-- The board language's second version has `triggers`, as the first version has them: on a part clicked, an event its
-  element raises, a part entering or leaving a status (of its own state, or of a `field`), or the board opened; when a
-  part is in a status; open a link, bring a part into view, hand the host an event or ask for another board. A part
-  made per item is named `<part>/<key>`. A first-version board's triggers carry across, except one on a node's state.
-- In the board language's second version a status's `glyph` marks what shows it — a status card's badge, a stat list's
-  values, a list's rows — not only the legend. Requires `@iyulab/u-widgets` 0.42, which draws an item's own mark (and
-  the `warn` tone legibly on a light page).
-
-- An HTTP connector reference can read every item of a list whose fields match: `items: { list, where }` — the rows a
-  list or a table shows, kept to the part of a list they are about (one pollutant out of a list of all of them), in the
-  source's order and empty when none matches. It goes without `item`, `valuePath` and `observedAtPath`; `isHttpRef`
-  refuses the mix, and the binding form keeps it when the binding is edited, with a button that reads the whole list
-  instead.
-
-- A binding whose value is a list can give each item fields of its own: `itemFields: { "<name>": { from, map? } }` —
-  each the value of the item's `from` field, translated by `map` when there is one. A list's or a table's rows keep the
-  source's words and gain the tone they are coloured by (`mapping.tone`); a field the widget reads by another name is
-  the source's field under that name. `withItemFields(fields, value)` applies them for a host's own code; the view
-  document's JSON Schema and validator take the new field, and the binding form keeps it when the binding is edited.
-- A binding can write the value it read into a text: `text: "Berth 1 · {{vessel}} · {{draft | fixed:1}} m"` — each
-  `{{field}}` a field of the item it read, in a template element's value grammar — for a title of words and readings.
-  `itemFields` now also gives an object value (one item read alone) its fields, so a text can show a field's words.
-  `writeText(text, value)` is the same for a host's own code; the validator and the JSON Schema take the field.
-- A drawing colour — a decoration's, a connector's, a state's ring — takes the widgets' tones by name (`ok`, `info`,
-  `watch`, `warn`, `alarm`, `off`, `idle`, `past`, `now`, `next`), drawn in the widgets' palette for the board's
-  appearance, beside `positive`, `warning`, `negative` and `accent`. An element's markup reads the same colours as the
-  widgets name them (`var(--u-widget-tone-alarm)` …).
-
-- An HTTP connector reference can ask a source for the data of a given time rather than for its latest: time places
-  in its `path` (`base_date={{now:yyyyMMdd}}&base_time={{now:HHmm}}`) are filled in each time a request is sent, on
-  `timeZone`'s clock, at the time `requestTime: { delaySeconds?, stepSeconds? }` names — the time of the request,
-  that much earlier, rounded down to that step (`{ delaySeconds: 2400, stepSeconds: 3600 }` for hourly data out forty
-  minutes after the hour). `requestPath(ref, now)` gives the request a reference makes; a path with any other `{{…}}`
-  is not a reference. The binding form asks for the zone, the delay and the step when a path has time places, shows
-  the request it makes now, and explores the source with them.
-
 ### Changed
 
-- Requires `@iyulab/u-widgets` 0.41: a `status` item's state is `data.tone` (`ok` · `warn` · `alarm` · `idle` · …)
-  where it was `data.level` (`success` · `warning` · `error` · `neutral`), a `metric`'s is `data.tone` where it was
-  `data.variant`, and a chart's axis format is a string (`xFormat: 'time'`). A new status widget starts with
-  `tone: 'idle'`. The property panel offers the fields the library now describes — a status item's tone and emphasis,
-  a gauge's tone and form. A binding's value map translates into whatever the prop takes, so maps that set a tone
-  write the new words.
-- Requires `@iyulab/u-widgets` 0.40, whose `form` widget draws its fields with `<formdown-ui>` and loads it only when a
-  form is first drawn, and `@canvas-kit/viewer` 0.6.1, where dragging to pan no longer selects overlay text.
+- **Breaking: a board is written in the board language.** One document says where its values come from and what
+  they mean once (`data` — a request to a connector, or an adapter's own `ref`; its list, key, time and freshness;
+  its `fields` with their names, units, formats, words and statuses), what it shows by id (`parts` — a kind, the data
+  it shows, made per item with `each`), and where (`layout` — a canvas of places, shapes, links and a background, or a
+  grid of spans that may hold canvases and grids), with its `statuses`, `symbols`, `elements` (a template, or a script
+  run in a sandboxed frame), `presets` and `triggers`. It replaces the view document as what a board is written,
+  checked, stored, drawn and edited in; the view document stays only as the picture the renderer draws a board from.
+- **Breaking: the entry points.** `@iyulab/u-board/domain` is the board language — its types, `boardSchema()`,
+  `validateBoard`, `checkBoard`, `emptyBoard`, `sourceAdvice`, `boardRulebook`, and the picture a board is drawn as
+  (`toViewDocument`, `pictureOf`, `readerOf`) — with the `Adapter` contract, JSON Patch and the connection-quality text;
+  it loads no other package at runtime. A new `@iyulab/u-board/picture` holds the picture model (`ViewDocument` and its
+  types, `resolveDocument`, `boardStateOf`, trigger and HTTP reference helpers, `lintViewDocument`) for code that reads a
+  drawn board — a server computing its state, an assistant looking at it. `@iyulab/u-board/viewer` is `BoardView` and
+  `ViewerPage`; the root adds `BoardAuthoring`. Removed: `AuthoringView`, `useResolvedDocument`,
+  `validateViewDocument`, `parseViewDocument`, `InvalidViewDocumentError`, `emptyViewDocument`, `documentPatch`,
+  `applyEditCommands`, `Adapter.references()` with `AdapterReference`, and the `view-document.schema.json` export.
+- Requires `@iyulab/u-widgets` 0.42: a `status` item's state is `data.tone` (`ok` · `warn` · `alarm` · `idle` · …), a
+  `metric`'s is `data.tone`, a chart's axis format is a string (`xFormat: 'time'`), and an item's own mark is drawn.
+  Requires `@canvas-kit/viewer` 0.6.1, where dragging to pan no longer selects overlay text.
 
-### Fixed
+### Added
 
-- Editing a binding in the binding form kept the fields its list items gain but dropped its `text`; it now keeps
-  everything the form does not edit.
+- `BoardView`: a board drawn in the application that hosts it — its values, and the items a grid lays out a part per
+  item of, read through the host's own adapters, with no U-Board server. `pictureOf(board, read)` with
+  `readerOf(adapters)` makes the same picture anywhere a board is drawn.
+- `BoardAuthoring`: the authoring surface of a board — parts added, moved, sized, ordered and deleted on a canvas or a
+  grid (a grid's canvas and grid cells edited in place), links, frames and texts drawn on a canvas, its background
+  chosen, its elements defined, a part's title, kind, data, fields, options and triggers set in its panel, and with
+  nothing selected the board's data (each read's source, request, list, key and fields — a read looked at through its
+  adapter offers the fields it found), statuses, tone, accent and triggers — with what the board's check finds there. A
+  setting the board cannot be drawn with keeps the last board it could draw, and says why. Undo, Redo, Save and Export
+  are the board's.
+- `Adapter.sample`: an adapter whose values are example data — a board that reads one says «Example data».
+- A request read can ask a source for the data of a given time: time places in its `path`
+  (`base_date={{now:yyyyMMdd}}`) are filled on the read's zone's clock at the time its `now` names (that much earlier,
+  rounded down to its step).
+- A colour in a drawing — a shape's, a link's — takes the widgets' tones by name (`ok`, `info`, `watch`, `warn`,
+  `alarm`, `off`, `idle`, `past`, `now`, `next`), drawn in the widgets' palette for the board's theme; an element's
+  markup reads the same colours (`var(--u-widget-tone-alarm)` …).
 
 ## [0.33.1] - 2026-10-21
 

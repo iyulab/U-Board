@@ -55,14 +55,13 @@ which depends on it. Before a release that changes the entry points or dependenc
 
 ## Open, not yet decided
 
-- The grid view kind (see `docs/concepts.md`) has its document format, validation, binding
-  resolution, JSON Schema, viewer (`renderer/grid-board.tsx`, sharing `renderer/node-frame.tsx` with the
-  canvas renderer) and editor (`authoring/GridAuthoring.tsx`; `AuthoringView` holds what both kinds share and
-  hands the document to the editor of its kind); the console asks the kind of a new board. Composition — a canvas in a
-  grid cell (`GridCanvasItem`) — has its document format, validation, resolution and binding walk, the viewer draws it
-  (`renderer/canvas-cell.tsx`) and the grid editor adds it and opens its canvas in the canvas editor
-  (`cellAsCanvas`/`withCellCanvas` in `editing/grid-editing.ts`). Code that reads a `ViewDocument` narrows on `kind`, a grid item on `isCanvasItem`, and code that walks
-  every widget uses `placedIn` (`placedAt` for its path). No other kind is planned.
+- A board is written in one language (`packages/core/src/board/` — types, validator, schema, rulebook, and
+  `picture.ts`, which draws a board as the picture the renderer reads). There is one format: a board does not name a
+  version of the language, and no other document format is read or stored. The picture
+  (`view-document.ts`, the `./picture` entry) is the renderer's model, made from a board — never written, stored or
+  accepted as input. Code that reads a picture narrows on `kind`, a grid item on `isCanvasItem`, and code that walks
+  every widget uses `placedIn` (`placedAt` for its path). Both view kinds — canvas and grid, with a canvas or a grid in
+  a grid cell — are built; no other kind is planned.
 - How the authoring tool is packaged/distributed is not decided. Do not assume a specific
   runtime (browser-only vs. a desktop shell) without checking current guidance.
 

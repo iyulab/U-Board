@@ -1,11 +1,11 @@
-import type { ViewDocument, ViewDocumentAdvice, ViewDocumentIssue, ViewKind } from '@iyulab/u-board/domain';
-import type { BoardV2 } from '@iyulab/u-board/board-v2';
+import type { Board, BoardFinding } from '@iyulab/u-board/domain';
+import type { ViewDocument, ViewDocumentAdvice, ViewKind } from '@iyulab/u-board/picture';
 
 /** What the server says went wrong — its code, and whatever it adds (issues, the operation that failed, a revision). */
 export class UBoardApiError extends Error {
   constructor(
     readonly status: number,
-    readonly body: { code?: string; issues?: ViewDocumentIssue[]; operation?: number; message?: string; revision?: number }
+    readonly body: { code?: string; issues?: BoardFinding[]; operation?: number; message?: string; revision?: number }
   ) {
     super(body.message ?? body.code ?? `HTTP ${status}`);
     this.name = 'UBoardApiError';
@@ -25,14 +25,13 @@ export interface BoardSummary {
   updatedAt: string;
 }
 
-export interface Board {
+export interface SavedBoard {
   id: string;
   name: string;
-  /** As stored: a board in the language's second version, or a first-version view document. */
-  document: BoardV2 | ViewDocument;
-  /** What its viewers draw: a second-version board's picture, made by the server with its data's items. A
-   *  first-version document is its own picture and comes without one. */
-  picture?: ViewDocument;
+  /** As stored. */
+  document: Board;
+  /** What its viewers draw: the board's picture, made by the server with its data's items. */
+  picture: ViewDocument;
   revision: number;
   updatedAt: string;
 }
@@ -114,8 +113,8 @@ export class UBoardClient {
     return (await this.request<{ boards: BoardSummary[] }>('GET', await this.workspacePath('/boards'))).boards;
   }
 
-  async getBoard(boardId: string): Promise<Board> {
-    return this.request<Board>('GET', await this.workspacePath(`/boards/${encodeURIComponent(boardId)}`));
+  async getBoard(boardId: string): Promise<SavedBoard> {
+    return this.request<SavedBoard>('GET', await this.workspacePath(`/boards/${encodeURIComponent(boardId)}`));
   }
 
   /** What a board shows now (the server’s `BoardState`): each part’s state, connection quality and its cause, how old

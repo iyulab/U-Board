@@ -40,7 +40,6 @@ test('a script element runs sandboxed, in the editor and from a share link', asy
   // The document an AI or a script would write — saved through the API the console uses.
   const session = await (await page.request.get('/api/workspaces/me')).json();
   const document = {
-    version: 2,
     elements: { counter: { script: COUNTER_SCRIPT, props: { value: 'number' } } },
     parts: { n1: { as: 'element', element: 'counter', props: { value: 42 } } },
     layout: { kind: 'canvas', size: [800, 500], place: { n1: [40, 40, 280, 140] } },

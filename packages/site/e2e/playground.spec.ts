@@ -15,9 +15,9 @@ test('the playground draws a board from its JSON and points at what is wrong', a
 
   const definition = page.locator('[data-field="definition"]');
   const text = await definition.inputValue();
-  await definition.fill(text.replace('"appearance": "dark"', '"appearance": "dim"'));
+  await definition.fill(text.replace('"theme": "dark"', '"theme": "dim"'));
   await expect(status).toHaveText(/문제 1개/);
-  await expect(page.locator('[data-problems] li')).toHaveText([/\/appearance/]);
+  await expect(page.locator('[data-problems] li')).toHaveText([/\/board\/theme/]);
 
   await definition.fill(text);
   await expect(status).toHaveText(/문제 없음/);

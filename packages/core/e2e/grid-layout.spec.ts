@@ -24,7 +24,7 @@ const rowsOf = (items: { x: number }[]) => items.reduce((rows, item, i) => rows 
 
 test('a wide board spans 12 columns: two halves, then thirds', async ({ page }) => {
   const items = await layoutAt(page, 1200);
-  expect(items.map(item => item.id)).toEqual(['pump-a', 'pump-a-load', 'pump-b', 'pump-c', 'pump-a-load-trend', 'seed-gauge-check', 'seed-chart-line-check']);
+  expect(items.map(item => item.id)).toEqual(['pump-a', 'pump-a-load', 'pump-b', 'pump-c', 'pump-a-load-trend', 'small-gauge', 'small-chart']);
   expect(rowsOf(items)).toBe(3);
   expect(items[0].width).toBeGreaterThan(items[2].width * 1.4);
 });

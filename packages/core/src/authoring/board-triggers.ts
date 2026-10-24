@@ -1,14 +1,14 @@
-// The triggers of a board in the language's second version, edited with the triggers editor of the first: each trigger
-// shown in the first version's words (a part is a node, a status a state, a link fills in `{{node}}` and `{{state}}`) and
+// The triggers of a board, edited with the triggers editor of its picture: each trigger
+// shown in the picture's words (a part is a node, a status a state, a link fills in `{{node}}` and `{{state}}`) and
 // written back in the board's — keeping the `field` a trigger reads a status of while it still names the same part.
 
 import type { Trigger as ViewTrigger, TriggerAction as ViewTriggerAction } from '../view-document.js';
-import type { BoardV2, Trigger, TriggerAction } from '../board-v2/types.js';
+import type { Board, Trigger, TriggerAction } from '../board/types.js';
 import type { TriggerEditing } from './TriggersEditor.js';
 
 /** What the triggers editor needs to edit `board`'s triggers: them in its words, the parts and statuses it offers, and
  *  how each change is written back (`edit`). `parts` are the ids a trigger may name — a part made per item by item. */
-export function boardTriggerEditing(board: BoardV2, parts: readonly string[], edit: (update: (current: BoardV2) => BoardV2) => void): TriggerEditing {
+export function boardTriggerEditing(board: Board, parts: readonly string[], edit: (update: (current: Board) => Board) => void): TriggerEditing {
   const statuses = Object.keys(board.statuses ?? {});
   const write = (update: (triggers: Trigger[]) => Trigger[]) =>
     edit(current => {
@@ -26,7 +26,7 @@ export function boardTriggerEditing(board: BoardV2, parts: readonly string[], ed
   };
 }
 
-/** A board's trigger in the first version's words. */
+/** A board's trigger in its picture's words. */
 function shown(t: Trigger): ViewTrigger {
   const on: ViewTrigger['on'] = t.on.event === 'open' ? { event: 'open' }
     : t.on.event === 'click' ? { event: 'click', node: t.on.part }

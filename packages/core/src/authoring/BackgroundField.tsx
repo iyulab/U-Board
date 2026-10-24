@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
-import type { CanvasLayout } from '../board-v2/types.js';
+import type { CanvasLayout } from '../board/types.js';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
 
 export interface BackgroundFieldProps {
@@ -12,7 +12,7 @@ export interface BackgroundFieldProps {
 }
 
 /**
- * The background of a canvas board in the language's second version: an image file chosen, which the canvas takes the
+ * The background of a canvas board: an image file chosen, which the canvas takes the
  * size of — its parts keep their places in the canvas's units — or taken away, the canvas keeping its size.
  */
 export function BackgroundField({ layout, onChange, labels = DEFAULT_LABELS }: BackgroundFieldProps) {

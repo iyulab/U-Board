@@ -8,23 +8,21 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
-- **The tools read and write boards in the board language's second version** (`"version": 2` — data read once and
-  given meaning once, parts by id, a layout per view kind). `describe("rules")` is how the tools change a board, then the
-  language's rulebook, generated from its schema and kinds; `describe("kind:<name>")` gives a kind in full (its options
-  with their types and defaults, several by commas); `describe("schema")` is the language's JSON Schema. `get_board`
-  reads a board stored in the first version converted, and the first change saves it in the second; one that uses what
-  the second version does not have yet (a trigger on a node's state) answers `409 FIRST_VERSION_BOARD`. `create_board` without a first board makes an
-  empty one of its kind. `look` draws the picture the server makes of a board — the one the board is read with, so no
+- **Breaking: the tools read and write boards in the board language** (data read once and given meaning once, parts by
+  id, a layout per view kind). `describe("rules")` is how the tools change a board, then the language's rulebook,
+  generated from its schema and kinds; `describe("kind:<name>")` gives a kind in full (its options with their types and
+  defaults, several by commas); `describe("schema")` is the language's JSON Schema. `create_board` without a first
+  board makes an empty one of its kind. `look` draws the picture the server makes of a board — the one the board is read with, so no
   second read — takes `focus: "/parts/<id>"`, and says what it found of the board's parts.
-- Requires `@iyulab/u-board` with the `./board-v2` entry.
+- Requires `@iyulab/u-board` with the board language in `./domain` and the picture model in `./picture`.
 
 ### Removed
 
-- `UBoardClient.getPicture` (`./tools`): `getBoard` answers a second-version board with its picture (`Board.picture`),
-  read from the workspace's board route rather than the share route.
+- `UBoardClient.getPicture` (`./tools`): `getBoard` answers a board with its picture (`SavedBoard.picture`), read from
+  the workspace's board route rather than the share route.
 - `edit_board`: a board's parts are addressed by id, so a rename or a removal is a patch at the part and at where the
   layout places it. The topics `canvas`, `data`, `elements`, `components`, `mixed`, `widgets` and `widget:<type>` —
-  the rulebook and `kind:<name>` say what they said, for the second version.
+  the rulebook and `kind:<name>` say what they said, in the board language.
 
 ### Added
 

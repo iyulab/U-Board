@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { toViewDocument } from '../board-v2/picture.js';
-import type { BoardV2, CanvasLayout } from '../board-v2/types.js';
+import { toViewDocument } from '../board/picture.js';
+import type { Board, CanvasLayout } from '../board/types.js';
 import type { CanvasView, GridView } from '../view-document.js';
 import { LINK, SHAPE, cellBoard, cellIndex, gridCellOf, layoutEditable, lineOf, linkOf, placesItself, shapeIn, shapeOf, withCell, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 
-const board: BoardV2 = {
-  version: 2,
+const board: Board = {
   data: {
     pumps: { from: 'plant', path: '/pumps', list: '/value', key: 'id', fields: { state: { state: { run: 'ok', '*': 'off' } } } },
     totals: { from: 'plant', path: '/totals' },
@@ -26,9 +25,9 @@ const board: BoardV2 = {
     { on: { event: 'click', part: 'title' }, do: [{ action: 'focus', part: 'pump/P1' }] },
   ],
 };
-const picture = (b: BoardV2) => toViewDocument(b) as CanvasView;
+const picture = (b: Board) => toViewDocument(b) as CanvasView;
 /** The picture with node `id` moved by `change`. */
-const moved = (b: BoardV2, id: string, change: Partial<CanvasView['nodes'][number]>): CanvasView => {
+const moved = (b: Board, id: string, change: Partial<CanvasView['nodes'][number]>): CanvasView => {
   const p = picture(b);
   return { ...p, nodes: p.nodes.map(n => (n.id === id ? { ...n, ...change } : n)) };
 };
@@ -91,7 +90,7 @@ describe('the links of a canvas board', () => {
 });
 
 describe('the shapes of a canvas board', () => {
-  const framed: BoardV2 = { ...board, layout: { ...(board.layout as CanvasLayout), shapes: { zone: { box: [0, 0, 300, 200], label: 'Zone' }, note: { text: 'Hi', at: [10, 400] }, pipe: { line: [[0, 0], [100, 0]] } } } };
+  const framed: Board = { ...board, layout: { ...(board.layout as CanvasLayout), shapes: { zone: { box: [0, 0, 300, 200], label: 'Zone' }, note: { text: 'Hi', at: [10, 400] }, pipe: { line: [[0, 0], [100, 0]] } } } };
 
   it('are the frames, texts and lines — a line drawn as a node of its own, which the board places itself', () => {
     expect(shapeOf(framed, `${SHAPE}zone`)).toBe('zone');
@@ -138,13 +137,13 @@ describe('the shapes of a canvas board', () => {
 });
 
 describe('withPictureLayout — a grid', () => {
-  const grid: BoardV2 = {
+  const grid: Board = {
     ...board,
     parts: { title: board.parts.title!, count: board.parts.count!, pump: board.parts.pump! },
     layout: { kind: 'grid', items: ['title', ['pump', 6], ['count', 3]] },
     triggers: [{ on: { event: 'click', part: 'count' }, do: [{ action: 'emit', name: 'count' }] }],
   };
-  const drawn = (b: BoardV2, keys: string[] = ['P1', 'P2']) => toViewDocument(b, { keysOf: () => keys }) as GridView;
+  const drawn = (b: Board, keys: string[] = ['P1', 'P2']) => toViewDocument(b, { keysOf: () => keys }) as GridView;
   const items = (p: GridView) => p.items.map(i => [i.id, i.span]);
 
   it('draws a grid of parts with one item per item of an each part', () => {
@@ -175,7 +174,7 @@ describe('withPictureLayout — a grid', () => {
   });
 
   describe('with a canvas in a cell', () => {
-    const plan: BoardV2 = {
+    const plan: Board = {
       ...grid,
       parts: { ...grid.parts, valve: { as: 'label', title: 'V1' } },
       layout: { kind: 'grid', items: ['title', { canvas: { size: [400, 200], place: { valve: [20, 30, 100, 40] }, links: { v: { from: 'valve', to: 'valve' } } }, span: 8, height: 240 }, ['count', 3]] },
@@ -210,7 +209,7 @@ describe('withPictureLayout — a grid', () => {
   });
 
   describe('with a grid in a cell', () => {
-    const stacked: BoardV2 = {
+    const stacked: Board = {
       ...grid,
       parts: { ...grid.parts, a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' } },
       layout: { kind: 'grid', items: [['title', 8], { grid: [['a', 6], ['b', 6], 'count'], span: 4 }] },
@@ -236,7 +235,7 @@ describe('withPictureLayout — a grid', () => {
     });
 
     it('does not lay out a grid in a grid in a cell, which the picture does not draw', () => {
-      const deeper: BoardV2 = { ...stacked, layout: { kind: 'grid', items: [{ grid: [{ grid: ['a'] }], span: 4 }] } };
+      const deeper: Board = { ...stacked, layout: { kind: 'grid', items: [{ grid: [{ grid: ['a'] }], span: 4 }] } };
       expect(layoutEditable(deeper)).toBe(false);
     });
   });

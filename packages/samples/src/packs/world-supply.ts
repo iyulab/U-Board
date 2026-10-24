@@ -1,9 +1,3 @@
-import type { Binding, CanvasView, Connector, ConnectorArrow, ElementDefinition, Node, Widget } from '@iyulab/u-board/domain';
-import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
-import { project, referencePoints, svgDataUrl } from '../frame.js';
-import { landDots, worldFrame } from '../world.js';
-import { snapshot } from '../snapshots/world-supply.js';
-
 // An electronics maker's supply chain on one page, drawn the way a newspaper's data desk draws a story: a headline that
 // says what changed this week, a world of grey dots, and the lanes as arcs — each from where its parts are made to the
 // assembly plant, or from the plant to where the products are sold — its width the containers on it each week, its
@@ -12,356 +6,902 @@ import { snapshot } from '../snapshots/world-supply.js';
 // a serif headline, thin rules, one colour that means late. No public source carries a company's lanes, so the values are
 // example data written for the board.
 
-export const SUPPLY: ExampleSampleConnector = {
-  key: 'supply',
-  name: '예시 공급망 API',
-  example: true,
-  attribution: { text: '예시 데이터 — 실제 기업이 아닙니다' },
-};
+import type { Board } from '@iyulab/u-board/domain';
+import type { SamplePack } from '../sample-pack.js';
+import { snapshot } from '../snapshots/world-supply.js';
 
-/** The lanes are recomputed from the carriers' updates every few hours; a day without one is a source that has stopped. */
-const MAX_AGE_SECONDS = 24 * 60 * 60;
-
-const bind = (path: string, valuePath: string): Binding => ({
-  adapter: SUPPLY.key,
-  ref: { path, valuePath, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-});
-
-const bindLane = (id: string, field: string, map?: Binding['map']): Binding => ({
-  adapter: SUPPLY.key,
-  ref: { path: '/supply/lanes', item: { list: '/value', where: { id } }, valuePath: `/${field}`, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-  ...(map ? { map } : {}),
-});
-
-const WIDTH = 1600;
-const HEIGHT = 900;
-const PAPER = '#f6f3ec';
-const INK = '#1d1d1b';
-const GREY = '#6b665e';
-const RULE = '#cfc8b8';
-const DOT = '#d6cfbf';
-const ON_TIME = '#1f6f8b';
-const SLOW = '#c98a0b';
-const LATE = '#b42318';
-const SERIF = 'Georgia, "Noto Serif KR", "Nanum Myeongjo", serif';
-const FONT = 'var(--u-widget-font-family)';
-
-/** A lane's colour by how it runs against its usual lead time, and its width by the containers on it each week. */
-const STATUS_COLOR = { values: { ok: ON_TIME, slow: SLOW, late: LATE }, otherwise: GREY };
-const TEU_WIDTH = { ranges: [{ min: 25, value: 7 }, { min: 15, value: 5 }, { min: 8, value: 3.5 }], otherwise: 2 };
-
-// ── The map ─────────────────────────────────────────────────────────────────────────────────────────────────────────
-
-/** The map's box — the world split in the Atlantic, 10 units to a 3° cell (`world.ts`). */
-const MAP = worldFrame(40, 150, 10);
-
-function drawing(): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
-<rect width="${WIDTH}" height="${HEIGHT}" fill="${PAPER}"/>
-<path d="M 40 138 L 1560 138" stroke="${INK}" stroke-width="2"/>
-<path d="M 1250 150 L 1250 600 M 40 616 L 1560 616" stroke="${RULE}" stroke-width="1"/>
-${landDots(MAP, DOT, 3.3)}
-</svg>`;
-  return svgDataUrl(svg);
-}
-
-// ── Elements ────────────────────────────────────────────────────────────────────────────────────────────────────
-
-/** The page's head: a kicker, the week's headline and the line under it. */
-const headline: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['title'],
-    properties: { kicker: { type: 'string' }, title: { type: 'string' }, dek: { type: 'string' }, date: { type: 'string' } },
+const board: Board = {
+  "board": {
+    "theme": "light",
+    "accent": "#b42318"
   },
-  template: `<header class="hl"><p class="k">{{kicker}}<span>{{date}}</span></p><h1>{{title}}</h1><p class="d">{{dek}}</p></header>`,
-  style: `.hl{height:100%;box-sizing:border-box;display:grid;align-content:end;gap:6px;color:${INK}}
-p{margin:0}
-.k{display:flex;gap:16px;font:700 14px ${FONT};letter-spacing:.12em;color:${LATE}}
-.k span{margin-left:auto;font-weight:400;letter-spacing:.02em;color:${GREY}}
-h1{margin:0;font:700 38px/1.15 ${SERIF};letter-spacing:-.01em;word-break:keep-all}
-.d{font:17px/1.45 ${FONT};color:${GREY};word-break:keep-all}`,
-  size: { width: 1520, height: 112 },
-};
-
-/** A place on the map: the plant a ring, a supplier or a sales centre a dot, coloured by its lane. */
-const site: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', required: ['role'], properties: { role: { enum: ['plant', 'supplier', 'market'] }, status: { enum: ['ok', 'slow', 'late'] }, name: { type: 'string' } } },
-  template: '<span class="s {{role}} {{status}}" role="img" aria-label="{{name}}"></span>',
-  style: `:host{display:grid;place-items:center}
-.s{box-sizing:border-box;width:10px;height:10px;border-radius:50%;background:${ON_TIME};border:2px solid ${PAPER}}
-.slow{background:${SLOW}}
-.late{background:${LATE};box-shadow:0 0 0 4px rgba(180,35,24,.18)}
-.market{background:${INK}}
-.plant{width:16px;height:16px;background:${PAPER};border:4px solid ${INK}}`,
-  size: { width: 18, height: 18 },
-};
-
-/** A place's name and what it sends, set beside its mark. */
-const tag: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['name'],
-    properties: { name: { type: 'string' }, part: { type: 'string' }, days: { type: 'number' }, status: { enum: ['ok', 'slow', 'late'] }, align: { enum: ['left', 'right'] } },
-  },
-  template: `<p class="t {{align}} {{status}}"><b>{{name}}</b><span>{{part}} · {{days}}일</span></p>`,
-  style: `.t{margin:0;height:100%;box-sizing:border-box;display:grid;align-content:center;font-family:${FONT};color:${INK};line-height:1.2;white-space:nowrap}
-.right{text-align:right}
-b{font-size:14px}
-span{font-size:12px;color:${GREY}}
-.slow span{color:${SLOW};font-weight:700}
-.late span{color:${LATE};font-weight:700}`,
-  size: { width: 120, height: 34 },
-};
-
-/** The week's figures, one to a row, the number large. */
-const figures: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['items'],
-    properties: {
-      items: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, value: { type: 'string' }, note: { type: 'string' }, tone: { enum: ['plain', 'late'] } } } },
+  "elements": {
+    "headline": {
+      "template": "<header class=\"hl\"><p class=\"k\">{{kicker}}<span>{{date}}</span></p><h1>{{title}}</h1><p class=\"d\">{{dek}}</p></header>",
+      "style": ".hl{height:100%;box-sizing:border-box;display:grid;align-content:end;gap:6px;color:#1d1d1b}\np{margin:0}\n.k{display:flex;gap:16px;font:700 14px var(--u-widget-font-family);letter-spacing:.12em;color:#b42318}\n.k span{margin-left:auto;font-weight:400;letter-spacing:.02em;color:#6b665e}\nh1{margin:0;font:700 38px/1.15 Georgia, \"Noto Serif KR\", \"Nanum Myeongjo\", serif;letter-spacing:-.01em;word-break:keep-all}\n.d{font:17px/1.45 var(--u-widget-font-family);color:#6b665e;word-break:keep-all}",
+      "props": {
+        "kicker": "string",
+        "title": "string",
+        "dek": "string",
+        "date": "string"
+      }
     },
+    "site": {
+      "template": "<span class=\"s {{role}} {{status}}\" role=\"img\" aria-label=\"{{name}}\"></span>",
+      "style": ":host{display:grid;place-items:center}\n.s{box-sizing:border-box;width:10px;height:10px;border-radius:50%;background:#1f6f8b;border:2px solid #f6f3ec}\n.slow{background:#c98a0b}\n.late{background:#b42318;box-shadow:0 0 0 4px rgba(180,35,24,.18)}\n.market{background:#1d1d1b}\n.plant{width:16px;height:16px;background:#f6f3ec;border:4px solid #1d1d1b}",
+      "props": {
+        "role": "string",
+        "status": "string",
+        "name": "string"
+      }
+    },
+    "tag": {
+      "template": "<p class=\"t {{align}} {{status}}\"><b>{{name}}</b><span>{{part}} · {{days}}일</span></p>",
+      "style": ".t{margin:0;height:100%;box-sizing:border-box;display:grid;align-content:center;font-family:var(--u-widget-font-family);color:#1d1d1b;line-height:1.2;white-space:nowrap}\n.right{text-align:right}\nb{font-size:14px}\nspan{font-size:12px;color:#6b665e}\n.slow span{color:#c98a0b;font-weight:700}\n.late span{color:#b42318;font-weight:700}",
+      "props": {
+        "name": "string",
+        "part": "string",
+        "days": "number",
+        "status": "string",
+        "align": "string"
+      }
+    },
+    "figures": {
+      "template": "<dl class=\"f\">{{#items}}<div class=\"{{tone}}\"><dt>{{label}}</dt><dd><b>{{value}}</b><span>{{note}}</span></dd></div>{{/items}}</dl>",
+      "style": ".f{height:100%;box-sizing:border-box;margin:0;display:grid;align-content:space-between;font-family:var(--u-widget-font-family);color:#1d1d1b}\n.f div{border-top:1px solid #cfc8b8;padding-top:8px}\ndt{font-size:13px;color:#6b665e}\ndd{margin:2px 0 0;display:flex;align-items:baseline;gap:10px}\ndd b{font:700 30px/1.1 Georgia, \"Noto Serif KR\", \"Nanum Myeongjo\", serif;font-variant-numeric:tabular-nums}\ndd span{font-size:13px;color:#6b665e}\n.late b{color:#b42318}",
+      "props": {
+        "items": "list"
+      }
+    },
+    "risks": {
+      "template": "<section class=\"r\"><h2>위험 공급사</h2><ol>{{#items}}<li class=\"{{tone}}\"><b>{{name}}</b>{{text}}</li>{{/items}}</ol></section>",
+      "style": ".r{height:100%;box-sizing:border-box;font-family:var(--u-widget-font-family);color:#1d1d1b;border-top:2px solid #1d1d1b;padding-top:8px}\nh2{margin:0 0 8px;font:700 15px var(--u-widget-font-family)}\nol{margin:0;padding:0 0 0 18px;display:grid;gap:6px;font-size:13px;line-height:1.4;word-break:keep-all}\nb{display:block;font-size:14px}\n.slow b{color:#c98a0b}\n.late b{color:#b42318}",
+      "props": {
+        "items": "list"
+      }
+    },
+    "note": {
+      "template": "<aside class=\"n\"><h2>{{title}}</h2><p>{{text}}</p></aside>",
+      "style": ".n{height:100%;box-sizing:border-box;font-family:var(--u-widget-font-family);color:#1d1d1b}\nh2{margin:0 0 8px;font:700 22px/1.25 Georgia, \"Noto Serif KR\", \"Nanum Myeongjo\", serif;word-break:keep-all}\np{margin:0;font-size:15px;line-height:1.6;color:#3b3934;word-break:keep-all}",
+      "props": {
+        "title": "string",
+        "text": "string"
+      }
+    },
+    "shipments": {
+      "template": "<section class=\"sh\"><h2>운송 중</h2><table><thead><tr><th>구간</th><th>선박</th><th>도착</th><th></th></tr></thead><tbody>{{#items}}<tr class=\"{{tone}}\"><td>{{lane}}</td><td>{{vessel}}</td><td>{{eta}}</td><td>{{delay}}</td></tr>{{/items}}</tbody></table></section>",
+      "style": ".sh{height:100%;box-sizing:border-box;font-family:var(--u-widget-font-family);color:#1d1d1b}\nh2{margin:0 0 6px;font:700 15px var(--u-widget-font-family)}\ntable{width:100%;border-collapse:collapse;font-size:13px}\nth{text-align:left;font-weight:400;color:#6b665e;border-bottom:1px solid #1d1d1b;padding:4px 4px}\ntd{padding:5px 4px;border-bottom:1px solid #cfc8b8;white-space:nowrap}\ntd:last-child{text-align:right;font-weight:700}\n.slow td:last-child{color:#c98a0b}\n.late td:last-child{color:#b42318}",
+      "props": {
+        "items": "list"
+      }
+    },
+    "legend": {
+      "template": "<dl class=\"lg\"><div><dt><i class=\"ok\"></i></dt><dd>평소 리드타임</dd></div><div><dt><i class=\"slow\"></i></dt><dd>평소보다 2일 이상 늦음</dd></div><div><dt><i class=\"late\"></i></dt><dd>평소보다 4일 이상 늦음</dd></div><div><dt><i class=\"w\"></i></dt><dd>굵기 = 주간 컨테이너(TEU)</dd></div><div><dt><i class=\"p\"></i></dt><dd>조립공장 · <i class=\"m\"></i> 판매 물류센터</dd></div></dl>",
+      "style": ".lg{height:100%;box-sizing:border-box;margin:0;display:grid;align-content:start;gap:8px;font-family:var(--u-widget-font-family);font-size:13px;color:#6b665e}\n.lg div{display:flex;align-items:center;gap:10px}\ndt{width:34px;display:flex;align-items:center}\ndd{margin:0}\ni{display:inline-block;width:34px;height:3px;border-radius:2px}\n.ok{background:#1f6f8b}\n.slow{background:#c98a0b}\n.late{background:#b42318}\n.w{height:7px;background:#6b665e}\n.p{width:12px;height:12px;border-radius:50%;border:3px solid #1d1d1b;box-sizing:border-box}\n.m{width:9px;height:9px;border-radius:50%;background:#1d1d1b;vertical-align:-1px}"
+    }
   },
-  template: `<dl class="f">{{#items}}<div class="{{tone}}"><dt>{{label}}</dt><dd><b>{{value}}</b><span>{{note}}</span></dd></div>{{/items}}</dl>`,
-  style: `.f{height:100%;box-sizing:border-box;margin:0;display:grid;align-content:space-between;font-family:${FONT};color:${INK}}
-.f div{border-top:1px solid ${RULE};padding-top:8px}
-dt{font-size:13px;color:${GREY}}
-dd{margin:2px 0 0;display:flex;align-items:baseline;gap:10px}
-dd b{font:700 30px/1.1 ${SERIF};font-variant-numeric:tabular-nums}
-dd span{font-size:13px;color:${GREY}}
-.late b{color:${LATE}}`,
-  size: { width: 290, height: 262 },
-};
-
-/** The suppliers at risk, each a name and one sentence. */
-const risks: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['items'],
-    properties: { items: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, text: { type: 'string' }, tone: { enum: ['slow', 'late'] } } } } },
+  "data": {
+    "story": {
+      "from": "supply",
+      "path": "/supply/story",
+      "time": "updatedAt",
+      "fresh": 86400,
+      "fields": {
+        "kicker": {},
+        "title": {},
+        "dek": {},
+        "date": {}
+      }
+    },
+    "lanes": {
+      "from": "supply",
+      "path": "/supply/lanes",
+      "list": "/value",
+      "key": "id",
+      "time": "updatedAt",
+      "fresh": 86400,
+      "fields": {
+        "status": {
+          "state": {
+            "ok": "past",
+            "slow": "warn",
+            "late": "alarm",
+            "*": "off"
+          }
+        },
+        "part": {},
+        "days": {},
+        "teu": {}
+      }
+    },
+    "plant": {
+      "from": "supply",
+      "path": "/supply/plant",
+      "time": "updatedAt",
+      "fresh": 86400,
+      "fields": {
+        "stockDays": {}
+      }
+    },
+    "figures": {
+      "from": "supply",
+      "path": "/supply/figures",
+      "time": "updatedAt",
+      "fresh": 86400,
+      "fields": {
+        "value": {}
+      }
+    },
+    "risks": {
+      "from": "supply",
+      "path": "/supply/risks",
+      "time": "updatedAt",
+      "fresh": 86400,
+      "fields": {
+        "value": {}
+      }
+    },
+    "note": {
+      "from": "supply",
+      "path": "/supply/note",
+      "time": "updatedAt",
+      "fresh": 86400,
+      "fields": {
+        "title": {},
+        "text": {}
+      }
+    },
+    "leadTimes": {
+      "from": "supply",
+      "path": "/supply/leadTimes",
+      "list": "/value",
+      "fresh": 86400,
+      "answerTime": "/updatedAt"
+    },
+    "shipments": {
+      "from": "supply",
+      "path": "/supply/shipments",
+      "time": "updatedAt",
+      "fresh": 86400,
+      "fields": {
+        "value": {}
+      }
+    }
   },
-  template: `<section class="r"><h2>위험 공급사</h2><ol>{{#items}}<li class="{{tone}}"><b>{{name}}</b>{{text}}</li>{{/items}}</ol></section>`,
-  style: `.r{height:100%;box-sizing:border-box;font-family:${FONT};color:${INK};border-top:2px solid ${INK};padding-top:8px}
-h2{margin:0 0 8px;font:700 15px ${FONT}}
-ol{margin:0;padding:0 0 0 18px;display:grid;gap:6px;font-size:13px;line-height:1.4;word-break:keep-all}
-b{display:block;font-size:14px}
-.slow b{color:${SLOW}}
-.late b{color:${LATE}}`,
-  size: { width: 290, height: 172 },
-};
-
-/** The desk's note on what happened, numbered as a figure's note is. */
-const note: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', required: ['text'], properties: { title: { type: 'string' }, text: { type: 'string' } } },
-  template: `<aside class="n"><h2>{{title}}</h2><p>{{text}}</p></aside>`,
-  style: `.n{height:100%;box-sizing:border-box;font-family:${FONT};color:${INK}}
-h2{margin:0 0 8px;font:700 22px/1.25 ${SERIF};word-break:keep-all}
-p{margin:0;font-size:15px;line-height:1.6;color:#3b3934;word-break:keep-all}`,
-  size: { width: 360, height: 250 },
-};
-
-/** The containers at sea: where each is bound, its ship and when it arrives. */
-const shipments: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['items'],
-    properties: {
-      items: {
-        type: 'array',
-        items: { type: 'object', properties: { lane: { type: 'string' }, vessel: { type: 'string' }, eta: { type: 'string' }, delay: { type: 'string' }, tone: { enum: ['ok', 'slow', 'late'] } } },
+  "parts": {
+    "headline": {
+      "as": "element",
+      "element": "headline",
+      "of": "story",
+      "bind": {
+        "kicker": "kicker",
+        "title": "title",
+        "dek": "dek",
+        "date": "date"
+      }
+    },
+    "site-pyeongtaek": {
+      "as": "element",
+      "element": "site",
+      "props": {
+        "role": "plant",
+        "status": "ok",
+        "name": "평택 조립공장"
+      }
+    },
+    "site-hsinchu": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[hsinchu]",
+      "props": {
+        "role": "supplier",
+        "name": "신주"
       },
+      "bind": {
+        "status": "status"
+      }
     },
+    "site-osaka": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[osaka]",
+      "props": {
+        "role": "supplier",
+        "name": "오사카"
+      },
+      "bind": {
+        "status": "status"
+      }
+    },
+    "site-shenzhen": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[shenzhen]",
+      "props": {
+        "role": "supplier",
+        "name": "선전"
+      },
+      "bind": {
+        "status": "status"
+      }
+    },
+    "site-penang": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[penang]",
+      "props": {
+        "role": "supplier",
+        "name": "페낭"
+      },
+      "bind": {
+        "status": "status"
+      }
+    },
+    "site-munich": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[munich]",
+      "props": {
+        "role": "supplier",
+        "name": "뮌헨"
+      },
+      "bind": {
+        "status": "status"
+      }
+    },
+    "site-austin": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[austin]",
+      "props": {
+        "role": "supplier",
+        "name": "오스틴"
+      },
+      "bind": {
+        "status": "status"
+      }
+    },
+    "site-rotterdam": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[rotterdam]",
+      "props": {
+        "role": "market",
+        "name": "로테르담"
+      },
+      "bind": {
+        "status": "status"
+      }
+    },
+    "site-longbeach": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[longbeach]",
+      "props": {
+        "role": "market",
+        "name": "롱비치"
+      },
+      "bind": {
+        "status": "status"
+      }
+    },
+    "site-singapore": {
+      "as": "element",
+      "element": "site",
+      "of": "lanes[singapore]",
+      "props": {
+        "role": "market",
+        "name": "싱가포르"
+      },
+      "bind": {
+        "status": "status"
+      }
+    },
+    "tag-hsinchu": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[hsinchu]",
+      "props": {
+        "name": "신주",
+        "align": "left"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "tag-osaka": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[osaka]",
+      "props": {
+        "name": "오사카",
+        "align": "left"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "tag-shenzhen": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[shenzhen]",
+      "props": {
+        "name": "선전",
+        "align": "right"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "tag-penang": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[penang]",
+      "props": {
+        "name": "페낭",
+        "align": "right"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "tag-munich": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[munich]",
+      "props": {
+        "name": "뮌헨",
+        "align": "left"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "tag-austin": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[austin]",
+      "props": {
+        "name": "오스틴",
+        "align": "left"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "tag-rotterdam": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[rotterdam]",
+      "props": {
+        "name": "로테르담",
+        "align": "left"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "tag-longbeach": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[longbeach]",
+      "props": {
+        "name": "롱비치",
+        "align": "right"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "tag-singapore": {
+      "as": "element",
+      "element": "tag",
+      "of": "lanes[singapore]",
+      "props": {
+        "name": "싱가포르",
+        "align": "left"
+      },
+      "bind": {
+        "part": "part",
+        "days": "days",
+        "status": "status"
+      }
+    },
+    "plant-tag": {
+      "as": "element",
+      "element": "tag",
+      "of": "plant",
+      "props": {
+        "name": "평택 조립공장",
+        "part": "부품 재고",
+        "status": "ok",
+        "align": "left"
+      },
+      "bind": {
+        "days": "stockDays"
+      }
+    },
+    "figures": {
+      "as": "element",
+      "element": "figures",
+      "of": "figures",
+      "bind": {
+        "items": "value"
+      }
+    },
+    "risks": {
+      "as": "element",
+      "element": "risks",
+      "of": "risks",
+      "bind": {
+        "items": "value"
+      }
+    },
+    "note": {
+      "as": "element",
+      "element": "note",
+      "of": "note",
+      "bind": {
+        "title": "title",
+        "text": "text"
+      }
+    },
+    "lead-times": {
+      "as": "chart.line",
+      "of": "leadTimes",
+      "title": "리드타임 12주(일)",
+      "x": "week",
+      "y": [
+        "hsinchu",
+        "penang",
+        "shenzhen"
+      ],
+      "valueAxisZero": false,
+      "series": [
+        {
+          "label": "신주 → 평택",
+          "color": "#b42318"
+        },
+        {
+          "label": "페낭 → 평택",
+          "color": "#c98a0b"
+        },
+        {
+          "label": "선전 → 평택",
+          "color": "#1f6f8b"
+        }
+      ]
+    },
+    "shipments": {
+      "as": "element",
+      "element": "shipments",
+      "of": "shipments",
+      "bind": {
+        "items": "value"
+      }
+    },
+    "legend": {
+      "as": "element",
+      "element": "legend"
+    }
   },
-  template: `<section class="sh"><h2>운송 중</h2><table><thead><tr><th>구간</th><th>선박</th><th>도착</th><th></th></tr></thead><tbody>{{#items}}<tr class="{{tone}}"><td>{{lane}}</td><td>{{vessel}}</td><td>{{eta}}</td><td>{{delay}}</td></tr>{{/items}}</tbody></table></section>`,
-  style: `.sh{height:100%;box-sizing:border-box;font-family:${FONT};color:${INK}}
-h2{margin:0 0 6px;font:700 15px ${FONT}}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;font-weight:400;color:${GREY};border-bottom:1px solid ${INK};padding:4px 4px}
-td{padding:5px 4px;border-bottom:1px solid ${RULE};white-space:nowrap}
-td:last-child{text-align:right;font-weight:700}
-.slow td:last-child{color:${SLOW}}
-.late td:last-child{color:${LATE}}`,
-  size: { width: 380, height: 250 },
-};
-
-/** What the arcs say. */
-const legend: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', properties: {} },
-  template: `<dl class="lg"><div><dt><i class="ok"></i></dt><dd>평소 리드타임</dd></div><div><dt><i class="slow"></i></dt><dd>평소보다 2일 이상 늦음</dd></div><div><dt><i class="late"></i></dt><dd>평소보다 4일 이상 늦음</dd></div><div><dt><i class="w"></i></dt><dd>굵기 = 주간 컨테이너(TEU)</dd></div><div><dt><i class="p"></i></dt><dd>조립공장 · <i class="m"></i> 판매 물류센터</dd></div></dl>`,
-  style: `.lg{height:100%;box-sizing:border-box;margin:0;display:grid;align-content:start;gap:8px;font-family:${FONT};font-size:13px;color:${GREY}}
-.lg div{display:flex;align-items:center;gap:10px}
-dt{width:34px;display:flex;align-items:center}
-dd{margin:0}
-i{display:inline-block;width:34px;height:3px;border-radius:2px}
-.ok{background:${ON_TIME}}
-.slow{background:${SLOW}}
-.late{background:${LATE}}
-.w{height:7px;background:${GREY}}
-.p{width:12px;height:12px;border-radius:50%;border:3px solid ${INK};box-sizing:border-box}
-.m{width:9px;height:9px;border-radius:50%;background:${INK};vertical-align:-1px}`,
-  size: { width: 290, height: 160 },
-};
-
-// ── The board ───────────────────────────────────────────────────────────────────────────────────────────────────
-
-const node = (id: string, x: number, y: number, width: number, height: number, widget: Widget): Node => ({ id, x, y, width, height, anchored: false, widget });
-
-interface Place {
-  id: string;
-  name: string;
-  role: 'plant' | 'supplier' | 'market';
-  lat: number;
-  /** East of Greenwich, continuing past 180 for the Americas (the map runs from 25°W eastward round to 25°W). */
-  lng: number;
-  /** Where its tag sits from its mark's centre, and which side the tag's text lines up on. */
-  tag?: { dx: number; dy: number; align: 'left' | 'right' };
-}
-
-const PLACES: Place[] = [
-  { id: 'pyeongtaek', name: '평택 조립공장', role: 'plant', lat: 37.0, lng: 127.1 },
-  { id: 'hsinchu', name: '신주', role: 'supplier', lat: 24.8, lng: 121.0, tag: { dx: 12, dy: -2, align: 'left' } },
-  { id: 'osaka', name: '오사카', role: 'supplier', lat: 34.7, lng: 135.5, tag: { dx: 12, dy: -4, align: 'left' } },
-  { id: 'shenzhen', name: '선전', role: 'supplier', lat: 22.5, lng: 114.1, tag: { dx: -132, dy: -6, align: 'right' } },
-  { id: 'penang', name: '페낭', role: 'supplier', lat: 5.4, lng: 100.3, tag: { dx: -132, dy: -22, align: 'right' } },
-  { id: 'munich', name: '뮌헨', role: 'supplier', lat: 48.1, lng: 11.6, tag: { dx: 10, dy: 8, align: 'left' } },
-  { id: 'austin', name: '오스틴', role: 'supplier', lat: 30.3, lng: 262.3, tag: { dx: 12, dy: -6, align: 'left' } },
-  { id: 'rotterdam', name: '로테르담', role: 'market', lat: 51.9, lng: 4.5, tag: { dx: -24, dy: -44, align: 'left' } },
-  { id: 'longbeach', name: '롱비치', role: 'market', lat: 33.8, lng: 241.8, tag: { dx: -132, dy: 6, align: 'right' } },
-  { id: 'singapore', name: '싱가포르', role: 'market', lat: 1.3, lng: 103.8, tag: { dx: 12, dy: 0, align: 'left' } },
-];
-
-const placeAt = (place: Place) => project(MAP, place.lat, place.lng);
-
-const siteNode = (place: Place): Node => {
-  const { x, y } = placeAt(place);
-  const lane = place.role === 'plant' ? undefined : place.id;
-  return {
-    id: `site-${place.id}`,
-    x: x - 9,
-    y: y - 9,
-    anchored: true,
-    widget: { type: 'element:site', props: { role: place.role, status: 'ok', name: place.name }, ...(lane && { bindings: { status: bindLane(lane, 'status') } }) },
-  };
-};
-
-const tagNode = (place: Place): Node[] => {
-  if (!place.tag) return [];
-  const { x, y } = placeAt(place);
-  return [
-    node(`tag-${place.id}`, x + place.tag.dx, y + place.tag.dy - 17, 120, 34, {
-      type: 'element:tag',
-      props: { name: place.name, part: '', days: 0, status: 'ok', align: place.tag.align },
-      bindings: { part: bindLane(place.id, 'part'), days: bindLane(place.id, 'days'), status: bindLane(place.id, 'status') },
-    }),
-  ];
-};
-
-/**
- * A lane between a place and the plant, drawn from the western end to the eastern so every arc bows north as a flight
- * path does; its arrow points the way the goods go. A long one carries its lead time on the arc.
- */
-const lane = (id: string, toPlant: boolean, labelled: boolean): Connector => {
-  const place = PLACES.find(p => p.id === id)!;
-  const plant = PLACES[0]!;
-  const westward = place.lng < plant.lng;
-  const [from, to] = westward ? [place, plant] : [plant, place];
-  // The goods run place → plant for a supplier, plant → place for a market.
-  const goodsToEast = toPlant === westward;
-  const arrow: ConnectorArrow = goodsToEast ? 'end' : 'start';
-  return {
-    id: `lane-${id}`,
-    fromNodeId: `site-${from.id}`,
-    toNodeId: `site-${to.id}`,
-    ...(labelled && { label: '{{value}}일' }),
-    style: { route: 'curved', arrow, strokeWidth: 3, stroke: ON_TIME },
-    bindings: {
-      ...(labelled && { label: bindLane(id, 'days') }),
-      'style.stroke': bindLane(id, 'status', STATUS_COLOR),
-      'style.strokeWidth': bindLane(id, 'teu', TEU_WIDTH),
+  "layout": {
+    "kind": "canvas",
+    "size": [
+      1600,
+      900
+    ],
+    "background": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221600%22%20height%3D%22900%22%20viewBox%3D%220%200%201600%20900%22%3E%0A%3Crect%20width%3D%221600%22%20height%3D%22900%22%20fill%3D%22%23f6f3ec%22%2F%3E%0A%3Cpath%20d%3D%22M%2040%20138%20L%201560%20138%22%20stroke%3D%22%231d1d1b%22%20stroke-width%3D%222%22%2F%3E%0A%3Cpath%20d%3D%22M%201250%20150%20L%201250%20600%20M%2040%20616%20L%201560%20616%22%20stroke%3D%22%23cfc8b8%22%20stroke-width%3D%221%22%2F%3E%0A%3Cg%20fill%3D%22%23d6cfbf%22%3E%3Ccircle%20cx%3D%2245%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221195%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221205%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221215%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221225%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221235%22%20cy%3D%22155%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2245%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221195%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221205%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221215%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221225%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221235%22%20cy%3D%22165%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2245%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22635%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22645%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22655%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22795%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22805%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22815%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221195%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221205%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221215%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221225%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221235%22%20cy%3D%22175%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22635%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22645%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22655%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22665%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22675%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22685%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22695%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22705%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22715%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22725%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22735%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22785%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22795%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22805%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22815%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22825%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22835%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22845%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22855%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22865%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22875%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22885%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22895%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22905%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221195%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221205%22%20cy%3D%22185%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2255%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2265%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22635%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22645%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22655%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22665%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22675%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22685%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22695%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22705%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22715%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22745%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22775%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22795%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22805%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22815%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22825%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22835%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22845%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22855%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22865%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22875%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22885%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22895%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22905%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22195%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22635%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22645%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22655%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22675%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22685%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22695%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22775%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22785%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22795%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22805%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22815%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22825%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22835%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22845%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22855%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22865%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22875%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22885%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22895%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22905%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22205%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22655%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22805%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22865%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22875%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22885%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22895%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22905%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22215%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22645%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22655%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22785%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22885%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22895%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22905%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22225%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22645%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22905%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22235%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22905%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22245%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22255%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22265%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22275%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22915%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22285%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22925%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22295%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22935%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22305%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22945%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22955%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22315%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2285%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22325%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22335%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22345%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22965%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22325%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2285%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22365%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22415%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22425%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22435%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22335%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2285%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22305%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22315%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22405%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22805%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22975%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22985%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22345%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2285%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22295%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22995%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221005%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221015%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22355%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2285%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22375%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221025%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221035%22%20cy%3D%22365%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2275%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2285%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22385%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221045%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22375%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2285%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22115%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22125%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22135%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22395%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22385%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22145%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22445%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22395%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22265%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22455%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22405%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22155%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22465%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22415%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22475%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221055%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221195%22%20cy%3D%22425%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22485%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22495%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221195%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221205%22%20cy%3D%22435%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221065%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221195%22%20cy%3D%22445%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22455%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22165%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22245%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22255%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22465%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22285%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221185%22%20cy%3D%22475%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22235%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221165%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221175%22%20cy%3D%22485%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22175%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22275%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22505%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22495%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22225%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22635%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221155%22%20cy%3D%22505%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22185%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22195%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22205%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22215%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22525%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22535%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22545%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22555%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22565%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221145%22%20cy%3D%22515%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22515%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22575%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22585%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22625%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221135%22%20cy%3D%22525%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22595%22%20cy%3D%22535%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22605%22%20cy%3D%22535%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22615%22%20cy%3D%22535%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22535%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22535%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22535%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22535%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221125%22%20cy%3D%22535%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22545%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22545%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22545%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221115%22%20cy%3D%22545%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22695%22%20cy%3D%22555%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22555%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22555%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221105%22%20cy%3D%22555%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22685%22%20cy%3D%22565%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22565%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22565%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22565%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%22355%22%20cy%3D%22575%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221075%22%20cy%3D%22575%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22575%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22575%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221085%22%20cy%3D%22585%22%20r%3D%223.3%22%2F%3E%3Ccircle%20cx%3D%221095%22%20cy%3D%22595%22%20r%3D%223.3%22%2F%3E%3C%2Fg%3E%0A%3C%2Fsvg%3E",
+    "place": {
+      "headline": [
+        40,
+        18,
+        1520,
+        112
+      ],
+      "site-pyeongtaek": [
+        538,
+        277.66666666666663,
+        18,
+        18
+      ],
+      "site-hsinchu": [
+        517.6666666666667,
+        318.33333333333337,
+        18,
+        18
+      ],
+      "site-osaka": [
+        566,
+        285.3333333333333,
+        18,
+        18
+      ],
+      "site-shenzhen": [
+        494.6666666666667,
+        326,
+        18,
+        18
+      ],
+      "site-penang": [
+        448.6666666666667,
+        383,
+        18,
+        18
+      ],
+      "site-munich": [
+        153,
+        240.66666666666666,
+        18,
+        18
+      ],
+      "site-austin": [
+        988.6666666666667,
+        300,
+        18,
+        18
+      ],
+      "site-rotterdam": [
+        129.33333333333331,
+        228,
+        18,
+        18
+      ],
+      "site-longbeach": [
+        920.3333333333334,
+        288.33333333333337,
+        18,
+        18
+      ],
+      "site-singapore": [
+        462,
+        402,
+        18,
+        18
+      ],
+      "tag-hsinchu": [
+        538.6666666666667,
+        308.33333333333337,
+        120,
+        34
+      ],
+      "tag-osaka": [
+        587,
+        273.3333333333333,
+        120,
+        34
+      ],
+      "tag-shenzhen": [
+        371.6666666666667,
+        312,
+        120,
+        34
+      ],
+      "tag-penang": [
+        325.6666666666667,
+        353,
+        120,
+        34
+      ],
+      "tag-munich": [
+        172,
+        240.66666666666663,
+        120,
+        34
+      ],
+      "tag-austin": [
+        1009.6666666666667,
+        286,
+        120,
+        34
+      ],
+      "tag-rotterdam": [
+        114.33333333333331,
+        176,
+        120,
+        34
+      ],
+      "tag-longbeach": [
+        797.3333333333334,
+        286.33333333333337,
+        120,
+        34
+      ],
+      "tag-singapore": [
+        481.33333333333337,
+        388.6666666666667,
+        120,
+        34
+      ],
+      "plant-tag": [
+        561,
+        234.66666666666663,
+        130,
+        34
+      ],
+      "figures": [
+        1270,
+        150,
+        290,
+        262
+      ],
+      "risks": [
+        1270,
+        428,
+        290,
+        172
+      ],
+      "note": [
+        40,
+        636,
+        360,
+        244
+      ],
+      "lead-times": [
+        420,
+        630,
+        420,
+        250
+      ],
+      "shipments": [
+        860,
+        636,
+        380,
+        244
+      ],
+      "legend": [
+        1270,
+        640,
+        290,
+        160
+      ]
     },
-  };
-};
-
-const LANES: Connector[] = [
-  lane('hsinchu', true, false),
-  lane('osaka', true, false),
-  lane('shenzhen', true, false),
-  lane('penang', true, false),
-  lane('munich', true, true),
-  lane('austin', true, true),
-  lane('rotterdam', false, true),
-  lane('longbeach', false, true),
-  lane('singapore', false, false),
-];
-
-const LOWER = { y: 636, height: 244 };
-
-const nodes: Node[] = [
-  node('headline', 40, 18, 1520, 112, {
-    type: 'element:headline',
-    props: { kicker: '', title: '', dek: '', date: '' },
-    bindings: {
-      kicker: bind('/supply/story', '/kicker'),
-      title: bind('/supply/story', '/title'),
-      dek: bind('/supply/story', '/dek'),
-      date: bind('/supply/story', '/date'),
-    },
-  }),
-  ...PLACES.map(siteNode),
-  ...PLACES.flatMap(tagNode),
-  node('plant-tag', placeAt(PLACES[0]!).x + 14, placeAt(PLACES[0]!).y - 52, 130, 34, {
-    type: 'element:tag',
-    props: { name: '평택 조립공장', part: '부품 재고', days: 0, status: 'ok', align: 'left' },
-    bindings: { days: bind('/supply/plant', '/stockDays') },
-  }),
-  node('figures', 1270, 150, 290, 262, { type: 'element:figures', props: { items: [] }, bindings: { items: bind('/supply/figures', '/value') } }),
-  node('risks', 1270, 428, 290, 172, { type: 'element:risks', props: { items: [] }, bindings: { items: bind('/supply/risks', '/value') } }),
-  node('note', 40, LOWER.y, 360, LOWER.height, { type: 'element:note', props: { title: '', text: '' }, bindings: { title: bind('/supply/note', '/title'), text: bind('/supply/note', '/text') } }),
-  node('lead-times', 420, LOWER.y - 6, 420, LOWER.height + 6, {
-    type: 'chart.line',
-    props: {
-      title: '리드타임 12주(일)',
-      data: [],
-      mapping: { x: 'week', y: ['hsinchu', 'penang', 'shenzhen'] },
-      options: { valueAxisZero: false, series: [{ label: '신주 → 평택', color: LATE }, { label: '페낭 → 평택', color: SLOW }, { label: '선전 → 평택', color: ON_TIME }] },
-    },
-    bindings: { data: bind('/supply/leadTimes', '/value') },
-  }),
-  node('shipments', 860, LOWER.y, 380, LOWER.height, { type: 'element:shipments', props: { items: [] }, bindings: { items: bind('/supply/shipments', '/value') } }),
-  node('legend', 1270, LOWER.y + 4, 290, 160, { type: 'element:legend', props: {} }),
-];
-
-const document: CanvasView = {
-  kind: 'canvas',
-  appearance: 'light',
-  accent: LATE,
-  background: { image: { src: drawing(), width: WIDTH, height: HEIGHT, referencePoints: referencePoints(MAP) } },
-  nodes,
-  connectors: LANES,
-  elements: { headline, site, tag, figures, risks, note, shipments, legend },
+    "links": {
+      "lane-hsinchu": {
+        "from": "site-hsinchu",
+        "to": "site-pyeongtaek",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[hsinchu]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      },
+      "lane-osaka": {
+        "from": "site-osaka",
+        "to": "site-pyeongtaek",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[osaka]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      },
+      "lane-shenzhen": {
+        "from": "site-shenzhen",
+        "to": "site-pyeongtaek",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[shenzhen]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      },
+      "lane-penang": {
+        "from": "site-penang",
+        "to": "site-pyeongtaek",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[penang]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      },
+      "lane-munich": {
+        "from": "site-munich",
+        "to": "site-pyeongtaek",
+        "label": "{{days}}일",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[munich]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      },
+      "lane-austin": {
+        "from": "site-austin",
+        "to": "site-pyeongtaek",
+        "label": "{{days}}일",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[austin]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      },
+      "lane-rotterdam": {
+        "from": "site-pyeongtaek",
+        "to": "site-rotterdam",
+        "label": "{{days}}일",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[rotterdam]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      },
+      "lane-longbeach": {
+        "from": "site-pyeongtaek",
+        "to": "site-longbeach",
+        "label": "{{days}}일",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[longbeach]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      },
+      "lane-singapore": {
+        "from": "site-pyeongtaek",
+        "to": "site-singapore",
+        "show": "status",
+        "weight": {
+          "field": "teu",
+          "bands": [
+            2,
+            8,
+            3.5,
+            15,
+            5,
+            25,
+            7
+          ]
+        },
+        "of": "lanes[singapore]",
+        "width": 3,
+        "arrow": true,
+        "route": "curved"
+      }
+    }
+  }
 };
 
 export const worldSupply: SamplePack = {
-  id: 'world-supply',
-  title: { ko: '전자부품 공급망 — 신문 데이터 지면', en: 'An electronics supply chain — a newspaper’s data page' },
-  field: { ko: '제조·공급망', en: 'Manufacturing & supply chain' },
-  kind: { ko: '세계 지도(점 지도 · 흐름 호)', en: 'A world map (dots and flow arcs)' },
-  domain: 'manufacturing',
-  styles: ['print'],
-  summary: {
-    ko: '전자제품 회사의 공급망을 신문 데이터 지면처럼 — 이번 주에 무엇이 바뀌었는지 말하는 제목, 회색 점으로 찍은 세계, 부품 공급사에서 조립공장으로, 공장에서 판매 물류센터로 가는 구간을 곡선 호로(굵기 = 주간 컨테이너, 색 = 제때·느림·늦음). 옆에 이번 주 수치와 위험 공급사, 아래에 무슨 일이 있었는지 한 단락, 세 구간의 12주 리드타임, 운송 중인 선적. 종이색 바탕, 세리프 제목, 늦음만 붉은색. 예시 데이터입니다.',
-    en: 'An electronics maker’s supply chain drawn as a newspaper’s data page — a headline saying what changed this week, a world of grey dots, and the lanes as arcs from the parts suppliers to the assembly plant and from the plant to the sales centres (width = containers a week, colour = on time, slow or late). Beside it the week’s figures and the suppliers at risk; under it a paragraph on what happened, three lanes’ lead times over twelve weeks and the shipments at sea. Paper, a serif headline, red only for late. Example data.',
+  id: "world-supply",
+  title: {
+    "ko": "전자부품 공급망 — 신문 데이터 지면",
+    "en": "An electronics supply chain — a newspaper’s data page"
   },
-  connectors: [SUPPLY],
-  document,
+  field: {
+    "ko": "제조·공급망",
+    "en": "Manufacturing & supply chain"
+  },
+  kind: {
+    "ko": "세계 지도(점 지도 · 흐름 호)",
+    "en": "A world map (dots and flow arcs)"
+  },
+  domain: "manufacturing",
+  styles: [
+    "print"
+  ],
+  summary: {
+    "ko": "전자제품 회사의 공급망을 신문 데이터 지면처럼 — 이번 주에 무엇이 바뀌었는지 말하는 제목, 회색 점으로 찍은 세계, 부품 공급사에서 조립공장으로, 공장에서 판매 물류센터로 가는 구간을 곡선 호로(굵기 = 주간 컨테이너, 색 = 제때·느림·늦음). 옆에 이번 주 수치와 위험 공급사, 아래에 무슨 일이 있었는지 한 단락, 세 구간의 12주 리드타임, 운송 중인 선적. 종이색 바탕, 세리프 제목, 늦음만 붉은색. 예시 데이터입니다.",
+    "en": "An electronics maker’s supply chain drawn as a newspaper’s data page — a headline saying what changed this week, a world of grey dots, and the lanes as arcs from the parts suppliers to the assembly plant and from the plant to the sales centres (width = containers a week, colour = on time, slow or late). Beside it the week’s figures and the suppliers at risk; under it a paragraph on what happened, three lanes’ lead times over twelve weeks and the shipments at sea. Paper, a serif headline, red only for late. Example data."
+  },
+  connectors: [
+    {
+      "key": "supply",
+      "name": "예시 공급망 API",
+      "example": true,
+      "attribution": {
+        "text": "예시 데이터 — 실제 기업이 아닙니다"
+      }
+    }
+  ],
+  board,
   snapshot,
 };

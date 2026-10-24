@@ -1,8 +1,3 @@
-import type { Binding, CanvasView, ComponentDefinition, ElementDefinition, Node, Widget } from '@iyulab/u-board/domain';
-import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
-import { svgDataUrl } from '../frame.js';
-import { BAYS, snapshot } from '../snapshots/bus-terminal.js';
-
 // The departure wall over the boarding bays of an intercity bus terminal: one ultrawide strip, wider than four
 // screens side by side, lit as an LED dot-matrix sign — amber for times, green for what is boarding, red for what is
 // late or sold out, on black with the dots showing. The terminal's clock on the left, then every boarding bay as one
@@ -10,185 +5,310 @@ import { BAYS, snapshot } from '../snapshots/bus-terminal.js';
 // line of notices along the bottom. No public source carries a terminal's bays this way, so the values are example
 // data written for it.
 
-export const TERMINAL: ExampleSampleConnector = {
-  key: 'terminal',
-  name: '예시 버스 터미널 발권 API',
-  example: true,
-  attribution: { text: '예시 데이터 — 실제 터미널·노선이 아닙니다' },
-};
+import type { Board } from '@iyulab/u-board/domain';
+import type { SamplePack } from '../sample-pack.js';
+import { snapshot } from '../snapshots/bus-terminal.js';
 
-/** Seats sell by the minute; five minutes without an answer is a source that has stopped. */
-const MAX_AGE_SECONDS = 5 * 60;
-
-const bind = (path: string, valuePath: string): Binding => ({
-  adapter: TERMINAL.key,
-  ref: { path, valuePath, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-});
-
-/** One field of the bay an instance is given — `{{bay}}` is its number. */
-const bindBay = (field: string): Binding => ({
-  adapter: TERMINAL.key,
-  ref: { path: '/terminal/bays', item: { list: '/value', where: { id: '{{bay}}' } }, valuePath: `/${field}`, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-});
-
-const WIDTH = 3840;
-const HEIGHT = 900;
-const AMBER = '#ffb000';
-const GREEN = '#3dff6a';
-const RED = '#ff3b30';
-const DIM = '#5a4a1a';
-const MONO = 'ui-monospace, "Cascadia Mono", Consolas, monospace';
-/** Lit dots: the glow an LED sign has, and the grid of dots behind every panel. */
-const GLOW = 'text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)';
-const DOTS = 'background:#050505 radial-gradient(circle,#1b1b1b 1.2px,transparent 1.6px) 0 0/6px 6px';
-
-const HEAD = { x: 40, y: 40, width: 560, height: 740 };
-const BAY = { x: 640, y: 40, width: 250, height: 740, gap: 13 };
-const TICKER = { y: 806, height: 60 };
-
-// ── The drawing ─────────────────────────────────────────────────────────────────────────────────────────────────
-
-function drawing(): string {
-  // The wall's housing: a dark frame with the bays' steel dividers between the panels.
-  const dividers = BAYS.map((_, i) => {
-    const x = BAY.x + i * (BAY.width + BAY.gap) - BAY.gap / 2;
-    return `<rect x="${x - 2}" y="20" width="4" height="${TICKER.y - 30}" fill="#2a2a2a"/>`;
-  }).join('');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
-<rect width="${WIDTH}" height="${HEIGHT}" fill="#121212"/>
-<rect x="8" y="8" width="${WIDTH - 16}" height="${HEIGHT - 16}" rx="10" fill="none" stroke="#2f2f2f" stroke-width="6"/>
-${dividers}
-<rect x="20" y="${TICKER.y - 10}" width="${WIDTH - 40}" height="4" fill="#2a2a2a"/>
-</svg>`;
-  return svgDataUrl(svg);
-}
-
-// ── Elements ────────────────────────────────────────────────────────────────────────────────────────────────────
-
-/** The terminal's panel: its name, the clock very large, the day, and the counter for help. */
-const head: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['name', 'time'],
-    properties: { name: { type: 'string' }, english: { type: 'string' }, time: { type: 'string' }, date: { type: 'string' }, today: { type: 'array', items: { type: 'object', properties: { label: { type: 'string' }, value: { type: 'string' }, red: { type: 'boolean' } } } } },
+const board: Board = {
+  "board": {
+    "theme": "dark",
+    "accent": "#ffb000"
   },
-  template: `<section class="hd"><h1>{{name}}</h1><p>{{english}}</p><time>{{time}}</time><span>{{date}}</span><dl>{{#today}}<div class="{{#red}}red{{/red}}"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/today}}</dl></section>`,
-  style: `.hd{height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto auto 1fr auto auto;padding:28px 30px;${DOTS};font-family:${MONO};color:${AMBER}}
-h1{margin:0;font-size:52px;font-weight:800;letter-spacing:.06em;${GLOW}}
-p{margin:4px 0 0;font-size:20px;letter-spacing:.3em;color:${DIM}}
-time{align-self:center;font-size:150px;font-weight:800;line-height:1;letter-spacing:.04em;${GLOW}}
-span{font-size:26px;letter-spacing:.1em;margin-bottom:24px}
-dl{margin:0;display:grid;gap:10px;border-top:3px solid #2a2a2a;padding-top:18px}
-div{display:flex;justify-content:space-between;font-size:26px}
-dt{color:${DIM}}
-dd{margin:0;font-weight:800;color:${GREEN};${GLOW}}
-.red dd{color:${RED}}`,
-  size: { width: HEAD.width, height: HEAD.height },
-};
-
-/** A boarding bay: its number and its routes' colour, and the next departures from it — time, where to, the seats
- *  still free, and whether it is boarding, on time, late or full. */
-const bay: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['no', 'departures'],
-    properties: {
-      no: { type: 'string' },
-      line: { type: 'string' },
-      colour: { type: 'string' },
-      departures: {
-        type: 'array',
-        items: { type: 'object', properties: { time: { type: 'string' }, to: { type: 'string' }, seats: { type: 'string' }, state: { enum: ['boarding', 'ontime', 'late', 'full'] }, note: { type: 'string' } } },
+  "presets": {
+    "bay": {
+      "as": "group",
+      "size": [
+        250,
+        740
+      ],
+      "parts": {
+        "board": {
+          "as": "element",
+          "element": "bay",
+          "bind": {
+            "line": "line",
+            "colour": "colour",
+            "departures": "departures",
+            "no": "id"
+          }
+        }
       },
-    },
+      "place": {
+        "board": [
+          0,
+          0,
+          250,
+          740
+        ]
+      }
+    }
   },
-  template: `<section class="by" style="--c: {{colour}}"><header><b>{{no}}</b><span>{{line}}</span></header><ol>{{#departures}}<li class="{{state}}"><time>{{time}}</time><strong>{{to}}</strong><p><em>{{note}}</em><i>{{seats}}</i></p></li>{{/departures}}</ol></section>`,
-  style: `.by{height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;${DOTS};font-family:${MONO};color:${AMBER}}
-header{display:flex;align-items:baseline;justify-content:space-between;padding:14px 16px 10px;border-bottom:8px solid var(--c)}
-b{font-size:44px;font-weight:800;${GLOW}}
-header span{font-size:19px;color:var(--c);letter-spacing:.04em}
-ol{margin:0;padding:0;list-style:none;display:grid;grid-template-rows:repeat(4,1fr)}
-li{display:grid;align-content:center;gap:2px;padding:0 16px;border-bottom:2px solid #1f1f1f}
-time{font-size:40px;font-weight:800;line-height:1.05;letter-spacing:.04em;${GLOW}}
-strong{font-size:30px;color:#ffd36b;white-space:nowrap;overflow:hidden;text-overflow:clip;${GLOW}}
-p{margin:0;display:flex;justify-content:space-between;align-items:baseline;font-size:19px}
-em{font-style:normal;color:${DIM}}
-i{font-style:normal;font-weight:800}
-.boarding em,.boarding time{color:${GREEN}}
-.late em{color:${RED};${GLOW}}
-.full i{color:${RED};${GLOW}}
-.ontime i,.boarding i,.late i{color:${GREEN}}`,
-  size: { width: BAY.width, height: BAY.height },
-};
-
-/** The line of notices along the bottom of the wall. */
-const ticker: ElementDefinition = {
-  render: 'template',
-  props: { type: 'object', required: ['items'], properties: { items: { type: 'array', items: { type: 'string' } } } },
-  template: `<p class="tk">{{#items}}<span>{{.}}</span>{{/items}}</p>`,
-  style: `.tk{margin:0;height:100%;box-sizing:border-box;display:flex;align-items:center;gap:80px;padding:0 30px;overflow:hidden;white-space:nowrap;${DOTS};font:700 30px ${MONO};color:${AMBER};letter-spacing:.06em}
-span{${GLOW}}
-span::before{content:"▶ ";color:${GREEN}}`,
-  size: { width: WIDTH - 80, height: TICKER.height },
-};
-
-// ── The board ───────────────────────────────────────────────────────────────────────────────────────────────────
-
-const bayComponent: ComponentDefinition = {
-  params: { type: 'object', required: ['bay'], properties: { bay: { type: 'string' } } },
-  nodes: [
-    {
-      id: 'board',
-      x: 0,
-      y: 0,
-      width: BAY.width,
-      height: BAY.height,
-      widget: {
-        type: 'element:bay',
-        props: { no: '{{bay}}', line: '', colour: AMBER, departures: [] },
-        bindings: { line: bindBay('line'), colour: bindBay('colour'), departures: bindBay('departures') },
-      },
+  "elements": {
+    "head": {
+      "template": "<section class=\"hd\"><h1>{{name}}</h1><p>{{english}}</p><time>{{time}}</time><span>{{date}}</span><dl>{{#today}}<div class=\"{{#red}}red{{/red}}\"><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/today}}</dl></section>",
+      "style": ".hd{height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto auto 1fr auto auto;padding:28px 30px;background:#050505 radial-gradient(circle,#1b1b1b 1.2px,transparent 1.6px) 0 0/6px 6px;font-family:ui-monospace, \"Cascadia Mono\", Consolas, monospace;color:#ffb000}\nh1{margin:0;font-size:52px;font-weight:800;letter-spacing:.06em;text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\np{margin:4px 0 0;font-size:20px;letter-spacing:.3em;color:#5a4a1a}\ntime{align-self:center;font-size:150px;font-weight:800;line-height:1;letter-spacing:.04em;text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\nspan{font-size:26px;letter-spacing:.1em;margin-bottom:24px}\ndl{margin:0;display:grid;gap:10px;border-top:3px solid #2a2a2a;padding-top:18px}\ndiv{display:flex;justify-content:space-between;font-size:26px}\ndt{color:#5a4a1a}\ndd{margin:0;font-weight:800;color:#3dff6a;text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\n.red dd{color:#ff3b30}",
+      "props": {
+        "name": "string",
+        "english": "string",
+        "time": "string",
+        "date": "string",
+        "today": "list"
+      }
     },
-  ],
-};
-
-const node = (id: string, x: number, y: number, width: number, height: number, widget: Widget): Node => ({ id, x, y, width, height, anchored: false, widget });
-
-const nodes: Node[] = [
-  node('head', HEAD.x, HEAD.y, HEAD.width, HEAD.height, {
-    type: 'element:head',
-    props: { name: '', english: '', time: '', date: '', today: [] },
-    bindings: { name: bind('/terminal/now', '/name'), english: bind('/terminal/now', '/english'), time: bind('/terminal/now', '/time'), date: bind('/terminal/now', '/date'), today: bind('/terminal/now', '/today') },
-  }),
-  node('ticker', 40, TICKER.y, WIDTH - 80, TICKER.height, { type: 'element:ticker', props: { items: [] }, bindings: { items: bind('/terminal/notices', '/value') } }),
-];
-
-const document: CanvasView = {
-  kind: 'canvas',
-  appearance: 'dark',
-  accent: AMBER,
-  background: { image: { src: drawing(), width: WIDTH, height: HEIGHT } },
-  nodes,
-  connectors: [],
-  elements: { head, bay, ticker },
-  components: { bay: bayComponent },
-  instances: BAYS.map((id, i) => ({ id: `bay-${id}`, component: 'bay', x: BAY.x + i * (BAY.width + BAY.gap), y: BAY.y, anchored: false, params: { bay: id } })),
+    "ticker": {
+      "template": "<p class=\"tk\">{{#items}}<span>{{.}}</span>{{/items}}</p>",
+      "style": ".tk{margin:0;height:100%;box-sizing:border-box;display:flex;align-items:center;gap:80px;padding:0 30px;overflow:hidden;white-space:nowrap;background:#050505 radial-gradient(circle,#1b1b1b 1.2px,transparent 1.6px) 0 0/6px 6px;font:700 30px ui-monospace, \"Cascadia Mono\", Consolas, monospace;color:#ffb000;letter-spacing:.06em}\nspan{text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\nspan::before{content:\"▶ \";color:#3dff6a}",
+      "props": {
+        "items": "list"
+      }
+    },
+    "bay": {
+      "template": "<section class=\"by\" style=\"--c: {{colour}}\"><header><b>{{no}}</b><span>{{line}}</span></header><ol>{{#departures}}<li class=\"{{state}}\"><time>{{time}}</time><strong>{{to}}</strong><p><em>{{note}}</em><i>{{seats}}</i></p></li>{{/departures}}</ol></section>",
+      "style": ".by{height:100%;box-sizing:border-box;display:grid;grid-template-rows:auto 1fr;background:#050505 radial-gradient(circle,#1b1b1b 1.2px,transparent 1.6px) 0 0/6px 6px;font-family:ui-monospace, \"Cascadia Mono\", Consolas, monospace;color:#ffb000}\nheader{display:flex;align-items:baseline;justify-content:space-between;padding:14px 16px 10px;border-bottom:8px solid var(--c)}\nb{font-size:44px;font-weight:800;text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\nheader span{font-size:19px;color:var(--c);letter-spacing:.04em}\nol{margin:0;padding:0;list-style:none;display:grid;grid-template-rows:repeat(4,1fr)}\nli{display:grid;align-content:center;gap:2px;padding:0 16px;border-bottom:2px solid #1f1f1f}\ntime{font-size:40px;font-weight:800;line-height:1.05;letter-spacing:.04em;text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\nstrong{font-size:30px;color:#ffd36b;white-space:nowrap;overflow:hidden;text-overflow:clip;text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\np{margin:0;display:flex;justify-content:space-between;align-items:baseline;font-size:19px}\nem{font-style:normal;color:#5a4a1a}\ni{font-style:normal;font-weight:800}\n.boarding em,.boarding time{color:#3dff6a}\n.late em{color:#ff3b30;text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\n.full i{color:#ff3b30;text-shadow:0 0 6px currentColor,0 0 14px color-mix(in srgb,currentColor 45%,transparent)}\n.ontime i,.boarding i,.late i{color:#3dff6a}",
+      "props": {
+        "no": "string",
+        "line": "string",
+        "colour": "string",
+        "departures": "list"
+      }
+    }
+  },
+  "data": {
+    "now": {
+      "from": "terminal",
+      "path": "/terminal/now",
+      "time": "updatedAt",
+      "fresh": 300,
+      "fields": {
+        "name": {},
+        "english": {},
+        "time": {},
+        "date": {},
+        "today": {}
+      }
+    },
+    "notices": {
+      "from": "terminal",
+      "path": "/terminal/notices",
+      "time": "updatedAt",
+      "fresh": 300,
+      "fields": {
+        "value": {}
+      }
+    },
+    "bays": {
+      "from": "terminal",
+      "path": "/terminal/bays",
+      "list": "/value",
+      "key": "id",
+      "time": "updatedAt",
+      "fresh": 300,
+      "fields": {
+        "line": {},
+        "colour": {},
+        "departures": {},
+        "id": {}
+      }
+    }
+  },
+  "parts": {
+    "head": {
+      "as": "element",
+      "element": "head",
+      "of": "now",
+      "bind": {
+        "name": "name",
+        "english": "english",
+        "time": "time",
+        "date": "date",
+        "today": "today"
+      }
+    },
+    "ticker": {
+      "as": "element",
+      "element": "ticker",
+      "of": "notices",
+      "bind": {
+        "items": "value"
+      }
+    },
+    "bay-1": {
+      "use": "bay",
+      "of": "bays[1]"
+    },
+    "bay-2": {
+      "use": "bay",
+      "of": "bays[2]"
+    },
+    "bay-3": {
+      "use": "bay",
+      "of": "bays[3]"
+    },
+    "bay-4": {
+      "use": "bay",
+      "of": "bays[4]"
+    },
+    "bay-5": {
+      "use": "bay",
+      "of": "bays[5]"
+    },
+    "bay-6": {
+      "use": "bay",
+      "of": "bays[6]"
+    },
+    "bay-7": {
+      "use": "bay",
+      "of": "bays[7]"
+    },
+    "bay-8": {
+      "use": "bay",
+      "of": "bays[8]"
+    },
+    "bay-9": {
+      "use": "bay",
+      "of": "bays[9]"
+    },
+    "bay-10": {
+      "use": "bay",
+      "of": "bays[10]"
+    },
+    "bay-11": {
+      "use": "bay",
+      "of": "bays[11]"
+    },
+    "bay-12": {
+      "use": "bay",
+      "of": "bays[12]"
+    }
+  },
+  "layout": {
+    "kind": "canvas",
+    "size": [
+      3840,
+      900
+    ],
+    "background": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%223840%22%20height%3D%22900%22%20viewBox%3D%220%200%203840%20900%22%3E%0A%3Crect%20width%3D%223840%22%20height%3D%22900%22%20fill%3D%22%23121212%22%2F%3E%0A%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%223824%22%20height%3D%22884%22%20rx%3D%2210%22%20fill%3D%22none%22%20stroke%3D%22%232f2f2f%22%20stroke-width%3D%226%22%2F%3E%0A%3Crect%20x%3D%22631.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%22894.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%221157.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%221420.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%221683.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%221946.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%222209.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%222472.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%222735.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%222998.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%223261.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%3Crect%20x%3D%223524.5%22%20y%3D%2220%22%20width%3D%224%22%20height%3D%22776%22%20fill%3D%22%232a2a2a%22%2F%3E%0A%3Crect%20x%3D%2220%22%20y%3D%22796%22%20width%3D%223800%22%20height%3D%224%22%20fill%3D%22%232a2a2a%22%2F%3E%0A%3C%2Fsvg%3E",
+    "place": {
+      "head": [
+        40,
+        40,
+        560,
+        740
+      ],
+      "ticker": [
+        40,
+        806,
+        3760,
+        60
+      ],
+      "bay-1": [
+        640,
+        40,
+        250,
+        740
+      ],
+      "bay-2": [
+        903,
+        40,
+        250,
+        740
+      ],
+      "bay-3": [
+        1166,
+        40,
+        250,
+        740
+      ],
+      "bay-4": [
+        1429,
+        40,
+        250,
+        740
+      ],
+      "bay-5": [
+        1692,
+        40,
+        250,
+        740
+      ],
+      "bay-6": [
+        1955,
+        40,
+        250,
+        740
+      ],
+      "bay-7": [
+        2218,
+        40,
+        250,
+        740
+      ],
+      "bay-8": [
+        2481,
+        40,
+        250,
+        740
+      ],
+      "bay-9": [
+        2744,
+        40,
+        250,
+        740
+      ],
+      "bay-10": [
+        3007,
+        40,
+        250,
+        740
+      ],
+      "bay-11": [
+        3270,
+        40,
+        250,
+        740
+      ],
+      "bay-12": [
+        3533,
+        40,
+        250,
+        740
+      ]
+    }
+  }
 };
 
 export const busTerminal: SamplePack = {
-  id: 'bus-terminal',
-  title: { ko: '고속버스 터미널 출발 안내 벽 — 울트라와이드 LED', en: 'An intercity bus terminal’s departure wall — an ultrawide LED sign' },
-  field: { ko: '대중교통', en: 'Public transport' },
-  kind: { ko: '울트라와이드 벽면(약 4:1, 컴포넌트 반복)', en: 'An ultrawide wall (about 4:1, one component repeated)' },
-  domain: 'transport',
-  styles: ['signage'],
-  summary: {
-    ko: '고속버스 터미널 승차홈 위에 길게 건 출발 안내 벽 — 화면 네 개를 이은 것보다 넓은 띠를 LED 도트 매트릭스처럼: 검은 바탕에 점이 보이고, 시각은 호박색, 탑승 중은 초록, 지연·매진은 빨강. 왼쪽에 터미널 이름과 아주 큰 시계·오늘 운행 현황, 이어서 승차홈 열둘이 같은 컴포넌트 하나(노선 계열 색 띠, 다음 출발 넷의 시각·행선지·남은 좌석·상태), 아래 안내 문구 띠. 예시 데이터입니다.',
-    en: 'The departure wall hung along the boarding bays of an intercity bus terminal — a strip wider than four screens side by side, lit like an LED dot-matrix sign: black with the dots showing, times in amber, boarding in green, late and sold out in red. On the left the terminal’s name, a very large clock and the day’s running; then twelve bays as one component (its routes’ colour band, the next four departures with time, destination, seats left and state); and a line of notices along the bottom. Example data.',
+  id: "bus-terminal",
+  title: {
+    "ko": "고속버스 터미널 출발 안내 벽 — 울트라와이드 LED",
+    "en": "An intercity bus terminal’s departure wall — an ultrawide LED sign"
   },
-  connectors: [TERMINAL],
-  document,
+  field: {
+    "ko": "대중교통",
+    "en": "Public transport"
+  },
+  kind: {
+    "ko": "울트라와이드 벽면(약 4:1, 컴포넌트 반복)",
+    "en": "An ultrawide wall (about 4:1, one component repeated)"
+  },
+  domain: "transport",
+  styles: [
+    "signage"
+  ],
+  summary: {
+    "ko": "고속버스 터미널 승차홈 위에 길게 건 출발 안내 벽 — 화면 네 개를 이은 것보다 넓은 띠를 LED 도트 매트릭스처럼: 검은 바탕에 점이 보이고, 시각은 호박색, 탑승 중은 초록, 지연·매진은 빨강. 왼쪽에 터미널 이름과 아주 큰 시계·오늘 운행 현황, 이어서 승차홈 열둘이 같은 컴포넌트 하나(노선 계열 색 띠, 다음 출발 넷의 시각·행선지·남은 좌석·상태), 아래 안내 문구 띠. 예시 데이터입니다.",
+    "en": "The departure wall hung along the boarding bays of an intercity bus terminal — a strip wider than four screens side by side, lit like an LED dot-matrix sign: black with the dots showing, times in amber, boarding in green, late and sold out in red. On the left the terminal’s name, a very large clock and the day’s running; then twelve bays as one component (its routes’ colour band, the next four departures with time, destination, seats left and state); and a line of notices along the bottom. Example data."
+  },
+  connectors: [
+    {
+      "key": "terminal",
+      "name": "예시 버스 터미널 발권 API",
+      "example": true,
+      "attribution": {
+        "text": "예시 데이터 — 실제 터미널·노선이 아닙니다"
+      }
+    }
+  ],
+  board,
   snapshot,
 };

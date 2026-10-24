@@ -33,6 +33,8 @@ function setLocation(search: string) {
 }
 
 const DOC = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+// The board as stored — the viewer draws the picture the server made of it, never the board itself.
+const BOARD = { parts: {}, layout: { kind: 'canvas', size: [400, 300], place: {} } };
 
 describe('App', () => {
   it('says the address is malformed when board or token query params are missing, without asking the server', async () => {
@@ -44,16 +46,16 @@ describe('App', () => {
 
   it('fetches the board and renders ViewerPage on success', async () => {
     setLocation('?board=b1&token=tok');
-    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: [] }) });
     render(<App />);
     expect(await screen.findByTestId('viewer-page')).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith('/api/share/boards/b1', expect.objectContaining({ headers: { Authorization: 'Bearer tok' } }));
   });
 
-  it('draws a board in the second version from the picture the server made of it', async () => {
+  it('draws a board from the picture the server made of it', async () => {
     setLocation('?board=b1&token=tok');
     const picture = { ...DOC, nodes: [{ id: 'pump/P1' }, { id: 'pump/P2' }] };
-    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: { version: 2 }, picture, connectorIds: [] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: BOARD, picture, connectorIds: [] }) });
     render(<App />);
     expect(await screen.findByTestId('node-ids')).toHaveTextContent('pump/P1,pump/P2');
   });
@@ -61,7 +63,7 @@ describe('App', () => {
   describe('events from a board’s triggers', () => {
     it('names the board to the viewer and hands its events to the embedding page', async () => {
       setLocation('?board=b1&token=tok');
-      (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+      (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: [] }) });
       const parent = { postMessage: vi.fn() };
       const framed = vi.spyOn(window, 'parent', 'get').mockReturnValue(parent as unknown as Window);
       try {
@@ -99,7 +101,7 @@ describe('App', () => {
       ok: true,
       status: 200,
       headers: new Headers(),
-      json: async () => ({ name: 'A', revision, document: { ...DOC, nodes: [{ id: nodeId }] }, connectorIds: ['c1'] }),
+      json: async () => ({ name: 'A', revision, document: BOARD, picture: { ...DOC, nodes: [{ id: nodeId }] }, connectorIds: ['c1'] }),
     });
     const values = (revision: number) => ({ ok: true, status: 200, headers: new Headers(), json: async () => ({ revision, results: [{ value: 1, quality: 'live' }] }) });
 
@@ -202,21 +204,21 @@ describe('App', () => {
 
   it('keeps the open board current by polling its values', async () => {
     setLocation('?board=b1&token=tok');
-    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: [] }) });
     render(<App />);
     expect((await screen.findByTestId('viewer-page')).dataset.poll).toBe(String(SHARE_POLL_INTERVAL_MS));
   });
 
   it('measures ages and update times by the server clock, not the screen clock', async () => {
     setLocation('?board=b1&token=tok');
-    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: [] }) });
     render(<App />);
     expect((await screen.findByTestId('viewer-page')).dataset.serverClock).toBe('true');
   });
 
   it('names the board view after the board', async () => {
     setLocation('?board=b1&token=tok');
-    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'Line 2 floor', document: DOC, connectorIds: [] }) });
+    (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'Line 2 floor', document: BOARD, picture: DOC, connectorIds: [] }) });
     render(<App />);
     expect((await screen.findByTestId('viewer-page')).dataset.label).toBe('Line 2 floor');
   });
@@ -236,7 +238,7 @@ describe('App', () => {
       setLocation('?board=b1&token=tok');
       (fetch as any)
         .mockResolvedValueOnce({ ok: false, headers: new Headers(), status: 502 })
-        .mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+        .mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: [] }) });
       render(<App />);
       expect(await screen.findByText(/보드를 불러오지 못했습니다. 2초 뒤에 다시 시도합니다/)).toBeInTheDocument();
       await vi.advanceTimersByTimeAsync(retryDelayMs(0));
@@ -252,7 +254,7 @@ describe('App', () => {
     (fetch as any)
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
-      .mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: DOC, connectorIds: [] }) });
+      .mockResolvedValueOnce({ ok: true, headers: new Headers(), json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: [] }) });
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: '지금 다시 시도' }));
     expect(await screen.findByText(/4초 뒤에 다시 시도합니다/)).toBeInTheDocument();
@@ -269,7 +271,7 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({
       ok: true,
       headers: new Headers(),
-      json: async () => ({ name: 'A', document: DOC, connectorIds: ['c1', 'c2'] }),
+      json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: ['c1', 'c2'] }),
     });
     render(<App />);
     const viewer = await screen.findByTestId('viewer-page');
@@ -282,7 +284,7 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({
       ok: true,
       headers: new Headers(),
-      json: async () => ({ name: 'A', document: DOC, connectorIds: ['c1', 'c2'], attributions: { c1: credit }, samples: ['c2'] }),
+      json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: ['c1', 'c2'], attributions: { c1: credit }, samples: ['c2'] }),
     });
     render(<App />);
     const viewer = await screen.findByTestId('viewer-page');
@@ -296,7 +298,7 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({
       ok: true,
       headers: new Headers(),
-      json: async () => ({ name: 'A', document: DOC, connectorIds: [] }),
+      json: async () => ({ name: 'A', document: BOARD, picture: DOC, connectorIds: [] }),
     });
     render(<App />);
     const viewer = await screen.findByTestId('viewer-page');

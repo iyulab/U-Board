@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { BackgroundField } from './BackgroundField';
-import type { CanvasLayout } from '../board-v2/types';
+import type { CanvasLayout } from '../board/types';
 
 const readBackgroundImage = vi.fn();
 vi.mock('./background-image', async importOriginal => ({

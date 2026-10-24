@@ -65,7 +65,6 @@ export interface Copy {
     reset: string;
     narrow: string;
     source: string;
-    references: Record<string, string>;
   };
   /** The JSON playground: a board's definition and data as text, drawn as typed. */
   playground: {
@@ -222,28 +221,21 @@ export const COPY: Record<Locale, Copy> = {
     otherLanguage: 'English',
     try: {
       title: 'U-Board — 브라우저에서 만들어 보기',
-      description: '설치 없이 브라우저에서 U-Board 보드를 만들어 봅니다. 노드를 놓고, 값을 연결하고, 상태가 어떻게 보이는지 바로 확인합니다.',
+      description: '설치 없이 브라우저에서 U-Board 보드를 만들어 봅니다. 부품을 옮기고, 값을 읽어 오고, 상태가 어떻게 보이는지 바로 확인합니다.',
       heading: '브라우저에서 만들어 보기',
-      intro: '제품에 들어 있는 저작 화면 그대로입니다. 보드 위에 노드를 놓고 끌어 옮기면 위젯이 그 자리에 실제로 그려집니다. 노드를 고른 뒤 오른쪽 속성에서 값을 연결해 보세요. ‘보기’로 바꾸면 공유 링크로 보는 화면 그대로입니다. 값은 이 페이지 안의 예시 원천에서 읽고, 저장은 이 브라우저에만 남습니다. 내보내기로 받은 파일은 설치한 U-Board의 보드 편집 화면에서 가져오기로 열 수 있습니다.',
+      intro: '제품에 들어 있는 저작 화면 그대로입니다. 보드 위의 부품을 끌어 옮기거나 크기를 바꾸면 위젯이 그 자리에 실제로 그려집니다. 부품을 고른 뒤 오른쪽 패널에서 무엇을 보일지, 어느 데이터를 읽을지 바꿔 보세요. ‘보기’로 바꾸면 공유 링크로 보는 화면 그대로입니다. 값은 이 페이지 안의 예시 원천에서 읽고, 저장은 이 브라우저에만 남습니다. 내보내기는 보드를 JSON 파일로 내려받습니다.',
       saved: '이 브라우저에 저장했습니다.',
       unsaved: '저장하지 않은 변경이 있습니다.',
       reset: '처음 상태로',
       narrow: '저작 화면은 넓은 화면에 맞춰져 있습니다. 컴퓨터에서 열면 편하게 써 볼 수 있습니다.',
       source: '예시 데이터',
-      references: {
-        'pump-a.state': '펌프 A 운전 상태',
-        'pump-a.load': '펌프 A 부하(%)',
-        'tank.temperature': '탱크 온도',
-        'line.pressure': '배관 압력(갱신 지연)',
-        'conveyor.state': '컨베이어 상태(연결 끊김)',
-      },
     },
     playground: {
       nav: '플레이그라운드',
       title: 'U-Board — JSON 플레이그라운드',
-      description: 'U-Board 보드의 정의(view document)와 데이터를 JSON으로 고치면 바로 그려 봅니다. 갤러리의 보드를 불러와 바꿔 볼 수 있습니다.',
+      description: 'U-Board 보드의 정의와 데이터를 JSON으로 고치면 바로 그려 봅니다. 갤러리의 보드를 불러와 바꿔 볼 수 있습니다.',
       heading: 'JSON 플레이그라운드',
-      intro: '보드는 JSON 두 개로 그려집니다 — 배경·노드·위젯·바인딩을 적은 정의(view document)와, 바인딩이 읽는 원천의 응답. 왼쪽을 고치면 오른쪽 보드가 바로 다시 그려지고, 잘못된 곳은 JSON 경로로 알려 줍니다. 갤러리의 보드를 불러와 시작해 보세요. 고친 내용은 이 페이지 안에만 있고 어디에도 보내지 않습니다.',
+      intro: '보드는 JSON 두 개로 그려집니다 — 어디서 무엇을 읽는지(data), 무엇을 보이는지(parts), 어디에 놓는지(layout)를 적은 정의와, 정의가 읽는 원천의 응답. 왼쪽을 고치면 오른쪽 보드가 바로 다시 그려지고, 잘못된 곳은 JSON 경로로 알려 줍니다. 갤러리의 보드를 불러와 시작해 보세요. 고친 내용은 이 페이지 안에만 있고 어디에도 보내지 않습니다.',
       board: '갤러리 보드 불러오기',
       definition: '정의',
       data: '데이터',
@@ -271,10 +263,10 @@ export const COPY: Record<Locale, Copy> = {
       board: {
         back: '갤러리',
         tags: '태그',
-        definition: '보드 정의 (view document JSON)',
-        definitionNote: '이 보드를 그리는 정의 전부입니다 — 배경, 노드의 자리와 위젯, 각 값을 어디서 읽는지(바인딩). U-Board의 편집기와 AI 비서가 쓰는 것과 같은 형식입니다. 배경 그림은 길어서 화면에서는 줄여 보이고, 내려받은 파일에는 그대로 있습니다.',
+        definition: '보드 정의 (JSON)',
+        definitionNote: '이 보드를 그리는 정의 전부입니다 — 각 값을 어디서 읽는지(data), 무엇을 보이는지(parts), 어디에 놓는지와 배경(layout). U-Board의 편집기와 AI 비서가 쓰는 것과 같은 형식입니다. 배경 그림은 길어서 화면에서는 줄여 보이고, 내려받은 파일에는 그대로 있습니다.',
         data: '데이터 (원천 응답 JSON)',
-        dataNote: '보드가 읽는 원천과, 원천이 돌려준 응답입니다 — 바인딩이 읽는 필드만 남겼습니다. 이 페이지는 서버 없이 이 응답으로 보드를 그립니다.',
+        dataNote: '보드가 읽는 원천과, 원천이 돌려준 응답입니다 — 보드가 읽는 필드만 남겼습니다. 이 페이지는 서버 없이 이 응답으로 보드를 그립니다.',
         download: '내려받기',
         openPlayground: '플레이그라운드에서 열기',
         related: '같은 분야의 다른 보드',
@@ -381,28 +373,21 @@ export const COPY: Record<Locale, Copy> = {
     otherLanguage: '한국어',
     try: {
       title: 'U-Board — build one in your browser',
-      description: 'Build a U-Board board in your browser, nothing to install: place nodes, bind values and see at once how each state is shown.',
+      description: 'Build a U-Board board in your browser, nothing to install: move parts, read values and see at once how each state is shown.',
       heading: 'Build one in your browser',
-      intro: 'This is the authoring view the product ships. Place and drag nodes on the board — each widget is drawn live where it sits — then select one and bind its values in the properties on the right; View shows the board as a shared link does. Values come from a sample source inside this page, and saving keeps the board in this browser only. Export downloads it as a file that Import opens in the board editor of an installed U-Board.',
+      intro: 'This is the authoring view the product ships. Drag or resize the parts on the board — each widget is drawn live where it sits — then select one and change what it shows and which data it reads in the panel on the right; View shows the board as a shared link does. Values come from a sample source inside this page, and saving keeps the board in this browser only. Export downloads the board as a JSON file.',
       saved: 'Saved in this browser.',
       unsaved: 'There are unsaved changes.',
       reset: 'Start over',
       narrow: 'The authoring view is made for a wide screen; it is easier to try on a computer.',
       source: 'Sample data',
-      references: {
-        'pump-a.state': 'Pump A running state',
-        'pump-a.load': 'Pump A load (%)',
-        'tank.temperature': 'Tank temperature',
-        'line.pressure': 'Line pressure (stale)',
-        'conveyor.state': 'Conveyor state (disconnected)',
-      },
     },
     playground: {
       nav: 'Playground',
       title: 'U-Board — JSON playground',
-      description: 'Edit a U-Board board’s definition (view document) and data as JSON and see it drawn as you type. Start from any board in the gallery.',
+      description: 'Edit a U-Board board’s definition and data as JSON and see it drawn as you type. Start from any board in the gallery.',
       heading: 'JSON playground',
-      intro: 'A board is drawn from two pieces of JSON — the definition (view document) with its background, nodes, widgets and bindings, and the answers of the sources its bindings read. Edit either on the left and the board on the right is drawn again; anything wrong is named by its JSON path. Start from a board of the gallery. What you edit stays in this page and is sent nowhere.',
+      intro: 'A board is drawn from two pieces of JSON — the definition, saying where values are read from (data), what is shown (parts) and where (layout), and the answers of the sources it reads. Edit either on the left and the board on the right is drawn again; anything wrong is named by its JSON path. Start from a board of the gallery. What you edit stays in this page and is sent nowhere.',
       board: 'Load a gallery board',
       definition: 'Definition',
       data: 'Data',
@@ -430,10 +415,10 @@ export const COPY: Record<Locale, Copy> = {
       board: {
         back: 'Gallery',
         tags: 'Tags',
-        definition: 'Board definition (view document JSON)',
-        definitionNote: 'Everything that draws this board — its background, where each node sits and its widget, and where each value is read from (its bindings), in the same format U-Board’s editor and AI assistant write. The background drawing is long, so it is shortened here; the downloaded file has it whole.',
+        definition: 'Board definition (JSON)',
+        definitionNote: 'Everything that draws this board — where each value is read from (data), what is shown (parts), and where it sits and over what background (layout), in the same format U-Board’s editor and AI assistant write. The background drawing is long, so it is shortened here; the downloaded file has it whole.',
         data: 'Data (source answers JSON)',
-        dataNote: 'The sources the board reads and what they answered — only the fields its bindings read. This page draws the board from these answers, with no server.',
+        dataNote: 'The sources the board reads and what they answered — only the fields the board reads. This page draws the board from these answers, with no server.',
         download: 'Download',
         openPlayground: 'Open in the playground',
         related: 'More boards in this field',

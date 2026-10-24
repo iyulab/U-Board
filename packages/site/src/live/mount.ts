@@ -3,7 +3,7 @@
 
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ViewerPage, KO_LABELS } from '@iyulab/u-board/viewer';
+import { BoardView, KO_LABELS } from '@iyulab/u-board/viewer';
 import '@iyulab/u-board/styles.css';
 import { sampleBoard, SampleAdapter, type SampleBoardText } from './sample-board';
 
@@ -15,8 +15,8 @@ for (const host of document.querySelectorAll<HTMLElement>('[data-live-board]')) 
   host.replaceChildren();
   host.classList.add('live');
   createRoot(host).render(
-    createElement(ViewerPage, {
-      document: sampleBoard(text),
+    createElement(BoardView, {
+      board: sampleBoard(text),
       adapters: [new SampleAdapter()],
       pollIntervalMs: POLL_INTERVAL_MS,
       ariaLabel: text.plant,

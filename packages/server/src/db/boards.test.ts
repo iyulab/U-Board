@@ -3,7 +3,7 @@ import type { DbClient } from '../db.js';
 import { createTestDb } from '../test-support/test-db.js';
 import { createWorkspace } from './workspaces.js';
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from './boards.js';
-import type { BoardV2 } from '@iyulab/u-board/board-v2';
+import type { Board } from '@iyulab/u-board/domain';
 
 let db: DbClient;
 let workspaceId: string;
@@ -13,10 +13,10 @@ beforeEach(async () => {
 });
 
 describe('board repository', () => {
-  it('creates a board with no parts yet, in the board language’s second version', async () => {
+  it('creates a board with no parts yet', async () => {
     const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'My Board' });
     expect(board.name).toBe('My Board');
-    expect(board.document).toEqual({ version: 2, parts: {}, layout: { kind: 'canvas', size: [1280, 720], place: {} } });
+    expect(board.document).toEqual({ parts: {}, layout: { kind: 'canvas', size: [1280, 720], place: {} } });
     expect(board.createdAt).toBe(board.updatedAt);
   });
 
@@ -24,7 +24,7 @@ describe('board repository', () => {
     const board1 = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     const board2 = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'B' });
     expect(board1.document).not.toBe(board2.document);
-    expect((board1.document as BoardV2).parts).not.toBe((board2.document as BoardV2).parts);
+    expect((board1.document as Board).parts).not.toBe((board2.document as Board).parts);
   });
 
   it('lists boards for a workspace without the document body', async () => {
@@ -52,7 +52,7 @@ describe('board repository', () => {
   it('updates name and document, bumping updatedAt', async () => {
     const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     await new Promise(r => setTimeout(r, 2)); // ensure a distinguishable ISO timestamp
-    const newDoc = { kind: 'canvas' as const, background: {}, nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status' } }], connectors: [] };
+    const newDoc: Board = { parts: { n1: { as: 'label', title: 'N1' } }, layout: { kind: 'canvas', size: [400, 300], place: { n1: [0, 0] } } };
     const result = await updateBoard(db, workspaceId, board.id, { name: 'Renamed', document: newDoc });
     if (!('board' in result)) throw new Error('expected the board');
     expect(result.board).toMatchObject({ name: 'Renamed', document: newDoc, revision: 2 });

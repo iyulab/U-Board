@@ -2,7 +2,8 @@
 // its tags, its thumbnail, a description short enough for a search result, and its definition and data as shown.
 
 import { SAMPLE_PACKS, tagsOf, type SamplePack } from '@iyulab/u-board-samples';
-import { expandComponents, sizedNodes, type CanvasView } from '@iyulab/u-board/domain';
+import { toViewDocument } from '@iyulab/u-board/domain';
+import { sizedNodes, type CanvasView } from '@iyulab/u-board/picture';
 import thumbs from './thumbs.json';
 import type { Locale } from './copy';
 
@@ -25,7 +26,7 @@ export function thumbnailOf(id: string): (Thumb & { path: string }) | undefined 
 // A board drawn over a background keeps its drawing's proportions; one with no drawing, those of its parts (with the
 // viewer's margin around them); a grid has none, and is as tall as its items.
 const partsExtent = (document: CanvasView) => {
-  const nodes = sizedNodes(expandComponents(document));
+  const nodes = sizedNodes(document);
   const width = Math.max(...nodes.map(n => n.x + n.width)) - Math.min(...nodes.map(n => n.x));
   const height = Math.max(...nodes.map(n => n.y + n.height)) - Math.min(...nodes.map(n => n.y));
   return { width: width + 32, height: height + 32 };
@@ -33,7 +34,9 @@ const partsExtent = (document: CanvasView) => {
 
 /** The board's own proportions, for the box it is drawn in — none for a grid. */
 export function boardExtent(pack: SamplePack): { width: number; height: number } | undefined {
-  return pack.document.kind === 'canvas' ? (pack.document.background.image ?? partsExtent(pack.document)) : undefined;
+  // A canvas names the items it places, so its picture needs no list read to be measured.
+  const picture = toViewDocument(pack.board, { keysOf: () => [] });
+  return picture.kind === 'canvas' ? (picture.background.image ?? partsExtent(picture)) : undefined;
 }
 
 /** A search result shows about this many characters of a description. */
@@ -53,7 +56,7 @@ const size = (bytes: number) => (bytes >= 1024 ? `${Math.round(bytes / 1024)} KB
 /** The definition as shown on the page: a drawing written into it (a `data:` address) is shortened to a note of its size. */
 export function definitionShown(pack: SamplePack, note: string): string {
   return JSON.stringify(
-    pack.document,
+    pack.board,
     (_key, value) => (typeof value === 'string' && value.startsWith('data:') && value.length > 200 ? note.replace('{size}', size(value.length)) : value),
     2
   );

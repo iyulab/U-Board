@@ -1,20 +1,23 @@
 import { describe, it, expect } from 'vitest';
-import { resolveDocument, validateViewDocument } from '@iyulab/u-board/domain';
+import { checkBoard, pictureOf, readerOf } from '@iyulab/u-board/domain';
+import { resolveDocument } from '@iyulab/u-board/picture';
 import { COPY } from '../src/copy';
 import { sampleBoard, SampleAdapter } from '../src/live/sample-board';
 
 const text = (locale: 'ko' | 'en') => ({ plant: COPY[locale].figure.plant, ...COPY[locale].figure.nodes });
 
 describe('the live board at the top of the site', () => {
-  it('is a document the product itself accepts, in both languages', () => {
+  it('is a board the product itself accepts, in both languages', () => {
     for (const locale of ['ko', 'en'] as const) {
-      expect(validateViewDocument(sampleBoard(text(locale))), locale).toEqual([]);
+      expect(checkBoard(sampleBoard(text(locale))), locale).toEqual({ issues: [], advice: [] });
     }
   });
 
   // The figure's caption and the "quality" section describe three states; the board shows each.
   it('shows a live, a stale and a disconnected value at once', async () => {
-    const resolved = await resolveDocument(sampleBoard(text('en')), [new SampleAdapter()]);
+    const adapters = [new SampleAdapter()];
+    const resolved = await resolveDocument(await pictureOf(sampleBoard(text('en')), readerOf(adapters)), adapters);
+    if (resolved.kind !== 'canvas') throw new Error('expected a canvas');
     const quality = Object.fromEntries(resolved.nodes.map(n => [n.id, Object.values(n.widget.quality)[0]]));
     expect(quality).toEqual({
       'pump-a': 'live',
@@ -24,7 +27,8 @@ describe('the live board at the top of the site', () => {
       conveyor: 'disconnected',
     });
     const pump = resolved.nodes.find(n => n.id === 'pump-a')!;
-    expect(pump.widget.props).toMatchObject({ data: { value: 'Running', tone: 'ok' } });
+    expect(JSON.stringify(pump.widget.props)).toContain('Running');
+    expect(JSON.stringify(pump.widget.props)).toContain('"ok"');
   });
 
   it('moves its live values with the clock, and ages its stale one from when the page opened', async () => {

@@ -1,18 +1,18 @@
-// Where the parts of a board in the language's second version are, written back from its picture. The editor draws the
+// Where the parts of a board are, written back from its picture. The editor draws the
 // picture and the author moves, sizes, orders and deletes what it draws; a node's or an item's id is its part's
 // (`<part>/<key>` for one of an `each` part's items), so what changed is said again in the board's layout — and nothing
 // else of the board changes.
 
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { GRID_DEFAULT_SPAN, type GridView, type Node, type ViewDocument } from '../view-document.js';
-import type { BoardV2, CanvasLayout, GridItem, Place, Shape, Trigger } from '../board-v2/types.js';
+import type { Board, CanvasLayout, GridItem, Place, Shape, Trigger } from '../board/types.js';
 
 /**
  * Whether the editor lays this board out: a canvas, or a grid — of parts, canvases, and grids of parts and canvases in
  * its cells (one level, as the picture draws them). A grid in a cell is laid out on its own (`cellBoard`): the picture
  * flattens it into the outer grid's rows, which the editor does not say back item by item.
  */
-export function layoutEditable(board: BoardV2): boolean {
+export function layoutEditable(board: Board): boolean {
   if (board.layout.kind === 'canvas') return true;
   return board.layout.items.every(entry => !isGridCell(entry) || entry.grid.every(inner => !isGridCell(inner)));
 }
@@ -24,7 +24,7 @@ export function cellId(i: number): string {
 }
 
 /** The grid entry a canvas cell's id names, if the board has a canvas there. */
-export function cellIndex(board: BoardV2, id: string): number | undefined {
+export function cellIndex(board: Board, id: string): number | undefined {
   const match = /^cell-(\d+)$/.exec(id);
   if (board.layout.kind !== 'grid' || match === null) return undefined;
   return isCanvasCell(board.layout.items[Number(match[1])]) ? Number(match[1]) : undefined;
@@ -32,7 +32,7 @@ export function cellIndex(board: BoardV2, id: string): number | undefined {
 
 /** The grid entry holding a grid that the picture's item `id` is drawn from — one of its parts (or their items), or a
  *  canvas in it (`cell-<i>-<j>`) — if it is one. */
-export function gridCellOf(board: BoardV2, id: string): number | undefined {
+export function gridCellOf(board: Board, id: string): number | undefined {
   if (board.layout.kind !== 'grid') return undefined;
   const canvas = /^cell-(\d+)-\d+$/.exec(id);
   if (canvas !== null) return isGridCell(board.layout.items[Number(canvas[1])]) ? Number(canvas[1]) : undefined;
@@ -42,7 +42,7 @@ export function gridCellOf(board: BoardV2, id: string): number | undefined {
 }
 
 /** The cell of grid entry `i` — a canvas, or a grid — as a board of its own: the board, that cell its layout. */
-export function cellBoard(board: BoardV2, i: number): BoardV2 | undefined {
+export function cellBoard(board: Board, i: number): Board | undefined {
   if (board.layout.kind !== 'grid') return undefined;
   const entry = board.layout.items[i];
   if (isCanvasCell(entry)) return { ...board, layout: { kind: 'canvas', ...entry.canvas } };
@@ -52,7 +52,7 @@ export function cellBoard(board: BoardV2, i: number): BoardV2 | undefined {
 
 /** The board with grid entry `i`'s cell — and its parts, triggers and all the rest — as `cell` (one `cellBoard` gave,
  *  edited) has them. */
-export function withCell(board: BoardV2, i: number, cell: BoardV2): BoardV2 {
+export function withCell(board: Board, i: number, cell: Board): Board {
   if (board.layout.kind !== 'grid') return board;
   const entry = board.layout.items[i];
   let next: GridItem;
@@ -78,7 +78,7 @@ function isGridCell(entry: GridItem | undefined): entry is Entry & { grid: GridI
 export const LINK = 'link.';
 
 /** The link of a canvas board a picture connector `id` draws, if it is one of the board's own (not a group's). */
-export function linkOf(board: BoardV2, id: string): string | undefined {
+export function linkOf(board: Board, id: string): string | undefined {
   if (board.layout.kind !== 'canvas' || !id.startsWith(LINK)) return undefined;
   const link = id.slice(LINK.length);
   return board.layout.links?.[link] !== undefined ? link : undefined;
@@ -89,13 +89,13 @@ export const SHAPE = 'shape.';
 
 /** The shape of a canvas board a picture piece `id` draws, if it is one of the board's own — a box or a text (drawn as a
  *  decoration), or a line or a path (drawn as a node of its own). */
-export function shapeOf(board: BoardV2, id: string): string | undefined {
+export function shapeOf(board: Board, id: string): string | undefined {
   if (board.layout.kind !== 'canvas' || !id.startsWith(SHAPE)) return undefined;
   return board.layout.shapes?.[id.slice(SHAPE.length)] !== undefined ? id.slice(SHAPE.length) : undefined;
 }
 
 /** The line or path of a canvas board a picture node `id` draws, if it is one. */
-export function lineOf(board: BoardV2, id: string): string | undefined {
+export function lineOf(board: Board, id: string): string | undefined {
   const shape = shapeOf(board, id);
   const drawn = shape !== undefined && board.layout.kind === 'canvas' ? board.layout.shapes![shape]! : undefined;
   return drawn && (drawn.line !== undefined || drawn.path !== undefined) ? shape : undefined;
@@ -115,7 +115,7 @@ export function shapeIn(shape: Shape, from: { x: number; y: number; width: numbe
 
 /** The board with a new shape — a box, a text, or a line — at the canvas's top left, stepped from the shapes it has, and its
  *  id. */
-export function withNewShape(board: BoardV2, kind: 'box' | 'text' | 'line', text: string): { board: BoardV2; id: string } {
+export function withNewShape(board: Board, kind: 'box' | 'text' | 'line', text: string): { board: Board; id: string } {
   if (board.layout.kind !== 'canvas') return { board, id: '' };
   const shapes = board.layout.shapes ?? {};
   let n = Object.keys(shapes).length + 1;
@@ -128,7 +128,7 @@ export function withNewShape(board: BoardV2, kind: 'box' | 'text' | 'line', text
 }
 
 /** The board with a new link from part `from` to part `to` — drawn with an arrowhead, as a flow is — and its id. */
-export function withNewLink(board: BoardV2, from: string, to: string): { board: BoardV2; id: string } {
+export function withNewLink(board: Board, from: string, to: string): { board: Board; id: string } {
   if (board.layout.kind !== 'canvas') return { board, id: '' };
   const links = board.layout.links ?? {};
   let n = Object.keys(links).length + 1;
@@ -139,7 +139,7 @@ export function withNewLink(board: BoardV2, from: string, to: string): { board: 
 
 /** Whether the picture node or item `id` is one the board places itself: a part, or an item of an `each` part — not a
  *  part inside a group, which moves with its group. */
-export function placesItself(board: BoardV2, id: string): boolean {
+export function placesItself(board: Board, id: string): boolean {
   if (!layoutEditable(board)) return false;
   if (lineOf(board, id) !== undefined) return true;
   const [part, key, ...rest] = id.split('/');
@@ -160,7 +160,7 @@ export function placesItself(board: BoardV2, id: string): boolean {
  * item) that moved or was sized placed where it is now, each part deleted gone — with the links and triggers that
  * named it. An item of an `each` part is there while its data has it, so deleting one deletes nothing.
  */
-export function withPictureLayout(board: BoardV2, before: ViewDocument, after: ViewDocument): BoardV2 {
+export function withPictureLayout(board: Board, before: ViewDocument, after: ViewDocument): Board {
   if (board.layout.kind === 'grid') return before.kind === 'grid' && after.kind === 'grid' ? withGridLayout(board, before, after) : board;
   if (before.kind !== 'canvas' || after.kind !== 'canvas') return board;
   const layout: CanvasLayout = { ...board.layout, place: { ...board.layout.place } };
@@ -236,7 +236,7 @@ export function withPictureLayout(board: BoardV2, before: ViewDocument, after: V
  * them all — and an entry deleted gone: a part with the triggers that named it, a canvas with the parts placed on it.
  * A part the picture did not draw (an `each` part whose data has no items now) keeps its place.
  */
-function withGridLayout(board: BoardV2, before: GridView, after: GridView): BoardV2 {
+function withGridLayout(board: Board, before: GridView, after: GridView): Board {
   if (board.layout.kind !== 'grid' || !layoutEditable(board)) return board;
   // An entry by the id its item is drawn with: a part's (an `each` part's, its items'), a canvas's `cell-<i>`; a grid
   // in a cell by `grid-<i>`, which every item drawn from it stands for — it keeps its own layout, coming where its first

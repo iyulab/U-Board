@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { applyJsonPatch, getByPointer, JsonPatchError, lintViewDocument, placedAt, type ViewDocument } from '@iyulab/u-board/domain';
-import { checkBoardV2, fromV1, isBoardV2, sourceAdvice, type BoardV2 } from '@iyulab/u-board/board-v2';
-import { UBoardApiError, type Board, type UBoardClient } from './client.js';
+import { applyJsonPatch, getByPointer, JsonPatchError } from '@iyulab/u-board/domain';
+import { lintViewDocument, placedAt, type ViewDocument } from '@iyulab/u-board/picture';
+import { checkBoard, sourceAdvice, type Board } from '@iyulab/u-board/domain';
+import { UBoardApiError, type UBoardClient } from './client.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
 import type { Looker } from './look.js';
@@ -45,24 +46,9 @@ function concerns(finding: { path?: string; message: string }, focus: string): b
   return finding.path === focus || !!finding.path?.startsWith(`${focus}/`) || finding.message.includes(`(${focus})`);
 }
 
-/** A board as these tools read and write it — in the language's second version. A board stored in the first is read
- *  converted; the first change saves it in the second. One that uses what the second version does not have yet cannot
- *  be changed here, and says so. */
-function boardOf(found: Board): { board: BoardV2; first: boolean } {
-  if (isBoardV2(found.document)) return { board: found.document, first: false };
-  const { board, unsupported } = fromV1(found.document);
-  if (unsupported.length > 0) {
-    throw new UBoardApiError(409, {
-      code: 'FIRST_VERSION_BOARD',
-      message: `this board is stored in the first version of the format and uses what the second does not have yet (${unsupported.join(', ')}) — it cannot be read or changed with these tools; a person changes it in the console`,
-    });
-  }
-  return { board, first: true };
-}
-
 /** Where in the board a place in the view document it is drawn from is: the part drawn there (`/parts/<id>`), and the
  *  item of a part made per item. `undefined` for a place that is no part. */
-function partAt(board: BoardV2, picture: ViewDocument, path: string): { path: string; item?: string } | undefined {
+function partAt(board: Board, picture: ViewDocument, path: string): { path: string; item?: string } | undefined {
   let id: unknown;
   try {
     id = (getByPointer(picture, path) as { id?: unknown } | undefined)?.id;
@@ -78,7 +64,7 @@ function partAt(board: BoardV2, picture: ViewDocument, path: string): { path: st
 
 /** A finding about the view document a board is drawn from, said of the board: at the part, naming the parts it names
  *  by where they are in the board — the writer never sees the view document. */
-function inBoard<P extends { path?: string; message: string }>(board: BoardV2, picture: ViewDocument, finding: P): P {
+function inBoard<P extends { path?: string; message: string }>(board: Board, picture: ViewDocument, finding: P): P {
   const message = finding.message.replace(/\((\/[^)\s]+)\)/g, (whole, path: string) => {
     const named = partAt(board, picture, path);
     return named ? `(${named.path})` : whole;
@@ -102,8 +88,8 @@ function inPicture(picture: ViewDocument, focus: string): string {
 const pointerKey = (key: string) => key.replace(/~/g, '~0').replace(/\//g, '~1');
 
 /** A board with nothing on it yet, of a kind. */
-function emptyBoard(kind: 'grid' | 'canvas'): BoardV2 {
-  return { version: 2, parts: {}, layout: kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', size: [1600, 900], place: {} } };
+function emptyBoard(kind: 'grid' | 'canvas'): Board {
+  return { parts: {}, layout: kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', size: [1600, 900], place: {} } };
 }
 
 /** Refuses a board that does not pass its check, as saving would — before anything is saved. */
@@ -151,9 +137,14 @@ const patch = z.array(operation).min(1).describe('A JSON Patch (RFC 6902), appli
 // parser (vLLM's, serving Qwen) rewrites the values under an empty schema — arrays came back as objects — and the
 // model was told off for what it never sent.
 const document = z
-  .looseObject({ version: z.literal(2, { error: WRAPPED('version', 'the board { "version": 2, … }') }) })
+  .looseObject({})
+  .superRefine((value, ctx) => {
+    if ('parts' in value) return;
+    const wrapper = Object.keys(value).find(key => typeof value[key] === 'object' && value[key] !== null && 'parts' in (value[key] as object));
+    if (wrapper) ctx.addIssue({ code: 'custom', message: `this is wrapped in "${wrapper}" — write the board { … } itself, not { "${wrapper}": { … } }` });
+  })
   .meta({ additionalProperties: true })
-  .describe('A whole board: { version: 2, data?, parts, layout, … } — describe("rules").');
+  .describe('A whole board: { data?, parts, layout, … } — describe("rules").');
 
 /** A tool an assistant draws boards with: what the MCP server lists, and what any other host of a model (the
  *  console's chat panel) offers it — the same names, descriptions, inputs and answers. */
@@ -215,13 +206,12 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
     async ({ board, pointer }) =>
       tool(async () => {
         const found = await client.getBoard(board);
-        const { board: read, first } = boardOf(found);
+        const read = found.document;
         return {
           id: found.id,
           name: found.name,
           revision: found.revision,
           kind: read.layout.kind,
-          ...(first && { stored: 'in the first version of the format — read here in the second; the first change saves it so' }),
           ...(pointer ? { pointer, value: getByPointer(read, pointer) } : { document: read }),
         };
       })
@@ -253,8 +243,8 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
       tool(async () => {
         // A refused first board makes no board: checked here first, as the server would — and should the server still
         // refuse it, the board just made is taken away again, so a retry never leaves empty boards behind.
-        const first = (document as unknown as BoardV2 | undefined) ?? emptyBoard(kind);
-        const { issues } = checkBoardV2(first);
+        const first = (document as unknown as Board | undefined) ?? emptyBoard(kind);
+        const { issues } = checkBoard(first);
         const laidOut = (first as { layout?: { kind?: unknown } }).layout?.kind;
         if (laidOut !== undefined && laidOut !== kind) issues.unshift({ path: '/layout/kind', message: `expected "${kind}", the kind asked for — got "${String(laidOut)}"` });
         refuseInvalid(issues, 'no board was made — fix the board and call create_board again');
@@ -307,14 +297,7 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
     },
     async ({ board, revision, patch }) =>
       tool(async () => {
-        const found = await client.getBoard(board);
-        if (isBoardV2(found.document)) return client.patchDocument(board, patch, revision);
-        // A board stored in the first version: the patch is made against the board as get_board reads it, converted,
-        // and the result is saved whole — in the second version, on the revision it was read at.
-        if (revision !== undefined && revision !== found.revision) throw new UBoardApiError(412, { code: 'BOARD_CHANGED', revision: found.revision });
-        const changed = applyJsonPatch(boardOf(found).board, patch);
-        refuseInvalid(checkBoardV2(changed).issues, 'nothing was saved — fix the patch');
-        return client.putDocument(board, changed, found.revision);
+        return client.patchDocument(board, patch, revision);
       })
   );
 
@@ -332,11 +315,11 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
           if (!board || !patch) throw new Error('give a document, or a board and a patch');
           const current = await client.getBoard(board);
           revision = current.revision;
-          candidate = applyJsonPatch(boardOf(current).board, patch);
+          candidate = applyJsonPatch(current.document, patch);
         }
-        const { issues, advice } = checkBoardV2(candidate);
+        const { issues, advice } = checkBoard(candidate);
         // As saving advises: a read whose source is not one of the workspace's.
-        if (issues.length === 0) advice.push(...sourceAdvice(candidate as BoardV2, await client.listSources()));
+        if (issues.length === 0) advice.push(...sourceAdvice(candidate as Board, await client.listSources()));
         // A check of a change to a board saves nothing: say so, with the revision the change is to be sent on — a
         // writer that took the check for the save sends the next patch on a revision the board never reached.
         const unsaved = revision !== undefined && issues.length === 0 && { next: `nothing is saved yet — send this patch with patch_board, on revision ${revision}` };
@@ -362,14 +345,14 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
       async ({ board, focus, appearance, width = 1600, height = 900 }) => {
         try {
           const found = await client.getBoard(board);
-          const { board: read } = boardOf(found);
-          // What the viewers' page draws: a second-version board's picture, made by the server with its data's items.
-          const picture = found.picture ?? (found.document as ViewDocument);
+          const read = found.document;
+          // What the viewers' page draws: the board's picture, made by the server with its data's items.
+          const { picture } = found;
           const { image, report } = await looker.look({ board, focus: focus && inPicture(picture, focus), appearance, width, height }, picture);
           // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
           // Up close, every layout finding is read before keeping the part's own — a fold past the limit would hide some.
           const layout = lintViewDocument(picture, focus ? { geometryLimit: Infinity } : {}).map(a => inBoard(read, picture, a));
-          const advice = [...checkBoardV2(read).advice, ...layout].filter(a => !focus || concerns(a, focus));
+          const advice = [...checkBoard(read).advice, ...layout].filter(a => !focus || concerns(a, focus));
           // A folded line stands for the findings it counts.
           const left = advice.reduce((n, a) => n + ((a as { count?: number }).count ?? 1), 0);
           // What went wrong while drawing is the whole board's; up close, only the part's — as its advice is.

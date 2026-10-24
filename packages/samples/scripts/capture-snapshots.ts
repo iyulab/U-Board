@@ -5,7 +5,8 @@
 
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { findHttpRefItem, placedIn, requestPath, sourceErrorIn, type HttpRef } from '@iyulab/u-board/domain';
+import { dataReadOf } from '@iyulab/u-board/domain';
+import { findHttpRefItem, requestPath, sourceErrorIn, type HttpRef } from '@iyulab/u-board/picture';
 import { SAMPLE_PACKS } from '../src/index.js';
 import { keepPointers } from '../src/prune.js';
 import { isInstallable, isLiveConnector, type LiveSampleConnector, type SamplePack } from '../src/sample-pack.js';
@@ -23,16 +24,16 @@ function requestUrl(connector: LiveSampleConnector, path: string, key: string): 
   return url;
 }
 
-/** The references each request of `pack` is read with, per connector key. */
+/** The references each request of `pack` is read with, per connector key: each of its board's data read whole — a
+ *  list kept whole, whichever of its items the board shows. */
 function requests(pack: SamplePack): Map<string, Map<string, HttpRef[]>> {
   const byConnector = new Map<string, Map<string, HttpRef[]>>();
-  for (const placed of placedIn(pack.document)) {
-    for (const binding of Object.values(placed.widget.bindings ?? {})) {
-      const ref = binding.ref as HttpRef;
-      const paths = byConnector.get(binding.adapter) ?? new Map<string, HttpRef[]>();
-      byConnector.set(binding.adapter, paths);
-      paths.set(ref.path, [...(paths.get(ref.path) ?? []), ref]);
-    }
+  for (const name of Object.keys(pack.board.data ?? {})) {
+    const { adapter, ref: read } = dataReadOf(pack.board, name);
+    const ref = read as HttpRef;
+    const paths = byConnector.get(adapter) ?? new Map<string, HttpRef[]>();
+    byConnector.set(adapter, paths);
+    paths.set(ref.path, [...(paths.get(ref.path) ?? []), ref]);
   }
   return byConnector;
 }

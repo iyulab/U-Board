@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { BoardV2, Trigger } from '../board-v2/types.js';
+import type { Board, Trigger } from '../board/types.js';
 import { boardTriggerEditing } from './board-triggers.js';
 
 const triggers: Trigger[] = [
   { on: { event: 'click', part: 'card' }, when: { part: 'card', field: 'state', status: 'fault' }, do: [{ action: 'open-link', url: '/x/{{part}}/{{status}}' }, { action: 'focus', part: 'pump/P1' }] },
   { on: { event: 'enter', part: 'card', field: 'state', status: 'fault' }, do: [{ action: 'emit', name: 'fault' }] },
 ];
-const board: BoardV2 = { version: 2, statuses: { fault: { tone: 'alarm' }, ok: { tone: 'ok' } }, parts: {}, layout: { kind: 'grid', items: [] }, triggers };
+const board: Board = { statuses: { fault: { tone: 'alarm' }, ok: { tone: 'ok' } }, parts: {}, layout: { kind: 'grid', items: [] }, triggers };
 
 describe('boardTriggerEditing', () => {
   it('shows a board’s triggers in the first version’s words, with its statuses offered for any part', () => {

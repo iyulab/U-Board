@@ -1,15 +1,15 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import { recordAuditEvent } from './audit.js';
-import type { ViewKind } from '@iyulab/u-board/domain';
-import { emptyBoard } from '@iyulab/u-board/board-v2';
-import { documentKind, type BoardDocument } from '../board-document.js';
+import { emptyBoard, type Board } from '@iyulab/u-board/domain';
+import type { ViewKind } from '@iyulab/u-board/picture';
+import { documentKind } from '../board-document.js';
 
-export interface Board {
+export interface StoredBoard {
   id: string;
   workspaceId: string;
   name: string;
-  document: BoardDocument;
+  document: Board;
   createdAt: string;
   updatedAt: string;
   /** How many times the board has been saved, counting its creation as 1 — what a save names to say
@@ -27,7 +27,7 @@ interface BoardRow {
   revision: number;
 }
 
-function rowToBoard(row: BoardRow): Board {
+function rowToBoard(row: BoardRow): StoredBoard {
   return {
     id: row.id,
     workspaceId: row.workspace_id,
@@ -39,11 +39,11 @@ function rowToBoard(row: BoardRow): Board {
   };
 }
 
-/** Creates a board with no parts yet, in the board language's second version, laying out `kind` — a canvas unless told
+/** Creates a board with no parts yet, laying out `kind` — a canvas unless told
  *  otherwise. */
-export async function createBoard(db: DbClient, input: { workspaceId: string; name: string; actorUserId: string; kind?: ViewKind }): Promise<Board> {
+export async function createBoard(db: DbClient, input: { workspaceId: string; name: string; actorUserId: string; kind?: ViewKind }): Promise<StoredBoard> {
   const now = new Date().toISOString();
-  const board: Board = {
+  const board: StoredBoard = {
     id: randomUUID(),
     workspaceId: input.workspaceId,
     name: input.name,
@@ -67,36 +67,33 @@ export async function createBoard(db: DbClient, input: { workspaceId: string; na
   return board;
 }
 
-/** The workspace's boards, each with its kind — and, for one the move to the board language's second version left in
- *  the first (`board_migrations`, at its revision now), what keeps it there (`firstVersion`). */
+/** The workspace's boards, each with its kind. */
 export async function listBoardsForWorkspace(
   db: DbClient,
   workspaceId: string
-): Promise<Array<{ id: string; name: string; kind: ViewKind; updatedAt: string; firstVersion?: string[] }>> {
-  const { rows } = await db.query<{ id: string; name: string; kind: ViewKind; updated_at: string; kept: string[] | null }>(
-    `SELECT b.id, b.name, b.kind, b.updated_at, m.notes AS kept FROM boards b
-     LEFT JOIN board_migrations m ON m.board_id = b.id AND m.revision = b.revision AND m.outcome = 'kept'
-     WHERE b.workspace_id = $1`,
+): Promise<Array<{ id: string; name: string; kind: ViewKind; updatedAt: string }>> {
+  const { rows } = await db.query<{ id: string; name: string; kind: ViewKind; updated_at: string }>(
+    `SELECT id, name, kind, updated_at FROM boards WHERE workspace_id = $1`,
     [workspaceId]
   );
-  return rows.map(r => ({ id: r.id, name: r.name, kind: r.kind, updatedAt: r.updated_at, ...(r.kept ? { firstVersion: r.kept } : {}) }));
+  return rows.map(r => ({ id: r.id, name: r.name, kind: r.kind, updatedAt: r.updated_at }));
 }
 
-export async function findBoard(db: DbClient, workspaceId: string, boardId: string): Promise<Board | undefined> {
+export async function findBoard(db: DbClient, workspaceId: string, boardId: string): Promise<StoredBoard | undefined> {
   const { rows } = await db.query<BoardRow>(`SELECT * FROM boards WHERE id = $1 AND workspace_id = $2`, [boardId, workspaceId]);
   return rows[0] ? rowToBoard(rows[0]) : undefined;
 }
 
 /** A board by its id alone, whatever workspace holds it — for an address that names a board and a definition of it
  *  (`routes/element-frames.ts`), which grants nothing beyond what naming them takes. */
-export async function findBoardById(db: DbClient, boardId: string): Promise<Board | undefined> {
+export async function findBoardById(db: DbClient, boardId: string): Promise<StoredBoard | undefined> {
   const { rows } = await db.query<BoardRow>(`SELECT * FROM boards WHERE id = $1`, [boardId]);
   return rows[0] ? rowToBoard(rows[0]) : undefined;
 }
 
 /** What a save came to: the board as saved, no such board, or — when the save named the revision it was
  *  made against and the board has been saved since — the revision it is at now. */
-export type UpdateBoardResult = { board: Board } | { notFound: true } | { conflict: { revision: number } };
+export type UpdateBoardResult = { board: StoredBoard } | { notFound: true } | { conflict: { revision: number } };
 
 /** Saves a board's name and/or document. With `expectedRevision`, only if the board is still at that
  *  revision — checked and bumped in one statement, so two saves of the same copy cannot both succeed. */
@@ -104,7 +101,7 @@ export async function updateBoard(
   db: DbClient,
   workspaceId: string,
   boardId: string,
-  input: { name?: string; document?: BoardDocument },
+  input: { name?: string; document?: Board },
   expectedRevision?: number
 ): Promise<UpdateBoardResult> {
   const { rows } = await db.query<BoardRow>(

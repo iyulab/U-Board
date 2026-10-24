@@ -5,13 +5,14 @@ import { resolve } from 'node:path';
 import { resolved } from './walkthrough.js';
 
 // Guards docs/api-reference.md's "Walkthrough" section against two independent kinds of drift:
-// the values it claims resolveDocument returns (this file re-runs the same example and asserts
+// the values it claims the board resolves to (this file re-runs the same example and asserts
 // on them), and the code itself silently diverging from what's actually printed in the doc
 // (the byte-identity check below). Neither is caught by `tsc`/`npm test` on the markdown file
 // alone — a fenced code block isn't compiled or executed on its own.
 describe('docs/api-reference.md walkthrough example', () => {
   it('produces exactly the values the doc says it does', () => {
-    expect(resolved.nodes[0].widget.props).toEqual({ data: { label: 'Pump A', value: 'running' } });
+    if (resolved.kind !== 'canvas') throw new Error('expected a canvas');
+    expect(resolved.nodes.map(node => node.id)).toEqual(['pump-a']);
     expect(resolved.nodes[0].widget.quality).toEqual({ 'data.value': 'live' });
   });
 

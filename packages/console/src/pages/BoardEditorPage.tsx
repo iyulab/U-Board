@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { BoardAuthoring, BoardView, KO_LABELS, type AuthoringMode, type Adapter } from '@iyulab/u-board';
-import { documentKind, fromV1, isBoardV2, type BoardDocument } from '@iyulab/u-board/board-v2';
+import { BoardAuthoring, KO_LABELS, type AuthoringMode, type Adapter, type Board } from '@iyulab/u-board';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, apiClock, ApiError,
@@ -28,9 +27,8 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   // never finishes, in a browser where such code holds the whole page.
   const [searchParams] = useSearchParams();
   const scriptsOff = searchParams.get('scripts') === 'off';
-  // The board as stored — in either version of the board language; the editor draws it as any host does, through the
-  // workspace's data sources.
-  const [document, setDocument] = useState<BoardDocument | null>(null);
+  // The board as stored; the editor draws it as any host does, through the workspace's data sources.
+  const [document, setDocument] = useState<Board | null>(null);
   // The origins this installation lets a board's elements load from, as the server says with the board.
   const [elementOrigins, setElementOrigins] = useState<readonly string[]>([]);
   // Where the board's script elements' frames are served: the server says when each definition has an origin of its own.
@@ -155,13 +153,13 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       </div>
     );
 
-  function handleSave(doc: BoardDocument): Promise<void> {
+  function handleSave(doc: Board): Promise<void> {
     const save = saving.current.catch(() => {}).then(() => saveNow(doc));
     saving.current = save;
     return save;
   }
 
-  async function saveNow(doc: BoardDocument) {
+  async function saveNow(doc: Board) {
     try {
       const saved = await updateBoard(workspaceId, boardId!, { document: doc }, revision.current);
       revision.current = saved.revision;
@@ -237,9 +235,6 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   // The server serves the frames the board's script elements run in under this address — none while opened with scripts
   // off, so no element code runs.
   const elementFramesAt = scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`);
-  // A board still stored in the language's first version — one the move at start-up could not carry — is shown, not
-  // edited: a board is saved only in the second version. What keeps it there is said.
-  const keptFirst = isBoardV2(document) ? undefined : fromV1(document).unsupported;
 
   // Always the same slot, so a change of state never moves the editor.
   const saveStatus = hasUnsavedChanges ? (
@@ -287,51 +282,29 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         </Alert>
       )}
       {overwriteArmed && <Alert>저장하면 다른 사람이 그사이 저장한 내용을 내 변경으로 덮어씁니다.</Alert>}
-      {keptFirst && (
-        <p className="ub-editor-note" role="status">
-          이 보드는 보드 언어 1판으로 저장돼 있고 새 판으로 옮기지 못해 보기만 됩니다
-          {keptFirst.length > 0 && <> — 옮기지 못한 것: {keptFirst.join(', ')}</>}. 편집하려면 새 보드로 다시 만드세요(✦ AI
-          비서가 이 보드를 보고 새 보드에 그릴 수 있습니다).
-        </p>
-      )}
       <div className="ub-editor-body">
       <div className="ub-editor-canvas">
-        {isBoardV2(document) ? (
-          <BoardAuthoring
-            key={`${boardId}:${editorGeneration}`}
-            initialBoard={document}
-            initialMode={editorMode}
-            onModeChange={setEditorMode}
-            adapters={adapters}
-            sourceLabels={connectorLabels}
-            onDirtyChange={handleDirtyChange}
-            onSave={handleSave}
-            labels={EDITOR_LABELS}
-            clock={apiClock.now}
-            boardId={boardId}
-            onNavigate={handleNavigate}
-            elementOrigins={elementOrigins}
-            elementFrames={elementFramesAt}
-          />
-        ) : (
-          <BoardView
-            key={`${boardId}:${editorGeneration}`}
-            board={document}
-            adapters={adapters}
-            ariaLabel={boardName}
-            labels={EDITOR_LABELS}
-            clock={apiClock.now}
-            boardId={boardId}
-            onNavigate={handleNavigate}
-            elementOrigins={elementOrigins}
-            elementFrames={elementFramesAt}
-          />
-        )}
+      <BoardAuthoring
+          key={`${boardId}:${editorGeneration}`}
+          initialBoard={document}
+          initialMode={editorMode}
+          onModeChange={setEditorMode}
+          adapters={adapters}
+          sourceLabels={connectorLabels}
+          onDirtyChange={handleDirtyChange}
+          onSave={handleSave}
+          labels={EDITOR_LABELS}
+          clock={apiClock.now}
+          boardId={boardId}
+          onNavigate={handleNavigate}
+          elementOrigins={elementOrigins}
+          elementFrames={elementFramesAt}
+        />
       </div>
       {isAssistantOpen && (
         <AssistantPanel
           workspaceId={workspaceId}
-          board={{ id: boardId!, name: boardName, kind: documentKind(document) }}
+          board={{ id: boardId!, name: boardName, kind: document.layout.kind }}
           blocked={hasUnsavedChanges ? '저장하지 않은 편집이 있습니다 — 먼저 저장하면 비서가 그 위에 이어서 그립니다.' : undefined}
           lookSetting={{
             adapters,

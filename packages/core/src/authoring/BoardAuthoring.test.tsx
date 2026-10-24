@@ -4,13 +4,12 @@ import '@testing-library/jest-dom/vitest';
 import { BoardAuthoring } from './BoardAuthoring';
 import { PartPanel } from './PartPanel';
 import { StatusesPanel } from './StatusesPanel';
-import type { BoardV2 } from '../board-v2/types';
+import type { Board } from '../board/types';
 
 vi.mock('@canvas-kit/designer', () => ({ KonvaDesigner: () => <div data-testid="konva-designer" /> }));
 vi.mock('@canvas-kit/viewer', () => ({ Viewer: () => <div data-testid="viewer" /> }));
 
-const board: BoardV2 = {
-  version: 2,
+const board: Board = {
   data: {
     pumps: { from: 'plant', path: '/pumps', list: '/value', key: 'id', fields: { flow: { unit: 'm³/h' }, state: { state: 'raw' } } },
     totals: { from: 'plant', path: '/totals', fields: { count: {} } },
@@ -36,7 +35,7 @@ describe('PartPanel', () => {
 
   it('reads one item of a list by its key, and says when a part is made per item', () => {
     const onChange = vi.fn();
-    const listed: BoardV2 = { ...board, parts: { ...board.parts, p: { as: 'stat', of: 'pumps', show: 'flow' }, each: { as: 'stat', each: 'pumps', show: 'flow' } } };
+    const listed: Board = { ...board, parts: { ...board.parts, p: { as: 'stat', of: 'pumps', show: 'flow' }, each: { as: 'stat', each: 'pumps', show: 'flow' } } };
     const { unmount } = render(<PartPanel id="p" board={listed} onChange={onChange} />);
     fireEvent.change(screen.getByLabelText('Item (key)'), { target: { value: 'P1' } });
     expect(onChange).toHaveBeenLastCalledWith({ as: 'stat', of: 'pumps[P1]', show: 'flow' });
@@ -51,13 +50,12 @@ describe('PartPanel', () => {
 describe('BoardAuthoring', () => {
   it('adds a part — on a canvas placed at its top left, in a grid last — titled, and of a kind that reads no data', async () => {
     const onSave = vi.fn();
-    const { unmount } = render(<BoardAuthoring initialBoard={{ version: 2, parts: {}, layout: { kind: 'canvas', size: [800, 400], place: {} } }} adapters={[]} onSave={onSave} />);
+    const { unmount } = render(<BoardAuthoring initialBoard={{ parts: {}, layout: { kind: 'canvas', size: [800, 400], place: {} } }} adapters={[]} onSave={onSave} />);
     fireEvent.click(screen.getByRole('button', { name: 'Add part' }));
     fireEvent.click(screen.getByRole('button', { name: 'Add part' }));
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
     expect(onSave.mock.calls[0]![0]).toEqual({
-      version: 2,
       parts: { 'part-1': { as: 'label', title: 'New part' }, 'part-2': { as: 'label', title: 'New part' } },
       layout: { kind: 'canvas', size: [800, 400], place: { 'part-1': [40, 40, 160, 60], 'part-2': [64, 64, 160, 60] } },
     });
@@ -73,7 +71,7 @@ describe('BoardAuthoring', () => {
 
   it('opens a grid’s canvas cell in the canvas editor — a part added there placed on the cell — and goes back to the grid', async () => {
     const onSave = vi.fn();
-    const withCell: BoardV2 = { ...board, layout: { kind: 'grid', items: ['head', { canvas: { size: [400, 200], place: {} }, span: 8 }] } };
+    const withCell: Board = { ...board, layout: { kind: 'grid', items: ['head', { canvas: { size: [400, 200], place: {} }, span: 8 }] } };
     render(<BoardAuthoring initialBoard={withCell} adapters={[]} onSave={onSave} />);
     fireEvent.click(screen.getByRole('button', { name: /^2\. / }));
     fireEvent.click(await screen.findByRole('button', { name: 'Edit canvas' }));
@@ -90,7 +88,7 @@ describe('BoardAuthoring', () => {
 
   it('opens the grid a cell holds from one of its items — ordered there, written back into the cell — the item not laid out alone outside', async () => {
     const onSave = vi.fn();
-    const stacked: BoardV2 = {
+    const stacked: Board = {
       ...board,
       parts: { ...board.parts, a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' } },
       layout: { kind: 'grid', items: [['head', 8], { grid: [['a', 6], ['b', 6]], span: 4 }] },
@@ -122,7 +120,7 @@ describe('BoardAuthoring', () => {
   });
 
   it('lays out a part per item of a list the board reads through its adapters, which it reads the items with', async () => {
-    const each: BoardV2 = { ...board, parts: { pump: { as: 'stat', each: 'pumps', show: 'flow' } }, layout: { kind: 'grid', items: ['pump'] } };
+    const each: Board = { ...board, parts: { pump: { as: 'stat', each: 'pumps', show: 'flow' } }, layout: { kind: 'grid', items: ['pump'] } };
     const resolve = vi.fn(async () => ({ value: [{ id: 'P1', flow: 1 }, { id: 'P2', flow: 2 }], quality: 'live' as const }));
     const { container } = render(<BoardAuthoring initialBoard={each} adapters={[{ id: 'plant', resolve }]} />);
     await waitFor(() => expect([...container.querySelectorAll<HTMLElement>('[data-item-id]')].map(item => item.dataset.itemId)).toEqual(['pump/P1', 'pump/P2']));
@@ -161,7 +159,7 @@ describe('BoardAuthoring', () => {
     const saved = async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Save' }));
       await waitFor(() => expect(onSave).toHaveBeenCalled());
-      const last = onSave.mock.calls.at(-1)![0] as BoardV2;
+      const last = onSave.mock.calls.at(-1)![0] as Board;
       onSave.mockClear();
       return last;
     };
@@ -195,7 +193,7 @@ describe('BoardAuthoring', () => {
 });
 
 describe('PartPanel — its kind’s options', () => {
-  const listed: BoardV2 = { ...board, parts: { rows: { as: 'list', of: 'pumps', show: 'flow', state: 'state', meter: { field: 'flow' } } } as BoardV2['parts'] };
+  const listed: Board = { ...board, parts: { rows: { as: 'list', of: 'pumps', show: 'flow', state: 'state', meter: { field: 'flow' } } } as Board['parts'] };
 
   it('sets the options the board reads itself by a field’s name, and the widget’s with their own controls', () => {
     const onChange = vi.fn();

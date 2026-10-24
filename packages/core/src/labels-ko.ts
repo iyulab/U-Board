@@ -4,7 +4,7 @@ import '@iyulab/u-widgets/locales/ko';
 import { timeText, type UBoardLabels } from './labels.js';
 import { ageText } from './quality-text.js';
 
-/** Every label in Korean — what `AuthoringView` and `ViewerPage` show when given `labels: KO_LABELS`,
+/** Every label in Korean — what `BoardAuthoring`, `BoardView` and `ViewerPage` show when given `labels: KO_LABELS`,
  *  with times of day and ages in Korean too (`timeText('ko')`, `ageText('ko')`), and the widgets'
  *  own text and names in Korean. */
 export const KO_LABELS: UBoardLabels = {

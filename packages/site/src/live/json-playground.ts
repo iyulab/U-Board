@@ -4,7 +4,7 @@
 
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ViewerPage, KO_LABELS } from '@iyulab/u-board/viewer';
+import { BoardView, KO_LABELS } from '@iyulab/u-board/viewer';
 import '@iyulab/u-board/styles.css';
 import { SnapshotAdapter } from '@iyulab/u-board-samples/lazy';
 import { readPlayground, type Problem } from './json-playground-model';
@@ -44,13 +44,13 @@ if (root) {
   const draw = () => {
     const reading = readPlayground(definition.value, data.value);
     showProblems(reading.problems);
-    if (!reading.document || !reading.data) return;
-    const { document: board, data: answers } = reading;
+    if (!reading.board || !reading.data) return;
+    const { board, data: answers } = reading;
     revision++;
     view.render(
-      createElement(ViewerPage, {
+      createElement(BoardView, {
         key: revision,
-        document: board,
+        board,
         adapters: answers.connectors.map(c => new SnapshotAdapter(c, answers.responses[c.key] ?? {}, answers.capturedAt)),
         labels: korean ? KO_LABELS : undefined,
       })

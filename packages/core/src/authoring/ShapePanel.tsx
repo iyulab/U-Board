@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { ERROR_STYLE, FIELD_STYLE } from '../ui-style.js';
-import { TONES, type BoardV2, type Shape, type Tone } from '../board-v2/types.js';
-import type { BoardFinding } from '../board-v2/check.js';
+import { TONES, type Board, type Shape, type Tone } from '../board/types.js';
+import type { BoardFinding } from '../board/check.js';
 
 export interface ShapePanelProps {
   id: string;
-  board: BoardV2;
+  board: Board;
   /** The shape as the panel made it. */
   onChange: (shape: Shape) => void;
   findings?: readonly BoardFinding[];
@@ -61,7 +61,7 @@ function LineFields({ shape, onChange, labels }: { shape: Shape; onChange: (shap
 }
 
 /**
- * The panel of a shape of a canvas board in the language's second version — a frame (a box, with a label at its top),
+ * The panel of a shape of a canvas board — a frame (a box, with a label at its top),
  * a text, or a line or a path: its words (a line's points, a path's drawing), its tone, and a frame's or a line's line or
  * a text's size. Where it is and how large is set on the canvas. A
  * setting left empty goes from the shape.

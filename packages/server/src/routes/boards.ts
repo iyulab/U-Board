@@ -8,8 +8,8 @@ import { requireWorkspaceMember } from '../middleware/require-workspace-role.js'
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from '../db/boards.js';
 import { elementFramesAddress } from '../element-frame.js';
 import { listConnectorsForWorkspace } from '../db/connectors.js';
-import { documentAdvice, documentIssues, documentKind, type BoardDocument } from '../board-document.js';
-import { isBoardV2, pictureOf } from '@iyulab/u-board/board-v2';
+import { documentAdvice, documentIssues, documentKind } from '../board-document.js';
+import { pictureOf, type Board } from '@iyulab/u-board/domain';
 import type { ResolveState } from '../resolve-connector.js';
 import { upstreamReader } from '../upstream-reader.js';
 
@@ -74,9 +74,9 @@ export function createBoardsRouter(config: AppConfig, resolveState: ResolveState
         id: board.id,
         name: board.name,
         document: board.document,
-        // A board in the language's second version comes with the picture its viewers draw it from — the one the share
-        // route answers, made here so every page shows a board the same way.
-        ...(isBoardV2(board.document) && { picture: await pictureOf(board.document, upstreamReader(config, resolveState, workspaceId)) }),
+        // With the picture its viewers draw it from — the one the share route answers, made here so every page shows a
+        // board the same way.
+        picture: await pictureOf(board.document, upstreamReader(config, resolveState, workspaceId)),
         updatedAt: board.updatedAt,
         revision: board.revision,
         elementOrigins: config.elementOrigins ?? [],
@@ -96,16 +96,14 @@ export function createBoardsRouter(config: AppConfig, resolveState: ResolveState
     if (change.document !== undefined) {
       // The API is a boundary like file import: a document stored here is later trusted by the
       // console, the share routes and the viewer, so every structural problem is refused now and
-      // named (capped — a wholly wrong body would otherwise answer with one issue per field). A document in the board
-      // language's second version says so (`"version": 2`) and is checked by it; one without a version is a
-      // first-version view document.
+      // named (capped — a wholly wrong body would otherwise answer with one issue per field).
       const issues = documentIssues(change.document);
       if (issues.length > 0) {
         res.status(400).json({ code: 'INVALID_DOCUMENT', issues: issues.slice(0, MAX_REPORTED_ISSUES) });
         return;
       }
     }
-    const document = change.document as BoardDocument | undefined;
+    const document = change.document as Board | undefined;
     const result = await updateBoard(db, workspaceId, boardId, { name: change.name, document }, expectedRevision);
     if ('notFound' in result) {
       res.status(404).json({ code: 'NOT_FOUND' });

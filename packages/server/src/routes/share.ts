@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from 'express';
-import { bindingsIn, boardStateOf, resolveDocument, type Adapter, type ViewDocument } from '@iyulab/u-board/domain';
+import { type Adapter } from '@iyulab/u-board/domain';
+import { bindingsIn, boardStateOf, resolveDocument, type ViewDocument } from '@iyulab/u-board/picture';
 import type { AppConfig } from '../app.js';
 import { findBoard } from '../db/boards.js';
 import { findConnector } from '../db/connectors.js';
@@ -13,8 +14,7 @@ import { DISCONNECTED, upstreamReader as readerFor, type UpstreamReader } from '
 import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { Connector } from '../db/connectors.js';
 import { elementFramesAddress } from '../element-frame.js';
-import { isBoardV2 } from '@iyulab/u-board/board-v2';
-import { pictureOf } from '@iyulab/u-board/board-v2';
+import { pictureOf } from '@iyulab/u-board/domain';
 
 /** Upper bound on one batch resolve request. A board's own bindings are the only entries that
  * resolve, so this only bounds the work a malformed or hostile request can make the server do. */
@@ -129,12 +129,12 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
       res.status(304).end();
       return;
     }
-    // A board in the language's second version travels as it is stored, with the picture the viewer draws it from.
+    // The board travels as it is stored, with the picture the viewer draws it from.
     const picture = await pictureOf(board.document, upstreamReader(token.workspaceId));
     res.status(200).json({
       name: board.name,
       document: board.document,
-      ...(isBoardV2(board.document) && { picture }),
+      picture,
       revision: board.revision,
       elementOrigins: config.elementOrigins ?? [],
       ...(config.elementFrameOrigin && { elementFrames: elementFramesAddress(config.elementFrameOrigin, boardId) }),
@@ -144,7 +144,7 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
 
   const upstreamReader = (workspaceId: string) => readerFor(config, resolveState, workspaceId);
 
-  /** Reads one of a board’s bindings for a request — only one the view document it is drawn from declares
+  /** Reads one of a board’s bindings for a request — only one the picture it is drawn from declares
    *  (`isDeclaredBinding`); anything else answers `disconnected` without calling an upstream. */
   const bindingReader = (read: UpstreamReader, document: ViewDocument) =>
     async (connectorId: string, ref: unknown): Promise<ResolvedBinding> =>

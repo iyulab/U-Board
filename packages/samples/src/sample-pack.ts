@@ -1,5 +1,6 @@
 import type { Domain, Style } from './tags.js';
-import type { Attribution, SourceErrorField, ViewDocument } from '@iyulab/u-board/domain';
+import type { Attribution, Board } from '@iyulab/u-board/domain';
+import type { SourceErrorField } from '@iyulab/u-board/picture';
 
 /** Text in each language the site and the console speak. */
 export interface Localized {
@@ -91,6 +92,6 @@ export interface SamplePack {
   styles: readonly Style[];
   summary: Localized;
   connectors: SampleConnector[];
-  document: ViewDocument;
+  board: Board;
   snapshot: SampleSnapshot;
 }

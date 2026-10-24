@@ -107,14 +107,14 @@ describe('board endpoints', () => {
   });
 
   it('getBoard GETs /workspaces/:id/boards/:boardId', async () => {
-    const doc = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
+    const doc = { parts: {}, layout: { kind: 'canvas' as const, size: [400, 300] as [number, number], place: {} } };
     (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ id: 'b1', name: 'A', document: doc, updatedAt: 't' }) });
     await expect(getBoard('w1', 'b1')).resolves.toEqual({ id: 'b1', name: 'A', document: doc, updatedAt: 't' });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ credentials: 'same-origin' }));
   });
 
   it('updateBoard PUTs the given fields', async () => {
-    const doc = { kind: 'canvas' as const, background: {}, nodes: [], connectors: [] };
+    const doc = { parts: {}, layout: { kind: 'canvas' as const, size: [400, 300] as [number, number], place: {} } };
     (fetch as any).mockResolvedValueOnce({ ok: true, headers: new Headers(), status: 200, json: async () => ({ id: 'b1', name: 'A', updatedAt: 't2' }) });
     await expect(updateBoard('w1', 'b1', { document: doc })).resolves.toEqual({ id: 'b1', name: 'A', updatedAt: 't2' });
     expect(fetch).toHaveBeenCalledWith('/api/workspaces/w1/boards/b1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ document: doc }) }));

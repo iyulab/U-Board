@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { elementDefinitionHash, elementFrameLabel, type ElementDefinition } from '@iyulab/u-board/domain';
+import { elementDefinitionHash, elementFrameLabel } from '@iyulab/u-board/picture';
 import type { AppConfig } from '../app.js';
 import { findBoardById } from '../db/boards.js';
 import { frameHostLabel, sendElementFrame } from '../element-frame.js';
-import { elementDefinition, isBoardV2 } from '@iyulab/u-board/board-v2';
+import { elementDefinition } from '@iyulab/u-board/domain';
 
 /**
  * The frames script elements run in: `GET /api/element-frames/:boardId/:name/:hash`. The address names the definition
@@ -26,15 +26,11 @@ export function createElementFramesRouter(config: AppConfig): Router {
   router.get('/:boardId/:name/:hash', async (req, res) => {
     const { boardId, name, hash } = req.params;
     const board = await findBoardById(db, boardId);
-    // A board in the second version defines its elements in its language; the frame serves the definition its picture
-    // draws (`elementDefinition`), which is the one the asking page hashed.
-    const document = board?.document;
-    const own = <T,>(elements: Record<string, T> | undefined) => (elements !== undefined && Object.hasOwn(elements, name) ? elements[name] : undefined);
-    let definition: ElementDefinition | undefined;
-    if (document !== undefined && isBoardV2(document)) {
-      const defined = own(document.elements);
-      definition = defined && elementDefinition(defined);
-    } else definition = own(document?.elements);
+    // The frame serves the definition the board's picture draws (`elementDefinition`), which is the one the asking page
+    // hashed.
+    const elements = board?.document.elements;
+    const defined = elements !== undefined && Object.hasOwn(elements, name) ? elements[name] : undefined;
+    const definition = defined && elementDefinition(defined);
     const label = config.elementFrameOrigin ? frameHostLabel(config.elementFrameOrigin, req.headers.host) : undefined;
     if (!definition || (await elementDefinitionHash(definition)) !== hash || (label !== undefined && label !== elementFrameLabel(hash))) {
       res.status(404).json({ code: 'NOT_FOUND' });

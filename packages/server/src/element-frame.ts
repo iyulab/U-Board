@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Response } from 'express';
-import { elementFrameHtml, elementFrameScripts, type ElementDefinition } from '@iyulab/u-board/domain';
+import { elementFrameHtml, elementFrameScripts, type ElementDefinition } from '@iyulab/u-board/picture';
 import { guardLoops } from './loop-guard.js';
 
 /**

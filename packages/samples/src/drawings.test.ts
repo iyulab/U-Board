@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { isCanvasItem, type CanvasView } from '@iyulab/u-board/domain';
+import { toViewDocument } from '@iyulab/u-board/domain';
+import { isCanvasItem, type CanvasView, type ViewDocument } from '@iyulab/u-board/picture';
 import { SAMPLE_PACKS } from './index.js';
 
 // A drawing that is not well-formed XML — an attribute written twice, an unescaped `&` — is dropped by the browser
 // without a word, and the board shows its nodes over nothing.
 
-const canvasesOf = (document: (typeof SAMPLE_PACKS)[number]['document']): CanvasView[] =>
+const canvasesOf = (document: ViewDocument): CanvasView[] =>
   document.kind === 'canvas' ? [document] : document.items.filter(isCanvasItem).map(item => ({ kind: 'canvas', ...item.canvas }));
 
 /** The SVG text of a `data:image/svg+xml` image, or nothing for any other image. */
@@ -18,7 +19,8 @@ function svgOf(src: string): string | undefined {
 }
 
 const drawn = SAMPLE_PACKS.flatMap(pack =>
-  canvasesOf(pack.document).flatMap(canvas => {
+  // Backgrounds do not depend on the items a list has.
+  canvasesOf(toViewDocument(pack.board, { keysOf: () => [] })).flatMap(canvas => {
     const svg = canvas.background.image && svgOf(canvas.background.image.src);
     return svg === undefined ? [] : [[pack.id, svg] as const];
   }),

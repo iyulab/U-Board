@@ -9,8 +9,8 @@ describe('index entry (".")', () => {
     expect('FixtureAdapter' in mod).toBe(false);
   });
 
-  it('still re-exports the authoring surface', () => {
-    expect(typeof mod.AuthoringView).toBe('function');
-    expect(typeof mod.resolveDocument).toBe('function');
+  it('re-exports the authoring surface and the board language', () => {
+    expect(typeof mod.BoardAuthoring).toBe('function');
+    expect(typeof mod.checkBoard).toBe('function');
   });
 });

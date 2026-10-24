@@ -1,16 +1,16 @@
 import { useId, useMemo, type ReactNode } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { FIELD_STYLE } from '../ui-style.js';
-import { PART_KINDS, partKind } from '../board-v2/kinds.js';
+import { PART_KINDS, partKind } from '../board/kinds.js';
 import { widgetFields } from './widget-fields.js';
 import { FieldControl } from './WidgetPropsForm.js';
-import type { BoardFinding } from '../board-v2/check.js';
-import type { BoardV2, Part } from '../board-v2/types.js';
+import type { BoardFinding } from '../board/check.js';
+import type { Board, Part } from '../board/types.js';
 
 export interface PartPanelProps {
   /** The part's id in the board's `parts`. */
   id: string;
-  board: BoardV2;
+  board: Board;
   /** Replaces the part with what the panel made of it. */
   onChange: (part: Part) => void;
   /** What the board's check finds at this part — shown under it, where it is fixed. */
@@ -25,7 +25,7 @@ const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
 
 /**
- * The panel of a part of a board in the language's second version: its title, its kind, what it reads (a data read,
+ * The panel of a part of a board: its title, its kind, what it reads (a data read,
  * and one item of it by key), which fields it shows, then its kind's options — those the board reads itself (a field's
  * name, offered from what the part reads; one written as a structure is shown, and set by the assistant or the JSON),
  * and the widget's, with the controls the widget library describes. A setting left empty goes from the part, so the
@@ -168,7 +168,7 @@ export function PartPanel({ id, board, onChange, findings = [], triggers, labels
 
 interface ElementPartFieldsProps {
   part: Part;
-  board: BoardV2;
+  board: Board;
   onChange: (part: Part) => void;
   labels: UBoardLabels;
   fieldList: string | undefined;

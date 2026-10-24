@@ -15,7 +15,7 @@ test('adds a text and a frame to a canvas, selects each by clicking it, names th
   await page.getByRole('button', { name: '생성' }).click();
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
 
-  // A text added to the new (second-version) canvas at its top left, (20, 20), and a frame cascaded to (44, 44) at
+  // A text added to the new canvas at its top left, (20, 20), and a frame cascaded to (44, 44) at
   // 240×160. Undo takes the frame away again, Redo (Ctrl+Shift+Z) brings it back. The canvas draws a piece back a
   // moment later, and under load a click before that lands on nothing: click the text until it selects it.
   await page.getByRole('button', { name: '글 추가' }).click();

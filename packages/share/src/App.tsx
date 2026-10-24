@@ -8,10 +8,10 @@ type LoadedState = { name: string; document: ViewDocument; adapters: readonly Ad
 
 type BoardBody = {
   name: string;
-  /** The board as stored — a first-version view document, or a board in the language's second version. */
+  /** The board as stored. */
   document: unknown;
-  /** The view document a second-version board is drawn from, made by the server with its data's items as they are. */
-  picture?: ViewDocument;
+  /** The picture the board is drawn from, made by the server with its data's items as they are. */
+  picture: ViewDocument;
   revision?: number;
   /** The origins this installation lets the board's elements load from. */
   elementOrigins?: string[];
@@ -125,7 +125,7 @@ export function App() {
       });
       const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id, body.attributions?.[id], body.samples?.includes(id)));
       shown.current.revision = body.revision;
-      setState({ name: body.name, document: body.picture ?? (body.document as ViewDocument), adapters, revision: body.revision, elementOrigins: body.elementOrigins ?? [], elementFrames: body.elementFrames ?? `${API_BASE}/element-frames/${encodeURIComponent(boardId)}` });
+      setState({ name: body.name, document: body.picture, adapters, revision: body.revision, elementOrigins: body.elementOrigins ?? [], elementFrames: body.elementFrames ?? `${API_BASE}/element-frames/${encodeURIComponent(boardId)}` });
     };
     read()
       .then(async res => {

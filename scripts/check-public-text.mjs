@@ -85,8 +85,11 @@ export function scanText(path, text, allow) {
       if (skipInIgnoreFiles && ignoreFile) continue;
       for (const m of lineText.matchAll(re)) found.push({ at: m.index, rule, match: m[0].trim() });
     }
+    // Hosts are read from the line as a URL means it: a percent-encoded one (a `data:` URI's own markup, a query
+    // value) names its host only once decoded, and would otherwise hide it or be read as a fragment of it.
+    const plain = lineText.replace(/%[0-9A-Fa-f]{2}/g, hex => String.fromCharCode(parseInt(hex.slice(1), 16)));
     const urlSpans = [];
-    for (const m of lineText.matchAll(URL_HOST)) {
+    for (const m of plain.matchAll(URL_HOST)) {
       urlSpans.push([m.index, m.index + m[0].length]);
       const host = m[1];
       if (!hostAllowed(host, allow)) {
@@ -96,7 +99,7 @@ export function scanText(path, text, allow) {
         if (repo && !allow.githubRepos.has(repo)) found.push({ at: m.index, rule: 'github-repo', match: repo });
       }
     }
-    for (const m of lineText.matchAll(BARE_HOST)) {
+    for (const m of plain.matchAll(BARE_HOST)) {
       if (urlSpans.some(([start, end]) => m.index >= start && m.index < end)) continue; // already checked as a URL
       if (!hostAllowed(m[0], allow)) found.push({ at: m.index, rule: 'host', match: m[0] });
     }

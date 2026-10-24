@@ -1,5 +1,5 @@
 import { getByPointer } from '@iyulab/u-board/domain';
-import { boardV2Rulebook, boardV2Schema, partKind, PART_KINDS } from '@iyulab/u-board/board-v2';
+import { boardRulebook, boardSchema, partKind, PART_KINDS } from '@iyulab/u-board/domain';
 import { getWidgetOptions } from '@iyulab/u-widgets/tools';
 
 /** The topics `describe` answers, each in one line — what an assistant reads first. */
@@ -38,11 +38,11 @@ const WORKFLOW = `# Changing boards with these tools
 
 /** The rules: how the tools change a board, then the board language itself — generated from its schema and kinds. */
 function rules(): string {
-  return `${WORKFLOW}\n\n${boardV2Rulebook()}`;
+  return `${WORKFLOW}\n\n${boardRulebook()}`;
 }
 
 function schemaPart(pointer: string): unknown {
-  const schema = boardV2Schema();
+  const schema = boardSchema();
   try {
     return getByPointer(schema, pointer);
   } catch {
@@ -96,7 +96,7 @@ function kindDetail(name: string): unknown {
 export function describeTopic(topic: string | undefined, pointer: string | undefined): unknown {
   if (!topic) return { topics: TOPICS, start: 'describe({ topic: "rules" })' };
   if (topic === 'rules') return rules();
-  if (topic === 'schema') return pointer ? schemaPart(pointer) : boardV2Schema();
+  if (topic === 'schema') return pointer ? schemaPart(pointer) : boardSchema();
   if (topic.startsWith('kind:')) return kindDetails(topic.slice('kind:'.length));
   throw new Error(`no topic "${topic}" — one of ${Object.keys(TOPICS).join(', ')}`);
 }

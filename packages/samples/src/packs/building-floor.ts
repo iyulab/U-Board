@@ -1,225 +1,381 @@
-import type { Binding, CanvasView, ElementDefinition, Node, Shape } from '@iyulab/u-board/domain';
-import type { ExampleSampleConnector, SamplePack } from '../sample-pack.js';
-import { escapeXml, svgDataUrl } from '../frame.js';
-import { snapshot } from '../snapshots/building-floor.js';
-
 // One floor of an office building drawn from above, each zone painted by its air: quiet while the temperature is within
 // the comfort range (20–26 °C), blue below it, amber above, red past 28 °C — with the power the zone draws and its CO₂,
 // marked past 1,000 ppm (the indoor air standard most building codes hold offices to). Beside it the building: today's
 // energy per floor, the demand now against the contracted peak, the air outside. No public source carries a building's
 // zones, so the values are example data written for the board.
 
-const WIDTH = 1280;
-const HEIGHT = 800;
+import type { Board } from '@iyulab/u-board/domain';
+import type { SamplePack } from '../sample-pack.js';
+import { snapshot } from '../snapshots/building-floor.js';
 
-export const BEMS: ExampleSampleConnector = {
-  key: 'bems',
-  name: '예시 BEMS API',
-  example: true,
-  attribution: { text: '예시 데이터 — 실제 건물이 아닙니다' },
-};
-
-/** The meters and sensors report every five minutes; fifteen without one is a source that has stopped. */
-const MAX_AGE_SECONDS = 15 * 60;
-
-const bindZone = (id: string, field: string, map?: Binding['map']): Binding => ({
-  adapter: BEMS.key,
-  ref: { path: '/floor/3/zones', item: { list: '/value', where: { id } }, valuePath: `/${field}`, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-  ...(map ? { map } : {}),
-});
-
-const bindBuilding = (valuePath: string): Binding => ({
-  adapter: BEMS.key,
-  ref: { path: '/building/summary', valuePath, observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS },
-});
-
-/** Comfort: 20–26 °C quiet; below, above, and past 28 °C each a colour. */
-const TEMPERATURE_BAND = { ranges: [{ min: 28, value: 'hot' }, { min: 26, value: 'warm' }, { min: 20, value: 'ok' }], otherwise: 'cold' };
-/** CO₂ past 1,000 ppm — the room needs more outside air. */
-const AIR_BAND = { ranges: [{ min: 1000, value: 'stuffy' }], otherwise: 'fresh' };
-
-const zone: ElementDefinition = {
-  render: 'template',
-  props: {
-    type: 'object',
-    required: ['name', 'temp', 'band', 'kw', 'co2', 'air'],
-    properties: {
-      name: { type: 'string' },
-      temp: { type: 'number', description: 'Air temperature, °C.' },
-      band: { enum: ['cold', 'ok', 'warm', 'hot'] },
-      kw: { type: 'number', minimum: 0, description: 'Power the zone draws, kW.' },
-      co2: { type: 'number', minimum: 0, description: 'CO₂, ppm.' },
-      air: { enum: ['fresh', 'stuffy'] },
-    },
+const board: Board = {
+  "elements": {
+    "zone": {
+      "template": "<div class=\"zone {{band}} {{air}}\" role=\"img\" aria-label=\"{{name}} {{temp}}°C, {{kw}} kW, CO₂ {{co2}} ppm\">\n  <b>{{name}}</b>\n  <span class=\"t\">{{temp | fixed:1}}<small>°C</small></span>\n  <span class=\"m\">{{kw | fixed:1}} kW · <span class=\"co2\">CO₂ {{co2}} ppm</span></span>\n</div>",
+      "style": ".zone{box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;\npadding:6px;border:2px solid var(--c);border-radius:6px;background:color-mix(in srgb, var(--c) 14%, transparent);\nfont-family:var(--u-widget-font-family);color:var(--u-widget-text);--c:var(--u-widget-border)}\nb{font-size:13px;font-weight:600;color:var(--u-widget-text-secondary)}\n.t{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}\n.t small{font-size:12px;font-weight:500;color:var(--u-widget-text-secondary)}\n.m{font-size:12px;color:var(--u-widget-text-secondary);font-variant-numeric:tabular-nums}\n.cold{--c:var(--u-widget-primary)}\n.warm{--c:var(--u-widget-warning)}\n.hot{--c:var(--u-widget-negative)}\n.cold .t,.warm .t,.hot .t{color:var(--c)}\n.stuffy .co2{color:var(--u-widget-negative);font-weight:600}",
+      "props": {
+        "name": "string",
+        "temp": "number",
+        "band": "string",
+        "kw": "number",
+        "co2": "number",
+        "air": "string"
+      }
+    }
   },
-  template: `<div class="zone {{band}} {{air}}" role="img" aria-label="{{name}} {{temp}}°C, {{kw}} kW, CO₂ {{co2}} ppm">
-  <b>{{name}}</b>
-  <span class="t">{{temp | fixed:1}}<small>°C</small></span>
-  <span class="m">{{kw | fixed:1}} kW · <span class="co2">CO₂ {{co2}} ppm</span></span>
-</div>`,
-  style: `.zone{box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-padding:6px;border:2px solid var(--c);border-radius:6px;background:color-mix(in srgb, var(--c) 14%, transparent);
-font-family:var(--u-widget-font-family);color:var(--u-widget-text);--c:var(--u-widget-border)}
-b{font-size:13px;font-weight:600;color:var(--u-widget-text-secondary)}
-.t{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
-.t small{font-size:12px;font-weight:500;color:var(--u-widget-text-secondary)}
-.m{font-size:12px;color:var(--u-widget-text-secondary);font-variant-numeric:tabular-nums}
-.cold{--c:var(--u-widget-primary)}
-.warm{--c:var(--u-widget-warning)}
-.hot{--c:var(--u-widget-negative)}
-.cold .t,.warm .t,.hot .t{color:var(--c)}
-.stuffy .co2{color:var(--u-widget-negative);font-weight:600}`,
-  size: { width: 200, height: 160 },
-};
-
-/** The zones of the third floor, laid out around the core (lifts, stairs, toilets) in the middle. */
-const ZONES = [
-  { id: 'open-a', name: '오픈 오피스 A', x: 52, y: 100, width: 420, height: 230 },
-  { id: 'open-b', name: '오픈 오피스 B', x: 484, y: 100, width: 444, height: 230 },
-  { id: 'meet-1', name: '회의실 1', x: 52, y: 342, width: 200, height: 176 },
-  { id: 'it', name: '전산실', x: 576, y: 342, width: 160, height: 176 },
-  { id: 'meet-2', name: '회의실 2', x: 748, y: 342, width: 180, height: 176 },
-  { id: 'lounge', name: '라운지', x: 52, y: 530, width: 300, height: 218 },
-  { id: 'open-c', name: '오픈 오피스 C', x: 364, y: 530, width: 564, height: 218 },
-];
-const CORE = { x: 264, y: 342, width: 300, height: 176 };
-
-function zoneNode({ id, name, x, y, width, height }: (typeof ZONES)[number]): Node {
-  return {
-    id: `zone-${id}`,
-    x,
-    y,
-    width,
-    height,
-    anchored: true,
-    widget: {
-      type: 'element:zone',
-      props: { name, temp: 0, band: 'ok', kw: 0, co2: 0, air: 'fresh' },
-      bindings: {
-        temp: bindZone(id, 'tempC'),
-        band: bindZone(id, 'tempC', TEMPERATURE_BAND),
-        kw: bindZone(id, 'kw'),
-        co2: bindZone(id, 'co2Ppm'),
-        air: bindZone(id, 'co2Ppm', AIR_BAND),
+  "data": {
+    "zones": {
+      "from": "bems",
+      "path": "/floor/3/zones",
+      "list": "/value",
+      "key": "id",
+      "time": "updatedAt",
+      "fresh": 900,
+      "fields": {
+        "tempC": {},
+        "tempC-2": {
+          "names": [
+            "cold",
+            20,
+            "ok",
+            26,
+            "warm",
+            28,
+            "hot"
+          ],
+          "at": "/tempC"
+        },
+        "kw": {},
+        "co2Ppm": {},
+        "co2Ppm-2": {
+          "names": [
+            "fresh",
+            1000,
+            "stuffy"
+          ],
+          "at": "/co2Ppm"
+        }
+      }
+    },
+    "summary": {
+      "from": "bems",
+      "path": "/building/summary",
+      "time": "updatedAt",
+      "fresh": 900,
+      "fields": {
+        "demandKw": {
+          "unit": "kW"
+        },
+        "todayKwh": {
+          "label": "오늘 사용량",
+          "unit": "kWh"
+        },
+        "outdoorC": {
+          "label": "외기 온도",
+          "unit": "°C"
+        }
+      }
+    },
+    "floors": {
+      "from": "bems",
+      "path": "/building/floors",
+      "list": "/value",
+      "fresh": 900,
+      "answerTime": "/updatedAt"
+    }
+  },
+  "parts": {
+    "zone-open-a": {
+      "as": "element",
+      "element": "zone",
+      "of": "zones[open-a]",
+      "props": {
+        "name": "오픈 오피스 A"
       },
+      "bind": {
+        "temp": "tempC",
+        "band": "tempC-2",
+        "kw": "kw",
+        "co2": "co2Ppm",
+        "air": "co2Ppm-2"
+      }
     },
-  };
-}
-
-const SIDE_X = 980;
-const SIDE: Node[] = [
-  {
-    id: 'demand',
-    x: SIDE_X,
-    y: 100,
-    width: 270,
-    height: 150,
-    anchored: false,
-    widget: {
-      type: 'gauge',
-      props: {
-        data: { value: 0 },
-        options: { min: 0, max: 600, unit: 'kW', subtitle: '지금 수요 전력', thresholds: [{ to: 480, color: 'green' }, { to: 560, color: 'yellow' }, { to: 600, color: 'red' }] },
+    "zone-open-b": {
+      "as": "element",
+      "element": "zone",
+      "of": "zones[open-b]",
+      "props": {
+        "name": "오픈 오피스 B"
       },
-      bindings: { 'data.value': bindBuilding('/demandKw') },
+      "bind": {
+        "temp": "tempC",
+        "band": "tempC-2",
+        "kw": "kw",
+        "co2": "co2Ppm",
+        "air": "co2Ppm-2"
+      }
     },
-  },
-  {
-    id: 'today',
-    x: SIDE_X,
-    y: 270,
-    width: 130,
-    height: 76,
-    anchored: false,
-    widget: { type: 'metric', props: { data: { label: '오늘 사용량', value: 0, unit: 'kWh' } }, bindings: { 'data.value': bindBuilding('/todayKwh') } },
-  },
-  {
-    id: 'outdoor',
-    x: SIDE_X + 140,
-    y: 270,
-    width: 130,
-    height: 76,
-    anchored: false,
-    widget: { type: 'metric', props: { data: { label: '외기 온도', value: 0, unit: '°C' } }, bindings: { 'data.value': bindBuilding('/outdoorC') } },
-  },
-  {
-    id: 'floors',
-    x: SIDE_X,
-    y: 366,
-    width: 270,
-    height: 300,
-    anchored: false,
-    widget: {
-      type: 'chart.bar',
-      props: {
-        title: '층별 오늘 사용량 (kWh)',
-        data: [],
-        mapping: { x: 'floor', y: 'kWh' },
-        options: { horizontal: true, series: [{ label: '사용량', color: '#4a555b' }] },
+    "zone-meet-1": {
+      "as": "element",
+      "element": "zone",
+      "of": "zones[meet-1]",
+      "props": {
+        "name": "회의실 1"
       },
-      bindings: { data: { adapter: BEMS.key, ref: { path: '/building/floors', valuePath: '/value', observedAtPath: '/updatedAt', maxAgeSeconds: MAX_AGE_SECONDS } } },
+      "bind": {
+        "temp": "tempC",
+        "band": "tempC-2",
+        "kw": "kw",
+        "co2": "co2Ppm",
+        "air": "co2Ppm-2"
+      }
     },
+    "zone-it": {
+      "as": "element",
+      "element": "zone",
+      "of": "zones[it]",
+      "props": {
+        "name": "전산실"
+      },
+      "bind": {
+        "temp": "tempC",
+        "band": "tempC-2",
+        "kw": "kw",
+        "co2": "co2Ppm",
+        "air": "co2Ppm-2"
+      }
+    },
+    "zone-meet-2": {
+      "as": "element",
+      "element": "zone",
+      "of": "zones[meet-2]",
+      "props": {
+        "name": "회의실 2"
+      },
+      "bind": {
+        "temp": "tempC",
+        "band": "tempC-2",
+        "kw": "kw",
+        "co2": "co2Ppm",
+        "air": "co2Ppm-2"
+      }
+    },
+    "zone-lounge": {
+      "as": "element",
+      "element": "zone",
+      "of": "zones[lounge]",
+      "props": {
+        "name": "라운지"
+      },
+      "bind": {
+        "temp": "tempC",
+        "band": "tempC-2",
+        "kw": "kw",
+        "co2": "co2Ppm",
+        "air": "co2Ppm-2"
+      }
+    },
+    "zone-open-c": {
+      "as": "element",
+      "element": "zone",
+      "of": "zones[open-c]",
+      "props": {
+        "name": "오픈 오피스 C"
+      },
+      "bind": {
+        "temp": "tempC",
+        "band": "tempC-2",
+        "kw": "kw",
+        "co2": "co2Ppm",
+        "air": "co2Ppm-2"
+      }
+    },
+    "demand": {
+      "as": "gauge",
+      "of": "summary",
+      "show": "demandKw",
+      "min": 0,
+      "max": 600,
+      "subtitle": "지금 수요 전력",
+      "thresholds": [
+        {
+          "to": 480,
+          "color": "green"
+        },
+        {
+          "to": 560,
+          "color": "yellow"
+        },
+        {
+          "to": 600,
+          "color": "red"
+        }
+      ]
+    },
+    "today": {
+      "as": "stat",
+      "of": "summary",
+      "show": "todayKwh"
+    },
+    "outdoor": {
+      "as": "stat",
+      "of": "summary",
+      "show": "outdoorC"
+    },
+    "floors": {
+      "as": "chart.bar",
+      "of": "floors",
+      "title": "층별 오늘 사용량 (kWh)",
+      "x": "floor",
+      "y": "kWh",
+      "horizontal": true,
+      "series": [
+        {
+          "label": "사용량",
+          "color": "#4a555b"
+        }
+      ]
+    }
   },
-];
-
-const DECORATIONS: Shape[] = [
-  { id: 'title', type: 'text', x: 24, y: 22, text: '3층 구역 에너지·환경', fontSize: 24, fill: '#17252b' },
-  { id: 'note', type: 'text', x: 24, y: 56, text: '구역마다 실내 온도(쾌적 20~26 °C 밖이면 색)·전력·CO₂(1,000 ppm 넘으면 표시) · 예시 데이터', fontSize: 13, fill: '#5b6b70' },
-  { id: 'side-title', type: 'text', x: SIDE_X, y: 72, text: '건물 전체 · 계약 전력 600 kW', fontSize: 15, fill: '#22313b' },
-];
-
-/** The floor drawn plainly: the outer wall with its windows, the zones' partitions, the core with its lifts, stairs and
- *  toilets, and the doors. */
-function drawing(): string {
-  const floor = { x: 40, y: 88, width: 900, height: 672 };
-  const windows: string[] = [];
-  for (let x = floor.x + 30; x < floor.x + floor.width - 40; x += 70) {
-    windows.push(`<path d="M ${x} ${floor.y} h 40"/>`, `<path d="M ${x} ${floor.y + floor.height} h 40"/>`);
+  "layout": {
+    "kind": "canvas",
+    "size": [
+      1280,
+      800
+    ],
+    "background": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%221280%22%20height%3D%22800%22%20viewBox%3D%220%200%201280%20800%22%3E%0A%3Crect%20width%3D%221280%22%20height%3D%22800%22%20fill%3D%22%23f4f6f7%22%2F%3E%0A%3Crect%20x%3D%2240%22%20y%3D%2288%22%20width%3D%22900%22%20height%3D%22672%22%20fill%3D%22%23fbfcfc%22%2F%3E%0A%3Crect%20x%3D%2246%22%20y%3D%2294%22%20width%3D%22432%22%20height%3D%22242%22%20fill%3D%22none%22%20stroke%3D%22%23c7d0d4%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%22478%22%20y%3D%2294%22%20width%3D%22456%22%20height%3D%22242%22%20fill%3D%22none%22%20stroke%3D%22%23c7d0d4%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%2246%22%20y%3D%22336%22%20width%3D%22212%22%20height%3D%22188%22%20fill%3D%22none%22%20stroke%3D%22%23c7d0d4%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%22570%22%20y%3D%22336%22%20width%3D%22172%22%20height%3D%22188%22%20fill%3D%22none%22%20stroke%3D%22%23c7d0d4%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%22742%22%20y%3D%22336%22%20width%3D%22192%22%20height%3D%22188%22%20fill%3D%22none%22%20stroke%3D%22%23c7d0d4%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%2246%22%20y%3D%22524%22%20width%3D%22312%22%20height%3D%22230%22%20fill%3D%22none%22%20stroke%3D%22%23c7d0d4%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%22358%22%20y%3D%22524%22%20width%3D%22576%22%20height%3D%22230%22%20fill%3D%22none%22%20stroke%3D%22%23c7d0d4%22%20stroke-width%3D%222%22%2F%3E%0A%3Crect%20x%3D%22264%22%20y%3D%22342%22%20width%3D%22300%22%20height%3D%22176%22%20rx%3D%224%22%20fill%3D%22%23e3e8eb%22%20stroke%3D%22%23b5c0c6%22%2F%3E%0A%3Crect%20x%3D%22280%22%20y%3D%22362%22%20width%3D%2256%22%20height%3D%2256%22%20fill%3D%22%23d3dade%22%20stroke%3D%22%23a9b5bc%22%2F%3E%0A%3Crect%20x%3D%22344%22%20y%3D%22362%22%20width%3D%2256%22%20height%3D%2256%22%20fill%3D%22%23d3dade%22%20stroke%3D%22%23a9b5bc%22%2F%3E%0A%3Ctext%20x%3D%22340%22%20y%3D%22438%22%20font-size%3D%2211%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%8A%B9%EA%B0%95%EA%B8%B0%3C%2Ftext%3E%0A%3Cg%20stroke%3D%22%23a9b5bc%22%3E%3Cpath%20d%3D%22M%20424%20362%20h%2052%22%2F%3E%3Cpath%20d%3D%22M%20424%20371%20h%2052%22%2F%3E%3Cpath%20d%3D%22M%20424%20380%20h%2052%22%2F%3E%3Cpath%20d%3D%22M%20424%20389%20h%2052%22%2F%3E%3Cpath%20d%3D%22M%20424%20398%20h%2052%22%2F%3E%3Cpath%20d%3D%22M%20424%20407%20h%2052%22%2F%3E%3Cpath%20d%3D%22M%20424%20416%20h%2052%22%2F%3E%3C%2Fg%3E%0A%3Ctext%20x%3D%22450%22%20y%3D%22438%22%20font-size%3D%2211%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EA%B3%84%EB%8B%A8%3C%2Ftext%3E%0A%3Crect%20x%3D%22488%22%20y%3D%22362%22%20width%3D%2260%22%20height%3D%22136%22%20fill%3D%22%23dde3e6%22%20stroke%3D%22%23a9b5bc%22%2F%3E%0A%3Ctext%20x%3D%22518%22%20y%3D%22434%22%20font-size%3D%2211%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%ED%99%94%EC%9E%A5%EC%8B%A4%3C%2Ftext%3E%0A%3Ctext%20x%3D%22364%22%20y%3D%22488%22%20font-size%3D%2212%22%20fill%3D%22%235b6b70%22%20text-anchor%3D%22middle%22%20font-family%3D%22sans-serif%22%3E%EC%BD%94%EC%96%B4%3C%2Ftext%3E%0A%3Crect%20x%3D%2240%22%20y%3D%2288%22%20width%3D%22900%22%20height%3D%22672%22%20fill%3D%22none%22%20stroke%3D%22%237f939e%22%20stroke-width%3D%225%22%2F%3E%0A%3Cg%20stroke%3D%22%239cc3dc%22%20stroke-width%3D%225%22%3E%3Cpath%20d%3D%22M%2070%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%2070%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20140%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20140%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20210%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20210%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20280%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20280%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20350%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20350%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20420%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20420%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20490%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20490%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20560%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20560%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20630%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20630%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20700%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20700%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20770%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20770%20760%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20840%2088%20h%2040%22%2F%3E%3Cpath%20d%3D%22M%20840%20760%20h%2040%22%2F%3E%3C%2Fg%3E%0A%3Crect%20x%3D%22964%22%20y%3D%2260%22%20width%3D%22300%22%20height%3D%22720%22%20rx%3D%228%22%20fill%3D%22%23ffffff%22%20stroke%3D%22%23d6dedb%22%2F%3E%0A%3Ctext%20x%3D%2240%22%20y%3D%22788%22%20font-size%3D%2211%22%20fill%3D%22%235b6b70%22%20font-family%3D%22sans-serif%22%3E%EC%95%BD%EB%8F%84%20%E2%80%94%20%EC%98%88%EC%8B%9C%20%EA%B1%B4%EB%AC%BC%203%EC%B8%B5%2C%20%EC%8B%A4%EC%A0%9C%20%EB%B0%B0%EC%B9%98%EC%99%80%20%EB%8B%A4%EB%A6%84%20%C2%B7%20%EC%B0%BD%EC%9D%80%20%EB%82%A8%EB%B6%81%20%EB%91%90%20%EB%A9%B4%3C%2Ftext%3E%0A%3C%2Fsvg%3E",
+    "place": {
+      "zone-open-a": [
+        52,
+        100,
+        420,
+        230
+      ],
+      "zone-open-b": [
+        484,
+        100,
+        444,
+        230
+      ],
+      "zone-meet-1": [
+        52,
+        342,
+        200,
+        176
+      ],
+      "zone-it": [
+        576,
+        342,
+        160,
+        176
+      ],
+      "zone-meet-2": [
+        748,
+        342,
+        180,
+        176
+      ],
+      "zone-lounge": [
+        52,
+        530,
+        300,
+        218
+      ],
+      "zone-open-c": [
+        364,
+        530,
+        564,
+        218
+      ],
+      "demand": [
+        980,
+        100,
+        270,
+        150
+      ],
+      "today": [
+        980,
+        270,
+        130,
+        76
+      ],
+      "outdoor": [
+        1120,
+        270,
+        130,
+        76
+      ],
+      "floors": [
+        980,
+        366,
+        270,
+        300
+      ]
+    },
+    "shapes": {
+      "title": {
+        "text": "3층 구역 에너지·환경",
+        "at": [
+          24,
+          22
+        ],
+        "size": 24,
+        "tone": "next"
+      },
+      "note": {
+        "text": "구역마다 실내 온도(쾌적 20~26 °C 밖이면 색)·전력·CO₂(1,000 ppm 넘으면 표시) · 예시 데이터",
+        "at": [
+          24,
+          56
+        ],
+        "size": 13,
+        "tone": "past"
+      },
+      "side-title": {
+        "text": "건물 전체 · 계약 전력 600 kW",
+        "at": [
+          980,
+          72
+        ],
+        "size": 15,
+        "tone": "next"
+      }
+    }
   }
-  const partitions = ZONES.map(z => `<rect x="${z.x - 6}" y="${z.y - 6}" width="${z.width + 12}" height="${z.height + 12}" fill="none" stroke="#c7d0d4" stroke-width="2"/>`).join('\n');
-  const core = `<rect x="${CORE.x}" y="${CORE.y}" width="${CORE.width}" height="${CORE.height}" rx="4" fill="#e3e8eb" stroke="#b5c0c6"/>
-<rect x="${CORE.x + 16}" y="${CORE.y + 20}" width="56" height="56" fill="#d3dade" stroke="#a9b5bc"/>
-<rect x="${CORE.x + 80}" y="${CORE.y + 20}" width="56" height="56" fill="#d3dade" stroke="#a9b5bc"/>
-<text x="${CORE.x + 76}" y="${CORE.y + 96}" font-size="11" fill="#5b6b70" text-anchor="middle" font-family="sans-serif">${escapeXml('승강기')}</text>
-<g stroke="#a9b5bc">${Array.from({ length: 7 }, (_, i) => `<path d="M ${CORE.x + 160} ${CORE.y + 20 + i * 9} h 52"/>`).join('')}</g>
-<text x="${CORE.x + 186}" y="${CORE.y + 96}" font-size="11" fill="#5b6b70" text-anchor="middle" font-family="sans-serif">${escapeXml('계단')}</text>
-<rect x="${CORE.x + 224}" y="${CORE.y + 20}" width="60" height="136" fill="#dde3e6" stroke="#a9b5bc"/>
-<text x="${CORE.x + 254}" y="${CORE.y + 92}" font-size="11" fill="#5b6b70" text-anchor="middle" font-family="sans-serif">${escapeXml('화장실')}</text>
-<text x="${CORE.x + 100}" y="${CORE.y + 146}" font-size="12" fill="#5b6b70" text-anchor="middle" font-family="sans-serif">${escapeXml('코어')}</text>`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}">
-<rect width="${WIDTH}" height="${HEIGHT}" fill="#f4f6f7"/>
-<rect x="${floor.x}" y="${floor.y}" width="${floor.width}" height="${floor.height}" fill="#fbfcfc"/>
-${partitions}
-${core}
-<rect x="${floor.x}" y="${floor.y}" width="${floor.width}" height="${floor.height}" fill="none" stroke="#7f939e" stroke-width="5"/>
-<g stroke="#9cc3dc" stroke-width="5">${windows.join('')}</g>
-<rect x="${SIDE_X - 16}" y="60" width="${WIDTH - SIDE_X}" height="${HEIGHT - 80}" rx="8" fill="#ffffff" stroke="#d6dedb"/>
-<text x="40" y="${HEIGHT - 12}" font-size="11" fill="#5b6b70" font-family="sans-serif">${escapeXml('약도 — 예시 건물 3층, 실제 배치와 다름 · 창은 남북 두 면')}</text>
-</svg>`;
-  return svgDataUrl(svg);
-}
-
-const document: CanvasView = {
-  kind: 'canvas',
-  background: { image: { src: drawing(), width: WIDTH, height: HEIGHT } },
-  nodes: [...ZONES.map(zoneNode), ...SIDE],
-  connectors: [],
-  decorations: DECORATIONS,
-  elements: { zone },
 };
 
 export const buildingFloor: SamplePack = {
-  id: 'building-floor',
-  title: { ko: '건물 층별 에너지·환경', en: 'Building floor energy and air' },
-  field: { ko: '건물·에너지', en: 'Buildings & energy' },
-  kind: { ko: '층 평면도', en: 'Floor plan' },
-  domain: 'energy',
-  styles: ['operations'],
-  summary: {
-    ko: '사무동 3층의 구역마다 실내 온도(쾌적 20~26 °C 밖이면 구역째 색)와 전력·CO₂(1,000 ppm 넘으면 표시)를 구역이 선 자리에, 옆에는 지금 수요 전력과 계약 전력, 오늘 사용량, 외기 온도, 층별 사용량. 예시 데이터입니다.',
-    en: 'Each zone of an office floor painted by its air where it lies — quiet within the 20–26 °C comfort range, coloured outside it — with its power and CO₂ (marked past 1,000 ppm); beside it the building’s demand against its contracted peak, today’s energy, the air outside and each floor’s use. Example data.',
+  id: "building-floor",
+  title: {
+    "ko": "건물 층별 에너지·환경",
+    "en": "Building floor energy and air"
   },
-  connectors: [BEMS],
-  document,
+  field: {
+    "ko": "건물·에너지",
+    "en": "Buildings & energy"
+  },
+  kind: {
+    "ko": "층 평면도",
+    "en": "Floor plan"
+  },
+  domain: "energy",
+  styles: [
+    "operations"
+  ],
+  summary: {
+    "ko": "사무동 3층의 구역마다 실내 온도(쾌적 20~26 °C 밖이면 구역째 색)와 전력·CO₂(1,000 ppm 넘으면 표시)를 구역이 선 자리에, 옆에는 지금 수요 전력과 계약 전력, 오늘 사용량, 외기 온도, 층별 사용량. 예시 데이터입니다.",
+    "en": "Each zone of an office floor painted by its air where it lies — quiet within the 20–26 °C comfort range, coloured outside it — with its power and CO₂ (marked past 1,000 ppm); beside it the building’s demand against its contracted peak, today’s energy, the air outside and each floor’s use. Example data."
+  },
+  connectors: [
+    {
+      "key": "bems",
+      "name": "예시 BEMS API",
+      "example": true,
+      "attribution": {
+        "text": "예시 데이터 — 실제 건물이 아닙니다"
+      }
+    }
+  ],
+  board,
   snapshot,
 };

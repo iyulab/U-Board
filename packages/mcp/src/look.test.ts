@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ViewDocument } from '@iyulab/u-board/domain';
+import type { ViewDocument } from '@iyulab/u-board/picture';
 import { inDocument, placedParts } from './look.js';
 
 const board: ViewDocument = {

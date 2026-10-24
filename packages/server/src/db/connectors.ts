@@ -1,5 +1,6 @@
 import type { DbClient } from '../db.js';
-import type { Attribution, SourceErrorField } from '@iyulab/u-board/domain';
+import type { Attribution } from '@iyulab/u-board/domain';
+import type { SourceErrorField } from '@iyulab/u-board/picture';
 import { randomUUID } from 'node:crypto';
 import type { ClientAuthMethod } from '../oauth-client-credentials.js';
 import { recordAuditEvent } from './audit.js';
