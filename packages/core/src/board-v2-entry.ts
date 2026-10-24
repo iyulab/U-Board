@@ -7,7 +7,7 @@ export { BOARD_LANGUAGE_VERSION, EMPHASES, FRAMES, TONES } from './board-v2/type
 export { boardV2Schema } from './board-v2/schema.js';
 export { validateBoardV2 } from './board-v2/validate.js';
 export type { BoardIssue } from './board-v2/validate.js';
-export { checkBoardV2, documentKind, isBoardV2, sourceAdvice } from './board-v2/check.js';
+export { checkBoardV2, documentKind, emptyBoard, isBoardV2, sourceAdvice } from './board-v2/check.js';
 export type { BoardCheck, BoardDocument, BoardFinding, KnownSource } from './board-v2/check.js';
 export { PART_KINDS, partKind } from './board-v2/kinds.js';
 export type { PartKind } from './board-v2/kinds.js';

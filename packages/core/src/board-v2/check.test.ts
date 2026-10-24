@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkBoardV2, documentKind, sourceAdvice } from './check.js';
+import { checkBoardV2, documentKind, emptyBoard, sourceAdvice } from './check.js';
 import { RULEBOOK_EXAMPLE } from './rulebook.js';
 import { validateBoardV2 } from './validate.js';
 
@@ -61,5 +61,15 @@ describe('checkBoardV2', () => {
       { path: '/data/byName/from', message: '"Line 1" is the name of a data source — "from" takes its id: "s1". Nothing is read until it does' },
       { path: '/data/gone/from', message: '"nowhere" is no data source of this workspace — "from" takes a source\'s id (list_sources). Nothing is read until it does' },
     ]);
+  });
+});
+
+describe('emptyBoard', () => {
+  it('starts a board of either kind with no parts, which the check takes and draws', () => {
+    for (const kind of ['canvas', 'grid'] as const) {
+      const board = emptyBoard(kind);
+      expect(board.layout.kind).toBe(kind);
+      expect(checkBoardV2(board).issues).toEqual([]);
+    }
   });
 });

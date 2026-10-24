@@ -44,6 +44,9 @@ export interface UBoardLabels {
   deleteSelected: string;
   /** Steps back through the edits since the document was opened (Ctrl+Z), and forward again (Ctrl+Shift+Z or Ctrl+Y). */
   undo: string;
+  /** Add a part to a board in the language's second version, and the title it starts with. */
+  partAdd: string;
+  newPartTitle: string;
   redo: string;
   /** The save button when the host handles saving (`onSave`). */
   save: string;
@@ -502,6 +505,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   makeComponentHint: 'Select the nodes and frames to draw again elsewhere — all anchored or all free.',
   deleteSelected: 'Delete',
   undo: 'Undo',
+  partAdd: 'Add part',
+  newPartTitle: 'New part',
   redo: 'Redo',
   save: 'Save',
   export: 'Export',

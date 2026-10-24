@@ -41,6 +41,15 @@ export function documentKind(document: BoardDocument): ViewKind {
   return isBoardV2(document) ? document.layout.kind : document.kind;
 }
 
+/** A board with no parts yet, laying out `kind` — what a new board starts as. A canvas is 1280 × 720 until it is resized. */
+export function emptyBoard(kind: ViewKind): BoardV2 {
+  return {
+    version: 2,
+    parts: {},
+    layout: kind === 'grid' ? { kind: 'grid', items: [] } : { kind: 'canvas', size: [1280, 720], place: {} },
+  };
+}
+
 export function checkBoardV2(board: unknown): BoardCheck {
   const found = validateBoardV2(board);
   const issues = found.filter(f => !f.hint).map(({ at, message }) => ({ path: at, message }));

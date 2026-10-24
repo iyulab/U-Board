@@ -29,7 +29,9 @@ All notable changes to this package are documented here. The format follows
   adapters, with no U-Board server. `pictureOf(board, read)`, `readKeys`, `dataReadOf` and `readerOf(adapters)` in `./board-v2` make
   the same view document anywhere a board is drawn — a server reads through its data sources, an application through
   its adapters.
-- `BoardAuthoring`: the authoring surface of a board in the language's second version — the items a grid lays out a
+- `emptyBoard(kind)` in `./board-v2`: a board with no parts yet, laying out a canvas or a grid — what a new board starts as.
+- `BoardAuthoring`: the authoring surface of a board in the language's second version — parts added (on a canvas at its
+  top left, in a grid last; a label or a header to set in its panel), the items a grid lays out a
   part per item of read through its `adapters` when the board opens and when what they are read by changes — drawn from its picture, its
   parts moved, sized and deleted on a canvas as on any board, each edit said again in the board's layout (and a deleted
   part's links and triggers removed with it), and on a grid of parts ordered, widened and deleted (an item of a part

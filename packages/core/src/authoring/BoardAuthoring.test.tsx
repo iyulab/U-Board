@@ -49,6 +49,28 @@ describe('PartPanel', () => {
 });
 
 describe('BoardAuthoring', () => {
+  it('adds a part — on a canvas placed at its top left, in a grid last — titled, and of a kind that reads no data', async () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<BoardAuthoring initialBoard={{ version: 2, parts: {}, layout: { kind: 'canvas', size: [800, 400], place: {} } }} adapters={[]} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add part' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add part' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0]![0]).toEqual({
+      version: 2,
+      parts: { 'part-1': { as: 'label', title: 'New part' }, 'part-2': { as: 'label', title: 'New part' } },
+      layout: { kind: 'canvas', size: [800, 400], place: { 'part-1': [40, 40, 160, 60], 'part-2': [64, 64, 160, 60] } },
+    });
+    unmount();
+    onSave.mockClear();
+    render(<BoardAuthoring initialBoard={board} adapters={[]} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add part' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0]![0].layout.items).toEqual(['head', 'count', 'part-3']);
+    expect(onSave.mock.calls[0]![0].parts['part-3']).toEqual({ as: 'header', title: 'New part' });
+  });
+
   it('sets the board’s data in its panel with nothing selected — its sources the adapters, looked at through them', async () => {
     const onSave = vi.fn();
     const resolve = vi.fn(async () => ({ value: { count: 3, shift: 'B' }, quality: 'live' as const }));

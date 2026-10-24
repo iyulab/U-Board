@@ -176,10 +176,35 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
     if (!onSave) setLastSaved(board);
   };
 
+  /** A new part, titled and of a kind that reads no data until its panel sets one — placed where a canvas has room at its
+   *  top left, or last in a grid. */
+  const addPart = () =>
+    setHistory(h => {
+      const present = h.present;
+      let n = Object.keys(present.parts).length + 1;
+      while (`part-${n}` in present.parts) n++;
+      const id = `part-${n}`;
+      const layout = present.layout;
+      if (layout.kind === 'canvas') {
+        const step = 24 * (n - 1);
+        const x = Math.min(40 + step, Math.max(0, layout.size[0] - 160));
+        const y = Math.min(40 + step, Math.max(0, layout.size[1] - 60));
+        return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'label', title: labels.newPartTitle } }, layout: { ...layout, place: { ...layout.place, [id]: [x, y, 160, 60] } } }, null);
+      }
+      return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'header', title: labels.newPartTitle } }, layout: { ...layout, items: [...layout.items, id] } }, null);
+    });
+
   const canUndo = mode === 'edit' && history.past.length > 0;
   const canRedo = mode === 'edit' && history.future.length > 0;
   const documentActions = (
     <>
+      {mode === 'edit' && layoutEditable(board) && (
+        <div className="ub-authoring__group" style={GROUP_STYLE}>
+          <button type="button" className="ub-action" onClick={addPart}>
+            {labels.partAdd}
+          </button>
+        </div>
+      )}
       <div className="ub-authoring__group" style={GROUP_STYLE}>
         <button type="button" className="ub-action" onClick={() => setHistory(undo)} disabled={!canUndo}>
           {labels.undo}

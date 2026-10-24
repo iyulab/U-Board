@@ -28,6 +28,8 @@ export const KO_LABELS: UBoardLabels = {
   makeComponentHint: '다른 곳에도 그릴 노드와 틀을 선택하세요 — 모두 고정이거나 모두 자유 배치.',
   deleteSelected: '삭제',
   undo: '실행 취소',
+  partAdd: '부품 추가',
+  newPartTitle: '새 부품',
   redo: '다시 실행',
   save: '저장',
   export: '내보내기',
