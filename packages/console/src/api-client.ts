@@ -237,7 +237,25 @@ export interface ConnectorOAuthSettings {
   oauthClientAuth?: ConnectorOAuthClientAuth;
 }
 
-export interface ConnectorSummary extends ConnectorOAuthSettings {
+/** A data source of the workspace: one called over HTTP, or one that answers what its owner stored. */
+export type ConnectorSummary = HttpConnectorSummary | StaticConnectorSummary;
+
+/** A data source that answers what its owner stored, by request path — example data, or a reference table that lives
+ *  nowhere else. Its answers are listed with it: they are not a secret. */
+export interface StaticConnectorSummary {
+  id: string;
+  name: string;
+  type: 'static';
+  /** The answer at each request path (`/equipment`), as an HTTP source would answer there. */
+  answers: Record<string, unknown>;
+  /** Its answers are example data — a board that reads them says so. */
+  sample: boolean;
+  attribution?: { text: string; url?: string };
+  description?: string;
+  updatedAt: string;
+}
+
+export interface HttpConnectorSummary extends ConnectorOAuthSettings {
   id: string;
   name: string;
   type: 'http';
@@ -267,9 +285,21 @@ export function listConnectors(workspaceId: string) {
   return request<{ connectors: ConnectorSummary[] }>(`/workspaces/${workspaceId}/connectors`);
 }
 
+/** A new static source: its answers by path and whether they are example data. */
+export interface NewStaticConnector {
+  type: 'static';
+  name: string;
+  answers: Record<string, unknown>;
+  sample?: boolean;
+  attribution?: { text: string; url?: string } | null;
+  description?: string | null;
+}
+
 export function createConnector(
   workspaceId: string,
-  input: { name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null; description?: string | null; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
+  input:
+    | ({ name: string; baseUrl: string; authType: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null; description?: string | null; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings)
+    | NewStaticConnector
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors`, {
     method: 'POST',
@@ -297,7 +327,7 @@ export type ConnectorTestResult =
  *  the stored one. Fails with `PATH_REQUIRED` when there is nothing to call without a path. */
 export function testConnector(
   workspaceId: string,
-  input: { connectorId?: string; path?: string; timeZone?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
+  input: { connectorId?: string; path?: string; timeZone?: string; type?: 'http' | 'static'; answers?: Record<string, unknown>; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
 ) {
   return request<ConnectorTestResult>(`/workspaces/${workspaceId}/connectors/test`, {
     method: 'POST',
@@ -308,7 +338,7 @@ export function testConnector(
 export function updateConnector(
   workspaceId: string,
   connectorId: string,
-  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null; description?: string | null; sourceError?: ConnectorSourceError | null } & ConnectorOAuthSettings
+  input: { name?: string; baseUrl?: string; authType?: ConnectorAuthType; authHeaderName?: string; authParamName?: string; authValue?: string; attribution?: { text: string; url?: string } | null; description?: string | null; sourceError?: ConnectorSourceError | null; answers?: Record<string, unknown>; sample?: boolean } & ConnectorOAuthSettings
 ) {
   return request<ConnectorSummary>(`/workspaces/${workspaceId}/connectors/${connectorId}`, {
     method: 'PUT',

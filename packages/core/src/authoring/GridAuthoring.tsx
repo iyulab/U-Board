@@ -3,7 +3,7 @@ import { resolveDocument, type ResolvedCellCanvas, type ResolvedGridView } from 
 import type { ResolvedWidget } from '../adapter.js';
 import { isCanvasItem, type CellCanvas, type GridView, type Widget } from '../view-document.js';
 import { GridBoard, GRID_MEDIUM_MIN_WIDTH, GRID_WIDE_MIN_WIDTH } from '../renderer/grid-board.js';
-import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
+import { AttributionLine, boardAttributions, showsExampleData } from '../viewer/attribution.js';
 import { focusPart, useTriggers } from '../viewer/use-triggers.js';
 import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { PropertyPanel } from './PropertyPanel.js';
@@ -91,6 +91,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
     };
   }, [doc, adapters]);
   const attributions = useMemo(() => boardAttributions(doc, adapters), [doc, adapters]);
+  const example = useMemo(() => showsExampleData(doc, adapters), [doc, adapters]);
   // The board's triggers run in View only, as a shared link runs them; in Edit a click selects.
   const surface = useRef<HTMLDivElement>(null);
   const shownDoc = mode === 'view' ? (preview?.doc ?? null) : null;
@@ -255,7 +256,7 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
           ) : (
             <p className="ub-authoring__status">{labels.resolving}</p>
           )}
-          {mode === 'view' && preview && <AttributionLine attributions={attributions} labels={labels} />}
+          {mode === 'view' && preview && <AttributionLine attributions={attributions} example={example} labels={labels} />}
         </div>
         <div className="ub-authoring__panel" style={{ flex: '0 0 var(--ub-panel-width, 320px)', minWidth: 0, overflowY: 'auto' }}>
           {selected ? (

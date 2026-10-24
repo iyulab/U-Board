@@ -17,7 +17,8 @@ const liveConnectors = (pack: SamplePack) => pack.connectors as LiveSampleConnec
  *  Its stored key may be the owner's own rather than the sample's — reusing it keeps that. */
 function existingFor(connectors: readonly ConnectorSummary[], sample: LiveSampleConnector): ConnectorSummary | undefined {
   return connectors.find(
-    c => c.baseUrl === sample.baseUrl && c.authType === sample.authType && (sample.authType !== 'query' || c.authParamName === sample.authParamName)
+    c =>
+      c.type === 'http' && c.baseUrl === sample.baseUrl && c.authType === sample.authType && (sample.authType !== 'query' || c.authParamName === sample.authParamName)
   );
 }
 

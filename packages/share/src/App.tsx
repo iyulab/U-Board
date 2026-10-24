@@ -19,6 +19,8 @@ type BoardBody = {
   elementFrames?: string;
   connectorIds: string[];
   attributions?: Record<string, Attribution>;
+  /** The data sources whose answers are example data. */
+  samples?: string[];
 };
 
 /** Why the board is not on screen. Each names a different next step for the person looking at it:
@@ -121,7 +123,7 @@ export function App() {
           if (shown.current.revision !== undefined && revision > shown.current.revision) refresh();
         },
       });
-      const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id, body.attributions?.[id]));
+      const adapters: Adapter[] = body.connectorIds.map(id => new ShareConnectorAdapter(batcher, id, body.attributions?.[id], body.samples?.includes(id)));
       shown.current.revision = body.revision;
       setState({ name: body.name, document: body.picture ?? (body.document as ViewDocument), adapters, revision: body.revision, elementOrigins: body.elementOrigins ?? [], elementFrames: body.elementFrames ?? `${API_BASE}/element-frames/${encodeURIComponent(boardId)}` });
     };

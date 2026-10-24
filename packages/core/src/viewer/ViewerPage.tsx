@@ -13,7 +13,7 @@ import type { UBoardLabels } from '../labels.js';
 import type { ResolvedGridView, ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
-import { AttributionLine, boardAttributions } from './attribution.js';
+import { AttributionLine, boardAttributions, showsExampleData } from './attribution.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { boardStateOf, type BoardState } from '../board-state.js';
 import { focusPart, useTriggers, type BoardEvent } from './use-triggers.js';
@@ -116,6 +116,8 @@ export function ViewerPage({
   const extentKey = JSON.stringify(document.kind === 'canvas' ? documentExtent(document) : null);
   const extent = useMemo(() => JSON.parse(extentKey) as ReturnType<typeof documentExtent>, [extentKey]);
   const attributions = useMemo(() => (attribution ? boardAttributions(document, adapters) : []), [document, adapters, attribution]);
+  // Example data is said whatever the host shows itself: it is not a credit but what the figures are.
+  const example = useMemo(() => showsExampleData(document, adapters), [document, adapters]);
   const view = useFittedView();
   const { fitTo, focusOn } = view;
   const surface = useRef<HTMLDivElement>(null);
@@ -182,7 +184,7 @@ export function ViewerPage({
         ) : (
           <p className="ub-viewer__status">{labels.resolving}</p>
         )}
-        {drawn && <AttributionLine attributions={attributions} labels={labels} />}
+        {drawn && <AttributionLine attributions={attributions} example={example} labels={labels} />}
       </div>
     </ElementHost>
   );

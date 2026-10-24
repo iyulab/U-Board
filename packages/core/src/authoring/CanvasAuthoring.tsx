@@ -44,7 +44,7 @@ import { ViewControls } from '../viewer/ViewControls.js';
 import type { BoardAppearance, Connector, Node, ReferencePoint, CanvasView, PropsSchema, Widget, Shape } from '../view-document.js';
 import { TOOLBAR_STYLE, GROUP_STYLE } from '../ui-style.js';
 import { FileError, ModeSwitch, type KindEditorProps } from './editor-parts.js';
-import { AttributionLine, boardAttributions } from '../viewer/attribution.js';
+import { AttributionLine, boardAttributions, showsExampleData } from '../viewer/attribution.js';
 
 /**
  * The editor of a canvas view: one board, shown in one of two modes, beside a `PropertyPanel` for editing
@@ -242,6 +242,7 @@ function CanvasEditor({
     };
   }, [doc, adapters, previewValues]);
   const attributions = useMemo(() => boardAttributions(doc, adapters), [doc, adapters]);
+  const example = useMemo(() => showsExampleData(doc, adapters), [doc, adapters]);
 
   // A part that leaves the document (undone, imported over) leaves the selection.
   useEffect(() => {
@@ -531,7 +532,7 @@ function CanvasEditor({
           ) : (
             <p className="ub-authoring__status">{labels.resolving}</p>
           )}
-          {mode === 'view' && preview && <AttributionLine attributions={attributions} labels={labels} />}
+          {mode === 'view' && preview && <AttributionLine attributions={attributions} example={example} labels={labels} />}
         </div>
         {/* A fixed width: sized by its content, the form's inline fields would widen the panel until the
             editor and preview — which give way (`minWidth: 0`) — were squeezed to a sliver. */}

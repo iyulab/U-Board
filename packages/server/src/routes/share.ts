@@ -39,13 +39,14 @@ async function referencedConnectors(db: AppConfig['db'], workspaceId: string, do
   return found.filter((connector): connector is Connector => connector !== undefined);
 }
 
-/** What the viewer needs about a board's data sources: their ids, and the credit of each that has one —
- *  never their address or settings. */
+/** What the viewer needs about a board's data sources: their ids, the credit of each that has one, and those whose
+ *  answers are example data (a static source's `sample`) — never their address or settings. */
 async function connectorsForViewer(db: AppConfig['db'], workspaceId: string, doc: ViewDocument) {
   const connectors = await referencedConnectors(db, workspaceId, doc);
   return {
     connectorIds: connectors.map(c => c.id),
     attributions: Object.fromEntries(connectors.flatMap(c => (c.attribution ? [[c.id, c.attribution]] : []))),
+    samples: connectors.flatMap(c => (c.type === 'static' && c.sample ? [c.id] : [])),
   };
 }
 

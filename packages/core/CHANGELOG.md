@@ -29,6 +29,9 @@ All notable changes to this package are documented here. The format follows
   adapters, with no U-Board server. `pictureOf(board, read)`, `readKeys`, `dataReadOf` and `readerOf(adapters)` in `./board-v2` make
   the same view document anywhere a board is drawn — a server reads through its data sources, an application through
   its adapters.
+- `Adapter.sample`: an adapter whose values are example data. A board that binds to one says «Example data» (the
+  `exampleData` label) first in the line under it (`ub-viewer__example`) — in `ViewerPage`, whatever its `attribution`
+  setting, and in the editors' view mode.
 - `BoardAuthoring` sets the board's tone and accent (`board.theme`, `board.accent`) in its panel with nothing selected; undoes
   with Ctrl+Z (⌘Z) and redoes with Ctrl+Shift+Z or Ctrl+Y anywhere in the editor but a field being typed into, a run of
   typing in one field one step, as `AuthoringView` does; and with two or more pieces of a canvas selected, says how many

@@ -24,6 +24,14 @@ export function boardAttributions(doc: ViewDocument, adapters: readonly Adapter[
   return result;
 }
 
+/** Whether a board shows example data: it binds to an adapter that says its values are (`Adapter.sample`). */
+export function showsExampleData(doc: ViewDocument, adapters: readonly Adapter[]): boolean {
+  const samples = new Set(adapters.filter(adapter => adapter.sample === true).map(adapter => adapter.id));
+  if (samples.size === 0) return false;
+  for (const { binding } of bindingsIn(doc)) if (samples.has(binding.adapter)) return true;
+  return false;
+}
+
 /** An address a link may go to: http(s) only — an attribution is shown to whoever opens a board. */
 function safeHref(url: string | undefined): string | undefined {
   if (!url) return undefined;
@@ -42,12 +50,15 @@ const LINE_STYLE: CSSProperties = {
   color: 'var(--ub-text-muted, #5b6b70)',
 };
 
-/** The line under a board naming where its data comes from — nothing when no source asks to be named. */
-export function AttributionLine({ attributions, labels }: { attributions: readonly Attribution[]; labels: UBoardLabels }) {
-  if (attributions.length === 0) return null;
+/** The line under a board naming where its data comes from, and first, when the board shows any (`example`), that it is
+ *  example data — nothing when there is neither to say. */
+export function AttributionLine({ attributions, example = false, labels }: { attributions: readonly Attribution[]; example?: boolean; labels: UBoardLabels }) {
+  if (attributions.length === 0 && !example) return null;
   return (
     <p className="ub-viewer__attribution" style={LINE_STYLE}>
-      {labels.dataSources}:{' '}
+      {example && <strong className="ub-viewer__example">{labels.exampleData}</strong>}
+      {example && attributions.length > 0 && ' · '}
+      {attributions.length > 0 && `${labels.dataSources}: `}
       {attributions.map((attribution, i) => {
         const href = safeHref(attribution.url);
         return (

@@ -21,6 +21,9 @@ export interface Adapter {
    * portal, a weather service. A viewer names it under every board that binds to this adapter, since a
    * source's license often makes that a condition of use. Omitted, nothing is shown. */
   readonly attribution?: Attribution;
+  /** Whether this adapter's values are example data, not a live source's — a board that binds to it says so under it,
+   * so no one reads made-up figures as real ones. Omitted: live. */
+  readonly sample?: boolean;
 }
 
 /** How a data source is named where its data is shown (`Adapter.attribution`). */

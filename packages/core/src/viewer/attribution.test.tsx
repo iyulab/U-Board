@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { AttributionLine, boardAttributions } from './attribution';
+import { AttributionLine, boardAttributions, showsExampleData } from './attribution';
 import { ViewerPage } from './ViewerPage';
 import { DEFAULT_LABELS } from '../labels';
 import type { CanvasView } from '../view-document';
@@ -48,6 +48,21 @@ describe('AttributionLine', () => {
     expect(screen.getByText(/Bad link/)).toBeInTheDocument();
   });
 
+  it('says first that a board shows example data, alone or before its sources', () => {
+    const { unmount } = render(<AttributionLine attributions={[]} example labels={DEFAULT_LABELS} />);
+    expect(screen.getByText('Example data')).toBeInTheDocument();
+    expect(screen.queryByText(/Data:/)).not.toBeInTheDocument();
+    unmount();
+    render(<AttributionLine attributions={[USGS]} example labels={DEFAULT_LABELS} />);
+    expect(screen.getByText('Example data').closest('p')).toHaveTextContent('Example data · Data: U.S. Geological Survey');
+  });
+
+  it('reads example data from an adapter the board binds to — not one it leaves alone', () => {
+    const sample: Adapter = { ...adapter('example'), sample: true };
+    expect(showsExampleData(board('seoul', 'example'), [adapter('seoul'), sample])).toBe(true);
+    expect(showsExampleData(board('seoul'), [adapter('seoul'), sample])).toBe(false);
+  });
+
   it('draws nothing when no source asks to be named', () => {
     const { container } = render(<AttributionLine attributions={[]} labels={DEFAULT_LABELS} />);
     expect(container).toBeEmptyDOMElement();
@@ -64,5 +79,10 @@ describe('ViewerPage', () => {
     render(<ViewerPage adapters={[adapter('seoul', SEOUL)]} document={board('seoul')} width={400} height={300} attribution={false} />);
     await screen.findByTestId('viewer');
     expect(screen.queryByText(/^Data:/)).not.toBeInTheDocument();
+  });
+
+  it('says the board shows example data even when the host names its sources itself', async () => {
+    render(<ViewerPage adapters={[{ ...adapter('example'), sample: true }]} document={board('example')} width={400} height={300} attribution={false} />);
+    expect(await screen.findByText('Example data')).toBeInTheDocument();
   });
 });

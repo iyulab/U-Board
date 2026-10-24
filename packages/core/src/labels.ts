@@ -115,6 +115,8 @@ export interface UBoardLabels {
   boardRegion: string;
   /** Before the sources a board's data comes from, under the board (`Adapter.attribution`). */
   dataSources: string;
+  /** Under a board that shows example data (`Adapter.sample`), before its sources. */
+  exampleData: string;
   resolving: string;
   /** A polling `ViewerPage`'s "last updated" line; `{time}` is replaced by the time of day. */
   lastUpdated: string;
@@ -576,6 +578,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   previewRegion: 'Board view',
   boardRegion: 'Board',
   dataSources: 'Data',
+  exampleData: 'Example data',
   resolving: 'Resolving…',
   lastUpdated: 'Updated {time}',
   notUpdating: 'Not updating — last updated {time}',

@@ -20,6 +20,9 @@ do when upgrading. Each release's notes carry its section.
   has no answer at reads as a wrong address. `sample: true` says its answers are example data. A program with an API
   token may create one — its answers are not a credential. Upgrading needs nothing: the connectors table takes the new
   columns at start, and every existing source stays an HTTP one.
+- The console's data sources page makes and edits a static source: its answers written as JSON by path, tried at a path
+  before saving, and marked as example data. A board that reads an example-data source says «Example data» under it —
+  in the editor's view and on a share link.
 
 ### Changed
 

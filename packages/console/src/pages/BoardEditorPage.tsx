@@ -102,7 +102,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   }, [workspaceId, userId]);
 
   const adapters: readonly Adapter[] = useMemo(
-    () => connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id, c.attribution)),
+    () => connectors.map(c => new HttpConnectorAdapter(workspaceId, c.id, c.attribution, c.type === 'static' && c.sample)),
     [workspaceId, connectors]
   );
 

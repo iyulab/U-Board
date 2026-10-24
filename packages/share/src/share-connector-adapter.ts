@@ -89,7 +89,7 @@ export class ShareResolveBatcher {
  * differs (share-link bearer token vs. cookie), so this is a separate class from console's
  * `HttpConnectorAdapter` rather than a forced shared abstraction over two different auth models. */
 export class ShareConnectorAdapter implements Adapter {
-  constructor(private batcher: ShareResolveBatcher, readonly id: string, readonly attribution?: Attribution) {}
+  constructor(private batcher: ShareResolveBatcher, readonly id: string, readonly attribution?: Attribution, readonly sample?: boolean) {}
 
   resolve(ref: unknown): Promise<ResolvedBinding> {
     return this.batcher.resolve(this.id, ref);

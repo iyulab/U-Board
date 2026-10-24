@@ -22,6 +22,18 @@ import { EmptyState } from '../design-system/EmptyState.js';
 import './ConnectorsPage.css';
 import { Loading } from '../design-system/Loading.js';
 
+/** The answers a static source's form holds, written as JSON: an object of answers by path — or `null` when it is not
+ *  one. */
+export function parseAnswersText(text: string): Record<string, unknown> | null {
+  if (text.trim() === '') return {};
+  try {
+    const value: unknown = JSON.parse(text);
+    return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** One label per auth type, shared by the form's select and each card's badge. */
 const AUTH_TYPE_LABELS: Record<ConnectorAuthType, string> = {
   none: '없음',
@@ -31,6 +43,8 @@ const AUTH_TYPE_LABELS: Record<ConnectorAuthType, string> = {
   path: 'URL 경로 속 키',
   'oauth2-client-credentials': 'OAuth 2.0 클라이언트 자격 증명',
 };
+
+const ANSWERS_NOT_JSON = '저장한 답이 JSON 객체가 아닙니다 — { "/경로": 응답 } 꼴로 적으세요.';
 
 const TEST_STAGES: Record<Extract<ConnectorTestResult, { ok: false }>['stage'], string> = {
   token: '토큰 발급',
@@ -48,8 +62,9 @@ const TEST_REASONS: Record<Extract<ConnectorTestResult, { ok: false }>['reason']
 };
 
 /** What a connection test found, as one line. */
-export function describeTestResult(result: ConnectorTestResult, path: string): string {
+export function describeTestResult(result: ConnectorTestResult, path: string, kind: 'http' | 'static' = 'http'): string {
   if (result.ok) return path ? `연결됨 — ${path}가 응답했습니다.` : '연결됨 — 토큰을 발급받았습니다.';
+  if (kind === 'static' && result.reason === 'address') return `${path}에 저장한 답이 없습니다 — 답의 경로를 확인하세요.`;
   const status = result.status !== undefined ? ` (HTTP ${result.status})` : '';
   // The source's own words say what to fix — a key, a query, a quota.
   if (result.reason === 'source') return `${TEST_STAGES[result.stage]} 단계 실패: ${TEST_REASONS.source} — “${result.message}”`;
@@ -65,6 +80,10 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingAuthType, setEditingAuthType] = useState<ConnectorAuthType | null>(null);
+  // An HTTP source, or one that answers what is stored here — chosen when it is made, kept after.
+  const [kind, setKind] = useState<'http' | 'static'>('http');
+  const [answersText, setAnswersText] = useState('');
+  const [sample, setSample] = useState(false);
   const [name, setName] = useState('');
   const [baseUrl, setBaseUrl] = useState('');
   const [authType, setAuthType] = useState<ConnectorAuthType>('none');
@@ -115,6 +134,9 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
   function resetForm() {
     setEditingId(null);
     setEditingAuthType(null);
+    setKind('http');
+    setAnswersText('');
+    setSample(false);
     setName('');
     setBaseUrl('');
     setAuthType('none');
@@ -137,8 +159,19 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
 
   function startEdit(c: ConnectorSummary) {
     setEditingId(c.id);
-    setEditingAuthType(c.authType);
+    setKind(c.type);
     setName(c.name);
+    setAttributionText(c.attribution?.text ?? '');
+    setAttributionUrl(c.attribution?.url ?? '');
+    setDescription(c.description ?? '');
+    setTestOutcome(null);
+    if (c.type === 'static') {
+      setEditingAuthType(null);
+      setAnswersText(JSON.stringify(c.answers, null, 2));
+      setSample(c.sample);
+      return;
+    }
+    setEditingAuthType(c.authType);
     setBaseUrl(c.baseUrl);
     setAuthType(c.authType);
     setAuthHeaderName(c.authHeaderName ?? '');
@@ -147,14 +180,22 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     setOauthTokenUrl(c.oauthTokenUrl ?? '');
     setOauthClientId(c.oauthClientId ?? '');
     setOauthScope(c.oauthScope ?? '');
-    setAttributionText(c.attribution?.text ?? '');
-    setAttributionUrl(c.attribution?.url ?? '');
-    setDescription(c.description ?? '');
     setErrorPath(c.sourceError?.path ?? '');
     setErrorOk(c.sourceError?.ok?.join(', ') ?? '');
     setErrorMessagePath(c.sourceError?.messagePath ?? '');
     setOauthClientAuth(c.oauthClientAuth ?? 'basic');
-    setTestOutcome(null);
+  }
+
+  /** The credit and description as the form holds them — what every kind of source has. Blank clears what the source
+   *  has; otherwise there is nothing to send. */
+  function formCommon() {
+    const editing = connectors.find(c => c.id === editingId);
+    return {
+      attribution: attributionText.trim()
+        ? { text: attributionText.trim(), ...(attributionUrl.trim() ? { url: attributionUrl.trim() } : {}) }
+        : editing?.attribution ? null : undefined,
+      description: description.trim() ? description.trim() : editing?.description ? null : undefined,
+    };
   }
 
   /** The connection settings as the form holds them — what is saved, and what a test tries. */
@@ -164,11 +205,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       authType,
       authHeaderName: authType === 'header' ? authHeaderName : undefined,
       authParamName: authType === 'query' ? authParamName : undefined,
-      // Blank clears a credit the connector has; otherwise there is nothing to send.
-      attribution: attributionText.trim()
-        ? { text: attributionText.trim(), ...(attributionUrl.trim() ? { url: attributionUrl.trim() } : {}) }
-        : connectors.find(c => c.id === editingId)?.attribution ? null : undefined,
-      description: description.trim() ? description.trim() : connectors.find(c => c.id === editingId)?.description ? null : undefined,
+      ...formCommon(),
       sourceError: formSourceError(),
       authValue: authType === 'none' ? undefined : authValue || undefined,
       ...(isOAuth ? { oauthTokenUrl, oauthClientId, oauthScope, oauthClientAuth } : {}),
@@ -177,7 +214,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
 
   /** Where the source reports errors, as the form holds it: blank clears a setting the connector has. */
   function formSourceError(): ConnectorSourceError | null | undefined {
-    if (!errorPath.trim()) return connectors.find(c => c.id === editingId)?.sourceError ? null : undefined;
+    const editing = connectors.find(c => c.id === editingId);
+    if (!errorPath.trim()) return editing?.type === 'http' && editing.sourceError ? null : undefined;
     const ok = errorOk.split(',').map(v => v.trim()).filter(v => v !== '');
     return {
       path: errorPath.trim(),
@@ -188,6 +226,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
 
   async function handleTest() {
     const path = testPath.trim();
+    if (kind === 'static') return handleStaticTest(path);
     if (!path && !isOAuth) {
       setTestOutcome({ ok: false, text: '시험할 경로를 입력하세요(예: /assets).' });
       return;
@@ -213,8 +252,26 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
     }
   }
 
+  /** Tries the answers the form holds at `path` — what a board reading that path would get. */
+  async function handleStaticTest(path: string) {
+    const answers = parseAnswersText(answersText);
+    if (!answers) return setTestOutcome({ ok: false, text: ANSWERS_NOT_JSON });
+    if (!path) return setTestOutcome({ ok: false, text: '시험할 경로를 입력하세요(예: /equipment).' });
+    setIsTesting(true);
+    setTestOutcome(null);
+    try {
+      const result = await testConnector(workspaceId, { type: 'static', answers, path, ...(editingId ? { connectorId: editingId } : {}) });
+      setTestOutcome({ ok: result.ok, text: describeTestResult(result, path, 'static'), excerpt: result.excerpt });
+    } catch {
+      setTestOutcome({ ok: false, text: '저장한 답이나 경로를 확인하세요 — 경로마다 /로 시작하고, 전체 512 KB 이하여야 합니다.' });
+    } finally {
+      setIsTesting(false);
+    }
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (kind === 'static') return submitStatic();
     const input = { name, ...formSettings() };
     try {
       if (editingId) {
@@ -227,6 +284,20 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       await reload();
     } catch {
       setActionError(editingId ? '데이터소스 수정에 실패했습니다' : '데이터소스 생성에 실패했습니다');
+    }
+  }
+
+  async function submitStatic() {
+    const answers = parseAnswersText(answersText);
+    if (!answers) return setActionError(ANSWERS_NOT_JSON);
+    try {
+      if (editingId) await updateConnector(workspaceId, editingId, { name, answers, sample, ...formCommon() });
+      else await createConnector(workspaceId, { type: 'static', name, answers, sample, ...formCommon() });
+      setActionError(null);
+      resetForm();
+      await reload();
+    } catch {
+      setActionError(`${editingId ? '데이터소스 수정' : '데이터소스 생성'}에 실패했습니다 — 답의 경로는 /로 시작하고, 전체 512 KB 이하여야 합니다.`);
     }
   }
 
@@ -258,8 +329,17 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
           {connectors.map(c => (
             <Card key={c.id}>
               <span className="ub-connector-card__name">{c.name}</span>
-              <span className="ub-connector-card__meta">{c.baseUrl}</span>
-              <Badge>{c.authType === 'none' ? '인증 없음' : AUTH_TYPE_LABELS[c.authType]}</Badge>
+              {c.type === 'static' ? (
+                <>
+                  <span className="ub-connector-card__meta">저장한 답 · 경로 {Object.keys(c.answers).length}개</span>
+                  <Badge>{c.sample ? '예시 데이터' : '저장한 답'}</Badge>
+                </>
+              ) : (
+                <>
+                  <span className="ub-connector-card__meta">{c.baseUrl}</span>
+                  <Badge>{c.authType === 'none' ? '인증 없음' : AUTH_TYPE_LABELS[c.authType]}</Badge>
+                </>
+              )}
               {isOwner && (
                 <div className="ub-connector-card__footer">
                   <Button variant="ghost" aria-label={`${c.name} 수정`} onClick={() => startEdit(c)}>수정</Button>
@@ -272,9 +352,40 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
       )}
       {isOwner && (
         <form onSubmit={handleSubmit}>
+          <fieldset className="ub-connector-kind" disabled={editingId !== null}>
+            <legend>종류</legend>
+            <label>
+              <input type="radio" name="connector-kind" checked={kind === 'http'} onChange={() => setKind('http')} /> HTTP 원천
+            </label>
+            <label>
+              <input type="radio" name="connector-kind" checked={kind === 'static'} onChange={() => setKind('static')} /> 저장한 답
+            </label>
+          </fieldset>
           <FormField label="이름">
             <input value={name} onChange={e => setName(e.target.value)} required />
           </FormField>
+          {kind === 'static' ? (
+            <>
+              <FormField label="저장한 답(JSON — 경로마다 응답)">
+                <textarea
+                  value={answersText}
+                  onChange={e => setAnswersText(e.target.value)}
+                  rows={8}
+                  spellCheck={false}
+                  placeholder={'{ "/equipment": [ { "id": "P1", "flow": 31 } ] }'}
+                />
+              </FormField>
+              <p className="ub-connector-hint">
+                HTTP 원천이 그 경로에서 줄 응답을 경로마다 적습니다. 보드는 다른 원천처럼 경로로 읽고(쿼리는 무시), 나중에 실제 원천으로 바꿀 때는
+                보드가 읽는 원천만 바꾸면 됩니다. 설비 목록 같은 참조표나 예시 데이터에 씁니다.
+              </p>
+              <label className="ub-connector-sample">
+                <input type="checkbox" checked={sample} onChange={e => setSample(e.target.checked)} /> 예시 데이터 — 이 원천을 읽는 보드 아래에 «예시 데이터»로
+                표시합니다
+              </label>
+            </>
+          ) : (
+            <>
           <FormField label="Base URL">
             <input value={baseUrl} onChange={e => setBaseUrl(e.target.value)} required />
           </FormField>
@@ -331,6 +442,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
               <input type="password" value={authValue} onChange={e => setAuthValue(e.target.value)} required={!canKeepStoredSecret} />
             </FormField>
           )}
+            </>
+          )}
           <FormField label="출처 표시(선택)">
             <input value={attributionText} onChange={e => setAttributionText(e.target.value)} maxLength={200} placeholder="예: 서울 열린데이터광장 (공공누리 제1유형)" />
           </FormField>
@@ -350,6 +463,7 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
             />
           </FormField>
           <p className="ub-connector-hint">이 데이터소스가 어떤 경로에서 무엇을 주는지 적어 두면, 보드를 만드는 사람과 AI 비서가 경로를 짐작하지 않고 바인딩합니다. 공유 링크에는 나가지 않습니다.</p>
+          {kind === 'http' && (
           <details className="ub-connector-source-error" open={errorPath.trim() !== ''}>
             <summary>응답 속 오류 위치(선택)</summary>
             <p className="ub-connector-hint">
@@ -366,7 +480,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
               <input value={errorMessagePath} onChange={e => setErrorMessagePath(e.target.value)} pattern="/.+" placeholder="/message" />
             </FormField>
           </details>
-          <FormField label={isOAuth ? '시험할 경로(선택 — 비우면 토큰만)' : '시험할 경로'}>
+          )}
+          <FormField label={kind === 'http' && isOAuth ? '시험할 경로(선택 — 비우면 토큰만)' : '시험할 경로'}>
             <input value={testPath} onChange={e => setTestPath(e.target.value)} placeholder="/assets" />
           </FormField>
           {testPath.includes('{{now:') && (
@@ -374,8 +489,8 @@ export function ConnectorsPage({ workspaceId, userId }: { workspaceId: string; u
               시각 자리({'{{now:…}}'})는 이 브라우저 시간대의 지금 시각(분 단위)으로 채워 시험합니다. 정시 자료만 주는 원천은 시각을 직접 적어 시험하세요.
             </p>
           )}
-          <Button type="button" variant="ghost" onClick={handleTest} disabled={isTesting || !baseUrl}>
-            {isTesting ? '시험 중…' : '연결 테스트'}
+          <Button type="button" variant="ghost" onClick={handleTest} disabled={isTesting || (kind === 'http' && !baseUrl)}>
+            {isTesting ? '시험 중…' : kind === 'static' ? '답 확인' : '연결 테스트'}
           </Button>
           {testOutcome && (
             <p role="status" className={testOutcome.ok ? 'ub-connector-test--ok' : 'ub-connector-test--failed'}>

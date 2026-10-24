@@ -10,7 +10,7 @@ vi.mock('@iyulab/u-board/viewer', async () => {
   return {
     ...actual,
     ViewerPage: (props: any) => (
-      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')} data-attributions={JSON.stringify(props.adapters.map((a: any) => a.attribution ?? null))} data-attribution-shown={String(props.attribution !== false)} data-label={props.ariaLabel} data-poll={props.pollIntervalMs} data-server-clock={String(props.clock === apiClock.now)}>
+      <div data-testid="viewer-page" data-adapter-ids={props.adapters.map((a: any) => a.id).join(',')} data-attributions={JSON.stringify(props.adapters.map((a: any) => a.attribution ?? null))} data-samples={JSON.stringify(props.adapters.map((a: any) => a.sample === true))} data-attribution-shown={String(props.attribution !== false)} data-label={props.ariaLabel} data-poll={props.pollIntervalMs} data-server-clock={String(props.clock === apiClock.now)}>
         {props.document.background ? 'rendered' : ''}
         <span data-testid="node-ids">{props.document.nodes.map((n: any) => n.id).join(',')}</span>
         <button type="button" onClick={() => props.adapters[0]?.resolve({ path: '/x' })}>
@@ -282,11 +282,12 @@ describe('App', () => {
     (fetch as any).mockResolvedValueOnce({
       ok: true,
       headers: new Headers(),
-      json: async () => ({ name: 'A', document: DOC, connectorIds: ['c1', 'c2'], attributions: { c1: credit } }),
+      json: async () => ({ name: 'A', document: DOC, connectorIds: ['c1', 'c2'], attributions: { c1: credit }, samples: ['c2'] }),
     });
     render(<App />);
     const viewer = await screen.findByTestId('viewer-page');
     expect(JSON.parse(viewer.dataset.attributions!)).toEqual([credit, null]);
+    expect(JSON.parse(viewer.dataset.samples!)).toEqual([false, true]);
     expect(viewer.dataset.attributionShown).toBe('true');
   });
 

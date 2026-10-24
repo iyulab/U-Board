@@ -31,7 +31,7 @@ describe('a sample on a source that asks each user for a key', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.mocked(api.createConnector).mockImplementation(async (_w, input) => ({ id: 'new', type: 'http', updatedAt: 't', ...input, attribution: undefined, description: undefined, sourceError: undefined }));
+    vi.mocked(api.createConnector).mockImplementation(async (_w, input: any) => ({ id: 'new', type: 'http', updatedAt: 't', ...input, attribution: undefined, description: undefined, sourceError: undefined }));
     vi.mocked(api.createBoard).mockResolvedValue({ id: 'b1', name: 'x', kind: 'canvas', updatedAt: 't' });
     vi.mocked(api.updateBoard).mockResolvedValue({ id: 'b1', name: 'x', updatedAt: 't', revision: 2 });
   });

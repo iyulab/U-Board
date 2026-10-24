@@ -106,7 +106,7 @@ describe('a static data source', () => {
   });
 
   it('is what a board in the second version draws its items from, as it is drawn for the editor and a share link', async () => {
-    const { body: source } = await create({ answers: { '/pumps': PUMPS } });
+    const { body: source } = await create({ answers: { '/pumps': PUMPS }, sample: true });
     const { body: board } = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', ownerCookie).send({ name: 'Pumps', kind: 'grid' });
     const at = `/api/workspaces/${workspaceId}/boards/${board.id}`;
     const document = {
@@ -124,6 +124,8 @@ describe('a static data source', () => {
     const shared = await request(app).get(`/api/share/boards/${board.id}`).set('Authorization', `Bearer ${token}`);
     expect(shared.status).toBe(200);
     expect(shared.body.picture.items.map((i: { id: string }) => i.id)).toEqual(['pump/P1', 'pump/P2']);
+    // The share viewer is told its answers are example data, to say so under the board.
+    expect(shared.body.samples).toEqual([source.id]);
     expect(upstream).not.toHaveBeenCalled();
   });
 });

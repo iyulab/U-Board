@@ -152,6 +152,50 @@ describe('ConnectorsPage', () => {
     await waitFor(() => expect(api.updateConnector).toHaveBeenLastCalledWith('w1', 'c7', expect.objectContaining({ sourceError: null })));
   });
 
+  it('makes a source that answers what is stored here — its answers by path, tried before saving, marked as example data', async () => {
+    const owner = { members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' as const }] };
+    const stored = { id: 's1', name: 'Plant (example)', type: 'static' as const, answers: { '/pumps': [{ id: 'P1' }] }, sample: true, updatedAt: 't' };
+    vi.mocked(api.listConnectors).mockResolvedValueOnce({ connectors: [] }).mockResolvedValue({ connectors: [stored] });
+    vi.mocked(api.listMembers).mockResolvedValue(owner);
+    vi.mocked(api.createConnector).mockResolvedValue(stored);
+    vi.mocked(api.testConnector).mockResolvedValue({ ok: false, stage: 'request', reason: 'address', status: 404, message: 'x' });
+    render(
+      <MemoryRouter>
+        <ConnectorsPage workspaceId="w1" userId="u1" />
+      </MemoryRouter>
+    );
+    await userEvent.click(await screen.findByRole('radio', { name: '저장한 답' }));
+    expect(screen.queryByLabelText('Base URL')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('인증 방식')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Plant (example)' } });
+    const answers = screen.getByLabelText('저장한 답(JSON — 경로마다 응답)');
+
+    // Not an object of answers: refused before anything is sent.
+    fireEvent.change(answers, { target: { value: '[1, 2]' } });
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 추가' }));
+    expect(await screen.findByText(/JSON 객체가 아닙니다/)).toBeInTheDocument();
+    expect(api.createConnector).not.toHaveBeenCalled();
+
+    fireEvent.change(answers, { target: { value: '{ "/pumps": [{ "id": "P1" }] }' } });
+    fireEvent.change(screen.getByLabelText('시험할 경로'), { target: { value: '/valves' } });
+    fireEvent.click(screen.getByRole('button', { name: '답 확인' }));
+    expect(await screen.findByText('/valves에 저장한 답이 없습니다 — 답의 경로를 확인하세요.')).toBeInTheDocument();
+    expect(api.testConnector).toHaveBeenCalledWith('w1', { type: 'static', answers: { '/pumps': [{ id: 'P1' }] }, path: '/valves' });
+
+    await userEvent.click(screen.getByRole('checkbox', { name: /예시 데이터/ }));
+    fireEvent.click(screen.getByRole('button', { name: '데이터소스 추가' }));
+    await waitFor(() =>
+      expect(api.createConnector).toHaveBeenCalledWith('w1', { type: 'static', name: 'Plant (example)', answers: { '/pumps': [{ id: 'P1' }] }, sample: true, attribution: undefined, description: undefined })
+    );
+    // Listed with what it holds, and edited as itself — its kind kept.
+    expect(await screen.findByText('저장한 답 · 경로 1개')).toBeInTheDocument();
+    expect(screen.getByText('예시 데이터')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Plant (example) 수정' }));
+    expect(screen.getByRole('radio', { name: '저장한 답' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'HTTP 원천' })).toBeDisabled();
+    expect(screen.getByLabelText('저장한 답(JSON — 경로마다 응답)')).toHaveValue(JSON.stringify(stored.answers, null, 2));
+  });
+
   it('shows an empty state when the workspace has no connectors yet', async () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
     vi.mocked(api.listMembers).mockResolvedValue({ members: [{ userId: 'u1', email: 'o@x.com', name: 'O', role: 'owner' }] });
