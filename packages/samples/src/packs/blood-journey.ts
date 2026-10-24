@@ -13,6 +13,10 @@ const board: Board = {
   "board": {
     "accent": "#b91c1c"
   },
+  "symbols": {
+    "drop": { "viewBox": "0 0 24 32", "path": "M12 1 C12 1 2 14 2 21 a10 10 0 0 0 20 0 C22 14 12 1 12 1 Z" },
+    "person": { "viewBox": "0 0 24 32", "path": "M6 7 a6 6 0 1 0 12 0 a6 6 0 1 0 -12 0 Z M1 32 v-8 a11 11 0 0 1 22 0 v8 Z" }
+  },
   "elements": {
     "masthead": {
       "template": "<header class=\"mast\">\n  <span class=\"kicker\">오늘의 혈액 수급 · {{asOf}} 기준</span>\n  <h1>혈액 한 팩이 환자에게 닿기까지</h1>\n  <p><b>{{donors | grouped:0}}</b>명이 오늘 팔을 걷었습니다</p>\n</header>",

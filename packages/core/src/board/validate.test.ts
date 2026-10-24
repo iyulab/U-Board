@@ -338,13 +338,43 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('holds what the renderer would choke on or drop unseen: the accent, a background, an origin, a symbol a template uses, an open hole', () => {
+    const at = (b: Record<string, unknown>) => issues({ ...canvas({}), ...b });
+    expect(at({ board: { accent: '#1f6feb' } })).toEqual([]);
+    expect(at({ board: { accent: 5 } })[0]).toMatch(/^\/board\/accent: an accent is a colour — a hex colour/);
+    expect(at({ board: { accent: 'url(https://x.example.com/a.png)' } })[0]).toMatch(/^\/board\/accent: an accent is a colour/);
+    expect(at({ board: { accent: 'accent' } })[0]).toMatch(/^\/board\/accent: the board's accent is a colour itself/);
+    const bg = (background: unknown) => issues({ ...canvas({}), layout: { kind: 'canvas', size: [100, 100], background, place: {} } });
+    for (const ok of ['https://cdn.example.com/plan.png', 'data:image/svg+xml,%3Csvg%2F%3E', '/plans/floor-1.png']) expect(bg(ok)).toEqual([]);
+    for (const bad of [5, 'javascript:alert(1)', '//evil.example.com/a.png', 'http://plain.example.com/a.png']) {
+      expect(bg(bad)).toEqual(['/layout/background: a background is an image — an https:// address, a data:image/… URL, or a path on this site ("/plans/floor-1.png")']);
+    }
+    const script = 'ub.onProps(function () {});';
+    expect(at({ elements: { s: { script, resources: ['https://cdn.example.com', 'https://CDN.example.com', 'https://a.example.com:443', 'https://a.example.com/lib.js'] } } })).toEqual([1, 2, 3].map(i =>
+      `/elements/s/resources/${i}: an origin is "https://" and a host in lower case with nothing after it — "https://cdn.example.com"`));
+    expect(at({ symbols: { pump: { path: 'M0 0h1v1z' } }, elements: { e: { template: '<svg><use href="#pump"/><use href="#nope"/><g id="own"/><use href="#own"/></svg>' } } })).toEqual([
+      '/elements/e/template: <use href="#nope">: no symbol "nope" — define it in symbols, or give a part of this template id="nope"',
+    ]);
+    expect(issues(canvas({ t: { as: 'label', title: 'flow {{v' } }))).toContain('/parts/t/title: "flow {{v" opens a {{ it does not close — write {{field}}');
+  });
+
+  it('runs a trigger that can run: a part enters one status at a time, and waits for at least one', () => {
+    const board = (on: Record<string, unknown>, when?: Record<string, unknown>) => ({
+      ...canvas({ k: { as: 'status-card', of: 'equipment[P1]', show: ['state'] } }),
+      triggers: [{ on, ...(when ? { when } : {}), do: [{ action: 'emit', name: 'x' }] }],
+    });
+    const status = (s: unknown) => issues(board({ event: 'enter', part: 'k', status: s }));
+    expect(status(['alarm'])).toEqual(['/triggers/0/on/status: a part enters or leaves one status at a time — name one; to act on several, add a trigger for each']);
+    expect(issues(board({ event: 'click', part: 'k' }, { part: 'k', status: [] }))).toEqual(['/triggers/0/when/status: a list of statuses names at least one — the trigger would never run']);
+  });
+
   it('takes an element that runs a script in a frame — a template or a script, one of them; what it loads an https:// origin', () => {
     const script = 'ub.onProps(function (p) { document.body.textContent = p.value; });';
     expect(issues({ ...canvas({}), elements: { counter: { script, style: 'body{margin:0}', resources: ['https://cdn.example.com'], props: { value: 'number' } } } })).toEqual([]);
     expect(issues({ ...canvas({}), elements: { a: { template: '<b/>', script }, b: {}, c: { script, resources: ['http://cdn.example.com/x.js'] }, d: { template: '<svg/>', resources: ['https://x.example.com'] } } })).toEqual([
       '/elements/a/template: an element has a "template" — markup with {{prop}} holes — or a "script" run in a sandboxed frame, one of them',
       '/elements/b/template: an element has a "template" — markup with {{prop}} holes — or a "script" run in a sandboxed frame, one of them',
-      '/elements/c/resources: resources are the https:// origins a script loads from — ["https://cdn.example.com"]',
+      '/elements/c/resources/0: an origin is "https://" and a host in lower case with nothing after it — "https://cdn.example.com"',
       '/elements/d/resources: a template element loads nothing — resources are a script element’s',
     ]);
   });

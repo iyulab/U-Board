@@ -7,8 +7,10 @@
 import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
 import { isTriggerLink } from '../view-document.js';
 import { EMPHASES, FRAMES, TONES } from './types.js';
-import { checkStyle, checkTemplateMarkup } from '../elements/markup-policy.js';
-import { VIEW_BOX } from '../elements/symbols.js';
+import { checkStyle, checkTemplateMarkup, isResourceOrigin } from '../elements/markup-policy.js';
+import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
+import { DRAWING_COLOR_FORMS, isDrawingColor } from '../css-color.js';
+import { THEME_COLORS, isThemeColor } from '../theme-colors.js';
 import { parseTemplate } from '../elements/template.js';
 
 /**
@@ -69,6 +71,14 @@ export function validateBoard(board: unknown): BoardIssue[] {
     if (!['title', 'theme', 'accent', 'skin'].includes(key)) fail(`/board/${key}`, `"board" has no "${key}" — it has title, theme, accent, skin`);
   }
   if (head.theme !== undefined && head.theme !== 'light' && head.theme !== 'dark') fail('/board/theme', 'a theme is "light" or "dark"');
+  // The accent is a colour itself — drawn as the accent tone and a header's banner, so only the forms every canvas reads.
+  if (head.accent !== undefined) {
+    if (typeof head.accent === 'string' && isThemeColor(head.accent)) {
+      fail('/board/accent', `the board's accent is a colour itself — a tone (${THEME_COLORS.join(', ')}) goes where a part is coloured`);
+    } else if (typeof head.accent !== 'string' || !isDrawingColor(head.accent) || /^(none|transparent)$/i.test(head.accent.trim())) {
+      fail('/board/accent', `an accent is a colour — ${DRAWING_COLOR_FORMS.replace(/, "transparent" or "none"$/, '')}`);
+    }
+  }
   const skin = isObj(head.skin) ? head.skin : {};
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
   if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
@@ -221,9 +231,11 @@ export function validateBoard(board: unknown): BoardIssue[] {
     }
     if (run) {
       // What a script loads is named, and only from an https:// origin.
-      if (el.resources !== undefined && (!Array.isArray(el.resources) || el.resources.some(r => typeof r !== 'string' || !/^https:\/\/[^/\s]+$/.test(r)))) {
-        fail(`${at}/resources`, 'resources are the https:// origins a script loads from — ["https://cdn.example.com"]');
-      }
+      // The same rule the renderer and the frame server hold an origin to: lower case, no port, path, query or user.
+      if (el.resources !== undefined && !Array.isArray(el.resources)) fail(`${at}/resources`, 'resources are the https:// origins a script loads from — ["https://cdn.example.com"]');
+      else (el.resources as unknown[] | undefined)?.forEach((r, i) => {
+        if (!isResourceOrigin(r)) fail(`${at}/resources/${i}`, 'an origin is "https://" and a host in lower case with nothing after it — "https://cdn.example.com"');
+      });
       continue;
     }
     if (el.resources !== undefined) fail(`${at}/resources`, 'a template element loads nothing — resources are a script element\u2019s');
@@ -231,6 +243,10 @@ export function validateBoard(board: unknown): BoardIssue[] {
     // The markup is read as the renderer reads it: a template that does not parse, or that the markup policy refuses
     // (a script, a frame, an event handler, a URL off the element), is an error here — not something dropped unseen.
     for (const issue of checkTemplateMarkup(el.template, [])) fail(`${at}/template`, issue.message);
+    for (const ref of symbolReferences(el.template)) {
+      if (ref.includes('{{') || (isObj(board.symbols) && ref in board.symbols) || el.template.includes(`id="${ref}"`) || el.template.includes(`id='${ref}'`)) continue;
+      fail(`${at}/template`, `<use href="#${ref}">: no symbol "${ref}" — define it in symbols, or give a part of this template id="${ref}"`);
+    }
     const holeIssues = issues.length;
     // A hole is a prop — or, inside a list's section ({{#items}} … {{/items}}), a field of its item or {{.}}, the item
     // itself. Nothing is computed in it.
@@ -364,6 +380,8 @@ export function validateBoard(board: unknown): BoardIssue[] {
     for (const prop of ['title', 'label', 'subtitle', 'note'] as const) {
       const text = holder[prop];
       if (typeof text !== 'string') continue;
+      // A hole left open would be shown as it is written.
+      if (text.replace(HOLE, '').includes('{{')) fail(`${at}/${prop}`, `"${text}" opens a {{ it does not close — write {{field}}`);
       for (const m of text.matchAll(HOLE)) {
         const name = m[1]!.trim();
         if (!/^[\w.-]+$/.test(name)) fail(`${at}/${prop}`, `"{{${m[1]}}}" — write {{field}} with a field name, or {{key}} for the item's key`);
@@ -561,6 +579,11 @@ export function validateBoard(board: unknown): BoardIssue[] {
   const layout = board.layout;
   const checkCanvas = (canvas: Obj, at: string) => {
     if (!isSize(canvas.size)) fail(`${at}/size`, 'a canvas needs "size": [width, height]');
+    // An image: an https:// address, an inline image, or a path on the site that serves the board — nothing that runs.
+    if (canvas.background !== undefined && (typeof canvas.background !== 'string'
+      || !/^(https:\/\/\S+|data:image\/(png|jpeg|gif|webp|svg\+xml)[;,]\S*|\/(?!\/)\S*)$/i.test(canvas.background))) {
+      fail(`${at}/background`, 'a background is an image — an https:// address, a data:image/… URL, or a path on this site ("/plans/floor-1.png")');
+    }
     const place = isObj(canvas.place) ? canvas.place : {};
     if (!isObj(canvas.place)) fail(`${at}/place`, 'a canvas needs "place": { "<part>": [x, y, width?, height?] }');
     for (const [id, p] of Object.entries(place)) {
@@ -677,7 +700,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     return undefined;
   };
   /** A part's status: of `field`, or of its own state — a status card's, or what its `state` option names. */
-  const checkStatusOf = (holder: Obj, at: string, status: unknown) => {
+  const checkStatusOf = (holder: Obj, at: string, status: unknown, list = false) => {
     const part = targetOf(holder.part, `${at}/part`);
     if (part) {
       const reads = typeof part.of === 'string' ? OF.exec(part.of)?.[1] : typeof part.each === 'string' ? part.each : undefined;
@@ -689,7 +712,9 @@ export function validateBoard(board: unknown): BoardIssue[] {
         fail(`${at}/field`, `"${String(holder.field)}" has no "state" in /data/${reads ?? '…'}/fields — a status is a field's state`);
       }
     }
-    for (const [i, name] of (Array.isArray(status) ? status : [status]).entries()) {
+    if (Array.isArray(status) && !list) fail(`${at}/status`, 'a part enters or leaves one status at a time — name one; to act on several, add a trigger for each');
+    else if (Array.isArray(status) && status.length === 0) fail(`${at}/status`, 'a list of statuses names at least one — the trigger would never run');
+    else for (const [i, name] of (Array.isArray(status) ? status : [status]).entries()) {
       if (!isStatus(name)) fail(Array.isArray(status) ? `${at}/status/${i}` : `${at}/status`, `"${String(name)}" is not a status — ${statusHint()}`);
     }
   };
@@ -708,7 +733,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     else if (on.event !== 'open') fail(`${at}/on/event`, `"${String(on.event)}" is not an event — click · element · enter · leave · open`);
     if (t.when !== undefined) {
       if (!isObj(t.when)) fail(`${at}/when`, '"when" is { "part", "field"?, "status": "<status>" | [ … ] }');
-      else checkStatusOf(t.when, `${at}/when`, t.when.status);
+      else checkStatusOf(t.when, `${at}/when`, t.when.status, true);
     }
     if (!Array.isArray(t.do) || t.do.length === 0) { fail(`${at}/do`, 'a trigger does something: "do": [{ "action": "open-link" | "focus" | "emit" | "go-to-board", … }]'); continue; }
     for (const [j, a] of t.do.entries()) {
