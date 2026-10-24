@@ -247,6 +247,7 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-panel__heading`, `ub-panel__subheading`, `ub-panel__field`, `ub-panel__hint`, `ub-panel__error` | Its heading, section heading, a labelled field, hint text and an error |
 | `ub-panel__findings` | What a board's check finds at the selected part, listed under its settings |
 | `ub-panel__widget-form`, `ub-panel__group` | The widget's own fields, and each group of them (data, display options) |
+| `ub-panel__details` | A fold for the finer settings of a data read (which items, their time, the request time) |
 | `ub-panel__list` | The board's elements or symbols, one row each, in their panel |
 | `ub-panel__field-name`, `ub-panel__field--check` | A field's name (with its key); a checkbox field |
 | `ub-panel__advanced`, `ub-panel__json` | The folded "edit as JSON" section, and its editor |

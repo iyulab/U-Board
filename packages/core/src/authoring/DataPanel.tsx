@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
-import { FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
+import { ERROR_STYLE, FIELD_STYLE, GROUP_STYLE } from '../ui-style.js';
 import type { Field, Query } from '../board-v2/types.js';
 import { MappingEditor } from './MappingEditor.js';
 
@@ -85,6 +85,82 @@ export function DataPanel({ data = {}, onChange, sources, look, statuses = [], l
   );
 }
 
+/** Items picked by their fields, as written — `kind=PM10, site=north` — a number (not one with a leading zero, an id) or
+ *  `true`/`false` as one, the rest as text; `null` when it is not pairs, `undefined` when empty. */
+export function parseWhere(text: string): Record<string, string | number | boolean> | null | undefined {
+  if (text.trim() === '') return undefined;
+  const where: Record<string, string | number | boolean> = {};
+  for (const pair of text.split(',')) {
+    const at = pair.indexOf('=');
+    const field = pair.slice(0, at).trim();
+    const value = pair.slice(at + 1).trim();
+    if (at < 0 || field === '' || value === '') return null;
+    where[field] = /^-?(0|[1-9]\d*)(\.\d+)?$/.test(value) ? Number(value) : value === 'true' ? true : value === 'false' ? false : value;
+  }
+  return where;
+}
+
+const whereText = (where: Query['where']) => (where ? Object.entries(where).map(([field, value]) => `${field}=${value}`).join(', ') : '');
+
+/** The finer points of a request read, folded: which items, when they were observed, how long a value stays current, the
+ *  source's time zone, the time its request asks for, and a long answer read as one item. */
+function ReadDetails({ query, labels, set }: { query: Query; labels: UBoardLabels; set: (change: Partial<Query>) => void }) {
+  const [where, setWhere] = useState(() => whereText(query.where));
+  const whereRead = parseWhere(where);
+  const text = (label: string, value: string | undefined, change: (value: string) => void) => (
+    <label className="ub-panel__field" style={FIELD_STYLE}>
+      {label}
+      <input type="text" value={value ?? ''} onChange={e => change(e.target.value)} />
+    </label>
+  );
+  const seconds = (label: string, value: number | undefined, change: (value: number | undefined) => void) => (
+    <label className="ub-panel__field" style={FIELD_STYLE}>
+      {label}
+      <input type="number" min={0} value={value ?? ''} onChange={e => change(e.target.value === '' ? undefined : Number(e.target.value))} />
+    </label>
+  );
+  const setNow = (change: Partial<NonNullable<Query['now']>>) => {
+    const now = Object.fromEntries(Object.entries({ ...query.now, ...change }).filter(([, v]) => v !== undefined));
+    set({ now: Object.keys(now).length > 0 ? now : undefined });
+  };
+  const setPivot = (change: Partial<NonNullable<Query['pivot']>>) => {
+    const pivot = { key: query.pivot?.key ?? '', value: query.pivot?.value ?? '', ...change };
+    set({ pivot: pivot.key.trim() === '' && pivot.value.trim() === '' ? undefined : pivot });
+  };
+  const open = [query.where, query.time, query.answerTime, query.fresh, query.zone, query.now, query.pivot].some(v => v !== undefined);
+  return (
+    <details className="ub-panel__details" open={open}>
+      <summary>{labels.dataDetails}</summary>
+      <label className="ub-panel__field" style={FIELD_STYLE}>
+        {labels.dataWhere}
+        <input
+          type="text"
+          value={where}
+          aria-invalid={whereRead === null}
+          onChange={e => {
+            setWhere(e.target.value);
+            const read = parseWhere(e.target.value);
+            if (read !== null) set({ where: read });
+          }}
+        />
+        {whereRead === null && (
+          <span role="alert" style={ERROR_STYLE}>
+            {labels.dataWhereInvalid}
+          </span>
+        )}
+      </label>
+      {text(labels.dataTime, query.time, time => set({ time }))}
+      {text(labels.dataAnswerTime, query.answerTime, answerTime => set({ answerTime }))}
+      {seconds(labels.dataFresh, query.fresh, fresh => set({ fresh }))}
+      {text(labels.dataZone, query.zone, zone => set({ zone }))}
+      {seconds(labels.dataNowDelay, query.now?.delay, delay => setNow({ delay }))}
+      {seconds(labels.dataNowStep, query.now?.step, step => setNow({ step }))}
+      {text(labels.dataPivotKey, query.pivot?.key, key => setPivot({ key }))}
+      {text(labels.dataPivotValue, query.pivot?.value, value => setPivot({ value }))}
+    </details>
+  );
+}
+
 interface DataReadProps {
   name: string;
   statuses: readonly string[];
@@ -130,6 +206,7 @@ function DataRead({ name, query, sources, look, statuses, labels, set, setField,
           {text(labels.dataPath, query.path, path => set({ path }))}
           {text(labels.dataList, query.list, list => set({ list }))}
           {text(labels.dataKey, query.key, key => set({ key }))}
+          <ReadDetails query={query} labels={labels} set={set} />
         </>
       )}
       <fieldset className="ub-panel__group" style={{ minWidth: 0 }}>

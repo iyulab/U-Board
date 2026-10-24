@@ -211,6 +211,18 @@ export interface UBoardLabels {
   dataByRef: string;
   dataList: string;
   dataKey: string;
+  /** The finer points of a request read, folded under one heading. */
+  dataDetails: string;
+  dataWhere: string;
+  dataWhereInvalid: string;
+  dataTime: string;
+  dataAnswerTime: string;
+  dataFresh: string;
+  dataZone: string;
+  dataNowDelay: string;
+  dataNowStep: string;
+  dataPivotKey: string;
+  dataPivotValue: string;
   dataFields: string;
   dataFieldLabel: string;
   dataFieldUnit: string;
@@ -662,6 +674,17 @@ export const DEFAULT_LABELS: UBoardLabels = {
   dataByRef: 'Read by its adapter’s own reference — set it with the assistant, or in the board’s JSON.',
   dataList: 'List in the answer (JSON Pointer)',
   dataKey: 'Key field of an item',
+  dataDetails: 'More about this read',
+  dataWhere: 'Only the items with (field=value, by commas)',
+  dataWhereInvalid: 'Write field=value pairs, by commas: kind=PM10, site=north.',
+  dataTime: 'Field with when an item was observed',
+  dataAnswerTime: 'When the answer as a whole was observed (JSON Pointer)',
+  dataFresh: 'Seconds a value stays current',
+  dataZone: 'Time zone the source writes times in (IANA)',
+  dataNowDelay: 'Request time — seconds after it the source has its data',
+  dataNowStep: 'Request time — seconds between the source’s data',
+  dataPivotKey: 'One row per name — the field naming it',
+  dataPivotValue: 'One row per name — the field with its value',
   dataFields: 'Fields',
   dataFieldLabel: 'Name',
   dataFieldUnit: 'Unit',

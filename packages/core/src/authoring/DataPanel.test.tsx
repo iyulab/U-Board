@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
-import { DataPanel } from './DataPanel';
+import { DataPanel, parseWhere } from './DataPanel';
 import type { Query } from '../board-v2/types';
 
 const data: Record<string, Query> = {
@@ -34,6 +34,29 @@ describe('DataPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove field flow' }));
     const { fields: _fields, ...withoutFields } = data.pumps!;
     expect(onChange).toHaveBeenLastCalledWith({ pumps: withoutFields });
+  });
+
+  it('sets the finer points of a read — its items by their fields, their time, how long a value stays current, the request time', () => {
+    const onChange = vi.fn();
+    render(<DataPanel data={data} sources={sources} onChange={onChange} />);
+    const where = screen.getByLabelText('Only the items with (field=value, by commas)');
+    fireEvent.change(where, { target: { value: 'kind' } });
+    expect(screen.getByRole('alert')).toHaveTextContent('field=value');
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.change(where, { target: { value: 'kind=PM10, floor=2' } });
+    expect(onChange).toHaveBeenLastCalledWith({ pumps: { ...data.pumps, where: { kind: 'PM10', floor: 2 } } });
+    fireEvent.change(screen.getByLabelText('Field with when an item was observed'), { target: { value: 'updatedAt' } });
+    expect(onChange.mock.lastCall![0].pumps.time).toBe('updatedAt');
+    fireEvent.change(screen.getByLabelText('Seconds a value stays current'), { target: { value: '600' } });
+    expect(onChange.mock.lastCall![0].pumps.fresh).toBe(600);
+    fireEvent.change(screen.getByLabelText(/seconds after it the source has its data/), { target: { value: '2400' } });
+    expect(onChange.mock.lastCall![0].pumps.now).toEqual({ delay: 2400 });
+  });
+
+  it('reads items picked by their fields as written — a number or true and false as one, the rest as text', () => {
+    expect(parseWhere('kind=PM10, floor=2, open=true, code=01a, line=07')).toEqual({ kind: 'PM10', floor: 2, open: true, code: '01a', line: '07' });
+    expect(parseWhere('')).toBeUndefined();
+    for (const text of ['kind', '=x', 'kind=', 'a=1,,b=2']) expect(parseWhere(text), text).toBeNull();
   });
 
   it('adds a read from the first source by a name parts can address, and removes one — none left is none', () => {
