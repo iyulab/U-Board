@@ -21,7 +21,9 @@ All notable changes to this package are documented here. The format follows
   the stored format. It loads no other package at runtime: the widget kinds it knows are a copy of the widget library's
   catalog written when this package is built, so a server can validate boards without the widget library installed.
   `BoardDocument` is what a board stores while boards move to it (a document in either version), and
-  `documentKind(document)` the kind of view either lays out.
+  `documentKind(document)` the kind of view either lays out. An option a kind reads itself in place of one of its widget's has that one name —
+  a list's `max` and `variant`, never the widget's `maxItems` and `layout` (the check says which to write; a first-version
+  document's list options come across renamed).
 - `BoardView` (in `./viewer`): a board as it is stored — in either version of the board language — drawn in the
   application that hosts it, its values and the items a grid lays out a part per item of read through the host's own
   adapters, with no U-Board server. `pictureOf(board, read)`, `readKeys`, `dataReadOf` and `readerOf(adapters)` in `./board-v2` make

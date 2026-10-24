@@ -20,6 +20,10 @@ export interface PartKind {
   /** The options the board reads itself, before it hands the rest to the widget: which field a list's line shows, a
    *  chart's mapping, a marker's shape. */
   own: string[];
+  /** The widget's options an option the board reads itself takes the place of — by the board's word, the widget's
+   *  (a list's `max` is the widget's `maxItems`). The widget's word is not an option of the kind: one setting has one
+   *  name. */
+  stands?: Record<string, string>;
 }
 
 /** The options of a chart part that are its mapping — which field is x, y, … */
@@ -29,12 +33,12 @@ export const CHART_MAPPING: readonly string[] = ['x', 'y', 'start', 'end', 'labe
  * The general built-ins, each drawn by a widget of the library — under the board's name where the two differ: a
  * board's `stat` is the library's `metric`, its `stat-list` the library's `kv`.
  */
-const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['of'], own?: readonly string[]])[] = [
+const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['of'], own?: readonly string[], stands?: Readonly<Record<string, string>>])[] = [
   ['status-card', 'status-card', 'needs', ['meter', 'subtitle', 'note', 'state']],
   ['header', 'header', 'may', ['kicker', 'subtitle', 'clock']],
   ['stat', 'metric', 'needs', ['trend']],
   ['stat-list', 'kv', 'needs', ['state']],
-  ['list', 'list', 'needs', ['primary', 'secondary', 'trailing', 'badge', 'time', 'state', 'max', 'variant']],
+  ['list', 'list', 'needs', ['primary', 'secondary', 'trailing', 'badge', 'time', 'state', 'max', 'variant'], { max: 'maxItems', variant: 'layout' }],
   ['table', 'table', 'needs'],
   ['bar-list', 'bar-list', 'needs', ['label', 'value', 'state']],
   ['status-grid', 'status-grid', 'needs', ['label', 'value', 'state']],
@@ -57,16 +61,20 @@ function generate(): PartKind[] {
     if (!found) throw new Error(`the widget library has no "${widget}" widget`);
     return found;
   };
-  const fromWidget = (kind: string, widget: string, of: PartKind['of'], own: readonly string[] = []): PartKind => ({
-    kind,
-    widget,
-    shows: entry(widget).description,
-    of,
-    options: [...entry(widget).options],
-    own: [...own],
-  });
+  const fromWidget = (kind: string, widget: string, of: PartKind['of'], own: readonly string[] = [], stands?: Readonly<Record<string, string>>): PartKind => {
+    const replaced = new Set(Object.values(stands ?? {}));
+    return {
+      kind,
+      widget,
+      shows: entry(widget).description,
+      of,
+      options: entry(widget).options.filter(option => !replaced.has(option)),
+      own: [...own],
+      ...(stands !== undefined ? { stands: { ...stands } } : {}),
+    };
+  };
   return [
-    ...GENERAL.map(([kind, widget, of, own]) => fromWidget(kind, widget, of, own)),
+    ...GENERAL.map(([kind, widget, of, own, stands]) => fromWidget(kind, widget, of, own, stands)),
     ...catalog.filter(c => c.category === 'chart').map(c => fromWidget(c.widget, c.widget, 'needs', CHART_MAPPING)),
     ...BOARD_KINDS,
   ];

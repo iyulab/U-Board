@@ -314,7 +314,8 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
         if (reportedPresetOptions.has(keyAt)) continue;
         reportedPresetOptions.add(keyAt);
       }
-      fail(keyAt, `"${key}" is not an option — ${offered}`);
+      const word = Object.entries(kind.stands ?? {}).find(([, widgetWord]) => widgetWord === key)?.[0];
+      fail(keyAt, word !== undefined ? `"${key}" is the widget's name for it — a ${kind.kind} writes "${word}"` : `"${key}" is not an option — ${offered}`);
     }
   };
 

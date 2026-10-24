@@ -10,6 +10,7 @@ import { THEME_PALETTE, isThemeColor } from '../theme-colors.js';
 import type { Binding, CanvasView, CellCanvas, ComponentDefinition, Connector, ElementDefinition, GridView, GridWidgetItem, Node, PropsSchema, Shape as V1Shape, Trigger as V1Trigger, ValueMap, ViewDocument, Widget } from '../view-document.js';
 import { TONES, type BoardV2, type Trigger, type CanvasLayout, type ElementDefinition as V2Element, type Field, type GridItem as V2GridItem, type Link, type Part, type Place, type Query, type Shape, type Status, type Tone, type ValueMapping } from './types.js';
 import { isFigure } from './picture.js';
+import { partKind } from './kinds.js';
 
 /** A converted board, what changed on the way, and what has no place in the second version yet. */
 export interface V1Conversion {
@@ -407,8 +408,14 @@ function listOf(widget: Widget, reads: Reads, unsupported: string[]): Part | und
     if (slot === 'primary') part.show = field;
     else part[slot] = field;
   }
-  const options = isObject(props.options) ? props.options : {};
+  const options = isObject(props.options) ? boardWords('list', props.options) : {};
   return { ...part, ...(typeof props.title === 'string' ? { title: props.title } : {}), ...options };
+}
+
+/** A widget's options as a kind writes them: an option the board reads itself under its own word (`maxItems` → `max`). */
+function boardWords(kind: string, options: Record<string, unknown>): Record<string, unknown> {
+  const stands = Object.entries(partKind(kind)?.stands ?? {});
+  return Object.fromEntries(Object.entries(options).map(([key, value]) => [stands.find(([, widgetWord]) => widgetWord === key)?.[0] ?? key, value]));
 }
 
 /** A table: its whole list read, each column a field of its items with the column's label and format as the field's. A

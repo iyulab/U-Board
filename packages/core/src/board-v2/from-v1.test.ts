@@ -130,12 +130,13 @@ describe('fromV1', () => {
     const { board, unsupported } = fromV1(canvas([
       node('l', {
         type: 'list',
-        props: { title: 'Orders', data: [], mapping: { primary: 'item', secondary: 'who', trailing: 'amount', badge: 'badge' } },
+        props: { title: 'Orders', data: [], mapping: { primary: 'item', secondary: 'who', trailing: 'amount', badge: 'badge' }, options: { maxItems: 5, layout: 'tiles' } },
         bindings: { data: { adapter: 'shop', ref: { path: '/sales/orders', valuePath: '/value' } } },
       }),
     ]));
     expect(unsupported).toEqual([]);
-    expect(board.parts.l).toEqual({ as: 'list', of: 'orders', show: 'item', secondary: 'who', trailing: 'amount', badge: 'badge', title: 'Orders' });
+    // The widget's options the board reads itself come across in the board's words.
+    expect(board.parts.l).toEqual({ as: 'list', of: 'orders', show: 'item', secondary: 'who', trailing: 'amount', badge: 'badge', title: 'Orders', max: 5, variant: 'tiles' });
     expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
     const drawn = toViewDocument(board);
     expect(drawn.kind === 'canvas' && (drawn.nodes[0]!.widget.props as { mapping: unknown }).mapping).toEqual({ primary: 'item', secondary: 'who', trailing: 'amount', badge: 'badge' });

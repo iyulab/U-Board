@@ -158,13 +158,17 @@ describe('validateBoardV2', () => {
   it("takes a kind's options — the board's own and its widget's — and names them for a key that is neither", () => {
     expect(issues(canvas({
       g: { as: 'gauge', of: 'totals', show: 'load', form: 'tank', max: 120 },
-      l: { as: 'list', of: 'equipment', primary: 'name', maxItems: 5 },
+      l: { as: 'list', of: 'equipment', primary: 'name', max: 5, variant: 'tiles' },
       c: { as: 'chart.bar', of: 'equipment', x: 'name', y: 'load', horizontal: true },
       m: { as: 'marker', of: 'equipment[PR-01]', shape: 'ring' },
     }))).toEqual([]);
     expect(issues(canvas({ s: { as: 'stat', of: 'totals', show: 'load', colour: 'red' }, l: { as: 'label', title: 'Line 1', size: 14 } }))).toEqual([
       '/parts/s/colour: "colour" is not an option — options of a stat: trend, format',
       '/parts/l/size: "size" is not an option — a label takes no options',
+    ]);
+    // One setting, one name: the widget's word for an option the board reads itself is not an option of the kind.
+    expect(issues(canvas({ l: { as: 'list', of: 'equipment', primary: 'name', maxItems: 5 } }))).toEqual([
+      `/parts/l/maxItems: "maxItems" is the widget's name for it — a list writes "max"`,
     ]);
     expect(issues(canvas({
       a: { as: 'status-card', of: 'equipment[PR-01]', meter: 'load', note: 'Seal {{seal}}', subtitle: 'Line 1' },

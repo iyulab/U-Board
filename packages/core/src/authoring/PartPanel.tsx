@@ -23,9 +23,6 @@ export interface PartPanelProps {
 /** `<data>` or `<data>[<key>]`, as a part names what it reads. */
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
-/** The widget's options a kind's own option stands for — a list's `max` is the widget's `maxItems`, its `variant` the
- *  widget's `layout` — offered once, in the kind's words. */
-const STANDS_FOR: Readonly<Record<string, readonly string[]>> = { list: ['maxItems', 'layout'] };
 
 /**
  * The panel of a part of a board in the language's second version: its title, its kind, what it reads (a data read,
@@ -49,7 +46,7 @@ export function PartPanel({ id, board, onChange, findings = [], triggers, labels
   const show = part.show === undefined ? '' : Array.isArray(part.show) ? part.show.join(', ') : part.show;
   const kind = partKind(part.as ?? (part.use !== undefined ? board.presets?.[part.use]?.as : undefined) ?? '');
   const widgetOptions = useMemo(
-    () => (kind?.widget === undefined ? [] : widgetFields({ type: kind.widget, props: {} }, labels.locale).fields.filter(f => f.section === 'options' && kind.options.includes(f.key) && !STANDS_FOR[kind.kind]?.includes(f.key))),
+    () => (kind?.widget === undefined ? [] : widgetFields({ type: kind.widget, props: {} }, labels.locale).fields.filter(f => f.section === 'options' && kind.options.includes(f.key))),
     [kind, labels.locale]
   );
   const own = (kind?.own ?? []).filter(key => !['size', 'parts', 'place'].includes(key));
