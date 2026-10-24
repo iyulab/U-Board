@@ -183,6 +183,17 @@ describe('BoardEditorPage', () => {
     await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('w1', 'b2'));
   });
 
+  it('shows a board in the language’s second version from the picture the server made, not in the first-version editor', async () => {
+    const board = { version: 2 as const, parts: { t: { as: 'header', title: 'Plant' } }, layout: { kind: 'grid' as const, items: ['t'] } };
+    const picture = { kind: 'grid' as const, items: [{ id: 't', span: 12, widget: { type: 'header', props: { data: { title: 'Plant' } } } }] };
+    vi.mocked(api.getBoard).mockResolvedValue({ id: 'b1', name: 'Floor 1', document: board, picture, updatedAt: 't', revision: 1 });
+    renderPage();
+
+    expect(await screen.findByText(/보드 언어 2판으로 저장돼 있어 지금은 보기만 됩니다/)).toBeInTheDocument();
+    expect(await screen.findByLabelText('Floor 1')).toBeInTheDocument();
+    expect(screen.queryByText('저장')).not.toBeInTheDocument();
+  });
+
   it('shows an error instead of getting stuck on the loading placeholder when the board fails to load', async () => {
     vi.mocked(api.getBoard).mockRejectedValue(new Error('network down'));
     renderPage();

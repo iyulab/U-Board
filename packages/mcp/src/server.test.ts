@@ -55,19 +55,16 @@ function fakeServer() {
     if (url.pathname === '/api/share/boards/b1/state') {
       return json(200, { evaluatedAt: '2026-10-16T09:00:00.000Z', revision: 4, parts: { a: { state: 'fault', quality: 'live' } } });
     }
-    const shared = /^\/api\/share\/boards\/([^/]+)$/.exec(url.pathname);
-    if (shared) {
-      const board = boards.get(shared[1]!);
-      if (!board) return json(404, { code: 'NOT_FOUND' });
-      const picture = isBoardV2(board.document) ? toViewDocument(board.document, { keysOf: () => [] }) : undefined;
-      return json(200, { name: board.name, document: board.document, ...(picture && { picture }), revision: board.revision, connectorIds: [] });
-    }
     const id = url.pathname.split('/').pop()!;
     const board = boards.get(id);
     if (!board) return json(404, { code: 'NOT_FOUND' });
     const ifMatch = headers['If-Match'];
     if (ifMatch && ifMatch !== `"${board.revision}"`) return json(412, { code: 'BOARD_CHANGED', revision: board.revision });
-    if (method === 'GET') return json(200, { id, name: board.name, document: board.document, revision: board.revision, updatedAt: 't' });
+    if (method === 'GET') {
+      // A board in the second version comes with the picture its viewers draw it from, as the server answers.
+      const picture = isBoardV2(board.document) ? toViewDocument(board.document, { keysOf: () => [] }) : undefined;
+      return json(200, { id, name: board.name, document: board.document, ...(picture && { picture }), revision: board.revision, updatedAt: 't' });
+    }
     if (method === 'DELETE') {
       boards.delete(id);
       return new Response(null, { status: 204 });
@@ -184,9 +181,9 @@ describe('u-board-mcp', () => {
     const { content, report } = await look('b1', { focus: '/parts/a' });
     expect(content[0]).toEqual({ type: 'image', data: 'iVBORw==', mimeType: 'image/png' });
     expect(report).toMatchObject({ revision: 4, problems: [{ path: '/parts/a', message: 'cut off' }] });
-    // The looker draws the view document the share route answers, up close where the part is drawn.
+    // The looker draws the picture the board is read with, up close where the part is drawn — no second read.
     expect(asked).toEqual([{ request: { board: 'b1', focus: '/items/0', width: 1600, height: 900 }, document: toViewDocument(gaugeBoard(), { keysOf: () => [] }) }]);
-    expect(server.requests.some(r => r.path === '/api/share/boards/b1')).toBe(true);
+    expect(server.requests.some(r => r.path === '/api/share/boards/b1')).toBe(false);
     const elsewhere = await look('b1', { focus: '/items/0' });
     expect(elsewhere.isError).toBe(true);
     expect(JSON.parse(elsewhere.content[0].text!).error).toContain('focus a part: "/parts/<id>"');

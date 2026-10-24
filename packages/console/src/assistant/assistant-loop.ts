@@ -4,7 +4,7 @@ import { functionTool, type BoardTool } from '@iyulab/u-board-mcp/tools';
 import { ModelError, streamChat, type ChatMessage, type ModelSettings } from './chat-model.js';
 
 /** The tools that change the open board — after one of them succeeds, the editor reads the board again. */
-export const BOARD_WRITES = new Set(['patch_board', 'edit_board', 'rename_board']);
+export const BOARD_WRITES = new Set(['patch_board', 'rename_board']);
 /** The tools the panel does not offer: it draws the board that is open, it does not make or delete others. */
 const LEFT_OUT = new Set(['create_board', 'delete_board']);
 
@@ -23,11 +23,10 @@ export function panelTools(tools: BoardTool[]): BoardTool[] {
   return tools.filter(t => !LEFT_OUT.has(t.name));
 }
 
-/** What `describe` answers for the rules and the widget list — read by the panel before the first turn, so the model
- *  starts drawing without asking for them. */
+/** What `describe` answers for the rules — the tools' workflow and the board language, with its kinds of part — read
+ *  by the panel before the first turn, so the model starts drawing without asking for them. */
 export interface Primer {
   rules: string;
-  widgets: string;
 }
 
 /** The language a message is written in, by its script — named to the model, which drifts into the English of the
@@ -55,17 +54,19 @@ export function systemPrompt(board: OpenBoard, primer?: Primer, language?: strin
 
 You are the drawing assistant in U-Board's board editor. The person sees the board you draw beside this chat, and each change you save appears there at once.
 
-The board open in the editor: id "${board.id}", named "${board.name}", a ${board.kind} board. Draw on this board only — read it with get_board, change it with patch_board (edit_board for renames and removals), check a change with validate when unsure. Its kind stays ${board.kind}.${board.kind === 'grid' ? ' Charts, lists and figures go in grid items; a canvas cell is only for a plan, a map or a diagram that places things.' : ''}
+The board open in the editor: id "${board.id}", named "${board.name}", a ${board.kind} board. Draw on this board only — read it with get_board, change it with patch_board (a JSON Patch on the board, every part addressed by its id), check a change with validate when unsure. Its layout stays a ${board.kind}.${board.kind === 'grid' ? ' Parts go in the grid\'s items; a canvas item is only for a plan, a map or a diagram that places things.' : ''}
 
 ${
     primer
-      ? `The rules — what describe({ "topic": "rules" }) answers — and the widget list are at the end of these instructions: do not read them again. ${board.kind === 'canvas' ? 'Read describe({ "topic": "canvas" }) before the first change, and ' : 'Read '}describe({ "topic": "widget:<a>,<b>" }) for the widgets you have not used, all in one read.`
-      : `Before the first change, read describe({ "topic": "rules" }); read describe({ "topic": "${board.kind === 'canvas' ? 'canvas' : 'widgets'}" }) too, and describe({ "topic": "widget:<a>,<b>" }) for the widgets you have not used, all in one read.`
-  }
+      ? 'The rules — what describe({ "topic": "rules" }) answers — are at the end of these instructions: do not read them again.'
+      : 'Before the first change, read describe({ "topic": "rules" }).'
+  } Read describe({ "topic": "kind:<a>,<b>" }) for the kinds of part you have not used, all in one read.
 
-Make it beautiful and easy to read: a clear title, a balanced layout with room around each part, one consistent palette, the most important figures largest, a title on every chart — in the chart's own "title" prop, not a separate header item above it. The board's own look is at the top of its document: "appearance" ("light" or "dark" — set "dark" for a dark board, not dark colours on each part) and "accent" (one colour). When no data source holds what the person asks for, write example values into the widgets' props (no bindings), so the board shows something — and say that the values are examples.
+Values come from the workspace's data sources: list_sources names them, and sample_source shows what a path answers, value by value — read before you bind. When no source holds what the person asks for, say so and ask where the values live (a public source that needs no key can be added with create_source); never write values into the board.
 
-Draw it in a few steps the person can watch: the layout and the main figures first, then the charts, then the finishing touches — each step one patch_board with several operations, not one operation per call. After each step, call look on the board and fix what it reports — a part whose content runs past its box needs more room (a larger height or span) or less in it; go on until look says nothing is left to fix. When a tool answers an error, fix what it says and go on.
+Make it beautiful and easy to read: a clear title, a balanced layout with room around each part, the most important figures largest, a title on every chart. The board's look is said once, in "board" — its theme ("light" or "dark"), accent and skin; parts never set fonts or colours, and statuses are coloured by the board's statuses.
+
+Draw it in a few steps the person can watch: the layout and the main figures first, then the charts, then the finishing touches — each step one patch_board with several operations, not one operation per call. After each step, call look on the board and fix what it reports — a part whose content runs past its box needs more room (a larger span or size) or less in it; go on until look says nothing is left to fix. When a tool answers an error, fix what it says and go on.
 
 Write every message in ${theirs}, from the first sentence on. Answer in two or three plain sentences (no Markdown — the chat shows text as it is): what you drew, and what they could ask for next. Before a step, say in one short sentence — in ${theirs} — what you are about to draw.${primer ? `
 
@@ -73,25 +74,19 @@ Write every message in ${theirs}, from the first sentence on. Answer in two or t
 
 ${primer.rules}
 
-# The widgets
-
-${primer.widgets}
-
 # Last: your language
 
 Every message you write — before a step, between steps, and the answer — is in ${theirs}, not the language of the rules above.` : ''}`;
 }
 
-/** Reads the rules and the widget list with the panel's own `describe`, for `systemPrompt` — none when it cannot. */
+/** Reads the rules with the panel's own `describe`, for `systemPrompt` — none when it cannot. */
 export async function readPrimer(tools: BoardTool[]): Promise<Primer | undefined> {
   const describe = tools.find(t => t.name === 'describe');
   if (!describe) return undefined;
-  const text = async (topic: string) => {
-    const answer = await describe.run({ topic } as never);
-    return answer.isError ? undefined : answer.content.map(part => (part.type === 'text' ? part.text : '')).join('\n');
-  };
-  const [rules, widgets] = await Promise.all([text('rules'), text('widgets')]);
-  return rules && widgets ? { rules, widgets } : undefined;
+  const answer = await describe.run({ topic: 'rules' } as never);
+  if (answer.isError) return undefined;
+  const rules = answer.content.map(part => (part.type === 'text' ? part.text : '')).join('\n');
+  return rules ? { rules } : undefined;
 }
 
 export type TurnEvent =

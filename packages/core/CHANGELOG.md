@@ -20,6 +20,8 @@ All notable changes to this package are documented here. The format follows
   document it is drawn as, and the conversion of a first-version document. Not stable before the release that makes it
   the stored format. It loads no other package at runtime: the widget kinds it knows are a copy of the widget library's
   catalog written when this package is built, so a server can validate boards without the widget library installed.
+  `BoardDocument` is what a board stores while boards move to it (a document in either version), and
+  `documentKind(document)` the kind of view either lays out.
 
 - An HTTP connector reference can read every item of a list whose fields match: `items: { list, where }` — the rows a
   list or a table shows, kept to the part of a list they are about (one pollutant out of a list of all of them), in the

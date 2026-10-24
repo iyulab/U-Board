@@ -19,7 +19,7 @@ type Item =
 
 /** What each tool's row says, in the panel's words. */
 function toolLabel(name: string, args: unknown): string {
-  const a = (args ?? {}) as { topic?: string; patch?: unknown[]; commands?: unknown[]; pointer?: string; path?: string; name?: string };
+  const a = (args ?? {}) as { topic?: string; patch?: unknown[]; pointer?: string; path?: string; name?: string };
   switch (name) {
     case 'describe':
       return a.topic ? `작성 규칙 읽기 · ${a.topic}` : '작성 규칙 목록 보기';
@@ -27,8 +27,6 @@ function toolLabel(name: string, args: unknown): string {
       return a.pointer ? `보드 읽기 · ${a.pointer}` : '보드 읽기';
     case 'patch_board':
       return `보드에 그리기 · 변경 ${a.patch?.length ?? 0}개`;
-    case 'edit_board':
-      return `보드 편집 · 명령 ${a.commands?.length ?? 0}개`;
     case 'validate':
       return '변경 검사';
     case 'look':

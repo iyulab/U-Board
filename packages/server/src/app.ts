@@ -164,7 +164,7 @@ export function createApp(config: AppConfig): express.Express {
   api.delete('/auth/me', accountRateLimiter);
   api.use('/auth', createAuthRouter(config));
   api.use('/invitations', createInvitationsRouter(config));
-  api.use('/workspaces/:workspaceId/boards', createBoardsRouter(config));
+  api.use('/workspaces/:workspaceId/boards', createBoardsRouter(config, resolveState));
   api.use('/workspaces/:workspaceId/boards/:boardId/share-tokens', createBoardShareTokensRouter(config));
   api.use('/workspaces/:workspaceId/connectors', createConnectorsRouter(config, resolveState));
   api.use('/workspaces/:workspaceId/api-tokens', createApiTokensRouter(config));

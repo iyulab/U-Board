@@ -155,20 +155,24 @@ describe('a turn', () => {
     expect(requests).toHaveLength(2);
   });
 
-  it('starts the model with the rules and the widget list the panel read itself, so it need not ask for them', async () => {
-    const describe = fakeTool('describe', args => ({ text: `the ${String((args as { topic?: string }).topic)} text` }));
+  it('starts the model with the rules the panel read itself — the workflow and the board language — so it need not ask for them', async () => {
+    const topics: unknown[] = [];
+    const describe = fakeTool('describe', args => (topics.push((args as { topic?: string }).topic), { text: 'the rules text' }));
     const primer = await readPrimer([describe]);
-    expect(primer).toEqual({ rules: 'the rules text', widgets: 'the widgets text' });
-    const prompt = systemPrompt(board, { rules: 'RULES', widgets: 'WIDGETS' });
+    expect(primer).toEqual({ rules: 'the rules text' });
+    expect(topics).toEqual(['rules']);
+    const prompt = systemPrompt(board, { rules: 'RULES' });
     expect(prompt).toContain('do not read them again');
-    expect(prompt).toMatch(/# The rules\s+RULES\s+# The widgets\s+WIDGETS/);
+    expect(prompt).toMatch(/# The rules\s+RULES\s+# Last: your language/);
+    expect(prompt).toContain('describe({ "topic": "kind:<a>,<b>" })');
+    expect(prompt).not.toContain('edit_board');
     expect(systemPrompt(board)).toContain('Before the first change, read describe');
     expect(await readPrimer([])).toBeUndefined();
   });
 
   it('names the language of the first message to the model, from its script — the person’s own words otherwise', () => {
     expect([languageOf('물류센터 현황을 그려줘'), languageOf('倉庫の出荷状況'), languageOf('仓库出货情况'), languageOf('Draw the warehouse')]).toEqual(['Korean', 'Japanese', 'Chinese', undefined]);
-    const prompt = systemPrompt(board, { rules: 'RULES', widgets: 'WIDGETS' }, 'Korean');
+    const prompt = systemPrompt(board, { rules: 'RULES' }, 'Korean');
     expect(prompt.startsWith('Write every message in Korean.')).toBe(true);
     expect(prompt).toMatch(/is in Korean, not the language of the rules above\.$/);
     expect(systemPrompt(board)).toContain('Write every message in the language the person writes in.');

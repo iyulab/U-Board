@@ -30,6 +30,9 @@ export interface Board {
   name: string;
   /** As stored: a board in the language's second version, or a first-version view document. */
   document: BoardV2 | ViewDocument;
+  /** What its viewers draw: a second-version board's picture, made by the server with its data's items. A
+   *  first-version document is its own picture and comes without one. */
+  picture?: ViewDocument;
   revision: number;
   updatedAt: string;
 }
@@ -113,13 +116,6 @@ export class UBoardClient {
    *  its data is — no values. Read through the share route, which takes this token as a viewer. */
   async getBoardState(boardId: string): Promise<unknown> {
     return this.request('GET', `/api/share/boards/${encodeURIComponent(boardId)}/state`);
-  }
-
-  /** The view document a board is drawn from, as its viewers get it — for a board in the language's second version, the
-   *  picture the server makes of it with its data's items as they are. Read through the share route, as a viewer. */
-  async getPicture(boardId: string): Promise<ViewDocument> {
-    const body = await this.request<{ document: ViewDocument; picture?: ViewDocument }>('GET', `/api/share/boards/${encodeURIComponent(boardId)}`);
-    return body.picture ?? body.document;
   }
 
   async createBoard(name: string, kind: ViewKind): Promise<{ id: string; revision: number }> {

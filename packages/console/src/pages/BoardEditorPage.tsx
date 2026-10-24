@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { AuthoringView, KO_LABELS, type AuthoringMode, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { AuthoringView, KO_LABELS, ViewerPage, type AuthoringMode, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { documentKind, isBoardV2, type BoardDocument } from '@iyulab/u-board/board-v2';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, apiClock, ApiError,
@@ -27,7 +28,11 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   // never finishes, in a browser where such code holds the whole page.
   const [searchParams] = useSearchParams();
   const scriptsOff = searchParams.get('scripts') === 'off';
-  const [document, setDocument] = useState<ViewDocument | null>(null);
+  // The board as stored, and what it is drawn from: the document itself for a first-version board, which the editor
+  // edits; the picture the server makes for a board in the language's second version, which is shown, not edited, until
+  // the editor writes that version.
+  const [document, setDocument] = useState<BoardDocument | null>(null);
+  const [picture, setPicture] = useState<ViewDocument | undefined>();
   // The origins this installation lets a board's elements load from, as the server says with the board.
   const [elementOrigins, setElementOrigins] = useState<readonly string[]>([]);
   // Where the board's script elements' frames are served: the server says when each definition has an origin of its own.
@@ -73,6 +78,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       .then(board => {
         if (cancelled) return;
         setDocument(board.document);
+        setPicture(board.picture);
         setElementOrigins(board.elementOrigins ?? []);
         setElementFrames(board.elementFrames);
         revision.current = board.revision;
@@ -195,6 +201,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     try {
       const board = await getBoard(workspaceId, boardId!);
       setDocument(board.document);
+      setPicture(board.picture);
       revision.current = board.revision;
       setBoardName(board.name);
       setConflict(null);
@@ -213,6 +220,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     try {
       const board = await getBoard(workspaceId, boardId!);
       setDocument(board.document);
+      setPicture(board.picture);
       revision.current = board.revision;
       setBoardName(board.name);
       setSavedAt(new Date());
@@ -228,6 +236,11 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     // successful save calls this with `false`, which must NOT clear the status it just set).
     if (dirty) setSavedAt(null);
   }
+
+  // The server serves the frames the board's script elements run in under this address — none while opened with scripts
+  // off, so no element code runs.
+  const elementFramesAt = scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`);
+  const secondVersion = isBoardV2(document);
 
   // Always the same slot, so a change of state never moves the editor.
   const saveStatus = hasUnsavedChanges ? (
@@ -275,37 +288,58 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
         </Alert>
       )}
       {overwriteArmed && <Alert>저장하면 다른 사람이 그사이 저장한 내용을 내 변경으로 덮어씁니다.</Alert>}
+      {secondVersion && (
+        <p className="ub-editor-note" role="status">
+          이 보드는 보드 언어 2판으로 저장돼 있어 지금은 보기만 됩니다 — 2판 편집기를 준비하고 있습니다. 고치려면 ✦ AI 비서에게
+          말하세요.
+        </p>
+      )}
       <div className="ub-editor-body">
       <div className="ub-editor-canvas">
-        <AuthoringView
-          key={`${boardId}:${editorGeneration}`}
-          initialDocument={document}
-          initialMode={editorMode}
-          onModeChange={setEditorMode}
-          adapters={adapters}
-          connectorLabels={connectorLabels}
-          onDirtyChange={handleDirtyChange}
-          onSave={handleSave}
-          labels={EDITOR_LABELS}
-          clock={apiClock.now}
-          boardId={boardId}
-          onNavigate={handleNavigate}
-          elementOrigins={elementOrigins}
-          // The server serves the frames the board's script elements run in under this address — none while opened
-          // with scripts off, so no element code runs.
-          elementFrames={scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`)}
-        />
+        {isBoardV2(document) ? (
+          picture && (
+            <ViewerPage
+              key={`${boardId}:${editorGeneration}`}
+              document={picture}
+              adapters={adapters}
+              ariaLabel={boardName}
+              labels={EDITOR_LABELS}
+              clock={apiClock.now}
+              boardId={boardId}
+              onNavigate={handleNavigate}
+              elementOrigins={elementOrigins}
+              elementFrames={elementFramesAt}
+            />
+          )
+        ) : (
+          <AuthoringView
+            key={`${boardId}:${editorGeneration}`}
+            initialDocument={document}
+            initialMode={editorMode}
+            onModeChange={setEditorMode}
+            adapters={adapters}
+            connectorLabels={connectorLabels}
+            onDirtyChange={handleDirtyChange}
+            onSave={handleSave}
+            labels={EDITOR_LABELS}
+            clock={apiClock.now}
+            boardId={boardId}
+            onNavigate={handleNavigate}
+            elementOrigins={elementOrigins}
+            elementFrames={elementFramesAt}
+          />
+        )}
       </div>
       {isAssistantOpen && (
         <AssistantPanel
           workspaceId={workspaceId}
-          board={{ id: boardId!, name: boardName, kind: document.kind }}
+          board={{ id: boardId!, name: boardName, kind: documentKind(document) }}
           blocked={hasUnsavedChanges ? '저장하지 않은 편집이 있습니다 — 먼저 저장하면 비서가 그 위에 이어서 그립니다.' : undefined}
           lookSetting={{
             adapters,
             clock: apiClock.now,
             elementOrigins,
-            elementFrames: scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`),
+            elementFrames: elementFramesAt,
           }}
           onBoardChanged={reloadSaved}
           onClose={() => setIsAssistantOpen(false)}

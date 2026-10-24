@@ -3,6 +3,7 @@
 // The server's save and an assistant's tools check with this, so both refuse the same boards in the same words.
 
 import { PictureError, toViewDocument } from './picture.js';
+import type { ViewDocument, ViewKind } from '../view-document.js';
 import type { BoardV2 } from './types.js';
 import { validateBoardV2 } from './validate.js';
 
@@ -27,6 +28,17 @@ const NO_ITEMS = { keysOf: () => [] };
  *  is told what to say rather than read as a first-version view document, which names none. */
 export function isBoardV2(document: unknown): document is BoardV2 {
   return typeof document === 'object' && document !== null && !Array.isArray(document) && Object.hasOwn(document, 'version');
+}
+
+/**
+ * What a board stores: a document in this language, which says so (`"version": 2`), or a first-version view document,
+ * which says no version. Both are read while stored boards move to this language.
+ */
+export type BoardDocument = ViewDocument | BoardV2;
+
+/** The kind of view a stored document lays out — what a board list shows beside its name. */
+export function documentKind(document: BoardDocument): ViewKind {
+  return isBoardV2(document) ? document.layout.kind : document.kind;
 }
 
 export function checkBoardV2(board: unknown): BoardCheck {

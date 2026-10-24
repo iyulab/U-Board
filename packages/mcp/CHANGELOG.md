@@ -14,8 +14,8 @@ All notable changes to this package are documented here. The format follows
   with their types and defaults, several by commas); `describe("schema")` is the language's JSON Schema. `get_board`
   reads a board stored in the first version converted, and the first change saves it in the second; one that uses what
   the second version does not have yet answers `409 FIRST_VERSION_BOARD`. `create_board` without a first board makes an
-  empty one of its kind. `look` draws the picture the server makes of a board, takes `focus: "/parts/<id>"`, and says
-  what it found of the board's parts.
+  empty one of its kind. `look` draws the picture the server makes of a board — the one the board is read with, so no
+  second read — takes `focus: "/parts/<id>"`, and says what it found of the board's parts.
 - Requires `@iyulab/u-board` with the `./board-v2` entry.
 
 ### Removed

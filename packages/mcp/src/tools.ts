@@ -364,7 +364,7 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
           const found = await client.getBoard(board);
           const { board: read } = boardOf(found);
           // What the viewers' page draws: a second-version board's picture, made by the server with its data's items.
-          const picture = isBoardV2(found.document) ? await client.getPicture(board) : found.document;
+          const picture = found.picture ?? (found.document as ViewDocument);
           const { image, report } = await looker.look({ board, focus: focus && inPicture(picture, focus), appearance, width, height }, picture);
           // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
           // Up close, every layout finding is read before keeping the part's own — a fold past the limit would hide some.

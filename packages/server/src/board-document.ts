@@ -4,16 +4,11 @@ import {
   type ViewDocument,
   type ViewDocumentAdvice,
   type ViewDocumentIssue,
-  type ViewKind,
 } from '@iyulab/u-board/domain';
-import { checkBoardV2, isBoardV2, keyReadsOf, keysIn, sourceAdvice, toViewDocument, type BoardV2, type KnownSource } from '@iyulab/u-board/board-v2';
+import { checkBoardV2, isBoardV2, keyReadsOf, keysIn, sourceAdvice, toViewDocument, type BoardDocument, type KnownSource } from '@iyulab/u-board/board-v2';
 
-/**
- * What a board stores: a document in the board language's second version, which says so (`"version": 2`), or a
- * first-version view document, which says no version. Both are accepted while stored boards move to the second
- * version; a first-version document is never written back from a second-version one.
- */
-export type BoardDocument = ViewDocument | BoardV2;
+// A first-version document is never written back from a second-version one.
+export { documentKind, type BoardDocument } from '@iyulab/u-board/board-v2';
 
 /**
  * Every structural problem in a document about to be stored, each at a JSON Pointer into it. A second-version board
@@ -27,11 +22,6 @@ export function documentIssues(document: unknown): ViewDocumentIssue[] {
  *  second-version board is also told of a read whose `from` is none of the workspace's data sources (`sources`). */
 export function documentAdvice(document: BoardDocument, sources: readonly KnownSource[]): ViewDocumentAdvice[] {
   return isBoardV2(document) ? [...checkBoardV2(document).advice, ...sourceAdvice(document, sources)] : lintViewDocument(document);
-}
-
-/** The kind of view a document lays out — what a board list shows beside its name. */
-export function documentKind(document: BoardDocument): ViewKind {
-  return isBoardV2(document) ? document.layout.kind : document.kind;
 }
 
 /** Reads one value for a board — a binding's adapter and reference. */

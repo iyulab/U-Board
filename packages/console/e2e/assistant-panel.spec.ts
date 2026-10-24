@@ -2,7 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Route } from '@playwright/test';
 
 // The chat panel against a model endpoint the test answers itself: a chat completions stream that reads the rules,
-// draws one card on the open board, looks at it, and answers — the panel's whole path but the model.
+// draws a title on the open board, looks at it, and answers — the panel's whole path but the model. The tools write the
+// board language's second version, so the board the editor reads again is one it shows from the server's picture.
 const ENDPOINT = 'https://models.example.com/v1';
 
 const sse = (...deltas: Array<Record<string, unknown>>) =>
@@ -33,9 +34,9 @@ test('the chat panel draws on the open board with a model the person sets, and t
     const board = /id "([^"]+)"/.exec(body.messages[0].content ?? '')![1];
     const answers = [
       sse({ content: '규칙을 읽겠습니다.' }, call('c1', 'describe', { topic: 'rules' })),
-      sse(call('c2', 'patch_board', { board, patch: [{ op: 'add', path: '/items/-', value: { id: 'sales', span: 4, widget: { type: 'metric', props: { data: { label: '오늘 매출', value: 1280, unit: '만원' } } } } }] })),
+      sse(call('c2', 'patch_board', { board, patch: [{ op: 'add', path: '/parts/title', value: { as: 'header', title: '오늘 매출 현황' } }, { op: 'add', path: '/layout/items/-', value: 'title' }] })),
       sse(call('c3', 'look', { board })),
-      sse({ content: '오늘 매출 카드를 그렸습니다.' }),
+      sse({ content: '오늘 매출 제목을 그렸습니다.' }),
     ];
     await route.fulfill({ status: 200, headers: { 'Content-Type': 'text/event-stream', 'Access-Control-Allow-Origin': '*' }, body: answers[requests.length - 1] ?? sse({ content: '끝' }) });
   });
@@ -50,15 +51,17 @@ test('the chat panel draws on the open board with a model the person sets, and t
   const a11y = await new AxeBuilder({ page }).include('.ub-assistant').withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
   expect(a11y.violations.map(v => `${v.id}: ${v.help}`)).toEqual([]);
 
-  await panel.getByRole('textbox', { name: '비서에게 보낼 말' }).fill('오늘 매출 카드 하나 그려줘');
+  await panel.getByRole('textbox', { name: '비서에게 보낼 말' }).fill('오늘 매출 제목을 그려줘');
   await panel.getByRole('button', { name: '보내기', exact: true }).click();
 
-  await expect(panel.getByText('오늘 매출 카드를 그렸습니다.')).toBeVisible({ timeout: 30_000 });
-  await expect(panel.getByText('보드에 그리기 · 변경 1개')).toBeVisible();
+  await expect(panel.getByText('오늘 매출 제목을 그렸습니다.')).toBeVisible({ timeout: 30_000 });
+  await expect(panel.getByText('보드에 그리기 · 변경 2개')).toBeVisible();
   await expect(panel.getByText('그려 보고 확인')).toBeVisible();
-  // The editor read the board again: the card the model drew is there, and saved.
-  await expect(page.getByRole('region', { name: '편집기' }).locator('.ub-authoring__pick')).toHaveCount(1);
+  // The editor read the board again: now in the second version, it is shown from the server's picture — the title the
+  // model drew is there, saved — and said to be shown, not edited, until the editor writes that version.
+  await expect(page.getByLabel('AI Board').getByText('오늘 매출 현황')).toBeVisible();
   await expect(page.getByText('저장됨')).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: '보드 언어 2판으로 저장돼 있어' })).toBeVisible();
 
   expect(requests[0].authorization).toBe('Bearer test-key');
   // What look answered went back to the model: the board drawn, nothing left to fix — and after it, read last, the

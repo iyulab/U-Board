@@ -3,8 +3,9 @@ import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 
 // A board written in the board language's second version, shared: the server lays its grid out with the items its
-// data has now — one part per pump — and the share viewer draws that picture, each part with its value.
-test('a shared board in the second version is drawn with one part per item of its data', async ({ page, browser }) => {
+// data has now — one part per pump — and the share viewer draws that picture, each part with its value; the console
+// opens it from the same picture.
+test('a board in the second version is drawn with one part per item of its data, shared and in the console', async ({ page, browser }) => {
   const mockServer = createServer((_req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ value: [{ id: 'P1', flow: 31 }, { id: 'P2', flow: 57 }, { id: 'P3', flow: 12 }] }));
@@ -46,6 +47,16 @@ test('a shared board in the second version is drawn with one part per item of it
       await expect(sharePage.getByText(`Pump ${pump}`, { exact: true }).locator('xpath=ancestor::*[contains(., "m³/h")][1]')).toContainText(flow);
     }
     await shareContext.close();
+
+    // The console shows it from the picture its own read of the board answers — shown, not edited, in this version.
+    await page.goto(`/boards/${board.id}/edit`);
+    const shown = page.getByLabel('Pumps', { exact: true });
+    for (const [pump, flow] of [['P1', '31'], ['P2', '57'], ['P3', '12']]) {
+      await expect(shown.getByText(`Pump ${pump}`, { exact: true })).toBeVisible();
+      await expect(shown.getByText(`Pump ${pump}`, { exact: true }).locator('xpath=ancestor::*[contains(., "m³/h")][1]')).toContainText(flow);
+    }
+    await expect(page.getByRole('status').filter({ hasText: '보드 언어 2판으로 저장돼 있어' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '저장', exact: true })).toHaveCount(0);
   } finally {
     mockServer.close();
   }

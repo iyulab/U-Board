@@ -1,6 +1,7 @@
 import type { ViewDocument, ViewKind } from '@iyulab/u-board';
 import type { HttpRef, ResolvedBinding } from '@iyulab/u-board';
 import { serverClock } from '@iyulab/u-board';
+import type { BoardDocument } from '@iyulab/u-board/board-v2';
 
 export class ApiError extends Error {
   /** `body` is the whole error response, for codes that carry more than the code — e.g. `LAST_OWNER`
@@ -195,8 +196,10 @@ export function createBoard(workspaceId: string, name: string, kind?: ViewKind) 
   });
 }
 
+/** A board as stored — in the board language's second version, or a first-version view document — and, for the
+ *  second version, the picture its viewers draw it from (a first-version document is its own picture). */
 export function getBoard(workspaceId: string, boardId: string) {
-  return request<{ id: string; name: string; document: ViewDocument; updatedAt: string; revision: number; elementOrigins?: string[]; elementFrames?: string }>(
+  return request<{ id: string; name: string; document: BoardDocument; picture?: ViewDocument; updatedAt: string; revision: number; elementOrigins?: string[]; elementFrames?: string }>(
     `/workspaces/${workspaceId}/boards/${boardId}`
   );
 }

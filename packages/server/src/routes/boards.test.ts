@@ -347,6 +347,18 @@ describe("a board in the board language's second version", () => {
     expect(list.body.boards.find((b: { id: string }) => b.id === boardId).kind).toBe('grid');
   });
 
+  it('is read with the picture its viewers draw it from — a first-version board, which is its own picture, with none', async () => {
+    const boardId = await newBoard();
+    const first = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    expect(first.body.picture).toBeUndefined();
+
+    await put(boardId, board({ t: { as: 'stat', of: 'totals', show: 'count' } }));
+    const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
+    expect(get.body.document.version).toBe(2);
+    expect(get.body.picture.kind).toBe('grid');
+    expect(get.body.picture.items.map((i: { id: string }) => i.id)).toEqual(['t']);
+  });
+
   it('refuses what its language does not have, each problem where it is', async () => {
     const boardId = await newBoard();
     const res = await put(boardId, board({ t: { as: 'metric', of: 'totals' } }));

@@ -8,7 +8,10 @@ import { requireWorkspaceMember } from '../middleware/require-workspace-role.js'
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from '../db/boards.js';
 import { elementFramesAddress } from '../element-frame.js';
 import { listConnectorsForWorkspace } from '../db/connectors.js';
-import { documentAdvice, documentIssues, documentKind, type BoardDocument } from '../board-document.js';
+import { documentAdvice, documentIssues, documentKind, pictureOf, type BoardDocument } from '../board-document.js';
+import { isBoardV2 } from '@iyulab/u-board/board-v2';
+import type { ResolveState } from '../resolve-connector.js';
+import { upstreamReader } from '../upstream-reader.js';
 
 /** How many document issues a 400 names at most. */
 const MAX_REPORTED_ISSUES = 20;
@@ -30,7 +33,7 @@ function ifMatchRevision(header: string | undefined): number | undefined | 'unma
   return match ? Number(match[1]) : 'unmatchable';
 }
 
-export function createBoardsRouter(config: AppConfig): Router {
+export function createBoardsRouter(config: AppConfig, resolveState: ResolveState): Router {
   const { db, sessionSecret } = config;
   const router = Router({ mergeParams: true }); // :workspaceId comes from the parent router's mount path
   // Boards are what a program writes for its person — an AI assistant drawing one — so an API token reaches them.
@@ -71,6 +74,9 @@ export function createBoardsRouter(config: AppConfig): Router {
         id: board.id,
         name: board.name,
         document: board.document,
+        // A board in the language's second version comes with the picture its viewers draw it from — the one the share
+        // route answers, made here so every page shows a board the same way.
+        ...(isBoardV2(board.document) && { picture: await pictureOf(board.document, upstreamReader(config, resolveState, workspaceId)) }),
         updatedAt: board.updatedAt,
         revision: board.revision,
         elementOrigins: config.elementOrigins ?? [],

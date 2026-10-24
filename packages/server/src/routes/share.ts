@@ -8,7 +8,8 @@ import { hashShareToken } from './board-share-tokens.js';
 import { API_TOKEN_PREFIX, hashApiToken } from '../auth/api-token.js';
 import { findApiTokenByHash, touchApiTokenLastUsed } from '../db/api-tokens.js';
 import { findWorkspaceUser } from '../db/workspaces.js';
-import { isValidRef, buildResolveTarget, resolveConnectorValue, type ResolveState } from '../resolve-connector.js';
+import type { ResolveState } from '../resolve-connector.js';
+import { DISCONNECTED, upstreamReader as readerFor, type UpstreamReader } from '../upstream-reader.js';
 import type { ResolvedBinding } from '@iyulab/u-board/domain';
 import type { Connector } from '../db/connectors.js';
 import { elementFramesAddress } from '../element-frame.js';
@@ -18,8 +19,6 @@ import { pictureOf } from '../board-document.js';
 /** Upper bound on one batch resolve request. A board's own bindings are the only entries that
  * resolve, so this only bounds the work a malformed or hostile request can make the server do. */
 const MAX_BATCH_BINDINGS = 500;
-
-const DISCONNECTED: ResolvedBinding = { value: undefined, quality: 'disconnected' };
 
 /** Every `(connectorId, ref)` pair a document declares via its bindings — widgets' and connectors' (`bindingsIn`) —
  * the single traversal `referencedConnectors` and `isDeclaredBinding` below both build on. */
@@ -76,7 +75,7 @@ interface Reader {
 }
 
 export function createShareRouter(config: AppConfig, resolveState: ResolveState): Router {
-  const { db, secrets } = config;
+  const { db } = config;
   const router = Router();
 
   /** Who may read this board here, from `Authorization: Bearer <token>` — a header, so it stays out of URLs and the
@@ -142,31 +141,11 @@ export function createShareRouter(config: AppConfig, resolveState: ResolveState)
     });
   });
 
-  /** Reads values for a request, from upstream, as a board's bindings name them — a valid ref for a connector that
-   *  exists, else `disconnected` without calling an upstream. Each connector is looked up once per request, and
-   *  upstream reads go through the shared reuse window (`resolveState`). Not gated: what reads a board's values for a
-   *  caller is `bindingReader`, and the server reads through this alone what a board itself needs to be drawn — the
-   *  items a grid lays out (`pictureOf`). */
-  const upstreamReader = (workspaceId: string) => {
-    const connectors = new Map<string, Promise<Connector | undefined>>();
-    const connectorOf = (id: string) => {
-      if (!connectors.has(id)) connectors.set(id, findConnector(db, workspaceId, id, secrets));
-      return connectors.get(id)!;
-    };
-    return async (connectorId: string, ref: unknown): Promise<ResolvedBinding> => {
-      if (!isValidRef(ref)) return DISCONNECTED;
-      const connector = await connectorOf(connectorId);
-      const target = connector && buildResolveTarget(connector, ref);
-      if (!connector || !target) return DISCONNECTED;
-      // What went wrong is for whoever can fix the data source; a share link is public.
-      const { message: _message, ...served } = await resolveConnectorValue(connector, target, ref, resolveState);
-      return served;
-    };
-  };
+  const upstreamReader = (workspaceId: string) => readerFor(config, resolveState, workspaceId);
 
   /** Reads one of a board’s bindings for a request — only one the view document it is drawn from declares
    *  (`isDeclaredBinding`); anything else answers `disconnected` without calling an upstream. */
-  const bindingReader = (read: ReturnType<typeof upstreamReader>, document: ViewDocument) =>
+  const bindingReader = (read: UpstreamReader, document: ViewDocument) =>
     async (connectorId: string, ref: unknown): Promise<ResolvedBinding> =>
       isDeclaredBinding(document, connectorId, ref) ? read(connectorId, ref) : DISCONNECTED;
 

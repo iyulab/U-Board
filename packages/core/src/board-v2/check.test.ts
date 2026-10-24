@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { checkBoardV2, sourceAdvice } from './check.js';
+import { checkBoardV2, documentKind, sourceAdvice } from './check.js';
 import { RULEBOOK_EXAMPLE } from './rulebook.js';
 import { validateBoardV2 } from './validate.js';
 
 const totals = { totals: { from: 'plant', path: '/plant/totals' } };
+
+describe('documentKind', () => {
+  it('reads the kind a stored board lays out, in either version', () => {
+    expect(documentKind({ version: 2, parts: {}, layout: { kind: 'grid', items: [] } })).toBe('grid');
+    expect(documentKind({ kind: 'canvas', background: {}, nodes: [], connectors: [] })).toBe('canvas');
+  });
+});
 
 describe('checkBoardV2', () => {
   it('takes a board that is right, with nothing to refuse', () => {
