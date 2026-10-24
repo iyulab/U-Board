@@ -1,4 +1,4 @@
-import { useId, useMemo } from 'react';
+import { useId, useMemo, type ReactNode } from 'react';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { FIELD_STYLE } from '../ui-style.js';
 import { PART_KINDS, partKind } from '../board-v2/kinds.js';
@@ -15,6 +15,8 @@ export interface PartPanelProps {
   onChange: (part: Part) => void;
   /** What the board's check finds at this part — shown under it, where it is fixed. */
   findings?: readonly BoardFinding[];
+  /** The part's triggers' editor, shown under its settings. */
+  triggers?: ReactNode;
   labels?: UBoardLabels;
 }
 
@@ -32,7 +34,7 @@ const STANDS_FOR: Readonly<Record<string, readonly string[]>> = { list: ['maxIte
  * and the widget's, with the controls the widget library describes. A setting left empty goes from the part, so the
  * board keeps only what was set. A part made per item reads the items its `each` names, shown and not changed here.
  */
-export function PartPanel({ id, board, onChange, findings = [], labels = DEFAULT_LABELS }: PartPanelProps) {
+export function PartPanel({ id, board, onChange, findings = [], triggers, labels = DEFAULT_LABELS }: PartPanelProps) {
   const part = board.parts[id] ?? {};
   const fieldList = useId();
   const set = (key: keyof Part, value: unknown) => {
@@ -154,6 +156,7 @@ export function PartPanel({ id, board, onChange, findings = [], labels = DEFAULT
           ))}
         </fieldset>
       )}
+      {triggers}
       {findings.length > 0 && (
         <ul className="ub-panel__findings" role="alert">
           {findings.map(finding => (

@@ -83,3 +83,12 @@ describe('PartPanel — its kind’s options', () => {
     expect(screen.queryByText('maxItems')).toBeNull();
   });
 });
+
+describe('BoardAuthoring — triggers', () => {
+  it('edits a selected part’s triggers under its settings, and the board’s own with nothing selected', async () => {
+    render(<BoardAuthoring initialBoard={board} adapters={[]} />);
+    expect(screen.getByRole('heading', { name: 'When the board opens' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^2\. / }));
+    expect(await screen.findByRole('heading', { name: 'Triggers' })).toBeInTheDocument();
+  });
+});

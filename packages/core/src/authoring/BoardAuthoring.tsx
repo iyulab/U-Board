@@ -3,7 +3,7 @@ import type { Adapter } from '../adapter.js';
 import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
-import type { CanvasView, GridView, ViewDocument } from '../view-document.js';
+import { placedIn, type CanvasView, type GridView, type ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { ViewerPage, type ViewerPageProps } from '../viewer/ViewerPage.js';
 import { PictureError, toViewDocument } from '../board-v2/picture.js';
@@ -11,6 +11,8 @@ import { checkBoardV2 } from '../board-v2/check.js';
 import type { BoardV2 } from '../board-v2/types.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
 import { PartPanel } from './PartPanel.js';
+import { TriggersEditor } from './TriggersEditor.js';
+import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
 import { layoutEditable, placesItself, withPictureLayout } from './board-layout.js';
@@ -83,9 +85,28 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
     const check = checkBoardV2(board);
     return [...check.issues, ...check.advice];
   }, [board]);
-  /** The panel of the part a selected node or item draws — a part made per item, or one inside a group, is its part. */
+  // What a trigger may name: a part — one made per item, by item — as the board is drawn now.
+  const targets = useMemo(
+    () => placedIn(picture).map(placed => placed.id.slice(placed.id.lastIndexOf(':') + 1)).filter(id => {
+      const [part, key, ...rest] = id.split('/');
+      const each = board.parts[part!]?.each !== undefined;
+      return rest.length === 0 && (key === undefined ? !each && part! in board.parts : each);
+    }),
+    [picture, board]
+  );
+  const triggerEditing = boardTriggerEditing(board, targets, update => setHistory(h => recordEdit(h, update(h.present), null)));
+  /** The panel of the part a selected node or item draws — a part made per item, or one inside a group, is its part;
+   *  with nothing selected, the board's own triggers (those that run when it opens). */
   const panel = (selected: string | null) => {
-    const id = selected?.split('/')[0];
+    if (selected === null) {
+      return (
+        <>
+          <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>
+          <TriggersEditor {...triggerEditing} labels={labels} />
+        </>
+      );
+    }
+    const id = selected.split('/')[0];
     if (id === undefined || !(id in board.parts)) return null;
     return (
       <PartPanel
@@ -94,6 +115,7 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
         board={board}
         onChange={part => setHistory(h => recordEdit(h, { ...h.present, parts: { ...h.present.parts, [id]: part } }, null))}
         findings={findings.filter(f => f.path === `/parts/${id}` || f.path.startsWith(`/parts/${id}/`))}
+        triggers={targets.includes(selected) ? <TriggersEditor key={`triggers:${selected}`} node={selected} {...triggerEditing} labels={labels} /> : undefined}
         labels={labels}
       />
     );
