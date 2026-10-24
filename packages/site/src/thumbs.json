@@ -17,12 +17,12 @@
   "assembly-wip": {
     "width": 800,
     "height": 479,
-    "hash": "cd55d9f97d3a1f90"
+    "hash": "ad582f7f4e07101e"
   },
   "bakery-sketch": {
     "width": 800,
     "height": 457,
-    "hash": "a920c742d1b44edf"
+    "hash": "51dba6326056da8f"
   },
   "bank-branch": {
     "width": 800,
@@ -32,12 +32,12 @@
   "bike-share": {
     "width": 800,
     "height": 496,
-    "hash": "c0fa3c5df48380d1"
+    "hash": "9630d3b7d1fe749d"
   },
   "blood-journey": {
     "width": 800,
     "height": 496,
-    "hash": "c819729a0d4d82a5"
+    "hash": "9af452f129c6abc2"
   },
   "body-gap": {
     "width": 800,
@@ -87,7 +87,7 @@
   "clinic-vaccines": {
     "width": 800,
     "height": 496,
-    "hash": "bdbe94704522c4e8"
+    "hash": "194706138a7b4ae3"
   },
   "coldchain-vapor": {
     "width": 800,
@@ -102,7 +102,7 @@
   "count-hall": {
     "width": 800,
     "height": 496,
-    "hash": "5df76274c6497800"
+    "hash": "68e8740ebb7d8943"
   },
   "dam-steampunk": {
     "width": 800,
@@ -147,7 +147,7 @@
   "fire-dispatch": {
     "width": 800,
     "height": 496,
-    "hash": "c879bc58859f0ba0"
+    "hash": "c228800a4051732b"
   },
   "ground-station": {
     "width": 800,
@@ -162,7 +162,7 @@
   "harbor-auction": {
     "width": 800,
     "height": 496,
-    "hash": "16b6304130cf183d"
+    "hash": "9e52c654cbe86327"
   },
   "harbor-radar": {
     "width": 800,
@@ -172,7 +172,7 @@
   "heating-nixie": {
     "width": 800,
     "height": 496,
-    "hash": "f2eb978410307d65"
+    "hash": "cad3b779d00af9cb"
   },
   "home-eink": {
     "width": 800,
@@ -227,7 +227,7 @@
   "line-flow": {
     "width": 800,
     "height": 353,
-    "hash": "75ce555dd4955841"
+    "hash": "06392accf11c840b"
   },
   "line-oee": {
     "width": 800,
@@ -252,12 +252,12 @@
   "mall-wayfinding": {
     "width": 386,
     "height": 693,
-    "hash": "56e60be637cd8c34"
+    "hash": "95370345575c4f62"
   },
   "microgrid": {
     "width": 800,
     "height": 453,
-    "hash": "bafa30c8c8c69686"
+    "hash": "0bcabbcbc62ad083"
   },
   "museum-najeon": {
     "width": 800,
@@ -312,7 +312,7 @@
   "port-terminal": {
     "width": 800,
     "height": 731,
-    "hash": "0823d27c2c82139e"
+    "hash": "e2f7619a41bbc15a"
   },
   "power-sld": {
     "width": 800,
@@ -402,7 +402,7 @@
   "theme-park": {
     "width": 800,
     "height": 496,
-    "hash": "88125b720b018097"
+    "hash": "3e0e513afd849bec"
   },
   "tunnel-tbm": {
     "width": 800,
@@ -432,7 +432,7 @@
   "warehouse-racks": {
     "width": 800,
     "height": 496,
-    "hash": "5d668aec364934bf"
+    "hash": "ba8f7d0b921db3b6"
   },
   "water-pumps": {
     "width": 800,
@@ -457,6 +457,6 @@
   "world-supply": {
     "width": 800,
     "height": 457,
-    "hash": "7c204454049ff8b6"
+    "hash": "989ffc2023c912eb"
   }
 }

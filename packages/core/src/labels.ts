@@ -526,6 +526,8 @@ export interface UBoardLabels {
   arrowEnd: string;
   arrowStart: string;
   arrowBoth: string;
+  /** A link's arrowheads read from a field of what it reads — `{field}` its name. */
+  arrowFromField: string;
   connectorRoute: string;
   routeStraight: string;
   routeOrthogonal: string;
@@ -939,6 +941,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   arrowEnd: 'Toward {to}',
   arrowStart: 'Toward {from}',
   arrowBoth: 'Both ways',
+  arrowFromField: 'By {field}',
   connectorRoute: 'Route',
   routeStraight: 'Straight',
   routeOrthogonal: 'Right angles',

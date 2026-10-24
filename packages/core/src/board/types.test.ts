@@ -38,7 +38,7 @@ const _plant = {
     kind: 'canvas', size: [800, 400],
     place: { P1: [40, 40, 160, 90], T1: [400, 40] },
     shapes: { quay: { path: 'M 40 300 C 200 280 400 320 760 300', dash: true }, title: { text: 'Plant', at: [24, 22], size: 24 } },
-    links: { feed: { from: 'P1', to: 'T1', of: 'lines[L1]', show: 'flow', label: '{{flow}}', arrow: true } },
+    links: { feed: { from: 'P1', to: 'T1', of: 'lines[L1]', show: 'flow', label: '{{flow}}', arrow: 'end' } },
   },
 } satisfies Board;
 

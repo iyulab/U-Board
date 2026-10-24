@@ -314,7 +314,7 @@ const board: Board = {
         "tone": "warn",
         "of": "queues",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "queue-q2": {
@@ -324,7 +324,7 @@ const board: Board = {
         "tone": "warn",
         "of": "queues",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "queue-q3": {
@@ -334,7 +334,7 @@ const board: Board = {
         "tone": "warn",
         "of": "queues",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       }
     }

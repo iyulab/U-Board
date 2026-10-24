@@ -505,7 +505,7 @@ const board: Board = {
         "of": "route",
         "width": 5,
         "dash": true,
-        "arrow": true
+        "arrow": "end"
       },
       "route-carousel-teacup": {
         "from": "ride-carousel",
@@ -515,7 +515,7 @@ const board: Board = {
         "of": "route",
         "width": 5,
         "dash": true,
-        "arrow": true
+        "arrow": "end"
       },
       "route-teacup-wheel": {
         "from": "ride-teacup",
@@ -525,7 +525,7 @@ const board: Board = {
         "of": "route",
         "width": 5,
         "dash": true,
-        "arrow": true
+        "arrow": "end"
       }
     }
   }

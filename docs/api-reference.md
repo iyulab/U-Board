@@ -106,7 +106,7 @@ in a canvas layout. A worked board, valid as written, is exported as `RULEBOOK_E
     "kind": "canvas", "size": [720, 360],
     "place": { "P1": [40, 40, 200, 120], "P2": [440, 40, 200, 120], "flow": [40, 200, 640, 140] },
     "shapes": { "title": { "text": "Pump station", "at": [40, 24] } },
-    "links": { "line": { "from": "P1", "to": "P2", "of": "pumps[P1]", "show": "state", "label": "{{flow}}", "arrow": true } }
+    "links": { "line": { "from": "P1", "to": "P2", "of": "pumps[P1]", "show": "state", "label": "{{flow}}", "arrow": "end" } }
   }
 }
 ```
@@ -286,7 +286,8 @@ type GridItem =
     width?: number;
     weight?: { field: string; bands?: number[]; map?: Record<string, number> };
     dash?: boolean;
-    arrow?: boolean;             // an arrowhead at its end
+    arrow?: 'end' | 'start' | 'both'                       // fixed arrowheads
+      | { field: string; map?: Record<string, 'end' | 'start' | 'both' | 'none'>; bands?: (string | number)[] };
   }
   ```
 
@@ -294,7 +295,12 @@ type GridItem =
   dash, `invert` thick. `orthogonal` runs with one turn between the two parts, as pipes and wiring are drawn;
   `curved` bows to the left of the way it runs, as flows on a map are drawn. `weight` reads the width from a field —
   an amount, not a status: bands from the width below the first number up (`[2, 8, 3.5, 15, 5]`), or a map of raw
-  values (`"*"` for the rest).
+  values (`"*"` for the rest). `arrow` puts arrowheads at the `end` (toward `to`), the `start` (toward `from`) or
+  `both` — or reads them from a field when a flow reverses: a map of its words
+  (`{ "field": "dir", "map": { "forward": "end", "reverse": "start", "*": "none" } }`) or bands of its sign
+  (`{ "field": "power", "bands": ["start", 0, "end"] }` — zero falls in the band from 0 up, so map the word when zero
+  should draw none). A direction is a meaning of the value, not a status, so it is read beside the status rather than
+  through it.
 
 Every part is placed by the layout — a part placed nowhere is refused.
 

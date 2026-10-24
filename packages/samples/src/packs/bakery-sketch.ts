@@ -382,7 +382,7 @@ const board: Board = {
         "of": "stations[oven1]",
         "width": 2,
         "dash": true,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "batch-oven2": {
@@ -393,7 +393,7 @@ const board: Board = {
         "of": "stations[oven2]",
         "width": 2,
         "dash": true,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       }
     }

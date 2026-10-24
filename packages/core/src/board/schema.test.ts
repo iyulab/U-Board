@@ -34,7 +34,7 @@ const AGREED: [string, unknown, boolean][] = [
   ['a canvas board with statuses, a look, shapes and links', {
     ...canvas({ P1: { as: 'status-card', of: 'equipment[P1]', title: '{{key}}', show: ['state', 'temp'] }, T: { as: 'stat', of: 'totals' } }, {
       shapes: { zone: { box: [0, 0, 100, 60], label: 'Zone A', tone: 'accent' }, note: { text: 'North', at: [5, 5], size: 12 }, edge: { path: 'M 0 0 L 10 10' } },
-      links: { feed: { from: 'P1', to: 'T', of: 'equipment[P1]', show: 'state', label: '{{temp}}', arrow: true } },
+      links: { feed: { from: 'P1', to: 'T', of: 'equipment[P1]', show: 'state', label: '{{temp}}', arrow: 'end' } },
     }),
     statuses: { run: { tone: 'ok', label: 'Running', glyph: '▶', emphasis: 'hatch' } },
     board: { title: 'Plant', theme: 'dark', accent: '#22d3ee', skin: { frame: 'plate', palette: { paper: '#f4efe4' }, shadow: 'soft', density: 'compact' } },

@@ -337,7 +337,7 @@ const board: Board = {
         },
         "of": "buffers[body-in--welding]",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       },
       "welding--paint": {
         "from": "welding",
@@ -358,7 +358,7 @@ const board: Board = {
         },
         "of": "buffers[welding--paint]",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       },
       "paint--trim-1": {
         "from": "paint",
@@ -379,7 +379,7 @@ const board: Board = {
         },
         "of": "buffers[paint--trim-1]",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       },
       "trim-1--trim-2": {
         "from": "trim-1",
@@ -400,7 +400,7 @@ const board: Board = {
         },
         "of": "buffers[trim-1--trim-2]",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       },
       "trim-2--final": {
         "from": "trim-2",
@@ -421,7 +421,7 @@ const board: Board = {
         },
         "of": "buffers[trim-2--final]",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       }
     }
   }

@@ -567,7 +567,7 @@ const board: Board = {
         "tone": "info",
         "of": "route",
         "width": 8,
-        "arrow": true,
+        "arrow": "end",
         "route": "orthogonal"
       }
     }

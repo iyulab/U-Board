@@ -381,7 +381,7 @@ const board: Board = {
         "of": "trucks",
         "width": 4,
         "dash": true,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "truck-t2": {
@@ -392,7 +392,7 @@ const board: Board = {
         "of": "trucks",
         "width": 4,
         "dash": true,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       }
     }

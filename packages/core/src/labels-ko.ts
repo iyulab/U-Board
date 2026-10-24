@@ -401,6 +401,7 @@ export const KO_LABELS: UBoardLabels = {
   arrowEnd: '{to} 쪽으로',
   arrowStart: '{from} 쪽으로',
   arrowBoth: '양쪽',
+  arrowFromField: '{field} 값에 따라',
   connectorRoute: '경로',
   routeStraight: '직선',
   routeOrthogonal: '직각으로 꺾기',

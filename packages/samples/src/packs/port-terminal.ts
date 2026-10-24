@@ -587,7 +587,7 @@ const board: Board = {
               "tone": "info",
               "of": "berths[B1]",
               "width": 2,
-              "arrow": true,
+              "arrow": "end",
               "route": "orthogonal"
             },
             "flow-B2": {
@@ -597,7 +597,7 @@ const board: Board = {
               "tone": "info",
               "of": "berths[B2]",
               "width": 2,
-              "arrow": true,
+              "arrow": "end",
               "route": "orthogonal"
             },
             "flow-gate": {
@@ -608,7 +608,7 @@ const board: Board = {
               "of": "gate",
               "width": 2,
               "dash": true,
-              "arrow": true,
+              "arrow": "end",
               "route": "orthogonal"
             }
           }

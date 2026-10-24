@@ -12,6 +12,19 @@ import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
 import type { Board, CanvasLayout, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
 
+/** A weight's or an arrow's bands or map as the value map a connector binding takes: bands as ranges, a map as values
+ *  and `otherwise`. */
+function bandsOrMap<T>(spec: { bands?: (T | number)[]; map?: Record<string, T> }): ValueMap {
+  if (spec.bands !== undefined) {
+    const b = spec.bands;
+    const ranges: { min?: number; max?: number; value: T | number }[] = [];
+    for (let i = 0; i < b.length; i += 2) ranges.push({ ...(i > 0 ? { min: b[i - 1] as number } : {}), ...(i + 1 < b.length ? { max: b[i + 1] as number } : {}), value: b[i]! });
+    return { ranges } as ValueMap;
+  }
+  const { '*': otherwise, ...values } = spec.map ?? {};
+  return { values, ...(otherwise !== undefined ? { otherwise } : {}) } as ValueMap;
+}
+
 /** A weight as the value map a connector's width binding takes: bands as ranges, a map as values and `otherwise`. */
 function weightMap(weight: { bands?: number[]; map?: Record<string, number> }): ValueMap {
   if (weight.bands !== undefined) {
@@ -723,6 +736,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       }
       // An amount sets the width itself — over a status's form, which then keeps only its colour and dash.
       if (link.weight !== undefined) bindings['style.strokeWidth'] = binding(link.weight.field, weightMap(link.weight));
+      // A direction that reverses: the arrowheads read from a field, `none` until it answers.
+      if (typeof link.arrow === 'object') bindings['style.arrow'] = binding(link.arrow.field, bandsOrMap(link.arrow));
       // A label of one field (with words around it) binds that field — wherever it lives in the item — and keeps its words
       // as the connector's own pattern, the field's places in it; a label of several fields is a text of the item.
       const one = label !== undefined ? /^([^{}]*)\{\{\s*([\w.-]+)\s*\}\}([^{}]*)$/.exec(label) : null;
@@ -740,7 +755,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       id, fromNodeId: link.from, toNodeId: link.to,
       ...(label !== undefined ? { label } : {}),
       style: {
-        stroke: link.tone ?? 'idle', strokeWidth: width, ...(link.dash ? { dash: 'dashed' as const } : {}), arrow: link.arrow ? 'end' : 'none',
+        stroke: link.tone ?? 'idle', strokeWidth: width, ...(link.dash ? { dash: 'dashed' as const } : {}), arrow: typeof link.arrow === 'string' ? link.arrow : 'none',
         ...(link.route !== undefined && link.route !== 'straight' ? { route: link.route } : {}),
       },
       ...(Object.keys(bindings).length > 0 ? { bindings } : {}),

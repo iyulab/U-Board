@@ -217,7 +217,7 @@ describe('the picture model of a v2 board', () => {
         place: { P1: [10, 10, 150, 80], P2: [300, 10, 150, 80] },
         shapes: { zone: { box: [0, 0, 500, 120], label: 'Line 1', tone: 'accent' }, note: { text: 'North', at: [5, 140], size: 12 } },
         links: {
-          feed: { from: 'P1', to: 'P2', of: 'pumps[P2]', show: 'state', label: '{{flow}}', arrow: true },
+          feed: { from: 'P1', to: 'P2', of: 'pumps[P2]', show: 'state', label: '{{flow}}', arrow: 'end' },
           plain: { from: 'P2', to: 'P1', dash: true },
         },
       },
@@ -236,6 +236,33 @@ describe('the picture model of a v2 board', () => {
     };
     // P2 has tripped: the link is in the alarm tone, dotted for the status's blink, and labelled with its flow.
     expect([read('style.stroke'), read('style.dash'), read('style.strokeWidth'), read('label')]).toEqual(['alarm', 'dotted', 2, 0]);
+  });
+
+  it('turns a link’s arrowheads by a field — its words through a map, its sign through bands — and keeps fixed ones', () => {
+    const doc = view(board(
+      { P1: { as: 'stat', of: 'pumps[P1]', show: 'flow' }, P2: { as: 'stat', of: 'pumps[P2]', show: 'flow' } },
+      {
+        kind: 'canvas', size: [600, 300],
+        place: { P1: [10, 10, 150, 80], P2: [300, 10, 150, 80] },
+        links: {
+          byWord: { from: 'P1', to: 'P2', of: 'pumps[P2]', arrow: { field: 'state', map: { trip: 'start', '*': 'none' } } },
+          bySign: { from: 'P1', to: 'P2', of: 'pumps[P1]', arrow: { field: 'flow', bands: ['start', 0, 'end'] } },
+          fixed: { from: 'P2', to: 'P1', arrow: 'both' },
+        },
+      },
+    ));
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    const [byWord, bySign, fixed] = doc.connectors;
+    const arrow = (c: typeof byWord) => {
+      const b = c!.bindings!['style.arrow']!;
+      const reading = readHttpRef(SOURCE[(b.ref as HttpRef).path], b.ref as HttpRef, READ_AT);
+      return reading.ok ? applyValueMap(b.map!, reading.value) : reading.message;
+    };
+    // Until a field answers, a link read for its direction draws no arrowhead.
+    expect(byWord!.style!.arrow).toBe('none');
+    expect([arrow(byWord), arrow(bySign)]).toEqual(['start', 'end']);
+    expect(fixed!.style!.arrow).toBe('both');
+    expect(fixed!.bindings).toBeUndefined();
   });
 
   it("draws markers, labels, a legend and lines with U-Board's own elements", () => {

@@ -1,6 +1,6 @@
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { FIELD_STYLE } from '../ui-style.js';
-import { TONES, type Board, type Link, type Tone } from '../board/types.js';
+import { TONES, type ArrowEnds, type Board, type Link, type Tone } from '../board/types.js';
 import type { BoardFinding } from '../board/check.js';
 
 export interface LinkPanelProps {
@@ -17,8 +17,9 @@ const ROUTES = ['straight', 'orthogonal', 'curved'] as const;
 /**
  * The panel of a link of a canvas board: the parts it joins (set by joining them on
  * the canvas), its label, the item it reads and the field whose status it takes — its colour the status's tone, its line
- * the status's emphasis — and, fixed, its tone without a status, its route, arrowhead and dash. A setting left empty
- * goes from the link.
+ * the status's emphasis — and, fixed, its tone without a status, its route, arrowheads and dash. A setting left empty
+ * goes from the link. Arrowheads read from a field (a direction that reverses) are written in the board's source; the
+ * panel names the field and replaces them only when a fixed choice is made.
  */
 export function LinkPanel({ id, board, onChange, findings = [], labels = DEFAULT_LABELS }: LinkPanelProps) {
   const link = (board.layout.kind === 'canvas' ? board.layout.links?.[id] : undefined) ?? { from: '', to: '' };
@@ -60,9 +61,18 @@ export function LinkPanel({ id, board, onChange, findings = [], labels = DEFAULT
           ))}
         </select>
       </label>
-      <label className="ub-panel__field ub-panel__field--check">
-        <input type="checkbox" checked={link.arrow === true} onChange={e => set({ arrow: e.target.checked })} />
+      <label className="ub-panel__field" style={FIELD_STYLE}>
         {labels.linkArrow}
+        <select
+          value={typeof link.arrow === 'object' ? 'field' : (link.arrow ?? '')}
+          onChange={e => e.target.value !== 'field' && set({ arrow: (e.target.value || undefined) as ArrowEnds | undefined })}
+        >
+          <option value="">{labels.arrowNone}</option>
+          <option value="end">{labels.arrowEnd.replace('{to}', link.to)}</option>
+          <option value="start">{labels.arrowStart.replace('{from}', link.from)}</option>
+          <option value="both">{labels.arrowBoth}</option>
+          {typeof link.arrow === 'object' && <option value="field">{labels.arrowFromField.replace('{field}', link.arrow.field)}</option>}
+        </select>
       </label>
       <label className="ub-panel__field ub-panel__field--check">
         <input type="checkbox" checked={link.dash === true} onChange={e => set({ dash: e.target.checked })} />

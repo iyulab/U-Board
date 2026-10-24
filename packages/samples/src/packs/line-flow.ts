@@ -261,25 +261,25 @@ const board: Board = {
         "from": "input/card",
         "to": "process-01/card",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-2": {
         "from": "process-01/card",
         "to": "process-02/card",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-3": {
         "from": "process-02/card",
         "to": "inspection/card",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-4": {
         "from": "inspection/card",
         "to": "packaging/card",
         "width": 2,
-        "arrow": true
+        "arrow": "end"
       }
     }
   }

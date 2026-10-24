@@ -691,7 +691,7 @@ const board: Board = {
         },
         "of": "lanes[hsinchu]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "lane-osaka": {
@@ -712,7 +712,7 @@ const board: Board = {
         },
         "of": "lanes[osaka]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "lane-shenzhen": {
@@ -733,7 +733,7 @@ const board: Board = {
         },
         "of": "lanes[shenzhen]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "lane-penang": {
@@ -754,7 +754,7 @@ const board: Board = {
         },
         "of": "lanes[penang]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "lane-munich": {
@@ -776,7 +776,7 @@ const board: Board = {
         },
         "of": "lanes[munich]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "lane-austin": {
@@ -798,7 +798,7 @@ const board: Board = {
         },
         "of": "lanes[austin]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "lane-rotterdam": {
@@ -820,7 +820,7 @@ const board: Board = {
         },
         "of": "lanes[rotterdam]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "lane-longbeach": {
@@ -842,7 +842,7 @@ const board: Board = {
         },
         "of": "lanes[longbeach]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "lane-singapore": {
@@ -863,7 +863,7 @@ const board: Board = {
         },
         "of": "lanes[singapore]",
         "width": 3,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       }
     }

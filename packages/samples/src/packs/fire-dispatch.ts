@@ -376,7 +376,7 @@ const board: Board = {
         "tone": "next",
         "of": "routes",
         "width": 4,
-        "arrow": true
+        "arrow": "end"
       },
       "route-r2": {
         "from": "station-c2",
@@ -385,7 +385,7 @@ const board: Board = {
         "tone": "next",
         "of": "routes",
         "width": 4,
-        "arrow": true
+        "arrow": "end"
       },
       "route-r3": {
         "from": "station-c5",
@@ -394,7 +394,7 @@ const board: Board = {
         "tone": "next",
         "of": "routes",
         "width": 4,
-        "arrow": true
+        "arrow": "end"
       },
       "route-r4": {
         "from": "station-c1",
@@ -403,7 +403,7 @@ const board: Board = {
         "tone": "next",
         "of": "routes",
         "width": 4,
-        "arrow": true
+        "arrow": "end"
       },
       "route-r5": {
         "from": "station-c3",
@@ -412,7 +412,7 @@ const board: Board = {
         "tone": "next",
         "of": "routes",
         "width": 4,
-        "arrow": true
+        "arrow": "end"
       }
     }
   }

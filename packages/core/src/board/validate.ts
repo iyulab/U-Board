@@ -477,6 +477,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
       if (l.tone !== undefined && !(TONES as readonly unknown[]).includes(l.tone)) fail(`${linkAt}/tone`, `"${String(l.tone)}" is not a tone — use ${TONES.join(' · ')}`);
       if (l.route !== undefined && !['straight', 'orthogonal', 'curved'].includes(l.route as string)) fail(`${linkAt}/route`, 'a link\u2019s route is "straight", "orthogonal" or "curved"');
       if (l.weight !== undefined) checkWeight(l, `${linkAt}/weight`, groupReads);
+      if (l.arrow !== undefined) checkArrow(l, `${linkAt}/arrow`, groupReads);
       checkTexts(l, linkAt, reads);
     }
   };
@@ -496,6 +497,31 @@ export function validateBoard(board: unknown): BoardIssue[] {
       });
     } else if (!isObj(w.map) || Object.keys(w.map).length === 0) fail(`${at}/map`, shape);
     else for (const [raw, v] of Object.entries(w.map)) if (!isNum(v) || v <= 0) fail(`${at}/map/${raw}`, 'a width is a number above 0');
+  };
+
+  /** A link's arrowheads: `"end"` · `"start"` · `"both"`, or from a field — `{ "field", "map" }` or `{ "field", "bands" }`. */
+  const checkArrow = (l: Obj, at: string, groupReads?: string | null) => {
+    const a = l.arrow;
+    const ENDS = ['end', 'start', 'both'];
+    if (typeof a === 'string') {
+      if (!ENDS.includes(a)) fail(at, `"${a}" is no arrowhead — use "end" (toward "to"), "start" (toward "from") or "both"`);
+      return;
+    }
+    const shape = 'an arrow is "end", "start" or "both" — or { "field", "map": { "<raw>": "end", "*": "none" } } or { "field", "bands": ["start", 0, "end"] }';
+    if (!isObj(a) || typeof a.field !== 'string' || (a.bands === undefined) === (a.map === undefined)) { fail(at, shape); return; }
+    if (l.of === undefined && !groupReads) fail(at, 'an arrow from a field reads it "of" a data item — give "of" too');
+    const isEnds = (v: unknown) => typeof v === 'string' && [...ENDS, 'none'].includes(v);
+    const ends = 'the ends are "end", "start", "both" or "none"';
+    if (a.bands !== undefined) {
+      const b = a.bands;
+      if (!Array.isArray(b) || b.length < 3 || b.length % 2 === 0) { fail(`${at}/bands`, 'bands are [ends, number, ends, …] — the ends, then a number and the ends from it up'); return; }
+      b.forEach((v, i) => {
+        if (i % 2 === 0 && !isEnds(v)) fail(`${at}/bands/${i}`, ends);
+        else if (i % 2 === 1 && !isNum(v)) fail(`${at}/bands/${i}`, 'a number comes before each ends after the first');
+        else if (i % 2 === 1 && i > 1 && isNum(b[i - 2]) && (v as number) <= (b[i - 2] as number)) fail(`${at}/bands/${i}`, 'the numbers of bands go up');
+      });
+    } else if (!isObj(a.map) || Object.keys(a.map).length === 0) fail(`${at}/map`, shape);
+    else for (const [raw, v] of Object.entries(a.map)) if (!isEnds(v)) fail(`${at}/map/${raw}`, ends);
   };
 
   for (const [id, raw] of Object.entries(parts)) {

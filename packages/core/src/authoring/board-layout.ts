@@ -134,7 +134,7 @@ export function withNewLink(board: Board, from: string, to: string): { board: Bo
   let n = Object.keys(links).length + 1;
   while (`link-${n}` in links) n++;
   const id = `link-${n}`;
-  return { board: { ...board, layout: { ...board.layout, links: { ...links, [id]: { from, to, arrow: true } } } }, id };
+  return { board: { ...board, layout: { ...board.layout, links: { ...links, [id]: { from, to, arrow: 'end' } } } }, id };
 }
 
 /** Whether the picture node or item `id` is one the board places itself: a part, or an item of an `each` part — not a

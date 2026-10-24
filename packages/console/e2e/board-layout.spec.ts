@@ -58,7 +58,7 @@ test('moves, sizes, orders and deletes the parts of boards, and saves each', asy
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
   const joined = (await (await page.request.get(at)).json()).document;
-  expect(joined.layout.links).toEqual({ l: { from: 'title', to: 'note' }, 'link-2': { from: 'title', to: 'note', arrow: true, label: 'flow' } });
+  expect(joined.layout.links).toEqual({ l: { from: 'title', to: 'note' }, 'link-2': { from: 'title', to: 'note', arrow: 'end', label: 'flow' } });
 
   // A frame added to the canvas, selected and named in its panel, saved as the board's shape.
   await page.getByRole('button', { name: '틀 추가' }).click();

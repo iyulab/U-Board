@@ -402,7 +402,7 @@ const board: Board = {
         "of": "eta",
         "width": 3,
         "dash": true,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "course-r2": {
@@ -413,7 +413,7 @@ const board: Board = {
         "of": "eta",
         "width": 3,
         "dash": true,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       },
       "course-r3": {
@@ -424,7 +424,7 @@ const board: Board = {
         "of": "eta",
         "width": 3,
         "dash": true,
-        "arrow": true,
+        "arrow": "end",
         "route": "curved"
       }
     }

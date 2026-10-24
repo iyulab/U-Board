@@ -144,6 +144,23 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('takes a link’s arrowheads as fixed ends or from a field, by a map of words or bands of a number', () => {
+    const board = (arrow: unknown, of: string | null = 'equipment[P1]') => ({
+      data, parts: { P1: { as: 'status-card', of: 'equipment[P1]' }, P2: { as: 'status-card', of: 'equipment[P2]' } },
+      layout: { kind: 'canvas', size: [800, 400], place: { P1: [0, 0], P2: [200, 0] }, links: { a: { from: 'P1', to: 'P2', ...(of ? { of } : {}), arrow } } },
+    });
+    expect(issues(board('both', null))).toEqual([]);
+    expect(issues(board({ field: 'state', map: { forward: 'end', reverse: 'start', '*': 'none' } }))).toEqual([]);
+    expect(issues(board({ field: 'state', bands: ['start', 0, 'end'] }))).toEqual([]);
+    expect(issues(board(true, null))).toEqual([
+      '/layout/links/a/arrow: an arrow is "end", "start" or "both" — or { "field", "map": { "<raw>": "end", "*": "none" } } or { "field", "bands": ["start", 0, "end"] }',
+    ]);
+    expect(issues(board('forward', null))).toEqual(['/layout/links/a/arrow: "forward" is no arrowhead — use "end" (toward "to"), "start" (toward "from") or "both"']);
+    expect(issues(board({ field: 'state', map: { forward: 'end' } }, null))).toEqual(['/layout/links/a/arrow: an arrow from a field reads it "of" a data item — give "of" too']);
+    expect(issues(board({ field: 'state', map: { forward: 'up' } }))).toEqual(['/layout/links/a/arrow/map/forward: the ends are "end", "start", "both" or "none"']);
+    expect(issues(board({ field: 'state', bands: ['start', 5, 'end', 1, 'both'] }))).toEqual(['/layout/links/a/arrow/bands/3: the numbers of bands go up']);
+  });
+
   it('names the kinds there are for a kind that is not one, and asks what a kind shows', () => {
     const [unknown] = issues(canvas({ g: { as: 'timeline', of: 'equipment' } }));
     expect(unknown).toMatch(/^\/parts\/g\/as: unknown kind "timeline" — one of status-card, header, stat, /);

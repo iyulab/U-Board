@@ -473,7 +473,7 @@ const board: Board = {
         "show": "state",
         "of": "stations",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-s2-t2": {
         "from": "s2",
@@ -481,7 +481,7 @@ const board: Board = {
         "show": "state-2",
         "of": "stations",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-s3-t3": {
         "from": "s3",
@@ -489,7 +489,7 @@ const board: Board = {
         "show": "state-3",
         "of": "stations",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-s4-t4": {
         "from": "s4",
@@ -497,7 +497,7 @@ const board: Board = {
         "show": "state-4",
         "of": "stations",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-s5-t5": {
         "from": "s5",
@@ -505,7 +505,7 @@ const board: Board = {
         "show": "state-5",
         "of": "stations",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-s6-t6": {
         "from": "s6",
@@ -513,7 +513,7 @@ const board: Board = {
         "show": "state-6",
         "of": "stations",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       }
     }
   }

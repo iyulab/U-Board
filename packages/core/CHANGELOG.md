@@ -30,6 +30,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A link's arrowheads are words — `"end"` (toward `to`), `"start"` or `"both"` — or read from a field when a flow
+  reverses: `{ "field", "map": { "<raw>": "end", "*": "none" } }` or bands of a number (`["start", 0, "end"]`). The
+  link panel chooses among them and names the field when they are read. `arrow: true` is no longer taken — write
+  `"end"`.
 - `BoardView`: a board drawn in the application that hosts it — its values, and the items a grid lays out a part per
   item of, read through the host's own adapters, with no U-Board server. `pictureOf(board, read)` with
   `readerOf(adapters)` makes the same picture anywhere a board is drawn.

@@ -150,8 +150,8 @@ export interface Shape {
 
 /**
  * A link between two parts. With `of` and `show` it carries a field's status — its colour is the status's tone, its
- * emphasis the line's form (`hatch` dashed · `blink` a moving dash · `invert` thick); `width`, `dash` and `arrow`
- * are fixed.
+ * emphasis the line's form (`hatch` dashed · `blink` a moving dash · `invert` thick); `width` and `dash` are fixed, and
+ * its arrowheads are fixed or read from a field (`arrow`).
  */
 export interface Link {
   from: string;
@@ -169,7 +169,20 @@ export interface Link {
    *  width below the first number up (`[2, 8, 3.5, 15, 5]`), or a `map` of raw values (`"*"` for the rest). */
   weight?: Weight;
   dash?: boolean;
-  arrow?: boolean;
+  /** Its arrowheads: at its `end` (toward `to`), its `start` (toward `from`) or `both` — or read from a field of the item
+   *  it reads, as a direction is (a flow that reverses): a `map` of raw values, or `bands` of a number (its sign). */
+  arrow?: ArrowEnds | Arrow;
+}
+
+/** Where a link's arrowheads are. */
+export type ArrowEnds = 'end' | 'start' | 'both';
+
+/** A link's arrowheads from a field: a map of raw values to ends (`"*"` for the rest), or bands — the ends below the
+ *  first number, then each number and the ends from it up (`["start", 0, "end"]`); `none` draws none. */
+export interface Arrow {
+  field: string;
+  map?: Record<string, ArrowEnds | 'none'>;
+  bands?: (ArrowEnds | 'none' | number)[];
 }
 
 /** A link's width from a field: bands of widths and numbers, or a map of raw values to widths. */

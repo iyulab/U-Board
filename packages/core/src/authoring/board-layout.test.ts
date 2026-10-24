@@ -84,7 +84,7 @@ describe('the links of a canvas board', () => {
   it('gains a link from one part to another, with an arrowhead, under a new id', () => {
     const { board: next, id } = withNewLink(board, 'title', 'count');
     expect(id).toBe('link-3');
-    expect(next.layout.kind === 'canvas' && next.layout.links?.[id]).toEqual({ from: 'title', to: 'count', arrow: true });
+    expect(next.layout.kind === 'canvas' && next.layout.links?.[id]).toEqual({ from: 'title', to: 'count', arrow: 'end' });
     expect(picture(next).connectors.map(c => c.id)).toContain(`${LINK}${id}`);
   });
 });

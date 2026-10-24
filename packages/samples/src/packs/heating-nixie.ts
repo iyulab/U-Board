@@ -366,7 +366,7 @@ const board: Board = {
         },
         "of": "pipes",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "orthogonal"
       },
       "pipe-plant-boosterB": {
@@ -388,7 +388,7 @@ const board: Board = {
         },
         "of": "pipes",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "orthogonal"
       },
       "pipe-boosterA-z1": {
@@ -410,7 +410,7 @@ const board: Board = {
         },
         "of": "pipes",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "orthogonal"
       },
       "pipe-boosterA-z2": {
@@ -432,7 +432,7 @@ const board: Board = {
         },
         "of": "pipes",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "orthogonal"
       },
       "pipe-boosterB-z3": {
@@ -454,7 +454,7 @@ const board: Board = {
         },
         "of": "pipes",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "orthogonal"
       },
       "pipe-boosterB-z4": {
@@ -476,7 +476,7 @@ const board: Board = {
         },
         "of": "pipes",
         "width": 4,
-        "arrow": true,
+        "arrow": "end",
         "route": "orthogonal"
       }
     }

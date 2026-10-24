@@ -1,7 +1,7 @@
 // A site's microgrid as its energy management system sees it: the solar array, the battery, the building and the car
 // chargers it feeds, and the utility grid, all meeting at the switchboard. Each line carries the power flowing on it —
-// its width grows with the power, and a line with nothing on it is dashed; which way it flows (the battery charging or
-// discharging, the grid importing or exporting) the battery's and the grid's cards say. Beside it the day: how much of the site's use the sun
+// its width grows with the power, a line with nothing on it is dashed, and its arrowhead points the way it flows (the
+// battery charging or discharging, the grid importing or exporting), read from the same item. Beside it the day: how much of the site's use the sun
 // covered, what came from and went to the grid, and the solar output against the load since morning. No public source
 // carries a site's power flows, so the values are example data written for the board.
 
@@ -355,7 +355,7 @@ const board: Board = {
         "tone": "next"
       },
       "note": {
-        "text": "선마다 지금 흐르는 전력 — 굵기는 크기, 점선은 멈춤 · 방향은 ESS · 계통 카드 · 예시 데이터",
+        "text": "선마다 지금 흐르는 전력 — 굵기는 크기, 점선은 멈춤 · 화살표는 흐르는 쪽 · 예시 데이터",
         "at": [
           24,
           56
@@ -405,7 +405,8 @@ const board: Board = {
         },
         "of": "assets[pv]",
         "width": 2.5,
-        "route": "orthogonal"
+        "route": "orthogonal",
+        "arrow": { "field": "dir", "map": { "forward": "end", "reverse": "start", "*": "none" } }
       },
       "flow-grid": {
         "from": "grid",
@@ -426,7 +427,8 @@ const board: Board = {
         },
         "of": "assets[grid]",
         "width": 2.5,
-        "route": "orthogonal"
+        "route": "orthogonal",
+        "arrow": { "field": "dir", "map": { "forward": "end", "reverse": "start", "*": "none" } }
       },
       "flow-ess": {
         "from": "switchboard",
@@ -447,7 +449,8 @@ const board: Board = {
         },
         "of": "assets[ess]",
         "width": 2.5,
-        "route": "orthogonal"
+        "route": "orthogonal",
+        "arrow": { "field": "dir", "map": { "forward": "end", "reverse": "start", "*": "none" } }
       },
       "flow-building": {
         "from": "switchboard",
@@ -468,7 +471,8 @@ const board: Board = {
         },
         "of": "assets[building]",
         "width": 2.5,
-        "route": "orthogonal"
+        "route": "orthogonal",
+        "arrow": { "field": "dir", "map": { "forward": "end", "reverse": "start", "*": "none" } }
       },
       "flow-ev": {
         "from": "switchboard",
@@ -489,7 +493,8 @@ const board: Board = {
         },
         "of": "assets[ev]",
         "width": 2.5,
-        "route": "orthogonal"
+        "route": "orthogonal",
+        "arrow": { "field": "dir", "map": { "forward": "end", "reverse": "start", "*": "none" } }
       }
     }
   }

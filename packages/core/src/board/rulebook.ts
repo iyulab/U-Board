@@ -28,7 +28,7 @@ export const RULEBOOK_EXAMPLE: Board = {
     kind: 'canvas', size: [720, 360],
     place: { P1: [40, 40, 200, 120], P2: [440, 40, 200, 120], flow: [40, 200, 640, 140] },
     shapes: { title: { text: '펌프장', at: [40, 24] } },
-    links: { line: { from: 'P1', to: 'P2', of: 'pumps[P1]', show: 'state', label: '{{flow}}', arrow: true } },
+    links: { line: { from: 'P1', to: 'P2', of: 'pumps[P1]', show: 'state', label: '{{flow}}', arrow: 'end' } },
   },
 };
 

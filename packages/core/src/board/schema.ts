@@ -183,7 +183,23 @@ export function boardSchema(): Schema {
             },
           },
           dash: { type: 'boolean', description: 'Dashed always.' },
-          arrow: { type: 'boolean', description: 'An arrowhead at its end.' },
+          arrow: {
+            description: 'Its arrowheads: "end" (toward to), "start" (toward from) or "both" — or from a field of the item it reads, as a direction that reverses: a map { "<raw>": "end", "*": "none" } or bands of a number ["start", 0, "end"] (the ends below the first number, then from each number up).',
+            oneOf: [
+              { enum: ['end', 'start', 'both'] },
+              {
+                type: 'object',
+                required: ['field'],
+                additionalProperties: false,
+                oneOf: [{ required: ['bands'] }, { required: ['map'] }],
+                properties: {
+                  field: { type: 'string' },
+                  map: { type: 'object', additionalProperties: { enum: ['end', 'start', 'both', 'none'] } },
+                  bands: { type: 'array', items: { oneOf: [{ type: 'number' }, { enum: ['end', 'start', 'both', 'none'] }] }, minItems: 3 },
+                },
+              },
+            ],
+          },
         },
       },
       // A link on a board's own canvas shows or weighs a field only "of" something; inside a group (above) it may read

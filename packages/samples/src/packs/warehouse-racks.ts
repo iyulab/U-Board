@@ -72,7 +72,7 @@ const board: Board = {
             ]
           },
           "width": 4,
-          "arrow": true
+          "arrow": "end"
         }
       }
     }

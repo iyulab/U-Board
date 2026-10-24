@@ -362,28 +362,28 @@ const board: Board = {
         "to": "test",
         "tone": "alarm",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-test": {
         "from": "test",
         "to": "separate",
         "tone": "alarm",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-separate": {
         "from": "separate",
         "to": "store",
         "tone": "alarm",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       },
       "flow-store": {
         "from": "store",
         "to": "supply",
         "tone": "alarm",
         "width": 3,
-        "arrow": true
+        "arrow": "end"
       }
     }
   }
