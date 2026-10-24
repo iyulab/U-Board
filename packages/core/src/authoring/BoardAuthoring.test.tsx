@@ -49,6 +49,20 @@ describe('PartPanel', () => {
 });
 
 describe('BoardAuthoring', () => {
+  it('sets the board’s data in its panel with nothing selected — its sources the adapters, looked at through them', async () => {
+    const onSave = vi.fn();
+    const resolve = vi.fn(async () => ({ value: { count: 3, shift: 'B' }, quality: 'live' as const }));
+    render(<BoardAuthoring initialBoard={board} adapters={[{ id: 'plant', resolve }]} sourceLabels={{ plant: 'Plant API' }} onSave={onSave} />);
+    expect(screen.getAllByRole('option', { name: 'Plant API' }).length).toBeGreaterThan(0);
+    const looks = screen.getAllByRole('button', { name: 'Look at the data' });
+    fireEvent.click(looks[1]!);
+    fireEvent.click(await screen.findByRole('button', { name: 'Add shift' }));
+    expect(resolve).toHaveBeenCalledWith(expect.objectContaining({ path: '/totals' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    expect(onSave.mock.calls[0]![0].data.totals.fields).toEqual({ count: {}, shift: {} });
+  });
+
   it('lays out a part per item of a list the board reads through its adapters, which it reads the items with', async () => {
     const each: BoardV2 = { ...board, parts: { pump: { as: 'stat', each: 'pumps', show: 'flow' } }, layout: { kind: 'grid', items: ['pump'] } };
     const resolve = vi.fn(async () => ({ value: [{ id: 'P1', flow: 1 }, { id: 'P2', flow: 2 }], quality: 'live' as const }));

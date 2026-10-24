@@ -135,6 +135,12 @@ export function keyReadsOf(board: BoardV2): KeyRead[] {
   });
 }
 
+/** How a board reads one of its data whole — the list, or the one item — as the parts that show it whole do. */
+export function dataReadOf(board: BoardV2, data: string): KeyRead {
+  const { adapter, ref } = readOf(board.data ?? {}, data, undefined, undefined, `/data/${data}`);
+  return { data, adapter, ref };
+}
+
 /** The keys of a data list's items, from the value its `KeyRead` read: each item's key field — or its place in the
  *  list, for a list with no key. Anything but a list has no items. */
 export function keysIn(board: BoardV2, data: string, value: unknown): string[] {

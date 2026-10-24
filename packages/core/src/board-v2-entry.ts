@@ -11,7 +11,7 @@ export { checkBoardV2, documentKind, isBoardV2, sourceAdvice } from './board-v2/
 export type { BoardCheck, BoardDocument, BoardFinding, KnownSource } from './board-v2/check.js';
 export { PART_KINDS, partKind } from './board-v2/kinds.js';
 export type { PartKind } from './board-v2/kinds.js';
-export { toViewDocument, keyReadsOf, keysIn, PictureError } from './board-v2/picture.js';
+export { toViewDocument, dataReadOf, keyReadsOf, keysIn, PictureError } from './board-v2/picture.js';
 export type { KeyRead, PictureOptions } from './board-v2/picture.js';
 export { pictureOf, readKeys, readerOf } from './board-v2/draw.js';
 export type { ValueReader } from './board-v2/draw.js';

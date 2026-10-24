@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 
 // A board written in the board language's second version, shared: the server lays its grid out with the items its
 // data has now — one part per pump — and the share viewer draws that picture, each part with its value; the console
-// opens it from the same picture.
+// draws it as any host does, through the workspace's data sources, and sets its data in the editor's data panel.
 test('a board in the second version is drawn with one part per item of its data, shared and in the console', async ({ page, browser }) => {
   const mockServer = createServer((_req, res) => {
     res.setHeader('Content-Type', 'application/json');
@@ -48,7 +48,7 @@ test('a board in the second version is drawn with one part per item of its data,
     }
     await shareContext.close();
 
-    // The console draws it from the picture its own read of the board answers, laid out in the editor.
+    // The console draws it through its own read of the data, laid out in the editor.
     await page.goto(`/boards/${board.id}/edit`);
     const shown = page.getByRole('region', { name: '편집기' });
     for (const [pump, flow] of [['P1', '31'], ['P2', '57'], ['P3', '12']]) {
@@ -57,6 +57,18 @@ test('a board in the second version is drawn with one part per item of its data,
     }
     await expect(page.getByText(/부품을 옮기고 크기를 바꾸거나 지울 수 있습니다/)).toBeVisible();
     await expect(page.getByRole('button', { name: '항목 추가' })).toHaveCount(0);
+
+    // With nothing selected, the data panel: the read's source by its name, a look at what it answers, a field found
+    // there added and given a name, and the board saved with them.
+    await expect(page.getByLabel('원천')).toHaveValue(connector.id);
+    await expect(page.getByLabel('원천').locator('option:checked')).toHaveText('Mock Plant API');
+    await page.getByRole('button', { name: '데이터 살펴보기' }).click();
+    await page.getByRole('button', { name: 'id 더하기' }).click();
+    await page.getByRole('group', { name: 'id' }).getByLabel('이름').fill('Pump');
+    await page.getByRole('button', { name: '저장', exact: true }).click();
+    await expect(page.getByText('저장됨')).toBeVisible();
+    const withField = (await (await page.request.get(`/api/workspaces/${workspaceId}/boards/${board.id}`)).json()).document;
+    expect(withField.data.pumps.fields).toEqual({ flow: { label: 'Flow', unit: 'm³/h' }, id: { label: 'Pump' } });
   } finally {
     mockServer.close();
   }

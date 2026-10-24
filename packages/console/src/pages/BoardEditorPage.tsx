@@ -300,6 +300,7 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
             initialMode={editorMode}
             onModeChange={setEditorMode}
             adapters={adapters}
+            sourceLabels={connectorLabels}
             onDirtyChange={handleDirtyChange}
             onSave={handleSave}
             labels={EDITOR_LABELS}

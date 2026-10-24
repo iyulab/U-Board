@@ -178,6 +178,32 @@ export interface UBoardLabels {
   statusRemove: string;
   statusNew: string;
   statusAdd: string;
+  /** The board's data panel. `{name}`: a data read's or a field's name. */
+  dataHeading: string;
+  dataFrom: string;
+  dataPath: string;
+  /** A read by an adapter's own reference, which the panel does not write. */
+  dataByRef: string;
+  dataList: string;
+  dataKey: string;
+  dataFields: string;
+  dataFieldLabel: string;
+  dataFieldUnit: string;
+  dataFieldDigits: string;
+  dataFieldFormat: string;
+  dataFieldRemove: string;
+  dataFieldNew: string;
+  dataFieldAdd: string;
+  /** Read the data now and list the fields its item has. */
+  dataLook: string;
+  dataLooking: string;
+  /** The fields reading found: a button per field the read does not name yet. `{name}`: the field. */
+  dataFound: string;
+  dataFoundAdd: string;
+  dataFoundNone: string;
+  dataRemove: string;
+  dataNew: string;
+  dataAdd: string;
   propertiesHeading: string;
   widgetType: string;
   /** The text a new node starts with: its label, and the value it shows until it is bound. */
@@ -566,6 +592,28 @@ export const DEFAULT_LABELS: UBoardLabels = {
   statusRemove: 'Remove {name}',
   statusNew: 'New status',
   statusAdd: 'Add status',
+  dataHeading: 'Data',
+  dataFrom: 'Source',
+  dataPath: 'Request path',
+  dataByRef: 'Read by its adapter’s own reference — set it with the assistant, or in the board’s JSON.',
+  dataList: 'List in the answer (JSON Pointer)',
+  dataKey: 'Key field of an item',
+  dataFields: 'Fields',
+  dataFieldLabel: 'Name',
+  dataFieldUnit: 'Unit',
+  dataFieldDigits: 'Decimal places',
+  dataFieldFormat: 'Format',
+  dataFieldRemove: 'Remove field {name}',
+  dataFieldNew: 'New field',
+  dataFieldAdd: 'Add field',
+  dataLook: 'Look at the data',
+  dataLooking: 'Reading…',
+  dataFound: 'Fields found',
+  dataFoundAdd: 'Add {name}',
+  dataFoundNone: 'Nothing was read — check the source and the request path.',
+  dataRemove: 'Remove {name}',
+  dataNew: 'New data',
+  dataAdd: 'Add data',
   propertiesHeading: 'Properties',
   widgetType: 'Widget type',
   newNodeLabel: 'New node',

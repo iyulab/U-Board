@@ -6,13 +6,14 @@ import { GROUP_STYLE } from '../ui-style.js';
 import { placedIn, type CanvasView, type GridView, type ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { ViewerPage, type ViewerPageProps } from '../viewer/ViewerPage.js';
-import { PictureError, keyReadsOf, toViewDocument } from '../board-v2/picture.js';
+import { PictureError, dataReadOf, keyReadsOf, toViewDocument } from '../board-v2/picture.js';
 import { readKeys, readerOf } from '../board-v2/draw.js';
 import { checkBoardV2 } from '../board-v2/check.js';
 import type { BoardV2 } from '../board-v2/types.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
 import { PartPanel } from './PartPanel.js';
 import { StatusesPanel } from './StatusesPanel.js';
+import { DataPanel } from './DataPanel.js';
 import { TriggersEditor } from './TriggersEditor.js';
 import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
@@ -26,6 +27,8 @@ export interface BoardAuthoringProps {
   /** Where the board's values are read — also which items a grid laying out a part per item of a list lays out, read
    *  when the board opens and whenever what the board reads them by changes. */
   adapters: readonly Adapter[];
+  /** What each adapter's source is called, by adapter id — the names the data panel offers sources by. Omitted, an id. */
+  sourceLabels?: Readonly<Record<string, string>>;
   width?: number;
   height?: number;
   /** What Save does. Omitted, there is no Save — Export downloads the board. */
@@ -50,7 +53,7 @@ export interface BoardAuthoringProps {
  * board cannot be drawn with keeps the last picture it could, and says why. Undo, Redo, Save and Export are the
  * board's. A grid holding grids or canvases of its own (`layoutEditable`) is shown as its viewers see it.
  */
-export function BoardAuthoring({ initialBoard, adapters, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
+export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
   const labels = useLabels(labelsProp);
   const [history, setHistory] = useState<DocumentHistory<BoardV2>>(() => startHistory(initialBoard));
   const board = history.present;
@@ -97,6 +100,13 @@ export function BoardAuthoring({ initialBoard, adapters, width, height, onSave, 
     }),
     [picture, board]
   );
+  const sources = useMemo(() => adapters.map(a => ({ id: a.id, ...(sourceLabels?.[a.id] !== undefined ? { label: sourceLabels[a.id] } : {}) })), [adapters, sourceLabels]);
+  const read = useMemo(() => readerOf(adapters), [adapters]);
+  /** One of the board's data read now, whole, as the board reads it. */
+  const look = async (name: string) => {
+    const { adapter, ref } = dataReadOf(board, name);
+    return (await read(adapter, ref)).value;
+  };
   const triggerEditing = boardTriggerEditing(board, targets, update => setHistory(h => recordEdit(h, update(h.present), null)));
   /** The panel of the part a selected node or item draws — a part made per item, or one inside a group, is its part;
    *  with nothing selected, the board's own triggers (those that run when it opens). */
@@ -105,6 +115,18 @@ export function BoardAuthoring({ initialBoard, adapters, width, height, onSave, 
       return (
         <>
           <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>
+          <DataPanel
+            data={board.data}
+            sources={sources}
+            look={look}
+            onChange={data =>
+              setHistory(h => {
+                const { data: _gone, ...rest } = h.present;
+                return recordEdit(h, data ? { ...rest, data } : rest, null);
+              })
+            }
+            labels={labels}
+          />
           <StatusesPanel
             statuses={board.statuses}
             onChange={statuses =>
