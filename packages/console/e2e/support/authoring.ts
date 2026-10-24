@@ -12,19 +12,6 @@ export async function clickEditorAt(page: Page, position: { x: number; y: number
 }
 
 /**
- * Clicks the first widget node in the authoring editor. The editor is a canvas with no DOM per node,
- * and where a node lands on screen depends on the view (a board with content opens fitted into
- * view), so a fixed pixel is not a stable target. The editor draws each node's widget in place as a
- * display-only overlay over the node — the pointer passes through it — so its centre is the node's.
- */
-export async function clickFirstNode(page: Page) {
-  const overlay = page.locator('[data-testid^="designer-overlay-node-"]').first();
-  await expect(overlay).toBeVisible();
-  const box = (await overlay.boundingBox())!;
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-}
-
-/**
  * Clicks a scene point in the authoring editor — where a shape the test placed actually is on
  * screen under the current view. The editor's overlay layer carries the view transform as CSS
  * (`translate(x, y) scale(s)`), so it maps the scene point to the editor's pixels the same way the

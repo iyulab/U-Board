@@ -536,10 +536,10 @@ function CanvasEditor({
         {/* A fixed width: sized by its content, the form's inline fields would widen the panel until the
             editor and preview — which give way (`minWidth: 0`) — were squeezed to a sliver. */}
         <div className="ub-authoring__panel" style={{ flex: '0 0 var(--ub-panel-width, 320px)', minWidth: 0, overflowY: 'auto' }}>
-          {movable ? (
-            (layoutOnly?.panel?.(selectedIds.length === 1 ? selectedIds[0]! : null) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)
-          ) : selectedIds.length > 1 ? (
+          {selectedIds.length > 1 ? (
             <p className="ub-panel__hint">{labels.multipleSelected.replace('{count}', String(selectedIds.length))}</p>
+          ) : movable ? (
+            (layoutOnly?.panel?.(selectedIds[0] ?? null) ?? <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>)
           ) : selectedConnector ? (
             <ConnectorPanel
               connector={selectedConnector}

@@ -24,8 +24,8 @@ test('a grid board: made as a grid, given items in order, saved, and opened from
 
   // Two items, the second after the first; the first made wide.
   const editor = page.getByRole('region', { name: '편집기' });
-  await page.getByRole('button', { name: '항목 추가' }).click();
-  await page.getByRole('button', { name: '항목 추가' }).click();
+  await page.getByRole('button', { name: '부품 추가' }).click();
+  await page.getByRole('button', { name: '부품 추가' }).click();
   await expect(editor.locator('.ub-authoring__pick')).toHaveCount(2);
   await editor.locator('.ub-authoring__pick').first().click();
   await page.getByLabel('너비(12열 중)').selectOption('8');

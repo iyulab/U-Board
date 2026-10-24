@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { serializeViewDocument, parseViewDocument, InvalidViewDocumentError } from '../persistence/view-document-file.js';
 import type { Adapter } from '../adapter.js';
 import type { ViewDocument } from '../view-document.js';
@@ -11,7 +11,8 @@ import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
 import { ElementHost } from '../renderer/element-view.js';
 import type { ViewerPageProps } from '../viewer/ViewerPage.js';
-import { endTyping, recordEdit, redo, startHistory, textEntry, undo, type DocumentHistory } from './document-history.js';
+import { recordEdit, redo, startHistory, undo, type DocumentHistory } from './document-history.js';
+import { useEditKeys } from './use-edit-keys.js';
 
 export interface AuthoringViewProps {
   /** The document to edit, of either kind — a canvas view or a grid view. */
@@ -146,57 +147,15 @@ export function AuthoringView({ initialDocument, adapters, width, height, connec
 
   // An edit typed into a field counts with the rest of what is typed there (document-history.ts) — until focus moves:
   // the same field, refilled for another part, is another step. The field is the one whose input the edit answers, not
-  // whichever has focus: a button that does not take focus when pressed (Safari) is not typing.
-  const typing = useRef<HTMLElement | null>(null);
+  // whichever has focus: a button that does not take focus when pressed (Safari) is not typing. A view shows the board
+  // as it is: the edits are walked back and forth only while editing.
+  const canUndo = mode === 'edit' && history.past.length > 0;
+  const canRedo = mode === 'edit' && history.future.length > 0;
+  const { rootRef, typing } = useEditKeys(setHistory, canUndo, canRedo);
   const edit = (update: (current: ViewDocument) => ViewDocument) => {
     const typingIn = typing.current;
     setHistory(h => recordEdit(h, update(h.present), typingIn));
   };
-  // A view shows the board as it is: the edits are walked back and forth only while editing.
-  const canUndo = mode === 'edit' && history.past.length > 0;
-  const canRedo = mode === 'edit' && history.future.length > 0;
-
-  // Ctrl+Z (⌘Z) undoes, Ctrl+Shift+Z or Ctrl+Y redoes — but in a field being typed into, the field's own undo. Heard
-  // anywhere in the editor (its board, its panels), as is focus moving on.
-  const rootRef = useRef<HTMLDivElement>(null);
-  const handleKey = useEffectEvent((e: KeyboardEvent) => {
-    if (!(e.ctrlKey || e.metaKey) || e.altKey || textEntry(e.target as Element)) return;
-    const key = e.key.toLowerCase();
-    const back = key === 'z' && !e.shiftKey;
-    const forward = (key === 'z' && e.shiftKey) || (key === 'y' && !e.shiftKey);
-    if (!back && !forward) return;
-    e.preventDefault();
-    if (back && canUndo) setHistory(undo);
-    if (forward && canRedo) setHistory(redo);
-  });
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-    const keyDown = (e: KeyboardEvent) => handleKey(e);
-    const focusMoved = () => setHistory(endTyping);
-    // A field's input is caught on its way down, before the editor's handlers answer it, and let go once it has risen
-    // past them all (to the window).
-    const typed = (e: Event) => {
-      typing.current = textEntry(e.target as Element);
-    };
-    const answered = () => {
-      typing.current = null;
-    };
-    root.addEventListener('keydown', keyDown);
-    root.addEventListener('focusin', focusMoved);
-    for (const type of ['input', 'change']) {
-      root.addEventListener(type, typed, true);
-      window.addEventListener(type, answered);
-    }
-    return () => {
-      root.removeEventListener('keydown', keyDown);
-      root.removeEventListener('focusin', focusMoved);
-      for (const type of ['input', 'change']) {
-        root.removeEventListener(type, typed, true);
-        window.removeEventListener(type, answered);
-      }
-    };
-  }, []);
 
   const documentActions = (
     <>

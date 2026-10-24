@@ -104,6 +104,51 @@ describe('BoardAuthoring', () => {
     expect(onSave.mock.calls[0]![0]).toEqual({ ...board, parts: { ...board.parts, count: { as: 'stat', of: 'totals', show: 'count', title: 'Pumps running' } } });
   });
 
+  it('sets the board’s theme and accent in its panel with nothing selected — one cleared goes, and so does `board` when empty', async () => {
+    const onSave = vi.fn();
+    render(<BoardAuthoring initialBoard={{ ...board, board: { accent: '#22d3ee' } }} adapters={[]} onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText('Tone'), { target: { value: 'dark' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]![0].board).toEqual({ accent: '#22d3ee', theme: 'dark' });
+    fireEvent.change(screen.getByLabelText('Tone'), { target: { value: 'light' } });
+    const accent = screen.getByLabelText('Accent colour');
+    fireEvent.change(accent, { target: { value: '' } });
+    fireEvent.blur(accent);
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2));
+    expect(onSave.mock.calls[1]![0].board).toEqual({ theme: 'light' });
+  });
+
+  it('undoes with Ctrl+Z and redoes with Ctrl+Shift+Z or Ctrl+Y anywhere in the editor, a run of typing in one field one step', async () => {
+    const onSave = vi.fn();
+    const saved = async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      const last = onSave.mock.calls.at(-1)![0] as BoardV2;
+      onSave.mockClear();
+      return last;
+    };
+    render(<BoardAuthoring initialBoard={board} adapters={[]} onSave={onSave} />);
+    fireEvent.click(screen.getByRole('button', { name: /^2\. / }));
+    const title = await screen.findByLabelText('Title');
+    title.focus();
+    for (const text of ['P', 'Pu', 'Pumps']) fireEvent.change(title, { target: { value: text } });
+    // In the field, the field's own undo: the board keeps what was typed.
+    fireEvent.keyDown(title, { key: 'z', ctrlKey: true });
+    expect(title).toHaveValue('Pumps');
+    // Elsewhere in the editor, the board's: the three changes typed in one go are one step.
+    const save = screen.getByRole('button', { name: 'Save' });
+    save.focus();
+    fireEvent.keyDown(save, { key: 'z', ctrlKey: true });
+    expect((await saved()).parts.count).toEqual(board.parts.count);
+    fireEvent.keyDown(save, { key: 'Z', ctrlKey: true, shiftKey: true });
+    expect((await saved()).parts.count!.title).toBe('Pumps');
+    fireEvent.keyDown(save, { key: 'z', metaKey: true });
+    fireEvent.keyDown(save, { key: 'y', ctrlKey: true });
+    expect((await saved()).parts.count!.title).toBe('Pumps');
+  });
+
   it('keeps the last board it could draw while a setting leaves one it cannot, and says why', async () => {
     render(<BoardAuthoring initialBoard={board} adapters={[]} />);
     fireEvent.click(screen.getByRole('button', { name: /^2\. / }));

@@ -1,4 +1,5 @@
 import { placedIn } from '@iyulab/u-board';
+import { fromV1 } from '@iyulab/u-board/board-v2';
 import type { LiveSampleConnector, SamplePack } from '@iyulab/u-board-samples';
 import { createBoard, createConnector, listConnectors, updateBoard, type ConnectorSummary } from './api-client.js';
 
@@ -30,7 +31,8 @@ export function keysToAsk(pack: SamplePack, connectors: readonly ConnectorSummar
 
 /**
  * Creates a board from `pack` in the workspace: its data sources (or the workspace's existing ones for the
- * same address), then the board with its bindings pointed at them. A source that asks for the workspace's own
+ * same address), then the board with its bindings pointed at them — in the board language's second version when that
+ * carries all of it. A source that asks for the workspace's own
  * key is created with the one `keys` gives under its connector key (see `keysToAsk`). Returns the new board's id.
  */
 export async function createBoardFromSample(workspaceId: string, pack: SamplePack, name: string, keys: Readonly<Record<string, string>> = {}): Promise<string> {
@@ -47,10 +49,13 @@ export async function createBoardFromSample(workspaceId: string, pack: SamplePac
     if (ownKey && !value) throw new MissingSampleKeyError(sample);
     ids.set(sample.key, (await createConnector(workspaceId, { ...settings, ...(value !== undefined ? { authValue: value } : {}) })).id);
   }
-  const document = structuredClone(pack.document);
-  for (const placed of placedIn(document)) {
+  const v1 = structuredClone(pack.document);
+  for (const placed of placedIn(v1)) {
     for (const binding of Object.values(placed.widget.bindings ?? {})) binding.adapter = ids.get(binding.adapter) ?? binding.adapter;
   }
+  // Stored in the board language's second version when it carries the whole sample; until then, as the sample is.
+  const converted = fromV1(v1);
+  const document = converted.unsupported.length === 0 ? converted.board : v1;
   const board = await createBoard(workspaceId, name);
   await updateBoard(workspaceId, board.id, { document });
   return board.id;

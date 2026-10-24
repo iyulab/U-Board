@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SAMPLE_PACKS, isInstallable, type LiveSampleConnector, type SamplePack } from '@iyulab/u-board-samples';
+import { fromV1 } from '@iyulab/u-board/board-v2';
 import * as api from './api-client.js';
 import type { ConnectorSummary } from './api-client.js';
 import { createBoardFromSample, keysToAsk, loadSamplePacks, MissingSampleKeyError, sampleHosts } from './sample-boards.js';
@@ -61,5 +62,21 @@ describe('a sample on a source that asks each user for a key', () => {
     vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [mine] });
     await createBoardFromSample('w1', pack, 'x');
     expect(api.createConnector).not.toHaveBeenCalled();
+  });
+
+  it('stores the board in the language’s second version, reading the data source made for it', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [mine] });
+    await createBoardFromSample('w1', pack, 'x');
+    const { document } = vi.mocked(api.updateBoard).mock.calls[0][2] as { document: { version?: number; data?: Record<string, { from: string }> } };
+    expect(document.version).toBe(2);
+    expect(Object.values(document.data ?? {}).map(read => read.from)).toContain('mine');
+  });
+
+  it('stores a sample the second version cannot carry whole as it is', async () => {
+    vi.mocked(api.listConnectors).mockResolvedValue({ connectors: [] });
+    const whole = (await loadSamplePacks()).find(p => fromV1(p.document).unsupported.length > 0)!;
+    await createBoardFromSample('w1', whole, 'x', Object.fromEntries(keysToAsk(whole, []).map(c => [c.key, 'k'])));
+    const { document } = vi.mocked(api.updateBoard).mock.calls[0][2] as { document: { version?: number } };
+    expect(document.version).toBeUndefined();
   });
 });

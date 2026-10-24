@@ -18,12 +18,14 @@ import { LinkPanel } from './LinkPanel.js';
 import { ShapePanel } from './ShapePanel.js';
 import { BackgroundField } from './BackgroundField.js';
 import { BoardElementsPanel } from './BoardElementsPanel.js';
+import { BoardPanel } from './BoardPanel.js';
 import { TriggersEditor } from './TriggersEditor.js';
 import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
 import { LINK, layoutEditable, linkOf, placesItself, shapeOf, withNewLink, withNewShape, withPictureLayout } from './board-layout.js';
 import { recordEdit, redo, startHistory, undo, type DocumentHistory } from './document-history.js';
+import { useEditKeys } from './use-edit-keys.js';
 
 export interface BoardAuthoringProps {
   /** The board to edit, in the language's second version. */
@@ -69,6 +71,17 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
     onModeChange?.(next);
   };
   const [fileError, setFileError] = useState<string | null>(null);
+  // A view shows the board as it is: the edits are walked back and forth only while editing — by the buttons, or the
+  // keys heard anywhere in the editor.
+  const canUndo = mode === 'edit' && history.past.length > 0;
+  const canRedo = mode === 'edit' && history.future.length > 0;
+  const { rootRef, typing } = useEditKeys(setHistory, canUndo, canRedo);
+  /** An edit — one with what was typed in the same field before it while it answers typing there (document-history.ts),
+   *  until focus moves on. Which field is read when the edit is made, before its update runs. */
+  const setEdit = (update: (h: DocumentHistory<BoardV2>, typingIn: HTMLElement | null) => DocumentHistory<BoardV2>) => {
+    const typingIn = typing.current;
+    setHistory(h => update(h, typingIn));
+  };
 
   useEffect(() => {
     if (!isDirty) return;
@@ -107,23 +120,39 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
   );
   const sources = useMemo(() => adapters.map(a => ({ id: a.id, ...(sourceLabels?.[a.id] !== undefined ? { label: sourceLabels[a.id] } : {}) })), [adapters, sourceLabels]);
   const read = useMemo(() => readerOf(adapters), [adapters]);
+  /** The board's own settings (`board` — its title, theme, accent and look) changed — one left empty goes, and so does
+   *  `board` when nothing is left in it. */
+  const setBoardHead = (change: Partial<NonNullable<BoardV2['board']>>) =>
+    setEdit((h, typingIn) => {
+      const { board: head, ...rest } = h.present;
+      const next: Record<string, unknown> = { ...head, ...change };
+      for (const [key, value] of Object.entries(change)) if (value === undefined) delete next[key];
+      return recordEdit(h, Object.keys(next).length > 0 ? { ...rest, board: next as NonNullable<BoardV2['board']> } : rest, typingIn);
+    });
   /** One of the board's data read now, whole, as the board reads it. */
   const look = async (name: string) => {
     const { adapter, ref } = dataReadOf(board, name);
     return (await read(adapter, ref)).value;
   };
-  const triggerEditing = boardTriggerEditing(board, targets, update => setHistory(h => recordEdit(h, update(h.present), null)));
+  const triggerEditing = boardTriggerEditing(board, targets, update => setEdit((h, typingIn) => recordEdit(h, update(h.present), typingIn)));
   /** The panel of the part a selected node or item draws — a part made per item, or one inside a group, is its part;
    *  with nothing selected, the board's own triggers (those that run when it opens). */
   const panel = (selected: string | null) => {
     if (selected === null) {
       return (
         <>
-          <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>
+          <BoardPanel
+            appearance={board.board?.theme ?? 'light'}
+            onAppearanceChange={theme => setBoardHead({ theme })}
+            accent={board.board?.accent}
+            onAccentChange={accent => setBoardHead({ accent })}
+            hint={labels.layoutOnlyHint}
+            labels={labels}
+          />
           {board.layout.kind === 'canvas' && (
             <BackgroundField
               layout={board.layout}
-              onChange={layout => setHistory(h => recordEdit(h, { ...h.present, layout }, null))}
+              onChange={layout => setEdit((h, typingIn) => recordEdit(h, { ...h.present, layout }, typingIn))}
               labels={labels}
             />
           )}
@@ -132,9 +161,9 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             sources={sources}
             look={look}
             onChange={data =>
-              setHistory(h => {
+              setEdit((h, typingIn) => {
                 const { data: _gone, ...rest } = h.present;
-                return recordEdit(h, data ? { ...rest, data } : rest, null);
+                return recordEdit(h, data ? { ...rest, data } : rest, typingIn);
               })
             }
             labels={labels}
@@ -142,9 +171,9 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
           <StatusesPanel
             statuses={board.statuses}
             onChange={statuses =>
-              setHistory(h => {
+              setEdit((h, typingIn) => {
                 const { statuses: _gone, ...rest } = h.present;
-                return recordEdit(h, statuses ? { ...rest, statuses } : rest, null);
+                return recordEdit(h, statuses ? { ...rest, statuses } : rest, typingIn);
               })
             }
             labels={labels}
@@ -153,9 +182,9 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
           <BoardElementsPanel
             board={board}
             onChange={elements =>
-              setHistory(h => {
+              setEdit((h, typingIn) => {
                 const { elements: _gone, ...rest } = h.present;
-                return recordEdit(h, elements ? { ...rest, elements } : rest, null);
+                return recordEdit(h, elements ? { ...rest, elements } : rest, typingIn);
               })
             }
             labels={labels}
@@ -171,10 +200,10 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
           id={shape}
           board={board}
           onChange={next =>
-            setHistory(h => {
+            setEdit((h, typingIn) => {
               const layout = h.present.layout;
               if (layout.kind !== 'canvas') return h;
-              return recordEdit(h, { ...h.present, layout: { ...layout, shapes: { ...layout.shapes, [shape]: next } } }, null);
+              return recordEdit(h, { ...h.present, layout: { ...layout, shapes: { ...layout.shapes, [shape]: next } } }, typingIn);
             })
           }
           findings={findings.filter(f => f.path === `/layout/shapes/${shape}` || f.path.startsWith(`/layout/shapes/${shape}/`))}
@@ -190,10 +219,10 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
           id={link}
           board={board}
           onChange={next =>
-            setHistory(h => {
+            setEdit((h, typingIn) => {
               const layout = h.present.layout;
               if (layout.kind !== 'canvas') return h;
-              return recordEdit(h, { ...h.present, layout: { ...layout, links: { ...layout.links, [link]: next } } }, null);
+              return recordEdit(h, { ...h.present, layout: { ...layout, links: { ...layout.links, [link]: next } } }, typingIn);
             })
           }
           findings={findings.filter(f => f.path === `/layout/links/${link}` || f.path.startsWith(`/layout/links/${link}/`))}
@@ -208,7 +237,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
         key={id}
         id={id}
         board={board}
-        onChange={part => setHistory(h => recordEdit(h, { ...h.present, parts: { ...h.present.parts, [id]: part } }, null))}
+        onChange={part => setEdit((h, typingIn) => recordEdit(h, { ...h.present, parts: { ...h.present.parts, [id]: part } }, typingIn))}
         findings={findings.filter(f => f.path === `/parts/${id}` || f.path.startsWith(`/parts/${id}/`))}
         triggers={targets.includes(selected) ? <TriggersEditor key={`triggers:${selected}`} node={selected} {...triggerEditing} labels={labels} /> : undefined}
         labels={labels}
@@ -239,7 +268,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
   /** A new part, titled and of a kind that reads no data until its panel sets one — placed where a canvas has room at its
    *  top left, or last in a grid. */
   const addPart = () =>
-    setHistory(h => {
+    setEdit((h, typingIn) => {
       const present = h.present;
       let n = Object.keys(present.parts).length + 1;
       while (`part-${n}` in present.parts) n++;
@@ -249,16 +278,14 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
         const step = 24 * (n - 1);
         const x = Math.min(40 + step, Math.max(0, layout.size[0] - 160));
         const y = Math.min(40 + step, Math.max(0, layout.size[1] - 60));
-        return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'label', title: labels.newPartTitle } }, layout: { ...layout, place: { ...layout.place, [id]: [x, y, 160, 60] } } }, null);
+        return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'label', title: labels.newPartTitle } }, layout: { ...layout, place: { ...layout.place, [id]: [x, y, 160, 60] } } }, typingIn);
       }
-      return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'header', title: labels.newPartTitle } }, layout: { ...layout, items: [...layout.items, id] } }, null);
+      return recordEdit(h, { ...present, parts: { ...present.parts, [id]: { as: 'header', title: labels.newPartTitle } }, layout: { ...layout, items: [...layout.items, id] } }, typingIn);
     });
 
   /** A frame or a text on a canvas board, at its top left. */
-  const addShape = (kind: 'box' | 'text') => setHistory(h => recordEdit(h, withNewShape(h.present, kind, labels.shapeNewText).board, null));
+  const addShape = (kind: 'box' | 'text') => setEdit((h, typingIn) => recordEdit(h, withNewShape(h.present, kind, labels.shapeNewText).board, typingIn));
 
-  const canUndo = mode === 'edit' && history.past.length > 0;
-  const canRedo = mode === 'edit' && history.future.length > 0;
   const documentActions = (
     <>
       {mode === 'edit' && layoutEditable(board) && (
@@ -279,10 +306,10 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
         </div>
       )}
       <div className="ub-authoring__group" style={GROUP_STYLE}>
-        <button type="button" className="ub-action" onClick={() => setHistory(undo)} disabled={!canUndo}>
+        <button type="button" className="ub-action" onClick={() => setHistory(undo)} disabled={!canUndo} aria-keyshortcuts="Control+Z Meta+Z">
           {labels.undo}
         </button>
-        <button type="button" className="ub-action" onClick={() => setHistory(redo)} disabled={!canRedo}>
+        <button type="button" className="ub-action" onClick={() => setHistory(redo)} disabled={!canRedo} aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y">
           {labels.redo}
         </button>
       </div>
@@ -301,7 +328,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
 
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>
-      <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }} ref={rootRef}>
         {drawing.error && (
           <p role="alert" className="ub-authoring__error">
             {labels.boardNotDrawn.replace('{reason}', drawing.error)}
@@ -311,9 +338,9 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
           <CanvasAuthoring
             doc={picture}
             updateDoc={update =>
-              setHistory(h => {
+              setEdit((h, typingIn) => {
                 const before = pictureOf(h).picture as CanvasView;
-                return recordEdit(h, withPictureLayout(h.present, before, update(before)), null);
+                return recordEdit(h, withPictureLayout(h.present, before, update(before)), typingIn);
               })
             }
             mode={mode}
@@ -332,7 +359,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
               panel,
               connect: (from, to) => {
                 const made = withNewLink(board, from, to);
-                setHistory(h => recordEdit(h, made.board, null));
+                setEdit((h, typingIn) => recordEdit(h, made.board, typingIn));
                 return `${LINK}${made.id}`;
               },
               deletable: ownPiece,
@@ -342,9 +369,9 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
           <GridAuthoring
             doc={picture}
             updateDoc={update =>
-              setHistory(h => {
+              setEdit((h, typingIn) => {
                 const before = pictureOf(h).picture as GridView;
-                return recordEdit(h, withPictureLayout(h.present, before, update(before)), null);
+                return recordEdit(h, withPictureLayout(h.present, before, update(before)), typingIn);
               })
             }
             mode={mode}

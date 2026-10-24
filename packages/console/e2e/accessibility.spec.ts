@@ -2,7 +2,6 @@ import AxeBuilder from '@axe-core/playwright';
 import { test, expect, type Page } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { clickFirstNode } from './support/authoring';
 
 // The data source the board binds to: a local server that answers any path with the same JSON.
 let mockServer: Server;
@@ -32,6 +31,14 @@ async function expectNoAxeViolations(page: Page, label: string) {
   expect(report, `${label}: accessibility violations`).toEqual([]);
 }
 
+/** Selects the board's one part by a click on its middle — the overlay over it lets the pointer through to the canvas. */
+async function selectPart(page: Page) {
+  const part = page.getByTestId('designer-overlay-part-1');
+  await expect(part).toBeVisible();
+  const box = (await part.boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+}
+
 test('the board list, the board editor, the share dialog and the shared board pass axe in light and dark', async ({ page, browser }) => {
   // The first signup of this invocation: owner and a default workspace.
   await page.goto('/');
@@ -53,29 +60,27 @@ test('the board list, the board editor, the share dialog and the shared board pa
   await page.getByRole('button', { name: '생성' }).click();
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
 
-  // A board with something on it: a node bound to the data source (its widget, its property panel) and
-  // a text decoration.
-  await page.getByText('노드 추가').click();
-  await clickFirstNode(page);
-  await page.getByLabel('프롭 경로').selectOption('data.value');
-  await page.getByLabel('데이터소스').selectOption({ label: 'A11y Source' });
+  // A board with something on it: a part drawn by a widget, reading the data source (the board's data panel, the part's
+  // panel), and a text.
+  await page.getByLabel('새 데이터').fill('plant');
+  await page.getByRole('button', { name: '데이터 추가' }).click();
   await page.getByLabel('요청 경로', { exact: true }).fill('/status');
-  await page.getByLabel('값 경로').fill('/status');
-  await page.getByText('바인딩 저장', { exact: true }).click();
-  await page.getByText('텍스트 장식 추가').click();
+  await page.getByLabel('새 필드').fill('status');
+  await page.getByRole('button', { name: '필드 추가' }).click();
+  await page.getByRole('button', { name: '부품 추가' }).click();
+  await selectPart(page);
+  await page.getByLabel('종류').selectOption('status-card');
+  await page.getByLabel('읽는 데이터').selectOption('plant');
+  await page.getByRole('combobox', { name: '보일 필드(쉼표로)' }).fill('status');
+  await page.getByRole('button', { name: '글 추가' }).click();
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
-
-  // The board speaks the console's language: the status widget names its list in Korean, and the
-  // property panel names the widget's fields as the widget library does, in Korean.
-  await expect(page.getByTestId('designer-overlay-layer').getByRole('list', { name: '상태' }).first()).toBeVisible();
-  await clickFirstNode(page);
-  await expect(page.getByLabel(/^라벨/)).toBeVisible();
+  await expect(page.getByTestId('designer-overlay-part-1')).toContainText('running');
 
   for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme });
-    await clickFirstNode(page);
-    await expect(page.getByLabel('프롭 경로')).toBeVisible();
+    await selectPart(page);
+    await expect(page.getByRole('heading', { name: '부품 part-1' })).toBeVisible();
     await expectNoAxeViolations(page, `editor (${colorScheme})`);
 
     await page.getByRole('button', { name: '공유', exact: true }).click();
@@ -102,7 +107,7 @@ test('the board list, the board editor, the share dialog and the shared board pa
     const sharePage = await shareContext.newPage();
     await sharePage.goto(shareUrl);
     await expect(sharePage.getByTestId('canvas')).toBeVisible();
-    await expect(sharePage.locator('[data-testid^="overlay-node-"]').first()).toBeVisible();
+    await expect(sharePage.getByTestId('overlay-part-1')).toBeVisible();
     await expectNoAxeViolations(sharePage, `shared board (${colorScheme})`);
     await shareContext.close();
   }

@@ -3,7 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { BoardsListPage } from './BoardsListPage.js';
-import { placedIn, type ViewDocument } from '@iyulab/u-board';
+import type { BoardV2 } from '@iyulab/u-board/board-v2';
 import * as api from '../api-client.js';
 import { formatDateTime } from '../format-time.js';
 
@@ -234,9 +234,10 @@ describe('BoardsListPage', () => {
     expect(await screen.findByText('editor page')).toBeInTheDocument();
     expect(api.createConnector).toHaveBeenCalledWith('w1', expect.objectContaining({ authType: 'path', authValue: 'sample', attribution: expect.objectContaining({ text: expect.stringContaining('공공누리') }) }));
     expect(api.createBoard).toHaveBeenCalledWith('w1', '서울 도심 미세먼지');
-    const document = vi.mocked(api.updateBoard).mock.calls[0][2].document as ViewDocument;
-    const adapters = new Set(placedIn(document).flatMap(n => Object.values(n.widget.bindings ?? {}).map(b => b.adapter)));
-    expect([...adapters]).toEqual(['new-서울시 실시간 대기환경']);
+    // Stored in the board language's second version, its data read from the source made for it.
+    const document = vi.mocked(api.updateBoard).mock.calls[0][2].document as BoardV2;
+    expect(document.version).toBe(2);
+    expect([...new Set(Object.values(document.data ?? {}).map(read => read.from))]).toEqual(['new-서울시 실시간 대기환경']);
   });
 
   it('asks for the key of a source that issues each user one, and refuses to start without it', async () => {

@@ -17,8 +17,8 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
   const boardId = new URL(page.url()).pathname.split('/')[2]; // /boards/:boardId/edit
 
-  // 노드 하나 추가 — 공유 뷰어가 맞춤·확대·팬을 보여 줄 대상(바인딩은 binding-editor.spec.ts가 본다).
-  await page.getByText('노드 추가').click();
+  // 부품 하나 추가 — 공유 뷰어가 맞춤·확대·팬을 보여 줄 대상(바인딩은 binding-editor.spec.ts가 본다).
+  await page.getByRole('button', { name: '부품 추가' }).click();
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
@@ -68,7 +68,7 @@ test('create a share link, view the board unauthenticated, then revoke it', asyn
   expect(nodeBox.y).toBeGreaterThanOrEqual(canvasBox.y);
   expect(nodeBox.x + nodeBox.width).toBeLessThanOrEqual(canvasBox.x + canvasBox.width + 1);
   expect(nodeBox.y + nodeBox.height).toBeLessThanOrEqual(canvasBox.y + canvasBox.height + 1);
-  // 작은 보드는 확대하지 않는다 — 기본 크기(160×100) 노드가 1:1 그대로.
+  // 작은 보드는 확대하지 않는다 — 기본 크기(160×60) 부품이 1:1 그대로.
   expect(nodeBox.width).toBeLessThanOrEqual(161);
   await expect(sharePage.getByRole('button', { name: '화면에 맞추기' })).toBeVisible();
 

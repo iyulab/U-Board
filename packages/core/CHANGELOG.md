@@ -29,6 +29,10 @@ All notable changes to this package are documented here. The format follows
   adapters, with no U-Board server. `pictureOf(board, read)`, `readKeys`, `dataReadOf` and `readerOf(adapters)` in `./board-v2` make
   the same view document anywhere a board is drawn — a server reads through its data sources, an application through
   its adapters.
+- `BoardAuthoring` sets the board's tone and accent (`board.theme`, `board.accent`) in its panel with nothing selected; undoes
+  with Ctrl+Z (⌘Z) and redoes with Ctrl+Shift+Z or Ctrl+Y anywhere in the editor but a field being typed into, a run of
+  typing in one field one step, as `AuthoringView` does; and with two or more pieces of a canvas selected, says how many
+  rather than showing the board's panel.
 - `emptyBoard(kind)` in `./board-v2`: a board with no parts yet, laying out a canvas or a grid — what a new board starts as.
 - `BoardAuthoring`: the authoring surface of a board in the language's second version — parts added (on a canvas at its
   top left, in a grid last; a label or a header to set in its panel), two parts of a canvas joined by a link (with an

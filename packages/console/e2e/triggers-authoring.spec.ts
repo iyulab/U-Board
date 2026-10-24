@@ -31,8 +31,8 @@ test('a trigger made in the editor: written once complete, run in View, and gone
 
   const source = await newGridBoard(page, 'Trigger Board');
   const editor = page.getByRole('region', { name: '편집기' });
-  await page.getByRole('button', { name: '항목 추가' }).click();
-  await page.getByRole('button', { name: '항목 추가' }).click();
+  await page.getByRole('button', { name: '부품 추가' }).click();
+  await page.getByRole('button', { name: '부품 추가' }).click();
   await editor.locator('.ub-authoring__pick').first().click();
 
   // A click on the first item shows the target board — nothing is written until the board's id is given.

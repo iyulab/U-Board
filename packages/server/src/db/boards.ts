@@ -1,7 +1,8 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import { recordAuditEvent } from './audit.js';
-import { emptyViewDocument, type ViewKind } from '@iyulab/u-board/domain';
+import type { ViewKind } from '@iyulab/u-board/domain';
+import { emptyBoard } from '@iyulab/u-board/board-v2';
 import { documentKind, type BoardDocument } from '../board-document.js';
 
 export interface Board {
@@ -38,14 +39,15 @@ function rowToBoard(row: BoardRow): Board {
   };
 }
 
-/** Creates a board with an empty document of `kind` — a canvas unless told otherwise. */
+/** Creates a board with no parts yet, in the board language's second version, laying out `kind` — a canvas unless told
+ *  otherwise. */
 export async function createBoard(db: DbClient, input: { workspaceId: string; name: string; actorUserId: string; kind?: ViewKind }): Promise<Board> {
   const now = new Date().toISOString();
   const board: Board = {
     id: randomUUID(),
     workspaceId: input.workspaceId,
     name: input.name,
-    document: emptyViewDocument(input.kind ?? 'canvas'),
+    document: emptyBoard(input.kind ?? 'canvas'),
     createdAt: now,
     updatedAt: now,
     revision: 1,

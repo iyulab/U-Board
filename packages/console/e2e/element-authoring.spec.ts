@@ -10,7 +10,7 @@ async function expectNoAxeViolations(page: Page, label: string) {
 /** The text an element draws inside its isolated root. */
 const drawn = (element: Locator) => element.evaluate(el => el.shadowRoot?.textContent ?? '');
 
-test('an element made in the editor: defined, previewed, placed with its props, saved, and drawn from a share link', async ({ page, browser }) => {
+test('an element made in the editor: defined, drawn by a part with its prop, saved, and drawn from a share link', async ({ page, browser }) => {
   await page.goto('/');
   await page.getByLabel('이메일').fill('e2e-element-owner@test.com');
   await page.getByLabel('비밀번호').fill('p4ssword!');
@@ -24,32 +24,36 @@ test('an element made in the editor: defined, previewed, placed with its props, 
   await page.getByRole('button', { name: '생성' }).click();
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
 
-  // With nothing selected, the board's elements: none yet, and a new one opens to edit.
-  await page.getByRole('button', { name: '새 요소' }).click();
-  await expect(page.getByRole('heading', { name: 'element-1' })).toBeVisible();
-  const template = page.getByRole('textbox', { name: '템플릿', exact: true });
-  await template.fill('<div class="box">{{label}} 수위</div>');
-  await expect.poll(() => drawn(page.locator('[data-element-preview] [data-element]'))).toContain('Label 수위');
-  await template.blur();
+  // With nothing selected, the board's elements: none yet; one is added by name, its template written, and the prop it
+  // takes named in place of the one a new element starts with.
+  const elements = page.locator('.ub-panel--elements');
+  await elements.getByLabel('이름', { exact: true }).fill('tank-level');
+  await elements.getByRole('button', { name: '새 요소' }).click();
+  await expect(elements.getByRole('group', { name: 'tank-level' })).toBeVisible();
+  await elements.getByRole('textbox', { name: '템플릿', exact: true }).fill('<div class="box">{{label}} 수위</div>');
+  await elements.getByRole('button', { name: 'value 지우기' }).click();
+  await elements.getByLabel('새 prop').fill('label');
+  await elements.getByRole('button', { name: 'prop 추가' }).click();
+  await expect(elements.getByRole('combobox', { name: 'label', exact: true })).toHaveValue('string');
   await expectNoAxeViolations(page, 'element editor');
-  await page.getByRole('button', { name: '요소 목록' }).click();
-  await expect(page.locator('[data-element-entry="element-1"]')).toContainText('배치 안 됨');
 
-  // Placed on an item, from the type choice, its prop edited by its own field.
-  await page.getByRole('button', { name: '항목 추가' }).click();
+  // Drawn by a part: its kind an element, which one, and its prop fixed to a text.
+  await page.getByRole('button', { name: '부품 추가' }).click();
   const editor = page.getByRole('region', { name: '편집기' });
-  // A new item is selected as it is added.
   await expect(editor.locator('.ub-authoring__pick')).toHaveCount(1);
-  await page.getByLabel('위젯 타입').selectOption('element:element-1');
-  const label = page.getByLabel(/^label/);
-  await label.fill('원수조');
+  await editor.locator('.ub-authoring__pick').first().click();
+  await expect(page.getByRole('heading', { name: '부품 part-1' })).toBeVisible();
+  await page.getByLabel('종류').selectOption('element');
+  await page.getByLabel('이 보드의 요소').selectOption('tank-level');
+  const label = page.getByRole('textbox', { name: 'label', exact: true });
+  await label.fill('"원수조"');
   await label.blur();
-  await expect.poll(() => drawn(editor.locator('[data-element="element-1"]'))).toContain('원수조 수위');
+  await expect.poll(() => drawn(editor.locator('[data-element="tank-level"]'))).toContain('원수조 수위');
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
 
   await page.reload();
-  await expect.poll(() => drawn(page.locator('[data-element="element-1"]').first())).toContain('원수조 수위');
+  await expect.poll(() => drawn(page.locator('[data-element="tank-level"]').first())).toContain('원수조 수위');
 
   await page.getByRole('button', { name: '공유', exact: true }).click();
   await page.getByRole('button', { name: '새 공유 링크 생성' }).click();
@@ -57,6 +61,6 @@ test('an element made in the editor: defined, previewed, placed with its props, 
   const shareContext = await browser.newContext();
   const sharePage = await shareContext.newPage();
   await sharePage.goto(shareUrl);
-  await expect.poll(() => drawn(sharePage.locator('[data-element="element-1"]').first())).toContain('원수조 수위');
+  await expect.poll(() => drawn(sharePage.locator('[data-element="tank-level"]').first())).toContain('원수조 수위');
   await shareContext.close();
 });

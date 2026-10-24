@@ -64,7 +64,7 @@ describe('boards routes', () => {
 
     const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(get.status).toBe(200);
-    expect(get.body.document).toEqual({ kind: 'canvas', background: {}, nodes: [], connectors: [] });
+    expect(get.body.document).toEqual({ version: 2, parts: {}, layout: { kind: 'canvas', size: [1280, 720], place: {} } });
 
     const newDoc = { kind: 'canvas', background: {}, nodes: [{ id: 'n1', x: 1, y: 2, anchored: false, widget: { type: 'status' } }], connectors: [] };
     const update = await request(app)
@@ -88,7 +88,7 @@ describe('boards routes', () => {
     expect(create.status).toBe(201);
     expect(create.body.kind).toBe('grid');
     const get = await request(app).get(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie);
-    expect(get.body.document).toEqual({ kind: 'grid', items: [] });
+    expect(get.body.document).toEqual({ version: 2, parts: {}, layout: { kind: 'grid', items: [] } });
 
     const canvas = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
     await request(app).put(`/api/workspaces/${workspaceId}/boards/${create.body.id}`).set('Cookie', memberCookie).send({ document: canvas });
@@ -239,7 +239,7 @@ describe('boards routes', () => {
   it('allows a name-only PUT and keeps the document unchanged', async () => {
     const create = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', memberCookie).send({ name: 'Original' });
     const boardId = create.body.id;
-    const originalDoc = create.body.document ?? { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+    const originalDoc = (await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie)).body.document;
 
     const update = await request(app)
       .put(`/api/workspaces/${workspaceId}/boards/${boardId}`)
@@ -349,6 +349,7 @@ describe("a board in the board language's second version", () => {
 
   it('is read with the picture its viewers draw it from — a first-version board, which is its own picture, with none', async () => {
     const boardId = await newBoard();
+    await put(boardId, { kind: 'canvas', background: {}, nodes: [], connectors: [] });
     const first = await request(app).get(`/api/workspaces/${workspaceId}/boards/${boardId}`).set('Cookie', memberCookie);
     expect(first.body.picture).toBeUndefined();
 

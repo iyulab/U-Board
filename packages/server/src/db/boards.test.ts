@@ -3,7 +3,7 @@ import type { DbClient } from '../db.js';
 import { createTestDb } from '../test-support/test-db.js';
 import { createWorkspace } from './workspaces.js';
 import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoard } from './boards.js';
-import { placedIn, type ViewDocument } from '@iyulab/u-board/domain';
+import type { BoardV2 } from '@iyulab/u-board/board-v2';
 
 let db: DbClient;
 let workspaceId: string;
@@ -13,10 +13,10 @@ beforeEach(async () => {
 });
 
 describe('board repository', () => {
-  it('creates a board with an empty document', async () => {
+  it('creates a board with no parts yet, in the board language’s second version', async () => {
     const board = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'My Board' });
     expect(board.name).toBe('My Board');
-    expect(board.document).toEqual({ kind: 'canvas', background: {}, nodes: [], connectors: [] });
+    expect(board.document).toEqual({ version: 2, parts: {}, layout: { kind: 'canvas', size: [1280, 720], place: {} } });
     expect(board.createdAt).toBe(board.updatedAt);
   });
 
@@ -24,7 +24,7 @@ describe('board repository', () => {
     const board1 = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'A' });
     const board2 = await createBoard(db, { actorUserId: 'test-actor', workspaceId, name: 'B' });
     expect(board1.document).not.toBe(board2.document);
-    expect(placedIn(board1.document as ViewDocument)).not.toBe(placedIn(board2.document as ViewDocument));
+    expect((board1.document as BoardV2).parts).not.toBe((board2.document as BoardV2).parts);
   });
 
   it('lists boards for a workspace without the document body', async () => {

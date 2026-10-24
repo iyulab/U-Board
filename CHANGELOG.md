@@ -13,6 +13,11 @@ do when upgrading. Each release's notes carry its section.
 
 ### Changed
 
+- A new board — from the console or the API — is made in the board language's second version: an empty canvas (or grid) to add
+  parts, frames, texts and links to, its data and elements set in the editor's panels. A sample installed from the console is stored
+  in the second version when that carries all of it, and as the sample is otherwise. The editor of such a board sets its tone and
+  accent with nothing selected, undoes and redoes with Ctrl+Z and Ctrl+Shift+Z (or Ctrl+Y) — what is typed in one field in one go
+  being one step — and says how many parts are selected when there is more than one.
 - A board saved in the board language's second version opens in the console drawn from its data as any host draws it, with
   the items its data has now. Parts are added, and moved, sized and deleted on a canvas, or ordered, widened and deleted
   on a grid, a selected part's title, kind, data, fields, options and triggers are set in its panel, the board's data

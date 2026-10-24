@@ -29,7 +29,7 @@ test('warns before leaving the board editor with unsaved changes, stays silent w
   // dialog before a one-shot waiter can react to it unless a listener is already attached.
   await page.goto(editorUrl);
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
-  await page.getByText('사각형 장식 추가').click();
+  await page.getByRole('button', { name: '틀 추가' }).click();
   await expect(page.getByText('저장되지 않은 변경 사항')).toBeVisible();
 
   let dialogType: string | null = null;
@@ -44,7 +44,7 @@ test('warns before leaving the board editor with unsaved changes, stays silent w
   // Back into the editor once more: edit, save, then leaving should be silent again.
   await page.goto(editorUrl);
   await expect(page.getByRole('button', { name: '저장', exact: true })).toBeVisible();
-  await page.getByText('사각형 장식 추가').click();
+  await page.getByRole('button', { name: '틀 추가' }).click();
   await expect(page.getByText('저장되지 않은 변경 사항')).toBeVisible();
   await page.getByRole('button', { name: '저장', exact: true }).click();
   await expect(page.getByText('저장됨')).toBeVisible();
