@@ -31,7 +31,8 @@ All notable changes to this package are documented here. The format follows
   `ComponentDefinition`, `ComponentNode` and `ComponentInstance`; `CanvasView` has no `components` or `instances` — the
   picture a board is drawn as has no components.
 - `UBoardLabels` drops the keys of the editor parts that are gone (components and instances, the add toolbar, node
-  anchoring) — a labels object that sets them is no longer typed against them.
+  anchoring, and the element, symbol, binding, decoration and connector panels the board editor replaced) — a labels
+  object that sets them is no longer typed against them.
 
 ### Added
 

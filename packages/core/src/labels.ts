@@ -44,7 +44,6 @@ export interface UBoardLabels {
   /** The save button when the document is downloaded as a file (no `onSave`). */
   export: string;
   import: string;
-  importFailed: string;
   /** The heading of the board's own settings, shown in the panel while nothing is selected. */
   boardHeading: string;
   /** Chooses an image file as the board's background; `removeBackground` takes it away. */
@@ -112,13 +111,10 @@ export interface UBoardLabels {
   /** Writes a time of day (epoch ms) for `{time}` — in the labels' own language, like
    * `qualityText.age`. `timeText(locale)` builds one. */
   time: (epochMs: number) => string;
-  debugDocument: string;
 
   // Node property panel
   /** Under the board's settings while nothing is selected: how to edit a node or a decoration. */
   selectNode: string;
-  /** The same, on a grid view: how to edit an item. */
-  selectItem: string;
   /** A grid item's room and place: the section heading, the span at full width (`{columns}` is replaced by 12) and
    *  at medium width (`{columns}`: 6, with a choice to follow the full-width span), the height (blank: the widget's
    *  own), and the buttons that move it in the order or remove it. */
@@ -247,9 +243,7 @@ export interface UBoardLabels {
   dataRemove: string;
   dataNew: string;
   dataAdd: string;
-  propertiesHeading: string;
   widgetType: string;
-  staticProps: string;
   /** The widget form: its data and its options, a field's "bound" mark, a choice left to the widget's
    * own default, the JSON editor it folds the rest into, and how many options only that editor holds. */
   widgetData: string;
@@ -259,64 +253,29 @@ export interface UBoardLabels {
   boardElements: string;
   /** The board's elements: their list, and the editor of one definition. */
   elementsHeading: string;
-  elementsHint: string;
   addElement: string;
-  elementPlacedCount: string;
-  elementUnplaced: string;
-  elementUndefined: string;
-  defineElement: string;
-  backToElements: string;
   elementName: string;
-  elementNameInvalid: string;
-  elementNameTaken: string;
-  elementRender: string;
-  elementRenderTemplate: string;
-  elementRenderScript: string;
   elementTemplate: string;
   elementScript: string;
   elementStyle: string;
-  elementPropsSchema: string;
-  elementResources: string;
-  elementWidth: string;
   elementHeight: string;
-  elementPreview: string;
   elementScriptPreview: string;
-  elementProblems: string;
   removeElement: string;
   removeElementPlaced: string;
   /** An element prop of a board, by name: removed, and a new one. `{name}`: the prop. */
   elementPropRemove: string;
   elementPropNew: string;
   elementPropAdd: string;
-  /** The board's symbols: their list, and the editor of one. */
-  symbolsHeading: string;
-  symbolsHint: string;
-  addSymbol: string;
-  symbolUsedCount: string;
-  symbolUnused: string;
-  backToSymbols: string;
-  symbolName: string;
-  symbolNameTaken: string;
-  symbolViewBox: string;
-  symbolMarkup: string;
-  removeSymbol: string;
-  removeSymbolUsed: string;
   boundField: string;
   choiceDefault: string;
   advancedProps: string;
   moreInAdvanced: string;
-  invalidJson: string;
-  bindingsHeading: string;
-  noBindings: string;
-  editBinding: string;
-  removeBinding: string;
   noDataSources: string;
   propPath: string;
   /** The prop picker's empty line, its "type a path" choice, and the field that path is typed in. */
   choosePropPath: string;
   otherPropPath: string;
   typedPropPath: string;
-  dataSource: string;
   /** The binding form's picker for an adapter that offers its references (`Adapter.references`),
    * and the line it shows before one is chosen. */
   reference: string;
@@ -333,10 +292,6 @@ export interface UBoardLabels {
   /** A binding that reads a list item named by its fields: "{list} · {field} = {value}" follows. */
   listItem: string;
   clearListItem: string;
-  /** A binding that reads every item of a list whose fields match (`items`): "{list} · {field} = {value}" follows,
-   *  and the button that reads the whole list instead. */
-  listItems: string;
-  clearListItems: string;
   /** The select naming the field where the source says when it observed the value (`observedAtPath`), its
    *  first option (no field: the value counts as observed when it is read), and the hint shown before the
    *  response has been explored for such fields. */
@@ -359,19 +314,9 @@ export interface UBoardLabels {
    *  data and how often it has new data (minutes, `requestTime`), what they do, the request it makes now, and why
    *  it cannot be saved — a place that is not a time, or a number that is not one. */
   requestTime: string;
-  requestDelay: string;
-  requestStep: string;
-  requestTimeHint: string;
-  requestNow: string;
-  invalidTimePlace: string;
-  invalidRequestTime: string;
   explore: string;
-  exploreFailed: string;
   /** In the response explorer: the whole response, when it is itself the value to pick. */
   wholeResponse: string;
-  previewBinding: string;
-  previewFailed: string;
-  saveBinding: string;
   /** Why "Save binding" cannot be pressed yet, shown next to it. */
   bindingNeedsPropPath: string;
   bindingNeedsReference: string;
@@ -438,57 +383,18 @@ export interface UBoardLabels {
   triggerLinkRefused: string;
   /** Marks a listed binding that has a value map. */
   mapped: string;
-  previewValue: string;
   /** The binding preview's word for a value that is current (`live`). */
   previewLive: string;
 
   // Decoration panel
-  decorationHeading: string;
-  decorationText: string;
-  /** A frame's name, and where inside the frame it sits. */
-  decorationLabel: string;
-  decorationLabelAt: string;
-  decorationLabelFill: string;
-  decorationRadius: string;
-  decorationDash: string;
-  /** Which point of a text's box its position is. */
-  decorationAnchor: string;
-  decorationBackground: string;
-  /** The nine points of a box, as `labelAt` and `anchor` name them. */
-  placeTopStart: string;
-  placeTop: string;
-  placeTopEnd: string;
-  placeStart: string;
-  placeCenter: string;
-  placeEnd: string;
-  placeBottomStart: string;
-  placeBottom: string;
-  placeBottomEnd: string;
 
   // Connector (line) panel — `{from}`/`{to}` name the nodes it joins
-  connectorHeading: string;
-  connectorEnds: string;
-  reverseConnector: string;
-  connectorLabel: string;
-  connectorLabelAt: string;
-  connectorLabelSize: string;
-  connectorStroke: string;
-  connectorStrokeWidth: string;
-  connectorDash: string;
-  dashSolid: string;
-  dashDashed: string;
-  dashDotted: string;
-  connectorArrow: string;
   arrowNone: string;
   arrowEnd: string;
   arrowStart: string;
   arrowBoth: string;
   /** A link's arrowheads read from a field of what it reads — `{field}` its name. */
   arrowFromField: string;
-  connectorRoute: string;
-  routeStraight: string;
-  routeOrthogonal: string;
-  routeCurved: string;
 
   /** Words for connection quality — the node tooltip, screen-reader announcement and binding
    * preview (`describeQuality`). */
@@ -523,7 +429,6 @@ export const DEFAULT_LABELS: UBoardLabels = {
   save: 'Save',
   export: 'Export',
   import: 'Import',
-  importFailed: 'Import failed.',
   boardHeading: 'Board',
   setBackground: 'Background image',
   removeBackground: 'Remove background',
@@ -567,10 +472,8 @@ export const DEFAULT_LABELS: UBoardLabels = {
   lastUpdated: 'Updated {time}',
   notUpdating: 'Not updating — last updated {time}',
   time: timeText('en'),
-  debugDocument: 'ViewDocument (debug)',
 
   selectNode: 'Select a node or a decoration to edit it.',
-  selectItem: 'Select an item to edit it.',
   itemLayout: 'Layout',
   itemSpan: 'Width (of {columns} columns)',
   itemSpanMedium: 'Width at medium size (of {columns})',
@@ -675,69 +578,33 @@ export const DEFAULT_LABELS: UBoardLabels = {
   dataRemove: 'Remove {name}',
   dataNew: 'New data',
   dataAdd: 'Add data',
-  propertiesHeading: 'Properties',
   widgetType: 'Widget type',
-  staticProps: 'Static props (JSON)',
   widgetData: 'Data',
   widgetOptions: 'Display',
   elementProps: 'Element props',
   boardElements: 'This board’s elements',
   elementsHeading: 'Elements',
-  elementsHint: 'Widgets this board draws itself — defined once, placed anywhere.',
   addElement: 'New element',
-  elementPlacedCount: 'placed {count}',
-  elementUnplaced: 'not placed',
-  elementUndefined: 'placed, not defined',
-  defineElement: 'Define it',
-  backToElements: 'All elements',
   elementName: 'Name',
-  elementNameInvalid: 'Lowercase letters, digits and hyphens, starting with a letter.',
-  elementNameTaken: 'Another element has this name.',
-  elementRender: 'Drawn by',
-  elementRenderTemplate: 'A template (HTML or SVG, no script)',
-  elementRenderScript: 'A script (in a sandboxed frame)',
   elementTemplate: 'Template',
   elementScript: 'Script',
   elementStyle: 'CSS',
-  elementPropsSchema: 'Props (JSON Schema)',
-  elementResources: 'Origins it loads from (https://…, separated by spaces)',
-  elementWidth: 'Width (px)',
   elementHeight: 'Height (px)',
-  elementPreview: 'Preview',
   elementScriptPreview: 'A script element is drawn from the saved board — save it to see this one.',
-  elementProblems: 'Problems',
   removeElement: 'Delete element',
   removeElementPlaced: 'Placed {count} times — change or remove those widgets first.',
   elementPropRemove: 'Remove {name}',
   elementPropNew: 'New prop',
   elementPropAdd: 'Add prop',
-  symbolsHeading: 'Symbols',
-  symbolsHint: 'Drawings the elements share — an element places one with <use href="#name"/>.',
-  addSymbol: 'New symbol',
-  symbolUsedCount: 'used {count}',
-  symbolUnused: 'not used',
-  backToSymbols: 'All symbols',
-  symbolName: 'Name',
-  symbolNameTaken: 'Another symbol has this name.',
-  symbolViewBox: 'viewBox',
-  symbolMarkup: 'SVG markup',
-  removeSymbol: 'Delete symbol',
-  removeSymbolUsed: 'Used {count} times by name — change those first.',
   boundField: 'bound',
   choiceDefault: 'Default',
   advancedProps: 'Advanced: edit as JSON',
   moreInAdvanced: 'More options in Advanced: {count}',
-  invalidJson: 'Not valid JSON',
-  bindingsHeading: 'Bindings',
-  noBindings: 'No bindings',
-  editBinding: 'Edit',
-  removeBinding: 'Remove',
   noDataSources: 'No data source is connected.',
   propPath: 'Prop path',
   choosePropPath: 'Choose what to bind',
   otherPropPath: 'Another path…',
   typedPropPath: 'Path in the widget props',
-  dataSource: 'Data source',
   reference: 'Reference',
   chooseReference: 'Choose a reference',
   path: 'Path',
@@ -745,8 +612,6 @@ export const DEFAULT_LABELS: UBoardLabels = {
   pickItemByPosition: 'its position in the list',
   listItem: 'List item',
   clearListItem: 'Pick by position',
-  listItems: 'Every list item where',
-  clearListItems: 'Read the whole list',
   observedAt: 'Observed time',
   observedAtWhenRead: 'When it is read',
   observedAtHint: 'Explore the response to pick the field where the source says when it observed the value.',
@@ -755,12 +620,6 @@ export const DEFAULT_LABELS: UBoardLabels = {
   observedAtReads: 'Reads as {time} — {age}',
   observedAtLater: 'This is later than now — check the time zone.',
   requestTime: 'The time it asks for',
-  requestDelay: 'The source has a time’s data after (minutes)',
-  requestStep: 'The source has new data every (minutes)',
-  requestTimeHint: 'Each request asks for the time it is sent, that much earlier, rounded down to the step — on the time zone’s clock.',
-  requestNow: 'Asks now:',
-  invalidTimePlace: 'A path takes only time places such as {{now:yyyyMMdd}} or {{now:HHmm}} between {{ and }}.',
-  invalidRequestTime: 'Enter a number of minutes — 0 or more after, above 0 every — or leave it empty.',
   maxAge: 'Normally at most (minutes old)',
   maxAgeHint: "Older than this by the source's time, the value is marked 'Source behind'. The source is asked again no sooner than an eighth of it.",
   invalidMaxAge: 'Enter a number of minutes above 0, or leave it empty.',
@@ -768,11 +627,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
     "This path seems to carry a key. A board keeps its paths and a share link shows them — send the key through the data source's authentication instead.",
   valuePath: 'Value path',
   explore: 'Explore',
-  exploreFailed: 'Exploring the response failed',
   wholeResponse: '(whole response)',
-  previewBinding: 'Preview',
-  previewFailed: 'The preview request failed',
-  saveBinding: 'Save binding',
   bindingNeedsPropPath: 'Enter the prop path to bind.',
   bindingNeedsReference: 'Choose a reference.',
   valueMapHeading: 'Value map',
@@ -829,50 +684,14 @@ export const DEFAULT_LABELS: UBoardLabels = {
   triggerIncomplete: 'Fill in every field — the trigger is saved once it is complete.',
   triggerLinkRefused: 'A link must be an https:// address or a path on this installation (/…).',
   mapped: 'mapped',
-  previewValue: 'Value',
   previewLive: 'live',
 
-  decorationHeading: 'Decoration',
-  decorationText: 'Text',
-  decorationLabel: 'Name',
-  decorationLabelAt: 'Name position',
-  decorationLabelFill: 'Name colour',
-  decorationRadius: 'Corner radius',
-  decorationDash: 'Line style',
-  decorationAnchor: 'Anchored at',
-  decorationBackground: 'Background',
-  placeTopStart: 'Top left',
-  placeTop: 'Top',
-  placeTopEnd: 'Top right',
-  placeStart: 'Left',
-  placeCenter: 'Centre',
-  placeEnd: 'Right',
-  placeBottomStart: 'Bottom left',
-  placeBottom: 'Bottom',
-  placeBottomEnd: 'Bottom right',
 
-  connectorHeading: 'Line',
-  connectorEnds: '{from} → {to}',
-  reverseConnector: 'Reverse',
-  connectorLabel: 'Label',
-  connectorLabelAt: 'Label position (0 at {from} – 1 at {to})',
-  connectorLabelSize: 'Label size',
-  connectorStroke: 'Colour',
-  connectorStrokeWidth: 'Width',
-  connectorDash: 'Line style',
-  dashSolid: 'Solid',
-  dashDashed: 'Dashed',
-  dashDotted: 'Dotted',
-  connectorArrow: 'Arrowheads',
   arrowNone: 'None',
   arrowEnd: 'Toward {to}',
   arrowStart: 'Toward {from}',
   arrowBoth: 'Both ways',
   arrowFromField: 'By {field}',
-  connectorRoute: 'Route',
-  routeStraight: 'Straight',
-  routeOrthogonal: 'Right angles',
-  routeCurved: 'Curved',
 
   qualityText: DEFAULT_QUALITY_TEXT,
 };
