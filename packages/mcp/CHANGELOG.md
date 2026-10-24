@@ -28,6 +28,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `create_source` makes a static source when no source has the values yet: `answers` as `[{ path, answer }]` (a list,
+  so no tool argument is an open object) and `sample: true` for example values — the board reads it by path as any
+  source and says «Example data» under it. `list_sources` gives a static source's type, the paths it answers and
+  whether its answers are example data, not the answers themselves. Requires a server with static sources.
 - `sample_source` names a list's items: for each list of objects, the values of the field that tells them apart
   (`names: { "id": ["input", "process-01", …] }`, up to 12) — an item is read by what it is called, not guessed from the
   first one. `validate`, as saving does, advises on a data read whose `from` is not a source's id — and gives the id when

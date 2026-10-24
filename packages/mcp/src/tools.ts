@@ -387,10 +387,15 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
   define(
     'list_sources',
     {
-      description: "The workspace's data sources: id (a binding's adapter), name, base URL, how it authenticates, and the description its owner wrote — the paths it answers and what each holds. Never a credential.",
+      description:
+        "The workspace's data sources: id (a data read's `from`), name, the description its owner wrote — the paths it answers and what each holds — and, for one called over HTTP, its base URL and how it authenticates; for one that answers what is stored (`static`), the paths it has answers at and whether they are example data (`sample`). Never a credential.",
       inputSchema: z.strictObject({}),
     },
-    async () => tool(async () => ({ sources: await client.listSources() }))
+    async () =>
+      tool(async () => ({
+        // A static source's answers are read with sample_source, path by path — listed, they could be a table each.
+        sources: (await client.listSources()).map(({ answers, ...source }) => (answers === undefined ? source : { ...source, paths: Object.keys(answers) })),
+      }))
   );
 
   define(
@@ -442,10 +447,22 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
     'create_source',
     {
       description:
-        'Makes a data source that needs no credential (a public or internal API with no key). A source that needs a key, token or OAuth is made by a person in the console — ask them, then use its id.',
+        'Makes a data source that needs no credential: a public or internal API with no key (`baseUrl`), or — when no source has the values yet — one that answers what you store in it (`answers`), read by path as any source is; mark example values `sample: true`, and say the board shows example data. A source that needs a key, token or OAuth is made by a person in the console — ask them, then use its id.',
       inputSchema: z.strictObject({
         name: z.string().min(1).max(200),
-        baseUrl: z.string().url().max(2000).describe('Where the requests go, e.g. "https://api.example.com".'),
+        baseUrl: z.string().url().max(2000).optional().describe('Where the requests go, e.g. "https://api.example.com". Not with `answers`.'),
+        answers: z
+          .array(
+            z.strictObject({
+              path: z.string().regex(/^\/[^?]*$/).max(2000).describe('The request path it answers at: "/equipment" (a query in a read is ignored).'),
+              answer: z.unknown().describe('What it answers there, as an HTTP source would: an object, a list of rows, a value.'),
+            })
+          )
+          .min(1)
+          .max(50)
+          .optional()
+          .describe('A source that answers what is stored in it, by path — example data or a reference table. Not with `baseUrl`.'),
+        sample: z.boolean().optional().describe('With `answers`: they are example data — a board that reads them says so under it.'),
         attribution: z.strictObject({ text: z.string().min(1).max(200), url: z.string().url().optional() }).optional().describe('How the source asks to be credited, shown under a board that uses it.'),
         description: z.string().min(1).max(2000).optional().describe('The paths it answers and what each holds, for whoever binds to it next: "GET /readings?line=N — one row per machine, by id".'),
         sourceError: z
@@ -458,8 +475,17 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
           .describe('For a source that answers an error with success (HTTP 200) and a status in the body — where it says so, so a read fails with its words instead of a missing value.'),
       }),
     },
-    async ({ name, baseUrl, attribution, description, sourceError }) =>
-      tool(async () => ({ source: await client.createSource({ name, baseUrl, attribution, description, sourceError }) }))
+    async ({ name, baseUrl, answers, sample, attribution, description, sourceError }) =>
+      tool(async () => {
+        if ((baseUrl === undefined) === (answers === undefined)) throw new Error('give a source either a `baseUrl` (an API it calls) or `answers` (what it answers by path), not both or neither');
+        if (answers !== undefined) {
+          if (sourceError !== undefined) throw new Error('`sourceError` is for a source called over HTTP — a source with `answers` answers what you stored');
+          const byPath = Object.fromEntries(answers.map(({ path, answer }) => [path, answer]));
+          return { source: await client.createSource({ name, answers: byPath, ...(sample !== undefined && { sample }), attribution, description }) };
+        }
+        if (sample !== undefined) throw new Error('`sample` is for a source with `answers`');
+        return { source: await client.createSource({ name, baseUrl: baseUrl!, attribution, description, sourceError }) };
+      })
   );
 
   return tools;

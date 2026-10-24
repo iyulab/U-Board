@@ -23,6 +23,9 @@ do when upgrading. Each release's notes carry its section.
 - The console's data sources page makes and edits a static source: its answers written as JSON by path, tried at a path
   before saving, and marked as example data. A board that reads an example-data source says «Example data» under it —
   in the editor's view and on a share link.
+- The assistant panel draws a board the workspace has no data for: it makes a static source of example values, draws
+  from it, and says the board shows example data — where it asked where the values live before. The editor reads the
+  workspace's sources again when the assistant changes the board, so a source it made is read at once.
 
 ### Changed
 

@@ -22,6 +22,8 @@ const canvasBoard = (place: Record<string, [number, number, number, number]>): B
 function fakeServer() {
   const boards = new Map<string, { name: string; document: BoardV2 | ViewDocument; revision: number }>([['b1', { name: 'Line 1', revision: 4, document: gaugeBoard() }]]);
   const requests: { method: string; path: string; headers: Record<string, string>; body?: unknown }[] = [];
+  // The sources made through the tools, listed after the one the workspace starts with.
+  const made: Record<string, unknown>[] = [];
   const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   const kindOf = (document: BoardV2 | ViewDocument) => (isBoardV2(document) ? document.layout.kind : document.kind);
 
@@ -37,10 +39,15 @@ function fakeServer() {
       return json(200, { boards: [...boards].map(([id, b]) => ({ id, name: b.name, kind: kindOf(b.document), updatedAt: 't' })) });
     }
     if (url.pathname === '/api/workspaces/w1/connectors' && method === 'GET') {
-      return json(200, { connectors: [{ id: 's1', name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer' }] });
+      return json(200, { connectors: [{ id: 's1', name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'bearer' }, ...made] });
     }
     if (url.pathname === '/api/workspaces/w1/connectors' && method === 'POST') {
-      return json(201, { id: 's2', name: body.name, baseUrl: body.baseUrl, authType: body.authType });
+      const source =
+        body.type === 'static'
+          ? { id: 's2', name: body.name, type: 'static', answers: body.answers, sample: body.sample === true }
+          : { id: 's2', name: body.name, baseUrl: body.baseUrl, authType: body.authType };
+      made.push(source);
+      return json(201, source);
     }
     if (url.pathname === '/api/workspaces/w1/connectors/s1/resolve') {
       if (body.ref.path === '/down') return json(200, { quality: 'disconnected', reason: 'transport', message: 'connect ECONNREFUSED' });
@@ -410,6 +417,20 @@ describe('u-board-mcp', () => {
     expect(value).toEqual({ source: { id: 's2', name: 'Open data', baseUrl: 'https://open.example.com', authType: 'none' } });
     const withKey = (await client.callTool({ name: 'create_source', arguments: { name: 'x', baseUrl: 'https://x.example.com', authValue: 'k' } })) as { isError?: boolean };
     expect(withKey.isError).toBe(true);
+  });
+
+  it('makes a source that answers what is stored in it, by path — example values when no source has them — and lists its paths', async () => {
+    const answers = [{ path: '/equipment', answer: [{ id: 'P1', flow: 31 }] }, { path: '/plant', answer: { shift: 'B' } }];
+    const { value } = await call('create_source', { name: 'Plant (example)', answers, sample: true });
+    const sent = server.requests.find(r => r.method === 'POST' && r.path.endsWith('/connectors'))!;
+    expect(sent.body).toEqual({ name: 'Plant (example)', type: 'static', answers: { '/equipment': [{ id: 'P1', flow: 31 }], '/plant': { shift: 'B' } }, sample: true });
+    expect(value.source).toMatchObject({ type: 'static', sample: true });
+    for (const wrong of [{ name: 'x' }, { name: 'x', baseUrl: 'https://x.example.com', answers }, { name: 'x', answers, sourceError: { path: '/code' } }, { name: 'x', baseUrl: 'https://x.example.com', sample: true }, { name: 'x', answers: [{ path: '/a?b=1', answer: 1 }] }]) {
+      const result = (await client.callTool({ name: 'create_source', arguments: wrong })) as { isError?: boolean };
+      expect(result.isError, JSON.stringify(wrong)).toBe(true);
+    }
+    const { value: listed } = await call('list_sources');
+    expect(listed.sources.find((s: { name: string }) => s.name === 'Plant (example)')).toEqual({ id: 's2', name: 'Plant (example)', type: 'static', sample: true, paths: ['/equipment', '/plant'] });
   });
 
   it('says what the source said when it answered an error with success, and who fixes it', async () => {

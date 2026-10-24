@@ -210,11 +210,13 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
     }
   }
 
-  // The assistant saved a change: the editor shows the board as it is saved now. Sending is held while there are
-  // unsaved edits, so nothing of the author's is dropped here.
+  // The assistant saved a change: the editor shows the board as it is saved now — read through the workspace's sources as
+  // they are now, a source the assistant made for it among them. Sending is held while there are unsaved edits, so
+  // nothing of the author's is dropped here.
   async function reloadSaved() {
     try {
-      const board = await getBoard(workspaceId, boardId!);
+      const [board, sources] = await Promise.all([getBoard(workspaceId, boardId!), listConnectors(workspaceId)]);
+      setConnectors(sources.connectors);
       setDocument(board.document);
       revision.current = board.revision;
       setBoardName(board.name);

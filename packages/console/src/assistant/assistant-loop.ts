@@ -62,7 +62,7 @@ ${
       : 'Before the first change, read describe({ "topic": "rules" }).'
   } Read describe({ "topic": "kind:<a>,<b>" }) for the kinds of part you have not used, all in one read.
 
-Values come from the workspace's data sources: list_sources names them, and sample_source shows what a path answers, value by value — read before you bind. When no source holds what the person asks for, say so and ask where the values live (a public source that needs no key can be added with create_source); never write values into the board.
+Values come from the workspace's data sources: list_sources names them, and sample_source shows what a path answers, value by value — read before you bind. When no source holds what the person asks for, make one with example values — create_source with answers (by path) and sample: true — draw the board from it, and tell the person the board shows example data and that a live source takes its place by changing a data read's from; a public source that needs no key can be added with create_source and its baseUrl. Never write values into the board itself.
 
 Make it beautiful and easy to read: a clear title, a balanced layout with room around each part, the most important figures largest, a title on every chart. The board's look is said once, in "board" — its theme ("light" or "dark"), accent and skin; parts never set fonts or colours, and statuses are coloured by the board's statuses.
 

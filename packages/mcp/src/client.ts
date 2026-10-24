@@ -37,12 +37,18 @@ export interface Board {
   updatedAt: string;
 }
 
-/** A data source as the workspace lists it — never its credential. */
+/** A data source as the workspace lists it — never its credential: one called over HTTP, or one that answers what is
+ *  stored in the workspace (`static`, its answers by path). */
 export interface SourceSummary {
   id: string;
   name: string;
-  baseUrl: string;
-  authType: string;
+  type?: 'http' | 'static';
+  baseUrl?: string;
+  authType?: string;
+  /** A static source's answers, by request path. */
+  answers?: Record<string, unknown>;
+  /** A static source's answers are example data. */
+  sample?: boolean;
   attribution?: { text: string; url?: string };
   /** The paths it answers and what each holds, as its owner wrote them. */
   description?: string;
@@ -149,15 +155,16 @@ export class UBoardClient {
     return (await this.request<{ connectors: SourceSummary[] }>('GET', await this.workspacePath('/connectors'))).connectors;
   }
 
-  /** Makes a data source that needs no credential. One that does is made by a person in the console. */
-  async createSource(input: {
-    name: string;
-    baseUrl: string;
-    attribution?: { text: string; url?: string };
-    description?: string;
-    sourceError?: SourceError;
-  }): Promise<SourceSummary> {
-    return this.request('POST', await this.workspacePath('/connectors'), { body: { ...input, authType: 'none' } });
+  /** Makes a data source that needs no credential: an HTTP one at `baseUrl`, or a static one that answers `answers` by
+   *  path. One that needs a credential is made by a person in the console. */
+  async createSource(
+    input: { name: string; attribution?: { text: string; url?: string }; description?: string } & (
+      | { baseUrl: string; sourceError?: SourceError }
+      | { answers: Record<string, unknown>; sample?: boolean }
+    )
+  ): Promise<SourceSummary> {
+    const body = 'answers' in input ? { ...input, type: 'static' } : { ...input, authType: 'none' };
+    return this.request('POST', await this.workspacePath('/connectors'), { body });
   }
 
   /** Reads `ref` from data source `sourceId` the way a binding does. */

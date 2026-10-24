@@ -27,6 +27,19 @@ A board asks again every 30 seconds while it is open. The server reads the same 
 number of open screens within 10 seconds — or, for a binding that says how old its value may be, within an
 eighth of that age. There is no push: a board is a status display, and polling is how it stays current.
 
+## Values with no source yet: a static source
+
+A data source of type `static` answers what is stored with it, by request path — `answers: { "/equipment": [ … ] }`,
+at most 512 KiB written as JSON — the way an HTTP source would answer there. A board reads it as it reads any source
+(`from` and `path`, and a list, key or field below it); a query in the path is ignored, and a path it has no answer
+at reads as a wrong address. Use it for a reference table that lives nowhere else (equipment and where it stands),
+or for example values while the real source is not there yet: with `sample: true`, a board that reads it says
+«Example data» under it — in the editor and on a share link. When the live source arrives with the same paths,
+changing each data read's `from` to it is all that changes; the example label goes with the static source.
+
+It is made in the console's data sources page (stored answers), through the API (`type: "static"`), or by an
+assistant with `create_source` — its answers are not a credential.
+
 ## The form that reads well
 
 1. **One stable address per view of the data**, with the window or filter in the query

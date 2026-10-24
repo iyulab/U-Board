@@ -47,7 +47,7 @@ open models drift into the English those answers are written in).
 | `validate` | Checks a board, or a board with a patch, without saving — exactly as saving does. |
 | `board_state` | What a saved board shows now — each part’s state, its connection quality and why, how old its data is — without values or a picture. |
 | `look` | Draws a saved board as its viewers see it and answers a picture, with what went wrong while drawing — an element's error, a widget whose content runs past its box, values not live — and the advice saving gave that still stands, such as parts drawn over one another — first a one-line status: done, or how many problems and pieces of advice are left. It can show one part up close (with only that part's problems and advice), or the board on the other paper. |
-| `list_sources`, `sample_source`, `create_source` | Lists the data sources (with the description of the paths each answers), answers what a source's response looks like (each value's JSON Pointer and type, and the fields that tell a list's items apart), and makes a source that needs no credential — with, for a source that answers an error with success, where it says so. |
+| `list_sources`, `sample_source`, `create_source` | Lists the data sources (with the description of the paths each answers), answers what a source's response looks like (each value's JSON Pointer and type, and the fields that tell a list's items apart), and makes a source that needs no credential — an API (with, for one that answers an error with success, where it says so), or a static source that answers what is stored in it by path, marked as example data when it is. |
 
 ## How it stays reliable and light
 

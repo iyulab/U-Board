@@ -47,9 +47,9 @@ In a client's JSON configuration:
 | `delete_board` | Deletes a board for good (marked destructive, so a client can ask first). A data source is removed in the console. |
 | `validate` | Checks a board, or a board with a patch, without saving. |
 | `look` | A picture of a saved board as its viewers see it, with what went wrong while drawing; `focus` one part (`/parts/<id>`), or `appearance` the other paper. Needs Chrome or Edge on this computer, or `UBOARD_BROWSER`. |
-| `list_sources` | The workspace's data sources — never a credential. |
+| `list_sources` | The workspace's data sources — never a credential; a static one with the paths it answers and whether its answers are example data. |
 | `sample_source` | What a source's response looks like: each value's JSON Pointer, type and example, and the fields that tell a list's items apart. |
-| `create_source` | A data source that needs no credential; one that does is made by a person in the console. |
+| `create_source` | A data source that needs no credential — an API, or one that answers what is stored in it by path (example values when no source has them yet); one that needs a credential is made by a person in the console. |
 
 Reads take a JSON Pointer so only the part needed travels, and a change is a patch answered with the new
 revision — the document is never sent back. Every answer is compact JSON.
