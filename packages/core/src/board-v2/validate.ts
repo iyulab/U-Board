@@ -196,11 +196,25 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     const at = `/elements/${name}`;
     if (!/^[a-z][a-z0-9-]*$/.test(name)) fail(at, `an element's name is lowercase letters, digits and "-", starting with a letter — not "${name}"`);
     else if (name.startsWith('u-board-')) fail(at, `"u-board-" names U-Board's own drawings — name "${name}" otherwise`);
-    if (!isObj(el) || typeof el.template !== 'string') { fail(`${at}/template`, 'an element needs a "template": markup with {{prop}} holes'); continue; }
+    const drawn = isObj(el) && typeof el.template === 'string';
+    const run = isObj(el) && typeof el.script === 'string';
+    if (!isObj(el) || drawn === run) {
+      fail(`${at}/template`, 'an element has a "template" — markup with {{prop}} holes — or a "script" run in a sandboxed frame, one of them');
+      continue;
+    }
     const props = isObj(el.props) ? el.props : {};
     for (const [prop, type] of Object.entries(props)) {
       if (!PROP_TYPES.includes(type as string)) fail(`${at}/props/${prop}`, `"${String(type)}" is not a prop type — ${PROP_TYPES.join(' · ')}`);
     }
+    if (run) {
+      // What a script loads is named, and only from an https:// origin.
+      if (el.resources !== undefined && (!Array.isArray(el.resources) || el.resources.some(r => typeof r !== 'string' || !/^https:\/\/[^/\s]+$/.test(r)))) {
+        fail(`${at}/resources`, 'resources are the https:// origins a script loads from — ["https://cdn.example.com"]');
+      }
+      continue;
+    }
+    if (el.resources !== undefined) fail(`${at}/resources`, 'a template element loads nothing — resources are a script element\u2019s');
+    if (typeof el.template !== 'string') continue;
     // A hole is a prop — or, inside a list's section ({{#items}} … {{/items}}), a field of its item or {{.}}, the item
     // itself. Nothing is computed in it.
     let sections = 0;

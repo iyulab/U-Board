@@ -955,13 +955,14 @@ interface Unit {
 }
 
 /** A v2 element definition as the view document's: its holes as a props schema. */
-function elementDefinition(definition: V2ElementDefinition): ElementDefinition {
+/** An element of a board in the language's second version as its picture draws it — a template, or a script run in a
+ *  frame (what a server answers a script element's frame with, by the same definition). */
+export function elementDefinition(definition: V2ElementDefinition): ElementDefinition {
   const type = { number: 'number', string: 'string', boolean: 'boolean', list: 'array', object: 'object' } as const;
-  return {
-    render: 'template',
-    props: { type: 'object', properties: Object.fromEntries(Object.entries(definition.props ?? {}).map(([k, t]) => [k, { type: type[t] }])) },
-    template: definition.template,
-    ...(definition.style !== undefined ? { style: definition.style } : {}),
-  };
+  const props = { type: 'object' as const, properties: Object.fromEntries(Object.entries(definition.props ?? {}).map(([k, t]) => [k, { type: type[t] }])) };
+  if (definition.script !== undefined) {
+    return { render: 'script', props, script: definition.script, ...(definition.style !== undefined ? { style: definition.style } : {}), ...(definition.resources !== undefined ? { resources: definition.resources } : {}) };
+  }
+  return { render: 'template', props, template: definition.template ?? '', ...(definition.style !== undefined ? { style: definition.style } : {}) };
 }
 

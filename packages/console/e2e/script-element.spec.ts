@@ -40,11 +40,10 @@ test('a script element runs sandboxed, in the editor and from a share link', asy
   // The document an AI or a script would write — saved through the API the console uses.
   const session = await (await page.request.get('/api/workspaces/me')).json();
   const document = {
-    kind: 'canvas',
-    background: {},
-    connectors: [],
-    nodes: [{ id: 'n1', x: 40, y: 40, width: 280, height: 140, anchored: false, widget: { type: 'element:counter', props: { value: 42 } } }],
-    elements: { counter: { render: 'script', script: COUNTER_SCRIPT, props: { type: 'object', properties: { value: { type: 'number' } } } } },
+    version: 2,
+    elements: { counter: { script: COUNTER_SCRIPT, props: { value: 'number' } } },
+    parts: { n1: { as: 'element', element: 'counter', props: { value: 42 } } },
+    layout: { kind: 'canvas', size: [800, 500], place: { n1: [40, 40, 280, 140] } },
   };
   const saved = await page.request.put(`/api/workspaces/${session.activeWorkspaceId}/boards/${boardId}`, { data: { document } });
   expect(saved.status()).toBe(200);
@@ -86,7 +85,7 @@ test('a script element runs sandboxed, in the editor and from a share link', asy
   await page.goto(`/boards/${boardId}/edit?scripts=off`);
   await expect(page.getByRole('alert').filter({ hasText: '스크립트 요소를 실행하지 않고 열었습니다' })).toBeVisible();
   await expect(page.locator('[data-element="counter"] iframe')).toHaveCount(0);
-  await page.getByRole('button', { name: 'counter', exact: true }).click();
+  // The board's elements are in its panel with nothing selected — the script element's code in its own box.
   const script = page.getByRole('textbox', { name: '스크립트', exact: true });
   await script.fill(COUNTER_SCRIPT);
   await script.blur();

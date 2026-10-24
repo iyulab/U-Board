@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Response } from 'express';
-import { elementFrameHtml, elementFrameScripts, type ViewDocument } from '@iyulab/u-board/domain';
+import { elementFrameHtml, elementFrameScripts, type ElementDefinition } from '@iyulab/u-board/domain';
 import { guardLoops } from './loop-guard.js';
 
 /**
@@ -79,9 +79,8 @@ function sha256(text: string): string {
  * The element's code is served with its loops bounded in time (`guardLoops`), so one that never ends stops with an
  * error instead of holding the frame — in a browser without site isolation, the whole page.
  */
-export function sendElementFrame(res: Response, doc: ViewDocument, name: string, allowedOrigins: readonly string[], frameAncestors: string): void {
-  const definition = Object.hasOwn(doc.elements ?? {}, name) ? doc.elements![name] : undefined;
-  if (!definition || definition.render !== 'script') {
+export function sendElementFrame(res: Response, definition: ElementDefinition, allowedOrigins: readonly string[], frameAncestors: string): void {
+  if (definition.render !== 'script') {
     res.status(404).json({ code: 'NOT_FOUND' });
     return;
   }

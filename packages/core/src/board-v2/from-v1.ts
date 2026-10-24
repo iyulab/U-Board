@@ -563,15 +563,18 @@ class Elements {
   }
 
   private convert(def: ElementDefinition): V2Element | undefined {
-    if (def.render !== 'template' || def.template === undefined) { this.unsupported.push('a script element'); return undefined; }
-    if ((def.resources ?? []).length > 0) { this.unsupported.push('an element that loads resources'); return undefined; }
+    const script = def.render === 'script' && def.script !== undefined;
+    if (!script && (def.render !== 'template' || def.template === undefined)) { this.unsupported.push('an element with nothing to draw'); return undefined; }
+    if (!script && (def.resources ?? []).length > 0) { this.unsupported.push('a template element that loads resources'); return undefined; }
     const props: Record<string, 'number' | 'string' | 'boolean' | 'list' | 'object'> = {};
     for (const [prop, schema] of Object.entries(def.props?.properties ?? {})) {
       const type = propType(schema);
       if (type === undefined) { this.unsupported.push(`an element prop that is ${String(schema.type ?? 'of no type')}`); return undefined; }
       props[prop] = type;
     }
-    return { template: def.template, ...(def.style !== undefined ? { style: def.style } : {}), ...(Object.keys(props).length > 0 ? { props } : {}) };
+    const typed = Object.keys(props).length > 0 ? { props } : {};
+    if (script) return { script: def.script!, ...(def.style !== undefined ? { style: def.style } : {}), ...((def.resources ?? []).length > 0 ? { resources: def.resources } : {}), ...typed };
+    return { template: def.template!, ...(def.style !== undefined ? { style: def.style } : {}), ...typed };
   }
 }
 

@@ -302,6 +302,17 @@ describe('validateBoardV2', () => {
     ]);
   });
 
+  it('takes an element that runs a script in a frame — a template or a script, one of them; what it loads an https:// origin', () => {
+    const script = 'ub.onProps(function (p) { document.body.textContent = p.value; });';
+    expect(issues({ ...canvas({}), elements: { counter: { script, style: 'body{margin:0}', resources: ['https://cdn.example.com'], props: { value: 'number' } } } })).toEqual([]);
+    expect(issues({ ...canvas({}), elements: { a: { template: '<b/>', script }, b: {}, c: { script, resources: ['http://cdn.example.com/x.js'] }, d: { template: '<svg/>', resources: ['https://x.example.com'] } } })).toEqual([
+      '/elements/a/template: an element has a "template" — markup with {{prop}} holes — or a "script" run in a sandboxed frame, one of them',
+      '/elements/b/template: an element has a "template" — markup with {{prop}} holes — or a "script" run in a sandboxed frame, one of them',
+      '/elements/c/resources: resources are the https:// origins a script loads from — ["https://cdn.example.com"]',
+      '/elements/d/resources: a template element loads nothing — resources are a script element’s',
+    ]);
+  });
+
   it('advises a built-in for an element that draws nothing of its own, without failing the board', () => {
     const board = {
       ...canvas({ c: { as: 'element', element: 'card', of: 'totals' }, d: { as: 'element', element: 'dial', of: 'totals' } }),

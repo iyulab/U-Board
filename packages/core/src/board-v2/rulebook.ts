@@ -105,7 +105,9 @@ Use a built-in whenever one shows the thing — a title, a status and a few valu
 \`stat-list\`. Write an element only for a drawing no built-in makes:
 \`"elements": { "tank": { "template": "<svg …>{{level}}</svg>", "style"?: "…", "props": { "level": "number", "tone": "string" } } }\`
 — every \`{{hole}}\` is a declared prop (\`number\` · \`string\` · \`boolean\` · \`list\` · \`object\`). A part places it with
-\`"as": "element", "element": "tank"\`, fixed \`props\` and \`bind\` (\`{ "level": "<field>", "tone": "<field>.tone" }\`). The look is \`board.skin\` — fonts, a
+\`"as": "element", "element": "tank"\`, fixed \`props\` and \`bind\` (\`{ "level": "<field>", "tone": "<field>.tone" }\`). What markup cannot draw runs as a
+\`"script"\` in place of the template — in a sandboxed frame with no network, its props through \`ub.onProps\`, \`"resources"\` the
+https:// origins it loads from. The look is \`board.skin\` — fonts, a
 palette and a frame (${code(FRAMES)}) — once for the board; parts never set fonts or colours.`,
 
     `## triggers — what the board does

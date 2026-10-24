@@ -228,11 +228,20 @@ export interface Skin {
   density?: 'regular' | 'compact';
 }
 
-/** A drawing no built-in makes: markup with declared holes, shown by a part `as: "element"`. */
+/**
+ * A drawing no built-in makes, shown by a part `as: "element"`: markup with declared holes (`template`), drawn in an
+ * isolated root — or code (`script`), run in a sandboxed frame that cannot reach the page, its viewer's session or the
+ * network, its props arriving through `ub.onProps`. One of the two.
+ */
 export interface ElementDefinition {
-  template: string;
+  template?: string;
+  /** CSS for its own markup — a template's, or what a script draws in its frame. */
   style?: string;
-  /** Its holes and their types — an `object` is a record its template reads by `{{prop.field}}`. */
+  script?: string;
+  /** The `https://` origins a script element loads anything from — a library, a font — beyond which nothing is
+   *  reachable; an installation allows them too. */
+  resources?: string[];
+  /** Its props and their types — an `object` is a record a template reads by `{{prop.field}}`. */
   props?: Record<string, 'number' | 'string' | 'boolean' | 'list' | 'object'>;
 }
 

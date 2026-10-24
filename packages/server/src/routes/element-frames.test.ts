@@ -9,6 +9,7 @@ import { createWorkspace } from '../db/workspaces.js';
 import { createUser } from '../db/users.js';
 import { createBoard, updateBoard } from '../db/boards.js';
 import { elementDefinitionHash, elementFrameLabel, elementFrameScripts, type ElementDefinition, type ViewDocument } from '@iyulab/u-board/domain';
+import { elementDefinition } from '@iyulab/u-board/board-v2';
 import { elementFrameOriginFromEnv, elementFramesAddress, elementOriginsFromEnv, frameHostLabel } from '../element-frame.js';
 
 const chart: ElementDefinition = {
@@ -65,13 +66,19 @@ describe('GET /api/element-frames/:boardId/:name/:hash', () => {
     expect(res.get('X-Content-Type-Options')).toBe('nosniff');
   });
 
-  it('answers 404 for a board in the second version — its elements draw in an isolated root, never a frame', async () => {
-    const path = `/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`;
+  it('serves a script element of a board in the second version by the definition its picture draws — a template, never', async () => {
     const { rows } = await db.query<{ workspace_id: string }>('SELECT workspace_id FROM boards WHERE id = $1', [boardId]);
+    const v2 = { script: chart.script!, style: chart.style!, resources: chart.resources!, props: { value: 'number' as const } };
     await updateBoard(db, rows[0]!.workspace_id, boardId, {
-      document: { version: 2, parts: {}, layout: { kind: 'grid', items: [] }, elements: { chart: { template: '<b/>' } } },
+      document: { version: 2, parts: {}, layout: { kind: 'grid', items: [] }, elements: { chart: v2, dot: { template: '<b/>' } } },
     });
-    expect((await request(app).get(path)).status).toBe(404);
+    const drawn = elementDefinition(v2);
+    expect(drawn).toEqual({ render: 'script', props: { type: 'object', properties: { value: { type: 'number' } } }, script: chart.script, style: chart.style, resources: chart.resources });
+    const res = await request(app).get(`/api/element-frames/${boardId}/chart/${await elementDefinitionHash(drawn)}`);
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('window.ub');
+    expect((await request(app).get(`/api/element-frames/${boardId}/chart/${await elementDefinitionHash(chart)}`)).status).toBe(404);
+    expect((await request(app).get(`/api/element-frames/${boardId}/dot/${await elementDefinitionHash(elementDefinition({ template: '<b/>' }))}`)).status).toBe(404);
   });
 
   it('revalidates by entity tag', async () => {

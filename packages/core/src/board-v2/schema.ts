@@ -292,11 +292,13 @@ export function boardV2Schema(): Schema {
       },
       element: {
         type: 'object',
-        required: ['template'],
+        oneOf: [{ required: ['template'] }, { required: ['script'] }],
         additionalProperties: false,
         properties: {
           template: { type: 'string', description: 'Markup with {{prop}} holes — names only; compute with CSS calc().' },
-          style: { type: 'string' },
+          style: { type: 'string', description: 'CSS for its own markup only.' },
+          script: { type: 'string', description: 'Code run in a sandboxed frame with no network; its props arrive through ub.onProps.' },
+          resources: { type: 'array', items: { type: 'string', pattern: '^https://[^/\\s]+$' }, description: 'The https:// origins a script loads from.' },
           props: map({ enum: ['number', 'string', 'boolean', 'list', 'object'] }),
         },
       },

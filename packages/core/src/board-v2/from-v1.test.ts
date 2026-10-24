@@ -308,6 +308,19 @@ describe('fromV1', () => {
     expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
   });
 
+  it('carries a script element across — its script, look, origins and props — a part drawing it as any element', () => {
+    const { board, unsupported } = fromV1(canvas(
+      [node('c', { type: 'element:Counter', props: { value: 42 } })],
+      { elements: { Counter: { render: 'script', script: 'ub.onProps(function () {});', style: 'body{margin:0}', resources: ['https://cdn.example.com'], props: { type: 'object', properties: { value: { type: 'number' } } } } } },
+    ));
+    expect(unsupported).toEqual([]);
+    expect(board.elements).toEqual({ counter: { script: 'ub.onProps(function () {});', style: 'body{margin:0}', resources: ['https://cdn.example.com'], props: { value: 'number' } } });
+    expect(board.parts.c).toEqual({ as: 'element', element: 'counter', props: { value: 42 } });
+    expect(validateBoardV2(board).filter(i => !i.hint)).toEqual([]);
+    const drawn = toViewDocument(board);
+    expect(drawn.elements?.counter).toMatchObject({ render: 'script', script: 'ub.onProps(function () {});' });
+  });
+
   it('draws connectors as links and decorations as shapes, their colours in the nearest tone', () => {
     const metric = (id: string, x: number) => node(id, { type: 'metric', props: { data: { value: 0 } }, bindings: { 'data.value': { adapter: 'plant', ref: equipment(id, '/load') } } }, x);
     const { board, notes, unsupported } = fromV1(canvas([metric('A', 0), metric('B', 300)], {

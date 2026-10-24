@@ -16,6 +16,10 @@ All notable changes to this package are documented here. The format follows
   is the value itself), and nothing of a request's (`list`, `key`, `where`, `time`, `fresh`, `now`, `zone`): the
   adapter says itself how current its value is. The conversion of a first-version document carries such bindings
   across instead of leaving them out.
+- The board language's second version defines script elements: `{ "script", "style"?, "resources"?, "props"? }` in
+  place of a template, run in the same sandboxed frame as before (no network beyond the `https://` origins it names and an
+  installation allows), drawn from the definition `elementDefinition` makes — exported from `./board-v2` so a server
+  answers the frame by the same definition. The conversion of a first-version document carries script elements across.
 - A `./board-v2` entry: the board language's second version — its types, its JSON Schema, its check, the view
   document it is drawn as, and the conversion of a first-version document. Not stable before the release that makes it
   the stored format. It loads no other package at runtime: the widget kinds it knows are a copy of the widget library's

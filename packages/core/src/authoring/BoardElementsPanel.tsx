@@ -21,8 +21,9 @@ const usable = (name: string, taken: Readonly<Record<string, unknown>>) =>
 const usesOf = (board: BoardV2, name: string) => Object.entries(board.parts).filter(([, part]) => part.as === 'element' && part.element === name).map(([id]) => id);
 
 /**
- * The board's elements — drawings no built-in makes, each a template of markup with `{{prop}}` holes, its CSS, and the
- * props it takes by name and type. An element is added by name and removed when no part draws it.
+ * The board's elements — drawings no built-in makes, each a template of markup with `{{prop}}` holes (or a script run in a
+ * sandboxed frame), its CSS, and the props it takes by name and type. An element is added by name — a template — and
+ * removed when no part draws it.
  */
 export function BoardElementsPanel({ board, onChange, labels = DEFAULT_LABELS }: BoardElementsPanelProps) {
   const elements = board.elements ?? {};
@@ -30,8 +31,9 @@ export function BoardElementsPanel({ board, onChange, labels = DEFAULT_LABELS }:
   const write = (next: Record<string, ElementDefinition>) => onChange(Object.keys(next).length > 0 ? next : undefined);
   const set = (key: string, change: Partial<ElementDefinition>) => {
     const next = { ...elements[key]!, ...change } as Record<string, unknown>;
-    for (const [k, v] of Object.entries(change)) if (v === undefined || v === '') delete next[k];
-    if (typeof next.template !== 'string') next.template = '';
+    for (const [k, v] of Object.entries(change)) if (v === undefined || (v === '' && k !== 'script')) delete next[k];
+    // A template element keeps its template while it is emptied; a script element has none.
+    if (typeof next.template !== 'string' && typeof next.script !== 'string') next.template = '';
     write({ ...elements, [key]: next as unknown as ElementDefinition });
   };
   return (
@@ -82,10 +84,20 @@ function BoardElement({ name, element, uses, labels, set, remove }: BoardElement
       <legend>
         <code>{name}</code>
       </legend>
-      <label className="ub-panel__field" style={FIELD_STYLE}>
-        {labels.elementTemplate}
-        <textarea rows={5} spellCheck={false} value={element.template} onChange={e => set({ template: e.target.value })} />
-      </label>
+      {element.script !== undefined ? (
+        <>
+          <label className="ub-panel__field" style={FIELD_STYLE}>
+            {labels.elementScript}
+            <textarea rows={8} spellCheck={false} value={element.script} onChange={e => set({ script: e.target.value })} />
+          </label>
+          <p className="ub-panel__hint">{labels.elementScriptPreview}</p>
+        </>
+      ) : (
+        <label className="ub-panel__field" style={FIELD_STYLE}>
+          {labels.elementTemplate}
+          <textarea rows={5} spellCheck={false} value={element.template ?? ''} onChange={e => set({ template: e.target.value })} />
+        </label>
+      )}
       <label className="ub-panel__field" style={FIELD_STYLE}>
         {labels.elementStyle}
         <textarea rows={3} spellCheck={false} value={element.style ?? ''} onChange={e => set({ style: e.target.value })} />

@@ -28,6 +28,17 @@ describe('BoardElementsPanel', () => {
     expect(onChange).toHaveBeenLastCalledWith({ ...board.elements, pipe: { template: '<div>{{value}}</div>', props: { value: 'string' } } });
   });
 
+  it('sets a script element’s script — no template added, emptied it stays a script', () => {
+    const onChange = vi.fn();
+    const counter = { script: 'ub.onProps(function () {});', props: { value: 'number' as const } };
+    render(<BoardElementsPanel board={{ ...board, elements: { counter } }} onChange={onChange} />);
+    expect(screen.queryByLabelText('Template')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Script'), { target: { value: 'ub.onProps(function (p) {});' } });
+    expect(onChange).toHaveBeenLastCalledWith({ counter: { ...counter, script: 'ub.onProps(function (p) {});' } });
+    fireEvent.change(screen.getByLabelText('Script'), { target: { value: '' } });
+    expect(onChange).toHaveBeenLastCalledWith({ counter: { ...counter, script: '' } });
+  });
+
   it('keeps an element a part draws — it is removed when none does', () => {
     const onChange = vi.fn();
     const { unmount } = render(<BoardElementsPanel board={board} onChange={onChange} />);

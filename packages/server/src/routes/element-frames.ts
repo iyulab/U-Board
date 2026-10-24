@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { elementDefinitionHash, elementFrameLabel } from '@iyulab/u-board/domain';
+import { elementDefinitionHash, elementFrameLabel, type ElementDefinition } from '@iyulab/u-board/domain';
 import type { AppConfig } from '../app.js';
 import { findBoardById } from '../db/boards.js';
 import { frameHostLabel, sendElementFrame } from '../element-frame.js';
-import { isBoardV2 } from '@iyulab/u-board/board-v2';
+import { elementDefinition, isBoardV2 } from '@iyulab/u-board/board-v2';
 
 /**
  * The frames script elements run in: `GET /api/element-frames/:boardId/:name/:hash`. The address names the definition
@@ -26,16 +26,21 @@ export function createElementFramesRouter(config: AppConfig): Router {
   router.get('/:boardId/:name/:hash', async (req, res) => {
     const { boardId, name, hash } = req.params;
     const board = await findBoardById(db, boardId);
-    // A board in the second version has no script elements — the elements it defines draw in an isolated root, not a
-    // frame — so it has no frame to answer with.
-    const document = board && !isBoardV2(board.document) ? board.document : undefined;
-    const definition = document && Object.hasOwn(document.elements ?? {}, name) ? document.elements![name] : undefined;
+    // A board in the second version defines its elements in its language; the frame serves the definition its picture
+    // draws (`elementDefinition`), which is the one the asking page hashed.
+    const document = board?.document;
+    const own = <T,>(elements: Record<string, T> | undefined) => (elements !== undefined && Object.hasOwn(elements, name) ? elements[name] : undefined);
+    let definition: ElementDefinition | undefined;
+    if (document !== undefined && isBoardV2(document)) {
+      const defined = own(document.elements);
+      definition = defined && elementDefinition(defined);
+    } else definition = own(document?.elements);
     const label = config.elementFrameOrigin ? frameHostLabel(config.elementFrameOrigin, req.headers.host) : undefined;
-    if (!document || !definition || (await elementDefinitionHash(definition)) !== hash || (label !== undefined && label !== elementFrameLabel(hash))) {
+    if (!definition || (await elementDefinitionHash(definition)) !== hash || (label !== undefined && label !== elementFrameLabel(hash))) {
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
-    sendElementFrame(res, document, name, config.elementOrigins ?? [], frameAncestors);
+    sendElementFrame(res, definition, config.elementOrigins ?? [], frameAncestors);
   });
 
   return router;
