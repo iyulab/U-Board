@@ -140,6 +140,10 @@ describe('validateBoardV2', () => {
       '/layout/links/a/to: no part "P9" to link',
       '/layout/links/b/show: a link shows a field "of" a data item — give "of" too',
     ]);
+    // A key a link does not have would be stored and never drawn.
+    expect(issues(board({ a: { from: 'P1', to: 'pumps/P2', color: 'blue' } }))).toEqual([
+      '/layout/links/a/color: a link has no "color" — it has from, to, of, show, label, tone, route, width, weight, dash, arrow',
+    ]);
   });
 
   it('names the kinds there are for a kind that is not one, and asks what a kind shows', () => {

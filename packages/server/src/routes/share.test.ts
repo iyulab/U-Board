@@ -389,9 +389,10 @@ describe('public share routes', () => {
     const connector = await createConnector(db, {
       actorUserId: 'test-actor', workspaceId, name: 'Plant API', baseUrl: 'https://plant.example.com', authType: 'none' });
     const doc = {
-      kind: 'canvas' as const, background: {},
-      nodes: [{ id: 'n1', x: 0, y: 0, anchored: false, widget: { type: 'status', bindings: { value: { adapter: connector.id, ref: { path: '/status', valuePath: 'status' } } } } }],
-      connectors: [],
+      version: 2,
+      data: { plant: { from: connector.id, path: '/status', fields: { status: {} } } },
+      parts: { n1: { as: 'stat', of: 'plant', show: 'status' } },
+      layout: { kind: 'canvas', size: [400, 300], place: { n1: [0, 0] } },
     };
 
     const saveRes = await request(app)
@@ -405,8 +406,9 @@ describe('public share routes', () => {
     expect(getRes.status).toBe(200);
     expect(getRes.body.connectorIds).toEqual([connector.id]);
 
-    const binding = getRes.body.document.nodes[0].widget.bindings.value;
-    expect(binding).toEqual({ adapter: connector.id, ref: { path: '/status', valuePath: 'status' } });
+    // The board's viewers draw it from its picture: the binding they resolve is the picture's.
+    const binding = getRes.body.picture.nodes[0].widget.bindings['data.value'];
+    expect(binding).toMatchObject({ adapter: connector.id, ref: { path: '/status' } });
 
     (fetch as any).mockResolvedValueOnce(jsonResponse({ status: 'running' }));
     const resolveRes = await request(app)

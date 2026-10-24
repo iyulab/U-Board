@@ -11,6 +11,14 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- **A board is saved only in the board language's second version.** Saving a first-version document through the API
+  (`PUT`/`PATCH` on a board) is refused with `INVALID_DOCUMENT`, one issue at the document's root that says to convert it
+  (`fromV1` in `@iyulab/u-board/board-v2`). A board stored in the first version before, which the move at start-up could
+  not carry, stays readable as it is. Upgrading: a script or an integration that writes first-version documents converts
+  them before saving.
+
 ## [0.27.0] - 2026-10-24
 
 ### Added

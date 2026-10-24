@@ -107,7 +107,7 @@ describe('using an API token', () => {
     const saved = await request(app)
       .put(`/api/workspaces/${workspaceId}/boards/${board.id}`)
       .set(bearer(token))
-      .send({ document: { kind: 'grid', items: [{ id: 'a', widget: { type: 'gauge' } }] } });
+      .send({ document: { version: 2, parts: { a: { as: 'header', title: 'A' } }, layout: { kind: 'grid', items: ['a'] } } });
     expect(saved.status).toBe(200);
   });
 

@@ -48,6 +48,9 @@ const PROP_TYPES = ['number', 'string', 'boolean', 'list', 'object'];
 /** `{{…}}` in a text: the name inside, as written. */
 const HOLE = /\{\{([^}]*)\}\}/g;
 
+/** What a link has (`Link`). */
+const LINK_KEYS = ['from', 'to', 'of', 'show', 'label', 'tone', 'route', 'width', 'weight', 'dash', 'arrow'] as const;
+
 export function validateBoardV2(board: unknown): BoardIssue[] {
   const issues: BoardIssue[] = [];
   const fail = (at: string, message: string) => void issues.push({ at, message });
@@ -450,6 +453,8 @@ export function validateBoardV2(board: unknown): BoardIssue[] {
     for (const [id, l] of Object.entries(links)) {
       const linkAt = `${at}/${id}`;
       if (!isObj(l)) { fail(linkAt, 'a link is { "from": part, "to": part }'); continue; }
+      // A key a link does not have would be stored and never drawn.
+      for (const key of Object.keys(l)) if (!(LINK_KEYS as readonly string[]).includes(key)) fail(`${linkAt}/${key}`, `a link has no "${key}" — it has ${LINK_KEYS.join(', ')}`);
       for (const end of ['from', 'to'] as const) {
         if (typeof l[end] !== 'string' || !exists(l[end] as string)) fail(`${linkAt}/${end}`, `no part "${String(l[end])}" to link`);
       }
