@@ -403,6 +403,20 @@ describe('the picture model of a v2 board — triggers', () => {
   } as Board['parts'];
   const layout = { kind: 'canvas', size: [800, 400], place: { card: [10, 10, 200, 100], pump: { P1: [220, 10, 200, 100], P2: [430, 10, 200, 100] } } } as Board['layout'];
 
+  it('names each part’s status on a board with no triggers — its own state, else the first field it shows with one', () => {
+    const b = board(
+      { ...parts, flow: { as: 'stat', of: 'pumps[P2]', show: 'state' }, plain: { as: 'stat', of: 'pumps[P2]', show: 'flow' } } as Board['parts'],
+      { ...layout, place: { ...(layout as { place: object }).place, flow: [10, 200, 120, 60], plain: [150, 200, 120, 60] } } as Board['layout'],
+    );
+    const doc = view(b, { pumps: ['P1', 'P2'] });
+    expect(doc.triggers).toBeUndefined();
+    expect(nodeOf(doc, 'card').states).toEqual({ from: 'data.tone', map: { values: { run: 'running', trip: 'tripped' }, otherwise: 'off' } });
+    expect(nodeOf(doc, 'pump/P2').states?.from).toBe('data.tone');
+    expect(nodeOf(doc, 'flow').states?.map).toEqual({ values: { run: 'running', trip: 'tripped' }, otherwise: 'off' });
+    // A field with no status rule names no state.
+    expect(nodeOf(doc, 'plain').states).toBeUndefined();
+  });
+
   it('runs a board’s triggers on the nodes its parts are drawn as, naming a part’s status from its state field', () => {
     const b: Board = {
       ...board(parts, layout),
@@ -420,7 +434,8 @@ describe('the picture model of a v2 board — triggers', () => {
     // The status a trigger reads is the card's state, named by the board's statuses from the raw value.
     expect(nodeOf(doc, 'card').states).toEqual({ from: 'data.tone', map: { values: { run: 'running', trip: 'tripped' }, otherwise: 'off' } });
     expect(nodeOf(doc, 'pump/P2').states?.from).toBe('data.tone');
-    expect(nodeOf(doc, 'pump/P1').states).toBeUndefined();
+    // A part no trigger reads still names its status — the board state says what every part is in.
+    expect(nodeOf(doc, 'pump/P1').states?.from).toBe('data.tone');
     // A trigger on an item its data does not have now (P9) is left out; one in a grid is drawn only with the items it has.
     const grid: Board = { ...b, layout: { kind: 'grid', items: ['card', 'pump'] } };
     expect(toViewDocument(grid, { keysOf: () => [] }).triggers).toEqual([doc.triggers![0]]);

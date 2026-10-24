@@ -874,19 +874,41 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
   const drawn: ViewDocument = layout.kind === 'canvas'
     ? { kind: 'canvas', background: background(layout), ...canvasOf(layout, '/layout'), ...look, ...withElements() }
     : { kind: 'grid', items: gridItems(layout.items, '/layout/items'), ...look, ...withElements() };
-  return withTriggers(drawn);
+  return withStates(drawn);
 
   // ── triggers ──
 
+  /** The field whose status is a part's own — a status card's (its `state`, else the first field it shows that has
+   *  one), or the part's `state` option. */
+  function ownStateField(part: Part): string | undefined {
+    return part.as === 'status-card'
+      ? (part.state as string | undefined) ?? (Array.isArray(part.show) ? part.show : part.show === undefined ? [] : [part.show]).find(n => fieldOfPart(part, n).state !== undefined)
+      : (part.state as string | undefined);
+  }
+
   /**
-   * The board's triggers as the viewer runs them, on the nodes its parts are drawn as. A part a trigger reads a status
-   * of is given the state rule that names it: the reading of the field's state binding, in the board's status names.
+   * The parts' states and the board's triggers, on the nodes the parts are drawn as. A part that shows a status of its
+   * own is given the state rule that names it — the reading of the field's state binding, in the board's status names —
+   * so the board state says what each part is in, read by a trigger or not. A trigger that reads another field's status
+   * gives its part that field's rule instead.
    */
-  function withTriggers(doc: ViewDocument): ViewDocument {
+  function withStates(doc: ViewDocument): ViewDocument {
     const triggers = board.triggers ?? [];
-    if (triggers.length === 0) return doc;
     // A node by the part it draws: its id past a canvas cell's prefix — a part, or an item of an `each` part.
     const nodes = new Map(placedIn(doc).map(placed => [placed.id.slice(placed.id.lastIndexOf(':') + 1), placed]));
+    for (const [id, placed] of nodes) {
+      const raw = board.parts[id.split('/')[0]!];
+      if (raw === undefined) continue;
+      const part = resolve(raw);
+      if (part.as === 'group') continue;
+      // Its own status, else the first field it shows that has one — what its tone is drawn from.
+      const keys = stateKeys.get(`/parts/${id.split('/')[0]}`);
+      const shown = Array.isArray(part.show) ? part.show : part.show === undefined ? [] : [part.show];
+      const field = ownStateField(part) ?? shown.find(n => keys?.has(n));
+      const key = field === undefined ? undefined : keys?.get(field);
+      if (key !== undefined) placed.states = { from: key, map: stateMaps(fieldOfPart(part, field!).state!).named };
+    }
+    if (triggers.length === 0) return doc;
     // An item of an `each` part is drawn only while its data has it: a trigger on one that is not there now is left out.
     const absent = new Error('absent');
     const nodeFor = (part: string, at: string) => {
@@ -901,10 +923,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       const placed = nodeFor(holder.part, `${at}/part`);
       const partId = holder.part.split('/')[0]!;
       const part = resolve(board.parts[partId]!);
-      const own = part.as === 'status-card'
-        ? (part.state as string | undefined) ?? (Array.isArray(part.show) ? part.show : part.show === undefined ? [] : [part.show]).find(n => fieldOfPart(part, n).state !== undefined)
-        : (part.state as string | undefined);
-      const field = holder.field ?? own;
+      const field = holder.field ?? ownStateField(part);
       const key = field === undefined ? undefined : stateKeys.get(`/parts/${partId}`)?.get(field);
       if (field === undefined || key === undefined) {
         throw new PictureError(`${at}/${holder.field !== undefined ? 'field' : 'part'}`, `"${holder.part}" does not show ${field !== undefined ? `"${field}"'s` : 'a'} status — a trigger reads a status the part shows`);

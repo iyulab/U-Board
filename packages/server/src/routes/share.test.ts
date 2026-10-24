@@ -391,8 +391,6 @@ describe('public share routes', () => {
       data: { pump: { from: plant.id, path: '/pump', fields: { state: { state: { Fault: 'fault', '*': 'running' } } } } },
       parts: { pump: { as: 'stat', of: 'pump', show: 'state' }, title: { as: 'label', title: 'Plant' } },
       layout: { kind: 'canvas', size: [400, 300], place: { pump: [0, 0], title: [0, 200] } },
-      // A part's state is the one its triggers read.
-      triggers: [{ on: { event: 'enter', part: 'pump', field: 'state', status: 'fault' }, do: [{ action: 'emit', name: 'pump-fault' }] }],
     };
     await updateBoard(db, workspaceId, boardId, { document: doc });
     (fetch as any).mockImplementation(async () => jsonResponse({ state: 'Fault', temp: 73.2 }));

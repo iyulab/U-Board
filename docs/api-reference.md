@@ -722,6 +722,10 @@ What a resolved board shows, part by part — no values. For example:
 }
 ```
 
+A part's `state` is the status of the field it is drawn in — a status card's own (its `state`, else the first field it
+shows that has a status), a part's `state` option, else the first field it shows that has one — whether a trigger reads
+it or not; a trigger that reads another field's status names that one. A part with no such field has no `state`.
+
 The viewer hands it to its host through `onBoardState` each time it draws new values (a view that has stopped updating
 reports its parts `stale`); a U-Board server answers it at `GET /api/share/boards/:id/state`.
 
