@@ -34,7 +34,7 @@ All notable changes to this package are documented here. The format follows
   top left, in a grid last; a label or a header to set in its panel), two parts of a canvas joined by a link (with an
   arrowhead) and a link selected, set in its panel (its label, the item and field whose status it takes, its tone,
   route, arrowhead and dash) and deleted, frames and texts added to a canvas, moved, sized, set in their panel (words,
-  tone, line or size) and deleted, the items a grid lays out a
+  tone, line or size) and deleted, a canvas's background image chosen (the canvas taking its size) or taken away, the items a grid lays out a
   part per item of read through its `adapters` when the board opens and when what they are read by changes — drawn from its picture, its
   parts moved, sized and deleted on a canvas as on any board, each edit said again in the board's layout (and a deleted
   part's links and triggers removed with it), and on a grid of parts ordered, widened and deleted (an item of a part

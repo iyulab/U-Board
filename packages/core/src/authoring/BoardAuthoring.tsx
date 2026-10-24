@@ -16,6 +16,7 @@ import { StatusesPanel } from './StatusesPanel.js';
 import { DataPanel } from './DataPanel.js';
 import { LinkPanel } from './LinkPanel.js';
 import { ShapePanel } from './ShapePanel.js';
+import { BackgroundField } from './BackgroundField.js';
 import { TriggersEditor } from './TriggersEditor.js';
 import { boardTriggerEditing } from './board-triggers.js';
 import { GridAuthoring } from './GridAuthoring.js';
@@ -118,6 +119,13 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
       return (
         <>
           <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>
+          {board.layout.kind === 'canvas' && (
+            <BackgroundField
+              layout={board.layout}
+              onChange={layout => setHistory(h => recordEdit(h, { ...h.present, layout }, null))}
+              labels={labels}
+            />
+          )}
           <DataPanel
             data={board.data}
             sources={sources}
