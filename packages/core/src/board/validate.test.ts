@@ -358,6 +358,51 @@ describe('validateBoard', () => {
     expect(issues(canvas({ t: { as: 'label', title: 'flow {{v' } }))).toContain('/parts/t/title: "flow {{v" opens a {{ it does not close — write {{field}}');
   });
 
+  it('holds the fields of shapes, links, grid items and element props to their types', () => {
+    const shapes = issues({ ...canvas({}), layout: { kind: 'canvas', size: [100, 100], place: {}, shapes: { s: { box: [0, 0, 10, 10], label: 5, dash: 'x' }, t: { text: 7, at: [5, 5], size: 'big' }, w: { line: [[0, 0], [5, 5]], width: -1 } } } });
+    expect(shapes).toEqual([
+      "/layout/shapes/s/label: a shape's label is words — a string",
+      '/layout/shapes/s/dash: dash is true or false',
+      "/layout/shapes/t/text: a shape's text is words — a string",
+      "/layout/shapes/t/size: a shape's size is a number above 0",
+      "/layout/shapes/w/width: a shape's width is a number above 0",
+    ]);
+    const parts = { a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' } };
+    const links = issues({ ...canvas(parts), layout: { kind: 'canvas', size: [400, 200], place: { a: [0, 0], b: [200, 0] }, links: { l: { from: 'a', to: 'b', width: -3, label: 5, dash: 'yes' } } } });
+    expect(links).toEqual([
+      '/layout/links/l/width: a link’s width is a number above 0',
+      '/layout/links/l/label: a link’s label is words — a string, with {{field}} for a value',
+      '/layout/links/l/dash: dash is true or false',
+    ]);
+    expect(issues({ ...canvas(parts), layout: { kind: 'grid', items: [{ id: 'a', height: -5 }, { id: 'b', height: 'tall' }] } })).toEqual([
+      '/layout/items/0/height: a height is a number of pixels above 0',
+      '/layout/items/1/height: a height is a number of pixels above 0',
+    ]);
+    const el = { tank: { template: '<svg><rect height="{{n}}"/></svg>{{#items}}{{.}}{{/items}}', props: { n: 'number', items: 'list', on: 'boolean' } } };
+    expect(issues({ ...canvas({ t: { as: 'element', element: 'tank', props: { n: 'abc', items: 'x', on: 'yes' } } }), elements: el })).toEqual([
+      '/parts/t/props/n: "n" is a number — "abc" is not one',
+      '/parts/t/props/items: "items" is a list — "x" is not one',
+      '/parts/t/props/on: "on" is a boolean — "yes" is not one',
+    ]);
+  });
+
+  it('links parts drawn on its own canvas — not a group itself, not a part of another cell; names no part like a cell', () => {
+    const parts = {
+      a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' },
+      g: { as: 'group', size: [100, 60], parts: { x: { as: 'label', title: 'X' } }, place: { x: [0, 0] } },
+    };
+    const grid = issues({ ...canvas(parts), layout: { kind: 'grid', items: ['b', { canvas: { size: [400, 200], place: { a: [0, 0], g: [200, 0] }, links: { l: { from: 'a', to: 'b' }, m: { from: 'g', to: 'a' }, n: { from: 'g/x', to: 'a' } } } }] } });
+    expect(grid).toEqual([
+      '/layout/items/1/canvas/links/l/to: no part "b" to link',
+      '/layout/items/1/canvas/links/m/from: no part "g" to link',
+    ]);
+    expect(issues({ ...canvas({ 'cell-1': { as: 'label', title: 'C' } }), layout: { kind: 'grid', items: ['cell-1'] } })).toEqual([
+      '/layout/items/0: "cell-1" is the name a grid gives a cell — name the part otherwise',
+    ]);
+    const inner = issues({ ...canvas({ g: { as: 'group', size: [100, 60], parts: { 'x/y': { as: 'label', title: 'X' } }, place: { 'x/y': [0, 0] } } }), layout: { kind: 'canvas', size: [200, 200], place: { g: [0, 0] } } });
+    expect(inner).toEqual(['/parts/g/parts/x/y: a part id has no "/" — "/" joins a group and its parts ("<group>/x-y")']);
+  });
+
   it('runs a trigger that can run: a part enters one status at a time, and waits for at least one', () => {
     const board = (on: Record<string, unknown>, when?: Record<string, unknown>) => ({
       ...canvas({ k: { as: 'status-card', of: 'equipment[P1]', show: ['state'] } }),

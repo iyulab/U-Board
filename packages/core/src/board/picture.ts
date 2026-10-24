@@ -297,6 +297,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
   /** The widget a part is drawn with, reading `query[item]` — or the whole of `query` when there is no item. */
   /** For each part (by its pointer), the binding key its fields' states are read at — what a trigger reads a status by. */
   const stateKeys = new Map<string, Map<string, string>>();
+  /** The element name each shape is drawn as, by name — the shape id it stands for. */
+  const shapeNames = new Map<string, string>();
 
   const widgetFor = (raw: Part, at: string, reads?: { query: string; item?: string }): Widget => {
     const part = resolve(raw);
@@ -709,7 +711,11 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     const d = shape.line !== undefined
       ? `M${shape.line.map(([px, py]) => `${px - x} ${py - y}`).join(' L')}`
       : shape.path!.replace(/-?\d*\.?\d+/g, n => String(Number(n) - (k++ % 2 === 0 ? x : y)));
-    const name = `u-board-${id.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`;
+    // An element name per shape: ids that read the same once cleaned (`a.b`, `a-b`) are told apart by a count.
+    const base = `u-board-${id.replace(/[^a-z0-9-]+/gi, '-').toLowerCase()}`;
+    let name = base;
+    for (let n = 2; shapeNames.has(name) && shapeNames.get(name) !== id; n++) name = `${base}-${n}`;
+    shapeNames.set(name, id);
     return { id, x, y, ...box, anchored: true, widget: { type: builtin(name, lineElement(d, box, { tone: shape.tone, width, dash: shape.dash === true })) } };
   };
 

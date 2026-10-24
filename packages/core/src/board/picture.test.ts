@@ -265,6 +265,13 @@ describe('the picture model of a v2 board', () => {
     expect(fixed!.bindings).toBeUndefined();
   });
 
+  it('draws two lines whose ids read the same once cleaned as two elements, each with its own path', () => {
+    const doc = view(board({}, { kind: 'canvas', size: [100, 100], place: {}, shapes: { 'a.b': { line: [[0, 0], [10, 0]] }, 'a-b': { line: [[0, 0], [0, 10]] } } }));
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    const types = doc.nodes.map(n => n.widget.type);
+    expect(new Set(types).size).toBe(2);
+  });
+
   it("draws markers, labels, a legend and lines with U-Board's own elements", () => {
     const doc = view(board(
       {

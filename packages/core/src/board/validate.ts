@@ -397,8 +397,12 @@ export function validateBoard(board: unknown): BoardIssue[] {
     if (!isObj(el)) { fail(`${at}/element`, `no element "${String(name)}" — elements: ${list(Object.keys(elements))}`); return; }
     const declared = isObj(el.props) ? el.props : {};
     const holes = `props: ${list(Object.keys(declared))}`;
-    for (const key of Object.keys(isObj(part.props) ? part.props : {})) {
-      if (!(key in declared)) fail(`${at}/props/${key}`, `"${String(name)}" has no prop "${key}" — ${holes}`);
+    for (const [key, value] of Object.entries(isObj(part.props) ? part.props : {})) {
+      if (!(key in declared)) { fail(`${at}/props/${key}`, `"${String(name)}" has no prop "${key}" — ${holes}`); continue; }
+      const type = declared[key];
+      const fits = type === 'number' ? isNum(value) : type === 'string' ? typeof value === 'string' : type === 'boolean' ? typeof value === 'boolean'
+        : type === 'list' ? Array.isArray(value) : type === 'object' ? isObj(value) : true;
+      if (!fits) fail(`${at}/props/${key}`, `"${key}" is a ${String(type)} — ${JSON.stringify(value)} is not one`);
     }
     if (part.bind === undefined) return;
     if (!isObj(part.bind)) { fail(`${at}/bind`, 'bind is { "<prop>": "<field>" | "<field>.status" | "<field>.tone" }'); return; }
@@ -451,6 +455,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     if (!isObj(group.place)) fail(`${at}/place`, 'a group needs "place": { "<part>": [x, y, width?, height?] } on its own canvas');
     for (const [id, raw] of Object.entries(inner)) {
       const innerAt = `${at}/parts/${id}`;
+      if (id.includes('/')) fail(innerAt, `a part id has no "/" — "/" joins a group and its parts ("<group>/${id.replace(/\//g, '-')}")`);
       const part = checkPart(raw, innerAt, { reads });
       if (part?.each !== undefined) fail(`${innerAt}/each`, 'a part inside a group is one part — repeat the group with "each" instead');
       if (!(id in place)) fail(innerAt, `"${id}" is not placed in the group — put it in its "place", or remove it`);
@@ -485,14 +490,19 @@ export function validateBoard(board: unknown): BoardIssue[] {
         }
       }
       if (s.tone !== undefined && !(TONES as readonly unknown[]).includes(s.tone)) fail(`${shapeAt}/tone`, `"${String(s.tone)}" is not a tone — use ${TONES.join(' · ')}`);
+      for (const key of ['text', 'label'] as const) if (s[key] !== undefined && typeof s[key] !== 'string') fail(`${shapeAt}/${key}`, `a shape's ${key} is words — a string`);
+      for (const key of ['width', 'size'] as const) if (s[key] !== undefined && !(isNum(s[key]) && (s[key] as number) > 0)) fail(`${shapeAt}/${key}`, `a shape's ${key} is a number above 0`);
+      if (s.dash !== undefined && typeof s.dash !== 'boolean') fail(`${shapeAt}/dash`, 'dash is true or false');
     }
   };
 
-  /** Whether a link end names a part: a part, an item of an `each` part, or a part inside a group. */
-  const isEnd = (end: string): boolean => {
-    if (ids.has(end)) return true;
+  /** Whether a link end names a part drawn on the canvas whose `here` are the parts it places: a part, an item of an
+   *  `each` part, or a part inside a group — not a group itself, which is drawn as its parts. */
+  const isEndOn = (here: ReadonlySet<string>) => (end: string): boolean => {
     const [head, ...rest] = end.split('/');
+    if (!here.has(head!)) return false;
     const owner = ids.get(head!)?.part;
+    if (rest.length === 0) return owner !== undefined && (owner.as !== 'group' || owner.each !== undefined);
     if (!owner || rest.length === 0) return false;
     const innerOf = (p: Obj) => (p.as === 'group' && isObj(p.parts) ? p.parts : {});
     if (owner.each !== undefined) return rest.length === 1 || rest.length === 2 && rest[1]! in innerOf(owner);
@@ -515,6 +525,9 @@ export function validateBoard(board: unknown): BoardIssue[] {
       if (l.show !== undefined && l.of === undefined && !groupReads) fail(`${linkAt}/show`, 'a link shows a field "of" a data item — give "of" too');
       if (l.tone !== undefined && !(TONES as readonly unknown[]).includes(l.tone)) fail(`${linkAt}/tone`, `"${String(l.tone)}" is not a tone — use ${TONES.join(' · ')}`);
       if (l.route !== undefined && !['straight', 'orthogonal', 'curved'].includes(l.route as string)) fail(`${linkAt}/route`, 'a link\u2019s route is "straight", "orthogonal" or "curved"');
+      if (l.width !== undefined && !(isNum(l.width) && l.width > 0)) fail(`${linkAt}/width`, 'a link\u2019s width is a number above 0');
+      if (l.label !== undefined && typeof l.label !== 'string') fail(`${linkAt}/label`, 'a link\u2019s label is words — a string, with {{field}} for a value');
+      if (l.dash !== undefined && typeof l.dash !== 'boolean') fail(`${linkAt}/dash`, 'dash is true or false');
       if (l.weight !== undefined) checkWeight(l, `${linkAt}/weight`, groupReads);
       if (l.arrow !== undefined) checkArrow(l, `${linkAt}/arrow`, groupReads);
       checkTexts(l, linkAt, reads);
@@ -589,6 +602,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     for (const [id, p] of Object.entries(place)) {
       const placeAt = `${at}/place/${id}`;
       const entry = ids.get(id);
+      if (/^cell-[\d-]+$/.test(id)) fail(placeAt, `"${id}" is the name a grid gives a cell — name the part otherwise`);
       if (!entry) {
         const owner = id.includes('/') ? id.slice(0, id.indexOf('/')) : undefined;
         fail(placeAt, owner && ids.get(owner)?.part.each !== undefined
@@ -609,13 +623,14 @@ export function validateBoard(board: unknown): BoardIssue[] {
       }
     }
     checkShapes(canvas.shapes, `${at}/shapes`);
-    checkLinks(canvas.links, `${at}/links`, isEnd);
+    checkLinks(canvas.links, `${at}/links`, isEndOn(new Set(Object.keys(place))));
   };
   const checkGrid = (items: unknown, at: string) => {
     if (!Array.isArray(items)) { fail(at, 'grid items are a list: ["<part>", ["<part>", span], { … }]'); return; }
     items.forEach((item, i) => {
       const itemAt = `${at}/${i}`;
       const name = (id: unknown, idAt: string) => {
+        if (typeof id === 'string' && /^cell-[\d-]+$/.test(id)) fail(idAt, `"${id}" is the name a grid gives a cell — name the part otherwise`);
         if (typeof id === 'string' && ids.has(id)) {
           if (placed.has(id)) fail(idAt, twice(id));
           placed.add(id);
@@ -638,6 +653,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
           return;
         }
         if (item.span !== undefined) span(item.span, `${itemAt}/span`);
+        if (item.height !== undefined && !(isNum(item.height) && item.height > 0)) fail(`${itemAt}/height`, 'a height is a number of pixels above 0');
         if (item.id !== undefined) name(item.id, `${itemAt}/id`);
         else if (item.canvas !== undefined) {
           if (isObj(item.canvas)) checkCanvas(item.canvas, `${itemAt}/canvas`);
