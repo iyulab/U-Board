@@ -36,8 +36,8 @@ All notable changes to this package are documented here. The format follows
   part is in a status; open a link, bring a part into view, hand the host an event or ask for another board. A part
   made per item is named `<part>/<key>`. A first-version board's triggers carry across, except one on a node's state.
 - In the board language's second version a status's `glyph` marks what shows it — a status card's badge, a stat list's
-  values, a list's rows — not only the legend (drawn by `@iyulab/u-widgets` with item glyphs; an earlier widget library
-  draws the tone's mark).
+  values, a list's rows — not only the legend. Requires `@iyulab/u-widgets` 0.42, which draws an item's own mark (and
+  the `warn` tone legibly on a light page).
 
 - An HTTP connector reference can read every item of a list whose fields match: `items: { list, where }` — the rows a
   list or a table shows, kept to the part of a list they are about (one pollutant out of a list of all of them), in the

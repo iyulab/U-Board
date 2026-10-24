@@ -24,7 +24,8 @@ do when upgrading. Each release's notes carry its section.
   is checked on submit, each failing field says why under it, Enter moves to the next field, and the form code loads
   only when a board first shows a form — a board or share page without one does not carry it. Dragging to pan a board
   in the share viewer no longer selects the text of the widgets it passes over (`@canvas-kit/viewer` 0.6.1).
-- Prepared widgets follow `@iyulab/u-widgets` 0.41: a value's state is a `tone` of eleven (`ok` · `info` · `watch` ·
+- Prepared widgets follow `@iyulab/u-widgets` 0.42 — the `warn` tone legible on a light page, and an item's own mark where a
+  board's status names one — and, from 0.41, a value's state is a `tone` of eleven (`ok` · `info` · `watch` ·
   `warn` · `alarm` · `off` · `idle` · …) where `status` items had a `level` and `metric` items a `variant`, and a chart's
   axis format is a string (`xFormat: 'time'`). A board saved with the old words draws those items with no colour —
   rename `level`/`variant` to `tone` and `success` · `warning` · `error` · `neutral` to `ok` · `warn` · `alarm` ·

@@ -10,9 +10,9 @@ import type { ElementDefinition, Widget } from '../view-document.js';
 const summary = (widget: Widget) => widgetFields(widget).fields.map(f => `${f.section}.${f.key}:${f.kind}`);
 
 describe('widgetFields', () => {
-  it("offers a status widget's data fields, its tone and emphasis as choices", () => {
+  it("offers a status widget's data fields, its tone and emphasis as choices, and its own mark as text", () => {
     const { fields, otherOptions } = widgetFields(seedWidget('status'));
-    expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual(['data.label:text', 'data.value:text', 'data.tone:choice', 'data.emphasis:choice']);
+    expect(fields.map(f => `${f.section}.${f.key}:${f.kind}`)).toEqual(['data.label:text', 'data.value:text', 'data.tone:choice', 'data.glyph:text', 'data.emphasis:choice']);
     expect(fields[2].choices).toContain('warn');
     expect(otherOptions).toBe(0);
   });

@@ -40,7 +40,7 @@ All notable changes to this package are documented here. The format follows
 - `describe("elements")` says that nothing an element draws reaches past its box, so a shadow needs room inside it.
 - `describe("data")` says how to bind a source asked for the data of a given time: time places in `path`
   (`{{now:yyyyMMdd}}`) with `timeZone` and `requestTime`.
-- Requires `@iyulab/u-widgets` 0.41 (a state is a `tone`; a format is a string).
+- Requires `@iyulab/u-widgets` 0.42 (a state is a `tone`; a format is a string; a toned item may give its own mark).
 
 ### Fixed
 
