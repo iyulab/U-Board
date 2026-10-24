@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// A canvas board written in the board language's second version, opened in the editor: its parts are moved and deleted
-// on the canvas as on any board, and what is saved is the board in its own version — the part placed where it was
-// dropped, the deleted one gone with the link that named it.
-test('moves and deletes the parts of a board in the second version, and saves the board in that version', async ({ page }) => {
+// Boards written in the board language's second version, opened in the editor: a canvas board's parts are moved and
+// deleted on the canvas as on any board, a grid board's widened and ordered in the panel, and what is saved is the board
+// in its own version — a part placed where it was dropped, a deleted one gone with the link that named it.
+test('moves, sizes, orders and deletes the parts of boards in the second version, and saves each in that version', async ({ page }) => {
   const signup = await page.request.post('/api/auth/signup', {
     data: { email: 'e2e-board-v2-layout@test.com', password: 'p4ssword!', name: 'E2E Board V2 Layout' },
   });
@@ -54,4 +54,22 @@ test('moves and deletes the parts of a board in the second version, and saves th
   const deleted = (await (await page.request.get(at)).json()).document;
   expect(Object.keys(deleted.parts)).toEqual(['title']);
   expect(deleted.layout.links).toEqual({});
+
+  // A grid board: an item is widened and moved earlier in the editor's panel, and the board is saved with its layout's
+  // entries in the new order and width.
+  const grid = await (await page.request.post(`/api/workspaces/${workspaceId}/boards`, { data: { name: 'Grid V2' } })).json();
+  const gridAt = `/api/workspaces/${workspaceId}/boards/${grid.id}`;
+  expect((await page.request.put(gridAt, {
+    data: { document: { version: 2, parts: { a: { as: 'header', title: 'First' }, b: { as: 'header', title: 'Second' } }, layout: { kind: 'grid', items: ['a', 'b'] } } },
+  })).ok()).toBe(true);
+  await page.goto(`/boards/${grid.id}/edit`);
+  await expect(page.getByRole('button', { name: '항목 추가' })).toHaveCount(0);
+  await page.getByRole('button', { name: /^2\. / }).click();
+  await page.getByLabel('너비(12열 중)').selectOption('8');
+  await page.getByRole('button', { name: '앞으로' }).click();
+  await page.getByRole('button', { name: '저장', exact: true }).click();
+  await expect(page.getByText('저장됨')).toBeVisible();
+  const laidOut = (await (await page.request.get(gridAt)).json()).document;
+  expect(laidOut.layout).toEqual({ kind: 'grid', items: [['b', 8], 'a'] });
+  expect(Object.keys(laidOut.parts)).toEqual(['a', 'b']);
 });

@@ -48,7 +48,7 @@ describe('domain entry', () => {
   });
 
   it('exports from the package root everything ./domain and ./viewer do, and the authoring tool', () => {
-    expect(Object.keys(root).sort()).toEqual([...new Set([...Object.keys(mod), ...Object.keys(viewer), 'AuthoringView', 'BoardAuthoring'])].sort());
+    expect(Object.keys(root).sort()).toEqual([...new Set([...Object.keys(mod), ...Object.keys(viewer), 'AuthoringView', 'BoardAuthoring', 'layoutEditable'])].sort());
   });
 
   // The server and the MCP server load this entry in a bare Node process, and the server image carries only the

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { AuthoringView, BoardAuthoring, KO_LABELS, ViewerPage, placedIn, type AuthoringMode, type ViewDocument, type Adapter } from '@iyulab/u-board';
+import { AuthoringView, BoardAuthoring, KO_LABELS, ViewerPage, layoutEditable, placedIn, type AuthoringMode, type ViewDocument, type Adapter } from '@iyulab/u-board';
 import { documentKind, isBoardV2, type BoardDocument } from '@iyulab/u-board/board-v2';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
@@ -240,8 +240,9 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
   // The server serves the frames the board's script elements run in under this address — none while opened with scripts
   // off, so no element code runs.
   const elementFramesAt = scriptsOff ? undefined : (elementFrames ?? `/api/element-frames/${encodeURIComponent(boardId!)}`);
-  // A board in the language's second version on a grid is shown, not edited, until the editor lays out a grid of it.
-  const shownOnly = isBoardV2(document) && document.layout.kind === 'grid';
+  // A board in the language's second version whose grid holds grids or canvases of its own is shown, not edited, until
+  // the editor lays such a grid out.
+  const shownOnly = isBoardV2(document) && !layoutEditable(document);
   // The items each data read has now, as the server's picture lays them out — what the editor draws a grid's parts by.
   const keys = picture ? itemKeys(document, picture) : undefined;
 
@@ -293,8 +294,8 @@ export function BoardEditorPage({ workspaceId, userId }: { workspaceId: string; 
       {overwriteArmed && <Alert>저장하면 다른 사람이 그사이 저장한 내용을 내 변경으로 덮어씁니다.</Alert>}
       {shownOnly && (
         <p className="ub-editor-note" role="status">
-          이 그리드 보드는 보드 언어 2판으로 저장돼 있어 지금은 보기만 됩니다 — 그리드 배치 편집을 준비하고 있습니다. 고치려면
-          ✦ AI 비서에게 말하세요.
+          이 보드는 그리드 칸 안에 그리드나 캔버스를 둔 보드 언어 2판 보드라 지금은 보기만 됩니다 — 그 배치 편집을 준비하고
+          있습니다. 고치려면 ✦ AI 비서에게 말하세요.
         </p>
       )}
       <div className="ub-editor-body">

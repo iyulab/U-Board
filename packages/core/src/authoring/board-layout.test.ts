@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { toViewDocument } from '../board-v2/picture.js';
 import type { BoardV2 } from '../board-v2/types.js';
-import type { CanvasView } from '../view-document.js';
-import { placesItself, withPictureLayout } from './board-layout.js';
+import type { CanvasView, GridView } from '../view-document.js';
+import { layoutEditable, placesItself, withPictureLayout } from './board-layout.js';
 
 const board: BoardV2 = {
   version: 2,
@@ -67,5 +67,49 @@ describe('withPictureLayout', () => {
     expect(Object.keys((next.layout as { links: object }).links)).toEqual(['l2']);
     expect(next.triggers).toEqual([board.triggers![1]]);
     expect(withPictureLayout(board, p, without(['pump/P1']))).toBe(board);
+  });
+});
+
+describe('withPictureLayout — a grid', () => {
+  const grid: BoardV2 = {
+    ...board,
+    parts: { title: board.parts.title!, count: board.parts.count!, pump: board.parts.pump! },
+    layout: { kind: 'grid', items: ['title', ['pump', 6], ['count', 3]] },
+    triggers: [{ on: { event: 'click', part: 'count' }, do: [{ action: 'emit', name: 'count' }] }],
+  };
+  const drawn = (b: BoardV2, keys: string[] = ['P1', 'P2']) => toViewDocument(b, { keysOf: () => keys }) as GridView;
+  const items = (p: GridView) => p.items.map(i => [i.id, i.span]);
+
+  it('draws a grid of parts with one item per item of an each part', () => {
+    expect(items(drawn(grid))).toEqual([['title', undefined], ['pump/P1', 6], ['pump/P2', 6], ['count', 3]]);
+    expect([layoutEditable(grid), placesItself(grid, 'pump/P2'), placesItself(grid, 'pump'), placesItself(grid, 'count')]).toEqual([true, true, false, true]);
+  });
+
+  it('orders the parts as the picture now does, an each part where its first item is', () => {
+    const p = drawn(grid);
+    const reordered = { ...p, items: [p.items[3]!, p.items[0]!, p.items[1]!, p.items[2]!] };
+    expect(withPictureLayout(grid, p, reordered).layout).toEqual({ kind: 'grid', items: [['count', 3], 'title', ['pump', 6]] });
+  });
+
+  it('gives a part the columns one of its items was given', () => {
+    const p = drawn(grid);
+    const wider = { ...p, items: p.items.map(i => (i.id === 'pump/P2' ? { ...i, span: 12 } : i.id === 'count' ? { ...i, span: 4 } : i)) };
+    expect(withPictureLayout(grid, p, wider).layout).toEqual({ kind: 'grid', items: ['title', ['pump', 12], 'count'] });
+    expect(withPictureLayout(grid, p, p)).toBe(grid);
+  });
+
+  it('deletes a part with its triggers, and keeps the place of a part the picture did not draw', () => {
+    const p = drawn(grid, []);
+    expect(items(p)).toEqual([['title', undefined], ['count', 3]]);
+    const next = withPictureLayout(grid, p, { ...p, items: [p.items[0]!] });
+    expect(next.layout).toEqual({ kind: 'grid', items: ['title', ['pump', 6]] });
+    expect(Object.keys(next.parts)).toEqual(['title', 'pump']);
+    expect(next.triggers).toEqual([]);
+  });
+
+  it('does not lay out a grid holding a grid of its own', () => {
+    const nested: BoardV2 = { ...grid, layout: { kind: 'grid', items: ['title', { grid: ['count'], span: 4 }, ['pump', 4]] } };
+    expect(layoutEditable(nested)).toBe(false);
+    expect(placesItself(nested, 'title')).toBe(false);
   });
 });

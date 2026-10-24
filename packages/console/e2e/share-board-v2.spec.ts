@@ -48,15 +48,15 @@ test('a board in the second version is drawn with one part per item of its data,
     }
     await shareContext.close();
 
-    // The console shows it from the picture its own read of the board answers — shown, not edited, in this version.
+    // The console draws it from the picture its own read of the board answers, laid out in the editor.
     await page.goto(`/boards/${board.id}/edit`);
-    const shown = page.getByLabel('Pumps', { exact: true });
+    const shown = page.getByRole('region', { name: '편집기' });
     for (const [pump, flow] of [['P1', '31'], ['P2', '57'], ['P3', '12']]) {
       await expect(shown.getByText(`Pump ${pump}`, { exact: true })).toBeVisible();
       await expect(shown.getByText(`Pump ${pump}`, { exact: true }).locator('xpath=ancestor::*[contains(., "m³/h")][1]')).toContainText(flow);
     }
-    await expect(page.getByRole('status').filter({ hasText: '보드 언어 2판으로 저장돼 있어' })).toBeVisible();
-    await expect(page.getByRole('button', { name: '저장', exact: true })).toHaveCount(0);
+    await expect(page.getByText(/부품을 옮기고 크기를 바꾸거나 지울 수 있습니다/)).toBeVisible();
+    await expect(page.getByRole('button', { name: '항목 추가' })).toHaveCount(0);
   } finally {
     mockServer.close();
   }

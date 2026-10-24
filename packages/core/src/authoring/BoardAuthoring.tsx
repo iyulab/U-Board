@@ -3,14 +3,15 @@ import type { Adapter } from '../adapter.js';
 import type { UBoardLabels } from '../labels.js';
 import { useLabels } from '../use-labels.js';
 import { GROUP_STYLE } from '../ui-style.js';
-import type { CanvasView, ViewDocument } from '../view-document.js';
+import type { CanvasView, GridView, ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { ViewerPage, type ViewerPageProps } from '../viewer/ViewerPage.js';
 import { toViewDocument } from '../board-v2/picture.js';
 import type { BoardV2 } from '../board-v2/types.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
+import { GridAuthoring } from './GridAuthoring.js';
 import type { AuthoringMode } from './editor-parts.js';
-import { placesItself, withPictureLayout } from './board-layout.js';
+import { layoutEditable, placesItself, withPictureLayout } from './board-layout.js';
 import { recordEdit, redo, startHistory, undo, type DocumentHistory } from './document-history.js';
 
 export interface BoardAuthoringProps {
@@ -38,9 +39,9 @@ export interface BoardAuthoringProps {
 
 /**
  * The authoring surface of a board in the language's second version: the board drawn from its picture, where its parts
- * are moved, sized and deleted — each edit said again in the board's layout (`withPictureLayout`), nothing else of the
- * board touched. Undo, Redo, Save and Export are the board's. A part's settings are not edited here yet; a grid's
- * layout neither — a grid board is shown as its viewers see it.
+ * are moved, sized, ordered and deleted — each edit said again in the board's layout (`withPictureLayout`), nothing
+ * else of the board touched. Undo, Redo, Save and Export are the board's. A part's settings are not edited here yet,
+ * nor a grid holding grids or canvases of its own (`layoutEditable`) — such a board is shown as its viewers see it.
  */
 export function BoardAuthoring({ initialBoard, keys, adapters, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
   const labels = useLabels(labelsProp);
@@ -121,12 +122,34 @@ export function BoardAuthoring({ initialBoard, keys, adapters, width, height, on
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>
       <div className="ub-authoring" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {picture.kind === 'canvas' ? (
+        {picture.kind === 'canvas' && layoutEditable(board) ? (
           <CanvasAuthoring
             doc={picture}
             updateDoc={update =>
               setHistory(h => {
                 const before = pictureOf(h.present) as CanvasView;
+                return recordEdit(h, withPictureLayout(h.present, before, update(before)), null);
+              })
+            }
+            mode={mode}
+            onModeChange={setMode}
+            documentActions={documentActions}
+            fileError={fileError}
+            onFileError={setFileError}
+            adapters={adapters}
+            width={width}
+            height={height}
+            labels={labels}
+            clock={clock}
+            triggerHosting={{ boardId, onTrigger, onNavigate, linkOrigins }}
+            layoutOnly={{ movable }}
+          />
+        ) : picture.kind === 'grid' && layoutEditable(board) ? (
+          <GridAuthoring
+            doc={picture}
+            updateDoc={update =>
+              setHistory(h => {
+                const before = pictureOf(h.present) as GridView;
                 return recordEdit(h, withPictureLayout(h.present, before, update(before)), null);
               })
             }

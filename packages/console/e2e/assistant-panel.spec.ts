@@ -57,11 +57,11 @@ test('the chat panel draws on the open board with a model the person sets, and t
   await expect(panel.getByText('오늘 매출 제목을 그렸습니다.')).toBeVisible({ timeout: 30_000 });
   await expect(panel.getByText('보드에 그리기 · 변경 2개')).toBeVisible();
   await expect(panel.getByText('그려 보고 확인')).toBeVisible();
-  // The editor read the board again: now in the second version, it is shown from the server's picture — the title the
-  // model drew is there, saved — and said to be shown, not edited, until the editor writes that version.
-  await expect(page.getByLabel('AI Board').getByText('오늘 매출 현황')).toBeVisible();
+  // The editor read the board again: now in the second version, it is drawn from the server's picture — the title the
+  // model drew is there, saved — and laid out in the editor of that version.
+  await expect(page.getByRole('region', { name: '편집기' }).getByText('오늘 매출 현황')).toBeVisible();
   await expect(page.getByText('저장됨')).toBeVisible();
-  await expect(page.getByRole('status').filter({ hasText: '보드 언어 2판으로 저장돼 있어' })).toBeVisible();
+  await expect(page.getByText(/부품을 옮기고 크기를 바꾸거나 지울 수 있습니다/)).toBeVisible();
 
   expect(requests[0].authorization).toBe('Bearer test-key');
   // What look answered went back to the model: the board drawn, nothing left to fix — and after it, read last, the

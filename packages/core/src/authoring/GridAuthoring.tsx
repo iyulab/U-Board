@@ -71,7 +71,8 @@ export interface GridAuthoringProps extends KindEditorProps<GridView> {
   onEditCanvas?: (id: string) => void;
 }
 
-export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, adapters, width, height, connectorLabels, labels, clock, triggerHosting, onEditCanvas }: GridAuthoringProps) {
+export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActions, fileError, adapters, width, height, connectorLabels, labels, clock, triggerHosting, onEditCanvas, layoutOnly }: GridAuthoringProps) {
+  const movable = layoutOnly?.movable;
   const readClock = useEffectEvent(() => clock());
   const [preview, setPreview] = useState<{ doc: ResolvedGridView; now: number } | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -151,14 +152,16 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
   return (
     <>
       <div className="ub-authoring__toolbar" style={TOOLBAR_STYLE}>
-        <div className="ub-authoring__group" style={GROUP_STYLE}>
-          <button type="button" className="ub-action" onClick={handleAddItem}>
-            {labels.addItem}
-          </button>
-          <button type="button" className="ub-action" onClick={handleAddCanvas}>
-            {labels.addCanvas}
-          </button>
-        </div>
+        {!movable && (
+          <div className="ub-authoring__group" style={GROUP_STYLE}>
+            <button type="button" className="ub-action" onClick={handleAddItem}>
+              {labels.addItem}
+            </button>
+            <button type="button" className="ub-action" onClick={handleAddCanvas}>
+              {labels.addCanvas}
+            </button>
+          </div>
+        )}
         {documentActions}
         <ModeSwitch mode={mode} onEdit={() => onModeChange('edit')} onView={handleViewMode} labels={labels} />
         {mode === 'edit' && (
@@ -202,14 +205,14 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                         aria-pressed={picked}
                         style={dropOn === item.id ? DROP_STYLE : picked ? PICKED_STYLE : PICK_STYLE}
                         onClick={() => setSelectedId(picked ? null : item.id)}
-                        draggable
+                        draggable={!movable || movable(item.id)}
                         onDragStart={e => {
                           e.dataTransfer.effectAllowed = 'move';
                           e.dataTransfer.setData('text/plain', item.id);
                           setDragged(item.id);
                         }}
                         onDragOver={e => {
-                          if (!dragged || dragged === item.id) return;
+                          if (!dragged || dragged === item.id || (movable && !movable(item.id))) return;
                           e.preventDefault();
                           e.dataTransfer.dropEffect = 'move';
                           setDropOn(item.id);
@@ -263,16 +266,18 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 isLast={selectedIndex === doc.items.length - 1}
                 onChange={change => updateDoc(current => updateGridItem(current, selected.id, change))}
                 onMove={by => updateDoc(current => moveGridItem(current, selected.id, gridItemIndex(current, selected.id) + by))}
-                onDuplicate={handleDuplicate}
+                onDuplicate={movable ? undefined : handleDuplicate}
                 onRemove={handleRemove}
+                spanOnly={!!movable}
                 labels={labels}
               />
-              {isCanvasItem(selected) && onEditCanvas && (
+              {movable && <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>}
+              {!movable && isCanvasItem(selected) && onEditCanvas && (
                 <button type="button" className="ub-action ub-action--primary" onClick={() => onEditCanvas(selected.id)}>
                   {labels.editCanvas}
                 </button>
               )}
-              {!isCanvasItem(selected) && (
+              {!movable && !isCanvasItem(selected) && (
                 <PropertyPanel
                   node={selected}
                   adapters={adapters}
@@ -286,6 +291,8 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
                 />
               )}
             </>
+          ) : movable ? (
+            <p className="ub-panel__hint">{labels.layoutOnlyHint}</p>
           ) : (
             <BoardPanel
               appearance={doc.appearance ?? 'light'}
@@ -307,8 +314,8 @@ export function GridAuthoring({ doc, updateDoc, mode, onModeChange, documentActi
               labels={labels}
             />
           )}
-          {!selected && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
-          {!selected && <SymbolsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
+          {!selected && !movable && <ElementsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
+          {!selected && !movable && <SymbolsPanel doc={doc} updateDoc={updateDoc} labels={labels} />}
         </div>
       </div>
     </>

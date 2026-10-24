@@ -13,8 +13,11 @@ export interface GridItemPanelProps {
   isLast: boolean;
   onChange: (change: Partial<Pick<GridItem, 'span' | 'spanMedium' | 'rowSpan' | 'height'>>) => void;
   onMove: (by: -1 | 1) => void;
-  onDuplicate: () => void;
+  /** Left out, there is no Duplicate (an editor that adds nothing). */
+  onDuplicate?: () => void;
   onRemove: () => void;
+  /** Only the columns it spans — what a board in the language's second version lays out. */
+  spanOnly?: boolean;
   labels?: UBoardLabels;
 }
 
@@ -23,7 +26,7 @@ export interface GridItemPanelProps {
  * is in the order. Moving and removing are buttons, so they are a key press as well as a click. A choice left at
  * its default leaves its field out of the document.
  */
-export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDuplicate, onRemove, labels = DEFAULT_LABELS }: GridItemPanelProps) {
+export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDuplicate, onRemove, spanOnly = false, labels = DEFAULT_LABELS }: GridItemPanelProps) {
   const span = item.span ?? GRID_DEFAULT_SPAN;
   return (
     <div className="ub-panel ub-panel--item">
@@ -35,9 +38,11 @@ export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDupli
         <button type="button" className="ub-action" disabled={isLast} onClick={() => onMove(1)}>
           {labels.moveLater}
         </button>
-        <button type="button" className="ub-action" onClick={onDuplicate}>
-          {labels.duplicateItem}
-        </button>
+        {onDuplicate && (
+          <button type="button" className="ub-action" onClick={onDuplicate}>
+            {labels.duplicateItem}
+          </button>
+        )}
         <button type="button" className="ub-action" onClick={onRemove}>
           {labels.removeItem}
         </button>
@@ -58,6 +63,8 @@ export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDupli
           ))}
         </select>
       </label>
+      {!spanOnly && (
+        <>
       <label className="ub-panel__field">
         {labels.itemSpanMedium.replace('{columns}', String(GRID_COLUMNS_MEDIUM))}
         <select value={item.spanMedium ?? ''} onChange={e => onChange({ spanMedium: e.target.value === '' ? undefined : Number(e.target.value) })}>
@@ -94,6 +101,8 @@ export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDupli
           }}
         />
       </label>
+        </>
+      )}
     </div>
   );
 }
