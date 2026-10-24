@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-10-25
+
 ### Changed
 
 - **Breaking: a board is written in the board language.** One document says where its values come from and what

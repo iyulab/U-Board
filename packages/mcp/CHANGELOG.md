@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-25
+
 ### Changed
 
 - **Breaking: the tools read and write boards in the board language** (data read once and given meaning once, parts by

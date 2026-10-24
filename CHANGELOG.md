@@ -11,14 +11,16 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-10-25
+
 ### Changed
 
 - **Breaking: a board is stored in the board language** (`@iyulab/u-board` — data read once and given meaning once,
   parts by id, a layout per view kind). Saving through the API (`PUT`/`PATCH` on a board) checks a board in it and that
   it draws, and refuses anything else with `INVALID_DOCUMENT`; a board's `GET` always answers its picture beside it.
   The console edits every board with the board editor, and the board list no longer marks boards in an earlier format.
-  At start-up a stored board that still names a language version (`"version"`) drops it, and the record of the earlier
-  format's one-time move goes.
+  At start-up a stored board that still names a language version (`"version"`) drops it, a stored link that says
+  `"arrow": true` says `"end"`, and the record of the earlier format's one-time move goes.
 - Saving a board refuses what the renderer would choke on or drop unseen, with where: a key the board has no place
   for, an accent that is not a colour, a background that is not an image address, markup or CSS the element policy
   refuses, a link to a part not drawn on its canvas, a trigger that could never run, and fields of the wrong type.
