@@ -60,8 +60,8 @@ test('a board in the second version is drawn with one part per item of its data,
 
     // With nothing selected, the data panel: the read's source by its name, a look at what it answers, a field found
     // there added and given a name, and the board saved with them.
-    await expect(page.getByLabel('원천')).toHaveValue(connector.id);
-    await expect(page.getByLabel('원천').locator('option:checked')).toHaveText('Mock Plant API');
+    await expect(page.getByRole('combobox', { name: /^원천/ })).toHaveValue(connector.id);
+    await expect(page.getByRole('combobox', { name: /^원천/ }).locator('option:checked')).toHaveText('Mock Plant API');
     await page.getByRole('button', { name: '데이터 살펴보기' }).click();
     await page.getByRole('button', { name: 'id 더하기' }).click();
     await page.getByRole('group', { name: 'id' }).getByLabel('이름').fill('Pump');

@@ -37,8 +37,8 @@ test('reads a data source into a board and shows one of its fields in a part, fr
     // 지금 읽어 본 응답에서 찾은 필드를 더한다.
     await page.getByLabel('새 데이터').fill('plant');
     await page.getByRole('button', { name: '데이터 추가' }).click();
-    await expect(page.getByLabel('원천')).toHaveValue(/.+/);
-    await expect(page.getByLabel('원천').locator('option:checked')).toHaveText('Mock Plant API');
+    await expect(page.getByRole('combobox', { name: /^원천/ })).toHaveValue(/.+/);
+    await expect(page.getByRole('combobox', { name: /^원천/ }).locator('option:checked')).toHaveText('Mock Plant API');
     await page.getByLabel('요청 경로', { exact: true }).fill('/status');
     await page.getByRole('button', { name: '데이터 살펴보기' }).click();
     await page.getByRole('button', { name: 'status 더하기' }).click();

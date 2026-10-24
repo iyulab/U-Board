@@ -30,7 +30,7 @@ test('a board reads a source of stored example answers, and says under it that i
   // The board reads it as any source: a data read from it at a path, and a part showing one of its fields.
   await page.getByLabel('새 데이터').fill('plant');
   await page.getByRole('button', { name: '데이터 추가' }).click();
-  await expect(page.getByLabel('원천').locator('option:checked')).toHaveText('Plant (example)');
+  await expect(page.getByRole('combobox', { name: /^원천/ }).locator('option:checked')).toHaveText('Plant (example)');
   await page.getByLabel('요청 경로', { exact: true }).fill('/plant');
   await page.getByRole('button', { name: '데이터 살펴보기' }).click();
   await page.getByRole('button', { name: 'shift 더하기' }).click();
