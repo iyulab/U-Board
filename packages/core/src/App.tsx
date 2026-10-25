@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { BoardAuthoring } from './authoring/BoardAuthoring.js';
 import { BoardView } from './viewer/BoardView.js';
 import { FixtureAdapter } from './fixture-adapter.js';
-import { demoBoard, demoGrid, demoMixed, elementsDemo } from './examples/demo-boards.js';
+import { demoBoard, demoGrid, demoMixed, demoQuakes, elementsDemo } from './examples/demo-boards.js';
 
 export function App() {
   const adapters = useMemo(() => [new FixtureAdapter()], []);
-  const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author' | 'mixed' | 'mixed-author' | 'elements' | 'elements-author'>('author');
+  const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author' | 'mixed' | 'mixed-author' | 'elements' | 'elements-author' | 'quakes'>('author');
   const [boardEvent, setBoardEvent] = useState<string | null>(null);
 
   return (
@@ -36,6 +36,9 @@ export function App() {
         </button>{' '}
         <button onClick={() => setMode('elements-author')} disabled={mode === 'elements-author'}>
           Author elements
+        </button>{' '}
+        <button onClick={() => setMode('quakes')} disabled={mode === 'quakes'}>
+          Quakes
         </button>
       </div>
       {mode === 'author' ? (
@@ -93,6 +96,16 @@ export function App() {
           </p>
           <div style={{ height: 720, maxWidth: 1200, resize: 'horizontal', overflow: 'auto' }}>
             <BoardView board={demoGrid} adapters={adapters} />
+          </div>
+        </>
+      ) : mode === 'quakes' ? (
+        <>
+          <p style={{ color: '#64748b', maxWidth: 640 }}>
+            Items placed by their own fields: each event sits where its longitude and latitude say, on a map of the whole
+            world, and a click opens the event's own page.
+          </p>
+          <div style={{ height: 420, maxWidth: 760 }}>
+            <BoardView board={demoQuakes} adapters={adapters} boardId="quakes" />
           </div>
         </>
       ) : (

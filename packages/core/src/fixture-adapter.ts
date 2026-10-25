@@ -16,6 +16,16 @@ export class FixtureAdapter implements Adapter {
 
   private answers: Record<string, unknown> = {
     '/pump-a/load': { value: [{ t: '09:00', load: 61 }, { t: '10:00', load: 68 }, { t: '11:00', load: 73 }, { t: '12:00', load: 70 }] },
+    // Events with a position, as a GeoJSON feed gives them — one with none, one outside any map.
+    '/quakes': {
+      features: [
+        { id: 'west', properties: { mag: 5.4 }, geometry: { coordinates: [-120, 35, 10] } },
+        { id: 'east', properties: { mag: 3.1 }, geometry: { coordinates: [140, 36, 20] } },
+        { id: 'south', properties: { mag: 6.8 }, geometry: { coordinates: [0, -60, 5] } },
+        { id: 'unlocated', properties: { mag: 2.2 }, geometry: null },
+        { id: 'offmap', properties: { mag: 4.0 }, geometry: { coordinates: [400, 0, 1] } },
+      ],
+    },
   };
 
   async resolve(ref: unknown): Promise<ResolvedBinding> {

@@ -587,3 +587,22 @@ export const elementsDemo: Board = {
     ]
   }
 };
+
+/** Events placed by their own fields on an equirectangular world — each opens its own page when clicked. */
+export const demoQuakes: Board = {
+  board: { title: 'Earthquakes' },
+  statuses: { big: { tone: 'alarm', label: 'Strong' }, mid: { tone: 'warn', label: 'Moderate' }, small: { tone: 'info', label: 'Light' } },
+  data: {
+    quakes: {
+      from: 'fixture', path: '/quakes', list: '/features', key: 'id',
+      fields: {
+        lon: { at: '/geometry/coordinates/0' },
+        lat: { at: '/geometry/coordinates/1' },
+        mag: { at: '/properties/mag', state: ['small', 4, 'mid', 6, 'big'] },
+      },
+    },
+  },
+  parts: { quake: { as: 'marker', each: 'quakes', show: 'mag' } },
+  layout: { kind: 'canvas', size: [720, 360], place: { quake: { at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [16, 16] } } },
+  triggers: [{ on: { event: 'click', part: 'quake' }, do: [{ action: 'open-link', url: '/events/{{key}}?mag={{mag}}' }] }],
+};
