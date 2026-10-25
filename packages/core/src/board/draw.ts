@@ -24,20 +24,30 @@ export function readerOf(adapters: readonly Adapter[]): ValueReader {
   };
 }
 
-/** The keys of the items each data list a part is made per item of (`each`) has now, read with `read` — what a grid
- *  lays them out by. A list that cannot be read has none. */
-export async function readKeys(board: Board, read: ValueReader): Promise<Record<string, string[]>> {
+/** The items each data list a part is made per item of (`each`) has now, read with `read` — what a grid lays them out
+ *  by, and a canvas places them by when it says where from their fields. A list that cannot be read has none. */
+export async function readLists(board: Board, read: ValueReader): Promise<Record<string, unknown[]>> {
   const entries = await Promise.all(
-    keyReadsOf(board).map(async ({ data, adapter, ref }) => [data, keysIn(board, data, (await read(adapter, ref)).value)] as const)
+    keyReadsOf(board).map(async ({ data, adapter, ref }) => {
+      const { value } = await read(adapter, ref);
+      return [data, Array.isArray(value) ? value : []] as const;
+    })
   );
   return Object.fromEntries(entries);
 }
 
+/** The keys of those items — what a grid lays them out by. */
+export async function readKeys(board: Board, read: ValueReader): Promise<Record<string, string[]>> {
+  const lists = await readLists(board, read);
+  return Object.fromEntries(Object.entries(lists).map(([data, items]) => [data, keysIn(board, data, items)]));
+}
+
 /**
  * The view document the renderer draws a board from. A board is drawn through its picture, which a
- * grid laying out a part per item of a list makes with the keys of the items it has now — read with `read`.
+ * grid laying out a part per item of a list makes with the keys of the items it has now — read with `read` — and a
+ * canvas that places a part by its items' fields makes with the items.
  */
 export async function pictureOf(board: Board, read: ValueReader): Promise<ViewDocument> {
-  const keys = await readKeys(board, read);
-  return toViewDocument(board, { keysOf: data => keys[data] ?? [] });
+  const lists = await readLists(board, read);
+  return toViewDocument(board, { keysOf: data => keysIn(board, data, lists[data] ?? []), rowsOf: data => lists[data] ?? [] });
 }

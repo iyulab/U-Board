@@ -5,6 +5,7 @@
 
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { GRID_DEFAULT_SPAN, type GridView, type Node, type ViewDocument } from '../view-document.js';
+import { isDataPlace } from '../board/picture.js';
 import type { Board, CanvasLayout, GridItem, Place, Shape, Trigger } from '../board/types.js';
 
 /**
@@ -152,7 +153,8 @@ export function placesItself(board: Board, id: string): boolean {
   }
   const placed = board.layout.place[part!];
   if (placed === undefined || rest.length > 0) return false;
-  return key === undefined ? Array.isArray(placed) : board.parts[part!]?.each !== undefined && !Array.isArray(placed);
+  // Items placed by their own fields are not dragged: their fields say where they are.
+  return key === undefined ? Array.isArray(placed) : board.parts[part!]?.each !== undefined && !Array.isArray(placed) && !isDataPlace(placed);
 }
 
 /**

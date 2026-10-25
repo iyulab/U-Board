@@ -3,7 +3,7 @@ import { checkSpec } from '@iyulab/u-widgets/tools';
 import { applyValueMap, withItemFields, writeText } from '../adapter.js';
 import { isHttpRef, readHttpRef, type HttpRef } from '../http-ref.js';
 import type { Node, ViewDocument, Widget } from '../view-document.js';
-import { PictureError, keyReadsOf, keysIn, toViewDocument } from './picture.js';
+import { PictureError, isDataPlace, keyReadsOf, keysIn, toViewDocument } from './picture.js';
 import type { Board } from './types.js';
 import { validateBoard } from './validate.js';
 
@@ -452,5 +452,77 @@ describe('the picture model of a v2 board — triggers', () => {
   it('refuses a trigger on a status a part does not show', () => {
     const b: Board = { ...board(parts, layout), triggers: [{ on: { event: 'enter', part: 'card', field: 'rpm', status: 'tripped' }, do: [{ action: 'emit', name: 'x' }] }] };
     expect(() => toViewDocument(b, { keysOf: () => ['P1'] })).toThrow(new PictureError('/triggers/0/on/field', '"card" does not show "rpm"\'s status — a trigger reads a status the part shows'));
+  });
+});
+
+describe('items placed by their own fields (a canvas)', () => {
+  const quakes = { from: 'plant', path: '/plant/quakes', list: '/features', key: 'id' } as const;
+  const world = (place: unknown, parts: Board['parts'] = { quake: { as: 'marker', each: 'quakes', title: '{{key}}' } }): Board => {
+    const base = board(parts, { kind: 'canvas', size: [360, 180], place: { quake: place as never } });
+    return { ...base, data: { ...base.data, quakes } };
+  };
+  const rows = [
+    { id: 'q1', lon: 0, lat: 0 },
+    { id: 'q2', lon: -180, lat: 90 },
+    { id: 'q3', lon: 90, lat: -45 },
+    { id: 'q4', lon: 'east', lat: 10 },
+    { id: 'q5', lon: 200, lat: 10 },
+    { id: 'q6', lat: 10 },
+  ];
+  const draw = (b: Board, list: unknown[] = rows) => {
+    const unplaced: Array<[string, number]> = [];
+    const doc = toViewDocument(b, { rowsOf: () => list, onUnplaced: (part, count) => unplaced.push([part, count]) });
+    return { doc, unplaced };
+  };
+  const centre = (n: Node) => [n.x + (n.width ?? 160) / 2, n.y + (n.height ?? 100) / 2];
+
+  it('puts each item at its fields’ place in the frame — linearly, its box centred there', () => {
+    const b = world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [10, 10] });
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const { doc } = draw(b);
+    expect(centre(nodeOf(doc, 'quake/q1'))).toEqual([180, 90]);
+    expect(centre(nodeOf(doc, 'quake/q2'))).toEqual([0, 0]);
+    expect(centre(nodeOf(doc, 'quake/q3'))).toEqual([270, 135]);
+    expect(nodeOf(doc, 'quake/q1')).toMatchObject({ width: 10, height: 10 });
+  });
+
+  it('takes the canvas’s own coordinates when no frame is given, and the default box when no size is', () => {
+    const { doc } = draw(world({ at: ['x', 'y'] }), [{ id: 'a', x: 100, y: 50 }]);
+    const n = nodeOf(doc, 'quake/a');
+    expect(centre(n)).toEqual([100, 50]);
+    expect(n.width).toBeUndefined();
+  });
+
+  it('leaves out an item with no number in a field or outside the frame, and tells how many', () => {
+    const { doc, unplaced } = draw(world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90] }));
+    expect(doc.kind === 'canvas' && doc.nodes.map(n => n.id)).toEqual(['quake/q1', 'quake/q2', 'quake/q3']);
+    expect(unplaced).toEqual([['quake', 3]]);
+    expect(draw(world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90] }), rows.slice(0, 3)).unplaced).toEqual([]);
+  });
+
+  it('needs to be given the items, and asks for them as a grid asks for keys', () => {
+    const b = world({ at: ['lon', 'lat'] });
+    expect(() => toViewDocument(b)).toThrow(PictureError);
+    expect(keyReadsOf(b).map(r => r.data)).toEqual(['quakes']);
+  });
+
+  it('is told from a place by hand by its "at": a list of names', () => {
+    expect(isDataPlace({ at: ['a', 'b'] })).toBe(true);
+    expect(isDataPlace({ at: [1, 2] })).toBe(false);
+    expect(isDataPlace({ P1: [0, 0] })).toBe(false);
+    expect(isDataPlace([1, 2])).toBe(false);
+  });
+
+  it('is refused for what it cannot place: other keys, a frame without width, a field deep in an item, no key', () => {
+    const issues = (place: unknown, data = quakes as Record<string, unknown>) => {
+      const base = world(place);
+      return validateBoard({ ...base, data: { ...base.data, quakes: data as never } }).filter(i => !i.hint).map(i => i.at);
+    };
+    expect(issues({ at: ['lon', 'lat'], q1: [1, 2] })).toEqual(['/layout/place/quake/q1']);
+    expect(issues({ at: ['lon'] })).toEqual(['/layout/place/quake/at']);
+    expect(issues({ at: ['lon', 'lat'], frame: [0, 0, 0, 5] })).toEqual(['/layout/place/quake/frame']);
+    expect(issues({ at: ['lon', 'lat'], size: [0, 4] })).toEqual(['/layout/place/quake/size']);
+    expect(issues({ at: ['lon', 'lat'] }, { ...quakes, fields: { lon: { at: '/geo/lon' } } })).toEqual(['/layout/place/quake/at/0']);
+    expect(issues({ at: ['lon', 'lat'] }, { from: 'plant', path: '/plant/quakes', list: '/features' })).toEqual(['/layout/place/quake']);
   });
 });

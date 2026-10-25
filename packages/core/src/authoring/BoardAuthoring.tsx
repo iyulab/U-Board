@@ -7,8 +7,8 @@ import { GROUP_STYLE } from '../ui-style.js';
 import { placedIn, type ViewDocument } from '../view-document.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { ViewerPage, type ViewerPageProps } from '../viewer/ViewerPage.js';
-import { PictureError, dataReadOf, keyReadsOf, toViewDocument } from '../board/picture.js';
-import { readKeys, readerOf } from '../board/draw.js';
+import { PictureError, dataReadOf, keyReadsOf, keysIn, toViewDocument, type PictureOptions } from '../board/picture.js';
+import { readLists, readerOf } from '../board/draw.js';
 import { checkBoard } from '../board/check.js';
 import type { Board } from '../board/types.js';
 import { CanvasAuthoring } from './CanvasAuthoring.js';
@@ -105,17 +105,20 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
     onDirtyChange?.(isDirty);
   }, [isDirty, onDirtyChange]);
 
-  const keys = useItemKeys(board, adapters);
-  const keysOf = useMemo(() => (data: string) => [...(keys[data] ?? [])], [keys]);
+  const items = useItemLists(board, adapters);
+  const drawOptions = useMemo<PictureOptions>(
+    () => ({ keysOf: data => keysIn(items.board, data, items.lists[data] ?? []), rowsOf: data => items.lists[data] ?? [] }),
+    [items]
+  );
   // What is drawn: the board, or — while a setting leaves it one that cannot be drawn — the newest board before it that
   // could be, with why the board is not.
-  const pictureOf = (h: DocumentHistory<Board>) => drawnOf(h, keysOf);
-  const drawing = useMemo(() => drawnOf(history, keysOf), [history, keysOf]);
+  const pictureOf = (h: DocumentHistory<Board>) => drawnOf(h, drawOptions);
+  const drawing = useMemo(() => drawnOf(history, drawOptions), [history, drawOptions]);
   const picture = drawing.picture;
   /** What the editor shows: the board, or the cell open — drawn as a board of its own. */
-  const shown: ViewDocument | null = inCell !== undefined ? drawCell(scoped, keysOf) : picture;
+  const shown: ViewDocument | null = inCell !== undefined ? drawCell(scoped, drawOptions) : picture;
   /** What was drawn before an edit, as the editor shows it. */
-  const shownOf = (h: DocumentHistory<Board>) => (inCell !== undefined ? drawCell(scope(h.present), keysOf) : pictureOf(h).picture);
+  const shownOf = (h: DocumentHistory<Board>) => (inCell !== undefined ? drawCell(scope(h.present), drawOptions) : pictureOf(h).picture);
   const movable = (id: string) => placesItself(scoped, id);
   const ownPiece = (id: string) => linkOf(scoped, id) !== undefined || shapeOf(scoped, id) !== undefined;
   const findings = useMemo(() => {
@@ -381,10 +384,10 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
                 if (before?.kind !== 'canvas') return h;
                 return recordEdit(h, unscope(h.present, withPictureLayout(scope(h.present), before, update(before))), typingIn);
               })
-            }
+            }
             mode={mode}
             onModeChange={setMode}
-            documentActions={documentActions}
+            documentActions={documentActions}
             adapters={adapters}
             width={width}
             height={height}
@@ -415,7 +418,7 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
             }
             mode={mode}
             onModeChange={setMode}
-            documentActions={documentActions}
+            documentActions={documentActions}
             adapters={adapters}
             width={width}
             height={height}
@@ -447,11 +450,11 @@ export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, he
 }
 
 /** A board drawn — when its language takes it and it draws — or why not. */
-function draw(board: Board, keysOf: (data: string) => string[]): { picture: ViewDocument; error: null } | { picture: null; error: string } {
+function draw(board: Board, options: PictureOptions): { picture: ViewDocument; error: null } | { picture: null; error: string } {
   const issue = checkBoard(board).issues[0];
   if (issue) return { picture: null, error: `${issue.path}: ${issue.message}` };
   try {
-    return { picture: toViewDocument(board, { keysOf }), error: null };
+    return { picture: toViewDocument(board, options), error: null };
   } catch (error) {
     if (error instanceof PictureError) return { picture: null, error: error.message };
     throw error;
@@ -461,10 +464,10 @@ function draw(board: Board, keysOf: (data: string) => string[]): { picture: View
 /** A grid's cell as `cellBoard` gives it, drawn for its editor: without the board's triggers — they name parts all over
  *  the board, most of them not in the cell — and without the board's check, which would find those parts placed nowhere
  *  in it. Null when it cannot be drawn. */
-function drawCell(cell: Board, keysOf: (data: string) => string[]): ViewDocument | null {
+function drawCell(cell: Board, options: PictureOptions): ViewDocument | null {
   const { triggers: _triggers, ...drawn } = cell;
   try {
-    return toViewDocument(drawn, { keysOf });
+    return toViewDocument(drawn, options);
   } catch (error) {
     if (error instanceof PictureError) return null;
     throw error;
@@ -474,34 +477,34 @@ function drawCell(cell: Board, keysOf: (data: string) => string[]): ViewDocument
 /** The keys of the items each data list a part is made per item of has now, read through `adapters` — again only when
  *  what they are read by changes (an edit elsewhere in the board reads nothing). While a setting leaves the board one
  *  that cannot be drawn, the keys read last stay. */
-function useItemKeys(board: Board, adapters: readonly Adapter[]): Record<string, string[]> {
-  const [keys, setKeys] = useState<Record<string, string[]>>({});
+function useItemLists(board: Board, adapters: readonly Adapter[]): { board: Board; lists: Record<string, unknown[]> } {
+  const [items, setItems] = useState<{ board: Board; lists: Record<string, unknown[]> }>({ board, lists: {} });
   const read = useMemo(() => readerOf(adapters), [adapters]);
   const by = useMemo(
-    () => (draw(board, () => []).picture === null ? null : JSON.stringify(keyReadsOf(board).map(r => [r, board.data?.[r.data]?.key]))),
+    () => (draw(board, { keysOf: () => [], rowsOf: () => [] }).picture === null ? null : JSON.stringify(keyReadsOf(board).map(r => [r, board.data?.[r.data]?.key]))),
     [board]
   );
-  // The board the keys are read from: the newest one that draws whose reads differ from the last.
+  // The board the items are read from: the newest one that draws whose reads differ from the last.
   const [source, setSource] = useState<{ by: string; board: Board }>({ by: '[]', board });
   if (by !== null && by !== source.by) setSource({ by, board });
   useEffect(() => {
     if (source.by === '[]') return;
     let current = true;
-    void readKeys(source.board, read).then(next => current && setKeys(next));
+    void readLists(source.board, read).then(lists => current && setItems({ board: source.board, lists }));
     return () => {
       current = false;
     };
   }, [source, read]);
-  return keys;
+  return items;
 }
 
 /** What the editor draws for a history: its board, or the newest one before it that draws, and why the board does not. */
-function drawnOf(history: DocumentHistory<Board>, keysOf: (data: string) => string[]): { picture: ViewDocument; error: string | null } {
-  const now = draw(history.present, keysOf);
+function drawnOf(history: DocumentHistory<Board>, options: PictureOptions): { picture: ViewDocument; error: string | null } {
+  const now = draw(history.present, options);
   if (now.picture) return now;
   for (const before of [...history.past].reverse()) {
-    const drawn = draw(before, keysOf).picture;
+    const drawn = draw(before, options).picture;
     if (drawn) return { picture: drawn, error: now.error };
   }
-  return { picture: toViewDocument(history.present, { keysOf }), error: now.error };
+  return { picture: toViewDocument(history.present, options), error: now.error };
 }

@@ -202,6 +202,18 @@ export function boardSchema(): Schema {
           },
         },
       },
+      // The items of an "each" part placed by their own fields rather than one by one.
+      placeByFields: {
+        type: 'object',
+        required: ['at'],
+        additionalProperties: false,
+        description: 'Items placed by their own fields: "at" names the fields holding x and y; "frame" is the values at the canvas’s left, top, right and bottom edges (the canvas’s own coordinates when left out); "size" the box centred on that point. An item with no number there, or outside the frame, is not drawn.',
+        properties: {
+          at: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2, description: '[the field holding x, the field holding y].' },
+          frame: { type: 'array', items: { type: 'number' }, minItems: 4, maxItems: 4, description: '[left, top, right, bottom] — the values at the canvas’s edges; [-180, 90, 180, -90] for longitude and latitude over a picture of the whole world.' },
+          size: { type: 'array', items: { type: 'number', exclusiveMinimum: 0 }, minItems: 2, maxItems: 2, description: '[width, height] of each item’s box.' },
+        },
+      },
       // A link on a board's own canvas shows or weighs a field only "of" something; inside a group (above) it may read
       // the group's data instead.
       link: { $ref: '#/$defs/groupLink', dependentRequired: { show: ['of'], weight: ['of'] } },
@@ -211,7 +223,7 @@ export function boardSchema(): Schema {
         properties: {
           size,
           background: { type: 'string' },
-          place: map({ oneOf: [ref('place'), map(ref('place'))] }, 'Where each part is; an "each" part places its items inside its own entry.'),
+          place: map({ oneOf: [ref('place'), map(ref('place')), ref('placeByFields')] }, 'Where each part is; an "each" part places its items inside its own entry, or by their fields ({ "at": ["lon", "lat"], "frame": [...] }).'),
           shapes: map(ref('shape')),
           links: map(ref('link')),
         },

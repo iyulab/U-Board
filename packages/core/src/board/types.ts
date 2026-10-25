@@ -192,12 +192,25 @@ export interface Weight {
   map?: Record<string, number>;
 }
 
-/** Parts placed on a drawing. An `each` part is placed item by item, inside its own entry. */
+/**
+ * Where the items of an `each` part go when their own fields say it: `at` names the field of an item holding its x and
+ * the field holding its y. `frame` is the value at the canvas's left, top, right and bottom edges (the canvas's own
+ * coordinates when absent; `[-180, 90, 180, -90]` for longitude and latitude over a whole-world picture); the position is
+ * the centre of the part's box, `size` when it gives one. An item with no number in either field, or outside the frame,
+ * is not drawn.
+ */
+export interface DataPlace {
+  at: [string, string];
+  frame?: [number, number, number, number];
+  size?: [number, number];
+}
+
+/** Parts placed on a drawing. An `each` part is placed item by item, inside its own entry — or by its items' fields. */
 export interface CanvasLayout {
   kind: 'canvas';
   size: [number, number];
   background?: string;
-  place: Record<string, Place | Record<string, Place>>;
+  place: Record<string, Place | Record<string, Place> | DataPlace>;
   shapes?: Record<string, Shape>;
   links?: Record<string, Link>;
 }

@@ -600,6 +600,27 @@ export function validateBoard(board: unknown): BoardIssue[] {
     }
     const place = isObj(canvas.place) ? canvas.place : {};
     if (!isObj(canvas.place)) fail(`${at}/place`, 'a canvas needs "place": { "<part>": [x, y, width?, height?] }');
+    /** A part's items placed by their own fields: which fields, what values the canvas's edges stand for, how big. */
+    const checkPlaceByFields = (p: Record<string, unknown>, placeAt: string, q: unknown) => {
+      for (const key of Object.keys(p)) {
+        if (!['at', 'frame', 'size'].includes(key)) fail(`${placeAt}/${key}`, `items placed by their fields take "at", "frame" and "size" — "${key}" is not one (items are not also placed by hand)`);
+      }
+      const names = p.at as unknown[];
+      if (names.length !== 2) fail(`${placeAt}/at`, '"at" names two fields of an item: [the field holding x, the field holding y]');
+      const fields = isObj(q) && isObj(q.fields) ? q.fields : {};
+      names.forEach((name, i) => {
+        const where = isObj(fields[name as string]) ? (fields[name as string] as Record<string, unknown>).at : undefined;
+        if (typeof where === 'string' && where.indexOf('/', 1) >= 0) {
+          fail(`${placeAt}/at/${i}`, `"${String(name)}" lives deeper in an item (${where}) — name a field at the top of an item`);
+        }
+      });
+      if (p.frame !== undefined) {
+        const f = p.frame;
+        if (!Array.isArray(f) || f.length !== 4 || !f.every(isNum)) fail(`${placeAt}/frame`, '"frame" is the values at the canvas’s left, top, right and bottom edges: [left, top, right, bottom]');
+        else if (f[0] === f[2] || f[1] === f[3]) fail(`${placeAt}/frame`, '"frame" needs different values at the left and right edges, and at the top and bottom');
+      }
+      if (p.size !== undefined && !isSize(p.size)) fail(`${placeAt}/size`, '"size" is [width, height], both above 0');
+    };
     for (const [id, p] of Object.entries(place)) {
       const placeAt = `${at}/place/${id}`;
       const entry = ids.get(id);
@@ -618,7 +639,8 @@ export function validateBoard(board: unknown): BoardIssue[] {
         // Placing items one by one names them — by the key of their data.
         const q = typeof entry.part.each === 'string' ? data[entry.part.each] : undefined;
         if (isObj(q) && q.list !== undefined && q.key === undefined) fail(placeAt, `items placed one by one are named by their "key" — give "${String(entry.part.each)}" a "key", or lay them out in a grid`);
-        for (const [key, q] of Object.entries(p)) if (!isPlace(q)) fail(`${placeAt}/${key}`, 'a place is [x, y] or [x, y, width, height]');
+        if (isByFields(p)) checkPlaceByFields(p, placeAt, typeof entry.part.each === 'string' ? data[entry.part.each] : undefined);
+        else for (const [key, q] of Object.entries(p)) if (!isPlace(q)) fail(`${placeAt}/${key}`, 'a place is [x, y] or [x, y, width, height]');
       } else if (!isPlace(p)) {
         fail(placeAt, `"${id}" is not a part with "each", so its place is [x, y, width?, height?]`);
       }
@@ -802,6 +824,12 @@ export function validateBoard(board: unknown): BoardIssue[] {
 
 function isSize(v: unknown): boolean {
   return Array.isArray(v) && v.length === 2 && v.every(n => isNum(n) && n > 0);
+}
+
+/** A place by the items' fields: an object whose `at` is a list of names — a place by hand for an item called "at" is
+ *  two numbers. */
+function isByFields(v: unknown): v is Record<string, unknown> {
+  return isObj(v) && Array.isArray(v.at) && v.at.every(n => typeof n === 'string');
 }
 
 function isPlace(v: unknown): boolean {

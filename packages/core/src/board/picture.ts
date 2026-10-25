@@ -7,10 +7,11 @@
 
 import { placedIn, type Binding, type CellCanvas, type Connector, type ElementDefinition, type GridItem, type GridLayout, type ItemField, type Node, type Shape as ViewShape, type Trigger as ViewTrigger, type TriggerAction as ViewTriggerAction, type ValueMap, type ValueRange, type ViewDocument, type Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
+import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
-import type { Board, CanvasLayout, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
+import type { Board, CanvasLayout, DataPlace, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
 
 /** A weight's or an arrow's bands or map as the value map a connector binding takes: bands as ranges, a map as values
  *  and `otherwise`. */
@@ -64,6 +65,21 @@ export interface PictureOptions {
    * lays out one item per key. A canvas names its items where it places them.
    */
   keysOf?: (data: string) => readonly string[];
+  /**
+   * The items of a data list, for a part a canvas places by its items' fields (`DataPlace`): each item as the list gave it.
+   * Where the board names none of its own, nothing is drawn for an item whose field says nothing.
+   */
+  rowsOf?: (data: string) => readonly unknown[];
+  /** Told, for a part placed by its items' fields, how many of its items were not drawn — no number in a field, or
+   *  outside the frame. Not told of a part that drew them all. */
+  onUnplaced?: (part: string, count: number) => void;
+}
+
+/** Whether a canvas's place for a part is by its items' fields: an object whose `at` names two fields (a place for an
+ *  item called "at" is two numbers). */
+export function isDataPlace(place: unknown): place is DataPlace {
+  return typeof place === 'object' && place !== null && !Array.isArray(place) && Array.isArray((place as { at?: unknown }).at)
+    && (place as { at: unknown[] }).at.every(f => typeof f === 'string');
 }
 
 /** The tone and the words a raw value maps to, through a field's `state`. */
@@ -139,7 +155,7 @@ export interface KeyRead extends Pick<Binding, 'adapter' | 'ref'> {
  */
 export function keyReadsOf(board: Board): KeyRead[] {
   const needed = new Set<string>();
-  toViewDocument(board, { keysOf: name => (needed.add(name), []) });
+  toViewDocument(board, { keysOf: name => (needed.add(name), []), rowsOf: name => (needed.add(name), []) });
   const data = board.data ?? {};
   return [...needed].map(name => {
     const { adapter, ref } = readOf(data, name, undefined, undefined, `/data/${name}`);
@@ -644,7 +660,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       // A part inside a group reads the group's data unless it names its own.
       const own = (key?: string) => readsOf(part, key) ?? (frame.reads === null ? undefined : frame.reads);
       if (Array.isArray(place)) placeOne(id, id, part, place, own());
-      else for (const [key, p] of Object.entries(place)) placeOne(id, `${id}/${key}`, part, p, own(key));
+      else if (isDataPlace(place)) placeByFields(id, part, place, canvas.size, `${at}/place/${id}`, own, placeOne);
+      else for (const [key, p] of Object.entries(place)) placeOne(id, `${id}/${key}`, part, p as Place, own(key));
     }
     for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
       const moved = moveShape(shape, frame);
@@ -658,6 +675,41 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     }
     // Lines are drawn under the parts, as the decorations are.
     return { nodes: [...lines, ...nodes], connectors, ...(decorations.length > 0 ? { decorations } : {}) };
+  };
+
+  /**
+   * An `each` part placed by its items' fields: one place per item, from its two fields, linearly from the frame's
+   * values onto the canvas. The position is the middle of the box — `size`, else the group's own size, else the default.
+   */
+  const placeByFields = (
+    partId: string, part: Part, where: DataPlace, canvasSize: [number, number], at: string, own: (key?: string) => Reads | undefined,
+    placeOne: (partId: string, id: string, part: Part, place: Place, reads: Reads | undefined) => void,
+  ) => {
+    const p = resolve(part);
+    const query = typeof p.each === 'string' ? p.each : undefined;
+    if (query === undefined) throw new PictureError(at, 'a place by fields is for a part made per item (each)');
+    const rows = options.rowsOf?.(query);
+    if (rows === undefined) throw new PictureError(at, `the items of "${query}" are not known — give rowsOf`);
+    const [xField, yField] = where.at.map(name => keyOf(query, name, at)) as [string, string];
+    const keyField = data[query]?.key;
+    const [left, top, right, bottom] = where.frame ?? [0, 0, canvasSize[0], canvasSize[1]];
+    const boxed = where.size ?? (p.as === 'group' ? (p.size as [number, number]) : undefined);
+    const [w, h] = boxed ?? [DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT];
+    let skipped = 0;
+    rows.forEach((row, i) => {
+      const item = typeof row === 'object' && row !== null ? (row as Record<string, unknown>) : {};
+      const named = keyField === undefined ? String(i) : item[keyField];
+      const x = item[xField];
+      const y = item[yField];
+      const inside = typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)
+        && x >= Math.min(left, right) && x <= Math.max(left, right) && y >= Math.min(top, bottom) && y <= Math.max(top, bottom);
+      if ((typeof named !== 'string' && typeof named !== 'number') || !inside) { skipped += 1; return; }
+      const cx = ((x as number) - left) / (right - left) * canvasSize[0];
+      const cy = ((y as number) - top) / (bottom - top) * canvasSize[1];
+      const place: Place = boxed !== undefined && where.size !== undefined ? [cx - w / 2, cy - h / 2, w, h] : [cx - w / 2, cy - h / 2];
+      placeOne(partId, `${partId}/${String(named)}`, part, place, own(String(named)));
+    });
+    if (skipped > 0) options.onUnplaced?.(partId, skipped);
   };
 
   /** A group's own canvas. */
