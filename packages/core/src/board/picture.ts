@@ -1005,14 +1005,48 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       return placed.id;
     };
     const drawnTriggers = triggers.flatMap((t: Trigger, i): ViewTrigger[] => {
-      try {
-        return [drawnTrigger(t, i)];
-      } catch (error) {
-        if (error === absent) return [];
-        throw error;
-      }
+      // A trigger on an `each` part by its own id is one trigger per item the data has now, each with its item as the
+      // context of what it does.
+      const partId = t.on.event === 'open' ? undefined : t.on.part;
+      const items = partId !== undefined && !partId.includes('/') && board.parts[partId] !== undefined && resolve(board.parts[partId]!).each !== undefined
+        ? [...nodes.keys()].filter(k => k.startsWith(`${partId}/`) && !k.slice(partId.length + 1).includes('/'))
+        : [undefined];
+      return items.flatMap((item): ViewTrigger[] => {
+        try {
+          return [drawnTrigger(item === undefined || t.on.event === 'open' ? t : { ...t, on: { ...t.on, part: item } }, i)];
+        } catch (error) {
+          if (error === absent) return [];
+          throw error;
+        }
+      });
     });
     return { ...doc, triggers: drawnTriggers };
+
+    /**
+     * A link's URL for the item an event is about: `{{key}}` its key and `{{<field>}}` that field's value, each as one URL
+     * component. The address stays as written (validation keeps the holes out of it); an item that has no value for a
+     * field cannot make the link and gets no trigger.
+     */
+    function itemUrl(url: string, part: string | undefined, at: string): string {
+      const head = part?.split('/')[0];
+      const query = head !== undefined && board.parts[head] !== undefined ? resolve(board.parts[head]!).each : undefined;
+      if (part === undefined || head === undefined || typeof query !== 'string' || part === head) return url;
+      const key = part.slice(head.length + 1);
+      let row: Record<string, unknown> | undefined;
+      return url.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (whole, name: string) => {
+        if (name === 'part' || name === 'status' || name === 'board') return whole;
+        if (name === 'key') return encodeURIComponent(key);
+        if (row === undefined) {
+          const rows = options.rowsOf?.(query);
+          if (rows === undefined) throw new PictureError(at, `the items of "${query}" are not known — give rowsOf`);
+          const keyField = data[query]?.key;
+          row = rows.find((r, n) => String(keyField === undefined ? n : (r as Record<string, unknown> | null)?.[keyField]) === key) as Record<string, unknown> | undefined;
+        }
+        const value = row === undefined ? undefined : valueAtPointer(row, fieldOf(query, name).at ?? `/${name}`);
+        if (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') throw absent;
+        return encodeURIComponent(String(value));
+      });
+    }
 
     function drawnTrigger(t: Trigger, i: number): ViewTrigger {
       const at = `/triggers/${i}`;
@@ -1021,7 +1055,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
           : t.on.event === 'element' ? { event: 'element', node: nodeFor(t.on.part, `${at}/on/part`).id, name: t.on.name }
             : { event: t.on.event, node: stateOf(t.on, `${at}/on`), state: t.on.status };
       const actions = t.do.map((a, j): ViewTriggerAction => a.action === 'focus' ? { action: 'focus', node: nodeFor(a.part, `${at}/do/${j}/part`).id }
-        : a.action === 'open-link' ? { action: 'open-link', url: a.url.replace(/\{\{\s*part\s*\}\}/g, '{{node}}').replace(/\{\{\s*status\s*\}\}/g, '{{state}}') }
+        : a.action === 'open-link' ? { action: 'open-link', url: itemUrl(a.url, t.on.event === 'open' ? undefined : t.on.part, `${at}/do/${j}/url`).replace(/\{\{\s*part\s*\}\}/g, '{{node}}').replace(/\{\{\s*status\s*\}\}/g, '{{state}}') }
           : a);
       return { on, ...(t.when !== undefined ? { when: { node: stateOf(t.when, `${at}/when`), state: t.when.status } } : {}), do: actions };
     }

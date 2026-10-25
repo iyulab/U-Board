@@ -534,3 +534,56 @@ describe('items placed by their own fields (a canvas)', () => {
     expect(issues({ at: ['lon', 'lat'] }, { from: 'plant', path: '/plant/quakes', list: '/features' })).toEqual(['/layout/place/quake']);
   });
 });
+
+describe('triggers on every item of an each part', () => {
+  const parts = { pump: { as: 'status-card', each: 'pumps', title: '{{key}}', show: ['state', 'flow'] }, total: { as: 'stat', of: 'totals', show: 'temp' } } as const;
+  const withTriggers = (triggers: NonNullable<Board['triggers']>): Board => {
+    const b = board(parts as never, { kind: 'grid', items: ['pump', 'total'] });
+    return { ...b, data: { ...b.data, pumps: { ...pumps, fields: { ...pumps.fields, line: {} } } }, triggers };
+  };
+  const rows = [{ id: 'P1', line: 'L 1', state: 'run' }, { id: 'P2', line: null, state: 'trip' }, { id: 'P3', line: 'L3', state: 'run' }];
+  const draw = (b: Board) => toViewDocument(b, { keysOf: () => rows.map(r => r.id), rowsOf: () => rows });
+
+  it('runs one trigger per item, each opening the link of its own item', () => {
+    const doc = draw(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: '/pumps/{{key}}?line={{line}}&from={{part}}' }] }]));
+    expect(doc.triggers).toEqual([
+      { on: { event: 'click', node: 'pump/P1' }, do: [{ action: 'open-link', url: '/pumps/P1?line=L%201&from={{node}}' }] },
+      // An item with no value for the field cannot make the link: no trigger for it.
+      { on: { event: 'click', node: 'pump/P3' }, do: [{ action: 'open-link', url: '/pumps/P3?line=L3&from={{node}}' }] },
+    ]);
+  });
+
+  it('puts only the item’s key in a link that names no field, so it needs no items', () => {
+    const b = withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: '/pumps/{{key}}' }] }]);
+    expect(toViewDocument(b, { keysOf: () => ['A B', 'C'] }).triggers!.map(t => (t.do[0] as { url: string }).url)).toEqual(['/pumps/A%20B', '/pumps/C']);
+    expect(() => toViewDocument(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: '/p?l={{line}}' }] }]), { keysOf: () => ['P1'] })).toThrow(PictureError);
+  });
+
+  it('reacts to an item entering a status, and names the items one by one for a trigger that names one', () => {
+    const doc = draw(withTriggers([
+      { on: { event: 'enter', part: 'pump', status: 'tripped' }, do: [{ action: 'emit', name: 'tripped' }] },
+      { on: { event: 'click', part: 'pump/P1' }, do: [{ action: 'open-link', url: '/pumps/{{key}}' }] },
+    ]));
+    expect(doc.triggers!.map(t => t.on)).toEqual([
+      { event: 'enter', node: 'pump/P1', state: 'tripped' },
+      { event: 'enter', node: 'pump/P2', state: 'tripped' },
+      { event: 'enter', node: 'pump/P3', state: 'tripped' },
+      { event: 'click', node: 'pump/P1' },
+    ]);
+    expect(doc.triggers![3]!.do).toEqual([{ action: 'open-link', url: '/pumps/P1' }]);
+  });
+
+  it('is refused where an item has no meaning, and where a value would choose the address', () => {
+    const issues = (b: Board) => validateBoard(b).filter(i => !i.hint).map(i => i.at);
+    expect(issues(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: '/pumps/{{key}}' }] }]))).toEqual([]);
+    // `focus` and a status condition name one thing — an item by its id.
+    expect(issues(withTriggers([{ on: { event: 'click', part: 'total' }, do: [{ action: 'focus', part: 'pump' }] }]))).toEqual(['/triggers/0/do/0/part']);
+    expect(issues(withTriggers([{ on: { event: 'open' }, when: { part: 'pump', status: 'running' }, do: [{ action: 'emit', name: 'x' }] }]))).toEqual(['/triggers/0/when/part']);
+    // An item’s hole needs an item, and never stands in the address.
+    expect(issues(withTriggers([{ on: { event: 'click', part: 'total' }, do: [{ action: 'open-link', url: '/x/{{key}}' }] }]))).toEqual(['/triggers/0/do/0/url']);
+    expect(issues(withTriggers([{ on: { event: 'open' }, do: [{ action: 'open-link', url: '/x/{{line}}' }] }]))).toEqual(['/triggers/0/do/0/url']);
+    expect(issues(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: 'https://x.example.com@{{line}}.example.net/a' }] }]))).toEqual(['/triggers/0/do/0/url']);
+    expect(issues(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: 'https://{{key}}@x.example.com/a' }] }]))).toEqual(['/triggers/0/do/0/url']);
+    expect(issues(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: 'https://x.example.com/a/{{key}}?l={{line}}#{{line}}' }] }]))).toEqual([]);
+  });
+});

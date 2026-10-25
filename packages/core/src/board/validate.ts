@@ -721,19 +721,20 @@ export function validateBoard(board: unknown): BoardIssue[] {
   }
 
   // ── triggers ──
-  /** The part a trigger names: one of the board's, or an item of an `each` part (`<part>/<key>`). */
-  const targetOf = (id: unknown, at: string): Obj | undefined => {
+  /** The part a trigger names: one of the board's, or an item of an `each` part (`<part>/<key>`) — or, where `all`
+   *  (the event a trigger reacts to), an `each` part by its own id: every one of its items. */
+  const targetOf = (id: unknown, at: string, all = false): Obj | undefined => {
     const [head, ...rest] = typeof id === 'string' ? id.split('/') : [];
     const found = head !== undefined ? ids.get(head)?.part : undefined;
-    if (found && (found.each === undefined ? rest.length === 0 : rest.length === 1 && rest[0] !== '')) return found;
+    if (found && (found.each === undefined ? rest.length === 0 : all && rest.length === 0 ? true : rest.length === 1 && rest[0] !== '')) return found;
     fail(at, found?.each !== undefined
-      ? `"${head}" is a part per item of "${String(found.each)}" — a trigger names one item: "${head}/<key>"`
+      ? `"${head}" is a part per item of "${String(found.each)}" — name one item: "${head}/<key>"${all ? ', or the part itself for every item' : ''}`
       : `no part "${String(id)}" — parts: ${list(ids.keys())}`);
     return undefined;
   };
   /** A part's status: of `field`, or of its own state — a status card's, or what its `state` option names. */
   const checkStatusOf = (holder: Obj, at: string, status: unknown, list = false) => {
-    const part = targetOf(holder.part, `${at}/part`);
+    const part = targetOf(holder.part, `${at}/part`, !list);
     if (part) {
       const reads = typeof part.of === 'string' ? OF.exec(part.of)?.[1] : typeof part.each === 'string' ? part.each : undefined;
       if (holder.field === undefined) {
@@ -766,9 +767,9 @@ export function validateBoard(board: unknown): BoardIssue[] {
     if (!isObj(t)) { fail(at, 'a trigger is { "on": { "event": … }, "when"?: …, "do": [ … ] }'); continue; }
     const on = isObj(t.on) ? t.on : undefined;
     if (!on) fail(`${at}/on`, 'a trigger says what it reacts to: "on": { "event": "click" | "element" | "enter" | "leave" | "open", … }');
-    else if (on.event === 'click') targetOf(on.part, `${at}/on/part`);
+    else if (on.event === 'click') targetOf(on.part, `${at}/on/part`, true);
     else if (on.event === 'element') {
-      targetOf(on.part, `${at}/on/part`);
+      targetOf(on.part, `${at}/on/part`, true);
       if (typeof on.name !== 'string' || on.name === '' || on.name.length > 64) fail(`${at}/on/name`, 'an element event is named, 1 to 64 characters: "name": "<the event the element raises>"');
     } else if (on.event === 'enter' || on.event === 'leave') checkStatusOf(on, `${at}/on`, on.status);
     else if (on.event !== 'open') fail(`${at}/on/event`, `"${String(on.event)}" is not an event — click · element · enter · leave · open`);
@@ -781,9 +782,25 @@ export function validateBoard(board: unknown): BoardIssue[] {
       const actionAt = `${at}/do/${j}`;
       if (!isObj(a)) { fail(actionAt, 'an action is { "action": … }'); continue; }
       if (a.action === 'open-link') {
+        // The item an event is about, when the part it names is made per item: {{key}} and {{<field>}} are its.
+        const onPart = isObj(on) && typeof on.part === 'string' ? on.part : undefined;
+        const eachQuery = onPart !== undefined ? ids.get(onPart.split('/')[0]!)?.part.each : undefined;
+        const eachItem = eachQuery !== undefined;
         if (!isTriggerLink(a.url)) fail(`${actionAt}/url`, 'a link is an https:// address or a path here ("/…")');
-        else for (const [, name] of a.url.matchAll(HOLE)) {
-          if (!['part', 'status', 'board'].includes(name!.trim())) fail(`${actionAt}/url`, `a link fills in {{part}}, {{status}} and {{board}} — not {{${name}}}`);
+        else {
+          const authority = /^https:\/\/[^/?#]*/.exec(a.url)?.[0] ?? '';
+          for (const [, name] of a.url.matchAll(HOLE)) {
+            const hole = name!.trim();
+            if (['part', 'status', 'board'].includes(hole)) continue;
+            if (!eachItem) fail(`${actionAt}/url`, `a link fills in {{part}}, {{status}} and {{board}} — not {{${name}}}; {{key}} and {{<field>}} are an item's, for an event of a part made per item (each)`);
+            else if (!/^[\w.-]+$/.test(hole)) fail(`${actionAt}/url`, `"{{${name}}}" — write {{key}} for the item's key or {{field}} with a field name`);
+            else if (authority.includes('{{')) fail(`${actionAt}/url`, 'an item’s value fills the path, query or fragment of a link — not the address it goes to (the scheme, host and port stay written out)');
+            // A hole no field answers would leave every item without its link, unseen: a field is one the data declares.
+            else if (hole !== 'key' && typeof eachQuery === 'string' && fieldOf(eachQuery, hole) === undefined) {
+              const declared = isObj(data[eachQuery]) && isObj((data[eachQuery] as Obj).fields) ? Object.keys((data[eachQuery] as Obj).fields as Obj) : [];
+              fail(`${actionAt}/url`, `"{{${hole}}}" is not a field of "${eachQuery}" — declare it in /data/${eachQuery}/fields, or write {{key}} (fields: ${declared.length > 0 ? declared.join(', ') : 'none'})`);
+            }
+          }
         }
       } else if (a.action === 'focus') targetOf(a.part, `${actionAt}/part`);
       else if (a.action === 'emit') { if (typeof a.name !== 'string' || a.name === '' || a.name.length > 64) fail(`${actionAt}/name`, 'an event is named, 1 to 64 characters: "name": "<event>"'); }

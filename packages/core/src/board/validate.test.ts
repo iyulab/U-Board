@@ -561,9 +561,8 @@ describe('validateBoard — triggers', () => {
       '/triggers/1/on/field: a stat has no state of its own — say whose state: "field": "<a field of what it reads, with a state>"',
       expect.stringMatching(/^\/triggers\/1\/on\/status: "busy" is not a status — /),
       '/triggers/1/do/0/url: a link is an https:// address or a path here ("/…")',
-      '/triggers/2/on/part: "eq" is a part per item of "equipment" — a trigger names one item: "eq/<key>"',
       '/triggers/2/when/field: "count" has no "state" in /data/equipment/fields — a status is a field\'s state',
-      '/triggers/2/do/0/url: a link fills in {{part}}, {{status}} and {{board}} — not {{node}}',
+      '/triggers/2/do/0/url: "{{node}}" is not a field of "equipment" — declare it in /data/equipment/fields, or write {{key}} (fields: state)',
       '/triggers/2/do/1/action: "write" is not an action — open-link · focus · emit · go-to-board',
     ]);
   });

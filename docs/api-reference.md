@@ -401,6 +401,12 @@ tell: nothing a trigger does writes to the systems a board reads.
 - `open-link` opens an `https://` address or a path on the installation the board is served from (`/…`, never `//…`)
   in a new tab, with no opener. `{{part}}`, `{{status}}` and `{{board}}` in it are filled in, each URL-encoded — a
   part's values are not.
+- A trigger's `on.part` may be the id of an `each` part: one trigger per item the data has, each about its own item
+  (`click`, `element`, `enter` and `leave`; `when`, `focus` and `go-to-board` still name one part). Its `open-link` `url`
+  may then hold `{{key}}`, the item's key, and `{{field}}`, a field the data declares (read where the field says it
+  lives), each URL-encoded as one component. The address (scheme, host and port) is written out — the holes go in the path,
+  query or fragment, so no data value chooses where a link goes — and `linkOrigins` still applies to the result. An item
+  with no text, number or boolean for a field gets no link.
 - `enter` and `leave` fire on a change between two draws of one viewer, never on the first draw — `open` is for that.
 - A part with a `click` trigger becomes a button: Enter and Space press it. A drag that starts on it pans the board and
   presses nothing.

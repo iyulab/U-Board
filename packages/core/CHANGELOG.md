@@ -8,6 +8,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A trigger may name an `each` part by its own id: one trigger per item, and `open-link` fills in the item.** `click`,
+  `element`, `enter` and `leave` on `"pumps"` run for every item, each about its own item; the link's `url` may hold
+  `{{key}}` and `{{<field>}}` (a declared field), URL-encoded, in the path, query or fragment — never in the address.
+  An item with no value for a field gets no link. A board whose `url` held such a hole is refused at save.
 - **A canvas places the items of an `each` part by their own fields.** A place may be
   `{ "at": ["<x field>", "<y field>"], "frame"?: [left, top, right, bottom], "size"?: [w, h] }` in place of one place per
   item: each item is put at the point its two fields say, mapped linearly from the frame's values at the canvas edges

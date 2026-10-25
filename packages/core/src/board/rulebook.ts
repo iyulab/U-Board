@@ -121,8 +121,11 @@ raises (\`"element"\` with \`name\`), a part entering or leaving a status (\`"en
 \`field\` whose state it is unless the part has its own — a status card's, a \`state\` option's) or the board opened
 (\`"open"\`); \`when\` keeps it to a part in one of the statuses; \`do\` opens a link (\`open-link\`, \`url\` with \`{{part}}\` ·
 \`{{status}}\` · \`{{board}}\` filled in), brings a part into view (\`focus\`), hands the host an event (\`emit\`) or asks for
-another board (\`go-to-board\`). A part made per item is named per item (\`"pumps/P1"\`). Triggers only show, move and
-tell — they write to nothing the board reads.`,
+another board (\`go-to-board\`). A part made per item is named per item (\`"pumps/P1"\`) — or, in \`on\`, by its own id for every
+item at once (\`{ "event": "click", "part": "pumps" }\`): the event is then about that item, and \`open-link\`'s \`url\` may hold
+\`{{key}}\` (the item's key) and \`{{field}}\` (a field the data declares), each URL-encoded: \`"/orders/{{key}}?line={{line}}"\`.
+The address (scheme, host, port) is written out; the holes go in the path, query or fragment. An item with no value for a field
+gets no link. Triggers only show, move and tell — they write to nothing the board reads.`,
 
     `## Rules
 
