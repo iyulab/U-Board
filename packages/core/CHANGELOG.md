@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-10-25
+
 ### Added
 
 - **A trigger may name an `each` part by its own id: one trigger per item, and `open-link` fills in the item.** `click`,

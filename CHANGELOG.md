@@ -11,6 +11,8 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-10-25
+
 ### Added
 
 - A board's `GET` answers `unplaced` — for each part a canvas places by its items' fields, how many items were left out —

@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-10-25
+
 ### Added
 
 - `look` reports, as a problem of the part, how many items placed by their own fields were left out (no number in a field,
