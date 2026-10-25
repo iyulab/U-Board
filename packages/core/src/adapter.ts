@@ -63,8 +63,8 @@ export interface ResolvedBinding {
    *  Ignored on a `live` reading. */
   message?: string;
   /** When `value` was observed (ISO 8601), if the adapter knows — the time the source says it
-   * observed the value when it says so (an HTTP reference's `observedAtPath`), else the time it was
-   * read; for `stale`, that of the last successful reading. It tells a last-known value of seconds
+   * observed the value when it says so (an HTTP reference's `observedAtPath`), else when the response says it was
+   * made, else the time it was read; for `stale`, that of the last successful reading. It tells a last-known value of seconds
    * ago from one of days ago. Ignored on a `disconnected` reading. */
   observedAt?: string;
 }

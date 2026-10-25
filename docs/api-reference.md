@@ -195,7 +195,10 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
   sources write (`2026-10-09 19:10`, `2026.10.09`, a missing offset, or an offset in hours alone such as `+09`), or
   compact digits (`202610091900`, `20261009 1910`, `20261009`); a time without an offset is on `zone`'s clock (UTC when
   absent). A field holding something else makes the read `disconnected` with reason `format`, and so does a time more
-  than five minutes after the read — a source cannot have observed it yet; the usual cause is a missing `zone`.
+  than five minutes after the read — a source cannot have observed it yet; the usual cause is a missing `zone`. A value
+  whose answer names no time is observed when the response says it was made: its `Date` header, or — when a cache or
+  proxy served an older answer — the `Age` it reports (the larger of the two counts, RFC 9111 §4.2.3); a response with
+  neither, or a `Date` more than five minutes ahead of the server's clock, is taken as made when it was received.
 - **`fresh`** — how old the source's value may normally be and still be current, as HTTP's `max-age` says of a
   response. Older than this by its observed time, a value reads `stale` with reason `lagging`: the source's latest, but
   behind. It also spaces the source's requests — a read answers later reads of the same request for an eighth of it —

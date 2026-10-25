@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { resolveConnectorValue, forgetConnector, type ResolveState } from './resolve-connector.js';
+import { resolveConnectorValue, forgetConnector, answeredAtOf, type ResolveState } from './resolve-connector.js';
 import { ClientCredentialsTokens } from './oauth-client-credentials.js';
 import type { Connector } from './db/connectors.js';
 
@@ -124,5 +124,63 @@ describe('slow sources (stale-while-revalidate)', () => {
     expect(state.lastReads.size).toBe(1);
     forgetConnector(state, 'c1');
     expect(state.lastReads.size).toBe(0);
+  });
+});
+
+describe('when an answer was made, as the response says', () => {
+  const NOW = Date.parse('2026-10-25T12:00:00Z');
+  const withHeaders = (extra: Record<string, string>, body: unknown = { v: 1 }) =>
+    ({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json', ...extra }),
+      json: async () => body,
+    }) as unknown as Response;
+  const target = new URL('https://plant.example.com/a');
+
+  it('is the time it was received when the response says nothing, or says it is from the future', () => {
+    expect(answeredAtOf(new Headers(), NOW)).toBe(NOW);
+    expect(answeredAtOf(new Headers({ date: 'not a date' }), NOW)).toBe(NOW);
+    expect(answeredAtOf(new Headers({ date: new Date(NOW + 6 * 60_000).toUTCString() }), NOW)).toBe(NOW);
+  });
+
+  it('is `Date` when it is behind the receiving clock, and `Age` when that is older still (RFC 9111 §4.2.3)', () => {
+    expect(answeredAtOf(new Headers({ date: new Date(NOW - 30_000).toUTCString() }), NOW)).toBe(NOW - 30_000);
+    expect(answeredAtOf(new Headers({ date: new Date(NOW - 30_000).toUTCString(), age: '600' }), NOW)).toBe(NOW - 600_000);
+    // `Age` counts from when the origin made it, and `Date` is that moment: not subtracted from each other.
+    expect(answeredAtOf(new Headers({ date: new Date(NOW - 600_000).toUTCString(), age: '600' }), NOW)).toBe(NOW - 600_000);
+    expect(answeredAtOf(new Headers({ age: '-4' }), NOW)).toBe(NOW);
+  });
+
+  it('is the observed time of a value whose answer names none, so a proxy serving an old answer shows as lagging', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+    const old = new Date(NOW - 20 * 60_000).toUTCString();
+    const state = stateWith(vi.fn(async () => withHeaders({ date: old })));
+    const result = await resolveConnectorValue(connector, target, { path: '/a', maxAgeSeconds: 300 }, state);
+    expect(result).toMatchObject({ value: { v: 1 }, quality: 'stale', reason: 'lagging', observedAt: new Date(NOW - 20 * 60_000).toISOString() });
+  });
+
+  it('leaves a source that answers from its database `live`, observed when it answered', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+    const state = stateWith(vi.fn(async () => withHeaders({ date: new Date(NOW - 1_000).toUTCString() })));
+    const result = await resolveConnectorValue(connector, target, { path: '/a', maxAgeSeconds: 300 }, state);
+    expect(result).toMatchObject({ quality: 'live', observedAt: new Date(NOW - 1_000).toISOString() });
+  });
+
+  it('gives way to the time the answer itself names for the value', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+    const answer = { v: 1, at: new Date(NOW - 60_000).toISOString() };
+    const state = stateWith(vi.fn(async () => withHeaders({ date: new Date(NOW - 20 * 60_000).toUTCString() }, answer)));
+    const result = await resolveConnectorValue(connector, target, { path: '/a', valuePath: '/v', observedAtPath: '/at', maxAgeSeconds: 300 }, state);
+    expect(result).toMatchObject({ value: 1, quality: 'live', observedAt: answer.at });
+  });
+
+  it('keeps the receiving clock for how long a read is reused, whatever age the response reports', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(NOW);
+    const fetchFn = vi.fn(async () => withHeaders({ age: '86400' }));
+    const state = stateWith(fetchFn, 10_000);
+    await resolveConnectorValue(connector, target, { path: '/a' }, state);
+    await resolveConnectorValue(connector, target, { path: '/a' }, state);
+    expect(fetchFn).toHaveBeenCalledTimes(1);
   });
 });

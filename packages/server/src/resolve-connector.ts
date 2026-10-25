@@ -62,6 +62,8 @@ export interface ResolveState {
 export interface LastRead {
   body: unknown;
   readAt: number;
+  /** When the response was made, as it says (`answeredAtOf`) — `readAt` when it says nothing. */
+  answeredAt: number;
   keepMs: number;
 }
 
@@ -72,12 +74,13 @@ export const DEFAULT_RESOLVE_WAIT_MS = 5_000;
  * answers with what the source did rather than the client's own timeout. */
 export const DEFAULT_READ_TIMEOUT_MS = 25_000;
 
-/** One read of a data source URL: its parsed body and when it was read (epoch ms) — the time a
- * value taken from it was observed, however much later a resolve reuses it. `settledAt` is set
+/** One read of a data source URL: its parsed body, when it was read (epoch ms) — which the cache's windows count from,
+ * however much later a resolve reuses it — and when the response was made, as it says (`answeredAt`): the time a value
+ * taken from it was observed when the source's answer names none. `settledAt` is set
  * once a successful read finishes, which starts its reuse window; `keepMs` is the longest window a
  * binding has asked of it, how long it is kept for one to reuse. */
 export interface UpstreamRead {
-  result: Promise<{ body: unknown; readAt: number }>;
+  result: Promise<{ body: unknown; readAt: number; answeredAt: number }>;
   settledAt?: number;
   keepMs: number;
 }
@@ -377,6 +380,24 @@ function requestUrl(connector: HttpConnector, target: URL): URL {
   return target;
 }
 
+/** How far ahead of this server's clock a response's `Date` may be and still be taken at its word — the two clocks are
+ *  not the same clock. Further ahead, the header is not a time the answer could have been made at. */
+const RESPONSE_CLOCK_TOLERANCE_MS = 5 * 60_000;
+
+/** When the response was made, as far as the response says (epoch ms), for a response received at `receivedAt`: the
+ *  age it has reached (RFC 9111 §4.2.3 — the larger of `receivedAt - Date` and `Age`) before it got here, taken off
+ *  `receivedAt`. A source that answers from its database says "now" (`Date`); a proxy or cache in front of it that
+ *  serves an old answer says how old (`Date` unchanged, `Age` growing). Without a usable `Date` (absent, unparseable,
+ *  or ahead of this clock by more than the tolerance) and without an `Age`, the response is taken as made when it was
+ *  received — what a read without headers always was. */
+export function answeredAtOf(headers: Headers, receivedAt: number): number {
+  const date = Date.parse(headers.get('date') ?? '');
+  const age = Number(headers.get('age'));
+  const apparent = Number.isNaN(date) || date - receivedAt > RESPONSE_CLOCK_TOLERANCE_MS ? 0 : Math.max(0, receivedAt - date);
+  const reported = headers.get('age') !== null && Number.isFinite(age) && age >= 0 ? age * 1000 : 0;
+  return receivedAt - Math.max(apparent, reported);
+}
+
 /** Fetches and parses `target` with `connector`'s auth headers. An OAuth connector whose token is
  * rejected (401) gets one fresh token and one retry — the authorization server may revoke a token
  * before the expiry it advertised. */
@@ -386,7 +407,7 @@ async function fetchBody(
   tokens: ClientCredentialsTokens,
   fetchFn: typeof fetch,
   timeoutMs: number
-): Promise<unknown> {
+): Promise<{ body: unknown; answeredAt: number }> {
   // `redirect: 'manual'` closes the same credential-exfiltration hole from the other side: a
   // compromised upstream must not be able to bounce the credentialed request to a host of its
   // choosing. A manual-redirect response is not `ok`, so it falls into the failure path below.
@@ -408,16 +429,17 @@ async function fetchBody(
       throw new HttpStatusError(response.status, `upstream responded ${response.status}`, body, text === '' ? undefined : excerptOf(text));
     }
     stage = 'response';
+    const answeredAt = answeredAtOf(response.headers, Date.now());
     const contentType = (response.headers.get('content-type') ?? '').toLowerCase();
     if (contentType.includes('json')) {
       const body: unknown = await response.json();
       const said = connector.sourceError ? sourceErrorIn(body, connector.sourceError) : undefined;
       if (said !== undefined) throw sourceReported(connector, said, body);
-      return body;
+      return { body, answeredAt };
     }
     const text = await response.text();
     if (contentType !== '' && !contentType.startsWith('text/plain')) throw unreadable(contentType, text);
-    return text;
+    return { body: text, answeredAt };
   } catch (err) {
     throw err instanceof StageError ? err : new StageError(stage, err);
   }
@@ -450,16 +472,17 @@ export async function resolveConnectorValue(
     sweepExpiredReads(state);
     const readTimeoutMs = state.readTimeoutMs ?? DEFAULT_READ_TIMEOUT_MS;
     const started: UpstreamRead = {
-      result: (connector.type === 'static' ? staticBody(connector, target) : fetchBody(connector, target, state.tokens, state.fetch, readTimeoutMs)).then(
-        body => ({ body, readAt: Date.now() })
-      ),
+      result: (connector.type === 'static'
+        ? staticBody(connector, target).then(body => ({ body, answeredAt: Date.now() }))
+        : fetchBody(connector, target, state.tokens, state.fetch, readTimeoutMs)
+      ).then(({ body, answeredAt }) => ({ body, readAt: Date.now(), answeredAt })),
       keepMs: windowMs,
     };
     state.reads.set(requestKey, started);
     // A failed read is never reused — the next resolve asks the data source again.
     started.result.then(
-      ({ body, readAt }) => {
-        state.lastReads.set(requestKey, { body, readAt, keepMs: started.keepMs + readTimeoutMs });
+      ({ body, readAt, answeredAt }) => {
+        state.lastReads.set(requestKey, { body, readAt, answeredAt, keepMs: started.keepMs + readTimeoutMs });
         if (started.keepMs > 0) started.settledAt = Date.now();
         else if (state.reads.get(requestKey) === started) state.reads.delete(requestKey);
       },
@@ -473,22 +496,24 @@ export async function resolveConnectorValue(
   try {
     let body: unknown;
     let readAt: number;
+    let answeredAt: number;
     let fromLast = false;
     if (read.settledAt === undefined && !(await settledWithin(read.result, state.waitMs ?? DEFAULT_RESOLVE_WAIT_MS))) {
       // The source is slow: answer now with the last read while this one goes on and serves the next resolve. It is
       // not a failure — nothing is logged, and nothing recovers when the read lands.
       const last = state.lastReads.get(requestKey);
       if (last === undefined || Date.now() - last.readAt > last.keepMs) return stillReading(state.values.get(cacheKey), state);
-      ({ body, readAt } = last);
+      ({ body, readAt, answeredAt } = last);
       fromLast = true;
     } else {
       try {
-        ({ body, readAt } = await read.result);
+        ({ body, readAt, answeredAt } = await read.result);
       } catch (err) {
         throw err instanceof StageError ? err : new StageError('request', err);
       }
     }
-    const reading = readHttpRef(body, ref, readAt, Date.now());
+    // The answer's own statement of when it was observed wins; without one, the value is as old as the response says.
+    const reading = readHttpRef(body, ref, ref.observedAtPath === undefined ? Math.min(answeredAt, readAt) : readAt, Date.now());
     if (!reading.ok) throw new StageError('response', new Error(reading.message), reading.reason);
     const result = resolvedReading(reading);
     state.values.set(cacheKey, { value: result.value, observedAt: result.observedAt!, readAt });
@@ -558,7 +583,7 @@ export async function testConnector(
       // The start of what came back, so the owner sees whether it is the data or an error the source
       // answered with success (some report a bad key or an empty query in a 200 body).
       if (connector.type === 'static') return { ok: true, excerpt: excerptOf(await staticBody(connector, target)) };
-      return { ok: true, excerpt: withoutSecret(connector, excerptOf(await fetchBody(connector, target, tokens, fetchFn, timeoutMs))) };
+      return { ok: true, excerpt: withoutSecret(connector, excerptOf((await fetchBody(connector, target, tokens, fetchFn, timeoutMs)).body)) };
     } else if (connector.type === 'http' && connector.authType === 'oauth2-client-credentials') {
       try {
         await tokens.get(clientCredentialsOf(connector));

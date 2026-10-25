@@ -11,6 +11,14 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Changed
+
+- **A value whose answer names no time is observed when the response says it was made** — its `Date` header, or the
+  `Age` a cache or proxy reports for an older answer (RFC 9111 §4.2.3) — instead of when the server received it. A
+  source that answers from live data with no time field now shows an age, and a binding with `fresh` marks a source
+  whose answer is served old as `stale` (`lagging`). A binding without `fresh` is unchanged apart from the age shown;
+  a time the answer itself names still wins. Nothing to do when upgrading.
+
 ## [0.28.0] - 2026-10-25
 
 ### Changed

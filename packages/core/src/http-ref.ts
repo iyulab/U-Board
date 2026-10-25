@@ -30,7 +30,8 @@ export interface HttpRef {
   /** A JSON Pointer to the value, inside `item` when there is one, else inside the whole response. */
   valuePath?: string;
   /** A JSON Pointer to the time the source says its value was observed, read where `valuePath` is. Absent:
-   *  the value counts as observed when it was read. */
+   *  the value counts as observed when the response was made, which a reader that has the response's headers
+   *  takes from them, and else when it was read. */
   observedAtPath?: string;
   /** The IANA time zone (`Asia/Seoul`) the source writes times in when a time carries no offset of its own.
    *  Absent: such times are UTC. */

@@ -47,7 +47,10 @@ assistant with `create_source` — its answers are not a credential.
    screens show it.
 2. **A time on every answer** — when the values were observed, in ISO 8601 with its offset
    (`"updatedAt": "2026-10-15T14:30:00+09:00"`). Say in your documentation how often it changes; that is
-   what a board's author sets as the value's normal age.
+   what a board's author sets as the value's normal age. A source that answers from live data and has no such field
+   is not asked to invent one: the server reads when the response says it was made (its `Date` header, and `Age` when
+   a cache or proxy in front served an older answer — RFC 9110 §6.6.1, RFC 9111 §4.2.3), so a board still shows the
+   value's age and marks a source whose answer is old.
 3. **Lists as objects with an identifying field** (`{ "id": "PR-01", ... }`), so a value is picked by what
    it is, not where it is. Time series as rows (`{ "t": ..., "value": ... }`) or as arrays of one length.
 4. **States as a closed set of codes** (`ok | degraded | down | unknown`), listed in your documentation.
