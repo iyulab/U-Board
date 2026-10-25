@@ -256,7 +256,7 @@ interface CanvasLayout {
   kind: 'canvas';
   size: [number, number];
   background?: string;                                     // an image's address, drawn at the canvas's size
-  place: Record<string, Place | Record<string, Place>>;    // an `each` part: by item key
+  place: Record<string, Place | Record<string, Place> | DataPlace>; // an `each` part: by item key, or by its items' fields
   shapes?: Record<string, Shape>;
   links?: Record<string, Link>;
 }
@@ -271,7 +271,15 @@ type GridItem =
 
 - **Canvas** — parts placed by coordinates over a drawing. A part placed without a size takes its kind's. `shapes` are
   purely visual: a `box` (`[x, y, w, h]`, with a `label`), a `text` `at` a point (`size`), a `line` through points or a
-  `path` (absolute `M` · `L` · `C` · `Q` · `Z`), each with an optional `tone`, `width` and `dash`.
+  `path` (absolute `M` · `L` · `C` · `Q` · `Z`), each with an optional `tone`, `width` and `dash`. The items of an
+  `each` part are placed one by one under its entry, or — for data whose items change and cannot be named — by their own
+  fields: `{ "at": ["lon", "lat"], "frame": [-180, 90, 180, -90], "size": [14, 14] }` puts each item at the point the
+  two fields say. `at` names the fields holding x and y (each where its field says it lives, `at` of the field); `frame`
+  is the values at the canvas's left, top, right and bottom edges, mapped linearly (the canvas's own coordinates when
+  left out); the position is the centre of the item's box, `size` when given. An item with no number in either field, or
+  outside the frame, is not drawn — `look` and `pictureOf`'s `unplaced` count them. The data needs a `key`, and a part is
+  placed one way, not both. The projection is linear: right for a plan and an equirectangular map, off for a Mercator one
+  over a wide range.
 - **Grid** — parts in order on a row of twelve columns, laid out to the width of the board's own container: one item
   per row below 600 pixels, six columns below 1024, twelve above. An item takes a `span` of the twelve, and optionally
   a fixed `height`; otherwise the widget's own. An item may hold a `canvas` of its own — the spatial panel of a mixed
@@ -453,11 +461,17 @@ function boardSchema(): object;   // JSON Schema 2020-12
 type ValueReader = (adapter: string, ref: unknown) => Promise<{ value?: unknown }>;
 function readerOf(adapters: readonly Adapter[]): ValueReader;
 function pictureOf(board: Board, read: ValueReader): Promise<ViewDocument>;
-function toViewDocument(board: Board, options?: { keysOf?: (data: string) => readonly string[] }): ViewDocument;
+function toViewDocument(board: Board, options?: {
+  keysOf?: (data: string) => readonly string[];                // the keys of a grid's items
+  rowsOf?: (data: string) => readonly unknown[];                 // the items, for a canvas placing a part by their fields
+  onUnplaced?: (part: string, count: number) => void;            // how many items of a part were left out
+}): ViewDocument;
 ```
 
 The renderer draws a board through its picture (below). `pictureOf` makes it, reading through `read` which items a list
-has — a grid laying out a part per item lays out one item per key; a canvas names its items where it places them.
+has — a grid laying out a part per item lays out one item per key; a canvas names its items where it places them, or
+takes them with their fields when it places a part by those (`drawBoard` answers the picture and how many items each such
+part left out).
 `readerOf(adapters)` reads each reference through the adapter it names, and nothing for one there is none of. `toViewDocument`
 is the same without reading, given the keys; it throws `PictureError` (with the board pointer `at`) for a board that
 does not draw. `keyReadsOf(board)` lists the reads that give those keys, `keysIn(board, data, value)` the keys in a

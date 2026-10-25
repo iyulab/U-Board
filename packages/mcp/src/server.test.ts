@@ -69,7 +69,8 @@ function fakeServer() {
     if (method === 'GET') {
       // A board comes with the picture its viewers draw it from, as the server answers.
       const picture = toViewDocument(board.document, { keysOf: () => [] });
-      return json(200, { id, name: board.name, document: board.document, picture, revision: board.revision, updatedAt: 't' });
+      const { unplaced } = board as { unplaced?: Record<string, number> };
+      return json(200, { id, name: board.name, document: board.document, picture, ...(unplaced && { unplaced }), revision: board.revision, updatedAt: 't' });
     }
     if (method === 'DELETE') {
       boards.delete(id);
@@ -207,6 +208,14 @@ describe('u-board-mcp', () => {
     // What is left, said in one line a writer cannot read past.
     expect(whole.status).toBe('not done — 1 piece of advice to fix');
     expect((await look('b3', { focus: '/parts/n3' })).report.status).toBe('nothing to fix on this part — look at the whole board before finishing');
+  });
+
+  it('says how many items placed by their fields were left out, as a problem of the part', async () => {
+    server.boards.set('b7', { name: 'Quakes', revision: 1, document: gaugeBoard(), unplaced: { a: 3 } } as never);
+    const { look } = await looking();
+    const { report } = await look('b7');
+    expect(report.problems).toEqual([{ path: '/parts/a', message: '3 items of "a" are not drawn: no number in the fields its place names, or outside its frame — check "at" and "frame"' }]);
+    expect(report.status).toMatch(/^not done/);
   });
 
   it('up close answers only the part’s problems, and counts only those in its status', async () => {

@@ -127,4 +127,26 @@ describe('a static data source', () => {
     expect(shared.body.samples).toEqual([source.id]);
     expect(upstream).not.toHaveBeenCalled();
   });
+
+  it('is what a canvas places a part’s items by, and the board answers how many it left out', async () => {
+    const quakes = [
+      { id: 'q1', geometry: { coordinates: [0, 0] } },
+      { id: 'q2', geometry: { coordinates: [90, -45] } },
+      { id: 'q3', geometry: null },
+      { id: 'q4', geometry: { coordinates: [400, 0] } },
+    ];
+    const { body: source } = await create({ answers: { '/quakes': quakes }, sample: true });
+    const { body: board } = await request(app).post(`/api/workspaces/${workspaceId}/boards`).set('Cookie', ownerCookie).send({ name: 'Quakes', kind: 'canvas' });
+    const at = `/api/workspaces/${workspaceId}/boards/${board.id}`;
+    const document = {
+      data: { quakes: { from: source.id, path: '/quakes', list: '', key: 'id', fields: { lon: { at: '/geometry/coordinates/0' }, lat: { at: '/geometry/coordinates/1' } } } },
+      parts: { quake: { as: 'marker', each: 'quakes', title: '{{key}}' } },
+      layout: { kind: 'canvas', size: [360, 180], place: { quake: { at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [10, 10] } } },
+    };
+    const saved = await request(app).put(at).set('Cookie', ownerCookie).send({ document });
+    expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+    const read = await request(app).get(at).set('Cookie', ownerCookie);
+    expect(read.body.picture.nodes.map((n: { id: string }) => n.id)).toEqual(['quake/q1', 'quake/q2']);
+    expect(read.body.unplaced).toEqual({ quake: 2 });
+  });
 });

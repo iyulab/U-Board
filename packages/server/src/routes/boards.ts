@@ -9,7 +9,7 @@ import { createBoard, listBoardsForWorkspace, findBoard, updateBoard, deleteBoar
 import { elementFramesAddress } from '../element-frame.js';
 import { listConnectorsForWorkspace } from '../db/connectors.js';
 import { documentAdvice, documentIssues, documentKind } from '../board-document.js';
-import { pictureOf, type Board } from '@iyulab/u-board/domain';
+import { drawBoard, type Board } from '@iyulab/u-board/domain';
 import type { ResolveState } from '../resolve-connector.js';
 import { upstreamReader } from '../upstream-reader.js';
 
@@ -67,6 +67,9 @@ export function createBoardsRouter(config: AppConfig, resolveState: ResolveState
       res.status(404).json({ code: 'NOT_FOUND' });
       return;
     }
+    // With the picture its viewers draw it from — the one the share route answers, made here so every page shows a
+    // board the same way — and, for the parts a canvas places by their items' fields, how many items were left out.
+    const { picture, unplaced } = await drawBoard(board.document, upstreamReader(config, resolveState, workspaceId));
     res
       .status(200)
       .set('ETag', etagOf(board.revision))
@@ -74,9 +77,8 @@ export function createBoardsRouter(config: AppConfig, resolveState: ResolveState
         id: board.id,
         name: board.name,
         document: board.document,
-        // With the picture its viewers draw it from — the one the share route answers, made here so every page shows a
-        // board the same way.
-        picture: await pictureOf(board.document, upstreamReader(config, resolveState, workspaceId)),
+        picture,
+        ...(Object.keys(unplaced).length > 0 && { unplaced }),
         updatedAt: board.updatedAt,
         revision: board.revision,
         elementOrigins: config.elementOrigins ?? [],

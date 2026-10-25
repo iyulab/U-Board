@@ -22,7 +22,7 @@ export interface BoardCheck {
 
 /** The items a part made per item stands for when a board is checked: none — a board draws before its data has any
  *  items, and the items it has later do not change what it is. */
-const NO_ITEMS = { keysOf: () => [] };
+const NO_ITEMS = { keysOf: () => [], rowsOf: () => [] };
 
 /** A board with no parts yet, laying out `kind` — what a new board starts as. A canvas is 1280 × 720 until it is resized. */
 export function emptyBoard(kind: ViewKind): Board {

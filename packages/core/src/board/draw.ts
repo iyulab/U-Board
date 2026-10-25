@@ -48,6 +48,18 @@ export async function readKeys(board: Board, read: ValueReader): Promise<Record<
  * canvas that places a part by its items' fields makes with the items.
  */
 export async function pictureOf(board: Board, read: ValueReader): Promise<ViewDocument> {
+  return (await drawBoard(board, read)).picture;
+}
+
+/** A board drawn — its picture, and for each part a canvas places by its items' fields, how many of its items it could
+ *  not place (no number in a field, or outside the frame). `unplaced` has the parts that left some out and no other. */
+export async function drawBoard(board: Board, read: ValueReader): Promise<{ picture: ViewDocument; unplaced: Record<string, number> }> {
   const lists = await readLists(board, read);
-  return toViewDocument(board, { keysOf: data => keysIn(board, data, lists[data] ?? []), rowsOf: data => lists[data] ?? [] });
+  const unplaced: Record<string, number> = {};
+  const picture = toViewDocument(board, {
+    keysOf: data => keysIn(board, data, lists[data] ?? []),
+    rowsOf: data => lists[data] ?? [],
+    onUnplaced: (part, count) => { unplaced[part] = (unplaced[part] ?? 0) + count; },
+  });
+  return { picture, unplaced };
 }

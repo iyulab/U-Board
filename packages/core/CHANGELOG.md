@@ -6,6 +6,16 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A canvas places the items of an `each` part by their own fields.** A place may be
+  `{ "at": ["<x field>", "<y field>"], "frame"?: [left, top, right, bottom], "size"?: [w, h] }` in place of one place per
+  item: each item is put at the point its two fields say, mapped linearly from the frame's values at the canvas edges
+  (the canvas's own coordinates when left out), its box centred there. An item with no number in a field, or outside the
+  frame, is not drawn and is counted. For data whose items change and cannot be named — events with a position, vehicles.
+  `toViewDocument` takes the items with `rowsOf` and tells the left-out count with `onUnplaced`; `pictureOf` reads them
+  with the keys, and the new `drawBoard` also answers the counts (`unplaced`); `readLists` reads the items.
+
 ## [0.34.0] - 2026-10-25
 
 ### Changed

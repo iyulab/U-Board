@@ -500,6 +500,15 @@ describe('items placed by their own fields (a canvas)', () => {
     expect(draw(world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90] }), rows.slice(0, 3)).unplaced).toEqual([]);
   });
 
+  it('reads a field where it lives in an item — a feature’s coordinates are deep in it', () => {
+    const b = world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [10, 10] });
+    const deep = { ...b, data: { ...b.data, quakes: { ...quakes, fields: { lon: { at: '/geometry/coordinates/0' }, lat: { at: '/geometry/coordinates/1' } } } } } as Board;
+    expect(validateBoard(deep).filter(i => !i.hint)).toEqual([]);
+    const { doc } = draw(deep, [{ id: 'f1', geometry: { coordinates: [90, -45, 10] } }, { id: 'f2', geometry: null }]);
+    expect(centre(nodeOf(doc, 'quake/f1'))).toEqual([270, 135]);
+    expect(doc.kind === 'canvas' && doc.nodes.map(n => n.id)).toEqual(['quake/f1']);
+  });
+
   it('needs to be given the items, and asks for them as a grid asks for keys', () => {
     const b = world({ at: ['lon', 'lat'] });
     expect(() => toViewDocument(b)).toThrow(PictureError);
@@ -513,7 +522,7 @@ describe('items placed by their own fields (a canvas)', () => {
     expect(isDataPlace([1, 2])).toBe(false);
   });
 
-  it('is refused for what it cannot place: other keys, a frame without width, a field deep in an item, no key', () => {
+  it('is refused for what it cannot place: other keys, a frame without width, no key', () => {
     const issues = (place: unknown, data = quakes as Record<string, unknown>) => {
       const base = world(place);
       return validateBoard({ ...base, data: { ...base.data, quakes: data as never } }).filter(i => !i.hint).map(i => i.at);
@@ -522,7 +531,6 @@ describe('items placed by their own fields (a canvas)', () => {
     expect(issues({ at: ['lon'] })).toEqual(['/layout/place/quake/at']);
     expect(issues({ at: ['lon', 'lat'], frame: [0, 0, 0, 5] })).toEqual(['/layout/place/quake/frame']);
     expect(issues({ at: ['lon', 'lat'], size: [0, 4] })).toEqual(['/layout/place/quake/size']);
-    expect(issues({ at: ['lon', 'lat'] }, { ...quakes, fields: { lon: { at: '/geo/lon' } } })).toEqual(['/layout/place/quake/at/0']);
     expect(issues({ at: ['lon', 'lat'] }, { from: 'plant', path: '/plant/quakes', list: '/features' })).toEqual(['/layout/place/quake']);
   });
 });

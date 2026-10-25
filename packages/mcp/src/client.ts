@@ -32,6 +32,8 @@ export interface SavedBoard {
   document: Board;
   /** What its viewers draw: the board's picture, made by the server with its data's items. */
   picture: ViewDocument;
+  /** For each part a canvas places by its items' fields, how many of its items were not drawn — absent when none. */
+  unplaced?: Record<string, number>;
   revision: number;
   updatedAt: string;
 }

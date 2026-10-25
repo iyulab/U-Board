@@ -75,6 +75,16 @@ export interface PictureOptions {
   onUnplaced?: (part: string, count: number) => void;
 }
 
+/** The value at a JSON Pointer in `item`, or `undefined` where the item has nothing there. */
+function valueAtPointer(item: unknown, pointer: string): unknown {
+  let at = item;
+  for (const raw of pointer.split('/').slice(1)) {
+    if (typeof at !== 'object' || at === null) return undefined;
+    at = (at as Record<string, unknown>)[raw.replace(/~1/g, '/').replace(/~0/g, '~')];
+  }
+  return at;
+}
+
 /** Whether a canvas's place for a part is by its items' fields: an object whose `at` names two fields (a place for an
  *  item called "at" is two numbers). */
 export function isDataPlace(place: unknown): place is DataPlace {
@@ -690,7 +700,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     if (query === undefined) throw new PictureError(at, 'a place by fields is for a part made per item (each)');
     const rows = options.rowsOf?.(query);
     if (rows === undefined) throw new PictureError(at, `the items of "${query}" are not known — give rowsOf`);
-    const [xField, yField] = where.at.map(name => keyOf(query, name, at)) as [string, string];
+    // A field lives where it says (`at`, a JSON Pointer into an item — a GeoJSON feature's `/geometry/coordinates/0`), else under its own name.
+    const [xAt, yAt] = where.at.map(name => fieldOf(query, name).at ?? `/${name}`) as [string, string];
     const keyField = data[query]?.key;
     const [left, top, right, bottom] = where.frame ?? [0, 0, canvasSize[0], canvasSize[1]];
     const boxed = where.size ?? (p.as === 'group' ? (p.size as [number, number]) : undefined);
@@ -699,8 +710,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     rows.forEach((row, i) => {
       const item = typeof row === 'object' && row !== null ? (row as Record<string, unknown>) : {};
       const named = keyField === undefined ? String(i) : item[keyField];
-      const x = item[xField];
-      const y = item[yField];
+      const x = valueAtPointer(item, xAt);
+      const y = valueAtPointer(item, yAt);
       const inside = typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)
         && x >= Math.min(left, right) && x <= Math.max(left, right) && y >= Math.min(top, bottom) && y <= Math.max(top, bottom);
       if ((typeof named !== 'string' && typeof named !== 'number') || !inside) { skipped += 1; return; }

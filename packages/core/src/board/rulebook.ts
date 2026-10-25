@@ -89,7 +89,12 @@ ${PART_KINDS.map(kindRow).join('\n')}`,
     `## layout — where, per view kind
 
 - canvas: \`{ "kind": "canvas", "size": [w, h], "background"?, "place": { "<part>": [x, y, w?, h?] }, "shapes"?, "links"? }\` —
-  an \`each\` part is placed item by item inside its own entry. A shape is a \`box\` (with \`label\`), a \`text\` at a point,
+  an \`each\` part is placed item by item inside its own entry (\`{ "P1": [x, y, w, h], … }\`), or — when the items change and cannot be
+  named — by their own fields: \`"quake": { "at": ["lon", "lat"], "frame": [-180, 90, 180, -90], "size": [14, 14] }\` puts each item
+  at the point its two fields say; \`frame\` is the values at the canvas's left, top, right and bottom edges (the canvas's own
+  coordinates when left out), \`size\` the box centred on the point (give one for a marker). An item with no number in a field, or
+  outside the frame, is not drawn — \`look\` counts them. The data needs a \`key\`; the projection is linear (right for a plan or an
+  equirectangular map). A part is placed one way, not both. A shape is a \`box\` (with \`label\`), a \`text\` at a point,
   a \`line\` through points or a \`path\` (absolute M · L · C · Q · Z).
 - grid: \`{ "kind": "grid", "items": ["<part>", ["<part>", span], { "grid": [ … ], "span": n }, { "canvas": { … }, "span": n }] }\` —
   12 columns; a grid inside an item stacks what it holds.

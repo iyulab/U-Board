@@ -35,7 +35,7 @@ const partsExtent = (document: CanvasView) => {
 /** The board's own proportions, for the box it is drawn in — none for a grid. */
 export function boardExtent(pack: SamplePack): { width: number; height: number } | undefined {
   // A canvas names the items it places, so its picture needs no list read to be measured.
-  const picture = toViewDocument(pack.board, { keysOf: () => [] });
+  const picture = toViewDocument(pack.board, { keysOf: () => [], rowsOf: () => [] });
   return picture.kind === 'canvas' ? (picture.background.image ?? partsExtent(picture)) : undefined;
 }
 

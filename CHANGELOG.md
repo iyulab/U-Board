@@ -11,6 +11,11 @@ do when upgrading. Each release's notes carry its section.
 
 ## [Unreleased]
 
+### Added
+
+- A board's `GET` answers `unplaced` — for each part a canvas places by its items' fields, how many items were left out —
+  when there are any.
+
 ### Changed
 
 - **A value whose answer names no time is observed when the response says it was made** — its `Date` header, or the

@@ -6,6 +6,11 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `look` reports, as a problem of the part, how many items placed by their own fields were left out (no number in a field,
+  or outside the frame); the rules (`describe({ topic: "rules" })`) teach the place by fields.
+
 ## [0.22.0] - 2026-10-25
 
 ### Changed

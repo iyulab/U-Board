@@ -356,7 +356,14 @@ export function boardTools(client: UBoardClient, { looker, boardState = true }: 
           // A folded line stands for the findings it counts.
           const left = advice.reduce((n, a) => n + ((a as { count?: number }).count ?? 1), 0);
           // What went wrong while drawing is the whole board's; up close, only the part's — as its advice is.
-          const seen = report.problems.map(p => inBoard(read, picture, p));
+          const seen = [
+            ...report.problems.map(p => inBoard(read, picture, p)),
+            // Items placed by their fields that were left out: no number in a field, or outside the frame.
+            ...Object.entries(found.unplaced ?? {}).map(([part, count]) => ({
+              path: `/parts/${part}`,
+              message: `${count} item${count === 1 ? '' : 's'} of "${part}" ${count === 1 ? 'is' : 'are'} not drawn: no number in the fields its place names, or outside its frame — check "at" and "frame"`,
+            })),
+          ];
           const problems = focus ? seen.filter(p => concerns(p, focus)) : seen;
           const said = { type: 'text' as const, text: JSON.stringify({ revision: found.revision, status: lookStatus(problems.length, left, focus), ...report, problems, advice }) };
           return { content: image ? [{ type: 'image' as const, data: image, mimeType: 'image/png' }, said] : [said] };
