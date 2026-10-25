@@ -364,6 +364,8 @@ export interface UBoardLabels {
   triggerEventName: string;
   triggerState: string;
   triggerOnlyWhen: string;
+  /** A trigger on an item that applies to every item of its part; `{part}` is the part. */
+  triggerEveryItem: string;
   triggerWhenPart: string;
   triggerWhenState: string;
   triggerAction: string;
@@ -666,6 +668,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   triggerEventName: 'Event name',
   triggerState: 'State',
   triggerOnlyWhen: 'Only while a part is in a state',
+  triggerEveryItem: 'For every item of {part}',
   triggerWhenPart: 'Part',
   triggerWhenState: 'State (several: comma-separated)',
   triggerAction: 'Action {n}',

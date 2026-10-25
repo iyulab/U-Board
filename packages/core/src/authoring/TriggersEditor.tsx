@@ -17,6 +17,8 @@ export interface TriggersEditorProps {
   stateNamesOf: (part: string) => readonly string[];
   /** How a part is named to the author; its id when left out. */
   nameOf?: (part: string) => string;
+  /** The `each` part an item node belongs to — a trigger may then be for every item of it. */
+  eachOf?: (node: string) => string | undefined;
   onAdd: (trigger: Trigger) => void;
   onReplace: (index: number, trigger: Trigger) => void;
   onRemove: (index: number) => void;
@@ -25,6 +27,8 @@ export interface TriggersEditorProps {
 
 /** A trigger as the form holds it: what it would write, possibly not yet complete. */
 interface Draft {
+  /** For every item of the part the node is an item of, not for the node alone. */
+  every?: boolean;
   on: { event: TriggerEvent['event']; name: string; state: string };
   when?: { node: string; state: string };
   do: Array<{ action: TriggerAction['action']; value: string }>;
@@ -32,9 +36,10 @@ interface Draft {
 
 const ACTION_FIELD = { 'open-link': 'url', focus: 'node', emit: 'name', 'go-to-board': 'board' } as const;
 
-function draftOf(trigger: Trigger): Draft {
+function draftOf(trigger: Trigger, group?: string): Draft {
   const on = trigger.on;
   return {
+    ...(group !== undefined && 'node' in on && on.node === group ? { every: true } : {}),
     on: { event: on.event, name: on.event === 'element' ? on.name : '', state: on.event === 'enter' || on.event === 'leave' ? on.state : '' },
     ...(trigger.when && { when: { node: trigger.when.node, state: ([] as string[]).concat(trigger.when.state).join(', ') } }),
     do: trigger.do.map(action => ({ action: action.action, value: (action as Record<string, string>)[ACTION_FIELD[action.action]] })),
@@ -87,9 +92,12 @@ function triggerOf(draft: Draft, node: string | undefined): { problem: 'incomple
  * entered or left — or, without a part, when the board opens. Each trigger is written as soon as it is complete and
  * one a board may hold; until then the form says what is missing, and the document keeps what it had.
  */
-export function TriggersEditor({ node, triggers, parts, stateNamesOf, nameOf, onAdd, onReplace, onRemove, labels }: TriggersEditorProps) {
+export function TriggersEditor({ node, triggers, parts, stateNamesOf, nameOf, eachOf, onAdd, onReplace, onRemove, labels }: TriggersEditorProps) {
+  const group = node === undefined ? undefined : eachOf?.(node);
   const shown = (triggers ?? []).flatMap((trigger, index) =>
-    node === undefined ? (trigger.on.event === 'open' ? [{ trigger, index }] : []) : 'node' in trigger.on && trigger.on.node === node ? [{ trigger, index }] : []
+    node === undefined
+      ? (trigger.on.event === 'open' ? [{ trigger, index }] : [])
+      : 'node' in trigger.on && (trigger.on.node === node || (group !== undefined && trigger.on.node === group)) ? [{ trigger, index }] : []
   );
   const [adding, setAdding] = useState(false);
   const fresh: Draft = { on: { event: node === undefined ? 'open' : 'click', name: '', state: '' }, do: [{ action: 'emit', value: '' }] };
@@ -104,7 +112,7 @@ export function TriggersEditor({ node, triggers, parts, stateNamesOf, nameOf, on
           n={n + 1}
           current={trigger}
           fresh={fresh}
-          {...{ node, parts, stateNamesOf, nameOf, labels }}
+          {...{ node, group, parts, stateNamesOf, nameOf, labels }}
           onWrite={next => onReplace(index, next)}
           onRemove={() => onRemove(index)}
         />
@@ -115,7 +123,7 @@ export function TriggersEditor({ node, triggers, parts, stateNamesOf, nameOf, on
           n={shown.length + 1}
           current={undefined}
           fresh={fresh}
-          {...{ node, parts, stateNamesOf, nameOf, labels }}
+          {...{ node, group, parts, stateNamesOf, nameOf, labels }}
           onWrite={next => {
             onAdd(next);
             setAdding(false);
@@ -137,6 +145,7 @@ function TriggerRow({
   current,
   fresh,
   node,
+  group,
   parts,
   stateNamesOf,
   nameOf,
@@ -150,6 +159,8 @@ function TriggerRow({
   /** Where a new trigger starts. */
   fresh: Draft;
   node?: string;
+  /** The `each` part `node` is an item of, if it is. */
+  group?: string;
   parts: readonly string[];
   stateNamesOf: (part: string) => readonly string[];
   nameOf?: (part: string) => string;
@@ -157,19 +168,21 @@ function TriggerRow({
   onWrite: (trigger: Trigger) => void;
   onRemove: () => void;
 }) {
-  const [draft, setDraft] = useState(() => (current ? draftOf(current) : fresh));
+  const [draft, setDraft] = useState(() => (current ? draftOf(current, group) : fresh));
   // A trigger arriving that this row did not write (Undo, a row removed above it) replaces the draft.
   const [seen, setSeen] = useState(current);
   const [written, setWritten] = useState(current);
   if (current !== seen) {
     setSeen(current);
-    if (current !== written) setDraft(current ? draftOf(current) : fresh);
+    if (current !== written) setDraft(current ? draftOf(current, group) : fresh);
   }
   const statesId = useId();
-  const result = triggerOf(draft, node);
+  /** The node the trigger is about: the one being edited, or — for every item — the part they belong to. */
+  const target = (d: Draft) => (d.every && group !== undefined ? group : node);
+  const result = triggerOf(draft, target(draft));
   const change = (next: Draft) => {
     setDraft(next);
-    const made = triggerOf(next, node);
+    const made = triggerOf(next, target(next));
     if ('trigger' in made) {
       setWritten(made.trigger);
       onWrite(made.trigger);
@@ -189,6 +202,12 @@ function TriggerRow({
             <option value="enter">{labels.triggerOnEnter}</option>
             <option value="leave">{labels.triggerOnLeave}</option>
           </select>
+        </label>
+      )}
+      {group !== undefined && (
+        <label>
+          <input type="checkbox" checked={!!draft.every} onChange={e => change({ ...draft, every: e.target.checked })} />
+          {labels.triggerEveryItem.replace('{part}', group)}
         </label>
       )}
       {draft.on.event === 'element' && (

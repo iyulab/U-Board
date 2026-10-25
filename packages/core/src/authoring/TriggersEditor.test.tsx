@@ -88,3 +88,32 @@ describe('TriggersEditor on the board', () => {
     expect(written(container)).toEqual([{ on: { event: 'open' }, do: [{ action: 'emit', name: 'opened' }] }]);
   });
 });
+
+describe('TriggersEditor on an item of an each part', () => {
+  const items = (): GridView => ({ kind: 'grid', items: [{ id: 'pump/P1', widget: { type: 'text' } }] });
+  const every = (node: string) => (node.startsWith('pump/') ? 'pump' : undefined);
+  function Items({ initial }: { initial?: GridView['triggers'] }) {
+    const [doc, setDoc] = useState<GridView>({ ...items(), ...(initial ? { triggers: initial } : {}) });
+    return (
+      <>
+        <TriggersEditor node="pump/P1" eachOf={every} {...triggerEditing(doc, update => setDoc(update))} labels={L} />
+        <output>{JSON.stringify(doc.triggers ?? [])}</output>
+      </>
+    );
+  }
+
+  it('writes a trigger for every item when asked to, about the part itself', () => {
+    const { container } = render(<Items />);
+    fireEvent.click(screen.getByRole('button', { name: L.addTrigger }));
+    fireEvent.click(screen.getByLabelText(L.triggerEveryItem.replace('{part}', 'pump')));
+    fireEvent.change(screen.getByLabelText(L.triggerAction.replace('{n}', '1')), { target: { value: 'open-link' } });
+    fireEvent.change(screen.getByLabelText(L.triggerLinkUrl.replace('{n}', '1')), { target: { value: '/pumps/{{key}}' } });
+    expect(written(container)).toEqual([{ on: { event: 'click', node: 'pump' }, do: [{ action: 'open-link', url: '/pumps/{{key}}' }] }]);
+  });
+
+  it('lists the trigger of every item beside those of the item, with the choice on', () => {
+    render(<Items initial={[{ on: { event: 'click', node: 'pump' }, do: [{ action: 'emit', name: 'any' }] }]} />);
+    expect(screen.getByLabelText(L.triggerEveryItem.replace('{part}', 'pump'))).toBeChecked();
+    expect(screen.getByLabelText(L.triggerEmitName.replace('{n}', '1'))).toHaveValue('any');
+  });
+});

@@ -19,6 +19,8 @@ export function boardTriggerEditing(board: Board, parts: readonly string[], edit
   return {
     triggers: board.triggers?.map(shown),
     parts,
+    // An item of an `each` part is a node `<part>/<key>`: a trigger on it may be for every item of the part.
+    eachOf: node => (node.includes('/') && board.parts[node.split('/')[0]!]?.each !== undefined ? node.split('/')[0] : undefined),
     stateNamesOf: () => statuses,
     onAdd: trigger => write(triggers => [...triggers, written(trigger)]),
     onReplace: (index, trigger) => write(triggers => triggers.map((t, i) => (i === index ? written(trigger, t) : t))),

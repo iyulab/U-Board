@@ -263,6 +263,7 @@ export const KO_LABELS: UBoardLabels = {
   triggerEventName: '이벤트 이름',
   triggerState: '상태',
   triggerOnlyWhen: '어떤 부품이 특정 상태일 때만',
+  triggerEveryItem: '{part}의 모든 항목에',
   triggerWhenPart: '부품',
   triggerWhenState: '상태(여럿이면 쉼표로)',
   triggerAction: '동작 {n}',
