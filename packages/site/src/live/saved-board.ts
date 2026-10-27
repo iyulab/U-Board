@@ -1,6 +1,7 @@
 // What the playground keeps in the browser, and how it reads it back.
 
-import { checkBoard, type Board } from '@iyulab/u-board/domain';
+import { type Board } from '@iyulab/u-board/domain';
+import { checkBoard } from '@iyulab/u-board-designer/check';
 
 export const STORAGE_KEY = 'u-board-try';
 

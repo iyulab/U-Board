@@ -23,7 +23,8 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
-    "@iyulab/u-board": "*"
+    "@iyulab/u-board": "*",
+    "@iyulab/u-board-designer": "*"
   },
   "devDependencies": {
     "@iyulab/u-widgets": "^0.42.0",

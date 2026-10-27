@@ -133,12 +133,12 @@ npm install @iyulab/u-board react react-dom
 ```
 
 ```ts
-import { checkBoard, pictureOf, readerOf, type Adapter, type Board } from '@iyulab/u-board/domain';
+import { pictureOf, readerOf, validateBoard, type Adapter, type Board } from '@iyulab/u-board/domain';
 
 const board: Board = { parts: {}, layout: { kind: 'canvas', size: [1280, 720], place: {} } };
 const adapters: Adapter[] = [/* your Adapter implementations */];
 
-const { issues } = checkBoard(board);                       // [] — nothing to refuse
+const issues = validateBoard(board);                         // [] — nothing to refuse
 const picture = await pictureOf(board, readerOf(adapters));  // what the renderer draws
 ```
 
@@ -156,14 +156,15 @@ canvas-kit designer (or in order on a grid), beside a panel for what is selected
 fields and its kind's options; a link's ends, status, label, route and arrow; a shape; and, with nothing selected, the
 board's background, theme and accent, its data reads, statuses, elements and triggers. A grid's cell opens in its own
 editor. Undo, Redo, Save (`onSave`, when the host gives one) and Export are the board's. It is exported from the
-package's main entry point:
+package `@iyulab/u-board-designer`:
 
 ```ts
-import { BoardAuthoring, type Adapter, type Board } from '@iyulab/u-board';
+import { BoardAuthoring } from '@iyulab/u-board-designer';
+import type { Adapter, Board } from '@iyulab/u-board/domain';
 ```
 
 An Edit / View switch shows the board as a shared link does, pan and zoom kept; without a `width`/`height` the board
-fills the parent beside the panel, so give the parent a definite height. The [package README](packages/core/README.md)
+fills the parent beside the panel, so give the parent a definite height. The [package README](packages/designer/README.md)
 covers sizing and view controls.
 
 Unlike the domain layer above, this surface depends on canvas-kit and renders to the DOM directly — a host application

@@ -1,4 +1,5 @@
-import type { Board, BoardFinding } from '@iyulab/u-board/domain';
+import type { Board } from '@iyulab/u-board/domain';
+import type { BoardFinding } from '@iyulab/u-board-designer/check';
 import type { ViewDocument, ViewDocumentAdvice, ViewKind } from '@iyulab/u-board/picture';
 
 /** What the server says went wrong — its code, and whatever it adds (issues, the operation that failed, a revision). */

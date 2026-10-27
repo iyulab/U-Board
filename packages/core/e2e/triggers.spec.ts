@@ -5,7 +5,6 @@ import { test, expect } from '@playwright/test';
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1200, height: 900 });
   await page.goto('/');
-  await page.getByRole('button', { name: 'View', exact: true }).first().click();
   await expect(page.locator('[data-node-id="pump-a"] u-widget')).toBeVisible();
 });
 

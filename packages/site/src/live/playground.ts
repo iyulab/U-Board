@@ -4,7 +4,8 @@
 
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BoardAuthoring, KO_LABELS, type Board } from '@iyulab/u-board';
+import { KO_LABELS, type Board } from '@iyulab/u-board';
+import { BoardAuthoring } from '@iyulab/u-board-designer';
 import '@iyulab/u-board/styles.css';
 import { savedBoard, STORAGE_KEY } from './saved-board';
 import { sampleBoard, SampleAdapter, SAMPLE_ADAPTER_ID, type SampleBoardText } from './sample-board';

@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@iyulab/u-board": "*",
+    "@iyulab/u-board-designer": "*",
     "@iyulab/u-board-mcp": "*",
     "@iyulab/u-board-samples": "*",
     "@iyulab/u-widgets": "^0.42.0",

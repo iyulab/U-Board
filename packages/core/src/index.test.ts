@@ -9,8 +9,10 @@ describe('index entry (".")', () => {
     expect('FixtureAdapter' in mod).toBe(false);
   });
 
-  it('re-exports the authoring surface and the board language', () => {
-    expect(typeof mod.BoardAuthoring).toBe('function');
-    expect(typeof mod.checkBoard).toBe('function');
+  it('re-exports the viewer and the board language, and no authoring tool', () => {
+    expect(typeof mod.BoardView).toBe('function');
+    expect(typeof mod.validateBoard).toBe('function');
+    expect('BoardAuthoring' in mod).toBe(false);
+    expect('checkBoard' in mod).toBe(false);
   });
 });

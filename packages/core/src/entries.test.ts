@@ -7,6 +7,8 @@ import { dirname, resolve } from 'node:path';
 import * as domain from './domain-entry.js';
 import * as picture from './picture-entry.js';
 import * as viewer from './viewer-entry.js';
+import * as examples from './examples-entry.js';
+import * as toolkit from './toolkit-entry.js';
 import * as root from './index.js';
 
 // The public surface, value by value: an export appears or goes away here on purpose, not as a side effect — what a
@@ -14,9 +16,9 @@ import * as root from './index.js';
 describe('the entry points', () => {
   it('./domain exports the board language and the adapter contract', () => {
     expect(Object.keys(domain).sort()).toEqual([
-      'DEFAULT_QUALITY_TEXT', 'EMPHASES', 'FRAMES', 'JsonPatchError', 'PART_KINDS', 'PictureError', 'RULEBOOK_EXAMPLE', 'TONES', 'ageText',
-      'applyJsonPatch', 'boardRulebook', 'boardSchema', 'checkBoard', 'dataReadOf', 'describeQuality', 'drawBoard', 'elementDefinition', 'emptyBoard',
-      'getByPointer', 'keyReadsOf', 'keysIn', 'partKind', 'pictureOf', 'readKeys', 'readLists', 'readerOf', 'sourceAdvice', 'toViewDocument', 'validateBoard',
+      'DEFAULT_QUALITY_TEXT', 'EMPHASES', 'FRAMES', 'JsonPatchError', 'PART_KINDS', 'PictureError', 'TONES', 'ageText',
+      'applyJsonPatch', 'boardSchema', 'dataReadOf', 'describeQuality', 'drawBoard', 'elementDefinition',
+      'getByPointer', 'keyReadsOf', 'keysIn', 'partKind', 'pictureOf', 'readKeys', 'readLists', 'readerOf', 'toViewDocument', 'validateBoard',
       'worstQuality',
     ]);
   });
@@ -24,7 +26,7 @@ describe('the entry points', () => {
   it('./picture exports the model the renderer draws from', () => {
     expect(Object.keys(picture).sort()).toEqual([
       'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'CONNECTOR_ROUTES', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'FiringLimit',
-      'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS', 'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn',
+      'GRID_COLUMNS', 'GRID_COLUMNS_MEDIUM', 'GRID_DEFAULT_SPAN', 'GRID_MAX_ROW_SPAN', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS', 'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn',
       'boardStateOf', 'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts',
       'elementListeners', 'findHttpRefItem', 'firedBy', 'getByPointer', 'isCanvasItem', 'isHttpRef',
       'isSourceErrorField', 'isTriggerLink', 'linkFor', 'lintViewDocument', 'nodeSize', 'parseSourceTime', 'placeAt', 'placedAt', 'placedIn',
@@ -37,8 +39,18 @@ describe('the entry points', () => {
     expect(Object.keys(viewer).sort()).toEqual(['BoardView', 'DEFAULT_LABELS', 'DEFAULT_QUALITY_TEXT', 'KO_LABELS', 'ViewerPage', 'ageText', 'serverClock', 'timeText']);
   });
 
-  it('exports from the package root everything ./domain and ./viewer do, and the authoring tool', () => {
-    expect(Object.keys(root).sort()).toEqual([...new Set([...Object.keys(domain), ...Object.keys(viewer), 'BoardAuthoring', 'layoutEditable'])].sort());
+  it('exports from the package root everything ./domain and ./viewer do, and nothing else', () => {
+    expect(Object.keys(root).sort()).toEqual([...new Set([...Object.keys(domain), ...Object.keys(viewer)])].sort());
+  });
+
+  it('./examples exports the sample boards and the fixture adapter', () => {
+    expect(Object.keys(examples).sort()).toEqual(['FixtureAdapter', 'demoBoard', 'demoGrid', 'demoMixed', 'demoQuakes', 'elementsDemo']);
+  });
+
+  it('./toolkit carries building blocks, not the viewer board or the authoring tool', () => {
+    expect('BoardView' in toolkit).toBe(false);
+    expect('BoardAuthoring' in toolkit).toBe(false);
+    expect(typeof toolkit.ViewerPage).toBe('function');
   });
 
   it('keeps React and the canvas out of ./domain and ./picture', () => {

@@ -10,6 +10,9 @@ export default defineConfig({
       // name listed first would turn '@iyulab/u-board/domain' into 'src/index.ts/domain'.
       '@iyulab/u-board/domain': fileURLToPath(new URL('./src/domain-entry.ts', import.meta.url)),
       '@iyulab/u-board/picture': fileURLToPath(new URL('./src/picture-entry.ts', import.meta.url)),
+      '@iyulab/u-board/toolkit': fileURLToPath(new URL('./src/toolkit-entry.ts', import.meta.url)),
+      '@iyulab/u-board/viewer': fileURLToPath(new URL('./src/viewer-entry.ts', import.meta.url)),
+      '@iyulab/u-board/examples': fileURLToPath(new URL('./src/examples-entry.ts', import.meta.url)),
       '@iyulab/u-board': fileURLToPath(new URL('./src/index.ts', import.meta.url)),
     },
   },

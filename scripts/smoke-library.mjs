@@ -12,6 +12,7 @@
 import assert from 'node:assert/strict';
 import { describeQuality, pictureOf, readerOf, validateBoard } from '@iyulab/u-board/domain';
 import { resolveDocument } from '@iyulab/u-board/picture';
+import { checkBoard } from '@iyulab/u-board-designer/check';
 
 const board = {
   data: {
@@ -35,6 +36,7 @@ const adapter = {
 };
 
 assert.deepEqual(validateBoard(board), []);
+assert.deepEqual(checkBoard(board).issues, []);
 
 const picture = await pictureOf(board, readerOf([adapter]));
 const nodes = (await resolveDocument(picture, [adapter])).nodes;

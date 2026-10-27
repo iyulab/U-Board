@@ -57,9 +57,9 @@ test('page loads without JS errors', async ({ page }) => {
 });
 
 test('the demo document\'s chart.line node renders a canvas, not the "Unknown widget" fallback', async ({ page }) => {
-  // node id from src/App.tsx's demoDocument — the authoring editor draws each node's widget in place
-  // as a canvas-kit designer overlay, data-testid="designer-overlay-<node.id>", not a plain DOM id.
-  const overlayTestId = 'designer-overlay-pump-a-load-trend';
+  // node id from the demo boards (src/examples) — the viewer draws each node's widget in place
+  // as a canvas-kit viewer overlay, data-testid="overlay-<node.id>", not a plain DOM id.
+  const overlayTestId = 'overlay-pump-a-load-trend';
 
   const hasCanvas = await overlayShadowHas(page, overlayTestId, 'canvas');
   expect(hasCanvas).toBe(true);
@@ -71,9 +71,9 @@ test('the demo document\'s chart.line node renders a canvas, not the "Unknown wi
 /** On-screen heights of a node's box and of the widget drawn in it. */
 async function heights(page: Page, nodeId: string) {
   // The overlay is drawn after the scene: on a loaded machine it is not there yet when the page first answers.
-  await page.locator(`[data-testid="designer-overlay-${nodeId}"] u-widget`).waitFor({ state: 'attached' });
+  await page.locator(`[data-testid="overlay-${nodeId}"] u-widget`).waitFor({ state: 'attached' });
   return page.evaluate(id => {
-    const overlay = document.querySelector(`[data-testid="designer-overlay-${id}"]`) as HTMLElement;
+    const overlay = document.querySelector(`[data-testid="overlay-${id}"]`) as HTMLElement;
     const widget = overlay.querySelector('u-widget') as HTMLElement;
     return { overlay: overlay.getBoundingClientRect().height, widget: widget.getBoundingClientRect().height };
   }, nodeId);
@@ -97,7 +97,7 @@ test('a widget stays whole inside a node smaller than its own size', async ({ pa
   }
 
   const fit = await page.evaluate(() => {
-    const overlay = (id: string) => document.querySelector(`[data-testid="designer-overlay-${id}"]`) as HTMLElement;
+    const overlay = (id: string) => document.querySelector(`[data-testid="overlay-${id}"]`) as HTMLElement;
     const deep = (root: ParentNode, sel: string): Element | null => {
       const hit = root.querySelector(sel);
       if (hit) return hit;

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { BoardAuthoring, KO_LABELS, type AuthoringMode, type Adapter, type Board } from '@iyulab/u-board';
+import { KO_LABELS, type Adapter, type Board } from '@iyulab/u-board';
+import { BoardAuthoring, type AuthoringMode } from '@iyulab/u-board-designer';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, apiClock, ApiError,

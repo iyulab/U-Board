@@ -53,7 +53,7 @@ describe.each(['viewer-entry.ts', 'domain-entry.ts'])('%s module graph', entry =
   const { files, packages } = moduleGraph(entry);
 
   it('reaches no authoring module', () => {
-    expect(files.filter(f => f.startsWith('authoring/'))).toEqual([]);
+    expect(files.filter(f => f.startsWith('authoring/') || f.startsWith('editing/'))).toEqual([]);
   });
 
   it('imports neither the designer nor the widget metadata', () => {

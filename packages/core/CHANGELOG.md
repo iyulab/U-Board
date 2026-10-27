@@ -6,6 +6,23 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking: the authoring tool and the board check moved to `@iyulab/u-board-designer`.** `BoardAuthoring` and
+  `layoutEditable` are no longer exported from the package root, and `checkBoard`, `emptyBoard`, `sourceAdvice`,
+  `boardRulebook` and `RULEBOOK_EXAMPLE` are no longer exported from `@iyulab/u-board/domain`; import them from
+  `@iyulab/u-board-designer` and `@iyulab/u-board-designer/check`. What stays is the board language (`validateBoard` and
+  the schema stay in `./domain`), the viewer and the picture. The authoring classes and tokens of `styles.css`
+  (`ub-authoring…`, `ub-panel…`, `ub-action--primary`, `--ub-panel-width`) moved to the designer's own stylesheet. The
+  package no longer depends on `@canvas-kit/designer`.
+
+### Added
+
+- **`./toolkit`**: the renderer's building blocks for a tool that edits a board and wants to draw it the way the viewer
+  does. **`./examples`**: the sample boards and the fixture adapter the demo and the docs use.
+- `./picture` also exports the grid constants (`GRID_COLUMNS`, `GRID_COLUMNS_MEDIUM`, `GRID_DEFAULT_SPAN`,
+  `GRID_MAX_ROW_SPAN`).
+
 ## [0.35.0] - 2026-10-25
 
 ### Added

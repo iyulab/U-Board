@@ -88,8 +88,8 @@ jobs:
       - name: Server tests
         run: npm test --workspace=packages/server
 
-  # Publishes the npm packages — the library (packages/core, @iyulab/u-board) and the MCP server
-  # (packages/mcp, @iyulab/u-board-mcp) — once `verify` and `node-floor` have passed on a push to main,
+  # Publishes the npm packages — the library (packages/core, @iyulab/u-board), the authoring tool and board check
+  # (packages/designer, @iyulab/u-board-designer) and the MCP server (packages/mcp, @iyulab/u-board-mcp) — once `verify` and `node-floor` have passed on a push to main,
   # each only if its version isn't on the registry yet. Kept in this workflow rather than a separate
   # one so the commit that gets published is exactly the commit that was verified — and so provenance
   # records that commit. The library goes first: the MCP server depends on it, and is never on the
@@ -119,7 +119,7 @@ jobs:
         id: check
         run: |
           pending=""
-          for dir in packages/core packages/mcp; do
+          for dir in packages/core packages/designer packages/mcp; do
             NAME=$(node -p "require('./${dir}/package.json').name")
             VERSION=$(node -p "require('./${dir}/package.json').version")
             # Only npm's 404 means "not published yet"; any other failure (registry down, rate limit)

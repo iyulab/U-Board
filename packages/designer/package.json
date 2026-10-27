@@ -1,0 +1,77 @@
+{
+  "name": "@iyulab/u-board-designer",
+  "version": "0.1.0",
+  "description": "The authoring tool for U-Board boards, and the check and rulebook an assistant writes by",
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iyulab/U-Board.git",
+    "directory": "packages/designer"
+  },
+  "main": "./dist/lib/index.js",
+  "module": "./dist/lib/index.js",
+  "types": "./dist/lib/index.d.ts",
+  "files": [
+    "dist/lib",
+    "styles.css",
+    "LICENSE",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js"
+    },
+    "./check": {
+      "types": "./dist/lib/check-entry.d.ts",
+      "import": "./dist/lib/check-entry.js"
+    },
+    "./styles.css": "./styles.css"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "build:lib": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "prepack": "node scripts/prepack.mjs",
+    "test:visual:update": "bash ../../scripts/update-visual-baselines.sh"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "@canvas-kit/core": "^0.8.0",
+    "@canvas-kit/designer": "^0.10.0",
+    "@canvas-kit/viewer": "^0.6.1",
+    "@iyulab/u-board": "^0.35.0",
+    "@iyulab/u-widgets": "^0.42.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^26.4.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.0.5",
+    "jsdom": "^30.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1",
+    "vitest": "^5.0.2"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

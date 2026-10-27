@@ -25,6 +25,7 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",
     "@iyulab/u-board": "*",
+    "@iyulab/u-board-designer": "*",
     "acorn": "^8.19.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

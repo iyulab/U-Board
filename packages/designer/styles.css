@@ -1,0 +1,277 @@
+/*
+ * @iyulab/u-board-designer — optional default look for the authoring view.
+ *
+ * Import it once, after `@iyulab/u-board/styles.css` (which carries the buttons and the viewer the authoring
+ * view draws the board with): `import '@iyulab/u-board-designer/styles.css'`. Without it every screen still
+ * works; the controls just keep the browser's own look.
+ *
+ * Theming and light or dark work as in `@iyulab/u-board/styles.css`: the rules read `--ub-*` custom
+ * properties, fall back to the values written here, and follow the page's declared theme or the system
+ * preference. The full list is in the package README ("Styling").
+ *
+ * Rules target the stable class names (`ub-authoring`, `ub-panel`, …), mostly one class each.
+ */
+
+/* Each root resolves the public tokens once, under private names, so a token a host defines on an
+   ancestor reaches every rule below and an undefined one falls back here. */
+.ub-authoring {
+  --_ub-surface: var(--ub-bg-surface, #ffffff);
+  --_ub-subtle: var(--ub-bg-subtle, #f1f5f9);
+  --_ub-border: var(--ub-border, #e2e8f0);
+  --_ub-border-strong: var(--ub-border-strong, #cbd5e1);
+  --_ub-text-strong: var(--ub-text-strong, #0f172a);
+  --_ub-text: var(--ub-text-normal, #334155);
+  --_ub-text-muted: var(--ub-text-muted, #64748b);
+  --_ub-accent: var(--ub-brand-solid, #0f766e);
+  --_ub-accent-text: var(--ub-text-inverse, #ffffff);
+  --_ub-accent-subtle: var(--ub-brand-subtle, rgba(15, 118, 110, 0.08));
+  --_ub-error: var(--ub-error, #b91c1c);
+  --_ub-warning: var(--ub-warning, #92400e);
+  --_ub-warning-bg: var(--ub-warning-bg, #fef3c7);
+  --_ub-radius-sm: var(--ub-radius-sm, 6px);
+  --_ub-radius-md: var(--ub-radius-md, 10px);
+  --_ub-space-1: var(--ub-space-1, 4px);
+  --_ub-space-2: var(--ub-space-2, 8px);
+  --_ub-space-3: var(--ub-space-3, 12px);
+  --_ub-space-4: var(--ub-space-4, 16px);
+  --_ub-font-xs: var(--ub-font-size-xs, 11px);
+  --_ub-font-sm: var(--ub-font-size-sm, 12px);
+  --_ub-font-md: var(--ub-font-size-md, 13px);
+  --_ub-font-base: var(--ub-font-size-base, 14px);
+  --_ub-font: var(--ub-font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+
+  font-family: var(--_ub-font);
+  font-size: var(--_ub-font-base);
+  line-height: 1.5;
+  color: var(--_ub-text);
+}
+
+/* The dark fallbacks — twice, because a declared theme and the system preference are separate
+   conditions: once for a page that declares dark, once for one that declares nothing on a dark system. */
+:root[data-theme='dark'] .ub-authoring {
+  --_ub-surface: var(--ub-bg-surface, #111b2f);
+  --_ub-subtle: var(--ub-bg-subtle, #16243a);
+  --_ub-border: var(--ub-border, #22324a);
+  --_ub-border-strong: var(--ub-border-strong, #2b3f5c);
+  --_ub-text-strong: var(--ub-text-strong, #e2e8f0);
+  --_ub-text: var(--ub-text-normal, #cbd5e1);
+  --_ub-text-muted: var(--ub-text-muted, #94a3b8);
+  --_ub-accent-subtle: var(--ub-brand-subtle, rgba(45, 212, 191, 0.12));
+  --_ub-error: var(--ub-error, #f87171);
+  --_ub-warning: var(--ub-warning, #fbbf24);
+  --_ub-warning-bg: var(--ub-warning-bg, #2d1d05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']):not([data-theme='dark']) .ub-authoring {
+    --_ub-surface: var(--ub-bg-surface, #111b2f);
+    --_ub-subtle: var(--ub-bg-subtle, #16243a);
+    --_ub-border: var(--ub-border, #22324a);
+    --_ub-border-strong: var(--ub-border-strong, #2b3f5c);
+    --_ub-text-strong: var(--ub-text-strong, #e2e8f0);
+    --_ub-text: var(--ub-text-normal, #cbd5e1);
+    --_ub-text-muted: var(--ub-text-muted, #94a3b8);
+    --_ub-accent-subtle: var(--ub-brand-subtle, rgba(45, 212, 191, 0.12));
+    --_ub-error: var(--ub-error, #f87171);
+    --_ub-warning: var(--ub-warning, #fbbf24);
+    --_ub-warning-bg: var(--ub-warning-bg, #2d1d05);
+  }
+}
+
+/* ── Authoring view ──────────────────────────────────────────────────── */
+
+/* ── Buttons the authoring view adds to the viewer package's ───────────── */
+
+.ub-action--primary {
+  border-color: var(--_ub-accent);
+  background: var(--_ub-accent);
+  color: var(--_ub-accent-text);
+}
+
+/* The chosen one of a set of toggles. */
+.ub-action[aria-pressed="true"] {
+  border-color: var(--_ub-accent);
+  background: var(--_ub-accent-subtle);
+  color: var(--_ub-text);
+}
+
+.ub-action--primary:hover:not(:disabled) {
+  background: var(--_ub-accent);
+  filter: brightness(1.08);
+}
+
+/* ── Authoring view ──────────────────────────────────────────────────── */
+
+.ub-authoring__toolbar {
+  padding-bottom: var(--_ub-space-3);
+}
+
+/* Actions that belong together sit together; a thin rule sets one group off from the next. */
+.ub-authoring__group + .ub-authoring__group {
+  padding-left: var(--_ub-space-2);
+  border-left: 1px solid var(--_ub-border);
+}
+
+.ub-authoring__error {
+  margin: var(--_ub-space-2) 0 0;
+  font-size: var(--_ub-font-md);
+}
+
+/* The widget type named above a node on the editor — a quiet hint over the board, never covering the widget. */
+.ub-authoring__node-tag {
+  padding: 0 var(--_ub-space-1);
+  border-radius: var(--_ub-radius-sm) var(--_ub-radius-sm) 0 0;
+  background: var(--_ub-accent);
+  color: var(--_ub-accent-text);
+  font-size: var(--_ub-font-xs);
+  line-height: 1.5;
+}
+
+/* The board's frame (the editor, or the board in view mode), so a board with nothing on it still reads as a board.
+   Inside the frame is the board's paper — the board's own tone, not the page theme: light like the drawings boards
+   are made on, unless the board is dark (below). */
+.ub-authoring__surface {
+  border: 1px solid var(--_ub-border);
+  border-radius: var(--_ub-radius-md);
+  background: var(--ub-board-bg, #ffffff);
+  overflow: hidden;
+}
+
+/* A dark board (`appearance: "dark"`) — for a dark drawing, or none: dark paper, and the widgets on it
+   take their dark palette. */
+.ub-authoring__surface[data-appearance="dark"] {
+  background: var(--ub-board-bg-dark, #111827);
+}
+
+.ub-authoring__panel {
+  box-sizing: border-box;
+  padding: var(--_ub-space-3);
+  border: 1px solid var(--_ub-border);
+  border-radius: var(--_ub-radius-md);
+  background: var(--_ub-surface);
+}
+
+.ub-authoring__status {
+  margin: var(--_ub-space-2) 0;
+  font-size: var(--_ub-font-md);
+  color: var(--_ub-text-muted);
+}
+
+/* ── Property and decoration panels ──────────────────────────────────── */
+
+.ub-panel__heading {
+  margin: 0 0 var(--_ub-space-3);
+  font-size: var(--_ub-font-base);
+  font-weight: 700;
+  color: var(--_ub-text-strong);
+}
+
+.ub-panel__subheading {
+  margin: var(--_ub-space-3) 0 var(--_ub-space-2);
+  padding-top: var(--_ub-space-3);
+  border-top: 1px solid var(--_ub-border);
+  font-size: var(--_ub-font-md);
+  font-weight: 700;
+  color: var(--_ub-text-strong);
+}
+
+/* A label above its control, the control as wide as the panel. */
+.ub-panel__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--_ub-space-1);
+  margin: 0 0 var(--_ub-space-2);
+  font-size: var(--_ub-font-sm);
+  font-weight: 600;
+  color: var(--_ub-text);
+}
+
+.ub-panel input:not([type='checkbox']):not([type='radio']),
+.ub-panel select,
+.ub-panel textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: var(--_ub-space-1) var(--_ub-space-2);
+  border: 1px solid var(--_ub-border-strong);
+  border-radius: var(--_ub-radius-sm);
+  background: var(--_ub-surface);
+  color: var(--_ub-text-strong);
+  font: inherit;
+  font-size: var(--_ub-font-md);
+  font-weight: 400;
+}
+
+.ub-panel__group {
+  margin: 0 0 var(--_ub-space-3);
+  padding: var(--_ub-space-2);
+  border: 1px solid var(--_ub-border);
+  border-radius: var(--_ub-radius-sm);
+}
+
+.ub-panel__group legend {
+  padding: 0 var(--_ub-space-1);
+  font-size: var(--_ub-font-sm);
+  font-weight: 600;
+}
+
+/* The widget library's name for a value, with its key for anyone matching it to the JSON. */
+.ub-panel__field-name code {
+  font-size: var(--_ub-font-xs);
+  font-weight: 400;
+  color: var(--_ub-text-muted);
+}
+
+.ub-panel__field--check {
+  font-weight: 400;
+}
+
+.ub-panel__hint {
+  margin: 0 0 var(--_ub-space-2);
+  font-size: var(--_ub-font-sm);
+  color: var(--_ub-text-muted);
+}
+
+.ub-panel__error {
+  margin: var(--_ub-space-1) 0 var(--_ub-space-2);
+  font-size: var(--_ub-font-sm);
+}
+
+.ub-panel__findings {
+  margin: var(--_ub-space-2) 0;
+  padding-left: var(--_ub-space-4);
+  font-size: var(--_ub-font-sm);
+}
+
+.ub-panel__binding-tag {
+  font-size: var(--_ub-font-xs);
+  color: var(--_ub-text-muted);
+}
+
+.ub-panel__value-map {
+  margin: var(--_ub-space-2) 0;
+  padding: var(--_ub-space-2);
+  border: 1px solid var(--_ub-border);
+  border-radius: var(--_ub-radius-sm);
+}
+
+.ub-panel__value-map legend {
+  padding: 0 var(--_ub-space-1);
+  font-size: var(--_ub-font-sm);
+  font-weight: 600;
+}
+
+.ub-panel__map-row {
+  margin-bottom: var(--_ub-space-1);
+  font-size: var(--_ub-font-sm);
+  color: var(--_ub-text-muted);
+}
+
+.ub-panel__value-map > .ub-action {
+  margin: var(--_ub-space-1) var(--_ub-space-1) var(--_ub-space-2) 0;
+}
+
+.ub-panel__actions {
+  margin-top: var(--_ub-space-2);
+}

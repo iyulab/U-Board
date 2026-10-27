@@ -9,7 +9,7 @@ import { createWorkspace, addWorkspaceUser } from '../db/workspaces.js';
 import { createConnector } from '../db/connectors.js';
 import { signSession } from '../auth/session.js';
 import { SESSION_COOKIE_NAME } from '../middleware/require-auth.js';
-import { RULEBOOK_EXAMPLE } from '@iyulab/u-board/domain';
+import { RULEBOOK_EXAMPLE } from '@iyulab/u-board-designer/check';
 
 const SECRET = 'test-secret-at-least-16-chars';
 let db: DbClient;

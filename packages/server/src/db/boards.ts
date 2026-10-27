@@ -1,7 +1,8 @@
 import type { DbClient } from '../db.js';
 import { randomUUID } from 'node:crypto';
 import { recordAuditEvent } from './audit.js';
-import { emptyBoard, type Board } from '@iyulab/u-board/domain';
+import { type Board } from '@iyulab/u-board/domain';
+import { emptyBoard } from '@iyulab/u-board-designer/check';
 import type { ViewKind } from '@iyulab/u-board/picture';
 import { documentKind } from '../board-document.js';
 

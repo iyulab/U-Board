@@ -7,6 +7,8 @@ COPY package.json package-lock.json ./
 # The test setups the packages' typecheck reads (not shipped — the runtime stage copies only built output).
 COPY test-support test-support
 COPY packages/core packages/core
+# The board check and the rulebook the server loads (packages/designer/check) — built with the core library.
+COPY packages/designer packages/designer
 COPY packages/server packages/server
 COPY packages/console packages/console
 COPY packages/share packages/share
@@ -36,6 +38,8 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/packages/core/package.json ./packages/core/package.json
 COPY --from=build /app/packages/core/dist ./packages/core/dist
+COPY --from=build /app/packages/designer/package.json ./packages/designer/package.json
+COPY --from=build /app/packages/designer/dist ./packages/designer/dist
 COPY --from=build /app/packages/server/package.json ./packages/server/package.json
 COPY --from=build /app/packages/server/dist ./packages/server/dist
 # The server finds these next to its own package and serves them (see src/index.ts).

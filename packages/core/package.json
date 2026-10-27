@@ -1,7 +1,7 @@
 {
   "name": "@iyulab/u-board",
   "version": "0.35.0",
-  "description": "Spatial dashboard authoring middleware",
+  "description": "The board language and the renderer that draws it",
   "type": "module",
   "license": "AGPL-3.0-or-later",
   "repository": {
@@ -48,6 +48,14 @@
       "types": "./dist/lib/picture-entry.d.ts",
       "import": "./dist/lib/picture-entry.js"
     },
+    "./toolkit": {
+      "types": "./dist/lib/toolkit-entry.d.ts",
+      "import": "./dist/lib/toolkit-entry.js"
+    },
+    "./examples": {
+      "types": "./dist/lib/examples-entry.d.ts",
+      "import": "./dist/lib/examples-entry.js"
+    },
     "./styles.css": "./styles.css"
   },
   "scripts": {
@@ -58,7 +66,6 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:visual:update": "bash ../../scripts/update-visual-baselines.sh",
     "gen:widget-catalog": "tsx scripts/gen-widget-catalog.ts",
     "prepack": "node scripts/prepack.mjs"
   },
@@ -67,7 +74,6 @@
   },
   "dependencies": {
     "@canvas-kit/core": "^0.8.0",
-    "@canvas-kit/designer": "^0.10.0",
     "@canvas-kit/viewer": "^0.6.1",
     "@iyulab/u-widgets": "^0.42.0",
     "@lit/react": "^1.0.8",

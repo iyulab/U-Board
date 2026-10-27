@@ -1,5 +1,6 @@
 import { getByPointer } from '@iyulab/u-board/domain';
-import { boardRulebook, boardSchema, partKind, PART_KINDS } from '@iyulab/u-board/domain';
+import { boardSchema, partKind, PART_KINDS } from '@iyulab/u-board/domain';
+import { boardRulebook } from '@iyulab/u-board-designer/check';
 import { getWidgetOptions } from '@iyulab/u-widgets/tools';
 
 /** The topics `describe` answers, each in one line — what an assistant reads first. */

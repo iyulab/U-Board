@@ -13,7 +13,7 @@ export type {
   ResolvedViewDocument,
   ResolvedOf,
 } from './resolve-document.js';
-export { placedIn, placedAt, isCanvasItem, isTriggerLink, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, CONNECTOR_ROUTES, PLACEMENTS, TRIGGER_EVENTS, TRIGGER_ACTIONS } from './view-document.js';
+export { placedIn, placedAt, isCanvasItem, isTriggerLink, CONNECTOR_BINDABLE, STROKE_DASHES, CONNECTOR_ARROWS, CONNECTOR_ROUTES, PLACEMENTS, TRIGGER_EVENTS, TRIGGER_ACTIONS, GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, GRID_MAX_ROW_SPAN } from './view-document.js';
 export { bindingsIn } from './document-bindings.js';
 export { DEFAULT_NODE_WIDTH, DEFAULT_NODE_HEIGHT } from './layout-defaults.js';
 export { nodeSize, sizedNodes } from './node-size.js';

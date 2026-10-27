@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { checkSpec } from '@iyulab/u-widgets/tools';
-import { checkBoard, pictureOf, readerOf } from '@iyulab/u-board/domain';
+import { pictureOf, readerOf } from '@iyulab/u-board/domain';
+import { checkBoard } from '@iyulab/u-board-designer/check';
 import { isCanvasItem, isSourceErrorField, placedIn, resolveDocument, sizedNodes, sourceErrorIn, type CanvasView, type Node, type ViewDocument } from '@iyulab/u-board/picture';
 import { SAMPLE_PACKS, isInstallable, isLiveConnector, snapshotAdapters } from './index.js';
 import { keepPointers } from './prune.js';

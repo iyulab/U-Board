@@ -1,70 +1,37 @@
 import { useMemo, useState } from 'react';
-import { BoardAuthoring } from './authoring/BoardAuthoring.js';
 import { BoardView } from './viewer/BoardView.js';
 import { FixtureAdapter } from './fixture-adapter.js';
 import { demoBoard, demoGrid, demoMixed, demoQuakes, elementsDemo } from './examples/demo-boards.js';
 
+// The package's development harness: the demo boards drawn the way a host that only views them draws them — no
+// editor, no designer, no server. The browser tests in e2e/ run against it.
+type Mode = 'view' | 'grid' | 'mixed' | 'elements' | 'quakes';
+const MODES: ReadonlyArray<readonly [Mode, string]> = [
+  ['view', 'View'],
+  ['grid', 'Grid'],
+  ['mixed', 'Mixed'],
+  ['elements', 'Elements'],
+  ['quakes', 'Quakes'],
+];
+
 export function App() {
   const adapters = useMemo(() => [new FixtureAdapter()], []);
-  const [mode, setMode] = useState<'author' | 'view' | 'grid' | 'grid-author' | 'mixed' | 'mixed-author' | 'elements' | 'elements-author' | 'quakes'>('author');
+  const [mode, setMode] = useState<Mode>('view');
   const [boardEvent, setBoardEvent] = useState<string | null>(null);
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'author' ? 'authoring' : mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : mode === 'elements-author' ? 'elements authoring' : mode === 'mixed' ? 'mixed board' : mode === 'mixed-author' ? 'mixed board authoring' : 'grid authoring'}</h1>
+      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : mode === 'mixed' ? 'mixed board' : 'placed by fields'}</h1>
       <div style={{ marginBottom: 12 }}>
-        <button onClick={() => setMode('author')} disabled={mode === 'author'}>
-          Author
-        </button>{' '}
-        <button onClick={() => setMode('view')} disabled={mode === 'view'}>
-          View
-        </button>{' '}
-        <button onClick={() => setMode('grid')} disabled={mode === 'grid'}>
-          Grid
-        </button>{' '}
-        <button onClick={() => setMode('grid-author')} disabled={mode === 'grid-author'}>
-          Author grid
-        </button>{' '}
-        <button onClick={() => setMode('mixed')} disabled={mode === 'mixed'}>
-          Mixed
-        </button>{' '}
-        <button onClick={() => setMode('mixed-author')} disabled={mode === 'mixed-author'}>
-          Author mixed
-        </button>{' '}
-        <button onClick={() => setMode('elements')} disabled={mode === 'elements'}>
-          Elements
-        </button>{' '}
-        <button onClick={() => setMode('elements-author')} disabled={mode === 'elements-author'}>
-          Author elements
-        </button>{' '}
-        <button onClick={() => setMode('quakes')} disabled={mode === 'quakes'}>
-          Quakes
-        </button>
+        {MODES.map(([value, label]) => (
+          <span key={value}>
+            <button onClick={() => setMode(value)} disabled={mode === value}>
+              {label}
+            </button>{' '}
+          </span>
+        ))}
       </div>
-      {mode === 'author' ? (
-        <>
-          <p style={{ color: '#64748b', maxWidth: 640 }}>
-            Add and drag nodes; each node's widget is drawn in place through the real render path
-            (the board's picture + u-widgets overlays) against a fixture adapter (one live value, one
-            deliberately stale, one that never resolves), and View shows the board as a shared
-            link does. Widgets whose binding isn't live get a frame — amber dashed for stale,
-            gray dotted for disconnected (distinct border style, not just color, so the two
-            don't rely on color perception alone). This is the library's development harness,
-            with no server behind it: Export saves the board as a local file. The console saves boards on the server.
-          </p>
-          <div style={{ height: 620 }}>
-            <BoardAuthoring initialBoard={demoBoard} adapters={adapters} />
-          </div>
-        </>
-      ) : mode === 'grid-author' ? (
-        <div style={{ height: 720 }}>
-          <BoardAuthoring initialBoard={demoGrid} adapters={adapters} />
-        </div>
-      ) : mode === 'mixed-author' ? (
-        <div style={{ height: 720 }}>
-          <BoardAuthoring initialBoard={demoMixed} adapters={adapters} />
-        </div>
-      ) : mode === 'mixed' ? (
+      {mode === 'mixed' ? (
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>
             A grid whose first cell holds a canvas — the floor plan with its nodes and line, fitted to the cell — and the
@@ -74,10 +41,6 @@ export function App() {
             <BoardView board={demoMixed} adapters={adapters} />
           </div>
         </>
-      ) : mode === 'elements-author' ? (
-        <div style={{ height: 720 }}>
-          <BoardAuthoring initialBoard={elementsDemo} adapters={adapters} />
-        </div>
       ) : mode === 'elements' ? (
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>

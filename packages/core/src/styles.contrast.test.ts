@@ -26,7 +26,7 @@ function contrast(a: string, b: string): number {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-const light = fallbacks(/^\.ub-authoring,\s*\n\.ub-viewer\s*\{/m);
+const light = fallbacks(/^\.ub-viewer\s*\{/m);
 const dark = { ...light, ...fallbacks(/^:root\[data-theme='dark'\]/m) };
 
 const PAIRS: [string, string][] = [

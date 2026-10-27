@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { applyJsonPatch, getByPointer, JsonPatchError } from '@iyulab/u-board/domain';
 import { lintViewDocument, placedAt, type ViewDocument } from '@iyulab/u-board/picture';
-import { checkBoard, sourceAdvice, type Board } from '@iyulab/u-board/domain';
+import { type Board } from '@iyulab/u-board/domain';
+import { checkBoard, sourceAdvice } from '@iyulab/u-board-designer/check';
 import { UBoardApiError, type UBoardClient } from './client.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';

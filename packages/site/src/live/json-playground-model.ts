@@ -1,7 +1,8 @@
 // The JSON playground's reading of what was typed, apart from the page so it can be tested: the two texts — a board's
 // definition and its data — parsed and checked, and every problem named by where it is.
 
-import { checkBoard, type Board } from '@iyulab/u-board/domain';
+import { type Board } from '@iyulab/u-board/domain';
+import { checkBoard } from '@iyulab/u-board-designer/check';
 import type { SampleConnector, SampleSnapshot } from '@iyulab/u-board-samples';
 
 /** A board's data as the gallery publishes it (`data.json`): the sources it reads and what they answered. */

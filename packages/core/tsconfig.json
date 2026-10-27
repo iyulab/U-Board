@@ -18,7 +18,10 @@
       // this never affects what actually ships in dist/lib.
       "@iyulab/u-board": ["./src/index.ts"],
       "@iyulab/u-board/domain": ["./src/domain-entry.ts"],
-      "@iyulab/u-board/picture": ["./src/picture-entry.ts"]
+      "@iyulab/u-board/picture": ["./src/picture-entry.ts"],
+      "@iyulab/u-board/toolkit": ["./src/toolkit-entry.ts"],
+      "@iyulab/u-board/viewer": ["./src/viewer-entry.ts"],
+      "@iyulab/u-board/examples": ["./src/examples-entry.ts"]
     }
   },
   "include": ["src"]
