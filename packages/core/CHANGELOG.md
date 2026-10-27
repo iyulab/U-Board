@@ -8,6 +8,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **The package is licensed under the MIT License** from this release on. Versions up to 0.35.0 were published under
+  AGPL-3.0-or-later and stay under it.
 - **Breaking: `UBoardLabels` holds only the texts the viewer shows.** The authoring texts (the panels, toolbar and
   editor messages) and their Korean are `DesignerLabels` and `KO_DESIGNER_LABELS` in `@iyulab/u-board-designer`;
   `KO_LABELS` keeps the viewer's.

@@ -255,7 +255,4 @@ Pre-1.0: a minor version may change the public API, including the board language
 
 ## License
 
-Copyright (c) 2026 iyulab.
-
-AGPL-3.0-or-later. A commercial license is available for organizations that cannot adopt AGPL-3.0
-terms.
+MIT. See [`LICENSE`](LICENSE).
