@@ -1,12 +1,12 @@
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { useMemo } from 'react';
 import type { ElementDefinition, Widget } from '@iyulab/u-board/picture';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
 import { readField, widgetFields, withField, type WidgetField } from './widget-fields.js';
 
 export interface WidgetPropsFormProps {
   widget: Widget;
   onChange: (widget: Widget) => void;
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
   /** The board's elements, which a placed element's fields are read from. */
   elements?: Readonly<Record<string, ElementDefinition>>;
 }
@@ -22,7 +22,7 @@ const text = (value: unknown) => (value === undefined || value === null ? '' : t
  * (`widgetFields`). A typed value is written when the control is left (or a choice is made), not on
  * every keystroke: each change re-resolves the preview's bindings.
  */
-export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS, elements }: WidgetPropsFormProps) {
+export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_DESIGNER_LABELS, elements }: WidgetPropsFormProps) {
   const { fields, otherOptions } = useMemo(() => widgetFields(widget, labels.locale, elements), [widget, labels.locale, elements]);
   if (fields.length === 0 && otherOptions === 0) return null;
 
@@ -73,7 +73,7 @@ export function WidgetPropsForm({ widget, onChange, labels = DEFAULT_LABELS, ele
 /** The control for one field: `value` is its value now, `write` sets it (`undefined` takes it out), `bound` marks a value
  *  a binding fills. A typed value is written when the control is left (or a choice is made), not on every keystroke. */
 /** The control of one field: a text, a number, a check box or a choice, named as the widget library names it. */
-export function FieldControl({ field, value, write, bound = false, labels }: { field: WidgetField; value: unknown; write: (value: unknown) => void; bound?: boolean; labels: UBoardLabels }) {
+export function FieldControl({ field, value, write, bound = false, labels }: { field: WidgetField; value: unknown; write: (value: unknown) => void; bound?: boolean; labels: DesignerLabels }) {
   const name = (
     <span className="ub-panel__field-name" title={field.description}>
       {field.label} <code>{field.key}</code>

@@ -1,9 +1,9 @@
+import { DEFAULT_DESIGNER_LABELS } from '../labels.js';
 import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { StatesEditor, stateNames } from './StatesEditor';
-import { DEFAULT_LABELS } from '@iyulab/u-board/toolkit';
 import type { StateRule, Widget } from '@iyulab/u-board/picture';
 
 const bound: Widget = { type: 'status', props: { data: { label: 'Pump' } }, bindings: { 'data.value': { adapter: 'plant', ref: { path: '/pump' } } } };
@@ -19,7 +19,7 @@ function Harness({ initial, onChange }: { initial?: StateRule; onChange: (states
         setStates(next);
         onChange(next);
       }}
-      labels={DEFAULT_LABELS}
+      labels={DEFAULT_DESIGNER_LABELS}
     />
   );
 }
@@ -32,18 +32,18 @@ describe('stateNames', () => {
 
 describe('StatesEditor', () => {
   it('asks for a binding first when the widget has none', () => {
-    render(<StatesEditor widget={{ type: 'text' }} states={undefined} onChange={vi.fn()} labels={DEFAULT_LABELS} />);
-    expect(screen.getByText(DEFAULT_LABELS.statesNeedBinding)).toBeInTheDocument();
-    expect(screen.queryByLabelText(DEFAULT_LABELS.statesFrom)).not.toBeInTheDocument();
+    render(<StatesEditor widget={{ type: 'text' }} states={undefined} onChange={vi.fn()} labels={DEFAULT_DESIGNER_LABELS} />);
+    expect(screen.getByText(DEFAULT_DESIGNER_LABELS.statesNeedBinding)).toBeInTheDocument();
+    expect(screen.queryByLabelText(DEFAULT_DESIGNER_LABELS.statesFrom)).not.toBeInTheDocument();
   });
 
   it('writes a rule once it is read from a binding and names a state', () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
-    fireEvent.change(screen.getByLabelText(DEFAULT_LABELS.statesFrom), { target: { value: 'data.value' } });
+    fireEvent.change(screen.getByLabelText(DEFAULT_DESIGNER_LABELS.statesFrom), { target: { value: 'data.value' } });
     expect(onChange).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: DEFAULT_LABELS.addMapping }));
-    fireEvent.change(screen.getByLabelText(DEFAULT_LABELS.mapFrom.replace('{n}', '1')), { target: { value: 'Fault' } });
+    fireEvent.click(screen.getByRole('button', { name: DEFAULT_DESIGNER_LABELS.addMapping }));
+    fireEvent.change(screen.getByLabelText(DEFAULT_DESIGNER_LABELS.mapFrom.replace('{n}', '1')), { target: { value: 'Fault' } });
     fireEvent.change(screen.getByLabelText('State for value 1'), { target: { value: 'fault' } });
     expect(onChange).toHaveBeenLastCalledWith({ from: 'data.value', map: { values: { Fault: 'fault' } } });
   });
@@ -61,17 +61,17 @@ describe('StatesEditor', () => {
   it('keeps a row just added while the rule it wrote comes back', () => {
     render(<Harness initial={{ from: 'data.value', map: { values: { Fault: 'fault' } } }} onChange={vi.fn()} />);
     fireEvent.click(screen.getByLabelText('Blink — fault'));
-    fireEvent.click(screen.getByRole('button', { name: DEFAULT_LABELS.addMapping }));
+    fireEvent.click(screen.getByRole('button', { name: DEFAULT_DESIGNER_LABELS.addMapping }));
     fireEvent.click(screen.getByLabelText('Blink — fault'));
-    expect(screen.getByLabelText(DEFAULT_LABELS.mapFrom.replace('{n}', '2'))).toHaveValue('');
+    expect(screen.getByLabelText(DEFAULT_DESIGNER_LABELS.mapFrom.replace('{n}', '2'))).toHaveValue('');
   });
 
   it('takes the states away', () => {
     const onChange = vi.fn();
     render(<Harness initial={{ from: 'data.value', map: { values: { Fault: 'fault' } } }} onChange={onChange} />);
-    fireEvent.click(screen.getByRole('button', { name: DEFAULT_LABELS.removeStates }));
+    fireEvent.click(screen.getByRole('button', { name: DEFAULT_DESIGNER_LABELS.removeStates }));
     expect(onChange).toHaveBeenLastCalledWith(undefined);
-    expect(screen.getByLabelText(DEFAULT_LABELS.statesFrom)).toHaveValue('');
+    expect(screen.getByLabelText(DEFAULT_DESIGNER_LABELS.statesFrom)).toHaveValue('');
   });
 });
 

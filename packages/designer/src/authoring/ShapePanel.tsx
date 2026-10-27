@@ -1,6 +1,7 @@
+import { FIELD_STYLE } from './field-style.js';
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { useState } from 'react';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
-import { ERROR_STYLE, FIELD_STYLE } from '@iyulab/u-board/toolkit';
+import { ERROR_STYLE } from '@iyulab/u-board/toolkit';
 import { TONES, type Board, type Shape, type Tone } from '@iyulab/u-board/toolkit';
 import type { BoardFinding } from '../board/check.js';
 
@@ -10,7 +11,7 @@ export interface ShapePanelProps {
   /** The shape as the panel made it. */
   onChange: (shape: Shape) => void;
   findings?: readonly BoardFinding[];
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /** A line's points as written — `20,20 220,20`: two or more `x,y` by spaces — or `undefined` when they are not. */
@@ -27,7 +28,7 @@ export function parsePoints(text: string): [number, number][] | undefined {
 }
 
 /** A line's points, or a path's drawing, as its panel edits them — a line's written only once they read. */
-function LineFields({ shape, onChange, labels }: { shape: Shape; onChange: (shape: Shape) => void; labels: UBoardLabels }) {
+function LineFields({ shape, onChange, labels }: { shape: Shape; onChange: (shape: Shape) => void; labels: DesignerLabels }) {
   const [points, setPoints] = useState(() => (shape.line ?? []).map(([x, y]) => `${x},${y}`).join(' '));
   if (shape.path !== undefined) {
     return (
@@ -66,7 +67,7 @@ function LineFields({ shape, onChange, labels }: { shape: Shape; onChange: (shap
  * a text's size. Where it is and how large is set on the canvas. A
  * setting left empty goes from the shape.
  */
-export function ShapePanel({ id, board, onChange, findings = [], labels = DEFAULT_LABELS }: ShapePanelProps) {
+export function ShapePanel({ id, board, onChange, findings = [], labels = DEFAULT_DESIGNER_LABELS }: ShapePanelProps) {
   const shape = (board.layout.kind === 'canvas' ? board.layout.shapes?.[id] : undefined) ?? {};
   const set = (change: Partial<Shape>) => {
     const next = { ...shape, ...change } as Record<string, unknown>;

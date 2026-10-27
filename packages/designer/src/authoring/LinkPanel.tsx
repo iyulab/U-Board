@@ -1,5 +1,5 @@
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
-import { FIELD_STYLE } from '@iyulab/u-board/toolkit';
+import { FIELD_STYLE } from './field-style.js';
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { TONES, type ArrowEnds, type Board, type Link, type Tone } from '@iyulab/u-board/toolkit';
 import type { BoardFinding } from '../board/check.js';
 
@@ -9,7 +9,7 @@ export interface LinkPanelProps {
   /** The link as the panel made it. */
   onChange: (link: Link) => void;
   findings?: readonly BoardFinding[];
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 const ROUTES = ['straight', 'orthogonal', 'curved'] as const;
@@ -21,7 +21,7 @@ const ROUTES = ['straight', 'orthogonal', 'curved'] as const;
  * goes from the link. Arrowheads read from a field (a direction that reverses) are written in the board's source; the
  * panel names the field and replaces them only when a fixed choice is made.
  */
-export function LinkPanel({ id, board, onChange, findings = [], labels = DEFAULT_LABELS }: LinkPanelProps) {
+export function LinkPanel({ id, board, onChange, findings = [], labels = DEFAULT_DESIGNER_LABELS }: LinkPanelProps) {
   const link = (board.layout.kind === 'canvas' ? board.layout.links?.[id] : undefined) ?? { from: '', to: '' };
   const set = (change: Partial<Link>) => {
     const next = { ...link, ...change } as Record<string, unknown>;

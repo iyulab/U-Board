@@ -1,9 +1,9 @@
+import { DEFAULT_DESIGNER_LABELS as L } from '../labels.js';
 import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { TriggersEditor, triggerEditing } from './TriggersEditor';
-import { DEFAULT_LABELS as L } from '@iyulab/u-board/toolkit';
 import type { GridView } from '@iyulab/u-board/picture';
 
 const board = (): GridView => ({

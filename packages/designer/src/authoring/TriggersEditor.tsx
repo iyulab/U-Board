@@ -1,10 +1,11 @@
+import { FIELD_STYLE } from './field-style.js';
+import { type DesignerLabels } from '../labels.js';
 import { useId, useState } from 'react';
 import { isTriggerLink, placedIn, type Trigger, type TriggerAction, type TriggerEvent, type ViewDocument } from '@iyulab/u-board/picture';
 import { partNamer } from './part-names.js';
 import { stateNames } from './StatesEditor.js';
 import { removeTrigger, replaceTrigger, withTrigger } from '../editing/trigger-editing.js';
-import type { UBoardLabels } from '@iyulab/u-board/toolkit';
-import { ERROR_STYLE, FIELD_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
+import { ERROR_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
 
 export interface TriggersEditorProps {
   /** The part whose triggers are edited — or none, for the board's own: those that run when it opens. */
@@ -22,7 +23,7 @@ export interface TriggersEditorProps {
   onAdd: (trigger: Trigger) => void;
   onReplace: (index: number, trigger: Trigger) => void;
   onRemove: (index: number) => void;
-  labels: UBoardLabels;
+  labels: DesignerLabels;
 }
 
 /** A trigger as the form holds it: what it would write, possibly not yet complete. */
@@ -164,7 +165,7 @@ function TriggerRow({
   parts: readonly string[];
   stateNamesOf: (part: string) => readonly string[];
   nameOf?: (part: string) => string;
-  labels: UBoardLabels;
+  labels: DesignerLabels;
   onWrite: (trigger: Trigger) => void;
   onRemove: () => void;
 }) {

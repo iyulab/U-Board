@@ -1,7 +1,7 @@
+import { type DesignerLabels } from '../labels.js';
+import { useDesignerLabels } from '../use-labels.js';
 import { useEffect, useMemo, useState } from 'react';
 import type { Adapter } from '@iyulab/u-board/toolkit';
-import type { UBoardLabels } from '@iyulab/u-board/toolkit';
-import { useLabels } from '@iyulab/u-board/toolkit';
 import { TONES } from '@iyulab/u-board/toolkit';
 import { GROUP_STYLE } from '@iyulab/u-board/toolkit';
 import { placedIn, type ViewDocument } from '@iyulab/u-board/picture';
@@ -41,7 +41,7 @@ export interface BoardAuthoringProps {
   /** What Save does. Omitted, there is no Save — Export downloads the board. */
   onSave?: (board: Board) => void | Promise<void>;
   onDirtyChange?: (isDirty: boolean) => void;
-  labels?: Partial<UBoardLabels>;
+  labels?: Partial<DesignerLabels>;
   clock?: () => number;
   elementOrigins?: readonly string[];
   elementFrames?: string;
@@ -61,7 +61,7 @@ export interface BoardAuthoringProps {
  * board's. A grid's cell — a canvas, or a grid of its own — opens in its own editor, what changes there written back.
  */
 export function BoardAuthoring({ initialBoard, adapters, sourceLabels, width, height, onSave, onDirtyChange, labels: labelsProp, clock = Date.now, elementOrigins, elementFrames, boardId, onTrigger, onNavigate, linkOrigins, initialMode = 'edit', onModeChange }: BoardAuthoringProps) {
-  const labels = useLabels(labelsProp);
+  const labels = useDesignerLabels(labelsProp);
   const [history, setHistory] = useState<DocumentHistory<Board>>(() => startHistory(initialBoard));
   const board = history.present;
   // A grid's cell open in its own editor — its entry — and the board as that editor sees it: the cell (a canvas, or a

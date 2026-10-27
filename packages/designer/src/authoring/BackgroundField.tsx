@@ -1,5 +1,5 @@
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { useRef, useState } from 'react';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
 import { GROUP_STYLE } from '@iyulab/u-board/toolkit';
 import type { CanvasLayout } from '@iyulab/u-board/toolkit';
 import { readBackgroundImage, BackgroundImageError, BACKGROUND_IMAGE_TYPES, MAX_BACKGROUND_BYTES } from './background-image.js';
@@ -8,14 +8,14 @@ export interface BackgroundFieldProps {
   layout: CanvasLayout;
   /** The canvas with its background as chosen — or taken away. */
   onChange: (layout: CanvasLayout) => void;
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /**
  * The background of a canvas board: an image file chosen, which the canvas takes the
  * size of — its parts keep their places in the canvas's units — or taken away, the canvas keeping its size.
  */
-export function BackgroundField({ layout, onChange, labels = DEFAULT_LABELS }: BackgroundFieldProps) {
+export function BackgroundField({ layout, onChange, labels = DEFAULT_DESIGNER_LABELS }: BackgroundFieldProps) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const choose = async (e: React.ChangeEvent<HTMLInputElement>) => {

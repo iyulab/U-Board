@@ -1,6 +1,7 @@
+import { FIELD_STYLE } from './field-style.js';
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { useState } from 'react';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
-import { FIELD_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
+import { GROUP_STYLE } from '@iyulab/u-board/toolkit';
 import type { Board, ElementDefinition } from '@iyulab/u-board/toolkit';
 
 type PropType = NonNullable<ElementDefinition['props']>[string];
@@ -10,7 +11,7 @@ export interface BoardElementsPanelProps {
   board: Board;
   /** The board's elements as the panel made them — none left: `undefined`. */
   onChange: (elements: Record<string, ElementDefinition> | undefined) => void;
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /** Whether a new element may take `name`: lowercase letters, digits and `-`, from a letter, not U-Board's, not taken. */
@@ -25,7 +26,7 @@ const usesOf = (board: Board, name: string) => Object.entries(board.parts).filte
  * sandboxed frame), its CSS, and the props it takes by name and type. An element is added by name — a template — and
  * removed when no part draws it.
  */
-export function BoardElementsPanel({ board, onChange, labels = DEFAULT_LABELS }: BoardElementsPanelProps) {
+export function BoardElementsPanel({ board, onChange, labels = DEFAULT_DESIGNER_LABELS }: BoardElementsPanelProps) {
   const elements = board.elements ?? {};
   const [name, setName] = useState('');
   const write = (next: Record<string, ElementDefinition>) => onChange(Object.keys(next).length > 0 ? next : undefined);
@@ -70,7 +71,7 @@ interface BoardElementProps {
   name: string;
   element: ElementDefinition;
   uses: readonly string[];
-  labels: UBoardLabels;
+  labels: DesignerLabels;
   set: (change: Partial<ElementDefinition>) => void;
   remove: () => void;
 }

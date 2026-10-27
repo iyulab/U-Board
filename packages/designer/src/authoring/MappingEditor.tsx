@@ -1,6 +1,7 @@
+import { FIELD_STYLE } from './field-style.js';
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { useId, useState } from 'react';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
-import { ERROR_STYLE, FIELD_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
+import { ERROR_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
 import type { ValueMapping } from '@iyulab/u-board/toolkit';
 
 /** How a mapping is written: by value (a map, `*` for anything else), or by number bands. */
@@ -46,7 +47,7 @@ export interface MappingEditorProps {
   raw?: boolean;
   /** The names a mapping may map to, to choose from — the board's statuses. */
   names?: readonly string[];
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /**
@@ -54,7 +55,7 @@ export interface MappingEditorProps {
  * value (`{ "down": "alarm", "*": "off" }`) or by number bands (`["ok", 1, "warn", 5, "alarm"]`); for a status, also
  * «the value already is one» (`raw`). A row with no value, and bands that do not read, are not written.
  */
-export function MappingEditor({ legend, value, onChange, raw = false, names = [], labels = DEFAULT_LABELS }: MappingEditorProps) {
+export function MappingEditor({ legend, value, onChange, raw = false, names = [], labels = DEFAULT_DESIGNER_LABELS }: MappingEditorProps) {
   const list = useId();
   // A form chosen before it holds anything to write: shown while the mapping is still none.
   const [drafting, setDrafting] = useState<Form | null>(null);

@@ -1,7 +1,8 @@
+import { FIELD_STYLE } from './field-style.js';
+import { type DesignerLabels } from '../labels.js';
 import { useId, useState } from 'react';
 import type { StateLook, StateRule, ValueMap, Widget } from '@iyulab/u-board/picture';
-import type { UBoardLabels } from '@iyulab/u-board/toolkit';
-import { FIELD_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
+import { GROUP_STYLE } from '@iyulab/u-board/toolkit';
 import { ValueMapFields, draftMap, invalidRanges, mapFromDraft, type MapDraft } from './ValueMapFields.js';
 import { THEME_COLORS } from '@iyulab/u-board/toolkit';
 
@@ -11,7 +12,7 @@ export interface StatesEditorProps {
   states: StateRule | undefined;
   /** A new rule, or `undefined` to take the part's states away. */
   onChange: (states: StateRule | undefined) => void;
-  labels: UBoardLabels;
+  labels: DesignerLabels;
 }
 
 /** The state names a map gives, each once, in the order the map tries them: values, ranges, then anything else. */

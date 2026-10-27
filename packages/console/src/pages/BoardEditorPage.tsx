@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
-import { KO_LABELS, type Adapter, type Board } from '@iyulab/u-board';
-import { BoardAuthoring, type AuthoringMode } from '@iyulab/u-board-designer';
+import { BoardAuthoring, KO_DESIGNER_LABELS, type AuthoringMode } from '@iyulab/u-board-designer';
+import type { Adapter, Board } from '@iyulab/u-board';
 import {
   getBoard, updateBoard, listConnectors, type ConnectorSummary,
   listMembers, apiClock, ApiError,
@@ -18,7 +18,7 @@ import { AssistantPanel } from '../assistant/AssistantPanel.js';
 // The editor's words, plus where a workspace without a data source goes next: the console's own
 // screens, which the library's generic wording cannot name.
 const EDITOR_LABELS = {
-  ...KO_LABELS,
+  ...KO_DESIGNER_LABELS,
   noDataSources: '연결된 데이터소스가 없습니다. 워크스페이스 소유자가 «데이터소스»에서 추가하면 여기서 고를 수 있습니다. 실제 데이터로 바로 보려면 보드 목록의 «샘플에서 시작»을 쓰세요.',
 };
 

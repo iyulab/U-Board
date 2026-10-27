@@ -1,9 +1,9 @@
+import { DEFAULT_DESIGNER_LABELS } from '../labels.js';
 import { useState } from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { ValueMapFields, draftMap, mapFromDraft, invalidRanges, type MapDraft } from './ValueMapFields';
-import { DEFAULT_LABELS } from '@iyulab/u-board/toolkit';
 import type { ValueMap } from '@iyulab/u-board/picture';
 
 describe('a value map as a form edits it', () => {
@@ -24,7 +24,7 @@ describe('ValueMapFields', () => {
     const [draft, setDraft] = useState<MapDraft>(draftMap({ values: { Fault: 'fault' } }));
     return (
       <>
-        <ValueMapFields draft={draft} onChange={update => setDraft(update)} labels={DEFAULT_LABELS} heading="States" toLabel={toLabel} />
+        <ValueMapFields draft={draft} onChange={update => setDraft(update)} labels={DEFAULT_DESIGNER_LABELS} heading="States" toLabel={toLabel} />
         <output>{JSON.stringify(mapFromDraft(draft))}</output>
       </>
     );
@@ -34,7 +34,7 @@ describe('ValueMapFields', () => {
     const { container } = render(<Harness toLabel={{ mapping: 'State for value {n}', range: 'State for range {n}' }} />);
     expect(screen.getByRole('group', { name: 'States' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('State for value 1'), { target: { value: 'alarm' } });
-    fireEvent.change(screen.getByLabelText(DEFAULT_LABELS.mapOtherwise), { target: { value: 'ok' } });
+    fireEvent.change(screen.getByLabelText(DEFAULT_DESIGNER_LABELS.mapOtherwise), { target: { value: 'ok' } });
     expect(container.querySelector('output')!.textContent).toBe('{"values":{"Fault":"alarm"},"otherwise":"ok"}');
   });
 });

@@ -1,6 +1,6 @@
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import type { GridItem } from '@iyulab/u-board/picture';
 import { GRID_COLUMNS, GRID_COLUMNS_MEDIUM, GRID_DEFAULT_SPAN, GRID_MAX_ROW_SPAN, isCanvasItem } from '@iyulab/u-board/picture';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
 import { GROUP_STYLE } from '@iyulab/u-board/toolkit';
 
 const ACTIONS_STYLE = { ...GROUP_STYLE, marginBottom: 'var(--ub-space-3, 12px)' };
@@ -18,7 +18,7 @@ export interface GridItemPanelProps {
   onRemove: () => void;
   /** Only the columns it spans — what a board lays out. */
   spanOnly?: boolean;
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /**
@@ -26,7 +26,7 @@ export interface GridItemPanelProps {
  * is in the order. Moving and removing are buttons, so they are a key press as well as a click. A choice left at
  * its default leaves its field out of the document.
  */
-export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDuplicate, onRemove, spanOnly = false, labels = DEFAULT_LABELS }: GridItemPanelProps) {
+export function GridItemPanel({ item, isFirst, isLast, onChange, onMove, onDuplicate, onRemove, spanOnly = false, labels = DEFAULT_DESIGNER_LABELS }: GridItemPanelProps) {
   const span = item.span ?? GRID_DEFAULT_SPAN;
   return (
     <div className="ub-panel ub-panel--item">

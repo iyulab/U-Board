@@ -1,6 +1,7 @@
+import { FIELD_STYLE } from './field-style.js';
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { useState } from 'react';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
-import { ERROR_STYLE, FIELD_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
+import { ERROR_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
 import type { Field, Query } from '@iyulab/u-board/toolkit';
 import { MappingEditor } from './MappingEditor.js';
 
@@ -20,7 +21,7 @@ export interface DataPanelProps {
   look?: (name: string) => Promise<unknown>;
   /** The board's statuses, by name — what a field's status maps to. */
   statuses?: readonly string[];
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /** Whether new data may take `name`: a name parts can address (`<data>[<key>]`), not one taken. */
@@ -45,7 +46,7 @@ function tidy<T extends object>(value: T): T {
  * data now and offers the fields it found. A field's value names and state are written as structures and shown, not
  * edited, here.
  */
-export function DataPanel({ data = {}, onChange, sources, look, statuses = [], labels = DEFAULT_LABELS }: DataPanelProps) {
+export function DataPanel({ data = {}, onChange, sources, look, statuses = [], labels = DEFAULT_DESIGNER_LABELS }: DataPanelProps) {
   const [name, setName] = useState('');
   const write = (next: Record<string, Query>) => onChange(Object.keys(next).length > 0 ? next : undefined);
   const set = (key: string, change: Partial<Query>) => write({ ...data, [key]: tidy({ ...data[key]!, ...change }) });
@@ -106,7 +107,7 @@ const whereText = (where: Query['where']) => (where ? Object.entries(where).map(
 
 /** The finer points of a request read, folded: which items, when they were observed, how long a value stays current, the
  *  source's time zone, the time its request asks for, and a long answer read as one item. */
-function ReadDetails({ query, labels, set }: { query: Query; labels: UBoardLabels; set: (change: Partial<Query>) => void }) {
+function ReadDetails({ query, labels, set }: { query: Query; labels: DesignerLabels; set: (change: Partial<Query>) => void }) {
   const [where, setWhere] = useState(() => whereText(query.where));
   const whereRead = parseWhere(where);
   const text = (label: string, value: string | undefined, change: (value: string) => void) => (
@@ -169,7 +170,7 @@ interface DataReadProps {
   query: Query;
   sources: readonly DataSource[];
   look?: (name: string) => Promise<unknown>;
-  labels: UBoardLabels;
+  labels: DesignerLabels;
   set: (change: Partial<Query>) => void;
   setField: (field: string, change: Partial<Field> | null) => void;
   remove: () => void;

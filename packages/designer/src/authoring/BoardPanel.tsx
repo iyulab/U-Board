@@ -1,6 +1,6 @@
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import type { BoardAppearance, ReferencePoint } from '@iyulab/u-board/picture';
 import { ReferencePointsFields } from './AnchorFields.js';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
 import { GROUP_STYLE } from '@iyulab/u-board/toolkit';
 import { TriggersEditor, type TriggerEditing } from './TriggersEditor.js';
 
@@ -30,7 +30,7 @@ export interface BoardPanelProps {
   hint?: string;
   /** The board's triggers, to edit those that run when it opens. */
   triggers?: TriggerEditing;
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /**
@@ -52,7 +52,7 @@ export function BoardPanel({
   anchors,
   hint,
   triggers,
-  labels = DEFAULT_LABELS,
+  labels = DEFAULT_DESIGNER_LABELS,
 }: BoardPanelProps) {
   return (
     <div className="ub-panel ub-panel--board">

@@ -8,6 +8,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **Breaking: `UBoardLabels` holds only the texts the viewer shows.** The authoring texts (the panels, toolbar and
+  editor messages) and their Korean are `DesignerLabels` and `KO_DESIGNER_LABELS` in `@iyulab/u-board-designer`;
+  `KO_LABELS` keeps the viewer's.
 - **Breaking: the authoring tool and the board check moved to `@iyulab/u-board-designer`.** `BoardAuthoring` and
   `layoutEditable` are no longer exported from the package root, and `checkBoard`, `emptyBoard`, `sourceAdvice`,
   `boardRulebook` and `RULEBOOK_EXAMPLE` are no longer exported from `@iyulab/u-board/domain`; import them from

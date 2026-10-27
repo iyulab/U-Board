@@ -16,7 +16,7 @@ npm install @iyulab/u-board-designer @iyulab/u-board react react-dom
 
 | Import | Contents | Depends on React / canvas |
 |---|---|---|
-| `@iyulab/u-board-designer` | `BoardAuthoring` | Yes |
+| `@iyulab/u-board-designer` | `BoardAuthoring`, `DesignerLabels`, `KO_DESIGNER_LABELS` | Yes |
 | `@iyulab/u-board-designer/check` | `checkBoard`, `emptyBoard`, `sourceAdvice`, `boardRulebook`, `RULEBOOK_EXAMPLE` | No |
 
 ## Authoring a board
@@ -45,6 +45,19 @@ listed where it applies, and a setting the board cannot be drawn with keeps the 
 grid's cell — a canvas, or a grid of its own — opens in its own editor. Undo and Redo walk the edits; Save calls
 `onSave` with the board (without it there is no Save), and Export downloads the board as a file. `sourceLabels` names
 each adapter's source in the data panel.
+
+### Text in another language
+
+The tool shows English text by default. Pass `labels` — any subset of `DesignerLabels`, the rest stays English — to
+show your own; `DEFAULT_DESIGNER_LABELS` lists every key with its English text. `DesignerLabels` is the viewer's
+`UBoardLabels` plus the authoring texts, and `labels.locale` is the language of both: the panel names part kinds, data
+fields and options in it, as the widget library names them. Korean ships as `KO_DESIGNER_LABELS`:
+
+```tsx
+import { BoardAuthoring, KO_DESIGNER_LABELS } from '@iyulab/u-board-designer';
+
+<BoardAuthoring initialBoard={board} adapters={adapters} labels={KO_DESIGNER_LABELS} />;
+```
 
 ## Checking a board
 

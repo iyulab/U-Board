@@ -21,7 +21,7 @@ export { toCanvasKit } from './renderer/to-canvas-kit.js';
 export { resolveDocument } from './resolve-document.js';
 export type { ResolvedCanvasView, ResolvedCellCanvas, ResolvedGridView } from './resolve-document.js';
 export { THEME_COLORS } from './theme-colors.js';
-export { ERROR_STYLE, FIELD_STYLE, GROUP_STYLE, TOOLBAR_STYLE } from './ui-style.js';
+export { ERROR_STYLE, GROUP_STYLE, TOOLBAR_STYLE } from './ui-style.js';
 export { useLabels } from './use-labels.js';
 export { ViewControls } from './viewer/ViewControls.js';
 export { ViewerPage } from './viewer/ViewerPage.js';

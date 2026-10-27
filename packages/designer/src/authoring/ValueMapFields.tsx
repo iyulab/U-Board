@@ -1,7 +1,8 @@
+import { FIELD_STYLE } from './field-style.js';
+import { type DesignerLabels } from '../labels.js';
 import type { CSSProperties } from 'react';
 import type { ValueMap } from '@iyulab/u-board/picture';
-import type { UBoardLabels } from '@iyulab/u-board/toolkit';
-import { ERROR_STYLE, FIELD_STYLE } from '@iyulab/u-board/toolkit';
+import { ERROR_STYLE } from '@iyulab/u-board/toolkit';
 
 /** A value map as a form edits it — rows of source value → mapped value, numeric bands, and the value for anything
  *  else (empty: none). Written as text: a map's usual job is a status word, a level or a state's name. */
@@ -96,7 +97,7 @@ export interface ValueMapFieldsProps {
   draft: MapDraft;
   /** Applies a change to the map's part of the draft. */
   onChange: (update: (draft: MapDraft) => MapDraft) => void;
-  labels: UBoardLabels;
+  labels: DesignerLabels;
   /** The heading — `labels.valueMapHeading` by default. */
   heading?: string;
   /** What a row maps to, as its field is named — `labels.mapTo` and `labels.rangeTo` by default ({n} is the row). */

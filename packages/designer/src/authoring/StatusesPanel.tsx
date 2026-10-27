@@ -1,13 +1,14 @@
+import { FIELD_STYLE } from './field-style.js';
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { useState } from 'react';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
-import { FIELD_STYLE, GROUP_STYLE } from '@iyulab/u-board/toolkit';
+import { GROUP_STYLE } from '@iyulab/u-board/toolkit';
 import { EMPHASES, TONES, type Emphasis, type Status, type Tone } from '@iyulab/u-board/toolkit';
 
 export interface StatusesPanelProps {
   statuses: Readonly<Record<string, Status>> | undefined;
   /** The board's statuses as the panel made them — none left: `undefined`. */
   onChange: (statuses: Record<string, Status> | undefined) => void;
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /** Whether a new status may take `name`: any word a field's state may give, but not an empty one or one taken. */
@@ -18,7 +19,7 @@ const usable = (name: string, taken: Readonly<Record<string, unknown>>) => name.
  * channel besides colour. A status is added by name and removed; its name is not changed here, since the states of
  * the board's fields name it.
  */
-export function StatusesPanel({ statuses = {}, onChange, labels = DEFAULT_LABELS }: StatusesPanelProps) {
+export function StatusesPanel({ statuses = {}, onChange, labels = DEFAULT_DESIGNER_LABELS }: StatusesPanelProps) {
   const [name, setName] = useState('');
   const write = (next: Record<string, Status>) => onChange(Object.keys(next).length > 0 ? next : undefined);
   const set = (key: string, change: Partial<Status>) => {

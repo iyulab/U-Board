@@ -157,8 +157,7 @@ rest stays English — to show your own; `DEFAULT_LABELS` lists every key with i
 `labels.qualityText` holds the words for connection quality (the node tooltip and screen-reader
 announcement), and `labels.time` writes the time of day — `timeText(locale)` builds one.
 `labels.locale` is the language of the labels: the widgets on the board speak it too (their own text,
-such as a table's pagination), and the panel names part kinds, data fields and options
-in it, as the widget library names them.
+such as a table's pagination).
 
 Korean ships with the package as `KO_LABELS`, every key included — with it the widgets' own text
 and names are Korean too. Lay your own words over it as over the English:

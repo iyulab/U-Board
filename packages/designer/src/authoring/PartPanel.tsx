@@ -1,6 +1,6 @@
+import { FIELD_STYLE } from './field-style.js';
+import { DEFAULT_DESIGNER_LABELS, type DesignerLabels } from '../labels.js';
 import { useId, useMemo, type ReactNode } from 'react';
-import { DEFAULT_LABELS, type UBoardLabels } from '@iyulab/u-board/toolkit';
-import { FIELD_STYLE } from '@iyulab/u-board/toolkit';
 import { PART_KINDS, partKind } from '@iyulab/u-board/toolkit';
 import { widgetFields } from './widget-fields.js';
 import { FieldControl } from './WidgetPropsForm.js';
@@ -17,7 +17,7 @@ export interface PartPanelProps {
   findings?: readonly BoardFinding[];
   /** The part's triggers' editor, shown under its settings. */
   triggers?: ReactNode;
-  labels?: UBoardLabels;
+  labels?: DesignerLabels;
 }
 
 /** `<data>` or `<data>[<key>]`, as a part names what it reads. */
@@ -31,7 +31,7 @@ const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
  * and the widget's, with the controls the widget library describes. A setting left empty goes from the part, so the
  * board keeps only what was set. A part made per item reads the items its `each` names, shown and not changed here.
  */
-export function PartPanel({ id, board, onChange, findings = [], triggers, labels = DEFAULT_LABELS }: PartPanelProps) {
+export function PartPanel({ id, board, onChange, findings = [], triggers, labels = DEFAULT_DESIGNER_LABELS }: PartPanelProps) {
   const part = board.parts[id] ?? {};
   const fieldList = useId();
   const set = (key: keyof Part, value: unknown) => {
@@ -170,7 +170,7 @@ interface ElementPartFieldsProps {
   part: Part;
   board: Board;
   onChange: (part: Part) => void;
-  labels: UBoardLabels;
+  labels: DesignerLabels;
   fieldList: string | undefined;
 }
 

@@ -1,9 +1,9 @@
+import { DEFAULT_DESIGNER_LABELS as labels } from '../labels.js';
 import { useState } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { ReferencePointsFields } from './AnchorFields.js';
-import { DEFAULT_LABELS as labels } from '@iyulab/u-board/toolkit';
 import type { ReferencePoint } from '@iyulab/u-board/picture';
 
 // Two points of a 1000 × 500 image that stand for 0–100 m across and 50–0 m from top to bottom.

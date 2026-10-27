@@ -4,9 +4,10 @@
 
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { KO_LABELS, type Board } from '@iyulab/u-board';
-import { BoardAuthoring } from '@iyulab/u-board-designer';
+import { BoardAuthoring, KO_DESIGNER_LABELS } from '@iyulab/u-board-designer';
+import type { Board } from '@iyulab/u-board';
 import '@iyulab/u-board/styles.css';
+import '@iyulab/u-board-designer/styles.css';
 import { savedBoard, STORAGE_KEY } from './saved-board';
 import { sampleBoard, SampleAdapter, SAMPLE_ADAPTER_ID, type SampleBoardText } from './sample-board';
 
@@ -58,7 +59,7 @@ for (const host of document.querySelectorAll<HTMLElement>('[data-playground]')) 
       onDirtyChange: (dirty: boolean) => {
         if (status && dirty) status.textContent = text.unsaved;
       },
-      labels: korean ? KO_LABELS : undefined,
+      labels: korean ? KO_DESIGNER_LABELS : undefined,
     })
   );
 }

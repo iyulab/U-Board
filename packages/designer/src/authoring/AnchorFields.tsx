@@ -1,6 +1,6 @@
+import { type DesignerLabels } from '../labels.js';
 import { useEffect, useRef, useState } from 'react';
 import type { ReferencePoint } from '@iyulab/u-board/picture';
-import type { UBoardLabels } from '@iyulab/u-board/toolkit';
 import { ERROR_STYLE } from '@iyulab/u-board/toolkit';
 
 const FIELD_STYLE: React.CSSProperties = { display: 'flex', flexDirection: 'column' };
@@ -46,7 +46,7 @@ export function ReferencePointsFields({
 }: {
   points: readonly ReferencePoint[] | undefined;
   onChange: (points: [ReferencePoint, ReferencePoint] | undefined) => void;
-  labels: UBoardLabels;
+  labels: DesignerLabels;
 }) {
   const [draft, setDraft] = useState(() => draftOf(points));
   // The points this form last saved. When they come back as `points`, the fields already say them, as the
