@@ -14,56 +14,31 @@ U-Board itself, without first raising it as a scope change.
 
 ## Current state
 
-The Status section of the [README](README.md) is the single description of what is implemented;
-keep it current rather than restating it here. The repository layout (one published library, three
-private applications, and the introduction site) is described there too.
+The [README](README.md) is the single description of what is here; keep it current rather than restating it here.
 
 ## Releasing
 
-Three things are released, each under its own version. The library, `packages/core`, is published as
-`@iyulab/u-board` on npm, and the MCP server, `packages/mcp`, as `@iyulab/u-board-mcp`. The product — the
-`server`, `console` and `share` applications in one container image — is released at the version in
-`packages/server/package.json`. The other workspaces (`site` is the introduction site, `samples` its sample
-boards) stay `private` on npm.
+The library, `packages/core`, is published as `@iyulab/u-board` on npm. To release it, change `version` in
+`packages/core/package.json` (semver; while the version is 0.x, a minor bump may break the public API), rename
+`## [Unreleased]` in `packages/core/CHANGELOG.md` to that version and date, and push the change to `main`. The
+`publish` job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` (`npm run check`) passes and
+publishes with provenance if that version is not on the registry yet — a prerelease version under the `next` dist-tag;
+on any other push it publishes nothing. Do not run `npm publish` by hand — a hand-published tarball has no provenance
+and skips the checks.
 
-To release the product, change `version` in `packages/server/package.json`, give that version its
-section in the root `CHANGELOG.md` (the release notes are made from it), and push the change to
-`main`. The `image` job in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` and, if that
-version has no GitHub release yet, pushes the image to `ghcr.io/iyulab/u-board` under the version,
-attests it, moves `<major>.<minor>` and `latest` onto it where it is the newest, and creates the
-release `v<version>` with the image as a `docker save` archive and its checksum. A version's tag is
-pushed once: if the job fails after that, re-run that workflow run — or, when GitHub will not retry
-it, run the CI workflow on `main` by hand (`workflow_dispatch`) — and it releases the image already
-in the registry. A later commit carrying the same unreleased version is refused rather than released as
-an image it did not build; give it a new version. `npm run release:image` builds the same image and release files locally without
-pushing anything.
-
-To release the library, change `version` in `packages/core/package.json` (semver; while the version is 0.x, a
-minor bump may break the public API), rename `## [Unreleased]` in `packages/core/CHANGELOG.md` to that
-version and date (a tooling test fails on a version without its section), and push the change to `main`. The MCP
-server is released the same way from `packages/mcp`; when it needs a new library version, raise its
-`@iyulab/u-board` range to that version in the same commit. The `publish` job in
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs after `verify` (`npm run check`) passes and publishes
-with provenance if that version is not on the registry yet — a prerelease version under the `next`
-dist-tag; on any other push it publishes nothing. Do not run
-`npm publish` by hand — a hand-published tarball has no provenance and skips the checks.
-
-Each package's `scripts/prepack.mjs` rebuilds its build output from clean and copies the repository
-`LICENSE` into the package on every pack. The `publish` job publishes the library before the MCP server,
-which depends on it. Before a release that changes the entry points or dependencies, check the tarball with
-`npm pack --dry-run --workspace=packages/core` (or `packages/mcp`).
+`packages/core/scripts/prepack.mjs` rebuilds the build output from clean and copies the repository `LICENSE` into the
+package on every pack. Before a release that changes the entry points or dependencies, check the tarball with
+`npm pack --dry-run --workspace=packages/core`.
 
 ## Open, not yet decided
 
-- A board is written in one language (`packages/core/src/board/` — types, validator, schema, rulebook, and
-  `picture.ts`, which draws a board as the picture the renderer reads). There is one format: a board does not name a
-  version of the language, and no other document format is read or stored. The picture
-  (`view-document.ts`, the `./picture` entry) is the renderer's model, made from a board — never written, stored or
-  accepted as input. Code that reads a picture narrows on `kind`, a grid item on `isCanvasItem`, and code that walks
-  every widget uses `placedIn` (`placedAt` for its path). Both view kinds — canvas and grid, with a canvas or a grid in
-  a grid cell — are built; no other kind is planned.
-- How the authoring tool is packaged/distributed is not decided. Do not assume a specific
-  runtime (browser-only vs. a desktop shell) without checking current guidance.
+- A board is written in one language (`packages/core/src/board/` — types, validator, schema, and `picture.ts`, which
+  draws a board as the picture the renderer reads). There is one format: a board does not name a version of the
+  language, and no other document format is read or stored. The picture (`view-document.ts`, the `./picture` entry)
+  is the renderer's model, made from a board — never written, stored or accepted as input. Code that reads a picture
+  narrows on `kind`, a grid item on `isCanvasItem`, and code that walks every widget uses `placedIn` (`placedAt` for
+  its path). Both view kinds — canvas and grid, with a canvas or a grid in a grid cell — are built; no other kind is
+  planned.
 
 ## Documentation split
 

@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
   # By hand on main: finishes a release whose run cannot be re-run (GitHub refuses to retry a run that
-  # failed while scheduling its jobs). Publishing stays as safe as on a push — see the `image` job.
+  # failed while scheduling its jobs). Publishing stays as safe as on a push.
   workflow_dispatch:
 
 concurrency:
@@ -18,13 +18,8 @@ concurrency:
 jobs:
   verify:
     name: verify
-    # Pinned to the release the reference pictures are drawn on (`scripts/update-visual-baselines.sh` uses
-    # the Playwright `-noble` image, Ubuntu 24.04): its fonts and anti-aliasing are what the visual
-    # comparison expects, and `ubuntu-latest` moves to a newer release on its own schedule.
-    runs-on: ubuntu-24.04
-    # The whole `npm run check` in one job takes 7–18 minutes depending on the runner; the limit sits well
-    # above that spread so a slow runner is not cut off mid-way through a passing run.
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v7
@@ -38,28 +33,19 @@ jobs:
         run: npm ci
 
       # The checks themselves live in scripts/check.mjs, so a local `npm run check` runs exactly this
-      # list. Only machine setup stays here: the browsers its last step (E2E) drives. The runner image
-      # ships Docker preinstalled, which its Postgres and image steps need.
+      # list. Only machine setup stays here: the browser its last step (E2E) drives.
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
         working-directory: packages/core
 
-      - name: Install Chromium (console)
-        run: npx playwright install --with-deps chromium
-        working-directory: packages/console
-
       - name: Check
         run: npm run check
 
-  # Each package declares the oldest Node it supports in `engines.node`. `verify` runs on the current
-  # line only, so without this job the declared floors would be claims nothing checks. It runs the
-  # product on its floor, not the test toolchain: the published library's entry point
-  # (scripts/smoke-library.mjs) on the library's floor (22.12), and the server's suite on the
-  # application's (22.22 — the console's router requires it to build, and the server's HTTP client
-  # to run). Browser code is unit-tested under jsdom in `verify` — its Node version is the tooling's,
-  # not the product's, and the test toolchain (jsdom among it) needs a newer Node than the floor.
+  # The package declares the oldest Node it supports in `engines.node`. `verify` runs on the current line only,
+  # so without this job the declared floor would be a claim nothing checks. It runs the library's entry points
+  # (scripts/smoke-library.mjs) on that floor, not the test toolchain, which needs a newer Node.
   node-floor:
-    name: node-floor (library 22.12, server 22.22)
+    name: node-floor (library 22.12)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -80,21 +66,9 @@ jobs:
       - name: Library smoke
         run: npm run smoke:library
 
-      # No native modules in the install, so the same node_modules serves the server's floor.
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "22.22"
-
-      - name: Server tests
-        run: npm test --workspace=packages/server
-
-  # Publishes the npm packages — the library (packages/core, @iyulab/u-board), the authoring tool and board check
-  # (packages/designer, @iyulab/u-board-designer) and the MCP server (packages/mcp, @iyulab/u-board-mcp) — once `verify` and `node-floor` have passed on a push to main,
-  # each only if its version isn't on the registry yet. Kept in this workflow rather than a separate
-  # one so the commit that gets published is exactly the commit that was verified — and so provenance
-  # records that commit. The library goes first: the MCP server depends on it, and is never on the
-  # registry before the library version it needs. The server, console, share, site and samples
-  # workspaces are applications and stay private.
+  # Publishes the library (packages/core, @iyulab/u-board) once `verify` and `node-floor` have passed on a push to
+  # main, only if its version isn't on the registry yet. Kept in this workflow rather than a separate one so the
+  # commit that gets published is exactly the commit that was verified — and so provenance records that commit.
   publish:
     name: publish
     needs: [verify, node-floor]
@@ -119,7 +93,7 @@ jobs:
         id: check
         run: |
           pending=""
-          for dir in packages/core packages/designer packages/mcp; do
+          for dir in packages/core; do
             NAME=$(node -p "require('./${dir}/package.json').name")
             VERSION=$(node -p "require('./${dir}/package.json').version")
             # Only npm's 404 means "not published yet"; any other failure (registry down, rate limit)
@@ -153,97 +127,3 @@ jobs:
           done
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  # Releases the product — the container image — once `verify` and `node-floor` have passed on a push
-  # to main, if the server's version (packages/server/package.json) has no GitHub Release yet: pushes
-  # the image to the registry and attaches it as a `docker save` archive for installations that cannot
-  # reach one. In this workflow for the same reason as `publish`: what is released is the commit that
-  # was verified. The build and the release files are scripts/release-image.mjs, which runs locally too.
-  image:
-    name: image
-    needs: [verify, node-floor]
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: write # the release and its tag
-      packages: write # the registry, and the image's attestation pushed beside it
-      id-token: write # signing the attestations
-      attestations: write
-      artifact-metadata: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-
-      - name: Check whether this version is already released
-        id: check
-        run: |
-          node scripts/release-image.mjs --plan > plan.json
-          TAG=$(node -p 'require("./plan.json").tag')
-          # Only "no such release" counts as not released. Any other failure stops here: taking it for
-          # "not released" would publish the version again.
-          if OUT=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" 2>&1); then EXISTS=true
-          elif grep -q "HTTP 404" <<< "${OUT}"; then EXISTS=false
-          else echo "${OUT}"; exit 1; fi
-          {
-            echo "tag=${TAG}"
-            echo "version=$(node -p 'require("./plan.json").version')"
-            echo "prerelease=$(node -p 'require("./plan.json").prerelease')"
-            echo "exists=${EXISTS}"
-          } >> "$GITHUB_OUTPUT"
-          if [ "${EXISTS}" = true ]; then echo "### Skipped — ${TAG} is already released" >> "$GITHUB_STEP_SUMMARY"; fi
-
-      - uses: docker/login-action@v3
-        if: steps.check.outputs.exists == 'false'
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
-
-      # The exact version tag only. A re-run of a run that failed further on releases the image already
-      # pushed under it, never a new build — the script asks the registry first.
-      - name: Publish the image
-        id: push
-        if: steps.check.outputs.exists == 'false'
-        run: node scripts/release-image.mjs --publish
-
-      # Build provenance — this workflow, this commit — for the pushed image and for the archive the
-      # release carries, so either can be checked with `gh attestation verify` (the library's npm
-      # provenance, for the product).
-      - uses: actions/attest@v4
-        if: steps.check.outputs.exists == 'false'
-        with:
-          subject-name: ghcr.io/iyulab/u-board
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
-
-      - uses: actions/attest@v4
-        if: steps.check.outputs.exists == 'false'
-        with:
-          subject-path: release/*.tar.gz
-
-      # After the attestation, so a moving tag never points at an image without one. Only where this
-      # version is the newest: a hotfix to an older line does not pull `latest` back.
-      - name: Move <major>.<minor> and latest
-        if: steps.check.outputs.exists == 'false'
-        run: node scripts/release-image.mjs --promote
-        env:
-          RELEASE_DIGEST: ${{ steps.push.outputs.digest }}
-
-      # Last: until it exists the version counts as unreleased. A failed run is finished by re-running
-      # it (same commit), on the image already pushed; a later commit with the same version is refused.
-      - name: Create the release
-        if: steps.check.outputs.exists == 'false'
-        run: |
-          gh release create "${{ steps.check.outputs.tag }}" release/*.tar.gz release/*.sha256 \
-            --target "$GITHUB_SHA" \
-            --title "U-Board ${{ steps.check.outputs.version }}" \
-            --notes-file release/notes.md \
-            ${{ steps.check.outputs.prerelease == 'true' && '--prerelease' || '' }}
-          echo "### Released ${{ steps.check.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"

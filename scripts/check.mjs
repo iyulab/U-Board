@@ -26,25 +26,18 @@ export const STEPS = [
   { name: 'public-text', command: 'npm run check:public-text' },
   // Relative Markdown links must reach a file and heading that exist.
   { name: 'doc-links', command: 'npm run check:doc-links' },
-  // The console, the share viewer and the site import the library from its build (packages/core/dist/lib),
-  // so it is built before they are checked — otherwise they are checked against a stale one.
+  // The library is built before anything is checked against its build output (dist/lib).
   { name: 'build-lib', command: 'npm run build:lib' },
   { name: 'typecheck', command: 'npm run typecheck' },
   // oxlint: typescript-eslint cannot load the native TypeScript 7 compiler.
   { name: 'lint', command: 'npm run lint' },
   { name: 'test', command: 'npm test' },
-  // Apart from `test` so it never competes with the PGlite-per-file suites (packages/server/vitest.config.ts).
-  // Needs Docker.
-  { name: 'postgres', command: 'npm run test:postgres --workspace=packages/server' },
   { name: 'build', command: 'npm run build' },
   { name: 'library-smoke', command: 'npm run smoke:library' },
   // The published package is ESM-only; its declarations must resolve under node16 and bundler resolution.
   { name: 'package-types', command: 'npm run check:package-types' },
-  // The container image — the product as installed: builds, starts on its required settings alone,
-  // passes the smoke checks, and stops cleanly on SIGTERM. Needs Docker.
-  { name: 'image', command: 'npm run check:image' },
   // Slowest last — jsdom cannot render <canvas> or shadow DOM, so only a real browser tells a chart
-  // from a silent fallback. Needs Chromium (`npx playwright install chromium` in packages/core and packages/console).
+  // from a silent fallback. Needs Chromium (`npx playwright install chromium` in packages/core).
   { name: 'e2e', command: 'npm run test:e2e' },
 ];
 

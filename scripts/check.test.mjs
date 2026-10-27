@@ -14,9 +14,9 @@ test('builds the library before anything that imports it is typechecked or teste
 });
 
 test('leaves out the steps named in --skip, and says which', () => {
-  const { run, skipped } = plan(['--skip=postgres,e2e']);
-  assert.equal(run.some(s => s.name === 'postgres' || s.name === 'e2e'), false);
-  assert.deepEqual(skipped, ['postgres', 'e2e']);
+  const { run, skipped } = plan(['--skip=build,e2e']);
+  assert.equal(run.some(s => s.name === 'build' || s.name === 'e2e'), false);
+  assert.deepEqual(skipped, ['build', 'e2e']);
 });
 
 test('refuses a step that does not exist, rather than silently running everything', () => {

@@ -15,9 +15,8 @@
   drawn in isolation, and scripts run in a sandboxed frame with no network — hosted by the renderer
   under one contract, so a board can draw what no widget does without U-Board growing a widget
   catalog of its own
-- An engine programs can drive: workspace API tokens, partial changes to a board (JSON Patch on a
-  revision), a published board schema, and an MCP server through which an AI assistant reads and
-  draws boards
+- An engine programs can drive: partial changes to a board (JSON Patch on a revision) and a published board schema,
+  so that an assistant can read and draw boards through a tool that builds on the library
 - Binding to external data sources without owning or storing the underlying data
 - A board that responds to what it shows: parts whose state follows conditions on their values,
   interactions that open a link, move to another board or notify the host application, alerts raised
@@ -34,8 +33,7 @@
 - Reimplementing the functionality of a business system (ERP, MES, CMMS, QMS, or similar) — a
   view built with U-Board displays and interacts with such systems, it does not replace them
 - AI inside the engine — it runs no model and holds no assistant; an assistant draws with it from the
-  outside, through its MCP server, as the person whose token it uses. A demo chat builder ships as one
-  such outside consumer: it uses the same tools, against a model endpoint its user supplies
+  outside, through the board language and its schema
 - Owning or storing domain data — a view's layout is U-Board's, the values shown in it belong to
   whatever system they came from. A board's state holds values only while they are current; what it
   keeps is derived from them (state names, connection quality, when a state began)
