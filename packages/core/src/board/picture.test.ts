@@ -15,6 +15,13 @@ const SOURCE: Record<string, unknown> = {
       { id: 'P2', line: 'L1', state: 'trip', flow: 0, rpm: 0, updatedAt: '2026-10-23T03:00:00Z' },
     ],
   },
+  // Features, as a map service answers: what an item is about is under its "properties".
+  '/plant/features': {
+    value: [
+      { id: 'q1', properties: { mag: 4.5, place: 'Alaska', state: 'run' } },
+      { id: 'q2', properties: { place: 'Chile', state: 'trip' } },
+    ],
+  },
   '/plant/totals': { output: 1280, oee: 0.83, temp: 74 },
   '/plant/hourly': { value: [{ hour: '09:00', count: 120 }, { hour: '10:00', count: 131 }] },
 };
@@ -372,6 +379,49 @@ describe('the picture model of a v2 board', () => {
     const title = nodeOf(doc, 'p/P1').widget.bindings!['data.title']!;
     expect(title.text).toBe('Pump P1 · {{flow | fixed:1}} m³/h · {{mode$name}}');
     expect(drawn(nodeOf(doc, 'p/P1').widget).data).toMatchObject({ title: 'Pump P1 · 41.5 m³/h · auto' });
+  });
+
+  describe('a field that lives deeper in an item than its top', () => {
+    const features = (parts: Board['parts'], place: Record<string, unknown>): Board => {
+      const b = board(parts, { kind: 'canvas', size: [400, 200], place: place as never });
+      b.data!.quakes = {
+        from: 'plant', path: '/plant/features', list: '/value', key: 'id',
+        fields: {
+          place: { at: '/properties/place' },
+          mag: { at: '/properties/mag', digits: 1 },
+          state: { at: '/properties/state', state: { run: 'running', trip: 'tripped', '*': 'off' } },
+        },
+      };
+      return b;
+    };
+
+    it('is written into a text by its pointer, an item without it leaving the hole empty', () => {
+      const b = features(
+        { q: { as: 'status-card', each: 'quakes', title: 'M{{mag}} · {{place}}', show: ['state'] } },
+        { q: { q1: [0, 0, 200, 100], q2: [200, 0, 200, 100] } },
+      );
+      const doc = view(b, { quakes: ['q1', 'q2'] });
+      const title = nodeOf(doc, 'q/q1').widget.bindings!['data.title']!;
+      expect(title.text).toBe('M{{mag | fixed:1}} · {{place}}');
+      expect(title.itemFields).toEqual({ mag: { from: '/properties/mag' }, place: { from: '/properties/place' } });
+      expect(drawn(nodeOf(doc, 'q/q1').widget).data).toMatchObject({ title: 'M4.5 · Alaska' });
+      expect(drawn(nodeOf(doc, 'q/q2').widget).data).toMatchObject({ title: 'M · Chile' });
+    });
+
+    it("is a table's column, a list's row and a state, read where it lives", () => {
+      const b = features(
+        { t: { as: 'table', of: 'quakes', show: ['place', 'mag', 'state'] }, l: { as: 'list', of: 'quakes', show: ['place'], time: 'mag', state: 'state' } },
+        { t: [0, 0], l: [200, 0] },
+      );
+      const doc = view(b);
+      const table = drawn(nodeOf(doc, 't').widget);
+      expect(table.data).toEqual([
+        expect.objectContaining({ id: 'q1', place: 'Alaska', mag: 4.5, state$tone: 'ok' }),
+        expect.objectContaining({ id: 'q2', place: 'Chile', state$tone: 'alarm' }),
+      ]);
+      expect((table.mapping as { columns: { field: string }[] }).columns.map(c => c.field)).toEqual(['place', 'mag', 'state']);
+      expect((drawn(nodeOf(doc, 'l').widget).mapping as Record<string, string>)).toMatchObject({ primary: 'place', time: 'mag' });
+    });
   });
 
   it("draws a marker as one of the board's symbols, the one a field names", () => {

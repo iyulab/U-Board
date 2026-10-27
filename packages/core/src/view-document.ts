@@ -408,7 +408,8 @@ export interface Binding {
 
 /** A field each item of a list value gains: see `Binding.itemFields`. */
 export interface ItemField {
-  /** The item's field the value is read from. */
+  /** The item's field the value is read from: its key, or — when it starts with `/` — a JSON Pointer into the item
+   * (`/properties/mag`), for a field that lives deeper in it. A field the item does not have reads as nothing. */
   from: string;
   /** Translates it, as `Binding.map` does a value. Omitted: the value as it is. */
   map?: ValueMap;

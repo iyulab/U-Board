@@ -6,6 +6,15 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A field that lives deeper in an item reads in a text, a list, a table and a bar list.** A board field declared with a
+  deeper `at` (`/properties/mag`) used to be refused wherever more than one value was read from it (`"mag" lives deeper
+  in an item …`); the picture now reads it by its pointer, so `title: "M{{mag}}"` and a table column work for a
+  GeoJSON-style answer as they do for a flat one.
+- **`ItemField.from` accepts a JSON Pointer.** A `from` that starts with `/` is read as a pointer into the item
+  (`withItemFields`); any other value is a key, as before. An item without the field gains nothing to show.
+
 ## [0.36.0] - 2026-10-27
 
 ### Changed

@@ -692,7 +692,9 @@ A widget's `type` is a widget of the widget library, or a drawing of U-Board's o
 dotted path into `props` (`'data.value'`) to where its value is read. At resolution each value is written into `props`
 at its path — copying, never mutating — so the static `props` keep the defaults for what is unbound or `disconnected`.
 A binding's `map` is the board's mapping as the picture writes it (`applyValueMap(map, value)`), `itemFields` what each
-row of a list gains (`withItemFields`), `text` a value written into a text (`writeText`).
+row of a list gains (`withItemFields`), `text` a value written into a text (`writeText`). An `ItemField`'s `from` is the
+item's key, or — when it starts with `/` — a JSON Pointer into the item (`/properties/mag`), so a field that lives deeper
+in an item gains a name the widget reads it by; an item without it gains nothing to show.
 
 ### `resolveDocument(picture, adapters)`
 

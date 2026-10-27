@@ -362,6 +362,16 @@ describe('value maps', () => {
     expect(withItemFields({ label: { from: 'id' } }, { id: 'P1' })).toEqual({ id: 'P1', label: 'P1' });
   });
 
+  it('reads an item field by a JSON Pointer when `from` starts with a slash, nothing where the item has none', () => {
+    const items = [{ id: 'q1', properties: { mag: 4.5, tags: ['a', 'b'] } }, { id: 'q2' }, { id: 'q3', properties: null }];
+    const gained = withItemFields({ mag: { from: '/properties/mag' }, first: { from: '/properties/tags/0' }, band: { from: '/properties/mag', map: { ranges: [{ min: 4, value: 'strong' }], otherwise: 'weak' } } }, items) as Record<string, unknown>[];
+    expect(gained[0]).toMatchObject({ mag: 4.5, first: 'a', band: 'strong' });
+    expect(gained[1]).toMatchObject({ mag: undefined, first: undefined });
+    expect(gained[2]).toMatchObject({ mag: undefined });
+    // A key that merely contains a slash is not a pointer; only a leading one is.
+    expect(withItemFields({ x: { from: 'a/b' } }, [{ 'a/b': 1 }])).toEqual([{ 'a/b': 1, x: 1 }]);
+  });
+
   it('writes the item it read into a text, its fields in the template value grammar', async () => {
     const port = new InMemoryAdapter('port', { b1: { value: { vessel: 'HMM Algeciras', draft: 14.567, teu: 23964, state: 'work' }, quality: 'live' } });
     const widget: Widget = {

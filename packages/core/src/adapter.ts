@@ -213,13 +213,22 @@ export function applyValueMap(map: ValueMap, value: unknown): unknown {
   return 'otherwise' in map ? map.otherwise : value;
 }
 
-/** A list `value` whose items have gained `fields` (`Binding.itemFields`): each the value of the item's `from` field,
- *  mapped when the field has a map. A value that is not a list, and an item that is not an object, are left as they are. */
+/** A list `value` whose items have gained `fields` (`Binding.itemFields`): each the value of the item's `from` field — a
+ *  key, or a JSON Pointer when it starts with `/` — mapped when the field has a map. A field the item does not have
+ *  gains nothing to show. A value that is not a list, and an item that is not an object, are left as they are. */
 export function withItemFields(fields: Record<string, ItemField>, value: unknown): unknown {
   if (!isObject(fields)) return value;
   const entries = Object.entries(fields).filter(([, f]) => isObject(f) && typeof f.from === 'string');
+  const read = (item: Record<string, any>, from: string): unknown => {
+    if (!from.startsWith('/')) return item[from];
+    try {
+      return getByPointer(item, from);
+    } catch {
+      return undefined;
+    }
+  };
   const gain = (item: unknown) => (isObject(item) && !Array.isArray(item)
-    ? { ...item, ...Object.fromEntries(entries.map(([name, f]) => [name, f.map ? applyValueMap(f.map, item[f.from]) : item[f.from]])) }
+    ? { ...item, ...Object.fromEntries(entries.map(([name, f]) => [name, f.map ? applyValueMap(f.map, read(item, f.from)) : read(item, f.from)])) }
     : item);
   return Array.isArray(value) ? value.map(gain) : gain(value);
 }

@@ -211,15 +211,26 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
   const fieldOf = (query: string | undefined, name: string): Field => (query === undefined ? {} : data[query]?.fields?.[name] ?? {});
 
   /**
-   * The key a field lives under in an item — its `at` (`/sky` → `sky`), else its own name — where a list's rows and a
-   * text read it. A field deeper in an item is read only one value at a time.
+   * Where a field lives in an item, as an item field reads it (`ItemField.from`): its key — `at` (`/sky` → `sky`), else
+   * its own name — or, for a field deeper in the item (`/properties/mag`), the pointer itself.
    */
-  const keyOf = (query: string, name: string, at: string): string => {
+  const sourceOf = (query: string, name: string): string => {
     const where = fieldOf(query, name).at;
     if (where === undefined) return name;
-    if (where.indexOf('/', 1) >= 0) throw new PictureError(at, `"${name}" lives deeper in an item (${where}) — a list's rows and a text read a field at the top of it`);
-    return where.slice(1);
+    return where.indexOf('/', 1) >= 0 ? where : where.slice(1);
   };
+
+  /** Whether a field lives deeper in an item than its top. */
+  const isDeep = (query: string, name: string): boolean => sourceOf(query, name).startsWith('/');
+
+  /**
+   * The name a list's rows and a text read a field by: its key at the top of an item, and for a deeper field its own
+   * name — which the item gains (`gainOf`), as it gains a field's words.
+   */
+  const columnOf = (query: string, name: string): string => (isDeep(query, name) ? name : sourceOf(query, name));
+
+  /** What an item gains so `columnOf` finds a field that lives deeper: the field under its own name. */
+  const gainOf = (query: string, name: string): Record<string, ItemField> => (isDeep(query, name) ? { [name]: { from: sourceOf(query, name) } } : {});
 
   /** A status by name: one the board declares, or a tone standing for itself. */
   const statusOf = (name: string): Status => statuses[name] ?? { tone: name as Tone };
@@ -303,9 +314,9 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     const written = t.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (_m, name: string) => {
       if (name === 'key') return reads.item ?? '';
       const f = fieldOf(reads.query, name);
-      const key = keyOf(reads.query, name, at);
-      if (f.names !== undefined) gained[`${name}$name`] = { from: key, map: mapOf(f.names, w => w) };
-      const shown = f.names !== undefined ? `${name}$name` : key;
+      Object.assign(gained, gainOf(reads.query, name));
+      if (f.names !== undefined) gained[`${name}$name`] = { from: sourceOf(reads.query, name), map: mapOf(f.names, w => w) };
+      const shown = f.names !== undefined ? `${name}$name` : columnOf(reads.query, name);
       return `{{${shown}${pipeOf(f)}}}`;
     });
     return {
@@ -369,15 +380,16 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       const f = field(name);
       const maps = f.state !== undefined ? stateMaps(f.state) : undefined;
       return {
-        ...(maps ? { [`${name}$tone`]: { from: key(name), map: maps.tone } } : {}),
-        ...(maps?.glyph ? { [`${name}$glyph`]: { from: key(name), map: maps.glyph } } : {}),
-        ...(f.names !== undefined ? { [`${name}$name`]: { from: key(name), map: mapOf(f.names, w => w) } } : {}),
+        ...gainOf(query!, name),
+        ...(maps ? { [`${name}$tone`]: { from: source(name), map: maps.tone } } : {}),
+        ...(maps?.glyph ? { [`${name}$glyph`]: { from: source(name), map: maps.glyph } } : {}),
+        ...(f.names !== undefined ? { [`${name}$name`]: { from: source(name), map: mapOf(f.names, w => w) } } : {}),
       };
     };
-    /** Where a row holds field `name`. */
-    const key = (name: string) => keyOf(query!, name, at);
-    /** The field a row shows `name` by: its words when it names them, else the field where it lives. */
-    const shown = (name: string) => (field(name).names !== undefined ? `${name}$name` : key(name));
+    /** Where an item holds field `name`: a key, or a pointer for a field deeper in it. */
+    const source = (name: string) => sourceOf(query!, name);
+    /** The field a row shows `name` by: its words when it names them, else the field under its name (`rowFields` gains it). */
+    const shown = (name: string) => (field(name).names !== undefined ? `${name}$name` : columnOf(query!, name));
     /** The first of `names` whose field has a state. */
     const stateIn = (names: readonly (string | undefined)[]) => names.find(n => n !== undefined && field(n).state !== undefined);
     const text = (t: string | undefined, key: string): string | undefined => {
@@ -506,13 +518,13 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         // it, `time` before it, coloured by a state.
         const { primary = fields[0], secondary, trailing, badge, time, state, max, variant, ...rest } = options as Record<string, string | undefined> & { max?: number };
         const tone = stateIn([state, ...fields]);
-        bindList('data', Object.assign({}, rowFields(primary), rowFields(secondary), rowFields(trailing), rowFields(badge), rowFields(tone)));
+        bindList('data', Object.assign({}, rowFields(primary), rowFields(secondary), rowFields(trailing), rowFields(badge), rowFields(tone), time !== undefined ? gainOf(query!, time) : {}));
         const mapping = {
           ...(primary !== undefined ? { primary: shown(primary) } : {}),
           ...(secondary !== undefined ? { secondary: shown(secondary) } : {}),
           ...(trailing !== undefined ? { trailing: shown(trailing) } : {}),
           ...(badge !== undefined ? { badge: shown(badge) } : {}),
-          ...(time !== undefined ? { time: key(time) } : {}),
+          ...(time !== undefined ? { time: columnOf(query!, time) } : {}),
           ...(tone !== undefined ? { tone: `${tone}$tone` } : {}),
           ...(tone !== undefined && glyphed ? { glyph: `${tone}$glyph` } : {}),
         };
@@ -532,9 +544,9 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         const tone = stateIn([state, ...fields]);
         const toneMap = tone !== undefined ? field(tone).state : undefined;
         bindList('data', {
-          ...(labelField !== undefined ? { label: { from: key(labelField), ...(field(labelField).names ? { map: mapOf(field(labelField).names!, w => w) } : {}) } } : {}),
-          ...(valueField !== undefined ? { value: { from: key(valueField) } } : {}),
-          ...(tone !== undefined && toneMap !== undefined ? { tone: { from: key(tone), map: stateMaps(toneMap).tone } } : {}),
+          ...(labelField !== undefined ? { label: { from: source(labelField), ...(field(labelField).names ? { map: mapOf(field(labelField).names!, w => w) } : {}) } } : {}),
+          ...(valueField !== undefined ? { value: { from: source(valueField) } } : {}),
+          ...(tone !== undefined && toneMap !== undefined ? { tone: { from: source(tone), map: stateMaps(toneMap).tone } } : {}),
         });
         return {
           type: kind.kind,
