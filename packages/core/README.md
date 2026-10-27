@@ -255,4 +255,4 @@ Pre-1.0: a minor version may change the public API, including the board language
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE).
+MIT. See the [license](https://github.com/iyulab/U-Board/blob/main/LICENSE).
