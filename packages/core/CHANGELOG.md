@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-27
+
 ### Changed
 
 - **The package is licensed under the MIT License** from this release on. Versions up to 0.35.0 were published under

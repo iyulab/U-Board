@@ -23,6 +23,7 @@
   "githubRepos": [
     "iyulab/U-Board",
     "iyulab/u-widgets",
-    "iyulab/canvas-kit"
+    "iyulab/canvas-kit",
+    "iyulab/u-board-studio"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/u-board",
-  "version": "0.35.0",
+  "version": "0.36.0",
   "description": "The board language and the renderer that draws it",
   "type": "module",
   "license": "MIT",
