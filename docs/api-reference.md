@@ -1,6 +1,6 @@
 # API Reference
 
-This is the reference for the library's public surface (see the root [`README.md`](../README.md#domain-layer) for how
+This is the reference for the library's public surface (see the root [`README.md`](../README.md#use-it) for how
 to install it). [`concepts.md`](concepts.md) explains what each term *means*; this document gives the concrete
 shapes and a runnable example, so a consumer — human or automated — can write a board, implement an `Adapter` and
 draw the board without guessing.

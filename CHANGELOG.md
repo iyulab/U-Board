@@ -939,7 +939,7 @@ Upgrading: nothing to set — the new data source setting is optional, and its c
 
 ## [0.1.0] - 2026-10-08
 
-The first release as a published image. What it does is described in the [README](README.md#status);
+The first release as a published image. What it does is described in the [README](README.md);
 running, backing up and upgrading it in [docs/self-hosting.md](docs/self-hosting.md).
 
 ### Upgrading from an image built from source
