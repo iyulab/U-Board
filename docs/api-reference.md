@@ -61,7 +61,7 @@ the two can't quietly diverge from each other either.
 |---|---|---|
 | `@iyulab/u-board/domain` | The board language — its types, `boardSchema`, `validateBoard`, the part kinds — drawing a board's picture (`pictureOf`, `readerOf`, `toViewDocument`), the `Adapter` contract, JSON Patch, connection-quality text | No — and no package at runtime |
 | `@iyulab/u-board/picture` | The picture a board is drawn as: `ViewDocument` and its parts, `resolveDocument`, `boardStateOf`, the trigger decisions, the HTTP connector's reference, element frames, `lintViewDocument` — what a server or an assistant reads off a drawn board | No — and no package at runtime |
-| `@iyulab/u-board/viewer` | `BoardView`, `ViewerPage` (a picture drawn as given), the labels, `serverClock` | Yes |
+| `@iyulab/u-board/viewer` | `BoardView`, `ViewerPage` (a picture drawn as given), the labels, `serverClock`, `setMediaOrigins` | Yes |
 | `@iyulab/u-board` | Everything in `domain` and `viewer` | Yes |
 | `@iyulab/u-board-designer` | `BoardAuthoring`, the authoring tool (a package that builds on this one) | Yes |
 | `@iyulab/u-board-designer/check` | `checkBoard`, `emptyBoard`, `sourceAdvice`, `boardRulebook` — the board check an author or an assistant reads, and the rulebook it writes by | No |
@@ -651,6 +651,23 @@ function serverClock(): ServerClock;   // from @iyulab/u-board/viewer
 `serverClock()` estimates a server's clock from the `Date` header of its responses (RFC 9110): hand it each response with
 the `Date.now()` the request was sent at, and pass `now` on as the clock. A response without a readable `Date` changes
 nothing — a cross-origin response does not expose it unless the server lists it in `Access-Control-Expose-Headers`.
+
+## Where a board's media may load from — `setMediaOrigins(origins)`
+
+```ts
+function setMediaOrigins(origins: readonly string[] | null): void;   // from @iyulab/u-board/viewer
+function getMediaOrigins(): readonly string[] | null;
+```
+
+An `image`, `gallery` or `video` part, a card's picture and a list's avatar ask the browser for the address the board gives as
+soon as they are drawn — and the address of a picture can carry what the board read. A board an assistant wrote is not input a
+host can vouch for, so a host lists the origins media may come from: `setMediaOrigins(['self', 'https://cdn.example.com'])`
+(`'self'` is the page's own origin, where a relative address points; `[]` allows nothing). A part whose address is outside the
+list is not requested; it draws its `alt` text where the picture would be. `null`, and never calling it, limit nothing.
+
+The setting belongs to the page, not to one viewer — it is the widget library's own, which the viewer draws with, re-exported
+here so a host sets the one the viewer reads. Call it once, before the first board is drawn; a part already on screen keeps what it
+drew until it next renders.
 
 ## Changing a board — `applyJsonPatch(board, patch)`
 
