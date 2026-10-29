@@ -13,4 +13,8 @@ export { DEFAULT_QUALITY_TEXT, ageText } from './quality-text.js';
 export type { QualityText } from './quality-text.js';
 export type { BoardState, PartState } from './board-state.js';
 export { serverClock } from './server-clock.js';
+// Which origins the media of a board's widgets — an image, a gallery, a video, a card's picture — may load from. It is
+// the setting of the widget library the viewer draws with, re-exported so a host sets the one the viewer reads: set it
+// before the first board is drawn, once per page (it is not a property of one viewer).
+export { setMediaOrigins, getMediaOrigins } from '@iyulab/u-widgets';
 export type { ServerClock, ResponseWithHeaders } from './server-clock.js';

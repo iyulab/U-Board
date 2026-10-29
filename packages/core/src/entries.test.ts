@@ -10,6 +10,7 @@ import * as viewer from './viewer-entry.js';
 import * as examples from './examples-entry.js';
 import * as toolkit from './toolkit-entry.js';
 import * as root from './index.js';
+import * as widgets from '@iyulab/u-widgets';
 
 // The public surface, value by value: an export appears or goes away here on purpose, not as a side effect — what a
 // 0.x minor release adds or removes is read off these lists.
@@ -35,8 +36,13 @@ describe('the entry points', () => {
     ]);
   });
 
+  it('./viewer re-exports the widget library’s own media origins setting — the one the viewer draws with, not a copy', () => {
+    expect(viewer.setMediaOrigins).toBe(widgets.setMediaOrigins);
+    expect(viewer.getMediaOrigins).toBe(widgets.getMediaOrigins);
+  });
+
   it('./viewer exports the board drawn in its host and a picture drawn as given', () => {
-    expect(Object.keys(viewer).sort()).toEqual(['BoardView', 'DEFAULT_LABELS', 'DEFAULT_QUALITY_TEXT', 'KO_LABELS', 'ViewerPage', 'ageText', 'serverClock', 'timeText']);
+    expect(Object.keys(viewer).sort()).toEqual(['BoardView', 'DEFAULT_LABELS', 'DEFAULT_QUALITY_TEXT', 'KO_LABELS', 'ViewerPage', 'ageText', 'getMediaOrigins', 'serverClock', 'setMediaOrigins', 'timeText']);
   });
 
   it('exports from the package root everything ./domain and ./viewer do, and nothing else', () => {

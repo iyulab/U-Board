@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **`setMediaOrigins` and `getMediaOrigins` from `@iyulab/u-board/viewer`** (the widget library's own, re-exported so a host
+  sets the one the viewer draws with). A board an assistant wrote is not input the host can vouch for, and an `image`,
+  `gallery`, `video`, card picture or list avatar asks the browser for whatever address the board gives as soon as it is drawn —
+  where a picture's address can carry what the board read. A host that lists the origins media may come from
+  (`setMediaOrigins(['self', 'https://cdn.example.com'])`, once per page, before the first board is drawn) draws the `alt` text
+  in place of anything else. Nothing is limited until it is called. Needs `@iyulab/u-widgets` 0.44.
 - **A field that lives deeper in an item reads in a text, a list, a table and a bar list.** A board field declared with a
   deeper `at` (`/properties/mag`) used to be refused wherever more than one value was read from it (`"mag" lives deeper
   in an item …`); the picture now reads it by its pointer, so `title: "M{{mag}}"` and a table column work for a
