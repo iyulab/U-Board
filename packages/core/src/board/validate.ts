@@ -638,7 +638,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     /** A part's items placed by their own fields: which fields, what values the canvas's edges stand for, how big. */
     const checkPlaceByFields = (p: Record<string, unknown>, placeAt: string) => {
       for (const key of Object.keys(p)) {
-        if (!['at', 'frame', 'size'].includes(key)) fail(`${placeAt}/${key}`, `items placed by their fields take "at", "frame" and "size" — "${key}" is not one (items are not also placed by hand)`);
+        if (!['at', 'frame', 'size', 'anchor'].includes(key)) fail(`${placeAt}/${key}`, `items placed by their fields take "at", "frame", "size" and "anchor" — "${key}" is not one (items are not also placed by hand)`);
       }
       const names = p.at as unknown[];
       if (names.length !== 2) fail(`${placeAt}/at`, '"at" names two fields of an item: [the field holding x, the field holding y]');
@@ -648,6 +648,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
         else if (f[0] === f[2] || f[1] === f[3]) fail(`${placeAt}/frame`, '"frame" needs different values at the left and right edges, and at the top and bottom');
       }
       if (p.size !== undefined && !isSize(p.size)) fail(`${placeAt}/size`, '"size" is [width, height], both above 0');
+      if (p.anchor !== undefined && !['center', 'left', 'right', 'top', 'bottom'].includes(p.anchor as string)) fail(`${placeAt}/anchor`, '"anchor" is the point of the box the position is: center, left, right, top or bottom');
     };
     for (const [id, p] of Object.entries(place)) {
       const placeAt = `${at}/place/${id}`;

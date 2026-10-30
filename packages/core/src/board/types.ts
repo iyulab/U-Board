@@ -220,13 +220,17 @@ export interface Weight {
  * Where the items of an `each` part go when their own fields say it: `at` names the field of an item holding its x and
  * the field holding its y. `frame` is the value at the canvas's left, top, right and bottom edges (the canvas's own
  * coordinates when absent; `[-180, 90, 180, -90]` for longitude and latitude over a whole-world picture); the position is
- * the centre of the part's box, `size` when it gives one. An item with no number in either field, or outside the frame,
+ * the point of the part's box `anchor` says (its centre unless it says otherwise), `size` when it gives one. An item with no number in either field, or outside the frame,
  * is not drawn.
  */
 export interface DataPlace {
   at: [string, string];
   frame?: [number, number, number, number];
   size?: [number, number];
+  /** Which point of the part's box the position is: its middle (`center`, the default) or the middle of its `left`,
+   *  `right`, `top` or `bottom` edge — a marker whose dot sits at the left of its label is `left`, a pin that rises from
+   *  its point is `bottom`. */
+  anchor?: 'center' | 'left' | 'right' | 'top' | 'bottom';
 }
 
 /** Parts placed on a drawing. An `each` part is placed item by item, inside its own entry — or by its items' fields. */

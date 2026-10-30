@@ -299,7 +299,9 @@ type GridItem =
   fields: `{ "at": ["lon", "lat"], "frame": [-180, 90, 180, -90], "size": [14, 14] }` puts each item at the point the
   two fields say. `at` names the fields holding x and y (each where its field says it lives, `at` of the field); `frame`
   is the values at the canvas's left, top, right and bottom edges, mapped linearly (the canvas's own coordinates when
-  left out); the position is the centre of the item's box, `size` when given. An item with no number in either field, or
+  left out); the position is the centre of the item's box, `size` when given — or the middle of one of its edges with
+  `"anchor": "left" | "right" | "top" | "bottom"` (`"center"` is the default): a marker whose dot sits at the left of its
+  label is `left`, a pin that rises from its point is `bottom`. An item with no number in either field, or
   outside the frame, is not drawn — `look` and `pictureOf`'s `unplaced` count them. The data needs a `key`, and a part is
   placed one way, not both. The projection is linear: right for a plan and an equirectangular map, off for a Mercator one
   over a wide range.

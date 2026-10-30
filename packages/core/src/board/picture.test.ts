@@ -614,6 +614,22 @@ describe('items placed by their own fields (a canvas)', () => {
     expect(nodeOf(doc, 'quake/q1')).toMatchObject({ width: 10, height: 10 });
   });
 
+  it('puts the point of the box an anchor names on the item’s place — the middle of an edge, not only the middle', () => {
+    const at = (anchor: string) => {
+      const b = world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [20, 10], anchor });
+      expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+      const n = nodeOf(draw(b, [{ id: 'q', lon: 0, lat: 0 }]).doc, 'quake/q');
+      return [n.x, n.y];
+    };
+    // The place is (180, 90) on this canvas: a box 20 wide and 10 high.
+    expect(at('center')).toEqual([170, 85]);
+    expect(at('left')).toEqual([180, 85]);
+    expect(at('right')).toEqual([160, 85]);
+    expect(at('top')).toEqual([170, 90]);
+    expect(at('bottom')).toEqual([170, 80]);
+    expect(validateBoard(world({ at: ['lon', 'lat'], anchor: 'middle' })).map(i => i.message)).toContain('"anchor" is the point of the box the position is: center, left, right, top or bottom');
+  });
+
   it('takes the canvas’s own coordinates when no frame is given, and the default box when no size is', () => {
     const { doc } = draw(world({ at: ['x', 'y'] }), [{ id: 'a', x: 100, y: 50 }]);
     const n = nodeOf(doc, 'quake/a');

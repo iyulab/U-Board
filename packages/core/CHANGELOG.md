@@ -14,6 +14,9 @@ All notable changes to this package are documented here. The format follows
   where a picture's address can carry what the board read. A host that lists the origins media may come from
   (`setMediaOrigins(['self', 'https://cdn.example.com'])`, once per page, before the first board is drawn) draws the `alt` text
   in place of anything else. Nothing is limited until it is called. Needs `@iyulab/u-widgets` 0.44.
+- **`anchor` for items placed by their fields.** `"place": { "quake": { "at": ["lon", "lat"], "anchor": "left" } }` puts the middle of the
+  left edge of each item's box at its place (`"center"`, the default, as before; `"right"`, `"top"`, `"bottom"`). A marker whose dot sits
+  at the left of its label no longer drifts off its data point by half its width.
 - **A read can compute a field from the items of its list.** `"fields": { "down": { "derive": { "op": "count", "where": { "state":
   "trip" } } } }` — `count`, or `sum` · `min` · `max` · `avg` of one item `field`, over the items equal to `where` — is a number a part
   that reads the list shows like any field (with `names`, `digits`, `format` and a `state`), so a count can raise a status. The

@@ -219,11 +219,12 @@ export function boardSchema(): Schema {
         type: 'object',
         required: ['at'],
         additionalProperties: false,
-        description: 'Items placed by their own fields: "at" names the fields holding x and y; "frame" is the values at the canvas’s left, top, right and bottom edges (the canvas’s own coordinates when left out); "size" the box centred on that point. An item with no number there, or outside the frame, is not drawn.',
+        description: 'Items placed by their own fields: "at" names the fields holding x and y; "frame" is the values at the canvas’s left, top, right and bottom edges (the canvas’s own coordinates when left out); "size" the box, centred on that point unless "anchor" says another. An item with no number there, or outside the frame, is not drawn.',
         properties: {
           at: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2, description: '[the field holding x, the field holding y].' },
           frame: { type: 'array', items: { type: 'number' }, minItems: 4, maxItems: 4, description: '[left, top, right, bottom] — the values at the canvas’s edges; [-180, 90, 180, -90] for longitude and latitude over a picture of the whole world.' },
           size: { type: 'array', items: { type: 'number', exclusiveMinimum: 0 }, minItems: 2, maxItems: 2, description: '[width, height] of each item’s box.' },
+          anchor: { enum: ['center', 'left', 'right', 'top', 'bottom'], description: 'The point of the box that is the position: its middle (default), or the middle of its left, right, top or bottom edge.' },
         },
       },
       // A link on a board's own canvas shows or weighs a field only "of" something; inside a group (above) it may read

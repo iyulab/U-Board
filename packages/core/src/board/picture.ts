@@ -836,7 +836,10 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       if ((typeof named !== 'string' && typeof named !== 'number') || !inside) { skipped += 1; return; }
       const cx = ((x as number) - left) / (right - left) * canvasSize[0];
       const cy = ((y as number) - top) / (bottom - top) * canvasSize[1];
-      const place: Place = boxed !== undefined && where.size !== undefined ? [cx - w / 2, cy - h / 2, w, h] : [cx - w / 2, cy - h / 2];
+      // The point of the box that is the position: its middle, or the middle of an edge (a dot at the left of its label).
+      const reach = [where.anchor === 'left' ? 0 : where.anchor === 'right' ? w : w / 2, where.anchor === 'top' ? 0 : where.anchor === 'bottom' ? h : h / 2] as const;
+      const corner = [cx - reach[0], cy - reach[1]] as const;
+      const place: Place = boxed !== undefined && where.size !== undefined ? [...corner, w, h] : [...corner];
       placeOne(partId, `${partId}/${String(named)}`, part, place, own(String(named)));
     });
     if (skipped > 0) options.onUnplaced?.(partId, skipped);
