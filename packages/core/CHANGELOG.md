@@ -14,6 +14,11 @@ All notable changes to this package are documented here. The format follows
   where a picture's address can carry what the board read. A host that lists the origins media may come from
   (`setMediaOrigins(['self', 'https://cdn.example.com'])`, once per page, before the first board is drawn) draws the `alt` text
   in place of anything else. Nothing is limited until it is called. Needs `@iyulab/u-widgets` 0.44.
+- **A read can compute a field from the items of its list.** `"fields": { "down": { "derive": { "op": "count", "where": { "state":
+  "trip" } } } }` — `count`, or `sum` · `min` · `max` · `avg` of one item `field`, over the items equal to `where` — is a number a part
+  that reads the list shows like any field (with `names`, `digits`, `format` and a `state`), so a count can raise a status. The
+  list is read once; the number is as current as the list. `Binding.derive` carries it in the view document (`deriveValue` computes
+  it); a list with nothing to take the smallest, largest or mean of reads `disconnected` with reason `address`.
 - **A part inside a group can be made per item of a list inside the group's item.** In a group made per item of a data
   (`"use": "zone", "each": "zones"`), a part with `"each": "/assets"` — a pointer into the item, as a field's `at` is — is drawn once
   per item of that list, ids `zones/Z1/machine/0` (an item is named by its place in the list), and reads it from the one answer

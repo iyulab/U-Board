@@ -74,6 +74,17 @@ export function boardSchema(): Schema {
           format: { type: 'string', description: 'A value format: "number:1", "percent", "time" …' },
           names: ref('mapping'),
           state: { description: 'How the value is doing, as a status: "raw" when the value is one, else a mapping.', oneOf: [{ const: 'raw' }, ref('mapping')] },
+          derive: {
+            type: 'object',
+            required: ['op'],
+            additionalProperties: false,
+            properties: {
+              op: { enum: ['count', 'sum', 'min', 'max', 'avg'] },
+              field: { type: 'string', description: 'The item field the number is taken from — not for count.' },
+              where: { type: 'object', additionalProperties: { type: ['string', 'number', 'boolean'] }, description: 'Only the items whose fields equal these values.' },
+            },
+            description: 'A field computed from the items of the list, not sent by the source: count, or the sum, min, max or avg of one field, over the items equal to where. Shown by a part that reads the list.',
+          },
           items: map(ref('field'), 'For a field holding a list of objects: what each field of its items means (at is relative to the item). An element’s list prop bound to it reads {{name}} in words, {{name$tone}} in tone.'),
         },
       },

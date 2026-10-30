@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkSpec } from '@iyulab/u-widgets/tools';
-import { applyValueMap, withItemFields, writeText } from '../adapter.js';
+import { applyValueMap, deriveValue, withItemFields, writeText } from '../adapter.js';
 import { isHttpRef, readHttpRef, type HttpRef } from '../http-ref.js';
 import type { Node, ViewDocument, Widget } from '../view-document.js';
 import { PictureError, isDataPlace, keyReadsOf, keysIn, toViewDocument } from './picture.js';
@@ -41,7 +41,8 @@ function drawn(widget: Widget): Record<string, unknown> {
     const ref = binding.ref as HttpRef;
     const reading = readHttpRef(SOURCE[ref.path], ref, READ_AT);
     if (!reading.ok) throw new Error(`${key}: ${reading.message}`);
-    const mapped = binding.map ? applyValueMap(binding.map, reading.value) : reading.value;
+    const read = binding.derive ? deriveValue(binding.derive, reading.value) : reading.value;
+    const mapped = binding.map ? applyValueMap(binding.map, read) : read;
     const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
     const value = binding.text !== undefined ? writeText(binding.text, gained) : gained;
     const path = key.split('.');
@@ -327,6 +328,23 @@ describe('the picture model of a v2 board', () => {
         { hour: '10:00', count: 131, flow: 131, count$tone: 'alarm', count$status: 'Tripped', count$emphasis: 'blink' },
       ],
     });
+  });
+
+  it('shows a field the read computes from the items of its list — and lets it raise a status like any reading', () => {
+    const b = board(
+      { down: { as: 'stat', of: 'pumps', show: 'tripped' }, mean: { as: 'stat', of: 'pumps', show: 'meanFlow' } },
+      { kind: 'canvas', size: [400, 200], place: { down: [0, 0, 100, 100], mean: [100, 0, 100, 100] } },
+    );
+    b.data!.pumps = { ...pumps, fields: { ...pumps.fields, tripped: { derive: { op: 'count', where: { state: 'trip' } }, state: ['running', 1, 'tripped'] }, meanFlow: { derive: { op: 'avg', field: 'flow' }, digits: 1 } } } as never;
+    const doc = view(b);
+    const down = nodeOf(doc, 'down').widget;
+    expect(down.bindings!['data.value']).toMatchObject({ derive: { op: 'count', where: { state: 'trip' } }, ref: { path: '/plant/pumps' } });
+    expect(drawn(down).data).toMatchObject({ value: 1, tone: 'alarm' });
+    expect(drawn(nodeOf(doc, 'mean').widget).data).toMatchObject({ value: 20.75 });
+    // Shown from one item it would have no list to compute from.
+    const one = board({ d: { as: 'stat', of: 'pumps[P1]', show: 'tripped' } }, { kind: 'canvas', size: [100, 100], place: { d: [0, 0] } });
+    one.data!.pumps = b.data!.pumps;
+    expect(() => toViewDocument(one)).toThrow(/is computed from the items of "pumps"/);
   });
 
   it('draws a part per item of a list inside the item a group is made for, each reading its own place in the list', () => {

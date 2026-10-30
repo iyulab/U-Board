@@ -58,6 +58,23 @@ export interface Field {
    * mark under `<name>$tone`, `<name>$status`, `<name>$emphasis`, `<name>$glyph`. Items do not nest.
    */
   items?: Record<string, Field>;
+  /**
+   * A field the read computes from the items of its list, not one the source sends: how many items there are, or the
+   * sum, smallest, largest or mean of one field of them, over the items equal to `where`. It is a number like any other
+   * reading — it has `names`, `digits`, `format` and a `state`, so "the number of products out of stock" can raise a
+   * status — and is only as current as the list it is computed from. The data is read whole; a part that shows it reads
+   * the list (`of: "<data>"`), not an item. The smallest, largest and mean of nothing are no value.
+   */
+  derive?: FieldDerive;
+}
+
+/** What a derived field computes: see `Field.derive`. */
+export interface FieldDerive {
+  op: 'count' | 'sum' | 'min' | 'max' | 'avg';
+  /** The item field the number is taken from — not for `count`. */
+  field?: string;
+  /** Only the items whose fields equal these values. */
+  where?: Record<string, string | number | boolean>;
 }
 
 /** When a request's `{{now:…}}` places stand, for a source asked for the data of a given time. */

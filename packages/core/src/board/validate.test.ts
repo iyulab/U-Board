@@ -47,6 +47,19 @@ describe('validateBoard', () => {
     expect(issues(withItems({ state: { items: {} } }))[0]).toContain('/data/queue/fields/value/items/state/items: items do not nest');
   });
 
+  it('checks a field the read computes from its list — an op, a field for all but a count, a list to compute from', () => {
+    const derived = (derive: unknown, extra: Record<string, unknown> = {}) => ({ ...canvas({ a: { as: 'stat', of: 'equipment', show: 'down' } }), data: { ...data, equipment: { ...data.equipment, fields: { down: { derive, ...extra } } } } });
+    expect(issues(derived({ op: 'count', where: { state: 'trip' } }))).toEqual([]);
+    expect(issues(derived({ op: 'avg', field: 'flow' }))).toEqual([]);
+    expect(issues(derived({ op: 'median', field: 'flow' }))).toEqual(['/data/equipment/fields/down/derive/op: "op" is count, sum, min, max or avg']);
+    expect(issues(derived({ op: 'sum' }))).toEqual(['/data/equipment/fields/down/derive/field: a sum takes "field": the item field the number is read from']);
+    expect(issues(derived({ op: 'count', field: 'flow' }))[0]).toContain('a count has no field');
+    expect(issues(derived({ op: 'count', where: { state: {} } }))[0]).toContain('/derive/where');
+    expect(issues(derived({ op: 'count' }, { at: '/n' }))).toEqual(['/data/equipment/fields/down/at: a derived field is not in the source — leave "at" out']);
+    const noList = { ...derived({ op: 'count' }), data: { ...data, equipment: { from: 'plant', path: '/plant/equipment', fields: { down: { derive: { op: 'count' } } } } } };
+    expect(issues(noList)).toContain('/data/equipment/fields/down/derive: a derived field is computed from the items of a list — this data has no "list"');
+  });
+
   it('checks presets and each', () => {
     expect(issues(canvas({ a: { use: 'card', of: 'equipment[PR-01]' } }))[0]).toBe('/parts/a/use: no preset "card" — presets: none');
     expect(issues(canvas({ a: { as: 'stat', each: 'equipment', of: 'equipment[PR-01]' } }))).toContain(

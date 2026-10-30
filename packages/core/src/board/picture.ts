@@ -374,6 +374,21 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     const bindings: Record<string, Binding> = {};
     const bind = (key: string, field: string | undefined, map?: ValueMap) => {
       if (query === undefined) return;
+      const derive = field !== undefined ? fieldOf(query, field).derive : undefined;
+      if (derive !== undefined) {
+        // A derived field is the list reduced to a number: the whole list is read and the resolution computes it.
+        if (item !== undefined) throw new PictureError(at, `"${field}" is computed from the items of "${query}" — show it from the list ("of": "${query}"), not from an item`);
+        bindings[key] = {
+          ...readFor(query, undefined, undefined, at),
+          derive: {
+            op: derive.op,
+            ...(derive.field !== undefined ? { field: sourceOf(query, derive.field) } : {}),
+            ...(derive.where !== undefined ? { where: Object.fromEntries(Object.entries(derive.where).map(([name, value]) => [sourceOf(query, name), value])) } : {}),
+          },
+          ...(map ? { map } : {}),
+        };
+        return;
+      }
       bindings[key] = { ...readFor(query, item, field, at), ...(map ? { map } : {}) };
     };
     const field = (name: string) => fieldOf(query, name);

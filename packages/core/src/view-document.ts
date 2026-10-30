@@ -393,6 +393,11 @@ export interface Binding {
    * vocabulary (`"Fault"`, `3`), a widget prop its own (a status tone). Applied to a value that is
    * shown (`live` or `stale`) before it reaches the prop. Omitted: the value is used as it comes. */
   map?: ValueMap;
+  /** For a value that is a list: what it is reduced to — its number of items, or the sum, smallest, largest or mean of one
+   * field of them, over the items that match `where` when it is given. Applied right after `at`, before `map`, so a count
+   * can be a status like any reading; a list that has nothing to reduce to (no number to take the smallest of) reads
+   * `disconnected` with reason `address`, as a value that is not there does. */
+  derive?: Derive;
   /** For a value that is a list — rows a list or a table shows — the fields each item gains, by name (an object value
    * gains them as one item does): each the value of the item's `from` field, translated by `map` when there is one. A row's state in the source's words (`"trip"`)
    * becomes the tone the widget colours the row by, beside the words themselves; a field the widget reads by another
@@ -404,6 +409,15 @@ export interface Binding {
    * `"Berth 1 · {{vessel}}"` — read from one item. Applied last, after `itemFields`, so a text can show the words a
    * field gained. A value that is not shown (`disconnected`) leaves the prop as it is. */
   text?: string;
+}
+
+/** What a list value is reduced to: see `Binding.derive`. */
+export interface Derive {
+  op: 'count' | 'sum' | 'min' | 'max' | 'avg';
+  /** The item's field the number is taken from — a key, or a JSON Pointer when it starts with `/`. Not for `count`. */
+  field?: string;
+  /** Only the items whose fields equal these values (a key or a JSON Pointer each). */
+  where?: Record<string, string | number | boolean>;
 }
 
 /** A field each item of a list value gains: see `Binding.itemFields`. */

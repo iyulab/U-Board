@@ -176,6 +176,7 @@ interface Field {
   names?: ValueMapping;         // the words a raw value is shown as
   state?: 'raw' | ValueMapping; // how the value is doing, as a status
   items?: Record<string, Field>; // a field that holds a list of objects: what each field of its items means
+  derive?: { op: 'count' | 'sum' | 'min' | 'max' | 'avg'; field?: string; where?: Record<string, string | number | boolean> }; // computed from the list
 }
 
 type ValueMapping = Record<string, string> | (string | number)[];
@@ -222,6 +223,14 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
   its `names` give under the field's own name (`{{state}}`) and its tone, status words, emphasis and mark beside it
   (`{{state$tone}}`, `{{state$status}}`, `{{state$emphasis}}`, `{{state$glyph}}`). Items do not nest; a value format is written
   in the template (`{{count | number:1}}`).
+- **Fields computed from the list.** A read with a `list` can declare a field the source does not send — `"down": { "derive":
+  { "op": "count", "where": { "state": "trip" } } }`, `"mean": { "derive": { "op": "avg", "field": "flow" }, "digits": 1 }` —
+  the number of items, or the sum, smallest, largest or mean (`sum` · `min` · `max` · `avg`) of one field of them, over the
+  items equal to `where`. A part that reads the list (`"of": "<data>"`, no item) shows it like any field and it has `names`,
+  `digits`, `format` and a `state`, so "the number of products out of stock" can raise a status. The list is read once, whole;
+  a derived field is as current as the list (`lagging` and `disconnected` follow it). An item's field that is not a number
+  is left out; the count and the sum of nothing are 0, the smallest, largest and mean of nothing are no value (`disconnected`
+  with reason `address`). It reads the list, so a part of one item (`"of": "<data>[<key>]"`) cannot show it.
 - **A list inside an item, one part per item.** In a group made per item of a data, a part with `"each": "/assets"` (a pointer
   into the group's item, relative like the `at` of an item field) is drawn once per item of that list — ids `zones/Z1/machine/0`,
   an item named by its place in the list — and reads it from the answer the group's item came with. It is placed in the group's

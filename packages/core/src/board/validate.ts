@@ -186,6 +186,19 @@ export function validateBoard(board: unknown): BoardIssue[] {
       }
       if (f.state !== undefined && f.state !== 'raw') checkMapping(f.state, `${fieldAt}/state`, 'state');
       if (f.names !== undefined) checkMapping(f.names, `${fieldAt}/names`, 'names');
+      if (f.derive !== undefined) {
+        const d = isObj(f.derive) ? f.derive : undefined;
+        const deriveAt = `${fieldAt}/derive`;
+        if (!d) fail(deriveAt, '"derive" is { "op": "count" | "sum" | "min" | "max" | "avg", "field"?, "where"? }');
+        else {
+          if (!['count', 'sum', 'min', 'max', 'avg'].includes(d.op as string)) fail(`${deriveAt}/op`, '"op" is count, sum, min, max or avg');
+          else if (d.op === 'count' && d.field !== undefined) fail(`${deriveAt}/field`, 'a count has no field — it counts items; "where" narrows which');
+          else if (d.op !== 'count' && typeof d.field !== 'string') fail(`${deriveAt}/field`, `a ${String(d.op)} takes "field": the item field the number is read from`);
+          if (d.where !== undefined && !(isObj(d.where) && Object.values(d.where).every(v => ['string', 'number', 'boolean'].includes(typeof v)))) fail(`${deriveAt}/where`, '"where" is { "<item field>": value } — only the items equal to these values');
+          if (q.list === undefined) fail(deriveAt, 'a derived field is computed from the items of a list — this data has no "list"');
+          if (f.at !== undefined) fail(`${fieldAt}/at`, 'a derived field is not in the source — leave "at" out');
+        }
+      }
       if (f.items !== undefined) {
         if (!isObj(f.items)) { fail(`${fieldAt}/items`, '"items" is { "<field>": { "at", "names", "state" } } — what each field of the items of a list this field holds means'); continue; }
         for (const [key, g] of Object.entries(f.items)) {

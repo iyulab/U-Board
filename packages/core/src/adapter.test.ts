@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveWidget, applyValueMap, withItemFields, writeText } from './adapter';
+import { resolveWidget, applyValueMap, deriveValue, withItemFields, writeText } from './adapter';
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { Widget } from './view-document';
 
@@ -251,6 +251,43 @@ describe('resolveWidget', () => {
     expect(resolved.props).toEqual({ items: [{ v: 0 }, { v: 9 }] });
     expect(Array.isArray(resolved.props.items)).toBe(true);
     expect(items).toEqual([{ v: 0 }, { v: 0 }]);
+  });
+});
+
+describe('deriveValue', () => {
+  const items = [{ kind: 'pump', state: 'run', flow: 40, at: { rack: 'A' } }, { kind: 'pump', state: 'trip', flow: '0' }, { kind: 'fan', state: 'run', flow: 'n/a' }, { kind: 'pump', state: 'run', flow: 20.5 }];
+
+  it('counts the items, or the items equal to where', () => {
+    expect(deriveValue({ op: 'count' }, items)).toBe(4);
+    expect(deriveValue({ op: 'count', where: { kind: 'pump', state: 'run' } }, items)).toBe(2);
+    expect(deriveValue({ op: 'count', where: { '/at/rack': 'A' } }, items)).toBe(1);
+    expect(deriveValue({ op: 'count', where: { kind: 'valve' } }, items)).toBe(0);
+  });
+
+  it('takes the sum, smallest, largest and mean of the numbers a field holds — a number in text counts, text that is not one does not', () => {
+    expect(deriveValue({ op: 'sum', field: 'flow' }, items)).toBe(60.5);
+    expect(deriveValue({ op: 'min', field: 'flow' }, items)).toBe(0);
+    expect(deriveValue({ op: 'max', field: 'flow' }, items)).toBe(40);
+    expect(deriveValue({ op: 'avg', field: 'flow', where: { kind: 'pump' } }, items)).toBeCloseTo(20.1667, 3);
+  });
+
+  it('gives a count and a sum of nothing 0, and no value for the smallest, largest and mean of nothing — or of a value that is no list', () => {
+    expect(deriveValue({ op: 'count' }, [])).toBe(0);
+    expect(deriveValue({ op: 'sum', field: 'flow' }, [])).toBe(0);
+    for (const op of ['min', 'max', 'avg'] as const) expect(deriveValue({ op, field: 'flow' }, [{ flow: 'n/a' }])).toBeUndefined();
+    expect(deriveValue({ op: 'count' }, { value: [] })).toBeUndefined();
+  });
+
+  it('reads a binding whole and writes the number — and reads disconnected, for an address that is not there, when there is none', async () => {
+    const source = new InMemoryAdapter('s', { all: { value: items, quality: 'stale', observedAt: '2026-10-30T01:00:00Z' }, none: { value: [], quality: 'live' } });
+    const widget = (ref: string, op: 'count' | 'max'): Widget => ({ type: 'uw-stat', bindings: { value: { adapter: 's', ref, derive: op === 'count' ? { op } : { op, field: 'flow' } } } });
+    const counted = await resolveWidget(widget('all', 'count'), [source]);
+    expect(counted.props).toMatchObject({ value: 4 });
+    expect(counted.quality).toEqual({ value: 'stale' });
+    expect(counted.observedAt).toEqual({ value: '2026-10-30T01:00:00Z' });
+    const nothing = await resolveWidget(widget('none', 'max'), [source]);
+    expect(nothing.quality).toEqual({ value: 'disconnected' });
+    expect(nothing.reasons).toEqual({ value: 'address' });
   });
 });
 

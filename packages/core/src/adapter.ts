@@ -1,4 +1,4 @@
-import type { Binding, ItemField, Widget, ValueMap } from './view-document.js';
+import type { Binding, Derive, ItemField, Widget, ValueMap } from './view-document.js';
 import { formatValue, parseTemplate } from './elements/template.js';
 import { getByPointer } from './json-patch.js';
 
@@ -180,6 +180,15 @@ export async function resolveBindings(
           }
         }
         if (resolved.quality !== 'disconnected') {
+          if (binding.derive !== undefined) {
+            const derived = deriveValue(binding.derive, read);
+            if (derived === undefined) {
+              quality[propPath] = 'disconnected';
+              reasons[propPath] = 'address';
+              return;
+            }
+            read = derived;
+          }
           readings[propPath] = read;
           const mapped = binding.map ? applyValueMap(binding.map, read) : read;
           const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
@@ -211,6 +220,35 @@ export function applyValueMap(map: ValueMap, value: unknown): unknown {
     if (range) return range.value;
   }
   return 'otherwise' in map ? map.otherwise : value;
+}
+
+/**
+ * The number a list reduces to (`Binding.derive`): how many items there are, or the sum, smallest, largest or mean of a field of
+ * them — over the items whose fields equal `where`. An item's field that is not a number is left out; the sum and the count
+ * of nothing are 0, the smallest, largest and mean of nothing are `undefined`. A value that is not a list reduces to nothing.
+ */
+export function deriveValue(derive: Derive, value: unknown): number | undefined {
+  if (!Array.isArray(value) || !isObject(derive)) return undefined;
+  const read = (item: unknown, from: string): unknown => {
+    if (!isObject(item)) return undefined;
+    if (!from.startsWith('/')) return (item as Record<string, unknown>)[from];
+    try {
+      return getByPointer(item, from);
+    } catch {
+      return undefined;
+    }
+  };
+  const where = isObject(derive.where) ? Object.entries(derive.where) : [];
+  const kept = value.filter(item => where.every(([from, equals]) => String(read(item, from)) === String(equals)));
+  if (derive.op === 'count') return kept.length;
+  if (typeof derive.field !== 'string') return undefined;
+  const numbers = kept.map(item => numericValue(read(item, derive.field!))).filter((n): n is number => n !== undefined);
+  if (derive.op === 'sum') return numbers.reduce((a, b) => a + b, 0);
+  if (numbers.length === 0) return undefined;
+  if (derive.op === 'min') return Math.min(...numbers);
+  if (derive.op === 'max') return Math.max(...numbers);
+  if (derive.op === 'avg') return numbers.reduce((a, b) => a + b, 0) / numbers.length;
+  return undefined;
 }
 
 /** A list `value` whose items have gained `fields` (`Binding.itemFields`): each the value of the item's `from` field — a
