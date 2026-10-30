@@ -214,11 +214,15 @@ describe('validateBoard', () => {
       a: { as: 'status-card', of: 'equipment[PR-01]', meter: 'load', note: 'Seal {{seal}}', subtitle: 'Line 1' },
       b: { as: 'status-card', of: 'equipment[PR-02]', meter: { field: 'load', min: 10, max: 5, form: 'dial', colour: 'red' } },
       c: { as: 'status-card', of: 'equipment[PR-03]', meter: 42 },
+      d: { as: 'status-card', of: 'equipment[PR-04]', meter: { field: 'load', max: 'capacity' } },
+      e: { as: 'status-card', of: 'equipment[PR-05]', meter: { field: 'load', min: true } },
     }))).toEqual([
       '/parts/b/meter/colour: a meter is "<field>" or { "field": "<field>", "min"?, "max"?, "form"?: "bar" | "ring" }',
       '/parts/b/meter/max: a meter’s max is above its min (10)',
       '/parts/b/meter/form: a meter’s form is "bar" or "ring"',
       '/parts/c/meter: a meter is "<field>" or { "field": "<field>", "min"?, "max"?, "form"?: "bar" | "ring" }',
+      `/parts/d/meter/max: "max" is a number written in the board — a meter's end is not read from a field ("capacity")`,
+      '/parts/e/meter/min: "min" is a number',
     ]);
     // A preset's key is the preset's mistake, said once however many parts use it.
     const board = { ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' }, b: { use: 'card', of: 'equipment[PR-02]' } }), presets: { card: { as: 'status-card', glow: true } } };

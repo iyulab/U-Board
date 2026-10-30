@@ -375,7 +375,14 @@ export function validateBoard(board: unknown): BoardIssue[] {
     const shape = 'a meter is "<field>" or { "field": "<field>", "min"?, "max"?, "form"?: "bar" | "ring" }';
     if (!isObj(meter) || typeof meter.field !== 'string') { fail(at, shape); return; }
     for (const key of Object.keys(meter)) if (!['field', 'min', 'max', 'form'].includes(key)) fail(`${at}/${key}`, shape);
-    for (const key of ['min', 'max'] as const) if (meter[key] !== undefined && !isNum(meter[key])) fail(`${at}/${key}`, `"${key}" is a number`);
+    for (const key of ['min', 'max'] as const) {
+      const end = meter[key];
+      if (end === undefined || isNum(end)) continue;
+      // A name is the natural thing to write — the meter's other end read from a field — and it is the one thing an end cannot be.
+      fail(`${at}/${key}`, typeof end === 'string'
+        ? `"${key}" is a number written in the board — a meter's end is not read from a field ("${end}")`
+        : `"${key}" is a number`);
+    }
     if (isNum(meter.min) || isNum(meter.max)) {
       const min = isNum(meter.min) ? meter.min : 0;
       const max = isNum(meter.max) ? meter.max : 100;

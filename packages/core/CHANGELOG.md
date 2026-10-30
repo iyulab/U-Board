@@ -14,6 +14,10 @@ All notable changes to this package are documented here. The format follows
   which part of the binding to fix. A binding whose `at` or `derive` finds nothing explains itself the same way. A message is one line
   of at most 160 characters. Adapters that serve the public leave `message` out, as before.
 
+### Changed
+
+- `validateBoard` says what a meter's `min` / `max` written as a field name gets wrong — «a number written in the board — a meter's end is not read from a field» — instead of the bare «"max" is a number». Writing the end as another field's name (`"max": "capacity"`) is the natural first try and the one thing a meter's end cannot be.
+
 ### Fixed
 
 - **`board.skin` is drawn.** The skin was in the schema, checked by `validateBoard` and listed in the rules, but nothing read it:
