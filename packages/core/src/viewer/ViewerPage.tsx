@@ -151,6 +151,7 @@ export function ViewerPage({
         {drawn && (drawn.kind === 'canvas' || pollIntervalMs !== undefined) && (
           <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
             {drawn.kind === 'canvas' && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
+            {drawn.kind === 'canvas' && drawn.preview.backgroundBlocked && <span role="status" style={NOT_UPDATING_STYLE}>{labels.backgroundBlocked}</span>}
             {pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
           </div>
         )}

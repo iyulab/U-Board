@@ -18,6 +18,7 @@ void import('@iyulab/u-widgets/charts');
 import type { ResolvedCanvasView } from '../resolve-document.js';
 import { sizedNodes } from '../node-size.js';
 import { DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
+import { mayLoadBackground } from './background-media.js';
 import { decorationObjects } from './decoration-drawing.js';
 import { NodeFrame } from './node-frame.js';
 import { captionObjects, connectorObjects, placeOnCanvas } from './connector-drawing.js';
@@ -31,6 +32,9 @@ import { elementListeners } from '../triggers.js';
 export interface CanvasKitRenderOutput {
   scene: Scene;
   overlays: ViewerOverlayItem[];
+  /** The board's background picture was left out: its address is outside the origins the host allowed
+   * (`setMediaOrigins`). The board is drawn on an empty background. */
+  backgroundBlocked?: boolean;
 }
 
 export interface ToCanvasKitOptions {
@@ -58,7 +62,8 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
   const scene = new Scene();
   const nodes = sizedNodes(doc);
 
-  if (doc.background.image) {
+  const backgroundBlocked = !!doc.background.image && !mayLoadBackground(doc.background.image.src);
+  if (doc.background.image && !backgroundBlocked) {
     scene.add({
       type: 'image',
       x: 0,
@@ -89,5 +94,5 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
   }));
   for (const placed of placeOnCanvas(nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 
-  return { scene, overlays };
+  return { scene, overlays, ...(backgroundBlocked && { backgroundBlocked }) };
 }

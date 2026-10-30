@@ -28,6 +28,9 @@ export interface UBoardLabels {
   /** Under a board that shows example data (`Adapter.sample`), before its sources. */
   exampleData: string;
   resolving: string;
+  /** Beside the view controls when the board's background picture is left out because its address is outside the
+   * origins the host allowed (`setMediaOrigins`). */
+  backgroundBlocked: string;
   /** A polling `ViewerPage`'s "last updated" line; `{time}` is replaced by the time of day. */
   lastUpdated: string;
   /** Shown instead, prominently, while a polling `ViewerPage` is not updating; `{time}` as above. */
@@ -60,6 +63,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   dataSources: 'Data',
   exampleData: 'Example data',
   resolving: 'Resolving…',
+  backgroundBlocked: 'Background image not shown — its address is not an allowed origin',
   lastUpdated: 'Updated {time}',
   notUpdating: 'Not updating — last updated {time}',
   time: timeText('en'),

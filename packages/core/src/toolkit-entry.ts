@@ -13,6 +13,7 @@ export { DEFAULT_LABELS } from './labels.js';
 export type { UBoardLabels } from './labels.js';
 export { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from './layout-defaults.js';
 export { sizedNodes } from './node-size.js';
+export { mayLoadBackground } from './renderer/background-media.js';
 export { captionObjects, connectorObjects } from './renderer/connector-drawing.js';
 export { decorationObjects } from './renderer/decoration-drawing.js';
 export { ElementHost } from './renderer/element-view.js';

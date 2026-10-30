@@ -14,6 +14,11 @@ All notable changes to this package are documented here. The format follows
   where a picture's address can carry what the board read. A host that lists the origins media may come from
   (`setMediaOrigins(['self', 'https://cdn.example.com'])`, once per page, before the first board is drawn) draws the `alt` text
   in place of anything else. Nothing is limited until it is called. Needs `@iyulab/u-widgets` 0.44.
+- **A board's background picture answers to the same list.** With origins set (`setMediaOrigins`), a `canvas.background` outside
+  them is not requested: the board is drawn on an empty background, `ViewerPage` says so beside the view controls
+  (`UBoardLabels.backgroundBlocked`, new — a host that supplies a complete labels object adds it), and `toCanvasKit` returns
+  `backgroundBlocked: true`. An inline `data:image/…` background is always drawn. `mayLoadBackground(src)` is exported from
+  `@iyulab/u-board/toolkit` for a host that draws a background itself. Nothing changes until origins are set.
 - **A field that lives deeper in an item reads in a text, a list, a table and a bar list.** A board field declared with a
   deeper `at` (`/properties/mag`) used to be refused wherever more than one value was read from it (`"mag" lives deeper
   in an item …`); the picture now reads it by its pointer, so `title: "M{{mag}}"` and a table column work for a

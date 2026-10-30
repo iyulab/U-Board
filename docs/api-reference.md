@@ -665,6 +665,11 @@ host can vouch for, so a host lists the origins media may come from: `setMediaOr
 (`'self'` is the page's own origin, where a relative address points; `[]` allows nothing). A part whose address is outside the
 list is not requested; it draws its `alt` text where the picture would be. `null`, and never calling it, limit nothing.
 
+The picture a board is drawn on (`canvas.background`) answers to the same list: outside it, the board is drawn on an empty
+background and `ViewerPage` says so beside the view controls (`labels.backgroundBlocked`; `toCanvasKit` returns
+`backgroundBlocked: true`). An inline image (`data:image/…`) makes no request and is always drawn. `mayLoadBackground(src)`
+from `@iyulab/u-board/toolkit` answers the same question for a host that draws a background itself.
+
 The setting belongs to the page, not to one viewer — it is the widget library's own, which the viewer draws with, re-exported
 here so a host sets the one the viewer reads. Call it once, before the first board is drawn; a part already on screen keeps what it
 drew until it next renders.

@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
+import { setMediaOrigins } from '@iyulab/u-widgets';
 import { ViewerPage } from './ViewerPage';
 import type { CanvasView, GridCanvasItem, GridView } from '../view-document';
 import { cellAspectRatio } from '../renderer/canvas-cell';
@@ -513,5 +514,25 @@ describe('triggers', () => {
     expect(note.props.onActivate).toBeUndefined();
     act(() => pump.props.onActivate!());
     expect(onTrigger).toHaveBeenCalledWith({ name: 'pump-details', node: 'pump', board: 'b1' });
+  });
+});
+
+describe('ViewerPage with a background outside the allowed origins', () => {
+  afterEach(() => setMediaOrigins(null));
+
+  it('leaves the picture out and says why beside the view controls', async () => {
+    setMediaOrigins(['self']);
+    const outside: CanvasView = { ...doc(), background: { image: { src: 'https://elsewhere.example/plan.png', width: 400, height: 300 } } };
+    render(<ViewerPage adapters={[]} width={400} height={300} document={outside} />);
+    await screen.findByTestId('viewer');
+    expect(screen.getByText(/Background image not shown/)).toBeInTheDocument();
+    expect(lastViewerProps().scene.getObjects().some((o: { type: string }) => o.type === 'image')).toBe(false);
+  });
+
+  it('says nothing when the picture may be loaded', async () => {
+    const inside: CanvasView = { ...doc(), background: { image: { src: 'https://elsewhere.example/plan.png', width: 400, height: 300 } } };
+    render(<ViewerPage adapters={[]} width={400} height={300} document={inside} />);
+    await screen.findByTestId('viewer');
+    expect(screen.queryByText(/Background image not shown/)).toBeNull();
   });
 });

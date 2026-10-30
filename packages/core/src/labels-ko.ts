@@ -19,6 +19,7 @@ export const KO_LABELS: UBoardLabels = {
   dataSources: '데이터 출처',
   exampleData: '예시 데이터',
   resolving: '불러오는 중…',
+  backgroundBlocked: '배경 그림을 표시하지 않음 — 허용된 출처가 아님',
   lastUpdated: '갱신 {time}',
   notUpdating: '갱신이 멈춤 — 마지막 갱신 {time}',
   time: timeText('ko'),
