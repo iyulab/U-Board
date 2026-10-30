@@ -84,6 +84,9 @@ export function validateBoard(board: unknown): BoardIssue[] {
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
   if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
   if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');
+  // declared and checked, but not drawn yet — say so, so a board that sets them is not left wondering why nothing changed
+  if (skin.density !== undefined) issues.push({ at: '/board/skin/density', message: '"density" is not drawn yet — the board looks the same with it', hint: true });
+  if (isObj(skin.palette) && skin.palette.ground !== undefined) issues.push({ at: '/board/skin/palette/ground', message: '"ground" is not drawn yet — the board looks the same with it; the board own background colour comes from its theme', hint: true });
 
   // ── statuses ──
   const statuses = isObj(board.statuses) ? board.statuses : {};

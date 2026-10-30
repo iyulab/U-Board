@@ -274,6 +274,13 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('says as a hint that a skin’s density and ground are not drawn yet', () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const hints = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => i.hint).map(i => i.at);
+    expect(hints({ palette: { paper: '#fff' }, radius: 2 })).toEqual([]);
+    expect(hints({ density: 'compact', palette: { ground: '#111' } })).toEqual(['/board/skin/density', '/board/skin/palette/ground']);
+  });
+
   it('checks shapes and the look', () => {
     const board = {
       ...canvas({}, {
