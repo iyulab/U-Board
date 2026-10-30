@@ -230,7 +230,8 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
   `digits`, `format` and a `state`, so "the number of products out of stock" can raise a status. The list is read once, whole;
   a derived field is as current as the list (`lagging` and `disconnected` follow it). An item's field that is not a number
   is left out; the count and the sum of nothing are 0, the smallest, largest and mean of nothing are no value (`disconnected`
-  with reason `address`). It reads the list, so a part of one item (`"of": "<data>[<key>]"`) cannot show it.
+  with reason `address`). It reads the list, so a part of one item (`"of": "<data>[<key>]"`) cannot show it. A source that
+  serves its list in pages gives only the page that was read: the count is of those items, not of the whole.
 - **A list inside an item, one part per item.** In a group made per item of a data, a part with `"each": "/assets"` (a pointer
   into the group's item, relative like the `at` of an item field) is drawn once per item of that list — ids `zones/Z1/machine/0`,
   an item named by its place in the list — and reads it from the answer the group's item came with. It is placed in the group's
