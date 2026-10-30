@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-30
+
 ### Added
 
 - **`setMediaOrigins` and `getMediaOrigins` from `@iyulab/u-board/viewer`** (the widget library's own, re-exported so a host
