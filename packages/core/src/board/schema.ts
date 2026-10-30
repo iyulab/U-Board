@@ -103,7 +103,7 @@ export function boardSchema(): Schema {
           list: { type: 'string', description: 'A JSON Pointer to the list of items in the answer.' },
           key: { type: 'string', description: 'The field that names each item: parts address one as <data>[<key>].' },
           where: map({ type: ['string', 'number', 'boolean'] }, 'Only the items whose fields equal these values.'),
-          time: { type: 'string', description: 'The field holding when the source observed the item.' },
+          time: { type: 'string', description: 'The field of each item holding when the source observed it. A whole list has one time of its own: answerTime.' },
           pivot: {
             type: 'object',
             required: ['key', 'value'],

@@ -350,6 +350,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     }
     if (kind.of === 'no' && (part.of !== undefined || part.each !== undefined)) fail(`${at}/of`, `a ${kind.kind} reads no data — leave "of" out`);
     checkTexts(part, at, reads);
+    if (kind.kind === 'header') checkHeaderOptions(part, at);
     checkOptions(raw, part, kind, at);
     if (kind.kind === 'status-card' && part.meter !== undefined) checkMeter(part.meter, `${at}/meter`);
     if (kind.kind === 'stat' && part.trend !== undefined && typeof part.trend !== 'string') fail(`${at}/trend`, '"trend" names a field of the item holding its recent values, a list of numbers');
@@ -415,6 +416,22 @@ export function validateBoard(board: unknown): BoardIssue[] {
         if (!/^[\w.-]+$/.test(name)) fail(`${at}/${prop}`, `"{{${m[1]}}}" — write {{field}} with a field name, or {{key}} for the item's key`);
         else if (reads === null) fail(`${at}/${prop}`, `"{{${name}}}" reads a field, but this reads no data — give "of"`);
       }
+    }
+  };
+
+  /**
+   * A header shows its `kicker` and `subtitle` as written — only its title reads `{{field}}` — and its `clock` is on or off. Said
+   * as advice, not a refusal: the board is valid, it just draws the braces, or no clock, where the author meant a field.
+   */
+  const checkHeaderOptions = (part: Obj, at: string) => {
+    for (const prop of ['kicker', 'subtitle'] as const) {
+      const text = part[prop];
+      if (typeof text === 'string' && text.includes('{{')) {
+        issues.push({ at: `${at}/${prop}`, message: `a header shows its "${prop}" as it is — only the title reads {{field}}; write the words, or put the field in the title`, hint: true });
+      }
+    }
+    if (part.clock !== undefined && typeof part.clock !== 'boolean') {
+      issues.push({ at: `${at}/clock`, message: '"clock" is true (the time of day) — it does not read a field; leave it out, or put the time field in the title with {{field}}', hint: true });
     }
   };
 

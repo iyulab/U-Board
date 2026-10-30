@@ -6,6 +6,13 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **Advice for text a header shows as written.** A header's `kicker` and `subtitle` are fixed text — only its title reads
+  `{{field}}` — and its `clock` is `true` or left out. A `{{field}}` in a kicker or subtitle, or a `clock` that names a field, is
+  still a valid board, but `validateBoard` now says (as a `hint`) that the braces are drawn as they are and no clock is shown.
+  The schema's description of a read's `time` says it is a field of each item, and that a whole list's own time is `answerTime`.
+
 ## [0.37.0] - 2026-10-30
 
 ### Added
