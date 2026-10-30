@@ -172,6 +172,9 @@ describe('the picture model of a v2 board', () => {
     ] });
     expect((drawn(nodeOf(doc, 'bars').widget).data as Record<string, unknown>[]).map(r => [r.label, r.value])).toEqual([['P1', 41.5], ['P2', 0]]);
     expect((drawn(nodeOf(doc, 'cells').widget).data as Record<string, unknown>[]).map(r => [r.label, r.tone])).toEqual([['P1', 'ok'], ['P2', 'alarm']]);
+    // a status's emphasis reaches the grid's cells (not a bar's row): the tripped pump's cell blinks
+    expect((drawn(nodeOf(doc, 'cells').widget).data as Record<string, unknown>[]).map(r => r.emphasis)).toEqual(['', 'blink']);
+    expect((drawn(nodeOf(doc, 'bars').widget).data as Record<string, unknown>[]).every(r => !('emphasis' in r))).toBe(true);
   });
 
   it('lays out a part per item in a grid, for the keys of its list', () => {

@@ -610,6 +610,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
           ...(labelField !== undefined ? { label: { from: source(labelField), ...(field(labelField).names ? { map: mapOf(field(labelField).names!, w => w) } : {}) } } : {}),
           ...(valueField !== undefined ? { value: { from: source(valueField) } } : {}),
           ...(tone !== undefined && toneMap !== undefined ? { tone: { from: source(tone), map: stateMaps(toneMap).tone } } : {}),
+          // a grid's cells draw the second channel a status names (a bar's row has none)
+          ...(kind.kind === 'status-grid' && tone !== undefined && toneMap !== undefined && stateMaps(toneMap).emphasis ? { emphasis: { from: source(tone), map: stateMaps(toneMap).emphasis! } } : {}),
         });
         return {
           type: kind.kind,

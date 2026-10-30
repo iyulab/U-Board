@@ -18,6 +18,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A status's `emphasis` reaches the cells of a `status-grid`.** The grid's cells took only the status's tone, so a status with `invert`, `hatch` or `blink` was drawn as a plain tint there. The picture now binds the status's emphasis to each cell (a `bar-list` row has none), and the widget library draws it from the release that gives a cell an `emphasis`.
+
 - **Advice for text a header shows as written.** A header's `kicker` and `subtitle` are fixed text — only its title reads
   `{{field}}` — and its `clock` is `true` or left out. A `{{field}}` in a kicker or subtitle, or a `clock` that names a field, is
   still a valid board, but `validateBoard` now says (as a `hint`) that the braces are drawn as they are and no clock is shown.
