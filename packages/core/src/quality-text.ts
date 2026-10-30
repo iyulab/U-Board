@@ -92,8 +92,14 @@ export function worstQuality(quality: Record<string, ConnectionQuality>): Connec
   return values.reduce((worst, q) => (QUALITY_SEVERITY[q] > QUALITY_SEVERITY[worst] ? q : worst));
 }
 
+/** A binding's message as part of a line of text: one line, at most 160 characters. */
+function clip(message: string): string {
+  const line = message.replace(/\s+/g, ' ').trim();
+  return line.length > 160 ? `${line.slice(0, 159)}…` : line;
+}
+
 /** What `describeQuality` reads from a widget — a `ResolvedWidget` fits as is. */
-export type QualitySummary = Pick<ResolvedWidget, 'quality' | 'reasons' | 'observedAt'>;
+export type QualitySummary = Pick<ResolvedWidget, 'quality' | 'reasons' | 'messages' | 'observedAt'>;
 
 export interface DescribeQualityOptions {
   /** The words to use — English by default (`DEFAULT_QUALITY_TEXT`). */
@@ -122,7 +128,7 @@ export function describeQuality(
   widget: QualitySummary,
   { text = DEFAULT_QUALITY_TEXT, now = Date.now() }: DescribeQualityOptions = {}
 ): string | undefined {
-  const { quality, reasons = {}, observedAt = {} } = widget;
+  const { quality, reasons = {}, messages = {}, observedAt = {} } = widget;
   const worst = worstQuality(quality);
   if (!worst) return undefined;
   const baseLabel = text.quality[worst];
@@ -131,7 +137,9 @@ export function describeQuality(
   // The cause and, for a stale value, its age — empty when neither is known.
   const details = (key: string, q: ConnectionQuality): string[] => {
     const parts: string[] = [];
-    if (reasons[key]) parts.push(text.reason[reasons[key]]);
+    const cause = reasons[key] ? text.reason[reasons[key]] : undefined;
+    const said = messages[key] ? clip(messages[key]) : undefined;
+    if (cause || said) parts.push(cause && said ? `${cause}: ${said}` : (cause ?? said)!);
     const at = q === 'stale' && observedAt[key] ? Date.parse(observedAt[key]) : NaN;
     if (!Number.isNaN(at)) parts.push(text.age(now - at));
     return parts;

@@ -304,17 +304,17 @@ function readValueAndTime(
   if (ref.observedAtPath === undefined) return { ok: true, value: value.value, observedAt: readAt };
 
   const time = valueAtPath(scope, ref.observedAtPath);
-  if (!time.found) return { ok: false, reason: 'address', message: `observedAtPath "${ref.observedAtPath}" not found in the response` };
+  if (!time.found) return { ok: false, reason: 'address', message: `the time field "${ref.observedAtPath}" (observedAtPath) is not in ${ref.item ? 'the item' : 'the response'}` };
   if (time.value === null || time.value === '') return { ok: true, value: value.value, observedAt: readAt };
   const observedAt = parseSourceTime(time.value, ref.timeZone);
   if (observedAt === null) {
-    return { ok: false, reason: 'format', message: `observedAtPath "${ref.observedAtPath}" holds ${JSON.stringify(time.value)}, which is not a time` };
+    return { ok: false, reason: 'format', message: `the time field "${ref.observedAtPath}" holds ${JSON.stringify(time.value)}, which is not a time` };
   }
   if (observedAt > readAt + CLOCK_TOLERANCE_MS) {
     return {
       ok: false,
       reason: 'format',
-      message: `observedAtPath "${ref.observedAtPath}" says ${new Date(observedAt).toISOString()}, later than the read — check the reference's timeZone`,
+      message: `the time field "${ref.observedAtPath}" says ${new Date(observedAt).toISOString()}, later than the read — check the reference's timeZone`,
     };
   }
   return { ok: true, value: value.value, observedAt: Math.min(observedAt, readAt) };

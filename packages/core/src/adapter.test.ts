@@ -94,6 +94,37 @@ describe('resolveWidget', () => {
     expect(resolved.reasons).toEqual({ 'data.a': 'address', 'data.b': 'transport' });
   });
 
+  it('carries what the adapter said about a binding that is not live, and what the core itself could not read', async () => {
+    const source = new InMemoryAdapter('src', {
+      gone: { value: undefined, quality: 'disconnected', reason: 'address', message: 'no list at "/rooms" in the response' },
+      old: { value: 3, quality: 'stale', reason: 'transport', message: 'timed out after 5 s' },
+      fine: { value: 1, quality: 'live', message: 'ignored on a live reading' },
+      quiet: { value: undefined, quality: 'disconnected', reason: 'auth' },
+      shape: { value: { other: 1 }, quality: 'live' },
+    });
+    const widget: Widget = {
+      type: 'gauge',
+      bindings: {
+        'data.a': { adapter: 'src', ref: 'gone' },
+        'data.b': { adapter: 'src', ref: 'old' },
+        'data.c': { adapter: 'src', ref: 'fine' },
+        'data.d': { adapter: 'src', ref: 'quiet' },
+        'data.e': { adapter: 'src', ref: 'shape', at: '/temp' },
+      },
+    };
+    const resolved = await resolveWidget(widget, [source]);
+    expect(resolved.messages).toEqual({
+      'data.a': 'no list at "/rooms" in the response',
+      'data.b': 'timed out after 5 s',
+      'data.e': 'at "/temp" is not in the reading',
+    });
+  });
+
+  it('carries no messages at all when no binding had one', async () => {
+    const resolved = await resolveWidget({ type: 'gauge', bindings: { 'data.value': { adapter: 'missing', ref: 'x' } } }, []);
+    expect('messages' in resolved).toBe(false);
+  });
+
   it('carries no reasons at all when no binding reported a cause', async () => {
     const widget: Widget = { type: 'gauge', bindings: { 'data.value': { adapter: 'missing', ref: 'x' } } };
     const resolved = await resolveWidget(widget, []);

@@ -60,7 +60,7 @@ export interface ResolvedBinding {
   reason?: QualityReason;
   /** What went wrong, in words for whoever fixes it — for `source`, what the source itself said. Only for
    *  someone who can change the binding or its data source: an adapter serving the public leaves it out.
-   *  Ignored on a `live` reading. */
+   *  Ignored on a `live` reading. `describeQuality` writes it after the cause, so a viewer's tooltip says it. */
   message?: string;
   /** When `value` was observed (ISO 8601), if the adapter knows — the time the source says it
    * observed the value when it says so (an HTTP reference's `observedAtPath`), else when the response says it was
@@ -83,6 +83,9 @@ export interface ResolvedWidget {
    * cause. Absent when none did — a binding with no matching adapter, or whose adapter rejected,
    * carries no cause: the core cannot tell a misconfiguration from a host that did not wire it. */
   reasons?: Record<string, QualityReason>;
+  /** What went wrong, per prop path, in the words the adapter gave (`ResolvedBinding.message`) — a binding the core
+   * itself could not read (`at`, `derive`) says why here too. For whoever can fix the binding; absent when none did. */
+  messages?: Record<string, string>;
   /** When each bound prop's value was obtained from its source (ISO 8601), per prop path, for the
    * `live` and `stale` bindings whose adapter reported it. Absent when none did. */
   observedAt?: Record<string, string>;
@@ -119,9 +122,10 @@ export async function resolveWidgetReadings(
   widget: Widget,
   adapters: readonly Adapter[]
 ): Promise<{ widget: ResolvedWidget; readings: Record<string, unknown> }> {
-  const { values: props, quality, reasons, observedAt, readings } = await resolveBindings({ ...widget.props }, widget.bindings, adapters);
+  const { values: props, quality, reasons, messages, observedAt, readings } = await resolveBindings({ ...widget.props }, widget.bindings, adapters);
   const resolved: ResolvedWidget = { type: widget.type, props, quality };
   if (Object.keys(reasons).length > 0) resolved.reasons = reasons;
+  if (Object.keys(messages).length > 0) resolved.messages = messages;
   if (Object.keys(observedAt).length > 0) resolved.observedAt = observedAt;
   return { widget: resolved, readings };
 }
@@ -131,6 +135,7 @@ export interface ResolvedBindings {
   values: Record<string, unknown>;
   quality: Record<string, ConnectionQuality>;
   reasons: Record<string, QualityReason>;
+  messages: Record<string, string>;
   observedAt: Record<string, string>;
   /** Per path, the value read from the source — before the binding’s `map` and before `accept` — for the readings
    *  that had one (`live` or `stale`). What a state is named from (`StateRule.from`). */
@@ -151,6 +156,7 @@ export async function resolveBindings(
 ): Promise<ResolvedBindings> {
   const quality: Record<string, ConnectionQuality> = {};
   const reasons: Record<string, QualityReason> = {};
+  const messages: Record<string, string> = {};
   const observedAt: Record<string, string> = {};
   const readings: Record<string, unknown> = {};
   const props = values;
@@ -176,6 +182,7 @@ export async function resolveBindings(
           } catch {
             quality[propPath] = 'disconnected';
             reasons[propPath] = 'address';
+            messages[propPath] = `at "${binding.at}" is not in the reading`;
             return;
           }
         }
@@ -185,6 +192,7 @@ export async function resolveBindings(
             if (derived === undefined) {
               quality[propPath] = 'disconnected';
               reasons[propPath] = 'address';
+              messages[propPath] = 'the reading cannot be derived from — a value it needs is not there';
               return;
             }
             read = derived;
@@ -197,13 +205,14 @@ export async function resolveBindings(
         }
         quality[propPath] = resolved.quality;
         if (resolved.reason && resolved.quality !== 'live') reasons[propPath] = resolved.reason;
+        if (resolved.message && resolved.quality !== 'live') messages[propPath] = resolved.message;
         if (resolved.observedAt && resolved.quality !== 'disconnected') observedAt[propPath] = resolved.observedAt;
       } catch {
         quality[propPath] = 'disconnected';
       }
     })
   );
-  return { values: props, quality, reasons, observedAt, readings };
+  return { values: props, quality, reasons, messages, observedAt, readings };
 }
 
 /** The value `map` gives `value` (`Binding.map`): the entry for the value's text when it is a

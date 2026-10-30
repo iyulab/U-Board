@@ -623,7 +623,7 @@ interface QualityText {
 const DEFAULT_QUALITY_TEXT: QualityText; // the English words, age by ageText('en')
 function ageText(locale: string): (elapsedMs: number) => string;
 function worstQuality(quality: Record<string, ConnectionQuality>): ConnectionQuality | undefined;
-type QualitySummary = Pick<ResolvedWidget, 'quality' | 'reasons' | 'observedAt'>;
+type QualitySummary = Pick<ResolvedWidget, 'quality' | 'reasons' | 'messages' | 'observedAt'>;
 function describeQuality(
   widget: QualitySummary,
   options?: { text?: QualityText; now?: number }
@@ -633,12 +633,18 @@ function describeQuality(
 The words the shipped renderer uses, for a host that renders its own UI from a resolved picture. `worstQuality` is the
 least current of a widget's bindings (`disconnected`, then `stale`, then `live`). `describeQuality(widget)` is one line
 of text for a `ResolvedWidget` — the renderer's tooltip and screen-reader announcement — or `undefined` when every
-binding is `live`. It names the cause when the adapter reported one and, for a `stale` value with an `observedAt`, how
-long ago it was obtained:
+binding is `live`. It names the cause when the adapter reported one, what the adapter said about it (`messages`, one line of at
+most 160 characters, after the cause), and, for a `stale` value with an `observedAt`, how long ago it was obtained:
 
 ```ts
 describeQuality({ quality: { 'data.value': 'disconnected' }, reasons: { 'data.value': 'address' } });
 // → 'disconnected — no value has been reached (bound value not found at the source)'
+describeQuality({
+  quality: { 'data.value': 'disconnected' },
+  reasons: { 'data.value': 'address' },
+  messages: { 'data.value': 'the time field "/updatedAt" (observedAtPath) is not in the item' },
+});
+// → 'disconnected — no value has been reached (bound value not found at the source: the time field "/updatedAt" (observedAtPath) is not in the item)'
 describeQuality({
   quality: { 'data.value': 'stale' },
   reasons: { 'data.value': 'transport' },
@@ -753,6 +759,7 @@ interface ResolvedWidget {
   props: Record<string, unknown>;
   quality: Record<string, ConnectionQuality>;
   reasons?: Record<string, QualityReason>;
+  messages?: Record<string, string>;
   observedAt?: Record<string, string>;
 }
 ```
@@ -760,7 +767,7 @@ interface ResolvedWidget {
 Resolves every widget's bindings — and on a canvas every connector's (`resolveConnector`) — against the given adapters,
 and returns the same picture with every `widget` a `ResolvedWidget`: its static `props` merged with every binding whose
 reading has a value to show (`live`, or `stale` with its last-known value), `quality` per bound prop path (only props
-that had a binding carry one), and the `reasons` and `observedAt` the adapters reported. A `disconnected` reading is never
+that had a binding carry one), and the `reasons`, `messages` and `observedAt` the adapters reported (a `messages` entry is the adapter's own words for whoever can fix the binding; a binding whose `at` or `derive` finds nothing says so there too). A `disconnected` reading is never
 merged, even if the adapter returned a value. `bindingsIn(picture)` yields every binding with the JSON Pointer of what it
 fills — the one walk for whatever needs to know what a board reads.
 

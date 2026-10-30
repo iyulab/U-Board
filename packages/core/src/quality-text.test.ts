@@ -102,3 +102,33 @@ describe('describeQuality with other words', () => {
     expect(describeQuality({ quality: { v: 'stale' } }, { text: DEFAULT_QUALITY_TEXT })).toBe(describeQuality({ quality: { v: 'stale' } }));
   });
 });
+
+describe('describeQuality — what the adapter said', () => {
+  it('writes the adapter message after the cause', () => {
+    expect(describeQuality({
+      quality: { 'data.value': 'disconnected' },
+      reasons: { 'data.value': 'address' },
+      messages: { 'data.value': 'the time field "/updatedAt" (observedAtPath) is not in the item' },
+    })).toBe('disconnected — no value has been reached (bound value not found at the source: the time field "/updatedAt" (observedAtPath) is not in the item)');
+  });
+
+  it('writes a message alone when the adapter gave no cause, and per property when several fail', () => {
+    expect(describeQuality({ quality: { 'data.value': 'disconnected' }, messages: { 'data.value': 'no list at "/rooms"' } }))
+      .toBe('disconnected — no value has been reached (no list at "/rooms")');
+    expect(describeQuality({
+      quality: { a: 'disconnected', b: 'disconnected' },
+      reasons: { a: 'address' },
+      messages: { a: 'no list at "/rooms"' },
+    })).toBe('disconnected — no value has been reached (a: bound value not found at the source: no list at "/rooms"; b)');
+  });
+
+  it('keeps a long or multi-line message to one line of at most 160 characters', () => {
+    const text = describeQuality({ quality: { x: 'disconnected' }, messages: { x: `first line
+  second ${'y'.repeat(300)}` } })!;
+    const message = text.slice(text.indexOf('(') + 1, text.lastIndexOf(')'));
+    expect(message.includes(String.fromCharCode(10))).toBe(false);
+    expect(message.length).toBeLessThanOrEqual(160);
+    expect(message.endsWith('…')).toBe(true);
+    expect(message.startsWith('first line second')).toBe(true);
+  });
+});

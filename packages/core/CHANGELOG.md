@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **`ResolvedWidget.messages`** — what an adapter said about a binding that is not live (`ResolvedBinding.message`) now reaches the
+  resolved widget, per prop path, and `describeQuality` writes it after the cause. A viewer's tooltip used to say only «Value not
+  found»; with an adapter that explains (an HTTP reference says `the time field "/updatedAt" (observedAtPath) is not in the item`) it now says
+  which part of the binding to fix. A binding whose `at` or `derive` finds nothing explains itself the same way. A message is one line
+  of at most 160 characters. Adapters that serve the public leave `message` out, as before.
+
 ### Fixed
 
 - **`board.skin` is drawn.** The skin was in the schema, checked by `validateBoard` and listed in the rules, but nothing read it:

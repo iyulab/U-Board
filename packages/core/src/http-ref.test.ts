@@ -162,6 +162,14 @@ describe('readHttpRef', () => {
     });
   });
 
+  it('says which part of the reference is missing when the time field is not there — the item or the response', () => {
+    const list = { rows: [{ id: 'a', level: 3 }] };
+    const inItem = readHttpRef(list, { path: '/r', item: { list: '/rows', where: { id: 'a' } }, valuePath: '/level', observedAtPath: '/updatedAt' }, READ_AT);
+    expect(inItem).toMatchObject({ ok: false, reason: 'address', message: 'the time field "/updatedAt" (observedAtPath) is not in the item' });
+    const inResponse = readHttpRef({ level: 3 }, { path: '/r', valuePath: '/level', observedAtPath: '/updatedAt' }, READ_AT);
+    expect(inResponse).toMatchObject({ ok: false, reason: 'address', message: 'the time field "/updatedAt" (observedAtPath) is not in the response' });
+  });
+
   it('refuses a time later than the read, naming the time zone as what to check', () => {
     // 23:20 read as UTC is nine hours after the read at 14:30 UTC — the zone was left out.
     const reading = readHttpRef(body, { path: '/r', valuePath: '/rows/0/level', observedAtPath: '/updatedAt' }, READ_AT);
