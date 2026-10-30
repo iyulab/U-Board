@@ -175,6 +175,7 @@ interface Field {
   format?: string;              // the widget library's value format: 'number:1', 'percent', 'time' …
   names?: ValueMapping;         // the words a raw value is shown as
   state?: 'raw' | ValueMapping; // how the value is doing, as a status
+  items?: Record<string, Field>; // a field that holds a list of objects: what each field of its items means
 }
 
 type ValueMapping = Record<string, string> | (string | number)[];
@@ -215,6 +216,12 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
   (`{ "trip": "down", "*": "off" }`), or bands of numbers — the name below the first number, then from each number up
   (`["ok", 70, "warn", 80, "alarm"]`). `state: "raw"` says the value already is a status name. A reading the mapping
   names nothing for is in no status.
+- **Fields of the items a field holds.** A field whose value is a list of objects (`{ "value": [{ "state": "run" }, …] }`) says what
+  each field of those items means with `items` — the same `at` (relative to the item, `/state`), `names` and `state` a field of a
+  read has. An element's `list` prop bound to that field (`"bind": { "items": "value" }`) reads every item with the words
+  its `names` give under the field's own name (`{{state}}`) and its tone, status words, emphasis and mark beside it
+  (`{{state$tone}}`, `{{state$status}}`, `{{state$emphasis}}`, `{{state$glyph}}`). Items do not nest; a value format is written
+  in the template (`{{count | number:1}}`).
 
 ### `parts` — what is shown, of which data
 

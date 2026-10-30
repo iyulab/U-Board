@@ -51,6 +51,13 @@ export interface Field {
   /** The words a raw value is shown as. */
   names?: ValueMapping;
   state?: StateRule;
+  /**
+   * For a field that holds a list of objects (an element's `list` prop is bound to it): what each field of those items
+   * means — the same things a field of a read means (`at`, `names`, `state`), once for every item. `at` is relative to
+   * the item (`/state`); an item field gains its words under its own name and its tone, status words, emphasis and
+   * mark under `<name>$tone`, `<name>$status`, `<name>$emphasis`, `<name>$glyph`. Items do not nest.
+   */
+  items?: Record<string, Field>;
 }
 
 /** When a request's `{{now:…}}` places stand, for a source asked for the data of a given time. */

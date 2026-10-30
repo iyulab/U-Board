@@ -186,6 +186,17 @@ export function validateBoard(board: unknown): BoardIssue[] {
       }
       if (f.state !== undefined && f.state !== 'raw') checkMapping(f.state, `${fieldAt}/state`, 'state');
       if (f.names !== undefined) checkMapping(f.names, `${fieldAt}/names`, 'names');
+      if (f.items !== undefined) {
+        if (!isObj(f.items)) { fail(`${fieldAt}/items`, '"items" is { "<field>": { "at", "names", "state" } } — what each field of the items of a list this field holds means'); continue; }
+        for (const [key, g] of Object.entries(f.items)) {
+          const itemAt = `${fieldAt}/items/${key}`;
+          if (!isObj(g)) { fail(itemAt, 'a field is an object: { "at", "names", "state", … }'); continue; }
+          if (g.at !== undefined && !(typeof g.at === 'string' && g.at.startsWith('/'))) fail(`${itemAt}/at`, '"at" is where the value lives in the item, starting with "/"');
+          if (g.items !== undefined) fail(`${itemAt}/items`, 'items do not nest — a field of an item that holds a list is read by a part of its own');
+          if (g.state !== undefined && g.state !== 'raw') checkMapping(g.state, `${itemAt}/state`, 'state');
+          if (g.names !== undefined) checkMapping(g.names, `${itemAt}/names`, 'names');
+        }
+      }
     }
   }
 
@@ -255,7 +266,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     for (const m of el.template.matchAll(HOLE)) {
       const body = m[1]!.split('|')[0]!.trim();
       const hole = body.replace(/^[#/^]/, '').split('.')[0]!;
-      const computed = !/^[#/^]?[\w-]*(\.[\w-]+)*$|^\.$/.test(body);
+      const computed = !/^[#/^]?[\w$-]*(\.[\w$-]+)*$|^\.$/.test(body);
       if (body.startsWith('/')) { sections = Math.max(0, sections - 1); continue; }
       const known = hole === '' || hole in props || (sections > 0 && !computed);
       if (computed || !known) {

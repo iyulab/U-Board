@@ -39,6 +39,14 @@ describe('validateBoard', () => {
     expect(issues(canvas({ a: { as: 'stat', of: 'totals[T1]' } }))[0]).toContain('"totals" has no "list"');
   });
 
+  it('checks what the fields of the items a field holds mean — a mapping, a pointer from the item, no nesting', () => {
+    const withItems = (items: unknown) => ({ ...canvas({ a: { as: 'stat', of: 'queue', show: 'value' } }), data: { ...data, queue: { from: 'desk', path: '/desk/queue', fields: { value: { items } } } } });
+    expect(issues(withItems({ state: { at: '/state', names: { run: 'Running' }, state: 'raw' } }))).toEqual([]);
+    expect(issues(withItems('state'))).toEqual(['/data/queue/fields/value/items: "items" is { "<field>": { "at", "names", "state" } } — what each field of the items of a list this field holds means']);
+    expect(issues(withItems({ state: { at: 'state' } }))).toEqual(['/data/queue/fields/value/items/state/at: "at" is where the value lives in the item, starting with "/"']);
+    expect(issues(withItems({ state: { items: {} } }))[0]).toContain('/data/queue/fields/value/items/state/items: items do not nest');
+  });
+
   it('checks presets and each', () => {
     expect(issues(canvas({ a: { use: 'card', of: 'equipment[PR-01]' } }))[0]).toBe('/parts/a/use: no preset "card" — presets: none');
     expect(issues(canvas({ a: { as: 'stat', each: 'equipment', of: 'equipment[PR-01]' } }))).toContain(

@@ -386,6 +386,27 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         ...(f.names !== undefined ? { [`${name}$name`]: { from: source(name), map: mapOf(f.names, w => w) } } : {}),
       };
     };
+    /**
+     * What each item of a list gains for the fields `items` declares: a field's words under its own name, its tone,
+     * status words, emphasis and mark under `<name>$tone` `$status` `$emphasis` `$glyph`. An item's `at` is relative to
+     * the item: a key at its top, a pointer for a field deeper in it.
+     */
+    const itemFieldsOf = (items: Record<string, Field>): Record<string, ItemField> => {
+      const gained: Record<string, ItemField> = {};
+      for (const [name, f] of Object.entries(items)) {
+        const from = f.at === undefined ? name : f.at.indexOf('/', 1) >= 0 ? f.at : f.at.slice(1);
+        if (f.names !== undefined) gained[name] = { from, map: mapOf(f.names, w => w) };
+        else if (from !== name) gained[name] = { from };
+        if (f.state !== undefined) {
+          const maps = stateMaps(f.state);
+          gained[`${name}$tone`] = { from, map: maps.tone };
+          gained[`${name}$status`] = { from, map: maps.status };
+          if (maps.emphasis) gained[`${name}$emphasis`] = { from, map: maps.emphasis };
+          if (maps.glyph) gained[`${name}$glyph`] = { from, map: maps.glyph };
+        }
+      }
+      return gained;
+    };
     /** Where an item holds field `name`: a key, or a pointer for a field deeper in it. */
     const source = (name: string) => sourceOf(query!, name);
     /** The field a row shows `name` by: its words when it names them, else the field under its name (`rowFields` gains it). */
@@ -619,8 +640,11 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         elements[element] ??= elementDefinition(definition);
         for (const [prop, ref] of Object.entries(bound)) {
           const [name, what] = ref.split('.') as [string, 'status' | 'tone' | undefined];
-          if (what === undefined) bindValue(prop, name);
-          else bind(prop, name, what === 'tone' ? stateMaps(field(name).state!).tone : statusNames(field(name).state!));
+          if (what === undefined) {
+            bindValue(prop, name);
+            const items = field(name).items;
+            if (items !== undefined && bindings[prop] !== undefined) bindings[prop] = { ...bindings[prop]!, itemFields: itemFieldsOf(items) };
+          } else bind(prop, name, what === 'tone' ? stateMaps(field(name).state!).tone : statusNames(field(name).state!));
         }
         // A prop the part does not set stays unset — a template's `{{#prop}}` section is then left out, as its author
         // wrote it; a blank stand-in (`0`, `''`) would be a value and open it.

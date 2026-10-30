@@ -14,6 +14,12 @@ All notable changes to this package are documented here. The format follows
   where a picture's address can carry what the board read. A host that lists the origins media may come from
   (`setMediaOrigins(['self', 'https://cdn.example.com'])`, once per page, before the first board is drawn) draws the `alt` text
   in place of anything else. Nothing is limited until it is called. Needs `@iyulab/u-widgets` 0.44.
+- **A list an element reads can carry the meaning of its items' fields.** A field that holds a list of objects takes `items` —
+  `{ "value": { "items": { "state": { "names": {…}, "state": {…} } } } }`: the same `at` (relative to the item), `names` and
+  `state` a field of a read has. An element's `list` prop bound to it (`"bind": { "items": "value" }`) reads every item with
+  the words under the field's own name (`{{state}}`) and its tone, status words, emphasis and mark beside it (`{{state$tone}}`,
+  `{{state$status}}`, `{{state$emphasis}}`, `{{state$glyph}}`), so a board keeps the raw value in its data and the words in
+  its `fields`, as it does for a single value. Items do not nest. A template hole may now contain `$`.
 - **A board's background picture answers to the same list.** With origins set (`setMediaOrigins`), a `canvas.background` outside
   them is not requested: the board is drawn on an empty background, `ViewerPage` says so beside the view controls
   (`UBoardLabels.backgroundBlocked`, new — a host that supplies a complete labels object adds it), and `toCanvasKit` returns

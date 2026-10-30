@@ -303,6 +303,25 @@ describe('the picture model of a v2 board', () => {
     expect(doc.elements!['u-board-shape-edge']!.template).toContain('d="M 3 3 L 43 43"');
   });
 
+  it('gives each item of a list an element reads the meaning of its fields — words under their own name, tone beside', () => {
+    const b = board(
+      { hours: { as: 'element', element: 'hours', of: 'hourly', bind: { items: 'value' } } },
+      { kind: 'canvas', size: [400, 200], place: { hours: [0, 0, 400, 200] } },
+    );
+    b.data!.hourly = {
+      from: 'plant', path: '/plant/hourly',
+      fields: { value: { items: { hour: { names: { '09:00': 'Nine' } }, count: { state: ['running', 125, 'tripped'] }, flow: { at: '/count' } } } },
+    };
+    b.elements = { hours: { template: '<ul>{{#items}}<li class="{{count$tone}}" title="{{count$status}}">{{hour}} {{flow}}</li>{{/items}}</ul>', props: { items: 'list' } } };
+    const doc = view(b);
+    expect(drawn(nodeOf(doc, 'hours').widget)).toEqual({
+      items: [
+        { hour: 'Nine', count: 120, flow: 120, count$tone: 'ok', count$status: 'Running', count$emphasis: '' },
+        { hour: '10:00', count: 131, flow: 131, count$tone: 'alarm', count$status: 'Tripped', count$emphasis: 'blink' },
+      ],
+    });
+  });
+
   it("draws the board's own elements, their props fixed or bound to a field, its status or its tone", () => {
     const b = board(
       { t: { as: 'element', element: 'tank', each: 'pumps', props: { name: 'Pump' }, bind: { level: 'flow', state: 'state.status', tone: 'state.tone' } } },
