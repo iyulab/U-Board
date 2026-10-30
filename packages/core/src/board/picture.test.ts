@@ -22,6 +22,13 @@ const SOURCE: Record<string, unknown> = {
       { id: 'q2', properties: { place: 'Chile', state: 'trip' } },
     ],
   },
+  // A list inside each item: the machines of a zone.
+  '/plant/zones': {
+    value: [
+      { id: 'Z1', name: 'North', updatedAt: '2026-10-23T03:00:00Z', assets: [{ state: 'run' }, { state: 'trip' }] },
+      { id: 'Z2', name: 'South', updatedAt: '2026-10-23T03:00:00Z', assets: [{ state: 'trip' }, { state: 'run' }] },
+    ],
+  },
   '/plant/totals': { output: 1280, oee: 0.83, temp: 74 },
   '/plant/hourly': { value: [{ hour: '09:00', count: 120 }, { hour: '10:00', count: 131 }] },
 };
@@ -320,6 +327,40 @@ describe('the picture model of a v2 board', () => {
         { hour: '10:00', count: 131, flow: 131, count$tone: 'alarm', count$status: 'Tripped', count$emphasis: 'blink' },
       ],
     });
+  });
+
+  it('draws a part per item of a list inside the item a group is made for, each reading its own place in the list', () => {
+    const zone = {
+      as: 'group', size: [200, 100],
+      parts: { name: { as: 'stat', show: 'name' }, machine: { as: 'status-card', each: '/assets', show: ['state'] } },
+      place: { name: [0, 0, 200, 20], machine: { '0': [0, 20, 100, 80], '1': [100, 20, 100, 80] } },
+    };
+    const b = { ...board({ zones: { use: 'zone', each: 'zones' } }, { kind: 'canvas', size: [400, 300], place: { zones: { Z1: [0, 0, 200, 100], Z2: [0, 150, 200, 100] } } }), presets: { zone } } as Board;
+    b.data!.zones = { from: 'plant', path: '/plant/zones', list: '/value', key: 'id', time: 'updatedAt', fresh: 60, fields: { name: {}, assets: { items: { state: { state: { run: 'running', trip: 'tripped', '*': 'off' } } } } } };
+    const doc = view(b);
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(doc.nodes.map(n => n.id)).toEqual(['zones/Z1/name', 'zones/Z1/machine/0', 'zones/Z1/machine/1', 'zones/Z2/name', 'zones/Z2/machine/0', 'zones/Z2/machine/1']);
+    // Each reads the one answer: the zone, then the machine in it by its place — never a request of its own.
+    expect(nodeOf(doc, 'zones/Z1/machine/1').widget.bindings!['data.tone']).toMatchObject({ ref: { path: '/plant/zones', item: { list: '/value', where: { id: 'Z1' } }, valuePath: '/assets/1/state', maxAgeSeconds: 60 } });
+    expect(drawn(nodeOf(doc, 'zones/Z1/machine/0').widget).data).toMatchObject({ tone: 'ok' });
+    expect(drawn(nodeOf(doc, 'zones/Z1/machine/1').widget).data).toMatchObject({ tone: 'alarm' });
+    expect(drawn(nodeOf(doc, 'zones/Z2/machine/0').widget).data).toMatchObject({ tone: 'alarm' });
+  });
+
+  it('places the parts made per item of a list inside the item by the fields of those items, and says where it cannot', () => {
+    const zone = {
+      as: 'group', size: [200, 100],
+      parts: { machine: { as: 'status-card', each: '/assets', show: ['state'] } },
+      place: { machine: { at: ['x', 'y'], frame: [0, 0, 200, 100], size: [40, 40] } },
+    };
+    const b = { ...board({ zones: { use: 'zone', each: 'zones' } }, { kind: 'canvas', size: [400, 300], place: { zones: { Z1: [0, 0, 200, 100] } } }), presets: { zone } } as Board;
+    b.data!.zones = { from: 'plant', path: '/plant/zones', list: '/value', key: 'id', fields: { assets: { items: { x: {}, y: {}, state: { state: { run: 'running' } } } } } };
+    const rows = [{ id: 'Z1', assets: [{ x: 50, y: 20, state: 'run' }, { x: 150, y: 70, state: 'run' }, { state: 'run' }] }];
+    const doc = toViewDocument(b, { rowsOf: () => rows });
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(doc.nodes.map(n => [n.id, n.x, n.y])).toEqual([['zones/Z1/machine/0', 30, 0], ['zones/Z1/machine/1', 130, 50]]);
+    const outside = { ...board({ m: { as: 'status-card', each: '/assets', show: ['state'] } }, { kind: 'canvas', size: [100, 100], place: { m: { '0': [0, 0] } } }) } as Board;
+    expect(validateBoard(outside).map(i => i.message).join(' ')).toContain('is for a part inside a group');
   });
 
   it("draws the board's own elements, their props fixed or bound to a field, its status or its tone", () => {

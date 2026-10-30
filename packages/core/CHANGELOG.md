@@ -14,6 +14,12 @@ All notable changes to this package are documented here. The format follows
   where a picture's address can carry what the board read. A host that lists the origins media may come from
   (`setMediaOrigins(['self', 'https://cdn.example.com'])`, once per page, before the first board is drawn) draws the `alt` text
   in place of anything else. Nothing is limited until it is called. Needs `@iyulab/u-widgets` 0.44.
+- **A part inside a group can be made per item of a list inside the group's item.** In a group made per item of a data
+  (`"use": "zone", "each": "zones"`), a part with `"each": "/assets"` — a pointer into the item, as a field's `at` is — is drawn once
+  per item of that list, ids `zones/Z1/machine/0` (an item is named by its place in the list), and reads it from the one answer
+  the group's item came with: no read of its own. Place it by item (`"machine": { "0": [x, y, w, h], … }`) or by the fields of
+  its items (`"at": ["x", "y"]`); the fields it shows are what the list field's `items` say. The pointer is relative to the item
+  — the same rule `items`' `at` has. Outside a group it is refused.
 - **A list an element reads can carry the meaning of its items' fields.** A field that holds a list of objects takes `items` —
   `{ "value": { "items": { "state": { "names": {…}, "state": {…} } } } }`: the same `at` (relative to the item), `names` and
   `state` a field of a read has. An element's `list` prop bound to it (`"bind": { "items": "value" }`) reads every item with

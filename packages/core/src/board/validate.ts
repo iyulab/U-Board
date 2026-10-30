@@ -311,7 +311,10 @@ export function validateBoard(board: unknown): BoardIssue[] {
     const part = resolve(raw, at);
     if (part.each !== undefined && part.of !== undefined) fail(`${at}/of`, 'a part with "each" takes its items from "each" — leave "of" out');
     const ofData = part.of !== undefined ? checkOf(part.of, `${at}/of`) : undefined;
-    if (part.each !== undefined) {
+    // `each` with a pointer ("/assets") makes the part per item of a list inside the item its group is made for.
+    const insideEach = typeof part.each === 'string' && part.each.startsWith('/');
+    if (insideEach && !group) fail(`${at}/each`, `"each": "${String(part.each)}" is a pointer into the item of the group the part is in — it is for a part inside a group`);
+    if (part.each !== undefined && !insideEach) {
       const q = typeof part.each === 'string' ? data[part.each] : undefined;
       if (!isObj(q)) fail(`${at}/each`, `no data "${String(part.each)}" — data: ${list(Object.keys(data))}`);
       else if (q.list === undefined) fail(`${at}/each`, `"each" makes a part per item of a "list" — "${String(part.each)}" has none`);
@@ -464,17 +467,25 @@ export function validateBoard(board: unknown): BoardIssue[] {
     const inner = isObj(group.parts) ? group.parts : undefined;
     if (!inner) { fail(`${at}/parts`, 'a group needs "parts": the parts drawn together'); return; }
     const place = isObj(group.place) ? group.place : {};
+    const madePerItem = new Set<string>();
     if (!isObj(group.place)) fail(`${at}/place`, 'a group needs "place": { "<part>": [x, y, width?, height?] } on its own canvas');
     for (const [id, raw] of Object.entries(inner)) {
       const innerAt = `${at}/parts/${id}`;
       if (id.includes('/')) fail(innerAt, `a part id has no "/" — "/" joins a group and its parts ("<group>/${id.replace(/\//g, '-')}")`);
       const part = checkPart(raw, innerAt, { reads });
-      if (part?.each !== undefined) fail(`${innerAt}/each`, 'a part inside a group is one part — repeat the group with "each" instead');
+      const insideEach = typeof part?.each === 'string' && part.each.startsWith('/');
+      if (part?.each !== undefined && !insideEach) fail(`${innerAt}/each`, 'a part inside a group is one part — repeat the group with "each" instead, or "each": "/<list in the item of the group>" for one per item of a list inside it');
+      if (insideEach) madePerItem.add(id);
       if (!(id in place)) fail(innerAt, `"${id}" is not placed in the group — put it in its "place", or remove it`);
     }
     for (const [id, p] of Object.entries(place)) {
       if (!(id in inner)) fail(`${at}/place/${id}`, `no part "${id}" in the group — its parts: ${list(Object.keys(inner))}`);
-      else if (!isPlace(p)) fail(`${at}/place/${id}`, 'a place is [x, y] or [x, y, width, height]');
+      else if (madePerItem.has(id)) {
+        // Placed by the place of each item in its list: { "0": [x, y, w, h], … } — or by the items' fields (`at`).
+        const byFields = isObj(p) && Array.isArray(p.at);
+        if (!isObj(p)) fail(`${at}/place/${id}`, 'a part made per item of a list is placed by item: { "0": [x, y, width?, height?], … } — an item is named by its place in the list — or by the fields of its items: { "at": [x, y], … }');
+        else if (!byFields) for (const [key, one] of Object.entries(p)) if (!isPlace(one)) fail(`${at}/place/${id}/${key}`, 'a place is [x, y] or [x, y, width, height]');
+      } else if (!isPlace(p)) fail(`${at}/place/${id}`, 'a place is [x, y] or [x, y, width, height]');
     }
     checkShapes(group.shapes, `${at}/shapes`);
     checkLinks(group.links, `${at}/links`, id => id in inner, reads);

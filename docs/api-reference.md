@@ -222,6 +222,11 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
   its `names` give under the field's own name (`{{state}}`) and its tone, status words, emphasis and mark beside it
   (`{{state$tone}}`, `{{state$status}}`, `{{state$emphasis}}`, `{{state$glyph}}`). Items do not nest; a value format is written
   in the template (`{{count | number:1}}`).
+- **A list inside an item, one part per item.** In a group made per item of a data, a part with `"each": "/assets"` (a pointer
+  into the group's item, relative like the `at` of an item field) is drawn once per item of that list — ids `zones/Z1/machine/0`,
+  an item named by its place in the list — and reads it from the answer the group's item came with. It is placed in the group's
+  `place` by item (`{ "0": [x, y, w, h] }`) or by the fields of its items (`{ "at": ["x", "y"], … }`); its fields are the list
+  field's `items`.
 
 ### `parts` — what is shown, of which data
 

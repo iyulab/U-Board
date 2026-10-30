@@ -85,6 +85,16 @@ function valueAtPointer(item: unknown, pointer: string): unknown {
   return at;
 }
 
+/** A list inside an item, read as a data of its own: `base` is the data it is in, `outer` the item of it (its key, or its
+ *  place when it has none) and `within` the pointer in that item where the list is. Its fields are what the list field's
+ *  `items` say. It exists only for the parts a group draws per item of it (`each: '/assets'`). */
+interface DerivedQuery extends Query {
+  baseName: string;
+  base: Query;
+  outer: string;
+  within: string;
+}
+
 /** Whether a canvas's place for a part is by its items' fields: an object whose `at` names two fields (a place for an
  *  item called "at" is two numbers). */
 export function isDataPlace(place: unknown): place is DataPlace {
@@ -115,7 +125,22 @@ function readOf(data: Record<string, Query>, query: string, item: string | undef
 /** An HTTP connector's reference: the request, the item, the value in it, and how current it must be. */
 function refFor(q: Query, query: string, item: string | undefined, field: string | undefined, valueAt: string | undefined, at: string): HttpRef {
   const ref: HttpRef = { path: q.path! };
-  if (q.pivot !== undefined) {
+  const derived = (q as DerivedQuery).within !== undefined ? (q as DerivedQuery) : undefined;
+  if (derived !== undefined && item !== undefined) {
+    // An item of a list inside an item (`each: '/assets'` in a group): the outer item, then the list in it and the place
+    // of this one — the value is read from the one answer, never asked for again.
+    const base = derived.base;
+    if (base.key !== undefined) {
+      ref.item = { list: base.list!, where: { ...base.where, [base.key]: derived.outer } };
+      ref.valuePath = `${derived.within}/${item}${valueAt ?? ''}`;
+    } else {
+      ref.valuePath = `${base.list}/${derived.outer}${derived.within}/${item}${valueAt ?? ''}`;
+    }
+    if (base.time !== undefined) ref.observedAtPath = base.fields?.[base.time]?.at ?? `/${base.time}`;
+    if (base.zone !== undefined) ref.timeZone = base.zone;
+    if (base.fresh !== undefined) ref.maxAgeSeconds = base.fresh;
+    return ref;
+  } else if (q.pivot !== undefined) {
     // A pivoted list is one item: its field is the row its name is, the value that row holds.
     if (field === undefined) throw new PictureError(at, `"${query}" is pivoted — name its fields, it has no whole item to write`);
     ref.item = { list: q.list!, where: { ...q.where, [q.pivot.key]: field } };
@@ -193,7 +218,9 @@ export function keysIn(board: Board, data: string, value: unknown): string[] {
 
 /** Make the view document that draws `board`. */
 export function toViewDocument(board: Board, options: PictureOptions = {}): ViewDocument {
-  const data = board.data ?? {};
+  // The board's data, and — as parts that a group makes per item of a list inside its item need them — the lists inside
+  // an item, each as a data of its own (`insideOf`).
+  const data: Record<string, Query> = { ...board.data };
   const statuses = board.statuses ?? {};
   const presets = board.presets ?? {};
 
@@ -668,6 +695,41 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     return p.of !== undefined ? target(p.of) : undefined;
   };
 
+  /**
+   * The list inside the group's item that a part inside the group is made per item of (`each: '/assets'`), as a data of
+   * its own: the pointer says where the list is in the item (the same kind of pointer a field's `at` is), the fields are
+   * what the list field's `items` say, and an item of it is addressed by its place in the list.
+   */
+  const insideOf = (pointer: string, reads: Reads | null | undefined, at: string): string => {
+    if (reads === null || reads === undefined || reads.item === undefined) {
+      throw new PictureError(at, `"each": "${pointer}" makes a part per item of a list inside the group's item — the group itself is made per item of a data ("each")`);
+    }
+    const base = data[reads.query]!;
+    if (base.list === undefined || base.path === undefined) {
+      throw new PictureError(at, `"each": "${pointer}" reads a list inside an item of "${reads.query}" — a data read of a connector's "path" with a "list"`);
+    }
+    const name = `${reads.query}[${reads.item}]${pointer}`;
+    if (data[name] === undefined) {
+      const holder = Object.entries(base.fields ?? {}).find(([n, f]) => (f.at ?? `/${n}`) === pointer)?.[1];
+      const derived: DerivedQuery = { from: base.from, path: base.path, fields: holder?.items ?? {}, baseName: reads.query, base, outer: reads.item, within: pointer };
+      data[name] = derived;
+    }
+    return name;
+  };
+
+  /** The items of a data the caller can tell: its rows — for a list inside an item, the ones in that item of its data. */
+  const rowsFor = (query: string): readonly unknown[] | undefined => {
+    const q = data[query] as DerivedQuery | undefined;
+    if (q === undefined || q.within === undefined) return options.rowsOf?.(query);
+    const rows = options.rowsOf?.(q.baseName);
+    if (rows === undefined) return undefined;
+    const row = q.base.key === undefined
+      ? rows[Number(q.outer)]
+      : rows.find(r => typeof r === 'object' && r !== null && String((r as Record<string, unknown>)[q.base.key!]) === q.outer);
+    const list = typeof row === 'object' && row !== null ? valueAtPointer(row as Record<string, unknown>, q.within) : undefined;
+    return Array.isArray(list) ? list : [];
+  };
+
   // ── layouts ──
 
   /**
@@ -703,10 +765,15 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     };
     for (const [id, place] of Object.entries(canvas.place)) {
       const part = parts[id]!;
-      // A part inside a group reads the group's data unless it names its own.
-      const own = (key?: string) => readsOf(part, key) ?? (frame.reads === null ? undefined : frame.reads);
+      // A part inside a group reads the group's data unless it names its own — or is made per item of a list inside the
+      // group's item (`each: '/assets'`).
+      const each = resolve(part).each;
+      const inside = typeof each === 'string' && each.startsWith('/') ? insideOf(each, frame.reads, `${at}/place/${id}`) : undefined;
+      const own = (key?: string): Reads | undefined => inside !== undefined
+        ? { query: inside, ...(key !== undefined ? { item: key } : {}) }
+        : readsOf(part, key) ?? (frame.reads === null ? undefined : frame.reads);
       if (Array.isArray(place)) placeOne(id, id, part, place, own());
-      else if (isDataPlace(place)) placeByFields(id, part, place, canvas.size, `${at}/place/${id}`, own, placeOne);
+      else if (isDataPlace(place)) placeByFields(id, part, place, canvas.size, `${at}/place/${id}`, own, placeOne, inside);
       else for (const [key, p] of Object.entries(place)) placeOne(id, `${id}/${key}`, part, p as Place, own(key));
     }
     for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
@@ -730,11 +797,12 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
   const placeByFields = (
     partId: string, part: Part, where: DataPlace, canvasSize: [number, number], at: string, own: (key?: string) => Reads | undefined,
     placeOne: (partId: string, id: string, part: Part, place: Place, reads: Reads | undefined) => void,
+    inside?: string,
   ) => {
     const p = resolve(part);
-    const query = typeof p.each === 'string' ? p.each : undefined;
+    const query = inside ?? (typeof p.each === 'string' ? p.each : undefined);
     if (query === undefined) throw new PictureError(at, 'a place by fields is for a part made per item (each)');
-    const rows = options.rowsOf?.(query);
+    const rows = rowsFor(query);
     if (rows === undefined) throw new PictureError(at, `the items of "${query}" are not known — give rowsOf`);
     // A field lives where it says (`at`, a JSON Pointer into an item — a GeoJSON feature's `/geometry/coordinates/0`), else under its own name.
     const [xAt, yAt] = where.at.map(name => fieldOf(query, name).at ?? `/${name}`) as [string, string];
@@ -899,6 +967,9 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         ? { id: itemId, canvas: { background: {}, ...canvasOf(groupCanvas(p), `/parts/${id}`, `${itemId}/`, p.parts as Record<string, Part>, { ...WHOLE, ids: `${itemId}/`, reads: reads ?? null }) }, ...layout, ...extra }
         : { id: itemId, widget: widgetFor(part, `/parts/${id}`, reads), ...layout, ...extra }),
     });
+    if (typeof p.each === 'string' && p.each.startsWith('/')) {
+      throw new PictureError(`${at}/${i}`, `"each": "${p.each}" is for a part inside a group — a group made per item of a data, with the part in its "parts"`);
+    }
     if (p.each !== undefined) {
       const keys = options.keysOf?.(p.each);
       if (keys === undefined) throw new PictureError(`${at}/${i}`, `the items of "${p.each}" are not known — give keysOf`);

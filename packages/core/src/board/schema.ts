@@ -119,7 +119,7 @@ export function boardSchema(): Schema {
           as: { enum: PART_KINDS.map(k => k.kind), description: 'The kind: ' + PART_KINDS.map(k => `${k.kind} — ${k.shows}`).join('; ') },
           use: { type: 'string', description: 'A preset whose settings this part takes.' },
           of: { type: 'string', pattern: '^[\\w-]+(\\[[^\\]]+\\])?$', description: '<data> for the whole, <data>[<key>] for one item.' },
-          each: { type: 'string', description: 'A data list: one part per item, ids <part>/<key>.' },
+          each: { type: 'string', description: 'A data list: one part per item, ids <part>/<key>. Inside a group made per item: a pointer ("/assets") — one part per item of the list in the group’s item, ids <part>/<place in the list>.' },
           title: { type: 'string', description: '{{field}} reads a field of what the part shows, {{key}} its item.' },
           show: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
           size,
