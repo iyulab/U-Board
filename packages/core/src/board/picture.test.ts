@@ -93,6 +93,7 @@ describe('the picture model of a v2 board', () => {
       { kind: 'canvas', size: [800, 400], place: { pump: { P1: [10, 10, 220, 110], P2: [10, 130, 220, 110] } } },
     ));
     expect(doc).toMatchObject({ kind: 'canvas', appearance: 'dark', accent: '#22d3ee' });
+    expect(doc).not.toHaveProperty('skin');
     const p1 = nodeOf(doc, 'pump/P1');
     expect(p1).toMatchObject({ x: 10, y: 10, width: 220, height: 110, anchored: true, widget: { type: 'status-card' } });
     expect(drawn(p1.widget)).toEqual({
@@ -189,6 +190,15 @@ describe('the picture model of a v2 board', () => {
     expect(keysIn(grid, 'pumps', { not: 'a list' })).toEqual([]);
 
     expect(keyReadsOf(board({ m: { as: 'marker', each: 'pumps', show: 'state' } }, { kind: 'canvas', size: [100, 100], place: { m: { P1: [0, 0, 10, 10] } } }))).toEqual([]);
+  });
+
+  it('carries a board skin to the picture, on a canvas and on a grid', () => {
+    const skin = { palette: { paper: '#fff', ink: '#111' }, frame: 'plate', radius: 0 } as const;
+    const parts = { pump: { as: 'status-card', each: 'pumps', title: 'Pump {{key}}' } } as Board['parts'];
+    const canvas = view({ ...board(parts, { kind: 'canvas', size: [800, 400], place: { pump: { P1: [10, 10, 220, 110] } } }), board: { skin } }, { pumps: ['P1'] });
+    const grid = view({ ...board(parts, { kind: 'grid', items: [['pump', 4]] }), board: { skin } }, { pumps: ['P1'] });
+    expect(canvas).toMatchObject({ kind: 'canvas', skin });
+    expect(grid).toMatchObject({ kind: 'grid', skin });
   });
 
   it('draws a status card’s meter, subtitle and note from its item', () => {

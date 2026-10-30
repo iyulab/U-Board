@@ -11,6 +11,7 @@
  * a background by position, a grid lays them out in order. Both carry widgets the same way — a
  * `Placed` — and only how they are placed differs. Narrow on `kind` before reading a kind's fields.
  */
+
 export type ViewDocument = CanvasView | GridView;
 
 /** The kinds a view can be — `ViewDocument['kind']`. */
@@ -23,6 +24,21 @@ export interface Placed {
   /** The states it can be in, read from one of its widget’s bindings, and how each is shown — see `StateRule`.
    *  Absent: it has no states. */
   states?: StateRule;
+}
+
+/**
+ * How the board's widgets and elements are drawn — the board's `skin`, carried to the renderer. Colours are CSS colours.
+ * Absent keys keep the theme's own.
+ */
+export interface ViewSkin {
+  font?: string;
+  display?: string;
+  mono?: string;
+  palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string };
+  frame?: 'card' | 'flat' | 'glow' | 'plate' | 'ticket' | 'postage' | 'tape';
+  radius?: number;
+  shadow?: 'none' | 'soft' | 'hard';
+  density?: 'regular' | 'compact';
 }
 
 /** A canvas view: widgets placed by position over a background, optionally joined by connectors. */
@@ -44,6 +60,8 @@ export interface CanvasView {
    * tank's level: the theme's primary colour), in place of the theme's own. A colour in the forms a decoration takes.
    * Absent means the theme's. */
   accent?: string;
+  /** The board's skin — see `ViewSkin`. Absent means the theme's look. */
+  skin?: ViewSkin;
   /** The elements this board defines, by name — see `ElementDefinition`. */
   elements?: Record<string, ElementDefinition>;
   /** Drawings its template elements share, by name — see `SymbolDefinition`. */
@@ -64,6 +82,8 @@ export interface GridView {
   appearance?: BoardAppearance;
   /** As a canvas view's — the board's accent colour. */
   accent?: string;
+  /** As a canvas view's — the board's skin. */
+  skin?: ViewSkin;
   /** As a canvas view's — the elements this board defines. */
   elements?: Record<string, ElementDefinition>;
   /** As a canvas view's — the drawings its template elements share. */

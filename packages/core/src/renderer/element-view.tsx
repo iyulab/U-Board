@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
+import type { BoardAppearance, ElementDefinition, SymbolDefinition, ViewSkin } from '../view-document.js';
 import { elementEventName, type ElementFrameMessage } from '../elements/frame.js';
 import { elementDefinitionHash, elementFrameLabel } from '../elements/definition-hash.js';
 import { boardTheme, renderTemplateElement } from './element-template.js';
@@ -66,6 +66,8 @@ export interface ElementViewProps {
   appearance?: BoardAppearance;
   /** The board's accent, in place of the theme's primary colour. */
   accent?: string;
+  /** The board's skin — its palette, fonts and corners — set over the theme's tokens. */
+  skin?: ViewSkin;
   /** The board's symbols, for a template element's `<use>`s. */
   symbols?: Record<string, SymbolDefinition>;
   /** An event the element raised: `ub.emit(name)` in a script element, or a click on a part of a template element's
@@ -83,9 +85,9 @@ export interface ElementViewProps {
  * element runs in a sandboxed frame its server builds — a frame of its own origin, with no network — and receives
  * its props by message. An element it cannot draw says so in its box rather than leaving it blank.
  */
-export function ElementView({ definition, name, props, appearance = 'light', accent, symbols, onEvent, events }: ElementViewProps) {
+export function ElementView({ definition, name, props, appearance = 'light', accent, skin, symbols, onEvent, events }: ElementViewProps) {
   const frames = useContext(ElementFrameContext);
-  const theme = useMemo(() => boardTheme(appearance, accent), [appearance, accent]);
+  const theme = useMemo(() => boardTheme(appearance, accent, skin), [appearance, accent, skin]);
   if (!definition) return <div style={NOTICE_STYLE} data-element-notice="">{`No element “${name}”`}</div>;
   if (definition.render === 'script') {
     if (!frames) return <div style={NOTICE_STYLE} data-element-notice="">{`“${name}” runs a script — shown where the board is served`}</div>;

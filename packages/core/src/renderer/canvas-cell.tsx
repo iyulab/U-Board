@@ -10,8 +10,8 @@ import { toCanvasKit } from './to-canvas-kit.js';
 
 /** A grid's canvas cell as a canvas board: its spatial layer, with what the board defines once. */
 export function cellCanvasView(doc: ResolvedGridView, item: ResolvedCanvasItem): ResolvedCanvasView {
-  const { appearance, accent, elements, symbols, triggers } = doc;
-  return { kind: 'canvas', ...item.canvas, appearance, accent, elements, symbols, triggers };
+  const { appearance, accent, skin, elements, symbols, triggers } = doc;
+  return { kind: 'canvas', ...item.canvas, appearance, accent, skin, elements, symbols, triggers };
 }
 
 /** The height a canvas cell's width calls for when it gives none of its own: the canvas's proportions, with the room

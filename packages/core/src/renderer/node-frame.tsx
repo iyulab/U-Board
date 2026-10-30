@@ -2,10 +2,10 @@ import type { CSSProperties, KeyboardEvent } from 'react';
 import { UWidget } from '@iyulab/u-widgets/react';
 import '@iyulab/u-widgets';
 import type { ResolvedWidget } from '../adapter.js';
-import type { BoardAppearance, ElementDefinition, StateLook, SymbolDefinition } from '../view-document.js';
+import type { BoardAppearance, ElementDefinition, StateLook, SymbolDefinition, ViewSkin } from '../view-document.js';
 import { elementNameOf } from '../elements/element-type.js';
 import { ElementView } from './element-view.js';
-import { accentTokens } from './element-template.js';
+import { accentTokens, skinTokens } from './element-template.js';
 import { drawingColor } from '../theme-colors.js';
 import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
@@ -62,6 +62,14 @@ function badgeText(widget: QualitySummary, key: string, text: QualityText, now: 
   return Number.isNaN(observed) ? what : `${what} · ${text.age(now - observed)}`;
 }
 
+/** What u-widgets is given for a widget: its type and props, with the skin's frame as its `options.frame` where the widget names none. */
+function withSkinFrame(widget: ResolvedWidget, skin: ViewSkin | undefined) {
+  const spec = { widget: widget.type, ...widget.props };
+  if (skin?.frame === undefined) return spec;
+  const options = ((spec as { options?: Record<string, unknown> }).options ?? {});
+  return options.frame === undefined ? { ...spec, options: { ...options, frame: skin.frame } } : spec;
+}
+
 export interface NodeFrameProps {
   /** The resolved widget to draw. */
   widget: ResolvedWidget;
@@ -69,6 +77,8 @@ export interface NodeFrameProps {
   appearance?: BoardAppearance;
   /** The board's accent, in place of the palette's primary colour. */
   accent?: string;
+  /** The board's skin — its palette, fonts and corners — set over the theme's tokens. */
+  skin?: ViewSkin;
   /** The board's symbols, for an element that places them. */
   symbols?: Record<string, SymbolDefinition>;
   /** Words for the connection-quality tooltip, mark and announcement (English by default). */
@@ -110,7 +120,7 @@ export interface NodeFrameProps {
  * When it has states, the one it is in is named on it and drawn by its look around the frame — never in place of the
  * quality’s border.
  */
-export function NodeFrame({ widget, appearance, accent, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, onActivate, onElementEvent, elementEvents, name }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, onActivate, onElementEvent, elementEvents, name }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -146,11 +156,11 @@ export function NodeFrame({ widget, appearance, accent, symbols, qualityText = D
       {...(state !== undefined && { 'data-state': state })}
     >
       {element !== undefined ? (
-        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} symbols={symbols} onEvent={onElementEvent} events={elementEvents} />
+        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} skin={skin} symbols={symbols} onEvent={onElementEvent} events={elementEvents} />
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.
-        <UWidget spec={{ widget: widget.type, ...widget.props }} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent) }} theme={appearance ?? 'light'} locale={locale} />
+        <UWidget spec={withSkinFrame(widget, skin)} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent), ...skinTokens(skin) }} theme={appearance ?? 'light'} locale={locale} />
       )}
       {badge && quality && (
         <span aria-hidden="true" data-quality-badge="" style={{ ...BADGE_STYLE, ...QUALITY_BADGE_STYLE[quality] }}>

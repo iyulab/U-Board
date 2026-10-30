@@ -134,7 +134,7 @@ interface Skin {
 ```
 
 `paper` · `ink` · `muted` · `rule` draw a framed part; `ground` is text on the board's background. Every built-in
-reads the skin; no part sets fonts or colours of its own.
+reads the skin; no part sets fonts or colours of its own. `ground` and `density` are accepted but not drawn yet.
 
 ### `statuses`
 

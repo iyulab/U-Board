@@ -1063,7 +1063,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       : {}),
   });
   const head = board.board ?? {};
-  const look = { ...(head.theme !== undefined ? { appearance: head.theme } : {}), ...(head.accent !== undefined ? { accent: head.accent } : {}) };
+  const look = { ...(head.theme !== undefined ? { appearance: head.theme } : {}), ...(head.accent !== undefined ? { accent: head.accent } : {}), ...(head.skin !== undefined ? { skin: head.skin } : {}) };
   const layout = board.layout;
   const drawn: ViewDocument = layout.kind === 'canvas'
     ? { kind: 'canvas', background: background(layout), ...canvasOf(layout, '/layout'), ...look, ...withElements() }

@@ -6,6 +6,16 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- **`board.skin` is drawn.** The skin was in the schema, checked by `validateBoard` and listed in the rules, but nothing read it:
+  a board that set a palette, a font, a frame, a corner radius or a shadow was drawn exactly as one without. The palette's
+  `paper` · `ink` · `muted` · `rule` now set the widgets' background, text, secondary text and border (and a surface a little
+  toward the ink), `font` · `display` · `mono` their fonts, `radius` their corners and `shadow` their shadow — on every widget and
+  every template element of the board, in a canvas and in a grid — and `frame` is each widget's `options.frame` where the part
+  names none. A board with no skin is drawn as before. `palette.ground` (text on the board's own background) and `density` are
+  still not drawn.
+
 ### Added
 
 - **Advice for text a header shows as written.** A header's `kicker` and `subtitle` are fixed text — only its title reads

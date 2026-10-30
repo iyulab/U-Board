@@ -1,4 +1,4 @@
-import type { BoardAppearance, ElementDefinition, SymbolDefinition } from '../view-document.js';
+import type { BoardAppearance, ElementDefinition, SymbolDefinition, ViewSkin } from '../view-document.js';
 import { symbolSheet, symbolsUsed } from '../elements/symbols.js';
 import { formatValue, parseTemplate, type TemplateNode } from '../elements/template.js';
 import { TEMPLATE_TAGS, attributeProblem, checkStyle, isResourceOrigin } from '../elements/markup-policy.js';
@@ -60,9 +60,36 @@ export function accentTokens(accent: string | undefined): Record<string, string>
   return { '--u-widget-primary': colour, '--u-widget-chart-color-1': colour, '--u-widget-on-primary': inkOn(colour) };
 }
 
-/** The board's whole theme for an element: its tone's tokens, with its accent in place of the primary colour. */
-export function boardTheme(appearance: BoardAppearance, accent?: string): Record<string, string> {
-  return { ...ELEMENT_THEME[appearance], ...accentTokens(accent) };
+/** The shadows a skin names, as the widgets' `--u-widget-shadow` takes them. */
+const SKIN_SHADOW = { none: 'none', soft: '0 1px 3px rgb(0 0 0 / 14%)' } as const;
+
+/**
+ * The tokens a board's `skin` sets — paper · ink · muted · rule as the widgets' background, text, secondary text and
+ * border; the fonts, the corner radius and the shadow. For a widget's host
+ * or an element's root, after the theme's and the accent's. None for a skin that names none of these.
+ */
+export function skinTokens(skin: ViewSkin | undefined): Record<string, string> {
+  if (skin === undefined) return {};
+  const p = skin.palette ?? {};
+  const out: Record<string, string> = {};
+  if (p.paper !== undefined) out['--u-widget-bg'] = p.paper;
+  if (p.ink !== undefined) out['--u-widget-text'] = p.ink;
+  if (p.muted !== undefined) out['--u-widget-text-secondary'] = p.muted;
+  if (p.rule !== undefined) out['--u-widget-border'] = p.rule;
+  // a surface (a gauge's track, a card's fill) is the paper a little toward the ink
+  if (p.paper !== undefined && p.ink !== undefined) out['--u-widget-surface'] = `color-mix(in srgb, ${p.ink} 8%, ${p.paper})`;
+  if (skin.font !== undefined) out['--u-widget-font-family'] = skin.font;
+  if (skin.display !== undefined) out['--u-widget-font-display'] = skin.display;
+  if (skin.mono !== undefined) out['--u-widget-font-mono'] = skin.mono;
+  if (skin.radius !== undefined) out['--u-widget-radius'] = `${skin.radius}px`;
+  if (skin.shadow === 'none' || skin.shadow === 'soft') out['--u-widget-shadow'] = SKIN_SHADOW[skin.shadow];
+  else if (skin.shadow === 'hard') out['--u-widget-shadow'] = `3px 3px 0 ${p.rule ?? 'currentColor'}`;
+  return out;
+}
+
+/** The board's whole theme for an element: its tone's tokens, with its accent in place of the primary colour and its skin on top. */
+export function boardTheme(appearance: BoardAppearance, accent?: string, skin?: ViewSkin): Record<string, string> {
+  return { ...ELEMENT_THEME[appearance], ...accentTokens(accent), ...skinTokens(skin) };
 }
 
 /** The ink that reads on a fill of `colour` — by its luminance where it is a hex or rgb() colour; the light ink
