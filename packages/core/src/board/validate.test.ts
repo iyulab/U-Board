@@ -574,6 +574,53 @@ describe('validateBoard', () => {
     }]);
   });
 
+  describe('a theme token with a fallback in an element', () => {
+    const element = (def: Record<string, unknown>, head?: Record<string, unknown>) => ({
+      ...canvas({ d: { as: 'element', element: 'dial', of: 'totals' } }),
+      ...(head ? { board: head } : {}),
+      elements: { dial: { template: '<svg><circle r="{{a}}"/></svg>', props: { a: 'number' }, ...def } },
+    });
+    const hints = (board: unknown) => validateBoard(board).filter(i => i.hint).map(i => `${i.at}: ${i.message}`);
+
+    it('says the fallback is never drawn where the theme always sets the token', () => {
+      expect(hints(element({ style: 'circle{fill:var(--u-widget-bg, #f6f4ef)}' }))).toEqual([
+        '/elements/dial/style: "var(--u-widget-bg, #f6f4ef)" never draws its fallback — the theme always sets --u-widget-bg, so it is the theme’s colour (a skin that names it replaces that); write the colour itself to keep it fixed, or leave the fallback out',
+      ]);
+    });
+
+    it('reads a fallback that is itself a function, and the inline style of the markup', () => {
+      const board = element({ template: '<svg><circle style="stroke:var(--u-widget-border,rgba(0,0,0,.2))" r="{{a}}"/></svg>' });
+      expect(hints(board)).toEqual([
+        '/elements/dial/template: "var(--u-widget-border,rgba(0,0,0,.2))" never draws its fallback — the theme always sets --u-widget-border, so it is the theme’s colour (a skin that names it replaces that); write the colour itself to keep it fixed, or leave the fallback out',
+      ]);
+    });
+
+    it('counts the rest of the tokens it found, once', () => {
+      const board = element({ style: 'a{fill:var(--u-widget-bg,#fff)}b{fill:var(--u-widget-text,#000)}c{fill:var(--u-widget-bg,#eee)}' });
+      expect(hints(board)).toEqual([
+        '/elements/dial/style: "var(--u-widget-bg,#fff)" never draws its fallback — the theme always sets --u-widget-bg, so it is the theme’s colour (a skin that names it replaces that); write the colour itself to keep it fixed, or leave the fallback out (also --u-widget-text)',
+      ]);
+    });
+
+    it('stays silent where the board’s skin or accent sets the token, where the theme does not, and where there is no fallback', () => {
+      const style = 'a{fill:var(--u-widget-bg,#fff)}b{fill:var(--u-widget-primary,#c00)}';
+      expect(hints(element({ style }, { skin: { palette: { paper: '#101010' } }, accent: '#0a0' }))).toEqual([]);
+      expect(hints(element({ style: 'a{border-radius:var(--u-widget-radius,4px)}b{fill:var(--u-widget-negative)}c{fill:var(--other,#fff)}' }))).toEqual([]);
+    });
+
+    it('leaves the pictures alone: an image reads no variables, so its fallback is the colour it draws', () => {
+      const image = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='var(--u-widget-text,%20%231c1b19)'/%3E%3C/svg%3E")`;
+      expect(hints(element({ style: `.m{background-image:${image}}` }))).toEqual([]);
+      expect(hints(element({ style: `.m{background-image:url('data:image/svg+xml,<svg fill="var(--u-widget-bg, #fff)"/>')}` }))).toEqual([]);
+    });
+
+    it('speaks for the token a skin leaves alone', () => {
+      expect(hints(element({ style: 'a{fill:var(--u-widget-bg,#fff)}b{color:var(--u-widget-text,#000)}' }, { skin: { palette: { paper: '#101010' } } }))).toEqual([
+        '/elements/dial/style: "var(--u-widget-text,#000)" never draws its fallback — the theme always sets --u-widget-text, so it is the theme’s colour (a skin that names it replaces that); write the colour itself to keep it fixed, or leave the fallback out',
+      ]);
+    });
+  });
+
   it('checks a data read: where on a list, the request time, and statuses', () => {
     const board = {
       ...canvas({}),

@@ -394,7 +394,11 @@ the thing — a title, a status and a few values are a `status-card`, `stat` or 
   A template element loads nothing from another origin.
 - **Theme** — the board's tone reaches the markup as CSS variables: `--u-widget-bg`, `--u-widget-surface`,
   `--u-widget-text`, `--u-widget-text-secondary`, `--u-widget-border`, `--u-widget-primary`, `--u-widget-positive`,
-  `--u-widget-negative`, `--u-widget-warning`, `--u-widget-font-family`, `--u-widget-font-mono`. A template is drawn
+  `--u-widget-negative`, `--u-widget-warning`, `--u-widget-font-family`, `--u-widget-font-mono`. The theme sets every
+  one of them, so a fallback in the markup's CSS — `var(--u-widget-bg, #f6f4ef)` — is never drawn (a skin that names the
+  token replaces the theme's colour; nothing else does): write the colour itself to keep it fixed. `check` says so as
+  advice. A picture written as a `url("data:image/svg+xml,…")` is an image and reads no variables, so there the
+  fallback is the colour drawn. A template is drawn
   in an isolated root of the page: its CSS reaches only its own markup, the page's does not reach in. Its root fills
   the part's box, every size in it includes its padding and border, and nothing it draws reaches past that box.
 - **Symbols** — SVG drawings the board defines once (`{ "viewBox"?, "path": "M … Z" }`), drawn by a `marker`'s

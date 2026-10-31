@@ -12,6 +12,11 @@ All notable changes to this package are documented here. The format follows
   and reads no CSS variables, so a pictogram or a pattern kept its own colours however the skin was set. It now follows the skin the way a board's
   background picture does: the colours it writes as the widgets' tokens with its own colour as the fallback (`fill="var(--u-widget-text, #1c1b19)"`)
   take the skin's values before the stylesheet is applied. With no skin, or a token the skin does not name, the stylesheet is what it was.
+- **Advice for a fallback an element's CSS can never draw.** The theme sets every `--u-widget-*` colour and font token an element reads, so
+  `var(--u-widget-bg, #f6f4ef)` in an element's `style` or markup draws the theme's colour — never `#f6f4ef` — unless the board's skin or accent
+  names that token. `validateBoard` now says so as advice, at the element's `style` or `template`, naming the first such `var()` (and the other
+  tokens found); write the colour itself to keep it fixed, or leave the fallback out to follow the theme. A picture drawn as a quoted `url(…)` is
+  an image, where the fallback is the colour drawn, and is left alone.
 
 ## [0.39.0] - 2026-10-31
 

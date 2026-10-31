@@ -5,7 +5,8 @@
 // parts — their kinds, what they read, how they are reused — and every layout with its shapes and links.
 
 import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
-import { isTriggerLink } from '../view-document.js';
+import { isTriggerLink, type ViewSkin } from '../view-document.js';
+import { ELEMENT_THEME, accentTokens, skinTokens } from '../renderer/element-template.js';
 import { EMPHASES, FRAMES, TONES } from './types.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from '../elements/markup-policy.js';
 import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
@@ -35,6 +36,31 @@ const list = (names: Iterable<string>, max = 12) => {
   const all = [...names];
   return all.length === 0 ? 'none' : all.slice(0, max).join(', ') + (all.length > max ? ', …' : '');
 };
+
+/** `var(--u-widget-…, fallback)` — the fallback may hold one level of parentheses (`rgba(…)`). */
+const TOKEN_WITH_FALLBACK = /var\(\s*(--u-widget-[a-z0-9-]+)\s*,\s*(?:[^()]|\([^()]*\))*\)/gi;
+const QUOTED_URL = /url\(\s*(?:"[^"]*"|'[^']*')\s*\)/g;
+
+/**
+ * The advice for the theme tokens a piece of element CSS gives a fallback: the theme sets them all, so the fallback is
+ * never drawn — the element takes the theme's colour, where an author would expect their own. `named` are the tokens the
+ * board's skin and accent set; for those the token follows the board, and the fallback is only unused, not misleading.
+ * A token only a skin sets (`--u-widget-radius`) keeps its fallback. A picture written as a quoted `url(…)` is an image and
+ * reads no CSS variables, so there the fallback is the colour drawn (and the skin's, where it names the token) — left out here.
+ */
+function deadFallback(css: string, at: string, named: ReadonlySet<string>): BoardIssue[] {
+  const found = [...css.replace(QUOTED_URL, '').matchAll(TOKEN_WITH_FALLBACK)].filter(m => m[1]!.toLowerCase() in ELEMENT_THEME.light && !named.has(m[1]!.toLowerCase()));
+  if (found.length === 0) return [];
+  const token = found[0]![1]!.toLowerCase();
+  const others = [...new Set(found.map(m => m[1]!.toLowerCase()))].filter(t => t !== token);
+  return [{
+    at,
+    message:
+      `"${found[0]![0]}" never draws its fallback — the theme always sets ${token}, so it is the theme’s colour (a skin that names it replaces that); ` +
+      `write the colour itself to keep it fixed, or leave the fallback out${others.length > 0 ? ` (also ${others.join(', ')})` : ''}`,
+    hint: true,
+  }];
+}
 
 /** The keys every part may have, whatever its kind. */
 const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show', 'highlight'] as const;
@@ -273,6 +299,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
 
   // ── elements ──
   const elements = isObj(board.elements) ? board.elements : {};
+  const named = new Set([...Object.keys(accentTokens(typeof head.accent === 'string' ? head.accent : undefined)), ...Object.keys(skinTokens(isObj(head.skin) ? (head.skin as ViewSkin) : undefined))]);
   for (const [name, el] of Object.entries(elements)) {
     const at = `/elements/${name}`;
     if (!/^[a-z][a-z0-9-]{0,39}$/.test(name)) fail(at, `an element's name is lowercase letters, digits and "-", starting with a letter, at most 40 — not "${name}"`);
@@ -291,7 +318,10 @@ export function validateBoard(board: unknown): BoardIssue[] {
     const loads = run && Array.isArray(el.resources) ? el.resources.filter((r): r is string => typeof r === 'string') : [];
     if (el.style !== undefined) {
       if (typeof el.style !== 'string') fail(`${at}/style`, 'an element\u2019s style is a string of CSS');
-      else for (const issue of checkStyle(el.style, loads)) fail(`${at}/style`, issue.message);
+      else {
+        for (const issue of checkStyle(el.style, loads)) fail(`${at}/style`, issue.message);
+        issues.push(...deadFallback(el.style, `${at}/style`, named));
+      }
     }
     if (run) {
       // What a script loads is named, and only from an https:// origin.
@@ -307,6 +337,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     // The markup is read as the renderer reads it: a template that does not parse, or that the markup policy refuses
     // (a script, a frame, an event handler, a URL off the element), is an error here — not something dropped unseen.
     for (const issue of checkTemplateMarkup(el.template, [])) fail(`${at}/template`, issue.message);
+    issues.push(...deadFallback(el.template, `${at}/template`, named));
     for (const ref of symbolReferences(el.template)) {
       if (ref.includes('{{') || (isObj(board.symbols) && ref in board.symbols) || el.template.includes(`id="${ref}"`) || el.template.includes(`id='${ref}'`)) continue;
       fail(`${at}/template`, `<use href="#${ref}">: no symbol "${ref}" — define it in symbols, or give a part of this template id="${ref}"`);
