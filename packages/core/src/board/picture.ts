@@ -1109,6 +1109,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       used += twelfths;
     }
     if (used < 12) throw new PictureError(at, `each row of a grid in a cell fills the cell — the last row takes ${used} of 12`);
+    // a cell that holds only the parts of an `each` has nothing in it until its list has items — one empty row, not none
+    if (rows.length === 0) rows.push([]);
     return rows;
   };
 

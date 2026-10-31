@@ -18,6 +18,13 @@ All notable changes to this package are documented here. The format follows
   tokens found); write the colour itself to keep it fixed, or leave the fallback out to follow the theme. A picture drawn as a quoted `url(…)` is
   an image, where the fallback is the colour drawn, and is left alone.
 
+### Fixed
+
+- **A grid in a cell that holds only the parts of an `each` no longer fails with a `TypeError`.** `{ "grid": ["pumps"], "span": 12 }` where `pumps` is an
+  `each` part has no cells until its list has items; the picture model read the first of its rows and threw, so `toViewDocument` — and the check a
+  board meets before it is saved, which draws with no items — stopped with a `TypeError` instead of drawing the cell empty. It is empty now, and fills
+  when the list does.
+
 ## [0.39.0] - 2026-10-31
 
 ### Added

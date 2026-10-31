@@ -488,6 +488,16 @@ describe('the picture model of a v2 board', () => {
     ]);
   });
 
+  it('draws nothing for a grid in a cell that holds only an each part with no items — it is not an error', () => {
+    const parts = { map: { as: 'stat', of: 'totals', show: 'output' }, pumps: { as: 'stat', each: 'pumps', title: '{{key}}', show: 'state' } };
+    const layout = { kind: 'grid', items: [['map', 8], { grid: ['pumps'], span: 4 }] } as Board['layout'];
+    const empty = view(board(parts, layout), { pumps: [] });
+    expect(empty.kind === 'grid' && empty.items.map(i => [i.id, i.span])).toEqual([['map', 8]]);
+    // the same board when the list has items: the cell fills with them
+    const filled = view(board(parts, layout), { pumps: ['P1', 'P2'] });
+    expect(filled.kind === 'grid' && filled.items.map(i => i.id)).toEqual(['map', 'pumps/P1', 'pumps/P2']);
+  });
+
   it('lays the items of a grid in a cell side by side, in rows that fill the cell', () => {
     const parts = {
       map: { as: 'stat', of: 'totals', show: 'output' }, a: { as: 'stat', of: 'totals', show: 'temp' },
