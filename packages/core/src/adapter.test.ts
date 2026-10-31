@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { resolveWidget, resolveWidgetReadings, secondsFromNow, applyValueMap, deriveValue, withItemFields, writeText } from './adapter';
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { Widget } from './view-document';
@@ -521,5 +521,31 @@ describe('a value map read against the clock', () => {
     expect(applyValueMap({ relativeTo: 'now', ranges: [{ max: 0, value: 'past' }] }, 'never', NOW)).toBe('never');
     // A map without it reads the number itself, as before.
     expect(applyValueMap({ ranges: [{ max: 0, value: 'low' }, { min: 0, value: 'high' }] }, 5, NOW)).toBe('high');
+  });
+
+  it('reads a list item against the same moment as the binding, however long the source takes to answer', async () => {
+    vi.useFakeTimers({ now: NOW });
+    try {
+      // The source answers an hour late: a clock read after the answer would put the item's time (30 minutes ahead) in the past.
+      const slow: Adapter = {
+        id: 'plant',
+        async resolve(): Promise<ResolvedBinding> {
+          vi.setSystemTime(NOW + 3_600_000);
+          return { value: [{ at: '2026-10-23T03:30:00Z' }], quality: 'live' };
+        },
+      };
+      const map = { relativeTo: 'now' as const, ranges: [{ max: 0, value: 'past' }, { min: 0, max: 3600, value: 'soon' }], otherwise: 'later' };
+      const widget: Widget = {
+        type: 'list',
+        props: { data: [] },
+        bindings: { data: { adapter: 'plant', ref: 'rows', itemFields: { when: { from: 'at', map } } } },
+      };
+      const resolved = await resolveWidget(widget, [slow]);
+      expect(resolved.props.data).toEqual([{ at: '2026-10-23T03:30:00Z', when: 'soon' }]);
+      // Given a moment, the item reads that one.
+      expect(withItemFields({ when: { from: 'at', map } }, [{ at: '2026-10-23T03:30:00Z' }], NOW + 3_600_000)).toEqual([{ at: '2026-10-23T03:30:00Z', when: 'past' }]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

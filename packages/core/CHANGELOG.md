@@ -24,6 +24,10 @@ All notable changes to this package are documented here. The format follows
   `each` part has no cells until its list has items; the picture model read the first of its rows and threw, so `toViewDocument` — and the check a
   board meets before it is saved, which draws with no items — stopped with a `TypeError` instead of drawing the cell empty. It is empty now, and fills
   when the list does.
+- **A list item's state that follows the clock reads the same moment as the binding.** A binding's own map and the fields its items gain
+  (`itemFields`) both read «now» — the moment the board is read. The items read a fresh clock after the source had answered, so a slow source
+  moved a session across a band edge («next» became «now») while the binding's state was still the earlier moment. Both read one moment now,
+  and `withItemFields` takes it as an optional third argument (the current time when omitted).
 
 ## [0.39.0] - 2026-10-31
 

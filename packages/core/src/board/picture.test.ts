@@ -45,7 +45,7 @@ function drawn(widget: Widget): Record<string, unknown> {
     if (!reading.ok) throw new Error(`${key}: ${reading.message}`);
     const read = binding.derive ? deriveValue(binding.derive, reading.value) : reading.value;
     const mapped = binding.map ? applyValueMap(binding.map, read, READ_AT) : read;
-    const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
+    const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped, READ_AT) : mapped;
     const value = binding.text !== undefined ? writeText(binding.text, gained) : gained;
     const path = key.split('.');
     let at: Record<string, unknown> = props;
