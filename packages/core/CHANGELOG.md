@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-31
+
 ### Added
 
 - **A field's state can follow the clock.** `"state": { "relative": ["past", -2700, "now", 1, "next", 2700, "later"] }` on a field that holds a time (ISO
