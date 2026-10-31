@@ -6,13 +6,21 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
-### Added
+## [0.38.0] - 2026-10-31
 
+### Added
 - **`ResolvedWidget.messages`** — what an adapter said about a binding that is not live (`ResolvedBinding.message`) now reaches the
   resolved widget, per prop path, and `describeQuality` writes it after the cause. A viewer's tooltip used to say only «Value not
   found»; with an adapter that explains (an HTTP reference says `the time field "/updatedAt" (observedAtPath) is not in the item`) it now says
   which part of the binding to fix. A binding whose `at` or `derive` finds nothing explains itself the same way. A message is one line
   of at most 160 characters. Adapters that serve the public leave `message` out, as before.
+- **`validateBoard` says a skin's `density` and `palette.ground` are not drawn yet** (as a `hint`) — both are accepted and checked but nothing
+  draws them, so a board that sets one looked the same without it.
+- **A status's `emphasis` reaches the cells of a `status-grid`.** The grid's cells took only the status's tone, so a status with `invert`, `hatch` or `blink` was drawn as a plain tint there. The picture now binds the status's emphasis to each cell (a `bar-list` row has none), and the widget library draws it from the release that gives a cell an `emphasis`.
+- **Advice for text a header shows as written.** A header's `kicker` and `subtitle` are fixed text — only its title reads
+  `{{field}}` — and its `clock` is `true` or left out. A `{{field}}` in a kicker or subtitle, or a `clock` that names a field, is
+  still a valid board, but `validateBoard` now says (as a `hint`) that the braces are drawn as they are and no clock is shown.
+  The schema's description of a read's `time` says it is a field of each item, and that a whole list's own time is `answerTime`.
 
 ### Changed
 
@@ -32,17 +40,6 @@ All notable changes to this package are documented here. The format follows
   every template element of the board, in a canvas and in a grid — and `frame` is each widget's `options.frame` where the part
   names none. A board with no skin is drawn as before. `palette.ground` (text on the board's own background) and `density` are
   still not drawn.
-
-### Added
-
-- **`validateBoard` says a skin's `density` and `palette.ground` are not drawn yet** (as a `hint`) — both are accepted and checked but nothing
-  draws them, so a board that sets one looked the same without it.
-- **A status's `emphasis` reaches the cells of a `status-grid`.** The grid's cells took only the status's tone, so a status with `invert`, `hatch` or `blink` was drawn as a plain tint there. The picture now binds the status's emphasis to each cell (a `bar-list` row has none), and the widget library draws it from the release that gives a cell an `emphasis`.
-
-- **Advice for text a header shows as written.** A header's `kicker` and `subtitle` are fixed text — only its title reads
-  `{{field}}` — and its `clock` is `true` or left out. A `{{field}}` in a kicker or subtitle, or a `clock` that names a field, is
-  still a valid board, but `validateBoard` now says (as a `hint`) that the braces are drawn as they are and no clock is shown.
-  The schema's description of a read's `time` says it is a field of each item, and that a whole list's own time is `answerTime`.
 
 ## [0.37.0] - 2026-10-30
 
