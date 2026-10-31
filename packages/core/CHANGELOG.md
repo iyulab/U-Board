@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A field's state can follow the clock.** `"state": { "relative": ["past", -2700, "now", 1, "next", 2700, "later"] }` on a field that holds a time (ISO
+  text, or epoch seconds or milliseconds) reads bands over the seconds from the time the board is read to that time — negative once it has passed —
+  so a timetable, a schedule or a departure board names a session «past», «now» or «next» without the data being rewritten to carry the answer. The
+  names are statuses like any other, so their tone, words and emphasis come from `statuses`. The time is taken once for a whole document when it is
+  resolved, so every part says the same; a value that is no time takes the last band's `otherwise`. `ValueMap` gains `relativeTo: "now"` and
+  `applyValueMap`, `resolveBindings`, `resolveWidgetReadings` and `stateOf` take the time (`Date.now()` when left out).
 - **A canvas can place the items of an `each` part by a rule.** `"place": { "tile": { "flow": { "cell": [114, 98], "columns": 7, "gap": [6, 52], "at": [16, 140] } } }`
   lays the items out in the order the data gives them, seven to a row, where a canvas had a coordinate for every item; with
   `"by": "<field>"` and `"boxes": { "columns": 4, "label": "{{key}}" }` the items are grouped by the field's value, each group in a labelled box

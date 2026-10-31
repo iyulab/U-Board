@@ -463,6 +463,9 @@ export interface ValueMap<V = unknown> {
   values?: Record<string, V>;
   ranges?: ValueRange<V>[];
   otherwise?: V;
+  /** `now`: the value is a time (ISO text, or epoch seconds or milliseconds) and the ranges are read over the seconds from the
+   *  time the value is resolved to it — negative once it has passed. Anything that is not a time takes `otherwise`. */
+  relativeTo?: 'now';
 }
 
 /** A band of numbers and the value a prop takes for it: from `min` up to but not including `max`,

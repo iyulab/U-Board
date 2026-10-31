@@ -11,7 +11,7 @@ import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
-import type { Board, CanvasLayout, DataPlace, FlowPlace, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
+import type { Board, CanvasLayout, DataPlace, FlowPlace, RelativeRule, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
 
 /** A weight's or an arrow's bands or map as the value map a connector binding takes: bands as ranges, a map as values
  *  and `otherwise`. */
@@ -100,6 +100,11 @@ interface DerivedQuery extends Query {
 export function isDataPlace(place: unknown): place is DataPlace {
   return typeof place === 'object' && place !== null && !Array.isArray(place) && Array.isArray((place as { at?: unknown }).at)
     && (place as { at: unknown[] }).at.every(f => typeof f === 'string');
+}
+
+/** Whether a field's state is read against the clock (`RelativeRule`): an object whose `relative` is the bands. */
+export function isRelativeRule(rule: unknown): rule is RelativeRule {
+  return typeof rule === 'object' && rule !== null && !Array.isArray(rule) && Array.isArray((rule as { relative?: unknown }).relative);
 }
 
 /** Whether a canvas's place for a part is a rule for its items (`FlowPlace`): an object whose `flow` is an object (an item called "flow" has a place that is an array). */
@@ -293,6 +298,15 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
 
   /** How a field's state colours and names a value: the status of each raw value, as a tone and as words. */
   const stateMaps = (rule: StateRule): StateMaps => {
+    if (isRelativeRule(rule)) {
+      // The same maps over the bands, read against the clock.
+      const maps = stateMaps(rule.relative);
+      const against = <V>(m: ValueMap<V> | undefined): ValueMap<V> | undefined => (m ? { ...m, relativeTo: 'now' as const } : undefined);
+      return {
+        named: against(maps.named)!, tone: against(maps.tone)!, status: against(maps.status)!,
+        ...(maps.emphasis ? { emphasis: against(maps.emphasis)! } : {}), ...(maps.glyph ? { glyph: against(maps.glyph)! } : {}),
+      };
+    }
     // "raw": the value already is a status name — a declared status, or a tone.
     const mapping: ValueMapping = rule === 'raw'
       ? { ...Object.fromEntries(Object.keys(statuses).map(n => [n, n])), '*': 'off' }
@@ -327,7 +341,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     for (const q of Object.values(data)) {
       for (const f of Object.values(q.fields ?? {})) {
         if (f.state === undefined) continue;
-        const words = f.state === 'raw' ? Object.keys(statuses) : Array.isArray(f.state) ? f.state.filter((w, i) => i % 2 === 0) : Object.values(f.state);
+        const bands = isRelativeRule(f.state) ? f.state.relative : f.state;
+        const words = bands === 'raw' ? Object.keys(statuses) : Array.isArray(bands) ? bands.filter((w, i) => i % 2 === 0) : Object.values(bands);
         for (const w of words) used.add(String(w));
       }
     }
@@ -720,7 +735,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
   const statusNames = (rule: StateRule): ValueMap<string> =>
     rule === 'raw'
       ? { values: Object.fromEntries([...Object.keys(statuses), ...TONES].map(n => [n, n])), otherwise: 'off' }
-      : mapOf(rule, w => w);
+      : isRelativeRule(rule) ? { ...mapOf(rule.relative, w => w), relativeTo: 'now' as const } : mapOf(rule, w => w);
 
   /** The data a part reads, for an item `key` of an `each` part or as its `of` says. */
   const readsOf = (part: Part, key?: string): Reads | undefined => {

@@ -64,11 +64,13 @@ export async function resolveDocument(doc: CanvasView, adapters: readonly Adapte
 export async function resolveDocument(doc: GridView, adapters: readonly Adapter[]): Promise<ResolvedGridView>;
 export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument>;
 export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument> {
+  // One time for the whole document: a state read against the time the document is resolved says the same for every part.
+  const now = Date.now();
   const resolve = <T extends Placed>(placed: readonly T[]) =>
     Promise.all(
       placed.map(async (p): Promise<Resolved<T>> => {
-        const { widget, readings } = await resolveWidgetReadings(p.widget, adapters);
-        const state = stateOf(p.states, readings, widget.quality);
+        const { widget, readings } = await resolveWidgetReadings(p.widget, adapters, now);
+        const state = stateOf(p.states, readings, widget.quality, now);
         return { ...p, widget, ...(state !== undefined && { state }), ...(isHighlighted(p.highlight, readings) && { highlighted: true as const }) };
       })
     );

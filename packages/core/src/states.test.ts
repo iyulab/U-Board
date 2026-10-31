@@ -8,6 +8,21 @@ const rule: StateRule = {
 };
 
 describe('stateOf', () => {
+  it('names a state from the clock when its map is read against it', () => {
+    const NOW = Date.parse('2026-10-23T03:00:00Z');
+    const timed: StateRule = {
+      from: 'data.at',
+      map: { relativeTo: 'now', ranges: [{ max: -2700, value: 'past' }, { min: -2700, max: 1, value: 'now' }, { min: 1, max: 2700, value: 'next' }], otherwise: 'later' },
+    };
+    const at = (iso: string) => stateOf(timed, { 'data.at': iso }, { 'data.at': 'live' }, NOW);
+    expect(at('2026-10-23T02:00:00Z')).toBe('past');
+    expect(at('2026-10-23T02:30:00Z')).toBe('now');
+    expect(at('2026-10-23T03:20:00Z')).toBe('next');
+    expect(at('2026-10-23T05:00:00Z')).toBe('later');
+    // A reading that is no time names the otherwise, never itself.
+    expect(at('soon')).toBe('later');
+  });
+
   it('names the state its map gives the reading of the binding it reads from', () => {
     expect(stateOf(rule, { 'data.value': 'Fault' }, { 'data.value': 'live' })).toBe('fault');
     expect(stateOf(rule, { 'data.value': 85 }, { 'data.value': 'live' })).toBe('hot');

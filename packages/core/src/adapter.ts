@@ -120,9 +120,10 @@ export async function resolveWidget(
  *  state is named from. */
 export async function resolveWidgetReadings(
   widget: Widget,
-  adapters: readonly Adapter[]
+  adapters: readonly Adapter[],
+  now: number = Date.now()
 ): Promise<{ widget: ResolvedWidget; readings: Record<string, unknown> }> {
-  const { values: props, quality, reasons, messages, observedAt, readings } = await resolveBindings({ ...widget.props }, widget.bindings, adapters);
+  const { values: props, quality, reasons, messages, observedAt, readings } = await resolveBindings({ ...widget.props }, widget.bindings, adapters, undefined, now);
   const resolved: ResolvedWidget = { type: widget.type, props, quality };
   if (Object.keys(reasons).length > 0) resolved.reasons = reasons;
   if (Object.keys(messages).length > 0) resolved.messages = messages;
@@ -152,7 +153,8 @@ export async function resolveBindings(
   values: Record<string, unknown>,
   bindings: Record<string, Binding> | undefined,
   adapters: readonly Adapter[],
-  accept: (path: string, value: unknown) => unknown = (_path, value) => value
+  accept: (path: string, value: unknown) => unknown = (_path, value) => value,
+  now: number = Date.now()
 ): Promise<ResolvedBindings> {
   const quality: Record<string, ConnectionQuality> = {};
   const reasons: Record<string, QualityReason> = {};
@@ -198,7 +200,7 @@ export async function resolveBindings(
             read = derived;
           }
           readings[propPath] = read;
-          const mapped = binding.map ? applyValueMap(binding.map, read) : read;
+          const mapped = binding.map ? applyValueMap(binding.map, read, now) : read;
           const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
           const value = accept(propPath, typeof binding.text === 'string' ? writeText(binding.text, gained) : gained);
           // A key that starts with `$` is a reading only: what a part draws around itself, not a prop of its widget.
@@ -224,12 +226,29 @@ export async function resolveBindings(
   return { values: props, quality, reasons, messages, observedAt, readings };
 }
 
+/**
+ * The seconds from `now` (epoch milliseconds) to a time: ISO text, or a number of epoch seconds (below 1e11) or milliseconds.
+ * Negative once the time has passed; `undefined` for anything that is not a time.
+ */
+export function secondsFromNow(value: unknown, now: number): number | undefined {
+  let at: number | undefined;
+  if (typeof value === 'number' && Number.isFinite(value)) at = Math.abs(value) < 1e11 ? value * 1000 : value;
+  else if (typeof value === 'string' && value.trim() !== '' && Number.isNaN(Number(value))) at = Date.parse(value);
+  else if (typeof value === 'string' && value.trim() !== '') at = Math.abs(Number(value)) < 1e11 ? Number(value) * 1000 : Number(value);
+  return at === undefined || Number.isNaN(at) ? undefined : (at - now) / 1000;
+}
+
 /** The value `map` gives `value` (`Binding.map`): the entry for the value's text when it is a
  * string, number, boolean or `null`; else the first range a numeric value falls in; else
  * `otherwise`; else the value unchanged. */
-export function applyValueMap(map: ValueMap, value: unknown): unknown {
+export function applyValueMap(map: ValueMap, value: unknown, now: number = Date.now()): unknown {
   // A document is not always validated before it is resolved; a map that is not one changes nothing.
   if (!isObject(map)) return value;
+  if (map.relativeTo === 'now') {
+    const seconds = secondsFromNow(value, now);
+    const range = seconds !== undefined && Array.isArray(map.ranges) ? map.ranges.find(r => inRange(r, seconds)) : undefined;
+    return range ? range.value : 'otherwise' in map ? map.otherwise : value;
+  }
   const key = value === null || ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : undefined;
   if (key !== undefined && isObject(map.values) && Object.hasOwn(map.values, key)) return map.values[key];
   const n = numericValue(value);

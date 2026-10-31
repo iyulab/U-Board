@@ -227,7 +227,11 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
 - **Mapping.** `state` and `names` take the same two forms: a map of raw values to names, `"*"` for anything else
   (`{ "trip": "down", "*": "off" }`), or bands of numbers — the name below the first number, then from each number up
   (`["ok", 70, "warn", 80, "alarm"]`). `state: "raw"` says the value already is a status name. A reading the mapping
-  names nothing for is in no status.
+  names nothing for is in no status. A `state` on a field that holds a time can follow the clock:
+  `{ "relative": ["past", -2700, "now", 1, "next", 2700, "later"] }` reads the bands over the seconds from the time the board is
+  read to the value (ISO text, or epoch seconds or milliseconds), negative once it has passed — here a session that began more
+  than 45 minutes ago is `past`, one that began within the last 45 is `now`, one that begins within 45 minutes is `next`, a later
+  one is `later`. The time is taken once for a whole document when it is resolved; a value that is no time is in no status.
 - **Fields of the items a field holds.** A field whose value is a list of objects (`{ "value": [{ "state": "run" }, …] }`) says what
   each field of those items means with `items` — the same `at` (relative to the item, `/state`), `names` and `state` a field of a
   read has. An element's `list` prop bound to that field (`"bind": { "items": "value" }`) reads every item with the words

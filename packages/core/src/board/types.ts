@@ -34,8 +34,15 @@ export interface Status {
  */
 export type ValueMapping = Record<string, string> | (string | number)[];
 
-/** How a field's value is doing, as a status name: `"raw"` when the value already is one, else a mapping. */
-export type StateRule = 'raw' | ValueMapping;
+/**
+ * A state that follows the clock: bands over the seconds from the time the board is read to the field's value — a time (ISO
+ * text, or epoch seconds or milliseconds) — negative once it has passed. `{ "relative": ["past", -2700, "now", 1, "next", 2700, "later"] }`
+ * reads «started more than 45 minutes ago: past; up to 45 minutes ago: now; starting within 45 minutes: next; later».
+ */
+export interface RelativeRule { relative: (string | number)[] }
+
+/** How a field's value is doing, as a status name: `"raw"` when the value already is one, else a mapping — or, for a time, a relative one. */
+export type StateRule = 'raw' | ValueMapping | RelativeRule;
 
 /** What a field of a data item means. The value itself stays as the source sends it. */
 export interface Field {

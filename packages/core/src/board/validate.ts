@@ -139,6 +139,12 @@ export function validateBoard(board: unknown): BoardIssue[] {
    * with the word below the first number. For a state, every word is a status.
    */
   const checkMapping = (m: unknown, at: string, what: 'state' | 'names') => {
+    // A state read against the clock: bands over the seconds from now to a time field's value.
+    if (what === 'state' && isObj(m) && Array.isArray(m.relative)) {
+      if (Object.keys(m).length !== 1) fail(at, 'a relative state is { "relative": ["past", -60, "now", 60, "next"] } — bands of the seconds from now to the time; nothing beside "relative"');
+      else checkMapping(m.relative, `${at}/relative`, 'state');
+      return;
+    }
     const word = (w: unknown, wordAt: string) => {
       if (typeof w !== 'string' || w === '') fail(wordAt, what === 'state' ? 'a state maps to a status name' : 'a name is a word');
       else if (what === 'state' && !isStatus(w)) fail(wordAt, `no status "${w}" — ${statusHint()}`);
@@ -156,7 +162,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
       for (const [raw, w] of Object.entries(m)) word(w, `${at}/${raw}`);
     } else {
       fail(at, what === 'state'
-        ? 'a state is "raw" (the value is a status), a map { "<raw>": "<status>", "*": … } or bands ["ok", 1, "warn", …]'
+        ? 'a state is "raw" (the value is a status), a map { "<raw>": "<status>", "*": … }, bands ["ok", 1, "warn", …] or, for a time, { "relative": ["past", -60, "now", 60, "next"] }'
         : 'names are a map { "<raw>": "<word>", "*": … } or bands ["low", 30, "high"]');
     }
   };

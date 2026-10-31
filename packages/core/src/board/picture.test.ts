@@ -44,7 +44,7 @@ function drawn(widget: Widget): Record<string, unknown> {
     const reading = readHttpRef(SOURCE[ref.path], ref, READ_AT);
     if (!reading.ok) throw new Error(`${key}: ${reading.message}`);
     const read = binding.derive ? deriveValue(binding.derive, reading.value) : reading.value;
-    const mapped = binding.map ? applyValueMap(binding.map, read) : read;
+    const mapped = binding.map ? applyValueMap(binding.map, read, READ_AT) : read;
     const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
     const value = binding.text !== undefined ? writeText(binding.text, gained) : gained;
     const path = key.split('.');
@@ -851,5 +851,40 @@ describe('items placed by a rule', () => {
     expect(isFlowPlace({ flow: [0, 0, 10, 10], P1: [0, 0] })).toBe(false);
     expect(isFlowPlace({ flow: { cell: [1, 1], columns: 1 } })).toBe(true);
     expect(() => toViewDocument(withPlace({ flow: { cell: [100, 50], columns: 2 } }))).toThrow(/give rowsOf/);
+  });
+});
+
+describe('a state that follows the clock', () => {
+  // The source answered at READ_AT; both pumps were updated 30 seconds before.
+  const withState = (rule: unknown): Board => {
+    const b = board({ pump: { as: 'status-card', each: 'pumps', title: '{{key}}', show: ['age'] } } as never, { kind: 'grid', items: ['pump'] });
+    b.data!.pumps = { ...pumps, fields: { ...pumps.fields, age: { at: '/updatedAt', state: rule as never } } };
+    return b;
+  };
+  const toneOf = (b: Board) => {
+    const doc = toViewDocument(b, { keysOf: () => ['P1'] });
+    const tone = (doc.kind === 'grid' ? doc.items : []).flatMap(i => ('widget' in i ? [i.widget] : []))[0]!.bindings!['data.tone']!;
+    return tone;
+  };
+
+  it('reads the bands over the seconds from the time the board is read to the value', () => {
+    const b = withState({ relative: ['idle', -300, 'ok', 0, 'warn'] });
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const tone = toneOf(b);
+    expect(tone.map).toMatchObject({ relativeTo: 'now', ranges: [{ max: -300, value: 'idle' }, { min: -300, max: 0, value: 'ok' }, { min: 0, value: 'warn' }] });
+    // 30 seconds before the read: within the second band.
+    expect(applyValueMap(tone.map!, '2026-10-23T03:00:00Z', READ_AT)).toBe('ok');
+    expect(applyValueMap(tone.map!, '2026-10-23T02:50:00Z', READ_AT)).toBe('idle');
+    expect(applyValueMap(tone.map!, '2026-10-23T03:05:00Z', READ_AT)).toBe('warn');
+    // Epoch seconds and milliseconds are times too; anything else is no time.
+    expect(applyValueMap(tone.map!, Date.parse('2026-10-23T03:00:00Z') / 1000, READ_AT)).toBe('ok');
+    expect(applyValueMap(tone.map!, Date.parse('2026-10-23T03:00:00Z'), READ_AT)).toBe('ok');
+    expect(applyValueMap(tone.map!, 'soon', READ_AT)).toBe('soon');
+  });
+
+  it('is refused where it is not bands', () => {
+    const issues = (rule: unknown) => validateBoard(withState(rule)).filter(i => !i.hint).map(i => [i.at, i.message]);
+    expect(issues({ relative: ['idle', 'ok'] })).toEqual([['/data/pumps/fields/age/state/relative', 'bands are [word, number, word, …] — a word, then a number and the word from it up']]);
+    expect(issues({ relative: ['idle', 0, 'ok'], raw: 'x' })).toEqual([['/data/pumps/fields/age/state', 'a relative state is { "relative": ["past", -60, "now", 60, "next"] } — bands of the seconds from now to the time; nothing beside "relative"']]);
   });
 });

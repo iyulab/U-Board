@@ -73,7 +73,19 @@ export function boardSchema(): Schema {
           digits: { type: 'integer', minimum: 0 },
           format: { type: 'string', description: 'A value format: "number:1", "percent", "time" …' },
           names: ref('mapping'),
-          state: { description: 'How the value is doing, as a status: "raw" when the value is one, else a mapping.', oneOf: [{ const: 'raw' }, ref('mapping')] },
+          state: {
+            description: 'How the value is doing, as a status: "raw" when the value is one, else a mapping — or, for a time, { "relative": bands } over the seconds from now to it (negative once it has passed).',
+            oneOf: [
+              { const: 'raw' },
+              ref('mapping'),
+              {
+                type: 'object',
+                required: ['relative'],
+                additionalProperties: false,
+                properties: { relative: { type: 'array', minItems: 3, items: { type: ['string', 'number'] }, description: 'Bands over the seconds from now to the value: the status below the first number, then each number and the status from it up — ["past", -2700, "now", 1, "next", 2700, "later"].' } },
+              },
+            ],
+          },
           derive: {
             type: 'object',
             required: ['op'],

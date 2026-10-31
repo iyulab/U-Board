@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveWidget, resolveWidgetReadings, applyValueMap, deriveValue, withItemFields, writeText } from './adapter';
+import { resolveWidget, resolveWidgetReadings, secondsFromNow, applyValueMap, deriveValue, withItemFields, writeText } from './adapter';
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { Widget } from './view-document';
 
@@ -497,3 +497,29 @@ describe('value maps', () => {
   });
 });
 
+
+describe('a value map read against the clock', () => {
+  const NOW = Date.parse('2026-10-23T03:00:00Z');
+  it('tells the seconds from now to a time, negative once it has passed', () => {
+    expect(secondsFromNow('2026-10-23T03:01:00Z', NOW)).toBe(60);
+    expect(secondsFromNow('2026-10-23T02:59:00Z', NOW)).toBe(-60);
+    expect(secondsFromNow(NOW / 1000 + 30, NOW)).toBe(30);
+    expect(secondsFromNow(NOW + 5000, NOW)).toBe(5);
+    expect(secondsFromNow(String(NOW / 1000 - 10), NOW)).toBe(-10);
+    expect(secondsFromNow('soon', NOW)).toBeUndefined();
+    expect(secondsFromNow('', NOW)).toBeUndefined();
+    expect(secondsFromNow(null, NOW)).toBeUndefined();
+    expect(secondsFromNow(true, NOW)).toBeUndefined();
+  });
+
+  it('applies the ranges over those seconds, and the value passes where it is no time and nothing else is named', () => {
+    const map = { relativeTo: 'now' as const, ranges: [{ max: 0, value: 'past' }, { min: 0, max: 600, value: 'soon' }], otherwise: 'later' };
+    expect(applyValueMap(map, '2026-10-23T02:00:00Z', NOW)).toBe('past');
+    expect(applyValueMap(map, '2026-10-23T03:05:00Z', NOW)).toBe('soon');
+    expect(applyValueMap(map, '2026-10-23T04:00:00Z', NOW)).toBe('later');
+    expect(applyValueMap(map, 'never', NOW)).toBe('later');
+    expect(applyValueMap({ relativeTo: 'now', ranges: [{ max: 0, value: 'past' }] }, 'never', NOW)).toBe('never');
+    // A map without it reads the number itself, as before.
+    expect(applyValueMap({ ranges: [{ max: 0, value: 'low' }, { min: 0, value: 'high' }] }, 5, NOW)).toBe('high');
+  });
+});

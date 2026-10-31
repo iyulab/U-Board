@@ -11,12 +11,13 @@ import type { StateRule } from './view-document.js';
 export function stateOf(
   rule: StateRule | undefined,
   readings: Readonly<Record<string, unknown>>,
-  quality: Readonly<Record<string, ConnectionQuality>>
+  quality: Readonly<Record<string, ConnectionQuality>>,
+  now: number = Date.now()
 ): string | undefined {
   if (!rule || typeof rule.from !== 'string' || typeof rule.map !== 'object' || rule.map === null) return undefined;
   const read = quality[rule.from];
   if (read === undefined || read === 'disconnected' || !Object.hasOwn(readings, rule.from)) return undefined;
   // `otherwise` is always present here, so a value the map does not name gives `undefined` rather than passing through.
-  const named = applyValueMap({ ...rule.map, otherwise: rule.map.otherwise }, readings[rule.from]);
+  const named = applyValueMap({ ...rule.map, otherwise: rule.map.otherwise }, readings[rule.from], now);
   return typeof named === 'string' && named !== '' ? named : undefined;
 }
