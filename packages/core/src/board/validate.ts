@@ -53,6 +53,8 @@ const PROP_TYPES = ['number', 'string', 'boolean', 'list', 'object'];
 
 /** `{{…}}` in a text: the name inside, as written. */
 const HOLE = /\{\{([^}]*)\}\}/g;
+/** The chart kinds whose value axis `echarts` reaches (`yAxis`, or `xAxis` for a horizontal bar) — where a `max` / `min` has nowhere else to go. */
+const VALUE_AXIS_KINDS: ReadonlySet<string> = new Set(['chart.bar', 'chart.line', 'chart.area']);
 
 /** What a link has (`Link`). */
 const LINK_KEYS = ['from', 'to', 'of', 'show', 'label', 'tone', 'route', 'width', 'weight', 'dash', 'arrow'] as const;
@@ -421,7 +423,11 @@ export function validateBoard(board: unknown): BoardIssue[] {
         reportedPresetOptions.add(keyAt);
       }
       const word = Object.entries(kind.stands ?? {}).find(([, widgetWord]) => widgetWord === key)?.[0];
-      fail(keyAt, word !== undefined ? `"${key}" is the widget's name for it — a ${kind.kind} writes "${word}"` : `"${key}" is not an option — ${offered}`);
+      // A chart takes no `max` / `min`: the end of its value axis is the chart library's own setting, reached through `echarts`.
+      const axisEnd = (key === 'max' || key === 'min') && VALUE_AXIS_KINDS.has(kind.kind)
+        ? `the end of a ${kind.kind}'s value axis is set through "echarts": { "yAxis": { "${key}": … } } ("xAxis" for a horizontal bar); `
+        : '';
+      fail(keyAt, word !== undefined ? `"${key}" is the widget's name for it — a ${kind.kind} writes "${word}"` : `"${key}" is not an option — ${axisEnd}${offered}`);
     }
   };
 

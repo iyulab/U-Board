@@ -16,6 +16,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- `validateBoard` tells a `chart.bar` · `chart.line` · `chart.area` written with `max` or `min` where the end of its value axis is set — through `echarts`: `{ "yAxis": { "max": 100 } }` (`xAxis` for a horizontal bar). The message used to list the chart's options and stop, and the way to fix it was to delete the `max`, so the board passed with the scale it meant to fix gone.
 - `validateBoard` says what a meter's `min` / `max` written as a field name gets wrong — «a number written in the board — a meter's end is not read from a field» — instead of the bare «"max" is a number». Writing the end as another field's name (`"max": "capacity"`) is the natural first try and the one thing a meter's end cannot be.
 
 ### Fixed

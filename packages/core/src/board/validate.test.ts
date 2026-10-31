@@ -285,6 +285,18 @@ describe('validateBoard', () => {
     expect(hints({ density: 'compact', palette: { ground: '#111' } })).toEqual(['/board/skin/density', '/board/skin/palette/ground']);
   });
 
+  it("tells a chart's max / min where the end of its value axis is set", () => {
+    const parts = (as: string, extra: Record<string, unknown> = {}) => canvas({ c: { as, of: 'equipment', x: 'name', y: 'load', max: 100, ...extra } });
+    for (const as of ['chart.bar', 'chart.line', 'chart.area']) {
+      const [issue] = issues(parts(as));
+      expect(issue, as).toContain(`/parts/c/max: "max" is not an option — the end of a ${as}'s value axis is set through "echarts": { "yAxis": { "max": … } } ("xAxis" for a horizontal bar); options of a ${as}: x, y,`);
+    }
+    expect(issues(canvas({ c: { as: 'chart.bar', of: 'equipment', x: 'name', y: 'load', min: 0 } }))[0]).toContain('"yAxis": { "min": … }');
+    // a chart kind without a value axis of that kind, and a kind that does take `max`, are not told
+    expect(issues(parts('chart.pie'))[0]).toBe('/parts/c/max: "max" is not an option — options of a chart.pie: x, y, start, end, label, name, value, group, color, size, task, category, donut, colors, legend, animate, showLabel, echarts');
+    expect(issues(canvas({ g: { as: 'gauge', of: 'totals', show: 'load', max: 120 } }))).toEqual([]);
+  });
+
   it('holds a skin to colours, font names and a radius — nothing the widgets\' CSS would read as a url or a rule', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const at = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message.slice(0, 32)}`);
