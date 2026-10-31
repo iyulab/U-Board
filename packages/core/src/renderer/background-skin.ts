@@ -17,8 +17,9 @@ const escapeXml = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, 
 export function skinBackground(src: string, skin: ViewSkin | undefined): string {
   if (skin === undefined) return src;
   const encoded = SVG_DATA.exec(src);
-  // a percent-encoded picture shows whether it asks (`var(`) without being decoded; a base64 one has to be read
-  if (encoded === null || (!encoded[1] && !src.includes('var('))) return src;
+  // a percent-encoded picture shows whether it asks (`var(`, or `var%28` where the encoder escaped the parenthesis) without being
+  // decoded; a base64 one has to be read
+  if (encoded === null || (!encoded[1] && !/var(\(|%28)/i.test(src))) return src;
   const tokens = skinTokens(skin);
   if (Object.keys(tokens).length === 0) return src;
   let text: string;

@@ -14,6 +14,12 @@ describe('skinBackground', () => {
     expect(out).toContain('<text fill="#111">x</text>');
   });
 
+  it('reads a picture whose encoder escaped the parentheses', () => {
+    const escaped = `data:image/svg+xml,${encodeURIComponent(svg('<rect fill="var(--u-widget-bg, #f6f4ef)"/>')).replace(/\(/g, '%28').replace(/\)/g, '%29')}`;
+    expect(escaped).toContain('var%28');
+    expect(text(skinBackground(escaped, { palette: { paper: '#102030' } }))).toContain('<rect fill="#102030"/>');
+  });
+
   it('reads a fallback that is itself a colour function', () => {
     const rgba = uri(svg('<rect fill="var(--u-widget-bg, rgba(246, 244, 239, .9))"/><rect fill="var(--u-widget-border, hsl(0 0% 50%))"/>'));
     const out = text(skinBackground(rgba, { palette: { paper: '#102030' } }));
