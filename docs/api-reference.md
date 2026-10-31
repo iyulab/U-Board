@@ -140,6 +140,13 @@ separated by commas (`"Noto Sans KR", sans-serif`); a radius is a number of pixe
 is none of these, and the viewer leaves such a value out — a skin never carries a `url()` or a rule into the page's CSS. A skin and
 its palette are objects with the keys above; `validateBoard` also names a skin written as anything else (a frame's name goes in `frame`) and a key they do not have.
 
+A background picture is drawn as an image, which reads no CSS variables, so it follows the skin by naming the widgets' own tokens with
+the colour it has by itself as the fallback: `fill="var(--u-widget-bg, #f6f4ef)"` (`--u-widget-bg` is `paper`, `--u-widget-text` `ink`,
+`--u-widget-text-secondary` `muted`, `--u-widget-border` `rule`, `--u-widget-font-family` `font`). Drawn on its own the picture shows the
+fallback; when the board's skin names that token, the viewer writes the skin's value in place of the whole `var(…)` before drawing. Only a
+picture the board carries (`data:image/svg+xml`) can be read — one at an address is drawn as it is — and a picture that names no token is
+untouched.
+
 ### `statuses`
 
 ```ts

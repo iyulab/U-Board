@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A background picture follows the board's skin.** A skin's palette reached widgets and template elements but not the background — the
+  largest part of what a board paints, drawn as an image that reads no CSS variables — so changing the skin moved a small share of the
+  picture. A picture that writes a colour as a widget token with its own colour as the fallback, `fill="var(--u-widget-bg, #f6f4ef)"`, is
+  now drawn with the skin's value where the skin names that token, and with its own colour otherwise (drawn on its own, it is the same
+  picture). Pictures at an address and pictures that name no token are untouched; the picture is still an image, so it runs no script and
+  loads nothing.
 - **A status card's `meter` reads the ends of its range from fields of the item.** `meter: { "field": "here", "max": "capacity" }` draws
   the value against a capacity the data carries («now / total» — occupancy, usage, stock against target); `min` takes a field name the
   same way. This is the convention a gauge's `max` already had, so one word means the same in both. A number stays the end itself, and

@@ -5,7 +5,7 @@ import { toCanvasKit } from './to-canvas-kit';
 import { NodeFrame, type NodeFrameProps } from './node-frame';
 import type { ResolvedCanvasView, ResolvedConnector } from '../resolve-document';
 import type { ResolvedWidget } from '../adapter';
-import type { Connector } from '../view-document';
+import type { Connector, ViewSkin } from '../view-document';
 import { KO_LABELS } from '../labels-ko';
 
 /** What a node's overlay draws: its `NodeFrame`, expanded one level so the frame's own elements can be read. */
@@ -120,6 +120,14 @@ describe('toCanvasKit', () => {
     expect(edge).not.toHaveProperty('stroke');
     expect(edge.fill).toBe('#eef');
     expect(ghost.fill).toBe('transparent');
+  });
+
+  it('draws a background picture in the skin’s colours where the picture names the skin’s tokens', () => {
+    const src = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"><rect fill="var(--u-widget-bg, #f6f4ef)"/></svg>')}`;
+    const background = { image: { src, width: 800, height: 600 } };
+    const drawn = (skin?: ViewSkin) => toCanvasKit({ ...doc({ background }), ...(skin && { skin }) }).scene.getObjects()[0] as unknown as { src: string };
+    expect(decodeURIComponent(drawn({ palette: { paper: '#102030' } }).src)).toContain('<rect fill="#102030"/>');
+    expect(drawn().src).toBe(src);
   });
 
   it('adds no scene objects for a document with no background, decorations, or connectors', () => {

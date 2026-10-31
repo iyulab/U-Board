@@ -19,6 +19,7 @@ import type { ResolvedCanvasView } from '../resolve-document.js';
 import { sizedNodes } from '../node-size.js';
 import { DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';
 import { mayLoadBackground } from './background-media.js';
+import { skinBackground } from './background-skin.js';
 import { decorationObjects } from './decoration-drawing.js';
 import { NodeFrame } from './node-frame.js';
 import { captionObjects, connectorObjects, placeOnCanvas } from './connector-drawing.js';
@@ -70,7 +71,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
       y: 0,
       width: doc.background.image.width,
       height: doc.background.image.height,
-      src: doc.background.image.src,
+      src: skinBackground(doc.background.image.src, doc.skin),
     });
   }
 
