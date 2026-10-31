@@ -97,6 +97,8 @@ export interface NodeFrameProps {
   state?: string;
   /** How each state is shown, by name — the part’s `states.looks`. */
   looks?: Record<string, StateLook>;
+  /** The part is marked out from the others like it (`Placed.highlight`) — a ring in the board's accent around it, apart from its state. */
+  highlighted?: boolean;
   /** What a click on the part does (a board’s `click` trigger) — the frame then is a button, Enter and Space included. */
   onActivate?: () => void;
   /** An event the part's element raised (`ElementView`'s `onEvent`). */
@@ -120,7 +122,7 @@ export interface NodeFrameProps {
  * When it has states, the one it is in is named on it and drawn by its look around the frame — never in place of the
  * quality’s border.
  */
-export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, onActivate, onElementEvent, elementEvents, name }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, highlighted, onActivate, onElementEvent, elementEvents, name }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -137,6 +139,7 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
         position: 'relative', width: '100%', height: '100%', ...frameStyle,
         ...(look?.outline && { boxShadow: `0 0 0 3px ${drawingColor(look.outline, appearance ?? 'light', accent)}` }),
         ...(look?.hidden && { visibility: 'hidden' as const }),
+        ...(highlighted && { outline: `3px solid ${drawingColor('accent', appearance ?? 'light', accent)}`, outlineOffset: 2 }),
         ...(onActivate && { cursor: 'pointer' }),
       }}
       {...(onActivate && {
@@ -154,6 +157,7 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
       {...(nodeId !== undefined && { 'data-node-id': nodeId })}
       {...(quality && quality !== 'live' && { 'data-quality': quality })}
       {...(state !== undefined && { 'data-state': state })}
+      {...(highlighted && { 'data-highlighted': '' })}
     >
       {element !== undefined ? (
         <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} skin={skin} symbols={symbols} onEvent={onElementEvent} events={elementEvents} />

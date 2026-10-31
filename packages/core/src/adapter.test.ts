@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveWidget, applyValueMap, deriveValue, withItemFields, writeText } from './adapter';
+import { resolveWidget, resolveWidgetReadings, applyValueMap, deriveValue, withItemFields, writeText } from './adapter';
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { Widget } from './view-document';
 
@@ -45,6 +45,23 @@ describe('resolveWidget', () => {
 
     expect(resolved.props).toEqual({ label: 'Pump A', value: 'running' });
     expect(resolved.quality).toEqual({ value: 'live' });
+  });
+
+  it('reads a `$` key without writing it into the props or saying anything about the widget’s own quality', async () => {
+    const source = new InMemoryAdapter('cmms', { 'pump-a.state': { value: 'running', quality: 'live' }, 'pump-a.current': { value: true, quality: 'live' } });
+    const widget: Widget = {
+      type: 'uw-status',
+      props: { label: 'Pump A' },
+      bindings: { value: { adapter: 'cmms', ref: 'pump-a.state' }, $highlight: { adapter: 'cmms', ref: 'pump-a.current' } },
+    };
+    const { widget: resolved, readings } = await resolveWidgetReadings(widget, [source]);
+    expect(resolved.props).toEqual({ label: 'Pump A', value: 'running' });
+    expect(resolved.quality).toEqual({ value: 'live' });
+    expect(readings).toMatchObject({ $highlight: true, value: 'running' });
+    // Not answered: no reading, and still nothing about the widget's quality.
+    const unanswered = await resolveWidgetReadings({ ...widget, bindings: { value: widget.bindings!.value!, $highlight: { adapter: 'cmms', ref: 'missing' } } }, [source]);
+    expect(unanswered.readings).not.toHaveProperty('$highlight');
+    expect(unanswered.widget.quality).toEqual({ value: 'live' });
   });
 
   it('reads a field inside the value an adapter resolved with "at", and nothing there as an address it does not have', async () => {

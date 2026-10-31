@@ -201,7 +201,8 @@ export async function resolveBindings(
           const mapped = binding.map ? applyValueMap(binding.map, read) : read;
           const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped) : mapped;
           const value = accept(propPath, typeof binding.text === 'string' ? writeText(binding.text, gained) : gained);
-          if (value !== undefined) setPath(props, propPath, value);
+          // A key that starts with `$` is a reading only: what a part draws around itself, not a prop of its widget.
+          if (value !== undefined && !propPath.startsWith('$')) setPath(props, propPath, value);
         }
         quality[propPath] = resolved.quality;
         if (resolved.reason && resolved.quality !== 'live') reasons[propPath] = resolved.reason;
@@ -212,6 +213,14 @@ export async function resolveBindings(
       }
     })
   );
+  // A reading-only key says nothing about how current the widget's own values are.
+  for (const [propPath] of bindingEntries) {
+    if (!propPath.startsWith('$')) continue;
+    delete quality[propPath];
+    delete reasons[propPath];
+    delete messages[propPath];
+    delete observedAt[propPath];
+  }
   return { values: props, quality, reasons, messages, observedAt, readings };
 }
 

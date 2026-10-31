@@ -66,6 +66,25 @@ describe('resolveDocument', () => {
     });
   });
 
+  it('marks a node highlighted while its highlight reading says yes, and leaves it unmarked otherwise', async () => {
+    const source = new InMemoryAdapter('cmms', {
+      yes: { value: true, quality: 'live' }, text: { value: 'true', quality: 'live' }, one: { value: 1, quality: 'live' },
+      no: { value: false, quality: 'live' }, zero: { value: 0, quality: 'live' }, word: { value: 'running', quality: 'live' },
+    });
+    const node = (id: string, ref: string) => ({
+      id, x: 0, y: 0, width: 10, height: 10, anchored: false,
+      widget: { type: 'status', props: {}, bindings: { $highlight: { adapter: 'cmms', ref } } },
+      highlight: { from: '$highlight' },
+    });
+    const refs = ['yes', 'text', 'one', 'no', 'zero', 'word', 'missing'];
+    const doc: CanvasView = { kind: 'canvas', background: {}, connectors: [], nodes: refs.map(ref => node(ref, ref)) };
+    const resolved = await resolveDocument(doc, [source]);
+    expect(resolved.nodes.filter(n => n.highlighted).map(n => n.id)).toEqual(['yes', 'text', 'one']);
+    // A node without a highlight rule is never marked, whatever it reads.
+    const plain = await resolveDocument({ ...doc, nodes: [{ ...node('yes', 'yes'), highlight: undefined }] }, [source]);
+    expect(plain.nodes[0]!.highlighted).toBeUndefined();
+  });
+
   it('passes the background through, and an unbound connector as it is', async () => {
     const doc: CanvasView = {
       kind: 'canvas',

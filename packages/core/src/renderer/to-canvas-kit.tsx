@@ -91,7 +91,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     width: node.width,
     height: node.height,
     // A widget takes its node's box exactly — the box the author drew is the layout.
-    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} elementEvents={listened?.get(node.id)} name={node.caption} />,
+    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} highlighted={node.highlighted} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} elementEvents={listened?.get(node.id)} name={node.caption} />,
   }));
   for (const placed of placeOnCanvas(nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 

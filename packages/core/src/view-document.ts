@@ -24,6 +24,10 @@ export interface Placed {
   /** The states it can be in, read from one of its widget’s bindings, and how each is shown — see `StateRule`.
    *  Absent: it has no states. */
   states?: StateRule;
+  /** The reading (a key of `widget.bindings`, starting with `$` — a reading only, no prop of the widget) that marks the part
+   *  out from the others like it while it is true: a ring around the frame, apart from the states it is in and the colour
+   *  they give. Absent: nothing marks it. */
+  highlight?: { from: string };
 }
 
 /**

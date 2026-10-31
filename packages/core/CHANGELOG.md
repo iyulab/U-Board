@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **`highlight` marks one item out from the others, apart from its status.** A part that reads one item takes `"highlight": "<field>"`, a
+  boolean field of the item; while it is true (`true`, the text `true`, or a number other than 0) a ring in the board's accent is drawn
+  around the part. A status takes the colour and its emphasis, and a part has one status, so «the one being looked at» had no place that
+  did not mix with it. The reading is made beside the widget's own (`Placed.highlight`, resolved to `highlighted`); a binding key that starts
+  with `$` is a reading only, written into no prop and saying nothing about how current the widget's values are. `validateBoard` refuses
+  it on a part that reads no single item.
 - **A background picture follows the board's skin.** A skin's palette reached widgets and template elements but not the background — the
   largest part of what a board paints, drawn as an image that reads no CSS variables — so changing the skin moved a small share of the
   picture. A picture that writes a colour as a widget token with its own colour as the fallback, `fill="var(--u-widget-bg, #f6f4ef)"`, is

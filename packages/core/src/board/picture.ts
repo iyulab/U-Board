@@ -366,7 +366,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
 
   const widgetFor = (raw: Part, at: string, reads?: { query: string; item?: string }): Widget => {
     const part = resolve(raw);
-    const { as, use: _use, of: _of, each: _each, title, show, ...options } = part;
+    const { as, use: _use, of: _of, each: _each, title, show, highlight, ...options } = part;
     const kind = partKind(as!)!;
     const fields = show === undefined ? [] : Array.isArray(show) ? show : [show];
     const query = reads?.query;
@@ -392,6 +392,12 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       bindings[key] = { ...readFor(query, item, field, at), ...(map ? { map } : {}) };
     };
     const field = (name: string) => fieldOf(query, name);
+    // `highlight` marks one item out from the others like it: the field's value, read beside the widget's own and drawn as a ring
+    // around its frame, not as a prop of the widget (`$` — a reading only).
+    if (highlight !== undefined) {
+      if (typeof highlight !== 'string' || item === undefined) throw new PictureError(`${at}/highlight`, '"highlight" names a boolean field of one item — the part reads one: "of": "<data>[<key>]", or "each"');
+      bind('$highlight', highlight);
+    }
     const formatOf = (f: Field) => f.format ?? (f.digits !== undefined ? `number:${f.digits}` : undefined);
     /** A field's value bound at `key`, in its words when it names them. */
     const bindValue = (key: string, name: string) => bind(key, name, field(name).names ? mapOf(field(name).names!, w => w) : undefined);
@@ -1098,6 +1104,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     // A node by the part it draws: its id past a canvas cell's prefix — a part, or an item of an `each` part.
     const nodes = new Map(placedIn(doc).map(placed => [placed.id.slice(placed.id.lastIndexOf(':') + 1), placed]));
     for (const [id, placed] of nodes) {
+      if (placed.widget.bindings?.['$highlight'] !== undefined) placed.highlight = { from: '$highlight' };
       const raw = board.parts[id.split('/')[0]!];
       if (raw === undefined) continue;
       const part = resolve(raw);

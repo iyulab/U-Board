@@ -133,6 +133,7 @@ export function boardSchema(): Schema {
           each: { type: 'string', description: 'A data list: one part per item, ids <part>/<key>. Inside a group made per item: a pointer ("/assets") — one part per item of the list in the group’s item, ids <part>/<place in the list>.' },
           title: { type: 'string', description: '{{field}} reads a field of what the part shows, {{key}} its item.' },
           show: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
+          highlight: { type: 'string', description: 'A boolean field of the item the part reads: while it is true, a ring marks this one out from the others, apart from its status.' },
           size,
           parts: map(ref('part')),
           place: map(ref('place')),

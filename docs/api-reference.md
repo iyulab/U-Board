@@ -266,7 +266,9 @@ interface Part {
 A part never says where it is — the layout does. `{{field}}` in a title or a label reads a field of what the part
 reads, `{{key}}` its item's key. `presets` hold settings parts share (`use`). `each: "<data>"` makes one part per item
 of a list, with the ids `<part>/<key>`; it takes no `of`, and the layout places it once — a grid lays out its items in
-order, a canvas places them item by item inside its entry.
+order, a canvas places them item by item inside its entry. `highlight: "<field>"` marks one item out from the others like it,
+apart from its status: while that field of the item the part reads is true (`true`, the text `true`, or a number other than 0),
+a ring in the board's accent is drawn around the part. It needs a part that reads one item — `"of": "<data>[<key>]"`, or `each`.
 
 The kinds come from three places, listed with their options as `PART_KINDS` (`partKind(as)` finds one):
 

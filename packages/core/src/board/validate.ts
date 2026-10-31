@@ -37,7 +37,7 @@ const list = (names: Iterable<string>, max = 12) => {
 };
 
 /** The keys every part may have, whatever its kind. */
-const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show'] as const;
+const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show', 'highlight'] as const;
 
 /** The spans (twelfths) that take whole columns of a cell `cell` columns wide. */
 const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i + 1).filter(s => (cell * s) % 12 === 0).map(String));
@@ -386,6 +386,13 @@ export function validateBoard(board: unknown): BoardIssue[] {
     if (kind.kind === 'header') checkHeaderOptions(part, at);
     checkOptions(raw, part, kind, at);
     if (kind.kind === 'status-card' && part.meter !== undefined) checkMeter(part.meter, `${at}/meter`);
+    // `highlight` marks one item out from the others like it, apart from its status: a boolean field of the item the part reads.
+    if (part.highlight !== undefined) {
+      const wholeList = part.each === undefined && typeof part.of === 'string' && !/\[[^\]]+\]$/.test(part.of);
+      if (typeof part.highlight !== 'string') fail(`${at}/highlight`, '"highlight" names a boolean field of the item the part reads');
+      else if (kind.of === 'no' || kind.kind === 'group') fail(`${at}/highlight`, `a ${kind.kind} marks no item — "highlight" is for a part that reads one item`);
+      else if (wholeList || reads === null) fail(`${at}/highlight`, '"highlight" marks one item — the part reads one: "of": "<data>[<key>]", or "each"');
+    }
     if (kind.kind === 'stat' && part.trend !== undefined && typeof part.trend !== 'string') fail(`${at}/trend`, '"trend" names a field of the item holding its recent values, a list of numbers');
     // A `state` option names the field whose state colours the rows (or the card): it needs a state to give.
     if (part.state !== undefined && kind.own.includes('state')) {

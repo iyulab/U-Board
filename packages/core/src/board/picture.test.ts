@@ -11,8 +11,8 @@ import { validateBoard } from './validate.js';
 const SOURCE: Record<string, unknown> = {
   '/plant/pumps': {
     value: [
-      { id: 'P1', line: 'L1', state: 'run', flow: 41.5, rpm: 1450, updatedAt: '2026-10-23T03:00:00Z' },
-      { id: 'P2', line: 'L1', state: 'trip', flow: 0, rpm: 0, updatedAt: '2026-10-23T03:00:00Z' },
+      { id: 'P1', line: 'L1', state: 'run', flow: 41.5, rpm: 1450, current: true, updatedAt: '2026-10-23T03:00:00Z' },
+      { id: 'P2', line: 'L1', state: 'trip', flow: 0, rpm: 0, current: false, updatedAt: '2026-10-23T03:00:00Z' },
     ],
   },
   // Features, as a map service answers: what an item is about is under its "properties".
@@ -38,6 +38,8 @@ const READ_AT = Date.parse('2026-10-23T03:00:30Z');
 function drawn(widget: Widget): Record<string, unknown> {
   const props = structuredClone(widget.props ?? {}) as Record<string, unknown>;
   for (const [key, binding] of Object.entries(widget.bindings ?? {})) {
+    // A `$` key is a reading beside the widget, not a prop of it.
+    if (key.startsWith('$')) continue;
     const ref = binding.ref as HttpRef;
     const reading = readHttpRef(SOURCE[ref.path], ref, READ_AT);
     if (!reading.ok) throw new Error(`${key}: ${reading.message}`);
@@ -245,6 +247,32 @@ describe('the picture model of a v2 board', () => {
     const p2 = nodeOf(doc, 'P2').widget;
     expect(p2.props).toMatchObject({ data: { meter: { min: 5, max: 60 } } });
     expect(Object.keys(p2.bindings ?? {})).not.toContain('data.meter.max');
+  });
+
+  it('marks one item out with a highlight field, read beside the widget and never written into it', () => {
+    const doc = view(board(
+      {
+        pump: { as: 'status-card', each: 'pumps', title: 'Pump {{key}}', show: ['state'], highlight: 'current' },
+        one: { as: 'stat', of: 'pumps[P2]', show: 'flow', highlight: 'current' },
+        plain: { as: 'stat', of: 'pumps[P1]', show: 'flow' },
+      },
+      { kind: 'canvas', size: [800, 400], place: { pump: { P1: [0, 0, 180, 160], P2: [200, 0, 180, 160] }, one: [400, 0, 150, 100], plain: [400, 120, 150, 100] } },
+    ), { pumps: ['P1', 'P2'] });
+    const p1 = nodeOf(doc, 'pump/P1');
+    expect(p1.highlight).toEqual({ from: '$highlight' });
+    expect(p1.widget.bindings!['$highlight']!.ref).toMatchObject({ path: '/plant/pumps', valuePath: '/current' });
+    // The widget's own props do not hold it — the reading is beside it.
+    expect(JSON.stringify(p1.widget.props)).not.toContain('highlight');
+    expect(nodeOf(doc, 'pump/P2').highlight).toEqual({ from: '$highlight' });
+    expect(nodeOf(doc, 'one').highlight).toEqual({ from: '$highlight' });
+    expect(nodeOf(doc, 'plain').highlight).toBeUndefined();
+    expect(nodeOf(doc, 'plain').widget.bindings).not.toHaveProperty('$highlight');
+  });
+
+  it('refuses a highlight on a part that reads no single item', () => {
+    const whole = board({ s: { as: 'stat', of: 'totals', show: 'temp', highlight: 'current' } }, { kind: 'canvas', size: [100, 100], place: { s: [0, 0] } });
+    expect(validateBoard(whole)).toEqual([{ at: '/parts/s/highlight', message: '"highlight" marks one item — the part reads one: "of": "<data>[<key>]", or "each"' }]);
+    expect(() => toViewDocument(whole)).toThrow(/"highlight" names a boolean field of one item/);
   });
 
   it('reads a request time and a fixed filter with the item', () => {

@@ -8,6 +8,20 @@ const frame = (props: Partial<NodeFrameProps>) => NodeFrame({ widget, now: 0, ..
 const announced = (el: ReactElement<Record<string, any>>) =>
   (React.Children.toArray(el.props.children) as ReactElement<Record<string, any>>[]).find(c => c?.props?.role === 'status')!.props.children;
 
+describe('NodeFrame highlight', () => {
+  it('rings a highlighted part in the board’s accent, apart from its state and its look', () => {
+    const marked = frame({ highlighted: true, state: 'fault', looks: { fault: { outline: '#dc2626' } } });
+    expect(marked.props.style.outline).toBe('3px solid #4f46e5');
+    expect(marked.props.style.outlineOffset).toBe(2);
+    expect(marked.props.style.boxShadow).toBe('0 0 0 3px #dc2626');
+    expect(marked.props['data-highlighted']).toBe('');
+    expect(frame({ highlighted: true, accent: '#0f766e' }).props.style.outline).toBe('3px solid #0f766e');
+    const plain = frame({});
+    expect(plain.props.style.outline).toBeUndefined();
+    expect(plain.props['data-highlighted']).toBeUndefined();
+  });
+});
+
 describe('NodeFrame states', () => {
   it('marks the state and says its name, with no look of its own', () => {
     const el = frame({ state: 'running' });
