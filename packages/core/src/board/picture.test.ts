@@ -842,6 +842,41 @@ describe('items placed by a rule', () => {
     expect(doc.decorations?.map(d => d.type === 'rect' ? [d.x, d.y, d.width, d.height, d.label] : null)).toEqual([[0, 0, 220, 116, 'Line L1'], [230, 0, 220, 116, 'Line L2']]);
   });
 
+  it('lets an item placed by a rule also be marked out, follow the clock and read the end of its meter from a field', () => {
+    const b = board(
+      { pump: { as: 'status-card', each: 'pumps', title: '{{key}}', show: ['age'], meter: { field: 'flow', max: 'rpm' }, highlight: 'current' } } as never,
+      {
+        kind: 'canvas', size: [600, 400],
+        place: { pump: { by: 'line', boxes: { at: [0, 0], gap: [10, 10], columns: 2, label: 'Line {{key}}' }, flow: { cell: [100, 40], gap: [4, 4], columns: 2, pad: [8, 24] } } },
+      } as never,
+    );
+    b.data!.pumps = { ...pumps, fields: { ...pumps.fields, age: { at: '/updatedAt', state: { relative: ['idle', -300, 'ok', 0, 'warn'] } } } } as never;
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const doc = draw(b);
+    const node = (id: string) => doc.nodes.find(n => n.id === id)!;
+    // placed by the rule …
+    expect(doc.nodes.map(boxOf)).toEqual([
+      ['pump/P1', 8, 24, 100, 40], ['pump/P3', 112, 24, 100, 40], ['pump/P5', 8, 68, 100, 40], ['pump/P2', 238, 24, 100, 40], ['pump/P4', 342, 24, 100, 40],
+    ]);
+    // … and every other thing a part may have is still on it, read beside the widget, the item's own.
+    for (const id of ['pump/P1', 'pump/P4']) {
+      expect(node(id).highlight).toEqual({ from: '$highlight' });
+      const bindings = node(id).widget.bindings!;
+      expect(bindings['$highlight']!.ref).toMatchObject({ path: '/plant/pumps', valuePath: '/current' });
+      expect(bindings['data.tone']!.map).toMatchObject({ relativeTo: 'now' });
+      expect(Object.keys(bindings).filter(key => key.startsWith('data.meter'))).not.toEqual([]);
+    }
+    expect(JSON.stringify(doc.nodes.map(n => n.widget.props))).not.toContain('highlight');
+  });
+
+  it('refuses a rule inside a group, and says what a place there is', () => {
+    const b = board(
+      { g: { as: 'group', size: [100, 100], parts: { a: { as: 'stat', of: 'totals', show: 'temp' } }, place: { a: { flow: { cell: [50, 50], columns: 2 } } } } } as never,
+      { kind: 'canvas', size: [600, 400], place: { g: [0, 0] } } as never,
+    );
+    expect(validateBoard(b).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`)).toEqual([expect.stringMatching(/^\/parts\/g\/place\/a: .*\[x, y/)]);
+  });
+
   it('draws a box of the size it is given, and tells how many items it could not place', () => {
     const lost: [string, number][] = [];
     const b = withPlace({ by: 'line', boxes: { cell: [300, 200], columns: 1 }, flow: { cell: [100, 40], columns: 2 } });
