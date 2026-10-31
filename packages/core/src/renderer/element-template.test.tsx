@@ -4,7 +4,7 @@ import { ELEMENT_THEME, accentTokens, boardTheme, fillTemplate, renderTemplateEl
 import { ElementHost, ElementOriginsContext, ElementView, FRAME_PING_INTERVAL_MS, FRAME_STALL_MS } from './element-view';
 import { elementDefinitionHash, elementFrameLabel } from '../elements/definition-hash';
 import { parseTemplate } from '../elements/template';
-import type { ElementDefinition } from '../view-document';
+import type { ElementDefinition, ViewSkin } from '../view-document';
 
 function filled(template: string, props: unknown): string {
   const parsed = parseTemplate(template);
@@ -162,6 +162,15 @@ describe('ElementView', () => {
       </ElementOriginsContext>,
     );
     expect(container.querySelector('[data-element]')!.shadowRoot!.querySelector('img')!.getAttribute('src')).toBe('https://cdn.example.com/a.png');
+  });
+
+  it('writes the board’s skin into the pictures its style draws, and draws them as they were without one', () => {
+    const picture = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg"><path fill="var(--u-widget-text, #1c1b19)"/></svg>')}`;
+    const element: ElementDefinition = { render: 'template', template: '<i class="bk"></i>', style: `.bk{background-image:url("${picture}")}` };
+    const styleOf = (skin?: ViewSkin) => render(<ElementView definition={element} name="bike" props={{}} skin={skin} />).container.querySelector('[data-element]')!.shadowRoot!.querySelector('style')!.textContent!;
+    const pictureIn = (sheet: string) => decodeURIComponent(/url\("data:image\/svg\+xml,([^"]*)"\)/.exec(sheet)![1]!);
+    expect(pictureIn(styleOf({ palette: { ink: '#102030' } }))).toContain('fill="#102030"');
+    expect(pictureIn(styleOf())).toContain('fill="var(--u-widget-text, #1c1b19)"');
   });
 
   it('says so in its box when it cannot draw the element', () => {

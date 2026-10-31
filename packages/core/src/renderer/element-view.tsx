@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef,
 import type { BoardAppearance, ElementDefinition, SymbolDefinition, ViewSkin } from '../view-document.js';
 import { elementEventName, type ElementFrameMessage } from '../elements/frame.js';
 import { elementDefinitionHash, elementFrameLabel } from '../elements/definition-hash.js';
+import { skinStyleImages } from './background-skin.js';
 import { boardTheme, renderTemplateElement } from './element-template.js';
 
 /** The origins this host lets an element load from — an element reaches an origin only when it declares it in
@@ -93,11 +94,13 @@ export function ElementView({ definition, name, props, appearance = 'light', acc
     if (!frames) return <div style={NOTICE_STYLE} data-element-notice="">{`“${name}” runs a script — shown where the board is served`}</div>;
     return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} theme={theme} onEvent={onEvent} />;
   }
-  return <TemplateElement definition={definition} name={name} props={props} theme={theme} symbols={symbols} onEvent={onEvent} events={events} />;
+  return <TemplateElement definition={definition} name={name} props={props} theme={theme} skin={skin} symbols={symbols} onEvent={onEvent} events={events} />;
 }
 
-function TemplateElement({ definition, name, props, theme, symbols, onEvent, events }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string>; symbols?: Record<string, SymbolDefinition>; onEvent?: (name: string) => void; events?: ReadonlySet<string> }) {
+function TemplateElement({ definition, name, props, theme, skin, symbols, onEvent, events }: { definition: ElementDefinition; name: string; props: unknown; theme: Record<string, string>; skin?: ViewSkin; symbols?: Record<string, SymbolDefinition>; onEvent?: (name: string) => void; events?: ReadonlySet<string> }) {
   const host = useRef<HTMLDivElement>(null);
+  // the pictures its style draws follow the skin as the background does (the style is held to its policy as it is drawn, after this)
+  const drawn = useMemo(() => (definition.style && skin ? { ...definition, style: skinStyleImages(definition.style, skin) } : definition), [definition, skin]);
   const origins = useContext(ElementOriginsContext);
   const latest = useRef({ onEvent, events });
   useLayoutEffect(() => {
@@ -140,13 +143,13 @@ function TemplateElement({ definition, name, props, theme, symbols, onEvent, eve
     const element = host.current;
     if (!element) return;
     const root = element.shadowRoot ?? element.attachShadow({ mode: 'open' });
-    root.replaceChildren(renderTemplateElement(definition, props, element.ownerDocument, origins, symbols));
+    root.replaceChildren(renderTemplateElement(drawn, props, element.ownerDocument, origins, symbols));
     for (const region of root.querySelectorAll('[data-ub-event]')) {
       if (!events?.has(region.getAttribute('data-ub-event') ?? '')) continue;
       if (!region.hasAttribute('tabindex')) region.setAttribute('tabindex', '0');
       if (!region.hasAttribute('role')) region.setAttribute('role', 'button');
     }
-  }, [definition, props, origins, symbols, events]);
+  }, [drawn, props, origins, symbols, events]);
   return <div ref={host} style={{ ...FILL, ...(theme as CSSProperties) }} data-element={name} />;
 }
 

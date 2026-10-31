@@ -37,3 +37,20 @@ export function skinBackground(src: string, skin: ViewSkin | undefined): string 
   });
   return changed ? `data:image/svg+xml,${encodeURIComponent(next)}` : src;
 }
+
+// A picture an element's stylesheet draws — `background-image: url("data:image/svg+xml,…")` — is an image as well, and reads no CSS variables
+// either. It follows the skin the same way: the colours it writes as the widgets' tokens with their own colour as the fallback are replaced by
+// the skin's values before the stylesheet is applied; with no skin, or a token the skin does not name, the stylesheet is exactly what it was.
+const STYLE_URL = /url\(\s*(?:"([^"]*)"|'([^']*)')\s*\)/g;
+
+/** The stylesheet with the skin's values written into the SVG pictures it carries as data URIs; the stylesheet itself when there is nothing to write. */
+export function skinStyleImages(css: string, skin: ViewSkin | undefined): string {
+  if (skin === undefined || !/data:image\/svg\+xml/i.test(css)) return css;
+  return css.replace(STYLE_URL, (whole, double: string | undefined, single: string | undefined) => {
+    const src = double ?? single ?? '';
+    const next = skinBackground(src, skin);
+    if (next === src) return whole;
+    // inside single quotes a bare ' would end the address early (encodeURIComponent leaves it as it is)
+    return double !== undefined ? `url("${next}")` : `url('${next.replace(/'/g, '%27')}')`;
+  });
+}

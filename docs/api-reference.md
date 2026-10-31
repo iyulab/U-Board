@@ -145,7 +145,8 @@ the colour it has by itself as the fallback: `fill="var(--u-widget-bg, #f6f4ef)"
 `--u-widget-text-secondary` `muted`, `--u-widget-border` `rule`, `--u-widget-font-family` `font`). Drawn on its own the picture shows the
 fallback; when the board's skin names that token, the viewer writes the skin's value in place of the whole `var(…)` before drawing. Only a
 picture the board carries (`data:image/svg+xml`) can be read — one at an address is drawn as it is — and a picture that names no token is
-untouched.
+untouched. The same holds for the pictures a template element's `style` carries as `url("data:image/svg+xml,…")` (a pictogram repeated as a
+background, a pattern): written with the tokens and a fallback, they take the skin's values.
 
 ### `statuses`
 
