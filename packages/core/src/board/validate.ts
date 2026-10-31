@@ -46,6 +46,8 @@ const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i 
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
 /** What a board says at its top, in the order it is written. */
+const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'density'];
+const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground'];
 const BOARD_SECTIONS = ['board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout', 'triggers'] as const;
 
 /** The types an element's prop may be. */
@@ -82,7 +84,22 @@ export function validateBoard(board: unknown): BoardIssue[] {
       fail('/board/accent', `an accent is a colour — ${DRAWING_COLOR_FORMS.replace(/, "transparent" or "none"$/, '')}`);
     }
   }
+  // A skin is an object. Written as a frame's name (`"skin": "ticket"`, the natural first try) it used to be read as no skin at all —
+  // the board passed and looked as if it had none; the keys it does not have (`background`, `colors` …) were left out the same way.
+  if (head.skin !== undefined && !isObj(head.skin)) {
+    const named = typeof head.skin === 'string' && (FRAMES as readonly string[]).includes(head.skin) ? ` — a frame name goes in "frame": { "frame": "${head.skin}" }` : '';
+    fail('/board/skin', `a skin is an object — { "palette": { "paper", "ink", "muted", "rule" }, "font", "frame", "radius", "shadow" }${named}`);
+  }
   const skin = isObj(head.skin) ? head.skin : {};
+  for (const key of Object.keys(skin)) {
+    if (!SKIN_KEYS.includes(key)) fail(`/board/skin/${key}`, `a skin has no "${key}" — it has ${SKIN_KEYS.join(', ')}`);
+  }
+  if (skin.palette !== undefined && !isObj(skin.palette)) fail('/board/skin/palette', 'a palette is an object — { "paper", "ink", "muted", "rule" }, each a colour');
+  if (isObj(skin.palette)) {
+    for (const key of Object.keys(skin.palette)) {
+      if (!PALETTE_KEYS.includes(key)) fail(`/board/skin/palette/${key}`, `a palette has no "${key}" — it has ${PALETTE_KEYS.join(', ')}: paper is the ground, ink the text on it, muted the quieter text, rule the lines`);
+    }
+  }
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
   if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
   if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');

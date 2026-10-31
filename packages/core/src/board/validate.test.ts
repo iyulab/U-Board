@@ -316,6 +316,26 @@ describe('validateBoard', () => {
     expect(at({ radius: '4px' })).toEqual(['/board/skin/radius: a radius is a number of pixels, ']);
   });
 
+  it('says a skin is an object, with the keys it has — a frame name written as the skin is not a skin the board looks different with', () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const at = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
+    expect(at('ticket')).toEqual(['/board/skin: a skin is an object — { "palette": { "paper", "ink", "muted", "rule" }, "font", "frame", "radius", "shadow" } — a frame name goes in "frame": { "frame": "ticket" }']);
+    expect(at('chalkboard')[0]).toMatch(/^\/board\/skin: a skin is an object — .*"shadow" }$/);
+    expect(at(['flat'])).toHaveLength(1);
+    expect(at(null)).toHaveLength(1);
+    expect(at({ frame: 'ticket', background: '#123', colors: {} })).toEqual([
+      '/board/skin/background: a skin has no "background" — it has font, display, mono, palette, frame, radius, shadow, density',
+      '/board/skin/colors: a skin has no "colors" — it has font, display, mono, palette, frame, radius, shadow, density',
+    ]);
+    expect(at({ palette: 'dark' })).toEqual(['/board/skin/palette: a palette is an object — { "paper", "ink", "muted", "rule" }, each a colour']);
+    expect(at({ palette: { bg: '#111', text: '#eee', paper: '#111' } })).toEqual([
+      '/board/skin/palette/bg: a palette has no "bg" — it has paper, ink, muted, rule, ground: paper is the ground, ink the text on it, muted the quieter text, rule the lines',
+      '/board/skin/palette/text: a palette has no "text" — it has paper, ink, muted, rule, ground: paper is the ground, ink the text on it, muted the quieter text, rule the lines',
+    ]);
+    expect(at({ frame: 'ticket', palette: { paper: '#111', ink: '#eee', muted: '#999', rule: '#333' }, font: 'Georgia, serif', radius: 4, shadow: 'soft', density: 'compact' })).toEqual([]);
+    expect(at(undefined)).toEqual([]);
+  });
+
   it('checks shapes and the look', () => {
     const board = {
       ...canvas({}, {

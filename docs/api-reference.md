@@ -137,7 +137,8 @@ interface Skin {
 reads the skin; no part sets fonts or colours of its own. `ground` and `density` are accepted but not drawn yet.
 A palette value is a colour — a hex colour, `rgb()`, `hsl()`, a CSS colour name or `transparent`; a font is family names
 separated by commas (`"Noto Sans KR", sans-serif`); a radius is a number of pixels, 0 or more. `validateBoard` names what
-is none of these, and the viewer leaves such a value out — a skin never carries a `url()` or a rule into the page's CSS.
+is none of these, and the viewer leaves such a value out — a skin never carries a `url()` or a rule into the page's CSS. A skin and
+its palette are objects with the keys above; `validateBoard` also names a skin written as anything else (a frame's name goes in `frame`) and a key they do not have.
 
 ### `statuses`
 

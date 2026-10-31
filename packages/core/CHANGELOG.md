@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- `validateBoard` says what a board's `skin` is and the keys it has. A skin written as a frame's name (`"skin": "ticket"` — the natural first try
+  for a model that reads «the look is `board.skin` … a frame») was read as no skin at all: the board passed and was drawn as if it had none.
+  It is now an error that names the way — `a skin is an object … a frame name goes in "frame": { "frame": "ticket" }` — and so are a skin or a
+  palette written as anything but an object, a key a skin or a palette does not have (`background`, `colors`, `bg`, `text` …). Boards that write
+  the skin as the documented object are unchanged.
+
 ## [0.38.0] - 2026-10-31
 
 ### Added
