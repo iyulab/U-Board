@@ -3,7 +3,7 @@ import { checkSpec } from '@iyulab/u-widgets/tools';
 import { applyValueMap, deriveValue, withItemFields, writeText } from '../adapter.js';
 import { isHttpRef, readHttpRef, type HttpRef } from '../http-ref.js';
 import type { Node, ViewDocument, Widget } from '../view-document.js';
-import { PictureError, isDataPlace, keyReadsOf, keysIn, toViewDocument } from './picture.js';
+import { PictureError, isDataPlace, isFlowPlace, keyReadsOf, keysIn, toViewDocument } from './picture.js';
 import type { Board } from './types.js';
 import { validateBoard } from './validate.js';
 
@@ -790,5 +790,66 @@ describe('triggers on every item of an each part', () => {
     expect(issues(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: 'https://x.example.com@{{line}}.example.net/a' }] }]))).toEqual(['/triggers/0/do/0/url']);
     expect(issues(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: 'https://{{key}}@x.example.com/a' }] }]))).toEqual(['/triggers/0/do/0/url']);
     expect(issues(withTriggers([{ on: { event: 'click', part: 'pump' }, do: [{ action: 'open-link', url: 'https://x.example.com/a/{{key}}?l={{line}}#{{line}}' }] }]))).toEqual([]);
+  });
+});
+
+describe('items placed by a rule', () => {
+  const rows = [
+    { id: 'P1', line: 'L1' }, { id: 'P2', line: 'L2' }, { id: 'P3', line: 'L1' }, { id: 'P4', line: 'L2' }, { id: 'P5', line: 'L1' },
+  ];
+  const parts = { pump: { as: 'status-card', each: 'pumps', title: '{{key}}', show: ['state'] } } as const;
+  const withPlace = (place: unknown): Board => board(parts as never, { kind: 'canvas', size: [600, 400], place: { pump: place } } as never);
+  const draw = (b: Board, extra: Parameters<typeof toViewDocument>[1] = {}) => {
+    const doc = toViewDocument(b, { rowsOf: () => rows, ...extra });
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    return doc;
+  };
+  const boxOf = (n: { id: string; x: number; y: number; width?: number; height?: number }) => [n.id, n.x, n.y, n.width, n.height];
+
+  it('flows the items in columns, in the order the data gives them', () => {
+    const b = withPlace({ flow: { at: [10, 20], cell: [100, 50], gap: [5, 6], columns: 2 } });
+    expect(validateBoard(b)).toEqual([]);
+    // A rule needs the items themselves, so a viewer or a server reads the list for it as it does for a place by fields.
+    expect(keyReadsOf(b).map(read => read.data)).toEqual(['pumps']);
+    expect(draw(b).nodes.map(boxOf)).toEqual([
+      ['pump/P1', 10, 20, 100, 50], ['pump/P2', 115, 20, 100, 50], ['pump/P3', 10, 76, 100, 50], ['pump/P4', 115, 76, 100, 50], ['pump/P5', 10, 132, 100, 50],
+    ]);
+  });
+
+  it('groups the items by a field into boxes of one size, the items flowing inside each', () => {
+    const b = withPlace({
+      by: 'line',
+      boxes: { at: [0, 0], gap: [10, 10], columns: 2, label: 'Line {{key}}' },
+      flow: { cell: [100, 40], gap: [4, 4], columns: 2, pad: [8, 24] },
+    });
+    expect(validateBoard(b)).toEqual([]);
+    const doc = draw(b);
+    // The biggest group has three items: two rows of two → a box 16 + 200 + 4 wide, 24 + 80 + 4 + 8 high.
+    expect(doc.nodes.map(boxOf)).toEqual([
+      ['pump/P1', 8, 24, 100, 40], ['pump/P3', 112, 24, 100, 40], ['pump/P5', 8, 68, 100, 40],
+      ['pump/P2', 238, 24, 100, 40], ['pump/P4', 342, 24, 100, 40],
+    ]);
+    expect(doc.decorations?.map(d => d.type === 'rect' ? [d.x, d.y, d.width, d.height, d.label] : null)).toEqual([[0, 0, 220, 116, 'Line L1'], [230, 0, 220, 116, 'Line L2']]);
+  });
+
+  it('draws a box of the size it is given, and tells how many items it could not place', () => {
+    const lost: [string, number][] = [];
+    const b = withPlace({ by: 'line', boxes: { cell: [300, 200], columns: 1 }, flow: { cell: [100, 40], columns: 2 } });
+    const doc = draw(b, { rowsOf: () => [...rows, { id: 'P6' }, { line: 'L1' }], onUnplaced: (part, count) => lost.push([part, count]) });
+    expect(doc.decorations?.map(d => d.type === 'rect' ? [d.width, d.height] : null)).toEqual([[300, 200], [300, 200]]);
+    expect(lost).toEqual([['pump', 2]]);
+  });
+
+  it('is refused where it cannot be read', () => {
+    const issues = (place: unknown) => validateBoard(withPlace(place)).filter(i => !i.hint).map(i => [i.at, i.message]);
+    expect(issues({ flow: { cell: [100, 50], columns: 0 } })).toEqual([['/layout/place/pump/flow/columns', '"columns" is a whole number of columns, 1 or more']]);
+    expect(issues({ flow: { columns: 2 } })).toEqual([['/layout/place/pump/flow/cell', '"cell" is the size of one item: [width, height], both above 0']]);
+    expect(issues({ flow: { cell: [100, 50], columns: 2 }, boxes: { columns: 1 } })).toEqual([['/layout/place/pump/boxes', '"boxes" are the groups of "by" — name the field the items are grouped by: "by": "<field>"']]);
+    expect(issues({ flow: { cell: [100, 50], columns: 2 }, by: 'line' })).toEqual([['/layout/place/pump', 'items grouped by a field are drawn in boxes: give "boxes": { "columns": n, "at"?, "gap"?, "cell"?, "label"? }']]);
+    expect(issues({ flow: { cell: [100, 50], columns: 2 }, gap: [1, 1] })).toEqual([['/layout/place/pump/gap', 'items placed by a rule take "flow", "by" and "boxes" — "gap" is not one (items are not also placed by hand)']]);
+    // An item called "flow" is still an item: its place is an array.
+    expect(isFlowPlace({ flow: [0, 0, 10, 10], P1: [0, 0] })).toBe(false);
+    expect(isFlowPlace({ flow: { cell: [1, 1], columns: 1 } })).toBe(true);
+    expect(() => toViewDocument(withPlace({ flow: { cell: [100, 50], columns: 2 } }))).toThrow(/give rowsOf/);
   });
 });

@@ -228,6 +228,41 @@ export function boardSchema(): Schema {
           anchor: { enum: ['center', 'left', 'right', 'top', 'bottom'], description: 'The point of the box that is the position: its middle (default), or the middle of its left, right, top or bottom edge.' },
         },
       },
+      // The items of an "each" part placed by a rule: flowing in columns, or grouped by a field into boxes.
+      placeByRule: {
+        type: 'object',
+        required: ['flow'],
+        additionalProperties: false,
+        dependentRequired: { by: ['boxes'], boxes: ['by'] },
+        description: 'Items placed by a rule: "flow" lays them out in columns from "at", each in a "cell", "gap" apart; with "by" (a field of the items) they are grouped by its value, each group in a labelled box, the items flowing inside it, and the boxes themselves flowing in "boxes.columns" columns.',
+        properties: {
+          flow: {
+            type: 'object',
+            required: ['cell', 'columns'],
+            additionalProperties: false,
+            properties: {
+              at: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[x, y] of the first item (or, with "by", unused: the boxes say where).' },
+              cell: { type: 'array', items: { type: 'number', exclusiveMinimum: 0 }, minItems: 2, maxItems: 2, description: '[width, height] of each item.' },
+              gap: { type: 'array', items: { type: 'number', minimum: 0 }, minItems: 2, maxItems: 2, description: '[across, down] between items.' },
+              columns: { type: 'integer', minimum: 1, description: 'Items per row.' },
+              pad: { type: 'array', items: { type: 'number', minimum: 0 }, minItems: 2, maxItems: 2, description: 'Inside a box: [room at the sides and bottom, room at the top for its label].' },
+            },
+          },
+          by: { type: 'string', description: 'A field of the items: they are grouped by its value, each group in a box.' },
+          boxes: {
+            type: 'object',
+            required: ['columns'],
+            additionalProperties: false,
+            properties: {
+              at: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2, description: '[x, y] of the first box.' },
+              cell: { type: 'array', items: { type: 'number', exclusiveMinimum: 0 }, minItems: 2, maxItems: 2, description: '[width, height] of every box (default: the biggest group’s).' },
+              gap: { type: 'array', items: { type: 'number', minimum: 0 }, minItems: 2, maxItems: 2, description: '[across, down] between boxes.' },
+              columns: { type: 'integer', minimum: 1, description: 'Boxes per row.' },
+              label: { type: 'string', description: 'The box’s title; {{key}} is the value its items are grouped by (default "{{key}}").' },
+            },
+          },
+        },
+      },
       // A link on a board's own canvas shows or weighs a field only "of" something; inside a group (above) it may read
       // the group's data instead.
       link: { $ref: '#/$defs/groupLink', dependentRequired: { show: ['of'], weight: ['of'] } },
@@ -237,7 +272,7 @@ export function boardSchema(): Schema {
         properties: {
           size,
           background: { type: 'string' },
-          place: map({ oneOf: [ref('place'), map(ref('place')), ref('placeByFields')] }, 'Where each part is; an "each" part places its items inside its own entry, or by their fields ({ "at": ["lon", "lat"], "frame": [...] }).'),
+          place: map({ oneOf: [ref('place'), map(ref('place')), ref('placeByFields'), ref('placeByRule')] }, 'Where each part is; an "each" part places its items inside its own entry, by their fields ({ "at": ["lon", "lat"], "frame": [...] }), or by a rule ({ "flow": { "cell": [w, h], "columns": n } }, with "by" and "boxes" to group them).'),
           shapes: map(ref('shape')),
           links: map(ref('link')),
         },

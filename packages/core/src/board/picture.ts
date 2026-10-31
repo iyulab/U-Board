@@ -11,7 +11,7 @@ import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
-import type { Board, CanvasLayout, DataPlace, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
+import type { Board, CanvasLayout, DataPlace, FlowPlace, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
 
 /** A weight's or an arrow's bands or map as the value map a connector binding takes: bands as ranges, a map as values
  *  and `otherwise`. */
@@ -100,6 +100,12 @@ interface DerivedQuery extends Query {
 export function isDataPlace(place: unknown): place is DataPlace {
   return typeof place === 'object' && place !== null && !Array.isArray(place) && Array.isArray((place as { at?: unknown }).at)
     && (place as { at: unknown[] }).at.every(f => typeof f === 'string');
+}
+
+/** Whether a canvas's place for a part is a rule for its items (`FlowPlace`): an object whose `flow` is an object (an item called "flow" has a place that is an array). */
+export function isFlowPlace(place: unknown): place is FlowPlace {
+  return typeof place === 'object' && place !== null && !Array.isArray(place)
+    && typeof (place as { flow?: unknown }).flow === 'object' && (place as { flow?: unknown }).flow !== null && !Array.isArray((place as { flow?: unknown }).flow);
 }
 
 /** The tone and the words a raw value maps to, through a field's `state`. */
@@ -802,6 +808,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         : readsOf(part, key) ?? (frame.reads === null ? undefined : frame.reads);
       if (Array.isArray(place)) placeOne(id, id, part, place, own());
       else if (isDataPlace(place)) placeByFields(id, part, place, canvas.size, `${at}/place/${id}`, own, placeOne, inside);
+      else if (isFlowPlace(place)) placeByFlow(id, part, place, `${at}/place/${id}`, own, placeOne, (shape, name) => decorations.push(shapeOf(moveShape(shape, frame), `${prefix}shape.${name}`)), inside);
       else for (const [key, p] of Object.entries(place)) placeOne(id, `${id}/${key}`, part, p as Place, own(key));
     }
     for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
@@ -855,6 +862,61 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       const place: Place = boxed !== undefined && where.size !== undefined ? [...corner, w, h] : [...corner];
       placeOne(partId, `${partId}/${String(named)}`, part, place, own(String(named)));
     });
+    if (skipped > 0) options.onUnplaced?.(partId, skipped);
+  };
+
+  /**
+   * An `each` part placed by a rule (`FlowPlace`): the items in the order the data gives them, flowing in columns — or, with
+   * `by`, grouped by a field's value into boxes, the items flowing inside each. An item with no key, or no value in the `by`
+   * field, is not drawn.
+   */
+  const placeByFlow = (
+    partId: string, part: Part, where: FlowPlace, at: string, own: (key?: string) => Reads | undefined,
+    placeOne: (partId: string, id: string, part: Part, place: Place, reads: Reads | undefined) => void,
+    addBox: (shape: Shape, name: string) => void,
+    inside?: string,
+  ) => {
+    const p = resolve(part);
+    const query = inside ?? (typeof p.each === 'string' ? p.each : undefined);
+    if (query === undefined) throw new PictureError(at, 'a place by a rule is for a part made per item (each)');
+    const rows = rowsFor(query);
+    if (rows === undefined) throw new PictureError(at, `the items of "${query}" are not known — give rowsOf`);
+    const keyField = data[query]?.key;
+    const { flow } = where;
+    const [cw, ch] = flow.cell;
+    const [gx, gy] = flow.gap ?? [0, 0];
+    // Each item's key and, with `by`, the value it is grouped by — in the order the data gives them.
+    let skipped = 0;
+    const entries: { key: string; group: string }[] = [];
+    rows.forEach((row, i) => {
+      const item = typeof row === 'object' && row !== null ? (row as Record<string, unknown>) : {};
+      const named = keyField === undefined ? String(i) : item[keyField];
+      const grouped = where.by === undefined ? '' : item[where.by];
+      const valued = where.by === undefined || typeof grouped === 'string' || typeof grouped === 'number';
+      if ((typeof named !== 'string' && typeof named !== 'number') || !valued) { skipped += 1; return; }
+      entries.push({ key: String(named), group: String(grouped) });
+    });
+    const put = (key: string, x: number, y: number) => placeOne(partId, `${partId}/${key}`, part, [x, y, cw, ch], own(key));
+    if (where.by === undefined) {
+      const [x0, y0] = flow.at ?? [0, 0];
+      entries.forEach(({ key }, i) => put(key, x0 + (i % flow.columns) * (cw + gx), y0 + Math.floor(i / flow.columns) * (ch + gy)));
+    } else {
+      const boxes = where.boxes!;
+      const groups = new Map<string, string[]>();
+      for (const { key, group } of entries) (groups.get(group) ?? groups.set(group, []).get(group)!).push(key);
+      const [padX, padTop] = flow.pad ?? [0, 0];
+      const most = Math.max(1, ...[...groups.values()].map(members => members.length));
+      const innerRows = Math.ceil(most / flow.columns);
+      const [bw, bh] = boxes.cell ?? [padX * 2 + flow.columns * cw + (flow.columns - 1) * gx, padTop + innerRows * ch + (innerRows - 1) * gy + padX];
+      const [ox, oy] = boxes.at ?? [0, 0];
+      const [bgx, bgy] = boxes.gap ?? [0, 0];
+      [...groups.entries()].forEach(([value, members], gi) => {
+        const x0 = ox + (gi % boxes.columns) * (bw + bgx);
+        const y0 = oy + Math.floor(gi / boxes.columns) * (bh + bgy);
+        addBox({ box: [x0, y0, bw, bh], label: (boxes.label ?? '{{key}}').replaceAll('{{key}}', value) }, `${partId}-box-${gi}`);
+        members.forEach((key, i) => put(key, x0 + padX + (i % flow.columns) * (cw + gx), y0 + padTop + Math.floor(i / flow.columns) * (ch + gy)));
+      });
+    }
     if (skipped > 0) options.onUnplaced?.(partId, skipped);
   };
 

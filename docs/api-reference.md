@@ -319,7 +319,12 @@ type GridItem =
   label is `left`, a pin that rises from its point is `bottom`. An item with no number in either field, or
   outside the frame, is not drawn — `look` and `pictureOf`'s `unplaced` count them. The data needs a `key`, and a part is
   placed one way, not both. The projection is linear: right for a plan and an equirectangular map, off for a Mercator one
-  over a wide range.
+  over a wide range. Items can also be placed by a rule: `{ "flow": { "at": [16, 140], "cell": [114, 98], "gap": [6, 52], "columns": 7 } }`
+  lays them out in the order the data gives them, `columns` to a row, each in a `cell`, `gap` apart. With `"by": "<field>"` and
+  `"boxes": { "columns": 4, "at": [16, 104], "gap": [10, 10], "label": "{{key}}" }` they are grouped by the field's value instead: each
+  group in a labelled box (every box the size of the biggest group's, or `boxes.cell`), the items flowing inside it with
+  `flow.pad` (`[sides and bottom, top]`) kept clear, and the boxes flowing in `boxes.columns` columns; `{{key}}` in a label is the
+  value of the group. An item with no key, or no value in the `by` field, is not drawn and is counted like an unplaced one.
 - **Grid** — parts in order on a row of twelve columns, laid out to the width of the board's own container: one item
   per row below 600 pixels, six columns below 1024, twelve above. An item takes a `span` of the twelve, and optionally
   a fixed `height`; otherwise the widget's own. An item may hold a `canvas` of its own — the spatial panel of a mixed
@@ -509,7 +514,7 @@ function readerOf(adapters: readonly Adapter[]): ValueReader;
 function pictureOf(board: Board, read: ValueReader): Promise<ViewDocument>;
 function toViewDocument(board: Board, options?: {
   keysOf?: (data: string) => readonly string[];                // the keys of a grid's items
-  rowsOf?: (data: string) => readonly unknown[];                 // the items, for a canvas placing a part by their fields
+  rowsOf?: (data: string) => readonly unknown[];                 // the items, for a canvas placing a part by their fields or by a rule
   onUnplaced?: (part: string, count: number) => void;            // how many items of a part were left out
 }): ViewDocument;
 ```

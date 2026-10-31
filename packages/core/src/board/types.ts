@@ -234,12 +234,25 @@ export interface DataPlace {
   anchor?: 'center' | 'left' | 'right' | 'top' | 'bottom';
 }
 
-/** Parts placed on a drawing. An `each` part is placed item by item, inside its own entry — or by its items' fields. */
+/**
+ * Where the items of an `each` part go by a rule rather than one by one: in `columns` columns from `at`, each in a `cell`,
+ * `gap` apart (an item follows the one before it in the data). With `by` — a field of the items — they are grouped by its value
+ * instead: each group in a box (a labelled rectangle), the items flowing inside it with `pad` (left and bottom, then top) kept
+ * clear, and the boxes themselves flowing in `boxes.columns` columns from `boxes.at`. Every box is one size — the biggest
+ * group's, or `boxes.cell` — and a box's `label` writes `{{key}}` as the group's value.
+ */
+export interface FlowPlace {
+  flow: { at?: [number, number]; cell: [number, number]; gap?: [number, number]; columns: number; pad?: [number, number] };
+  by?: string;
+  boxes?: { at?: [number, number]; cell?: [number, number]; gap?: [number, number]; columns: number; label?: string };
+}
+
+/** Parts placed on a drawing. An `each` part is placed item by item, inside its own entry — by its items' fields — or by a rule. */
 export interface CanvasLayout {
   kind: 'canvas';
   size: [number, number];
   background?: string;
-  place: Record<string, Place | Record<string, Place> | DataPlace>;
+  place: Record<string, Place | Record<string, Place> | DataPlace | FlowPlace>;
   shapes?: Record<string, Shape>;
   links?: Record<string, Link>;
 }

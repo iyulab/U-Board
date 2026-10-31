@@ -4,10 +4,10 @@
 export type { Adapter, ResolvedWidget } from './adapter.js';
 export { readLists, readerOf } from './board/draw.js';
 export { PART_KINDS, partKind } from './board/kinds.js';
-export { PictureError, dataReadOf, isDataPlace, keyReadsOf, keysIn, toViewDocument } from './board/picture.js';
+export { PictureError, dataReadOf, isDataPlace, isFlowPlace, keyReadsOf, keysIn, toViewDocument } from './board/picture.js';
 export type { PictureOptions } from './board/picture.js';
 export { EMPHASES, TONES } from './board/types.js';
-export type { ArrowEnds, Board, CanvasLayout, ElementDefinition, Emphasis, Field, GridItem, Link, Part, Place, Query, Shape, Status, Tone, Trigger, TriggerAction, ValueMapping } from './board/types.js';
+export type { ArrowEnds, Board, CanvasLayout, DataPlace, ElementDefinition, Emphasis, Field, FlowPlace, GridItem, Link, Part, Place, Query, Shape, Status, Tone, Trigger, TriggerAction, ValueMapping } from './board/types.js';
 export { elementNameOf } from './elements/element-type.js';
 export { DEFAULT_LABELS } from './labels.js';
 export type { UBoardLabels } from './labels.js';

@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A canvas can place the items of an `each` part by a rule.** `"place": { "tile": { "flow": { "cell": [114, 98], "columns": 7, "gap": [6, 52], "at": [16, 140] } } }`
+  lays the items out in the order the data gives them, seven to a row, where a canvas had a coordinate for every item; with
+  `"by": "<field>"` and `"boxes": { "columns": 4, "label": "{{key}}" }` the items are grouped by the field's value, each group in a labelled box
+  of one size and the items flowing inside it, so «rooms with their beds» or «lines with their machines» is a few lines instead of a place and
+  a rectangle per item. It is made from the items the viewer already supplies for a place by fields (`rowsOf`), so a viewer or a server that
+  places by fields needs no change. `isFlowPlace` and the types `FlowPlace` and `DataPlace` are exported with the toolkit.
 - **`highlight` marks one item out from the others, apart from its status.** A part that reads one item takes `"highlight": "<field>"`, a
   boolean field of the item; while it is true (`true`, the text `true`, or a number other than 0) a ring in the board's accent is drawn
   around the part. A status takes the colour and its emphasis, and a part has one status, so «the one being looked at» had no place that

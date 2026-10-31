@@ -718,6 +718,39 @@ export function validateBoard(board: unknown): BoardIssue[] {
       if (p.size !== undefined && !isSize(p.size)) fail(`${placeAt}/size`, '"size" is [width, height], both above 0');
       if (p.anchor !== undefined && !['center', 'left', 'right', 'top', 'bottom'].includes(p.anchor as string)) fail(`${placeAt}/anchor`, '"anchor" is the point of the box the position is: center, left, right, top or bottom');
     };
+    /** A part's items placed by a rule: flowing in columns, or grouped by a field into boxes whose items flow. */
+    const checkPlaceByFlow = (p: Record<string, unknown>, placeAt: string, query: unknown) => {
+      for (const key of Object.keys(p)) {
+        if (!['flow', 'by', 'boxes'].includes(key)) fail(`${placeAt}/${key}`, `items placed by a rule take "flow", "by" and "boxes" — "${key}" is not one (items are not also placed by hand)`);
+      }
+      if (isObj(query) && query.list === undefined) fail(placeAt, `a rule places the items of a list — "${String(query.from ?? '')}" has none`);
+      const pair = (v: unknown, min = 0) => Array.isArray(v) && v.length === 2 && v.every(n => isNum(n) && n >= min);
+      const columns = (v: unknown, whereAt: string) => {
+        if (!(Number.isInteger(v) && (v as number) >= 1)) fail(whereAt, '"columns" is a whole number of columns, 1 or more');
+      };
+      const flow = p.flow as Obj;
+      for (const key of Object.keys(flow)) {
+        if (!['at', 'cell', 'gap', 'columns', 'pad'].includes(key)) fail(`${placeAt}/flow/${key}`, `"flow" takes "at", "cell", "gap", "columns" and "pad" — "${key}" is not one`);
+      }
+      if (!isSize(flow.cell)) fail(`${placeAt}/flow/cell`, '"cell" is the size of one item: [width, height], both above 0');
+      columns(flow.columns, `${placeAt}/flow/columns`);
+      if (flow.at !== undefined && !(Array.isArray(flow.at) && flow.at.length === 2 && flow.at.every(isNum))) fail(`${placeAt}/flow/at`, '"at" is where the first item goes: [x, y]');
+      if (flow.gap !== undefined && !pair(flow.gap)) fail(`${placeAt}/flow/gap`, '"gap" is the space between items: [across, down], 0 or more');
+      if (flow.pad !== undefined && !pair(flow.pad)) fail(`${placeAt}/flow/pad`, '"pad" is the room kept inside a box: [at the sides and bottom, at the top], 0 or more');
+      if (p.by === undefined && p.boxes !== undefined) fail(`${placeAt}/boxes`, '"boxes" are the groups of "by" — name the field the items are grouped by: "by": "<field>"');
+      if (p.by !== undefined) {
+        if (typeof p.by !== 'string' || p.by === '') fail(`${placeAt}/by`, '"by" names a field of the items to group them by');
+        if (!isObj(p.boxes)) { fail(placeAt, 'items grouped by a field are drawn in boxes: give "boxes": { "columns": n, "at"?, "gap"?, "cell"?, "label"? }'); return; }
+        for (const key of Object.keys(p.boxes)) {
+          if (!['at', 'cell', 'gap', 'columns', 'label'].includes(key)) fail(`${placeAt}/boxes/${key}`, `"boxes" takes "at", "cell", "gap", "columns" and "label" — "${key}" is not one`);
+        }
+        columns(p.boxes.columns, `${placeAt}/boxes/columns`);
+        if (p.boxes.at !== undefined && !(Array.isArray(p.boxes.at) && p.boxes.at.length === 2 && p.boxes.at.every(isNum))) fail(`${placeAt}/boxes/at`, '"at" is where the first box goes: [x, y]');
+        if (p.boxes.cell !== undefined && !isSize(p.boxes.cell)) fail(`${placeAt}/boxes/cell`, '"cell" is the size of every box: [width, height], both above 0');
+        if (p.boxes.gap !== undefined && !pair(p.boxes.gap)) fail(`${placeAt}/boxes/gap`, '"gap" is the space between boxes: [across, down], 0 or more');
+        if (p.boxes.label !== undefined && typeof p.boxes.label !== 'string') fail(`${placeAt}/boxes/label`, '"label" is a text; {{key}} is the value the items are grouped by');
+      }
+    };
     for (const [id, p] of Object.entries(place)) {
       const placeAt = `${at}/place/${id}`;
       const entry = ids.get(id);
@@ -737,6 +770,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
         const q = typeof entry.part.each === 'string' ? data[entry.part.each] : undefined;
         if (isObj(q) && q.list !== undefined && q.key === undefined) fail(placeAt, `items placed one by one are named by their "key" — give "${String(entry.part.each)}" a "key", or lay them out in a grid`);
         if (isByFields(p)) checkPlaceByFields(p, placeAt);
+        else if (isByRule(p)) checkPlaceByFlow(p, placeAt, q);
         else for (const [key, q] of Object.entries(p)) if (!isPlace(q)) fail(`${placeAt}/${key}`, 'a place is [x, y] or [x, y, width, height]');
       } else if (!isPlace(p)) {
         fail(placeAt, `"${id}" is not a part with "each", so its place is [x, y, width?, height?]`);
@@ -944,6 +978,11 @@ function isSize(v: unknown): boolean {
  *  two numbers. */
 function isByFields(v: unknown): v is Record<string, unknown> {
   return isObj(v) && Array.isArray(v.at) && v.at.every(n => typeof n === 'string');
+}
+
+/** A place that is a rule for the items (`flow`) — an item called "flow" has a place that is an array. */
+function isByRule(v: unknown): v is Record<string, unknown> {
+  return isObj(v) && isObj(v.flow);
 }
 
 function isPlace(v: unknown): boolean {
