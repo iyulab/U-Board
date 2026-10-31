@@ -18,6 +18,11 @@ All notable changes to this package are documented here. The format follows
   tokens found); write the colour itself to keep it fixed, or leave the fallback out to follow the theme. A picture drawn as a quoted `url(…)` is
   an image, where the fallback is the colour drawn, and is left alone.
 
+### Changed
+
+- The viewer dependency `@canvas-kit/viewer` is raised to `^0.7.0` (a minor, so the earlier `^0.6.1` range no longer covers it). The new version lets a viewer
+  that has an `onTap` be tapped from the keyboard; the board viewer sets none, so nothing changes in how a board is drawn or read.
+
 ### Fixed
 
 - **A grid in a cell that holds only the parts of an `each` no longer fails with a `TypeError`.** `{ "grid": ["pumps"], "span": 12 }` where `pumps` is an
