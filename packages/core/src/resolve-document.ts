@@ -59,13 +59,15 @@ export type ResolvedOf<D extends ViewDocument> = D extends CanvasView ? Resolved
 /**
  * Resolves every widget's bindings in a ViewDocument against the given adapters. This is the single entry point a renderer calls to go from a saved document to something
  * paintable — it has no opinion on canvas-kit, u-widgets, or any other rendering concern.
+ *
+ * `now` (epoch milliseconds, the current time when omitted) is the moment the document is read: every state a field or a part reads
+ * against the clock (`relativeTo: 'now'`) is measured from it. A screen whose own clock may be off passes one corrected to the source's.
  */
-export async function resolveDocument(doc: CanvasView, adapters: readonly Adapter[]): Promise<ResolvedCanvasView>;
-export async function resolveDocument(doc: GridView, adapters: readonly Adapter[]): Promise<ResolvedGridView>;
-export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument>;
-export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[]): Promise<ResolvedViewDocument> {
+export async function resolveDocument(doc: CanvasView, adapters: readonly Adapter[], now?: number): Promise<ResolvedCanvasView>;
+export async function resolveDocument(doc: GridView, adapters: readonly Adapter[], now?: number): Promise<ResolvedGridView>;
+export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[], now?: number): Promise<ResolvedViewDocument>;
+export async function resolveDocument(doc: ViewDocument, adapters: readonly Adapter[], now: number = Date.now()): Promise<ResolvedViewDocument> {
   // One time for the whole document: a state read against the time the document is resolved says the same for every part.
-  const now = Date.now();
   const resolve = <T extends Placed>(placed: readonly T[]) =>
     Promise.all(
       placed.map(async (p): Promise<Resolved<T>> => {

@@ -85,6 +85,23 @@ describe('resolveDocument', () => {
     expect(plain.nodes[0]!.highlighted).toBeUndefined();
   });
 
+  it('measures a state read against the clock from the moment it is given, the current time when it is not', async () => {
+    const source = new InMemoryAdapter('cmms', { start: { value: '2026-10-23T03:30:00Z', quality: 'live' } });
+    const rule = { from: 'when', map: { relativeTo: 'now' as const, ranges: [{ max: 0, value: 'past' }, { min: 0, max: 3600, value: 'soon' }], otherwise: 'later' } };
+    const doc: CanvasView = {
+      kind: 'canvas',
+      background: {},
+      connectors: [],
+      nodes: [{ id: 'n1', x: 0, y: 0, width: 10, height: 10, anchored: false, widget: { type: 'status', props: {}, bindings: { when: { adapter: 'cmms', ref: 'start' } } }, states: rule }],
+    };
+    const at = Date.parse('2026-10-23T03:00:00Z');
+    expect((await resolveDocument(doc, [source], at)).nodes[0]!.state).toBe('soon');
+    // A screen whose own clock runs an hour behind the source's passes the corrected one.
+    expect((await resolveDocument(doc, [source], at + 3_600_000)).nodes[0]!.state).toBe('past');
+    // Without one the document is read now, which is long past that time.
+    expect((await resolveDocument(doc, [source])).nodes[0]!.state).toBe('past');
+  });
+
   it('passes the background through, and an unbound connector as it is', async () => {
     const doc: CanvasView = {
       kind: 'canvas',

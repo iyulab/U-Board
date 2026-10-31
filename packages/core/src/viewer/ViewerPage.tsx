@@ -37,8 +37,8 @@ export interface ViewerPageProps {
   ariaLabel?: string;
   /** Text to show instead of the English defaults — any subset of `UBoardLabels`. */
   labels?: Partial<UBoardLabels>;
-  /** The current time in epoch milliseconds — what "N minutes ago" and the time of the last update
-   * are measured by. `Date.now` by default. The `observedAt` times adapters report come from the
+  /** The current time in epoch milliseconds — what "N minutes ago", the time of the last update and
+   * a state read against the clock (a session «now» or «next») are measured by. `Date.now` by default. The `observedAt` times adapters report come from the
    * source's side; when this machine's clock may be off from that one (an unattended screen whose
    * clock has drifted), pass a clock corrected to the source's — see `serverClock`. */
   clock?: () => number;

@@ -28,6 +28,10 @@ All notable changes to this package are documented here. The format follows
   (`itemFields`) both read «now» — the moment the board is read. The items read a fresh clock after the source had answered, so a slow source
   moved a session across a band edge («next» became «now») while the binding's state was still the earlier moment. Both read one moment now,
   and `withItemFields` takes it as an optional third argument (the current time when omitted).
+- **A state that follows the clock follows the clock the viewer is given.** The `clock` of `ViewerPage` and `useResolvedDocument` — the source's
+  time, for a screen whose own clock may drift — measured «N minutes ago» and the time of the last update but not the moment a state read against
+  the time (`relative`) is taken from, so an unattended screen with a drifted clock said «now» and «next» by its own time. The viewer now hands its
+  clock to each read, and `resolveDocument` takes the moment as an optional third argument (the current time when omitted).
 
 ## [0.39.0] - 2026-10-31
 

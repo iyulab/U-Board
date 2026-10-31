@@ -8,8 +8,9 @@ export interface UseResolvedDocumentOptions {
   /** Re-resolve every N ms while a document is loaded. Omitted — the document is resolved once
    * (unchanged from the original one-shot behavior). */
   pollIntervalMs?: number;
-  /** The current time in epoch milliseconds, read for `resolvedAt` — `Date.now` by default. Read when
-   * a resolve completes, so a new function on every render is fine. */
+  /** The current time in epoch milliseconds — `Date.now` by default. Read when a resolve starts, as the moment the
+   * document is read (what a state read against the clock is measured from), and when it completes, for `resolvedAt`,
+   * so a new function on every render is fine. */
   clock?: () => number;
 }
 
@@ -92,7 +93,7 @@ export function useResolvedDocument<D extends ViewDocument>(
       if (inFlight) return;
       inFlight = true;
       setIsRefreshing(true);
-      resolveDocument(doc, adapters).then(result => {
+      resolveDocument(doc, adapters, readClock()).then(result => {
         inFlight = false;
         if (cancelled) return;
         setResolved(result as ResolvedOf<D>);

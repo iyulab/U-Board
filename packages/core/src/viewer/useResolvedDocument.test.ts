@@ -122,6 +122,38 @@ describe('useResolvedDocument', () => {
     expect(result.current.resolved?.nodes[0].widget.props.data).toEqual([{ at: '2026-10-23T03:30:00Z', when: 'past' }]);
   });
 
+  it('reads a state against the clock it is given — a screen whose own clock is off follows the source’s', async () => {
+    vi.useFakeTimers({ now: new Date('2026-10-23T03:00:00Z') });
+    const adapter: Adapter = {
+      id: 'cmms',
+      resolve: vi.fn(async (): Promise<ResolvedBinding> => ({ value: [{ at: '2026-10-23T03:30:00Z' }], quality: 'live' })),
+    };
+    const map = { relativeTo: 'now' as const, ranges: [{ max: 0, value: 'past' }, { min: 0, max: 3600, value: 'soon' }], otherwise: 'later' };
+    const doc: CanvasView = {
+      kind: 'canvas',
+      background: {},
+      nodes: [
+        {
+          id: 'n1',
+          x: 0,
+          y: 0,
+          anchored: false,
+          widget: { type: 'list', props: { data: [] }, bindings: { data: { adapter: 'cmms', ref: 'k', itemFields: { when: { from: 'at', map } } } } },
+        },
+      ],
+      connectors: [],
+    };
+    const adapters = [adapter];
+    // The machine says 03:00; the source's clock, which the host passes, says 04:00.
+    const clock = () => Date.now() + 3_600_000;
+
+    const { result } = renderHook(() => useResolvedDocument(doc, adapters, { clock }));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.resolved?.nodes[0].widget.props.data).toEqual([{ at: '2026-10-23T03:30:00Z', when: 'past' }]);
+  });
+
   it('skips a poll tick while the previous resolve is still in flight', async () => {
     vi.useFakeTimers();
     const doc = docWithBinding();

@@ -232,7 +232,8 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
   `{ "relative": ["past", -2700, "now", 1, "next", 2700, "later"] }` reads the bands over the seconds from the time the board is
   read to the value (ISO text, or epoch seconds or milliseconds), negative once it has passed — here a session that began more
   than 45 minutes ago is `past`, one that began within the last 45 is `now`, one that begins within 45 minutes is `next`, a later
-  one is `later`. The time is taken once for a whole document when it is resolved; a value that is no time is in no status.
+  one is `later`. The time is taken once for a whole document when it is resolved — by the clock the viewer is given (see
+  `clock` under «Describing connection quality»), else the machine's; a value that is no time is in no status.
 - **Fields of the items a field holds.** A field whose value is a list of objects (`{ "value": [{ "state": "run" }, …] }`) says what
   each field of those items means with `items` — the same `at` (relative to the item, `/state`), `names` and `state` a field of a
   read has. An element's `list` prop bound to that field (`"bind": { "items": "value" }`) reads every item with the words
@@ -696,7 +697,8 @@ words through their `labels` prop (`labels.qualityText`).
 
 `observedAt` is stamped on the source's side, so the age is only as right as the two clocks agree. On a machine whose
 clock may drift (a screen left running unattended), measure against the source's clock instead: the shipped components
-take it as `clock`.
+take it as `clock`. The same clock is the moment a state that follows the time (`relative`) is measured from, so an unattended
+screen with a drifted clock still says «now» and «next» by the source's time.
 
 ```ts
 interface ServerClock {
