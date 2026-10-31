@@ -5,7 +5,7 @@
 // The board is taken as valid (`validateBoard` first): what is wrong in it is reported there, with where and how to
 // write it instead. What the picture model cannot draw yet is a `PictureError`.
 
-import { placedIn, type Binding, type CellCanvas, type Connector, type ElementDefinition, type GridItem, type GridLayout, type ItemField, type Node, type Shape as ViewShape, type Trigger as ViewTrigger, type TriggerAction as ViewTriggerAction, type ValueMap, type ValueRange, type ViewDocument, type Widget } from '../view-document.js';
+import { placedAt, type Binding, type CellCanvas, type Connector, type ElementDefinition, type GridItem, type GridLayout, type ItemField, type Node, type Shape as ViewShape, type Trigger as ViewTrigger, type TriggerAction as ViewTriggerAction, type ValueMap, type ValueRange, type ViewDocument, type Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
 import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
@@ -1180,8 +1180,13 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
    */
   function withStates(doc: ViewDocument): ViewDocument {
     const triggers = board.triggers ?? [];
-    // A node by the part it draws: its id past a canvas cell's prefix — a part, or an item of an `each` part.
-    const nodes = new Map(placedIn(doc).map(placed => [placed.id.slice(placed.id.lastIndexOf(':') + 1), placed]));
+    // A node by the part it draws: its id past a canvas cell's own prefix (`<cell>:`) — a part, or an item of an `each` part,
+    // whose key may hold a colon (a time of day) as well.
+    const nodes = new Map(placedAt(doc).map(({ placed, at }) => {
+      const cell = /^\/items\/(\d+)\/canvas\//.exec(at);
+      const prefix = cell !== null && doc.kind === 'grid' ? `${doc.items[Number(cell[1])]!.id}:` : '';
+      return [prefix !== '' && placed.id.startsWith(prefix) ? placed.id.slice(prefix.length) : placed.id, placed];
+    }));
     for (const [id, placed] of nodes) {
       if (placed.widget.bindings?.['$highlight'] !== undefined) placed.highlight = { from: '$highlight' };
       const raw = board.parts[id.split('/')[0]!];

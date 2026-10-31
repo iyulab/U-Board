@@ -32,6 +32,10 @@ All notable changes to this package are documented here. The format follows
   time, for a screen whose own clock may drift — measured «N minutes ago» and the time of the last update but not the moment a state read against
   the time (`relative`) is taken from, so an unattended screen with a drifted clock said «now» and «next» by its own time. The viewer now hands its
   clock to each read, and `resolveDocument` takes the moment as an optional third argument (the current time when omitted).
+- **An item whose key holds a colon keeps its highlight and its board state.** The picture model found a part's node by the text after the last
+  colon of its id, so the items of an `each` part keyed by a time of day (`12:30`, `13:30`) collided on `30` — only one of them read the
+  rule that rings it (`highlight`) or names its state for triggers, and the others drew without. The node is found by its own id, past
+  the prefix of the canvas cell it sits in.
 
 ## [0.39.0] - 2026-10-31
 

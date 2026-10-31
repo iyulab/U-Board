@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { checkSpec } from '@iyulab/u-widgets/tools';
 import { applyValueMap, deriveValue, withItemFields, writeText } from '../adapter.js';
 import { isHttpRef, readHttpRef, type HttpRef } from '../http-ref.js';
-import type { Node, ViewDocument, Widget } from '../view-document.js';
+import { placedIn, type Node, type ViewDocument, type Widget } from '../view-document.js';
 import { PictureError, isDataPlace, isFlowPlace, keyReadsOf, keysIn, toViewDocument } from './picture.js';
 import type { Board } from './types.js';
 import { validateBoard } from './validate.js';
@@ -267,6 +267,17 @@ describe('the picture model of a v2 board', () => {
     expect(nodeOf(doc, 'one').highlight).toEqual({ from: '$highlight' });
     expect(nodeOf(doc, 'plain').highlight).toBeUndefined();
     expect(nodeOf(doc, 'plain').widget.bindings).not.toHaveProperty('$highlight');
+  });
+
+  it('finds an item by its key when the key holds a colon — a time of day — in a grid and in a canvas cell', () => {
+    const keys = { pumps: ['12:30', '13:30', '14:30'] };
+    const parts = { pump: { as: 'status-card' as const, each: 'pumps', title: '{{key}}', show: ['state'], highlight: 'current' } };
+    const draw = (layout: Board['layout']) => toViewDocument(board(parts, layout), { keysOf: d => (keys as Record<string, string[]>)[d] ?? [] });
+    const grid = draw({ kind: 'grid', items: [['pump', 4]] });
+    for (const key of keys.pumps) expect(nodeOf(grid, `pump/${key}`).highlight, key).toEqual({ from: '$highlight' });
+    const cell = draw({ kind: 'grid', items: [{ span: 12, canvas: { size: [600, 200], place: { pump: { '12:30': [0, 0, 150, 100], '13:30': [160, 0, 150, 100], '14:30': [320, 0, 150, 100] } } } }] });
+    const marked = placedIn(cell).filter(n => n.highlight !== undefined).map(n => n.id.slice(n.id.indexOf('pump/')));
+    expect(marked).toEqual(['pump/12:30', 'pump/13:30', 'pump/14:30']);
   });
 
   it('refuses a highlight on a part that reads no single item', () => {
