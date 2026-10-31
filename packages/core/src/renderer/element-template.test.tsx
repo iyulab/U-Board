@@ -92,6 +92,9 @@ describe('fillTemplate', () => {
     expect(filled('{{#alarm}}!{{/alarm}}{{^alarm}}ok{{/alarm}}', { alarm: true })).toBe('!');
     expect(filled('{{#alarm}}!{{/alarm}}{{^alarm}}ok{{/alarm}}', { alarm: false })).toBe('ok');
     expect(filled('{{^rows}}none{{/rows}}', { rows: [] })).toBe('none');
+    // A number is a value, 0 too: a section is shown for it and the inverted one is not — `0` is no emptier than `0°C`.
+    expect(filled('{{#n}}[{{n}}]{{/n}}{{^n}}none{{/n}}', { n: 0 })).toBe('[0]');
+    expect(filled('{{#t}}x{{/t}}{{^t}}none{{/t}}', { t: '' })).toBe('none');
   });
 
   it('shows a number with the digits its value asks for — text that reads as one too — and anything else as it is', () => {

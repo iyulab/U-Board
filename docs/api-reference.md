@@ -383,8 +383,9 @@ An element is one of two: a **template** or a **script**. Names are lowercase le
 the thing — a title, a status and a few values are a `status-card`, `stat` or `stat-list`.
 
 - **Template holes** — logic-less: `{{name}}` (a declared prop, or a dotted path into an `object` prop; every value
-  escaped), `{{#list}}…{{/list}}` (repeated for each item, or shown once for any other truthy value; inside it a name
-  is looked up in the item first and `{{.}}` is the item itself), `{{^flag}}…{{/flag}}` (shown when empty or false),
+  escaped), `{{#list}}…{{/list}}` (repeated for each item, or shown once for any other value that is not empty — a number
+  is a value, `0` too; inside it a name is looked up in the item first and `{{.}}` is the item itself),
+  `{{^flag}}…{{/flag}}` (shown when empty: not there, `null`, `false`, an empty text or an empty list),
   `{{! comment}}`. `{{inlet | fixed:1}}` shows a number with that many digits after the point (0–6),
   `{{orders | grouped:0}}` the same with a comma every three digits. Nothing is computed inside the braces: numbers
   become a drawing through CSS — `style="--level: {{level}}"` and `height: calc(var(--level) * 1%)`.

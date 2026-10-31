@@ -1,7 +1,8 @@
 /**
  * The value language of a `template` element: logic-less Mustache, the part of it that needs no code —
  * `{{name}}` (a value, escaped), `{{#name}}…{{/name}}` (a section: repeated for each item of a list, shown
- * once for any other truthy value), `{{^name}}…{{/name}}` (shown when the value is empty or false) and
+ * once for any other value that is not empty — a number is a value, 0 too), `{{^name}}…{{/name}}` (shown when the
+ * value is empty: not there, `null`, `false`, an empty text or an empty list) and
  * `{{! comment}}`. A name is a dotted path into the props (`reading.value`), or `.` for the current item.
  * A value may name how a number is shown: `{{inlet | fixed:1}}` — that many digits after the point (0–6), so 24 and
  * 24.25 read as 24.0 and 24.3 beside each other; `{{orders | grouped:0}}` the same with a comma every three digits
