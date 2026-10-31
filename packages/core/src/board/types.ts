@@ -150,9 +150,10 @@ export interface GroupPart extends Part {
 
 /**
  * A status card's meter: one field against its range, as a bar or a ring — the field's name, or the field with its
- * range (`min` 0 and `max` 100 when absent) and its form. The field's unit, format and state go with it.
+ * range (`min` 0 and `max` 100 when absent) and its form. An end of the range is a number written in the board, or the
+ * name of a field of what the part reads — a capacity — as a gauge's `max` is. The field's unit, format and state go with it.
  */
-export type Meter = string | { field: string; min?: number; max?: number; form?: 'bar' | 'ring' };
+export type Meter = string | { field: string; min?: number | string; max?: number | string; form?: 'bar' | 'ring' };
 
 /** `[x, y]`, or `[x, y, width, height]`, on the canvas. */
 export type Place = [number, number] | [number, number, number, number];

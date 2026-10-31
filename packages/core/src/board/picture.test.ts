@@ -227,6 +227,26 @@ describe('the picture model of a v2 board', () => {
     });
   });
 
+  it('reads the ends of a status card’s meter from fields of its item, as a gauge’s max is', () => {
+    const doc = view(board(
+      {
+        P1: { as: 'status-card', of: 'pumps[P1]', show: 'state', meter: { field: 'flow', max: 'rpm' } },
+        P2: { as: 'status-card', of: 'pumps[P2]', show: 'state', meter: { field: 'flow', min: 5, max: 60 } },
+      },
+      { kind: 'canvas', size: [400, 200], place: { P1: [0, 0, 180, 160], P2: [200, 0, 180, 160] } },
+    ));
+    const p1 = nodeOf(doc, 'P1').widget;
+    // A field's end is not written into the picture's props — it is the binding that fills it.
+    expect(p1.props).toMatchObject({ data: { meter: { value: 0, unit: 'm³/h', format: 'number:1' } } });
+    expect((p1.props as { data: { meter: Record<string, unknown> } }).data.meter).not.toHaveProperty('max');
+    expect(Object.keys(p1.bindings ?? {})).toContain('data.meter.max');
+    expect(drawn(p1)).toMatchObject({ data: { meter: { value: 41.5, max: 1450 } } });
+    // Numbers stay written in the board and bind nothing.
+    const p2 = nodeOf(doc, 'P2').widget;
+    expect(p2.props).toMatchObject({ data: { meter: { min: 5, max: 60 } } });
+    expect(Object.keys(p2.bindings ?? {})).not.toContain('data.meter.max');
+  });
+
   it('reads a request time and a fixed filter with the item', () => {
     const b = board({ p: { as: 'stat', of: 'air[중구]', show: 'pm10' } }, { kind: 'canvas', size: [100, 100], place: { p: [0, 0] } });
     b.data!.air = { from: 'gov', path: '/air?date={{now:yyyyMMdd}}', list: '/items', key: 'station', where: { item: 'PM10' }, now: { delay: 2400, step: 3600 }, zone: 'Asia/Seoul' };

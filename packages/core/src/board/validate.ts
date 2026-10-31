@@ -399,7 +399,10 @@ export function validateBoard(board: unknown): BoardIssue[] {
     return part;
   };
 
-  /** A status card's meter: a field's name, or `{ "field", "min"?, "max"?, "form"? }` with `max` above `min`. */
+  /**
+   * A status card's meter: a field's name, or `{ "field", "min"?, "max"?, "form"? }` — an end of the range is a number, or the
+   * name of a field of what the part reads (a capacity), as a gauge's `max` is — with `max` above `min` when both are numbers.
+   */
   const checkMeter = (meter: unknown, at: string) => {
     if (typeof meter === 'string') return;
     const shape = 'a meter is "<field>" or { "field": "<field>", "min"?, "max"?, "form"?: "bar" | "ring" }';
@@ -407,16 +410,13 @@ export function validateBoard(board: unknown): BoardIssue[] {
     for (const key of Object.keys(meter)) if (!['field', 'min', 'max', 'form'].includes(key)) fail(`${at}/${key}`, shape);
     for (const key of ['min', 'max'] as const) {
       const end = meter[key];
-      if (end === undefined || isNum(end)) continue;
-      // A name is the natural thing to write — the meter's other end read from a field — and it is the one thing an end cannot be.
-      fail(`${at}/${key}`, typeof end === 'string'
-        ? `"${key}" is a number written in the board — a meter's end is not read from a field ("${end}")`
-        : `"${key}" is a number`);
+      if (end === undefined || isNum(end) || (typeof end === 'string' && end !== '')) continue;
+      fail(`${at}/${key}`, `"${key}" is a number, or the name of a field of what the part reads`);
     }
     if (isNum(meter.min) || isNum(meter.max)) {
-      const min = isNum(meter.min) ? meter.min : 0;
-      const max = isNum(meter.max) ? meter.max : 100;
-      if (max <= min) fail(`${at}/max`, `a meter’s max is above its min (${min})`);
+      const min = isNum(meter.min) ? meter.min : meter.min === undefined ? 0 : null;
+      const max = isNum(meter.max) ? meter.max : meter.max === undefined ? 100 : null;
+      if (min !== null && max !== null && max <= min) fail(`${at}/max`, `a meter’s max is above its min (${min})`);
     }
     if (meter.form !== undefined && meter.form !== 'bar' && meter.form !== 'ring') fail(`${at}/form`, 'a meter’s form is "bar" or "ring"');
   };

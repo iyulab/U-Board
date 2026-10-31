@@ -516,10 +516,15 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
           const f = field(gauge.field);
           bindValue('data.meter.value', gauge.field);
           bindState('data.meter.', gauge.field);
+          // An end of the range read from the item — a capacity — is a field's value; a number is the end itself.
+          for (const end of ['min', 'max'] as const) {
+            const value = gauge[end];
+            if (typeof value === 'string') bindValue(`data.meter.${end}`, value);
+          }
           const format = formatOf(f);
           meterProp = {
             value: 0,
-            ...(gauge.min !== undefined ? { min: gauge.min } : {}), ...(gauge.max !== undefined ? { max: gauge.max } : {}),
+            ...(typeof gauge.min === 'number' ? { min: gauge.min } : {}), ...(typeof gauge.max === 'number' ? { max: gauge.max } : {}),
             ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}), ...(gauge.form !== undefined ? { form: gauge.form } : {}),
           };
         }

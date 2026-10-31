@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- **A status card's `meter` reads the ends of its range from fields of the item.** `meter: { "field": "here", "max": "capacity" }` draws
+  the value against a capacity the data carries («now / total» — occupancy, usage, stock against target); `min` takes a field name the
+  same way. This is the convention a gauge's `max` already had, so one word means the same in both. A number stays the end itself, and
+  a board that wrote numbers draws as before. A name that is empty, or neither a number nor a string, is an error that says so; before, a
+  field name was refused with «a meter's end is not read from a field».
+
 ### Changed
 
 - `validateBoard` says what a board's `skin` is and the keys it has. A skin written as a frame's name (`"skin": "ticket"` — the natural first try
