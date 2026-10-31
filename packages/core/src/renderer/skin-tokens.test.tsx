@@ -29,6 +29,16 @@ describe('the tokens a skin sets', () => {
     expect(skinTokens({ shadow: 'hard' })['--u-widget-shadow']).toBe('3px 3px 0 currentColor');
   });
 
+  it('leaves out what is not a colour, a font or a radius — a document need not have been validated', () => {
+    // `url(…)` as a background would load an image the board's media origins never allowed
+    expect(skinTokens({ palette: { paper: 'url(https://example.test/p.gif)', ink: 'var(--x)', muted: 'none', rule: 'red;background:url(x)' } })).toEqual({});
+    expect(skinTokens({ font: 'x;y', display: 'url(https://example.test/f.woff)', mono: '{}', radius: -2 })).toEqual({});
+    expect(skinTokens({ radius: Number.NaN })).toEqual({});
+    // a surface is mixed from a paper and an ink that both held
+    expect(skinTokens({ palette: { paper: '#fff', ink: 'url(x)' } })).toEqual({ '--u-widget-bg': '#fff' });
+    expect(skinTokens({ shadow: 'hard', palette: { rule: 'url(x)' } })['--u-widget-shadow']).toBe('3px 3px 0 currentColor');
+  });
+
   it('reaches an element\'s theme after the theme\'s and the accent\'s', () => {
     const theme = boardTheme('light', '#0a0', { palette: { paper: '#eee' } });
     expect(theme['--u-widget-bg']).toBe('#eee');

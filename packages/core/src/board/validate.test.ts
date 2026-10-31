@@ -285,6 +285,25 @@ describe('validateBoard', () => {
     expect(hints({ density: 'compact', palette: { ground: '#111' } })).toEqual(['/board/skin/density', '/board/skin/palette/ground']);
   });
 
+  it('holds a skin to colours, font names and a radius — nothing the widgets\' CSS would read as a url or a rule', () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const at = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message.slice(0, 32)}`);
+    expect(at({ palette: { paper: '#fff', ink: 'rgb(10 20 30)', muted: 'hsl(210, 10%, 40%)', rule: 'gray', ground: 'transparent' }, font: 'Georgia, serif', display: '"Noto Sans KR", sans-serif', mono: 'monospace', radius: 0 })).toEqual([]);
+    expect(at({ palette: { paper: 'url(https://example.test/p.gif)', ink: 'red;background:url(x)', rule: 'var(--x)', muted: 'none' } })).toEqual([
+      '/board/skin/palette/paper: a palette colour is a colour — a',
+      '/board/skin/palette/ink: a palette colour is a colour — a',
+      '/board/skin/palette/muted: a palette colour is a colour — a',
+      '/board/skin/palette/rule: a palette colour is a colour — a',
+    ]);
+    expect(at({ font: 'x;y', display: 'url(https://example.test/f.woff)', mono: '{}' })).toEqual([
+      '/board/skin/font: a font is family names separated',
+      '/board/skin/display: a font is family names separated',
+      '/board/skin/mono: a font is family names separated',
+    ]);
+    expect(at({ radius: -1 })).toEqual(['/board/skin/radius: a radius is a number of pixels, ']);
+    expect(at({ radius: '4px' })).toEqual(['/board/skin/radius: a radius is a number of pixels, ']);
+  });
+
   it('checks shapes and the look', () => {
     const board = {
       ...canvas({}, {

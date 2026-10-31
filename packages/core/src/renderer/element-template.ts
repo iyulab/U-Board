@@ -4,6 +4,7 @@ import { formatValue, parseTemplate, type TemplateNode } from '../elements/templ
 import { TEMPLATE_TAGS, attributeProblem, checkStyle, isResourceOrigin } from '../elements/markup-policy.js';
 import { TONES } from '../tones.js';
 import { THEME_PALETTE } from '../theme-colors.js';
+import { isFontStack, isSkinColor } from '../css-color.js';
 
 /**
  * The colours and type an element draws with, by the board's tone — the same values the prepared widgets use
@@ -70,20 +71,31 @@ const SKIN_SHADOW = { none: 'none', soft: '0 1px 3px rgb(0 0 0 / 14%)' } as cons
  */
 export function skinTokens(skin: ViewSkin | undefined): Record<string, string> {
   if (skin === undefined) return {};
-  const p = skin.palette ?? {};
+  // These values land in the widgets' CSS, and a view document does not have to have been through `validateBoard`: a colour
+  // that is not a colour (`url(…)` would load an image the board's media origins never allowed) and a font that is not a list
+  // of names are left out, as if the skin had not named them.
+  const colour = (value: unknown) => (isSkinColor(value) ? value : undefined);
+  const font = (value: unknown) => (isFontStack(value) ? value : undefined);
+  const paper = colour(skin.palette?.paper);
+  const ink = colour(skin.palette?.ink);
+  const muted = colour(skin.palette?.muted);
+  const rule = colour(skin.palette?.rule);
+  const sans = font(skin.font);
+  const display = font(skin.display);
+  const mono = font(skin.mono);
   const out: Record<string, string> = {};
-  if (p.paper !== undefined) out['--u-widget-bg'] = p.paper;
-  if (p.ink !== undefined) out['--u-widget-text'] = p.ink;
-  if (p.muted !== undefined) out['--u-widget-text-secondary'] = p.muted;
-  if (p.rule !== undefined) out['--u-widget-border'] = p.rule;
+  if (paper !== undefined) out['--u-widget-bg'] = paper;
+  if (ink !== undefined) out['--u-widget-text'] = ink;
+  if (muted !== undefined) out['--u-widget-text-secondary'] = muted;
+  if (rule !== undefined) out['--u-widget-border'] = rule;
   // a surface (a gauge's track, a card's fill) is the paper a little toward the ink
-  if (p.paper !== undefined && p.ink !== undefined) out['--u-widget-surface'] = `color-mix(in srgb, ${p.ink} 8%, ${p.paper})`;
-  if (skin.font !== undefined) out['--u-widget-font-family'] = skin.font;
-  if (skin.display !== undefined) out['--u-widget-font-display'] = skin.display;
-  if (skin.mono !== undefined) out['--u-widget-font-mono'] = skin.mono;
-  if (skin.radius !== undefined) out['--u-widget-radius'] = `${skin.radius}px`;
+  if (paper !== undefined && ink !== undefined) out['--u-widget-surface'] = `color-mix(in srgb, ${ink} 8%, ${paper})`;
+  if (sans !== undefined) out['--u-widget-font-family'] = sans;
+  if (display !== undefined) out['--u-widget-font-display'] = display;
+  if (mono !== undefined) out['--u-widget-font-mono'] = mono;
+  if (typeof skin.radius === 'number' && Number.isFinite(skin.radius) && skin.radius >= 0) out['--u-widget-radius'] = `${skin.radius}px`;
   if (skin.shadow === 'none' || skin.shadow === 'soft') out['--u-widget-shadow'] = SKIN_SHADOW[skin.shadow];
-  else if (skin.shadow === 'hard') out['--u-widget-shadow'] = `3px 3px 0 ${p.rule ?? 'currentColor'}`;
+  else if (skin.shadow === 'hard') out['--u-widget-shadow'] = `3px 3px 0 ${rule ?? 'currentColor'}`;
   return out;
 }
 

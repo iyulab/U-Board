@@ -49,5 +49,20 @@ export function isDrawingColor(value: string): boolean {
   return v.toLowerCase() === 'none' || HEX.test(v) || NAMED.has(v.toLowerCase()) || RGB.test(v) || HSL.test(v);
 }
 
+/** Whether `value` is a colour a skin's palette may name: a drawing's colour that paints something (`none` paints nothing). A
+ *  palette colour is written into the widgets' CSS, where anything else — `url(…)`, a `var()` — would load or read what the
+ *  board's media origins and its theme govern. */
+export function isSkinColor(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().toLowerCase() !== 'none' && isDrawingColor(value);
+}
+
+const FONT_STACK = /^[\p{L}\p{N}\s,"'._-]{1,200}$/u;
+
+/** Whether `value` is a font stack a skin may name: family names separated by commas (`"Noto Sans KR", serif`). No function,
+ *  no url, no braces or semicolons — a font is written into the widgets' CSS as a name, never as a rule. */
+export function isFontStack(value: unknown): value is string {
+  return typeof value === 'string' && FONT_STACK.test(value) && value.trim() !== '';
+}
+
 /** What a decoration's colour field accepts, said the way a fix needs it. */
 export const DRAWING_COLOR_FORMS = 'a hex colour ("#1f6feb", "#1f6feb33"), rgb()/rgba(), hsl()/hsla(), a CSS colour name, "transparent" or "none"';

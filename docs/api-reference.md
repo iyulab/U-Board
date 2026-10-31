@@ -135,6 +135,9 @@ interface Skin {
 
 `paper` · `ink` · `muted` · `rule` draw a framed part; `ground` is text on the board's background. Every built-in
 reads the skin; no part sets fonts or colours of its own. `ground` and `density` are accepted but not drawn yet.
+A palette value is a colour — a hex colour, `rgb()`, `hsl()`, a CSS colour name or `transparent`; a font is family names
+separated by commas (`"Noto Sans KR", sans-serif`); a radius is a number of pixels, 0 or more. `validateBoard` names what
+is none of these, and the viewer leaves such a value out — a skin never carries a `url()` or a rule into the page's CSS.
 
 ### `statuses`
 

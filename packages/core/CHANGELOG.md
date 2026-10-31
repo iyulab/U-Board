@@ -20,6 +20,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- A board's `skin` is held to what it is written into the page as: a palette colour is a colour (hex, `rgb()`, `hsl()`, a CSS colour name,
+  `transparent`), a font is a list of family names and a radius is a number of pixels, 0 or more. `validateBoard` names a value that is
+  none of these, and the viewer leaves it out. A palette value such as `url(…)` used to reach the widgets' background, where it asked
+  the browser to load an image from an address the board's media origins had never allowed.
 - **`board.skin` is drawn.** The skin was in the schema, checked by `validateBoard` and listed in the rules, but nothing read it:
   a board that set a palette, a font, a frame, a corner radius or a shadow was drawn exactly as one without. The palette's
   `paper` · `ink` · `muted` · `rule` now set the widgets' background, text, secondary text and border (and a surface a little

@@ -9,7 +9,7 @@ import { isTriggerLink } from '../view-document.js';
 import { EMPHASES, FRAMES, TONES } from './types.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from '../elements/markup-policy.js';
 import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
-import { DRAWING_COLOR_FORMS, isDrawingColor } from '../css-color.js';
+import { DRAWING_COLOR_FORMS, isDrawingColor, isFontStack, isSkinColor } from '../css-color.js';
 import { THEME_COLORS, isThemeColor } from '../theme-colors.js';
 import { parseTemplate } from '../elements/template.js';
 import { unknownKeys } from './schema-keys.js';
@@ -84,6 +84,17 @@ export function validateBoard(board: unknown): BoardIssue[] {
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
   if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
   if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');
+  // The skin's values are written into the widgets' CSS: a colour is a colour and a font a list of names — never a url or a rule.
+  if (isObj(skin.palette)) {
+    for (const key of ['paper', 'ink', 'muted', 'rule', 'ground'] as const) {
+      const colour = skin.palette[key];
+      if (colour !== undefined && !isSkinColor(colour)) fail(`/board/skin/palette/${key}`, `a palette colour is a colour — ${DRAWING_COLOR_FORMS.replace(', "transparent" or "none"', ' or "transparent"')}`);
+    }
+  }
+  for (const key of ['font', 'display', 'mono'] as const) {
+    if (skin[key] !== undefined && !isFontStack(skin[key])) fail(`/board/skin/${key}`, 'a font is family names separated by commas — "Noto Sans KR", serif — not a url, a function or a rule');
+  }
+  if (skin.radius !== undefined && !(isNum(skin.radius) && skin.radius >= 0)) fail('/board/skin/radius', 'a radius is a number of pixels, 0 or more');
   // declared and checked, but not drawn yet — say so, so a board that sets them is not left wondering why nothing changed
   if (skin.density !== undefined) issues.push({ at: '/board/skin/density', message: '"density" is not drawn yet — the board looks the same with it', hint: true });
   if (isObj(skin.palette) && skin.palette.ground !== undefined) issues.push({ at: '/board/skin/palette/ground', message: '"ground" is not drawn yet — the board looks the same with it; the board own background colour comes from its theme', hint: true });
