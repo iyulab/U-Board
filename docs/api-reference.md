@@ -291,7 +291,9 @@ The kinds come from three places, listed with their options as `PART_KINDS` (`pa
 - **Charts** — every chart of the widget library (`chart.line`, `chart.bar` …), with their mapping options (`x`, `y`,
   `label`, `value`, `group` …) naming fields of the rows they read.
 - **The board's own**: `marker` — a point on a canvas in its status, with a label (`shape`, or `symbol` naming one of
-  the board's symbols); `label` — a text, fixed or from a field; `legend` — the statuses in use; `group` — several
+  the board's symbols; `labelAt`: `right` · `left` · `above` · `below` — or `auto`, the first of below, right, above, left that none of its links leaves — puts the point at the middle of the part's box and
+  its words on that side of it, so a link to the part meets the point — without it the point is at the box's left, the
+  words beside it); `label` — a text, fixed or from a field; `legend` — the statuses in use; `group` — several
   parts drawn together on a small canvas of their own (`size`, `parts`, `place`, `shapes`, `links`), its parts reading
   the group's `of` unless they name their own and addressed `<group>/<part>`; `element` — a drawing of the board's
   `elements` (`element`, fixed `props`, and `bind` from a prop to a field — `"<field>"`, its status `"<field>.status"`

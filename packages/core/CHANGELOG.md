@@ -8,6 +8,11 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **`marker` takes `labelAt` — the side of its point the words go on.** A marker's point sat at the left of its box with the words beside it, so a link
+  to the marker ended at the middle of the box, missing the point, and every label was to the right whatever the line it stood on. With
+  `labelAt: "right" | "left" | "above" | "below"` the point is the middle of the part's box and the words are on that side of it — a link meets the point,
+  a station on a horizontal line can name itself below and one on a vertical line to its right — `labelAt: "auto"` picks the first side of below, right, above and left that none of the marker's links leaves. The node carries `joint` (the size of its point), and
+  `placeConnectors` ends a straight, bent or curved line at that square at the middle of the box, not at the box's edge. Without `labelAt` nothing changes.
 - **`board.skin.palette.backdrop` — the board's own background colour.** A board's page was always the viewer's white (or the theme's dark);
   a board that wants a warm paper, a night sky or a tint behind its cards now says it with one palette colour, drawn behind every part and
   under a background picture. A colour only (hex, `rgb()`, `hsl()`, a CSS name, `transparent`) — never a `url()` or a gradient; a gradient or a

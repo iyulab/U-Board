@@ -74,6 +74,8 @@ const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 /** What a board says at its top, in the order it is written. */
 const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'density'];
 const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'];
+/** The sides of a marker's point its words may go on. */
+const MARKER_SIDES = ['right', 'left', 'above', 'below', 'auto'];
 const BOARD_SECTIONS = ['board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout', 'triggers'] as const;
 
 /** The types an element's prop may be. */
@@ -436,6 +438,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
       else if (kind.of === 'no' || kind.kind === 'group') fail(`${at}/highlight`, `a ${kind.kind} marks no item — "highlight" is for a part that reads one item`);
       else if (wholeList || reads === null) fail(`${at}/highlight`, '"highlight" marks one item — the part reads one: "of": "<data>[<key>]", or "each"');
     }
+    if (kind.kind === 'marker' && part.labelAt !== undefined && !MARKER_SIDES.includes(part.labelAt as string)) fail(`${at}/labelAt`, `"labelAt" is the side of the point its words go — ${MARKER_SIDES.join(' · ')} (auto: the side its links leave free)`);
     if (kind.kind === 'stat' && part.trend !== undefined && typeof part.trend !== 'string') fail(`${at}/trend`, '"trend" names a field of the item holding its recent values, a list of numbers');
     // A `state` option names the field whose state colours the rows (or the card): it needs a state to give.
     if (part.state !== undefined && kind.own.includes('state')) {

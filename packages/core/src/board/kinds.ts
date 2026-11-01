@@ -47,7 +47,7 @@ const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['o
 
 /** The kinds only a spatial board has, and the two that structure a board: a group of parts, and an own drawing. */
 const BOARD_KINDS: readonly PartKind[] = [
-  { kind: 'marker', shows: 'a point on a canvas, in its status, with a label', of: 'may', options: [], own: ['shape', 'symbol', 'note'] },
+  { kind: 'marker', shows: 'a point on a canvas, in its status, with a label', of: 'may', options: [], own: ['shape', 'symbol', 'note', 'labelAt'] },
   { kind: 'label', shows: 'a text on a canvas, from a field or fixed', of: 'may', options: [], own: [] },
   { kind: 'legend', shows: "the board's statuses that are in use", of: 'no', options: [], own: [] },
   { kind: 'group', shows: 'several parts drawn together on a small canvas of their own', of: 'may', options: [], own: ['size', 'parts', 'place', 'shapes', 'links'] },

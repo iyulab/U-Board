@@ -10,18 +10,26 @@ const TONE_RULES = TONES.map(t => `[data-tone="${t}"]{--c:var(--u-widget-tone-${
 
 const text = { type: 'string' } as const;
 
+/** The size of a marker's point — what a link meets when the marker's words are on a side of it (`labelAt`). */
+export const MARKER_JOINT = 14;
+
 /** A point on a canvas, in its status, with its name, its status's words and a note. */
 export const MARKER: ElementDefinition = {
   render: 'template',
-  props: { type: 'object', properties: { name: text, tone: text, status: text, note: text, shape: { enum: ['dot', 'pin', 'ring'] } } },
+  props: { type: 'object', properties: { name: text, tone: text, status: text, note: text, shape: { enum: ['dot', 'pin', 'ring'] }, labelAt: { enum: ['', 'right', 'left', 'above', 'below'] } } },
   template:
-    '<div class="mk {{shape}}" data-tone="{{tone}}"><i></i><span class="txt"><b>{{name}}</b><span class="st">{{status}}</span><small>{{note}}</small></span></div>',
+    '<div class="mk {{shape}} at-{{labelAt}}" data-tone="{{tone}}"><i></i><span class="txt"><b>{{name}}</b><span class="st">{{status}}</span><small>{{note}}</small></span></div>',
   style:
     `.mk{--c:var(--u-widget-tone-idle);display:flex;align-items:center;gap:6px;height:100%;font:12px var(--u-widget-font-family);color:var(--u-widget-text)}${TONE_RULES}` +
     '.mk i{flex:none;width:14px;height:14px;border-radius:50%;background:var(--c)}.mk.ring i{background:none;border:3px solid var(--c)}' +
     '.mk.pin i{border-radius:50% 50% 50% 0;transform:rotate(-45deg)}.txt{display:grid;line-height:1.2;min-width:0}' +
     '.txt b,.st,small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.st{color:var(--c);font-weight:600}.st:empty,small:empty{display:none}' +
-    'small{color:var(--u-widget-text-secondary)}',
+    'small{color:var(--u-widget-text-secondary)}' +
+    // With `labelAt` the point is the middle of the box and the words go on a side of it — so a link to the box meets the point.
+    '.mk[class*=" at-"]:not(.at-){position:relative;display:block}.mk[class*=" at-"]:not(.at-) i{position:absolute;left:50%;top:50%;box-sizing:border-box;margin:-7px 0 0 -7px}' +
+    '.mk[class*=" at-"]:not(.at-) .txt{position:absolute}.at-right .txt{left:calc(50% + 14px);top:50%;transform:translateY(-50%)}' +
+    '.at-left .txt{right:calc(50% + 14px);top:50%;transform:translateY(-50%);text-align:right}' +
+    '.at-below .txt{left:0;right:0;top:calc(50% + 14px);text-align:center}.at-above .txt{left:0;right:0;bottom:calc(50% + 14px);text-align:center}',
 };
 
 /** A marker drawn as one of the board's symbols — in its status's colour — with its name, status and note under it. */

@@ -54,8 +54,8 @@ export interface ConnectorPlacement {
  * arrowhead's tip touches the box it points at. `measure` gives a text's width (the canvas's own where there is one).
  * A connector naming a node the document does not have is not placed.
  */
-export function placeConnectors(nodes: ReadonlyArray<Pick<Node, 'id' | 'x' | 'y'> & BoxSize>, connectors: readonly Connector[], measure: (text: string, size: number) => number = estimateTextWidth): ConnectorPlacement[] {
-  const boxes = new Map(nodes.map(node => [node.id, boxOf(node)]));
+export function placeConnectors(nodes: ReadonlyArray<Pick<Node, 'id' | 'x' | 'y' | 'joint'> & BoxSize>, connectors: readonly Connector[], measure: (text: string, size: number) => number = estimateTextWidth): ConnectorPlacement[] {
+  const boxes = new Map(nodes.map(node => [node.id, joinBoxOf(node)]));
   const siblings = new Map<string, Array<{ connector: Connector; index: number }>>();
   connectors.forEach((connector, index) => {
     const key = [connector.fromNodeId, connector.toNodeId].sort().join('\u0000');
@@ -97,6 +97,14 @@ export function labelChipOf(label: Box): Box {
 
 export function boxOf(node: Pick<Node, 'x' | 'y'> & BoxSize): Box {
   return { x: node.x, y: node.y, width: node.width, height: node.height };
+}
+
+/** The box connectors meet: the node's own, or its `joint` square at the middle of it. */
+function joinBoxOf(node: Pick<Node, 'x' | 'y' | 'joint'> & BoxSize): Box {
+  const box = boxOf(node);
+  const joint = node.joint;
+  if (joint === undefined || !(joint > 0)) return box;
+  return { x: box.x + (box.width - joint) / 2, y: box.y + (box.height - joint) / 2, width: joint, height: joint };
 }
 
 function labelBox(text: string, points: number[], along: number, measure: (text: string, size: number) => number, size: number): Box {

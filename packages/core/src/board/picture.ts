@@ -8,7 +8,33 @@
 import { placedAt, type Binding, type CellCanvas, type Connector, type ElementDefinition, type GridItem, type GridLayout, type ItemField, type Node, type Shape as ViewShape, type Trigger as ViewTrigger, type TriggerAction as ViewTriggerAction, type ValueMap, type ValueRange, type ViewDocument, type Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
-import { LABEL, LEGEND, MARKER, MARKER_SYMBOL, lineElement } from './builtins.js';
+import { LABEL, LEGEND, MARKER, MARKER_JOINT, MARKER_SYMBOL, lineElement } from './builtins.js';
+
+const MARKER_JOINT_SIDES = ['right', 'left', 'above', 'below'];
+
+/**
+ * Puts the words of each marker in `auto` on the first side its links do not leave — below, then right, above, left: a station on
+ * a horizontal line names itself below it, one on a vertical line to its right. A marker every side of which has a link takes right.
+ */
+function sideFreeOfLinks(nodes: Node[], connectors: Connector[], auto: ReadonlySet<string>): void {
+  const centre = new Map(nodes.map(n => [n.id, { x: n.x + (n.width ?? 0) / 2, y: n.y + (n.height ?? 0) / 2 }]));
+  for (const node of nodes) {
+    if (!auto.has(node.id)) continue;
+    const here = centre.get(node.id)!;
+    const taken = new Set<string>();
+    for (const c of connectors) {
+      const other = c.fromNodeId === node.id ? c.toNodeId : c.toNodeId === node.id ? c.fromNodeId : undefined;
+      const there = other === undefined ? undefined : centre.get(other);
+      if (!there) continue;
+      const dx = there.x - here.x;
+      const dy = there.y - here.y;
+      taken.add(Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'right' : 'left') : dy >= 0 ? 'below' : 'above');
+    }
+    const side = ['below', 'right', 'above', 'left'].find(s => !taken.has(s)) ?? 'right';
+    const widget = node.widget as { props?: Record<string, unknown> };
+    node.widget = { ...node.widget, props: { ...widget.props, labelAt: side } } as Node['widget'];
+  }
+}
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { TONES } from './types.js';
 import type { Board, CanvasLayout, DataPlace, FlowPlace, RelativeRule, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
@@ -699,13 +725,13 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         throw new PictureError(`${at}/as`, `a ${kind.kind} is not drawn yet`);
       }
       case 'marker': {
-        const { shape = 'dot', symbol, note } = options as { shape?: string; symbol?: string; note?: string };
+        const { shape = 'dot', symbol, note, labelAt } = options as { shape?: string; symbol?: string; note?: string; labelAt?: string };
         const stateField = stateIn(fields);
         if (stateField) bindState('', stateField, { words: true });
         const props = { name: text(title, 'name') ?? item ?? '', tone: '', status: '', note: text(note, 'note') ?? '' };
         // A marker with a symbol draws the board's drawing — one, or the one a field names — in its status's colour.
         if (symbol !== undefined) return { type: builtin('u-board-marker-symbol', MARKER_SYMBOL), props: { ...props, symbol: text(symbol, 'symbol') ?? '' }, bindings };
-        return { type: builtin('u-board-marker', MARKER), props: { ...props, shape }, bindings };
+        return { type: builtin('u-board-marker', MARKER), props: { ...props, shape, labelAt: labelAt === 'right' || labelAt === 'left' || labelAt === 'above' || labelAt === 'below' ? labelAt : labelAt === 'auto' ? 'below' : '' }, bindings };
       }
       case 'label': {
         const name = fields[0];
@@ -808,6 +834,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     const connectors: Connector[] = [];
     const decorations: ViewShape[] = [];
     const lines: Node[] = [];
+    /** The markers whose words go on the side their links leave free (`labelAt: "auto"`). */
+    const autoLabelled = new Set<string>();
     const placeOne = (partId: string, id: string, part: Part, place: Place, reads: Reads | undefined) => {
       const nodeId = `${frame.ids}${id}`;
       const p = resolve(part);
@@ -824,7 +852,8 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         return;
       }
       const placed = place.length === 4 ? { width: place[2] * frame.sx, height: place[3] * frame.sy } : {};
-      nodes.push({ id: nodeId, x, y, ...placed, anchored: true, widget: widgetFor(part, `/parts/${partId}`, reads) });
+      if (p.as === 'marker' && p.labelAt === 'auto') autoLabelled.add(nodeId);
+      nodes.push({ id: nodeId, x, y, ...placed, anchored: true, ...(p.as === 'marker' && (MARKER_JOINT_SIDES.includes(p.labelAt as string) || p.labelAt === 'auto') ? { joint: MARKER_JOINT } : {}), widget: widgetFor(part, `/parts/${partId}`, reads) });
     };
     for (const [id, place] of Object.entries(canvas.place)) {
       const part = parts[id]!;
@@ -850,6 +879,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       const of = link.of ?? (frame.reads ? (frame.reads.item !== undefined ? `${frame.reads.query}[${frame.reads.item}]` : frame.reads.query) : undefined);
       connectors.push(connectorOf({ ...link, ...(of !== undefined ? { of } : {}), from: `${frame.ids}${link.from}`, to: `${frame.ids}${link.to}` }, `${prefix}link.${id}`, `${at}/links/${id}`));
     }
+    if (autoLabelled.size > 0) sideFreeOfLinks(nodes, connectors, autoLabelled);
     // Lines are drawn under the parts, as the decorations are.
     return { nodes: [...lines, ...nodes], connectors, ...(decorations.length > 0 ? { decorations } : {}) };
   };

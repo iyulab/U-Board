@@ -391,6 +391,38 @@ describe('the picture model of a v2 board', () => {
     expect(new Set(types).size).toBe(2);
   });
 
+  it('puts the words of a marker on the side its labelAt names — the point stays the middle of the box — and on none when it names none', () => {
+    const at = (labelAt: unknown) => {
+      const doc = view(board({ m: { as: 'marker', each: 'pumps', show: 'state', labelAt } }, { kind: 'canvas', size: [100, 100], place: { m: { P2: [10, 50, 120, 30] } } }));
+      if (doc.kind !== 'canvas') throw new Error('a canvas');
+      return (drawn(nodeOf(doc, 'm/P2').widget) as { labelAt: string }).labelAt;
+    };
+    expect(['right', 'left', 'above', 'below'].map(at)).toEqual(['right', 'left', 'above', 'below']);
+    expect(at(undefined)).toBe('');
+    // a link meets the point, not the edge of the box its words need — and only when the words are on a side
+    const joint = (labelAt?: string) => {
+      const doc = view(board({ m: { as: 'marker', each: 'pumps', show: 'state', ...(labelAt && { labelAt }) } }, { kind: 'canvas', size: [100, 100], place: { m: { P2: [10, 50, 120, 30] } } }));
+      if (doc.kind !== 'canvas') throw new Error('a canvas');
+      return nodeOf(doc, 'm/P2').joint;
+    };
+    expect(joint('below')).toBe(14);
+    expect(joint()).toBeUndefined();
+  });
+
+  it('puts the words of an auto marker on the side its links leave free', () => {
+    const sides = (positions: Record<string, [number, number, number, number]>) => {
+      const doc = view(board(
+        { m: { as: 'marker', each: 'pumps', show: 'state', labelAt: 'auto' } },
+        { kind: 'canvas', size: [400, 400], place: { m: positions }, links: { l: { from: 'm/P1', to: 'm/P2' } } },
+      ));
+      if (doc.kind !== 'canvas') throw new Error('a canvas');
+      return ['m/P1', 'm/P2'].map(id => (drawn(nodeOf(doc, id).widget) as { labelAt: string }).labelAt);
+    };
+    // on a horizontal line each names itself below; on a vertical one the upper takes its right, the lower its below
+    expect(sides({ P1: [10, 10, 100, 100], P2: [250, 10, 100, 100] })).toEqual(['below', 'below']);
+    expect(sides({ P1: [10, 10, 100, 100], P2: [10, 250, 100, 100] })).toEqual(['right', 'below']);
+  });
+
   it("draws markers, labels, a legend and lines with U-Board's own elements", () => {
     const doc = view(board(
       {
@@ -406,7 +438,7 @@ describe('the picture model of a v2 board', () => {
     ));
     if (doc.kind !== 'canvas') throw new Error('a canvas');
     expect(Object.keys(doc.elements ?? {}).sort()).toEqual(['u-board-legend', 'u-board-label', 'u-board-marker', 'u-board-shape-edge', 'u-board-shape-pipe'].sort());
-    expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', note: '', shape: 'ring' });
+    expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', note: '', shape: 'ring', labelAt: '' });
     expect(drawn(nodeOf(doc, 'l').widget)).toEqual({ text: 41.5, tone: '' });
     expect(drawn(nodeOf(doc, 'key').widget)).toEqual({ items: [{ tone: 'ok', label: 'Running', glyph: '' }, { tone: 'alarm', label: 'Tripped', glyph: '' }] });
     // A line is a node boxed around its points, under the parts, drawn in the box's own coordinates.

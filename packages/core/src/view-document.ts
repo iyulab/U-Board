@@ -273,6 +273,10 @@ export interface Node extends Placed {
   /** A name drawn under the node's box, outside it — a device's name under its icon. Connectors end at the box, so
    * the box can stay the size of what the widget draws while its name is as long as it needs to be. */
   caption?: string;
+  /** The size of the square, centred in the node's box, that connectors meet — a marker whose words go beside its point
+   * gives its point's size, so a line ends at the point, not at the edge of the box its words need. Left out, connectors end
+   * at the box. */
+  joint?: number;
 }
 
 /** A line drawn between two nodes, used when the relationship between them needs to be shown — from the edge of one
