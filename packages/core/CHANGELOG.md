@@ -8,6 +8,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A skin's `numerals` sets the headline figure of a `metric` or `stat-group`: `{ "scale": "large", "weight": 300 }`.** The big number of a card was one size
+  and one weight for every board, so a board that wanted a large light figure, or a small plain one, could not say so. `scale` is
+  `small` · `regular` · `large` · `xlarge` (0.75× · 1× · 1.25× · 1.75× of the size the widget would have drawn, at every width) and `weight`
+  a whole number from 100 to 900. A skin without `numerals` draws as before. Needs a widget library that reads the two figure tokens.
 - **`marker` takes `labelAt` — the side of its point the words go on.** A marker's point sat at the left of its box with the words beside it, so a link
   to the marker ended at the middle of the box, missing the point, and every label was to the right whatever the line it stood on. With
   `labelAt: "right" | "left" | "above" | "below"` the point is the middle of the part's box and the words are on that side of it — a link meets the point,

@@ -20,6 +20,16 @@ describe('the tokens a skin sets', () => {
     expect(skinTokens({ palette: { ground: '#000', paper: '#fff' } })).toEqual({ '--u-widget-bg': '#fff' });
   });
 
+  it('sets the scale and the weight of the big figures', () => {
+    expect(skinTokens({ numerals: { scale: 'large', weight: 300 } })).toEqual({ '--u-widget-figure-scale': '1.25', '--u-widget-figure-weight': '300' });
+    expect(skinTokens({ numerals: { scale: 'small' } })).toEqual({ '--u-widget-figure-scale': '0.75' });
+    expect(skinTokens({ numerals: { weight: 200 } })).toEqual({ '--u-widget-figure-weight': '200' });
+    // regular is the figure as it is drawn; a word the board language does not have is no scale, and a weight outside 100–900 is no weight
+    expect(skinTokens({ numerals: { scale: 'regular' } })).toEqual({ '--u-widget-figure-scale': '1' });
+    expect(skinTokens({ numerals: { scale: 'toString' as never, weight: 1000 } })).toEqual({});
+    expect(skinTokens({ numerals: {} })).toEqual({});
+  });
+
   it('sets the fonts, the corner radius and the shadow', () => {
     expect(skinTokens({ font: 'serif', display: 'Georgia', mono: 'monospace', radius: 0, shadow: 'none' })).toEqual({
       '--u-widget-font-family': 'serif', '--u-widget-font-display': 'Georgia',

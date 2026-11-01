@@ -37,7 +37,7 @@ const AGREED: [string, unknown, boolean][] = [
       links: { feed: { from: 'P1', to: 'T', of: 'equipment[P1]', show: 'state', label: '{{temp}}', arrow: 'end' } },
     }),
     statuses: { run: { tone: 'ok', label: 'Running', glyph: '▶', emphasis: 'hatch' } },
-    board: { title: 'Plant', theme: 'dark', accent: '#22d3ee', skin: { frame: 'plate', palette: { paper: '#f4efe4' }, shadow: 'soft', density: 'compact' } },
+    board: { title: 'Plant', theme: 'dark', accent: '#22d3ee', skin: { frame: 'plate', palette: { paper: '#f4efe4' }, shadow: 'soft', density: 'compact', numerals: { scale: 'large', weight: 300 } } },
   }, true],
   ['a grid with a cell of its own grid and a canvas cell', grid([['a', 8], { grid: ['b'], span: 4 }, { canvas: { size: [100, 100], place: {} }, span: 12 }]), true],
   ['a group preset repeated with each', { data, presets: { pump }, parts: { pumps: { use: 'pump', each: 'equipment' } }, layout: { kind: 'grid', items: ['pumps'] } }, true],

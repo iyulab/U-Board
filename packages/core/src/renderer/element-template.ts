@@ -5,6 +5,7 @@ import { TEMPLATE_TAGS, attributeProblem, checkStyle, isResourceOrigin } from '.
 import { TONES } from '../tones.js';
 import { THEME_PALETTE } from '../theme-colors.js';
 import { isFontStack, isSkinColor } from '../css-color.js';
+import { NUMERAL_SCALES, isNumeralWeight } from '../numerals.js';
 
 /**
  * The colours and type an element draws with, by the board's tone — the same values the prepared widgets use
@@ -93,6 +94,9 @@ export function skinTokens(skin: ViewSkin | undefined): Record<string, string> {
   if (sans !== undefined) out['--u-widget-font-family'] = sans;
   if (display !== undefined) out['--u-widget-font-display'] = display;
   if (mono !== undefined) out['--u-widget-font-mono'] = mono;
+  const scale = skin.numerals?.scale;
+  if (typeof scale === 'string' && Object.hasOwn(NUMERAL_SCALES, scale)) out['--u-widget-figure-scale'] = String(NUMERAL_SCALES[scale]);
+  if (isNumeralWeight(skin.numerals?.weight)) out['--u-widget-figure-weight'] = String(skin.numerals!.weight);
   if (typeof skin.radius === 'number' && Number.isFinite(skin.radius) && skin.radius >= 0) out['--u-widget-radius'] = `${skin.radius}px`;
   if (skin.shadow === 'none' || skin.shadow === 'soft') out['--u-widget-shadow'] = SKIN_SHADOW[skin.shadow];
   else if (skin.shadow === 'hard') out['--u-widget-shadow'] = `3px 3px 0 ${rule ?? 'currentColor'}`;

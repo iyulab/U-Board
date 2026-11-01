@@ -6,7 +6,7 @@
 // placed, that a state's words are statuses — `validateBoard` checks, and says where and how to write it instead.
 
 import { PART_KINDS } from './kinds.js';
-import { EMPHASES, FRAMES, TONES } from './types.js';
+import { EMPHASES, FRAMES, NUMERAL_SCALES, TONES } from './types.js';
 
 type Schema = Record<string, unknown>;
 
@@ -342,6 +342,11 @@ export function boardSchema(): Schema {
           radius: { type: 'number', minimum: 0 },
           shadow: { enum: ['none', 'soft', 'hard'] },
           density: { enum: ['regular', 'compact'] },
+          numerals: {
+            type: 'object',
+            additionalProperties: false,
+            properties: { scale: { enum: Object.keys(NUMERAL_SCALES) }, weight: { type: 'integer', minimum: 100, maximum: 900 } },
+          },
         },
       },
       trigger: {

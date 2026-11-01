@@ -43,6 +43,7 @@ export interface ViewSkin {
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';
   density?: 'regular' | 'compact';
+  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge'; weight?: number };
 }
 
 /** A canvas view: widgets placed by position over a background, optionally joined by connectors. */

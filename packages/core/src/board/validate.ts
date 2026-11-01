@@ -7,7 +7,8 @@
 import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
 import { isTriggerLink, type ViewSkin } from '../view-document.js';
 import { ELEMENT_THEME, accentTokens, skinTokens } from '../renderer/element-template.js';
-import { EMPHASES, FRAMES, TONES } from './types.js';
+import { EMPHASES, FRAMES, NUMERAL_SCALES, TONES } from './types.js';
+import { isNumeralWeight } from '../numerals.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from '../elements/markup-policy.js';
 import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor, isFontStack, isSkinColor } from '../css-color.js';
@@ -72,7 +73,7 @@ const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i 
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
 /** What a board says at its top, in the order it is written. */
-const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'density'];
+const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'density', 'numerals'];
 const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'];
 /** The sides of a marker's point its words may go on. */
 const MARKER_SIDES = ['right', 'left', 'above', 'below', 'auto'];
@@ -131,6 +132,14 @@ export function validateBoard(board: unknown): BoardIssue[] {
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
   if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
   if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');
+  if (skin.numerals !== undefined && !isObj(skin.numerals)) fail('/board/skin/numerals', 'numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy the big figures are');
+  if (isObj(skin.numerals)) {
+    for (const key of Object.keys(skin.numerals)) {
+      if (key !== 'scale' && key !== 'weight') fail(`/board/skin/numerals/${key}`, `numerals has no "${key}" — it has scale (${Object.keys(NUMERAL_SCALES).join(' · ')}) and weight (100–900)`);
+    }
+    if (skin.numerals.scale !== undefined && !Object.keys(NUMERAL_SCALES).includes(skin.numerals.scale as string)) fail('/board/skin/numerals/scale', `a scale is ${Object.keys(NUMERAL_SCALES).join(' · ')}`);
+    if (skin.numerals.weight !== undefined && !isNumeralWeight(skin.numerals.weight)) fail('/board/skin/numerals/weight', 'a weight is a whole number from 100 (thin) to 900 (black)');
+  }
   // The skin's values are written into the widgets' CSS: a colour is a colour and a font a list of names — never a url or a rule.
   if (isObj(skin.palette)) {
     for (const key of ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'] as const) {

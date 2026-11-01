@@ -292,6 +292,18 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('checks the numerals of a skin: a scale word and a weight from 100 to 900, nothing else', () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const at = (numerals: unknown) => validateBoard({ ...base, board: { skin: { numerals } } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
+    expect(at({ scale: 'large', weight: 300 })).toEqual([]);
+    expect(at({})).toEqual([]);
+    expect(at('large')).toEqual(['/board/skin/numerals: numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy the big figures are']);
+    expect(at({ size: 40 })).toEqual(['/board/skin/numerals/size: numerals has no "size" — it has scale (small · regular · large · xlarge) and weight (100–900)']);
+    expect(at({ scale: 'huge' })).toEqual(['/board/skin/numerals/scale: a scale is small · regular · large · xlarge']);
+    expect(at({ weight: 250.5 })).toEqual(['/board/skin/numerals/weight: a weight is a whole number from 100 (thin) to 900 (black)']);
+    expect(at({ weight: 'bold' })).toEqual(['/board/skin/numerals/weight: a weight is a whole number from 100 (thin) to 900 (black)']);
+  });
+
   it('says as a hint that a skin’s ground is not drawn yet — density is', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const hints = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => i.hint).map(i => i.at);
@@ -352,8 +364,8 @@ describe('validateBoard', () => {
     expect(at(['flat'])).toHaveLength(1);
     expect(at(null)).toHaveLength(1);
     expect(at({ frame: 'ticket', background: '#123', colors: {} })).toEqual([
-      '/board/skin/background: a skin has no "background" — it has font, display, mono, palette, frame, radius, shadow, density',
-      '/board/skin/colors: a skin has no "colors" — it has font, display, mono, palette, frame, radius, shadow, density',
+      '/board/skin/background: a skin has no "background" — it has font, display, mono, palette, frame, radius, shadow, density, numerals',
+      '/board/skin/colors: a skin has no "colors" — it has font, display, mono, palette, frame, radius, shadow, density, numerals',
     ]);
     expect(at({ palette: 'dark' })).toEqual(['/board/skin/palette: a palette is an object — { "paper", "ink", "muted", "rule" }, each a colour']);
     expect(at({ palette: { bg: '#111', text: '#eee', paper: '#111' } })).toEqual([
