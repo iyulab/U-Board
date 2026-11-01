@@ -311,10 +311,18 @@ describe('validateBoard', () => {
     expect(issues(canvas({ g: { as: 'gauge', of: 'totals', show: 'load', max: 120 } }))).toEqual([]);
   });
 
+  it('holds the palette backdrop to a colour, as every palette colour is', () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const at = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message.slice(0, 32)}`);
+    expect(at({ palette: { backdrop: 'linear-gradient(red, blue)' } })).toEqual(['/board/skin/palette/backdrop: a palette colour is a colour — a']);
+    expect(at({ palette: { backdrop: 'url(https://example.test/p.gif)' } })).toEqual(['/board/skin/palette/backdrop: a palette colour is a colour — a']);
+    expect(at({ palette: { backdrop: '#f2f0eb' } })).toEqual([]);
+  });
+
   it('holds a skin to colours, font names and a radius — nothing the widgets\' CSS would read as a url or a rule', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const at = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message.slice(0, 32)}`);
-    expect(at({ palette: { paper: '#fff', ink: 'rgb(10 20 30)', muted: 'hsl(210, 10%, 40%)', rule: 'gray', ground: 'transparent' }, font: 'Georgia, serif', display: '"Noto Sans KR", sans-serif', mono: 'monospace', radius: 0 })).toEqual([]);
+    expect(at({ palette: { paper: '#fff', ink: 'rgb(10 20 30)', muted: 'hsl(210, 10%, 40%)', rule: 'gray', ground: 'transparent', backdrop: '#f2f0eb' }, font: 'Georgia, serif', display: '"Noto Sans KR", sans-serif', mono: 'monospace', radius: 0 })).toEqual([]);
     expect(at({ palette: { paper: 'url(https://example.test/p.gif)', ink: 'red;background:url(x)', rule: 'var(--x)', muted: 'none' } })).toEqual([
       '/board/skin/palette/paper: a palette colour is a colour — a',
       '/board/skin/palette/ink: a palette colour is a colour — a',
@@ -343,8 +351,8 @@ describe('validateBoard', () => {
     ]);
     expect(at({ palette: 'dark' })).toEqual(['/board/skin/palette: a palette is an object — { "paper", "ink", "muted", "rule" }, each a colour']);
     expect(at({ palette: { bg: '#111', text: '#eee', paper: '#111' } })).toEqual([
-      '/board/skin/palette/bg: a palette has no "bg" — it has paper, ink, muted, rule, ground: paper is the ground, ink the text on it, muted the quieter text, rule the lines',
-      '/board/skin/palette/text: a palette has no "text" — it has paper, ink, muted, rule, ground: paper is the ground, ink the text on it, muted the quieter text, rule the lines',
+      `/board/skin/palette/bg: a palette has no "bg" — it has paper, ink, muted, rule, ground, backdrop: paper is a framed part's fill, ink the text on it, muted the quieter text, rule the lines, backdrop the board's own background`,
+      `/board/skin/palette/text: a palette has no "text" — it has paper, ink, muted, rule, ground, backdrop: paper is a framed part's fill, ink the text on it, muted the quieter text, rule the lines, backdrop the board's own background`,
     ]);
     expect(at({ frame: 'ticket', palette: { paper: '#111', ink: '#eee', muted: '#999', rule: '#333' }, font: 'Georgia, serif', radius: 4, shadow: 'soft', density: 'compact' })).toEqual([]);
     expect(at(undefined)).toEqual([]);

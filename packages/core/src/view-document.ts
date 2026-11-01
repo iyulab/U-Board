@@ -38,7 +38,7 @@ export interface ViewSkin {
   font?: string;
   display?: string;
   mono?: string;
-  palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string };
+  palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string; backdrop?: string };
   frame?: 'card' | 'flat' | 'glow' | 'plate' | 'ticket' | 'postage' | 'tape';
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';

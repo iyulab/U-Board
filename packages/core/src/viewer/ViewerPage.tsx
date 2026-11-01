@@ -13,6 +13,7 @@ import type { UBoardLabels } from '../labels.js';
 import type { ResolvedGridView, ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
 import { TOOLBAR_STYLE, MUTED_STYLE } from '../ui-style.js';
+import { isSkinColor } from '../css-color.js';
 import { AttributionLine, boardAttributions, showsExampleData } from './attribution.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { boardStateOf, type BoardState } from '../board-state.js';
@@ -169,7 +170,7 @@ export function ViewerPage({
           </div>
         )}
         {drawn ? (
-          <div ref={surface} className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0, ...(drawn.kind === 'grid' && { width, height }) }}>
+          <div ref={surface} className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0, ...(isSkinColor(document.skin?.palette?.backdrop) && { background: document.skin.palette.backdrop }), ...(drawn.kind === 'grid' && { width, height }) }}>
             {drawn.kind === 'canvas' ? (
               <Viewer
                 width={width}

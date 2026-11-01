@@ -299,8 +299,9 @@ export interface Skin {
   font?: string;
   display?: string;
   mono?: string;
-  /** `paper` · `ink` · `muted` · `rule` draw a framed part; `ground` is text on the board's background. */
-  palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string };
+  /** `paper` · `ink` · `muted` · `rule` draw a framed part; `ground` is text on the board's background; `backdrop` is the board's
+   *  own background colour, behind every part (and under a background picture). */
+  palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string; backdrop?: string };
   frame?: Frame;
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';

@@ -8,6 +8,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **`board.skin.palette.backdrop` — the board's own background colour.** A board's page was always the viewer's white (or the theme's dark);
+  a board that wants a warm paper, a night sky or a tint behind its cards now says it with one palette colour, drawn behind every part and
+  under a background picture. A colour only (hex, `rgb()`, `hsl()`, a CSS name, `transparent`) — never a `url()` or a gradient; a gradient or a
+  pattern is a background picture. Nothing changes for a board that does not name it.
 - **A list inside an item can name its items by a field.** A field that holds a list of objects (`items`) takes `key`: the field of those items that names each
   one. The parts a group makes per item of that list (`each: "/assets"`) are then named by it (`machine/M2`, not `machine/1`) and read the item by it, so a
   list the source sends in another order — or with an item missing — is still the same items, and a status that follows an item stays with it. Without a

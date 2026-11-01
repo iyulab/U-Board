@@ -73,7 +73,7 @@ const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
 /** What a board says at its top, in the order it is written. */
 const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'density'];
-const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground'];
+const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'];
 const BOARD_SECTIONS = ['board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout', 'triggers'] as const;
 
 /** The types an element's prop may be. */
@@ -123,7 +123,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
   if (skin.palette !== undefined && !isObj(skin.palette)) fail('/board/skin/palette', 'a palette is an object — { "paper", "ink", "muted", "rule" }, each a colour');
   if (isObj(skin.palette)) {
     for (const key of Object.keys(skin.palette)) {
-      if (!PALETTE_KEYS.includes(key)) fail(`/board/skin/palette/${key}`, `a palette has no "${key}" — it has ${PALETTE_KEYS.join(', ')}: paper is the ground, ink the text on it, muted the quieter text, rule the lines`);
+      if (!PALETTE_KEYS.includes(key)) fail(`/board/skin/palette/${key}`, `a palette has no "${key}" — it has ${PALETTE_KEYS.join(', ')}: paper is a framed part's fill, ink the text on it, muted the quieter text, rule the lines, backdrop the board's own background`);
     }
   }
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
@@ -131,7 +131,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
   if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');
   // The skin's values are written into the widgets' CSS: a colour is a colour and a font a list of names — never a url or a rule.
   if (isObj(skin.palette)) {
-    for (const key of ['paper', 'ink', 'muted', 'rule', 'ground'] as const) {
+    for (const key of ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'] as const) {
       const colour = skin.palette[key];
       if (colour !== undefined && !isSkinColor(colour)) fail(`/board/skin/palette/${key}`, `a palette colour is a colour — ${DRAWING_COLOR_FORMS.replace(', "transparent" or "none"', ' or "transparent"')}`);
     }
@@ -142,7 +142,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
   if (skin.radius !== undefined && !(isNum(skin.radius) && skin.radius >= 0)) fail('/board/skin/radius', 'a radius is a number of pixels, 0 or more');
   // declared and checked, but not drawn yet — say so, so a board that sets them is not left wondering why nothing changed
   if (skin.density !== undefined) issues.push({ at: '/board/skin/density', message: '"density" is not drawn yet — the board looks the same with it', hint: true });
-  if (isObj(skin.palette) && skin.palette.ground !== undefined) issues.push({ at: '/board/skin/palette/ground', message: '"ground" is not drawn yet — the board looks the same with it; the board own background colour comes from its theme', hint: true });
+  if (isObj(skin.palette) && skin.palette.ground !== undefined) issues.push({ at: '/board/skin/palette/ground', message: '"ground" is not drawn yet — the board looks the same with it; the board own background colour is the palette "backdrop"', hint: true });
 
   // ── statuses ──
   const statuses = isObj(board.statuses) ? board.statuses : {};

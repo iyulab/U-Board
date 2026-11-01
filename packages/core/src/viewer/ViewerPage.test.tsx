@@ -399,6 +399,14 @@ describe('ViewerPage with a grid view', () => {
     expect(region.closest('.ub-viewer__surface')).toHaveAttribute('data-appearance', 'dark');
   });
 
+  it('paints the surface with the skin palette backdrop, and leaves out a backdrop that is not a colour', async () => {
+    const { rerender } = render(<ViewerPage document={{ ...grid(), skin: { palette: { backdrop: '#f2f0eb' } } }} adapters={[new SpyAdapter()]} ariaLabel="Line 3" />);
+    const region = await screen.findByRole('region', { name: 'Line 3' });
+    expect(region.closest<HTMLElement>('.ub-viewer__surface')!.style.background).toBe('rgb(242, 240, 235)');
+    rerender(<ViewerPage document={{ ...grid(), skin: { palette: { backdrop: 'url(https://example.test/p.gif)' } } }} adapters={[new SpyAdapter()]} ariaLabel="Line 3" />);
+    expect((await screen.findByRole('region', { name: 'Line 3' })).closest<HTMLElement>('.ub-viewer__surface')!.style.background).toBe('');
+  });
+
   it('gives each item its spans at full and medium width — the default span 4, medium half of it rounded up', async () => {
     render(<ViewerPage document={grid()} adapters={[new SpyAdapter()]} />);
     const region = await screen.findByRole('region');

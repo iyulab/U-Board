@@ -336,7 +336,7 @@ export function boardSchema(): Schema {
           palette: {
             type: 'object',
             additionalProperties: false,
-            properties: Object.fromEntries(['paper', 'ink', 'muted', 'rule', 'ground'].map(k => [k, { type: 'string' }])),
+            properties: Object.fromEntries(['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'].map(k => [k, { type: 'string' }])),
           },
           frame: { enum: [...FRAMES] },
           radius: { type: 'number', minimum: 0 },

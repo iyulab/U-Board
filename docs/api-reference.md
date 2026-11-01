@@ -125,7 +125,7 @@ interface Skin {
   font?: string;
   display?: string;
   mono?: string;
-  palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string };
+  palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string; backdrop?: string };
   frame?: 'card' | 'flat' | 'glow' | 'plate' | 'ticket' | 'postage' | 'tape';   // FRAMES
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';
@@ -133,7 +133,8 @@ interface Skin {
 }
 ```
 
-`paper` · `ink` · `muted` · `rule` draw a framed part; `ground` is text on the board's background. Every built-in
+`paper` · `ink` · `muted` · `rule` draw a framed part; `backdrop` is the board's own background colour, behind every part (a
+background picture is drawn over it); `ground` is text on the board's background. Every built-in
 reads the skin; no part sets fonts or colours of its own. `ground` and `density` are accepted but not drawn yet.
 A palette value is a colour — a hex colour, `rgb()`, `hsl()`, a CSS colour name or `transparent`; a font is family names
 separated by commas (`"Noto Sans KR", sans-serif`); a radius is a number of pixels, 0 or more. `validateBoard` names what
