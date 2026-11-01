@@ -28,6 +28,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- **A part whose click trigger is guarded shut is no longer offered as a button.** A part with a `click` trigger drew as a button — focusable, `role="button"`,
+  a pointer cursor — whether or not the trigger's `when` held, so a card the board meant to open a page only while it is under a warning was a button that did
+  nothing the rest of the time. The viewer now offers a part as a button only while a click trigger of it can run (`clickableNow`, exported beside
+  `firedBy`, tells which), and takes it away when its guard stops holding.
 - **A bar list and a status grid write a value in its field's unit and format.** A field declared with a `unit` or a `format` showed it on a stat, a table's
   column and a stat list's row, but a bar-list's rows and a status-grid's cells took only the number — `72` where the field says `72 %`. They now hand the
   widget the field's `unit` and `format` for every item, as the other parts do.

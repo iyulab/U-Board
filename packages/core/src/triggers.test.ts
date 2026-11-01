@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { firedBy, stateChanges, linkFor, elementListeners, FiringLimit } from './triggers';
+import { firedBy, clickableNow, stateChanges, linkFor, elementListeners, FiringLimit } from './triggers';
 import type { Trigger } from './view-document';
 
 const emit = (name: string) => [{ action: 'emit' as const, name }];
@@ -32,6 +32,33 @@ describe('firedBy', () => {
   it('fires nothing for a board without triggers, or for a part none names', () => {
     expect(firedBy(undefined, { event: 'open' }, {})).toEqual([]);
     expect(firedBy(triggers, { event: 'click', node: 'gone' }, {})).toEqual([]);
+  });
+});
+
+describe('clickableNow', () => {
+  const triggers: Trigger[] = [
+    { on: { event: 'click', node: 'pump' }, do: emit('a') },
+    { on: { event: 'click', node: 'valve' }, when: { node: 'valve', state: ['open', 'stuck'] }, do: emit('b') },
+    { on: { event: 'click', node: 'fan' }, when: { node: 'fan', state: 'hot' }, do: emit('c') },
+    { on: { event: 'click', node: 'fan' }, do: emit('d') },
+    { on: { event: 'enter', node: 'gauge', state: 'fault' }, do: emit('e') },
+  ];
+
+  it('names a part some click trigger of it can run now — one without a condition always, one with it while it holds', () => {
+    expect([...clickableNow(triggers, { valve: 'closed', fan: 'cold' })].sort()).toEqual(['fan', 'pump']);
+    expect([...clickableNow(triggers, { valve: 'open' })].sort()).toEqual(['fan', 'pump', 'valve']);
+  });
+
+  it('leaves out a part whose every click trigger is guarded shut, and one with no state to meet the guard', () => {
+    const guarded: Trigger[] = [{ on: { event: 'click', node: 'valve' }, when: { node: 'valve', state: 'open' }, do: emit('b') }];
+    expect([...clickableNow(guarded, { valve: 'closed' })]).toEqual([]);
+    expect([...clickableNow(guarded, {})]).toEqual([]);
+    expect([...clickableNow(guarded, { valve: 'open' })]).toEqual(['valve']);
+  });
+
+  it('names no part for a board without triggers, or whose triggers are not clicks', () => {
+    expect([...clickableNow(undefined, {})]).toEqual([]);
+    expect([...clickableNow([triggers[4]!], { gauge: 'fault' })]).toEqual([]);
   });
 });
 

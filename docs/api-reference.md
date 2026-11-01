@@ -465,7 +465,8 @@ tell: nothing a trigger does writes to the systems a board reads.
   with no text, number or boolean for a field gets no link.
 - `enter` and `leave` fire on a change between two draws of one viewer, never on the first draw — `open` is for that.
 - A part with a `click` trigger becomes a button: Enter and Space press it. A drag that starts on it pans the board and
-  presses nothing.
+  presses nothing. It is a button only while a click trigger of it can run — one whose `when` does not hold now leaves the
+  part as it is, neither focusable nor a button, until it does.
 - An element raises an event with `ub.emit(name)` in a script element, or, in a template, from a region marked
   `data-ub-event="name"` that is clicked; a marked region some trigger listens for is focusable and a button to
   assistive technology, and Enter or Space raise its event.
@@ -843,7 +844,8 @@ reports its parts `stale`); a U-Board server answers it at `GET /api/share/board
 ### Triggers
 
 The decisions a viewer makes, as pure functions for a host that draws a picture its own way: `firedBy(triggers, event,
-states)` — the triggers an event fires, given the parts' states now; `stateChanges(before, now)` — the `leave` and
+states)` — the triggers an event fires, given the parts' states now; `clickableNow(triggers, states)` — the parts a click
+does something on now, those a `click` trigger names whose `when` holds; `stateChanges(before, now)` — the `leave` and
 `enter` events between two draws; `linkFor(url, { node, state, board }, { origins })` — the address an `open-link` opens,
 or `undefined` when it may not open; `elementListeners(triggers)` — by part, the element events triggers listen for;
 `FiringLimit` — once a second per trigger. In the picture a trigger names a part as `node` and a status as `state`.

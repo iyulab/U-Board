@@ -36,11 +36,29 @@ export function firedBy(
     if ('node' in on && 'node' in event && on.node !== event.node) return false;
     if (on.event === 'element' && event.event === 'element' && on.name !== event.name) return false;
     if ((on.event === 'enter' || on.event === 'leave') && (event.event === 'enter' || event.event === 'leave') && on.state !== event.state) return false;
-    if (!trigger.when) return true;
-    const now = states[trigger.when.node];
-    const wanted = Array.isArray(trigger.when.state) ? trigger.when.state : [trigger.when.state];
-    return now !== undefined && wanted.includes(now);
+    return guardHolds(trigger, states);
   });
+}
+
+/** Whether a trigger's `when`, if it has one, holds for the parts' states now — one that has none always does. */
+function guardHolds(trigger: Trigger, states: Readonly<Record<string, string | undefined>>): boolean {
+  if (!trigger.when) return true;
+  const now = states[trigger.when.node];
+  const wanted = Array.isArray(trigger.when.state) ? trigger.when.state : [trigger.when.state];
+  return now !== undefined && wanted.includes(now);
+}
+
+/**
+ * The parts a click does something on right now: those some `click` trigger names whose `when`, if any, holds for the
+ * parts' states now (`states`, by part id). A part whose every click trigger is guarded shut is not one to press — a viewer
+ * does not offer it as a button, so a click on it is not a control that does nothing.
+ */
+export function clickableNow(triggers: readonly Trigger[] | undefined, states: Readonly<Record<string, string | undefined>>): Set<string> {
+  const nodes = new Set<string>();
+  for (const trigger of triggers ?? []) {
+    if (trigger.on.event === 'click' && guardHolds(trigger, states)) nodes.add(trigger.on.node);
+  }
+  return nodes;
 }
 
 /**

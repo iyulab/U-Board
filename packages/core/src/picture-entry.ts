@@ -21,7 +21,7 @@ export type { BoxSize, SizedNode } from './node-size.js';
 export { resolveDocument, resolveConnector } from './resolve-document.js';
 export { boardStateOf } from './board-state.js';
 export type { BoardState, PartState } from './board-state.js';
-export { firedBy, stateChanges, linkFor, elementListeners, FiringLimit } from './triggers.js';
+export { firedBy, clickableNow, stateChanges, linkFor, elementListeners, FiringLimit } from './triggers.js';
 export type { FiredEvent } from './triggers.js';
 export { lintViewDocument } from './lint-view-document.js';
 export { elementFrameHtml, elementFrameScripts } from './elements/frame.js';

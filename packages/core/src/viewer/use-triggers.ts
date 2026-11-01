@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { firedBy, stateChanges, linkFor, FiringLimit, type FiredEvent } from '../triggers.js';
+import { firedBy, clickableNow, stateChanges, linkFor, FiringLimit, type FiredEvent } from '../triggers.js';
 import { placedIn, type TriggerAction, type ViewDocument } from '../view-document.js';
 import type { ResolvedViewDocument } from '../resolve-document.js';
 import { sizedNodes } from '../node-size.js';
@@ -80,9 +80,10 @@ export function useTriggers(doc: ViewDocument, resolved: ResolvedViewDocument | 
     for (const change of changes) run(change);
   }, [resolved, run]);
 
+  // The parts a click does something on now — a part whose click triggers are all guarded shut is not offered as a button.
   const activatable = useMemo(
-    () => new Set((doc.triggers ?? []).flatMap(trigger => (trigger.on.event === 'click' ? [trigger.on.node] : []))),
-    [doc.triggers]
+    () => clickableNow(doc.triggers, Object.fromEntries(resolved ? placedIn(resolved).map(part => [part.id, part.state]) : [])),
+    [doc.triggers, resolved]
   );
   const activate = useCallback((node: string) => run({ event: 'click', node }), [run]);
   const elementEvent = useCallback((node: string, name: string) => run({ event: 'element', node, name }), [run]);

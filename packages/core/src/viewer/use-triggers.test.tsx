@@ -41,6 +41,20 @@ describe('useTriggers', () => {
     expect([...hook.result.current.activatable].sort()).toEqual(['pump', 'valve']);
   });
 
+  it('offers a part as a button only while a click trigger of it can run — a guard shut on its own state takes it away', () => {
+    const guarded: GridView = {
+      kind: 'grid',
+      items: doc.items,
+      triggers: [{ on: { event: 'click', node: 'pump' }, when: { node: 'pump', state: 'fault' }, do: [{ action: 'emit', name: 'pump-clicked' }] }],
+    };
+    const hook = renderHook(({ r }) => useTriggers(guarded, r, { onTrigger: vi.fn(), boardId: 'b1' }), { initialProps: { r: resolved('ok') as ResolvedGridView | null } });
+    expect([...hook.result.current.activatable]).toEqual([]);
+    hook.rerender({ r: resolved('fault') });
+    expect([...hook.result.current.activatable]).toEqual(['pump']);
+    hook.rerender({ r: resolved('ok') });
+    expect([...hook.result.current.activatable]).toEqual([]);
+  });
+
   it('fires open once, when the board is first drawn', () => {
     const { hook, onTrigger } = setup();
     expect(onTrigger.mock.calls.map(c => c[0].name)).toEqual(['opened']);
