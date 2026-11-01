@@ -417,7 +417,7 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
   /** The element name each shape is drawn as, by name — the shape id it stands for. */
   const shapeNames = new Map<string, string>();
 
-  const widgetFor = (raw: Part, at: string, reads?: { query: string; item?: string }): Widget => {
+  const drawnWidget = (raw: Part, at: string, reads?: { query: string; item?: string }): Widget => {
     const part = resolve(raw);
     const { as, use: _use, of: _of, each: _each, title, show, highlight, ...options } = part;
     const kind = partKind(as!)!;
@@ -766,6 +766,17 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
       case 'group':
         throw new PictureError(at, 'a group is drawn by the layout that places it');
     }
+  };
+
+  /** The widget a part is drawn with. A board whose skin says `density: "compact"` draws every widget that has a `compact`
+   *  option compact, unless the part sets `compact` itself (`false` keeps it regular). */
+  const compactBoard = board.board?.skin?.density === 'compact';
+  const widgetFor = (raw: Part, at: string, reads?: { query: string; item?: string }): Widget => {
+    const widget = drawnWidget(raw, at, reads);
+    if (!compactBoard || !partKind(resolve(raw).as!)?.options.includes('compact')) return widget;
+    const options = (widget.props?.options ?? {}) as Record<string, unknown>;
+    if (options.compact !== undefined) return widget;
+    return { ...widget, props: { ...widget.props, options: { ...options, compact: true } } };
   };
 
   /** A field's state as the status name each raw value is in — what an element's `<field>.status` reads. */

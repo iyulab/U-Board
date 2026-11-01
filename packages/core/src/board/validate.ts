@@ -142,8 +142,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
     if (skin[key] !== undefined && !isFontStack(skin[key])) fail(`/board/skin/${key}`, 'a font is family names separated by commas — "Noto Sans KR", serif — not a url, a function or a rule');
   }
   if (skin.radius !== undefined && !(isNum(skin.radius) && skin.radius >= 0)) fail('/board/skin/radius', 'a radius is a number of pixels, 0 or more');
-  // declared and checked, but not drawn yet — say so, so a board that sets them is not left wondering why nothing changed
-  if (skin.density !== undefined) issues.push({ at: '/board/skin/density', message: '"density" is not drawn yet — the board looks the same with it', hint: true });
+  // declared and checked, but not drawn yet — say so, so a board that sets it is not left wondering why nothing changed
   if (isObj(skin.palette) && skin.palette.ground !== undefined) issues.push({ at: '/board/skin/palette/ground', message: '"ground" is not drawn yet — the board looks the same with it; the board own background colour is the palette "backdrop"', hint: true });
 
   // ── statuses ──

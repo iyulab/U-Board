@@ -391,6 +391,32 @@ describe('the picture model of a v2 board', () => {
     expect(new Set(types).size).toBe(2);
   });
 
+  it('draws the widgets that have a compact option compact when the skin’s density is compact — and leaves a part that says its own', () => {
+    const parts: Board['parts'] = {
+      card: { as: 'status-card', of: 'pumps[P2]', show: ['state'] },
+      own: { as: 'list', of: 'pumps', show: ['id'], compact: false },
+      rows: { as: 'list', of: 'pumps', show: ['id'] },
+      headline: { as: 'header', title: 'Plant' },
+      chart: { as: 'chart.line', of: 'hourly', x: 'hour', y: 'count' },
+    };
+    const layout: Board['layout'] = { kind: 'grid', items: ['card', 'own', 'rows', 'headline', 'chart'] };
+    const optionsOf = (b: Board) => Object.fromEntries((view(b).kind === 'grid' ? (view(b) as { items: { id: string; widget: { props?: { options?: object } } }[] }).items : []).map(i => [i.id, i.widget.props?.options]));
+    const regular = optionsOf(board(parts, layout));
+    expect(Object.values(regular).some(o => (o as { compact?: unknown } | undefined)?.compact === true)).toBe(false);
+    const dense: Board = { ...board(parts, layout), board: { title: 'Plant', theme: 'dark', accent: '#22d3ee', skin: { density: 'compact' } } };
+    const compact = optionsOf(dense);
+    expect(compact.rows).toMatchObject({ compact: true });
+    // read from the catalog: a widget gets it once the library gives it the option, not by a list kept here
+    expect(compact.card === undefined || !('compact' in compact.card)).toBe(true);
+    expect(compact.own).toMatchObject({ compact: false });
+    // a widget with no compact option is not given one
+    expect(compact.headline === undefined || !('compact' in compact.headline)).toBe(true);
+    expect(compact.chart === undefined || !('compact' in compact.chart)).toBe(true);
+    // a board that says regular is a board that says nothing
+    const plain: Board = { ...dense, board: { title: 'Plant', theme: 'dark', accent: '#22d3ee', skin: { density: 'regular' } } };
+    expect(optionsOf(plain)).toEqual(regular);
+  });
+
   it('puts the words of a marker on the side its labelAt names — the point stays the middle of the box — and on none when it names none', () => {
     const at = (labelAt: unknown) => {
       const doc = view(board({ m: { as: 'marker', each: 'pumps', show: 'state', labelAt } }, { kind: 'canvas', size: [100, 100], place: { m: { P2: [10, 50, 120, 30] } } }));

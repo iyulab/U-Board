@@ -36,6 +36,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **A skin's `density: "compact"` is drawn.** It was accepted and checked but did nothing, and the check said so. A board whose skin says `compact` now draws every
+  part whose widget has a `compact` option (`list`, `table`, `steps`, `citation` — and any widget that gains the option) compact; a part that sets `compact` itself
+  (`false` keeps it regular) is left as it says. A skin without `density`, or with `regular`, draws as before.
 - **A header's `kicker` and `subtitle` read `{{field}}` as its title does.** They were fixed text, and a hole in one drew its braces — the check advised against
   it, and the same slip kept coming back. They now take the fields of what the header reads: `"subtitle": "{{shift}} shift"`. The advice for a hole in them is gone;
   a hole left open is refused in a kicker as in a title.
