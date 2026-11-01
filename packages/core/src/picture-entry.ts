@@ -35,4 +35,4 @@ export type { QualityText, QualitySummary, DescribeQualityOptions } from './qual
 export { coordinateOf, placeAt } from './anchor.js';
 export type { Coordinate } from './anchor.js';
 export { isHttpRef, requestPath, requestTimeProblem, readHttpRef, resolvedReading, parseSourceTime, findHttpRefItem, isSourceErrorField, sourceErrorIn } from './http-ref.js';
-export type { HttpRef, HttpRefItem, HttpRefReading, HttpRefRequestTime, SourceErrorField } from './http-ref.js';
+export type { HttpRef, HttpRefInside, HttpRefItem, HttpRefReading, HttpRefRequestTime, SourceErrorField } from './http-ref.js';

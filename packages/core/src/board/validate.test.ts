@@ -47,6 +47,16 @@ describe('validateBoard', () => {
     expect(issues(withItems({ state: { items: {} } }))[0]).toContain('/data/queue/fields/value/items/state/items: items do not nest');
   });
 
+  it('checks the key of the items a field holds — a field of those items, only where there are items, and not nested', () => {
+    const withKey = (field: unknown) => ({ ...canvas({ a: { as: 'stat', of: 'queue', show: 'value' } }), data: { ...data, queue: { from: 'desk', path: '/desk/queue', fields: { value: field } } } } as never);
+    expect(issues(withKey({ items: { id: {}, state: { state: 'raw' } }, key: 'id' }))).toEqual([]);
+    // the field of the items may sit elsewhere in the item, as long as the items say where
+    expect(issues(withKey({ items: { code: { at: '/meta/id' }, state: {} }, key: 'meta' }))[0]).toContain('/data/queue/fields/value/key: "meta" is not a field of "items"');
+    expect(issues(withKey({ key: 'id' }))).toEqual(['/data/queue/fields/value/key: "key" names the items of a list this field holds — give "items" too']);
+    expect(issues(withKey({ items: { id: {} }, key: '' }))).toEqual(['/data/queue/fields/value/key: "key" is the name of the field of the items that names each one']);
+    expect(issues(withKey({ items: { id: {}, tags: { key: 'id' } }, key: 'id' }))[0]).toContain('/data/queue/fields/value/items/tags/key: a "key" is for a field that holds a list');
+  });
+
   it('checks a field the read computes from its list — an op, a field for all but a count, a list to compute from', () => {
     const derived = (derive: unknown, extra: Record<string, unknown> = {}) => ({ ...canvas({ a: { as: 'stat', of: 'equipment', show: 'down' } }), data: { ...data, equipment: { ...data.equipment, fields: { down: { derive, ...extra } } } } });
     expect(issues(derived({ op: 'count', where: { state: 'trip' } }))).toEqual([]);

@@ -66,6 +66,13 @@ export interface Field {
    */
   items?: Record<string, Field>;
   /**
+   * For a field with `items`: the field of those items that names each one — as a data's `key` names its items. The parts a
+   * group makes per item of the list (`each: "/assets"`) then name them by it (`<part>/<key value>`), and the read of an item
+   * finds it by that field, so a list the source sends in another order is still the same items. Absent: an item is named by
+   * its place in the list, as before.
+   */
+  key?: string;
+  /**
    * A field the read computes from the items of its list, not one the source sends: how many items there are, or the
    * sum, smallest, largest or mean of one field of them, over the items equal to `where`. It is a number like any other
    * reading — it has `names`, `digits`, `format` and a `state`, so "the number of products out of stock" can raise a

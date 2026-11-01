@@ -98,6 +98,7 @@ export function boardSchema(): Schema {
             description: 'A field computed from the items of the list, not sent by the source: count, or the sum, min, max or avg of one field, over the items equal to where. Shown by a part that reads the list.',
           },
           items: map(ref('field'), 'For a field holding a list of objects: what each field of its items means (at is relative to the item). An element’s list prop bound to it reads {{name}} in words, {{name$tone}} in tone.'),
+          key: { type: 'string', minLength: 1, description: 'For a field with items: the field of those items that names each one, so a part made per item of the list is named by it and keeps its item when the source sends the list in another order. Absent: an item is named by its place in the list.' },
         },
       },
       query: {

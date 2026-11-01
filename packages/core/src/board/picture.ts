@@ -143,7 +143,13 @@ function refFor(q: Query, query: string, item: string | undefined, field: string
     const base = derived.base;
     if (base.key !== undefined) {
       ref.item = { list: base.list!, where: { ...base.where, [base.key]: derived.outer } };
-      ref.valuePath = `${derived.within}/${item}${valueAt ?? ''}`;
+      if (derived.key !== undefined) {
+        // A list field with a `key` names its items by that field, so the one read is found by it, not by its place.
+        ref.item.inside = { list: derived.within, where: { [derived.key]: item } };
+        ref.valuePath = valueAt ?? '';
+      } else {
+        ref.valuePath = `${derived.within}/${item}${valueAt ?? ''}`;
+      }
     } else {
       ref.valuePath = `${base.list}/${derived.outer}${derived.within}/${item}${valueAt ?? ''}`;
     }
@@ -765,7 +771,10 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
     const name = `${reads.query}[${reads.item}]${pointer}`;
     if (data[name] === undefined) {
       const holder = Object.entries(base.fields ?? {}).find(([n, f]) => (f.at ?? `/${n}`) === pointer)?.[1];
-      const derived: DerivedQuery = { from: base.from, path: base.path, fields: holder?.items ?? {}, baseName: reads.query, base, outer: reads.item, within: pointer };
+      if (holder?.key !== undefined && base.key === undefined) {
+        throw new PictureError(at, `"each": "${pointer}" reads a list whose items are named by a "key" inside an item of "${reads.query}", which has none — an item named by its place cannot be found again when the list changes; give "${reads.query}" a "key" too`);
+      }
+      const derived: DerivedQuery = { from: base.from, path: base.path, fields: holder?.items ?? {}, ...(holder?.key !== undefined ? { key: holder.key } : {}), baseName: reads.query, base, outer: reads.item, within: pointer };
       data[name] = derived;
     }
     return name;

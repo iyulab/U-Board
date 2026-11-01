@@ -264,6 +264,11 @@ export function validateBoard(board: unknown): BoardIssue[] {
           if (f.at !== undefined) fail(`${fieldAt}/at`, 'a derived field is not in the source — leave "at" out');
         }
       }
+      if (f.key !== undefined) {
+        if (typeof f.key !== 'string' || f.key === '') fail(`${fieldAt}/key`, '"key" is the name of the field of the items that names each one');
+        else if (f.items === undefined) fail(`${fieldAt}/key`, '"key" names the items of a list this field holds — give "items" too');
+        else if (isObj(f.items) && !Object.keys(f.items).includes(f.key) && !Object.values(f.items).some(g => isObj(g) && g.at === `/${f.key}`)) fail(`${fieldAt}/key`, `"${f.key}" is not a field of "items" — declare it there (a key is read from the field the items say it is)`);
+      }
       if (f.items !== undefined) {
         if (!isObj(f.items)) { fail(`${fieldAt}/items`, '"items" is { "<field>": { "at", "names", "state" } } — what each field of the items of a list this field holds means'); continue; }
         for (const [key, g] of Object.entries(f.items)) {
@@ -271,6 +276,7 @@ export function validateBoard(board: unknown): BoardIssue[] {
           if (!isObj(g)) { fail(itemAt, 'a field is an object: { "at", "names", "state", … }'); continue; }
           if (g.at !== undefined && !(typeof g.at === 'string' && g.at.startsWith('/'))) fail(`${itemAt}/at`, '"at" is where the value lives in the item, starting with "/"');
           if (g.items !== undefined) fail(`${itemAt}/items`, 'items do not nest — a field of an item that holds a list is read by a part of its own');
+          if (g.key !== undefined) fail(`${itemAt}/key`, 'a "key" is for a field that holds a list — items do not nest'); 
           if (g.state !== undefined && g.state !== 'raw') checkMapping(g.state, `${itemAt}/state`, 'state');
           if (g.names !== undefined) checkMapping(g.names, `${itemAt}/names`, 'names');
         }

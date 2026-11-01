@@ -14,6 +14,18 @@ import type { ResolvedBinding } from './adapter.js';
 export interface HttpRefItem {
   list: string;
   where: Record<string, string | number | boolean>;
+  /** One level further in: the element of the list at `list` — a JSON Pointer read from the element found above —
+   *  whose fields equal every one in `where`. The value is then read inside this one. It names an item of a list
+   *  that sits inside an item, by its fields as well, so a reordering of the inner list cannot change which item
+   *  is meant. Only an `item` takes it, and it takes no `inside` of its own. `valuePath` reads inside the inner element;
+   *  `observedAtPath` still reads inside the outer one — the time is the item's, not its inner items'. */
+  inside?: HttpRefInside;
+}
+
+/** The inner selector of an `HttpRefItem`: see `HttpRefItem.inside`. */
+export interface HttpRefInside {
+  list: string;
+  where: Record<string, string | number | boolean>;
 }
 
 /** An HTTP connector binding's reference. */
@@ -78,7 +90,7 @@ export function isHttpRef(ref: unknown): ref is HttpRef {
     requestTimeProblem(path) === undefined &&
     (requestTime === undefined || isRequestTime(requestTime)) &&
     (item === undefined || isHttpRefItem(item)) &&
-    (items === undefined || (isHttpRefItem(items) && item === undefined && valuePath === undefined && observedAtPath === undefined)) &&
+    (items === undefined || (isHttpRefItem(items) && (items as HttpRefItem).inside === undefined && item === undefined && valuePath === undefined && observedAtPath === undefined)) &&
     (valuePath === undefined || typeof valuePath === 'string') &&
     (observedAtPath === undefined || isPointer(observedAtPath)) &&
     (timeZone === undefined || (typeof timeZone === 'string' && isTimeZone(timeZone))) &&
@@ -177,13 +189,21 @@ function isPointer(path: unknown): path is string {
   return typeof path === 'string' && (path === '' || path.startsWith('/'));
 }
 
-function isHttpRefItem(item: unknown): item is HttpRefItem {
-  if (!item || typeof item !== 'object') return false;
-  const { list, where } = item as { list?: unknown; where?: unknown };
-  if (!isPointer(list)) return false;
+function isNamingWhere(where: unknown): boolean {
   if (!where || typeof where !== 'object' || Array.isArray(where)) return false;
   const values = Object.values(where);
   return values.length > 0 && values.every(v => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean');
+}
+
+function isHttpRefItem(item: unknown): item is HttpRefItem {
+  if (!item || typeof item !== 'object') return false;
+  const { list, where, inside } = item as { list?: unknown; where?: unknown; inside?: unknown };
+  if (!isPointer(list) || !isNamingWhere(where)) return false;
+  if (inside === undefined) return true;
+  // One level only: an inner selector has a list and a where, and nothing further in.
+  if (!inside || typeof inside !== 'object' || Array.isArray(inside)) return false;
+  const { list: innerList, where: innerWhere, ...rest } = inside as Record<string, unknown>;
+  return Object.keys(rest).length === 0 && isPointer(innerList) && isNamingWhere(innerWhere);
 }
 
 /** The keys `path` names, in order. A path starting with `/` is an RFC 6901 JSON Pointer — the form the
@@ -291,6 +311,7 @@ function readValueAndTime(
     return { ok: true, value: rows.value.filter(element => matches(element, where)), observedAt: readAt };
   }
   let scope = body;
+  let timeScope = body;
   if (ref.item) {
     const found = findHttpRefItem(body, ref.item);
     if (!found.found) {
@@ -298,12 +319,21 @@ function readValueAndTime(
       return { ok: false, reason: 'address', message: `no item of "${ref.item.list}" where ${where}` };
     }
     scope = found.value;
+    timeScope = scope;
+    if (ref.item.inside) {
+      const within = findHttpRefItem(scope, ref.item.inside);
+      if (!within.found) {
+        const where = Object.entries(ref.item.inside.where).map(([field, expected]) => `${field}=${String(expected)}`).join(', ');
+        return { ok: false, reason: 'address', message: `no item of "${ref.item.inside.list}" inside the item of "${ref.item.list}" where ${where}` };
+      }
+      scope = within.value;
+    }
   }
   const value = valueAtPath(scope, ref.valuePath ?? '');
   if (!value.found) return { ok: false, reason: 'address', message: `valuePath "${ref.valuePath}" not found in the response` };
   if (ref.observedAtPath === undefined) return { ok: true, value: value.value, observedAt: readAt };
 
-  const time = valueAtPath(scope, ref.observedAtPath);
+  const time = valueAtPath(timeScope, ref.observedAtPath);
   if (!time.found) return { ok: false, reason: 'address', message: `the time field "${ref.observedAtPath}" (observedAtPath) is not in ${ref.item ? 'the item' : 'the response'}` };
   if (time.value === null || time.value === '') return { ok: true, value: value.value, observedAt: readAt };
   const observedAt = parseSourceTime(time.value, ref.timeZone);

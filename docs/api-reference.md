@@ -239,7 +239,10 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
   read has. An element's `list` prop bound to that field (`"bind": { "items": "value" }`) reads every item with the words
   its `names` give under the field's own name (`{{state}}`) and its tone, status words, emphasis and mark beside it
   (`{{state$tone}}`, `{{state$status}}`, `{{state$emphasis}}`, `{{state$glyph}}`). Items do not nest; a value format is written
-  in the template (`{{count | number:1}}`).
+  in the template (`{{count | number:1}}`). A field with `items` may also say `key`: the field of those items that names each
+  one. The parts a group makes per item of that list (`each: "/assets"`) are then named by it (`machine/M2`) and read the
+  item by that field — a list the source sends in another order is still the same items. Without a `key`, an item is named
+  by its place in the list. A `key` needs the group's own data to have a `key` too.
 - **Fields computed from the list.** A read with a `list` can declare a field the source does not send — `"down": { "derive":
   { "op": "count", "where": { "state": "trip" } } }`, `"mean": { "derive": { "op": "avg", "field": "flow" }, "digits": 1 }` —
   the number of items, or the sum, smallest, largest or mean (`sum` · `min` · `max` · `avg`) of one field of them, over the
@@ -855,7 +858,7 @@ or `undefined` when it may not open; `elementListeners(triggers)` — by part, t
 ```ts
 interface HttpRef {
   path: string;
-  item?: { list: string; where: Record<string, string | number | boolean> };
+  item?: { list: string; where: Record<string, string | number | boolean>; inside?: { list: string; where: Record<string, string | number | boolean> } };
   items?: { list: string; where: Record<string, string | number | boolean> };
   valuePath?: string;
   observedAtPath?: string;
@@ -867,8 +870,10 @@ interface HttpRef {
 
 The reference a data read with a `path` becomes, and what the hosted HTTP connector reads — implement it in an adapter
 that stands in for one. `path` is the read's request; `item` one element of the list (by `key`, or a `pivot`'s row),
-`items` the elements `where` keeps, `valuePath` a JSON Pointer to the value inside the item or the answer;
-`observedAtPath`, `timeZone`, `maxAgeSeconds` and `requestTime` the read's `time`, `zone`, `fresh` and `now`.
+`items` the elements `where` keeps, `valuePath` a JSON Pointer to the value inside the item or the answer. `inside` goes one
+level further in: the element of the list at `inside.list` (a JSON Pointer read from the item) whose fields equal
+`inside.where` — an item of a list that sits inside an item, found by its fields rather than its place; `valuePath` then
+reads inside it, and `observedAtPath` still reads inside the outer item. `observedAtPath`, `timeZone`, `maxAgeSeconds` and `requestTime` the read's `time`, `zone`, `fresh` and `now`.
 `readHttpRef(body, ref, readAt, now?)` reads a parsed response with it the way the hosted connector does — the value, its
 observed time and whether it is `lagging`, or why it failed (`address`, `format`); `resolvedReading(reading)` turns a
 reading that found its value into the binding's result; `requestPath(ref, now)` is the request a reference makes at a

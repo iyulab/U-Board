@@ -39,6 +39,17 @@ describe('isHttpRef', () => {
   it('refuses an item with no fields to match', () => {
     expect(isHttpRef({ path: '/r', item: { list: '/rows', where: {} } })).toBe(false);
   });
+
+  it('takes an inner item — a list inside the item, one level in, named by its fields', () => {
+    const item = { list: '/zones', where: { id: 'Z1' }, inside: { list: '/assets', where: { id: 'M2' } } };
+    expect(isHttpRef({ path: '/p', item, valuePath: '/state' })).toBe(true);
+    expect(isHttpRef({ path: '/p', item: { ...item, inside: { list: '/assets', where: {} } } })).toBe(false);
+    expect(isHttpRef({ path: '/p', item: { ...item, inside: { list: 'assets', where: { id: 'M2' } } } })).toBe(false);
+    expect(isHttpRef({ path: '/p', item: { ...item, inside: { list: '/assets', where: { id: 'M2' }, inside: { list: '/x', where: { a: 1 } } } } })).toBe(false);
+    expect(isHttpRef({ path: '/p', item: { ...item, inside: 'M2' } })).toBe(false);
+    // the rows a list keeps (`items`) take no inner item
+    expect(isHttpRef({ path: '/p', items: item })).toBe(false);
+  });
 });
 
 describe('requestPath', () => {
@@ -113,6 +124,31 @@ describe('findHttpRefItem', () => {
       value: { id: 12, v: 'x' },
       index: 1,
     });
+  });
+});
+
+describe('readHttpRef — an item inside an item', () => {
+  const zone = (assets: unknown[]) => ({ value: [{ id: 'Z1', seenAt: '202610092300', assets }, { id: 'Z2', seenAt: '202610092300', assets: [{ id: 'M1', state: 'zone two' }] }] });
+  const ref = (id: string) => ({ path: '/r', item: { list: '/value', where: { id: 'Z1' }, inside: { list: '/assets', where: { id } } }, valuePath: '/state', observedAtPath: '/seenAt', timeZone: 'Asia/Seoul' });
+
+  it('finds the inner item by its fields, wherever the source puts it in its list', () => {
+    const first = zone([{ id: 'M1', state: 'run' }, { id: 'M2', state: 'trip' }]);
+    const reordered = zone([{ id: 'M2', state: 'trip' }, { id: 'M3', state: 'off' }, { id: 'M1', state: 'run' }]);
+    for (const body of [first, reordered]) {
+      expect(readHttpRef(body, ref('M2'), READ_AT)).toMatchObject({ ok: true, value: 'trip' });
+      expect(readHttpRef(body, ref('M1'), READ_AT)).toMatchObject({ ok: true, value: 'run' });
+    }
+  });
+
+  it('reads the observed time inside the outer item, not the inner one', () => {
+    const body = zone([{ id: 'M1', state: 'run' }]);
+    expect(readHttpRef(body, ref('M1'), READ_AT)).toMatchObject({ ok: true, observedAt: Date.parse('2026-10-09T14:00:00Z') });
+  });
+
+  it('says which item is missing — the outer one, or the inner one inside it', () => {
+    const body = zone([{ id: 'M1', state: 'run' }]);
+    expect(readHttpRef(body, ref('M9'), READ_AT)).toEqual({ ok: false, reason: 'address', message: 'no item of "/assets" inside the item of "/value" where id=M9' });
+    expect(readHttpRef(body, { ...ref('M1'), item: { list: '/value', where: { id: 'Z9' }, inside: { list: '/assets', where: { id: 'M1' } } } }, READ_AT)).toEqual({ ok: false, reason: 'address', message: 'no item of "/value" where id=Z9' });
   });
 });
 

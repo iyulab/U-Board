@@ -8,6 +8,13 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A list inside an item can name its items by a field.** A field that holds a list of objects (`items`) takes `key`: the field of those items that names each
+  one. The parts a group makes per item of that list (`each: "/assets"`) are then named by it (`machine/M2`, not `machine/1`) and read the item by it, so a
+  list the source sends in another order — or with an item missing — is still the same items, and a status that follows an item stays with it. Without a
+  `key` an item is named by its place, as before. `validateBoard` says where a `key` has no `items`, names a field the items do not declare, or sits in an
+  item. The reference a part reads with gains an inner selector, `HttpRef.item.inside` (`{ list, where }`, one level), which `isHttpRef` checks and `readHttpRef`
+  follows; `observedAtPath` keeps reading inside the outer item. A `key` on the list needs the group's data to have a `key` of its own.
+
 - **The pictures an element's stylesheet draws follow the board's skin.** An element's `background-image: url("data:image/svg+xml,…")` is an image
   and reads no CSS variables, so a pictogram or a pattern kept its own colours however the skin was set. It now follows the skin the way a board's
   background picture does: the colours it writes as the widgets' tokens with its own colour as the fallback (`fill="var(--u-widget-text, #1c1b19)"`)

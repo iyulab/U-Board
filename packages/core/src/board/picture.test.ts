@@ -29,6 +29,13 @@ const SOURCE: Record<string, unknown> = {
       { id: 'Z2', name: 'South', updatedAt: '2026-10-23T03:00:00Z', assets: [{ state: 'trip' }, { state: 'run' }] },
     ],
   },
+  // The same, with the machines named by an id of their own — and one id that has a colon and a slash in it.
+  '/plant/cells': {
+    value: [
+      { id: 'Z1', name: 'North', updatedAt: '2026-10-23T03:00:00Z', assets: [{ id: 'M1', state: 'run' }, { id: 'M2', state: 'trip' }, { id: 'a:b/c', state: 'run' }] },
+      { id: 'Z2', name: 'South', updatedAt: '2026-10-23T03:00:00Z', assets: [{ id: 'M1', state: 'trip' }, { id: 'M2', state: 'run' }, { id: 'a:b/c', state: 'trip' }] },
+    ],
+  },
   '/plant/totals': { output: 1280, oee: 0.83, temp: 74 },
   '/plant/hourly': { value: [{ hour: '09:00', count: 120 }, { hour: '10:00', count: 131 }] },
 };
@@ -460,6 +467,71 @@ describe('the picture model of a v2 board', () => {
     expect(drawn(nodeOf(doc, 'zones/Z1/machine/0').widget).data).toMatchObject({ tone: 'ok' });
     expect(drawn(nodeOf(doc, 'zones/Z1/machine/1').widget).data).toMatchObject({ tone: 'alarm' });
     expect(drawn(nodeOf(doc, 'zones/Z2/machine/0').widget).data).toMatchObject({ tone: 'alarm' });
+  });
+
+  describe('a list inside an item whose field names its items by a key', () => {
+    const cellZone = {
+      as: 'group', size: [200, 100],
+      parts: { name: { as: 'stat', show: 'name' }, machine: { as: 'status-card', each: '/assets', show: ['state'] } },
+      place: { name: [0, 0, 200, 20], machine: { M1: [0, 20, 100, 80], M2: [100, 20, 100, 80] } },
+    };
+    const cells = (assets: Record<string, unknown>, keyedOuter = true, place?: Record<string, unknown>): Board => {
+      const b = { ...board({ zones: { use: 'zone', each: 'zones' } }, { kind: 'canvas', size: [400, 300], place: { zones: place ?? { Z1: [0, 0, 200, 100], Z2: [0, 150, 200, 100] } } } as Board['layout']), presets: { zone: structuredClone(cellZone) } } as Board;
+      b.data!.zones = { from: 'plant', path: '/plant/cells', list: '/value', ...(keyedOuter ? { key: 'id' } : {}), time: 'updatedAt', fresh: 60, fields: { name: {}, assets } } as never;
+      return b;
+    };
+    const STATES = { run: 'running', trip: 'tripped', '*': 'off' };
+    const ASSETS = { items: { id: {}, state: { state: STATES } }, key: 'id' };
+    const bindingOf = (doc: ViewDocument, id: string) => nodeOf(doc, id).widget.bindings!['data.tone']!;
+
+    it('names each part by the key of its item, and reads the item by that key — the zone, then the machine inside it', () => {
+      const doc = view(cells(ASSETS));
+      if (doc.kind !== 'canvas') throw new Error('a canvas');
+      expect(doc.nodes.map(n => n.id)).toEqual(['zones/Z1/name', 'zones/Z1/machine/M1', 'zones/Z1/machine/M2', 'zones/Z2/name', 'zones/Z2/machine/M1', 'zones/Z2/machine/M2']);
+      expect(bindingOf(doc, 'zones/Z1/machine/M2')).toMatchObject({
+        ref: { path: '/plant/cells', item: { list: '/value', where: { id: 'Z1' }, inside: { list: '/assets', where: { id: 'M2' } } }, valuePath: '/state', observedAtPath: '/updatedAt', maxAgeSeconds: 60 },
+      });
+    });
+
+    it('keeps the item when the source sends the list in another order — the part named by a key reads the same machine', () => {
+      const sent = (assets: unknown[]) => ({ value: [{ id: 'Z1', updatedAt: '2026-10-23T03:00:00Z', assets }] });
+      const keyed = view(cells(ASSETS));
+      const keyedRef = bindingOf(keyed, 'zones/Z1/machine/M2').ref as HttpRef;
+      const state = (body: unknown, ref: HttpRef) => { const r = readHttpRef(body, ref, READ_AT); return r.ok ? r.value : r; };
+      const first = [{ id: 'M1', state: 'run' }, { id: 'M2', state: 'trip' }];
+      const reordered = [{ id: 'M3', state: 'off' }, { id: 'M2', state: 'trip' }, { id: 'M1', state: 'run' }];
+      expect(state(sent(first), keyedRef)).toBe('trip');
+      expect(state(sent(reordered), keyedRef)).toBe('trip');
+      // …where a place names whichever machine is second, it is another machine once the list is sent in another order
+      const byPlace = cells({ items: { state: { state: STATES } } }, true, { Z1: [0, 0, 200, 100] });
+      (byPlace.presets!.zone as unknown as { place: Record<string, unknown> }).place = { name: [0, 0, 200, 20], machine: { '0': [0, 20, 100, 80], '1': [100, 20, 100, 80] } };
+      const placeRef = bindingOf(view(byPlace), 'zones/Z1/machine/1').ref as HttpRef;
+      expect(state(sent(first), placeRef)).toBe('trip');
+      expect(state(sent(reordered), placeRef)).toBe('trip');
+      // (the second place held M2 before the reordering and holds M3 after it: the same part, another machine)
+      expect(readHttpRef(sent(reordered), { ...placeRef, valuePath: placeRef.valuePath!.replace('/state', '/id') }, READ_AT)).toMatchObject({ value: 'M2' });
+    });
+
+    it('says a key on the inner list needs a key on the outer data — an item named by its place cannot be found again', () => {
+      const b = cells(ASSETS, false, { flow: { at: [0, 0], cell: [200, 100], columns: 1 } } as never);
+      expect(() => toViewDocument(b, { rowsOf: () => SOURCE['/plant/cells'] ? (SOURCE['/plant/cells'] as { value: unknown[] }).value : [] })).toThrow(/give "zones" a "key" too/);
+    });
+
+    it('names an item by a key that has a colon and a slash in it as the key says it', () => {
+      const b = cells(ASSETS, true, { Z1: [0, 0, 200, 100] });
+      (b.presets!.zone as unknown as { place: Record<string, unknown> }).place = { name: [0, 0, 200, 20], machine: { 'a:b/c': [0, 20, 100, 80] } };
+      const doc = view(b);
+      expect(bindingOf(doc, 'zones/Z1/machine/a:b/c')).toMatchObject({ ref: { item: { inside: { where: { id: 'a:b/c' } } } } });
+      expect(drawn(nodeOf(doc, 'zones/Z1/machine/a:b/c').widget).data).toMatchObject({ tone: 'ok' });
+    });
+
+    it('is what it was without a key — a list without one is named by its places and read by them', () => {
+      const b = cells({ items: { id: {}, state: { state: STATES } } }, true, { Z1: [0, 0, 200, 100] });
+      (b.presets!.zone as unknown as { place: Record<string, unknown> }).place = { name: [0, 0, 200, 20], machine: { '0': [0, 20, 100, 80], '1': [100, 20, 100, 80] } };
+      const doc = view(b);
+      expect(bindingOf(doc, 'zones/Z1/machine/1')).toMatchObject({ ref: { item: { list: '/value', where: { id: 'Z1' } }, valuePath: '/assets/1/state', maxAgeSeconds: 60 } });
+      expect(bindingOf(doc, 'zones/Z1/machine/1').ref).not.toHaveProperty('item.inside');
+    });
   });
 
   it('places the parts made per item of a list inside the item by the fields of those items, and says where it cannot', () => {
