@@ -154,6 +154,21 @@ describe('the picture model of a v2 board', () => {
     });
   });
 
+  it("puts a waterfall's total flag, a radar's axis and a scatter's opacity in the chart's mapping, where the widget reads them", () => {
+    const doc = view(board(
+      {
+        steps: { as: 'chart.waterfall', of: 'hourly', x: 'hour', y: 'count', total: 'count' },
+        kinds: { as: 'chart.radar', of: 'hourly', axis: 'hour', y: 'count' },
+        dots: { as: 'chart.scatter', of: 'hourly', x: 'hour', y: 'count', opacity: 'count' },
+      },
+      { kind: 'grid', items: ['steps', 'kinds', 'dots'] },
+    ));
+    expect(drawn(nodeOf(doc, 'steps').widget)).toMatchObject({ mapping: { x: 'hour', y: 'count', total: 'count' } });
+    expect(drawn(nodeOf(doc, 'steps').widget)).not.toHaveProperty('options');
+    expect(drawn(nodeOf(doc, 'kinds').widget)).toMatchObject({ mapping: { axis: 'hour', y: 'count' } });
+    expect(drawn(nodeOf(doc, 'dots').widget)).toMatchObject({ mapping: { x: 'hour', y: 'count', opacity: 'count' } });
+  });
+
   it("colours the rows of a list, a table, bars and a grid of cells by each item's state", () => {
     const doc = view(board(
       {

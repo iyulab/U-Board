@@ -297,7 +297,7 @@ describe('validateBoard', () => {
     }
     expect(issues(canvas({ c: { as: 'chart.bar', of: 'equipment', x: 'name', y: 'load', min: 0 } }))[0]).toContain('"yAxis": { "min": … }');
     // a chart kind without a value axis of that kind, and a kind that does take `max`, are not told
-    expect(issues(parts('chart.pie'))[0]).toBe('/parts/c/max: "max" is not an option — options of a chart.pie: x, y, start, end, label, name, value, group, color, size, task, category, donut, colors, legend, animate, showLabel, echarts');
+    expect(issues(parts('chart.pie'))[0]).toBe('/parts/c/max: "max" is not an option — options of a chart.pie: x, y, start, end, label, name, value, group, color, size, task, category, axis, total, opacity, donut, colors, legend, animate, showLabel, echarts');
     expect(issues(canvas({ g: { as: 'gauge', of: 'totals', show: 'load', max: 120 } }))).toEqual([]);
   });
 

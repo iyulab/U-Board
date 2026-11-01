@@ -25,6 +25,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- **A chart part can name a waterfall's total rows, a radar's axis and a scatter's opacity.** The widgets read `total` (a per-row flag that draws the row as an
+  absolute bar from zero, not a delta stacked on the running total), `axis` and `opacity` from their mapping, but a part's list of mapping names left them out, so
+  they were handed to the widget as plain options and ignored — a waterfall with an opening and a closing balance drew the closing one twice over. They are in the
+  chart's mapping now, and the message that lists a chart's options names them.
 - **A grid in a cell that holds only the parts of an `each` no longer fails with a `TypeError`.** `{ "grid": ["pumps"], "span": 12 }` where `pumps` is an
   `each` part has no cells until its list has items; the picture model read the first of its rows and threw, so `toViewDocument` — and the check a
   board meets before it is saved, which draws with no items — stopped with a `TypeError` instead of drawing the cell empty. It is empty now, and fills

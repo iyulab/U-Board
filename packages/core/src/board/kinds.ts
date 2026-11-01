@@ -27,7 +27,7 @@ export interface PartKind {
 }
 
 /** The options of a chart part that are its mapping — which field is x, y, … */
-export const CHART_MAPPING: readonly string[] = ['x', 'y', 'start', 'end', 'label', 'name', 'value', 'group', 'color', 'size', 'task', 'category'];
+export const CHART_MAPPING: readonly string[] = ['x', 'y', 'start', 'end', 'label', 'name', 'value', 'group', 'color', 'size', 'task', 'category', 'axis', 'total', 'opacity'];
 
 /**
  * The general built-ins, each drawn by a widget of the library — under the board's name where the two differ: a
