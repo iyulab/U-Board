@@ -46,6 +46,30 @@ describe('useFittedView', () => {
     expect(result.current.transform.scale).toBeCloseTo(0.25);
   });
 
+  it('brings a part into view as soon as the viewport has a size when it was asked for before', () => {
+    const { result } = renderHook(() => useFittedView());
+    const part = { x: 600, y: 100, width: 200, height: 100 };
+    act(() => result.current.fitTo(BOARD));
+    act(() => result.current.focusOn(part)); // the board's first drawing asks before the view is measured
+    expect(result.current.transform).toEqual({ x: 0, y: 0, scale: 1 });
+
+    act(() => result.current.onViewportResize({ width: 532, height: 400 }));
+    // 532 - 2×48 padding across a 200-wide part → 2.18, held to the zoom a focus may reach
+    expect(result.current.transform.scale).toBe(2);
+    // the part, not the board, is what a resize keeps in view from here on — the view is left where the focus put it
+    const focused = result.current.transform;
+    act(() => result.current.onViewportResize({ width: 282, height: 400 }));
+    expect(result.current.transform).toEqual(focused);
+  });
+
+  it('drops a focus asked for early when the board is fitted again before the view is measured', () => {
+    const { result } = renderHook(() => useFittedView());
+    act(() => result.current.focusOn({ x: 600, y: 100, width: 200, height: 100 }));
+    act(() => result.current.fitTo(BOARD));
+    act(() => result.current.onViewportResize({ width: 532, height: 400 }));
+    expect(result.current.transform.scale).toBeCloseTo(0.5);
+  });
+
   it('leaves the view alone for an empty target', () => {
     const { result } = renderHook(() => useFittedView());
     act(() => result.current.onViewportResize({ width: 532, height: 400 }));

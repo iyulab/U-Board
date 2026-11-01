@@ -41,6 +41,9 @@ export function useFittedView({ magnify = false }: { magnify?: boolean } = {}): 
   const [transform, setTransform] = useState<Transform>(IDENTITY);
   const viewportRef = useRef<Size | null>(null);
   const targetRef = useRef<DocumentRect | null>(null);
+  // A part brought into view before the viewport had a size — the board's first drawing can ask, a moment before the view
+  // that shows it has been measured. It is brought into view as soon as the size is known, and a later fit drops it.
+  const focusedRef = useRef<DocumentRect | null>(null);
 
   const applyFit = useCallback(() => {
     const viewport = viewportRef.current;
@@ -51,20 +54,28 @@ export function useFittedView({ magnify = false }: { magnify?: boolean } = {}): 
 
   const fitTo = useCallback((rect: DocumentRect | null) => {
     targetRef.current = rect;
+    focusedRef.current = null;
     applyFit();
   }, [applyFit]);
 
-  const focusOn = useCallback((rect: DocumentRect) => {
-    const viewport = viewportRef.current;
-    if (!viewport) return;
+  const focusIn = useCallback((viewport: Size, rect: DocumentRect) => {
     targetRef.current = null;
+    focusedRef.current = null;
     setTransform(fitTransform(viewport, rect, { padding: 48, maxScale: 2, minScale: MIN_SCALE }));
   }, []);
 
+  const focusOn = useCallback((rect: DocumentRect) => {
+    const viewport = viewportRef.current;
+    if (viewport) focusIn(viewport, rect);
+    else focusedRef.current = rect;
+  }, [focusIn]);
+
   const onViewportResize = useCallback((size: Size) => {
     viewportRef.current = size;
-    applyFit();
-  }, [applyFit]);
+    const focused = focusedRef.current;
+    if (focused) focusIn(size, focused);
+    else applyFit();
+  }, [applyFit, focusIn]);
 
   const onUserTransform = useCallback((next: Transform) => {
     targetRef.current = null;
