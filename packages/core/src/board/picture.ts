@@ -641,6 +641,10 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
         bindList('data', {
           ...(labelField !== undefined ? { label: { from: source(labelField), ...(field(labelField).names ? { map: mapOf(field(labelField).names!, w => w) } : {}) } } : {}),
           ...(valueField !== undefined ? { value: { from: source(valueField) } } : {}),
+          // the value's unit and format, as every other part that shows a field writes it: the same for each item, so a map with no values
+          // and an `otherwise` gives every item it
+          ...(valueField !== undefined && field(valueField).unit ? { unit: { from: source(valueField), map: { otherwise: field(valueField).unit } } } : {}),
+          ...(valueField !== undefined && formatOf(field(valueField)) ? { format: { from: source(valueField), map: { otherwise: formatOf(field(valueField)) } } } : {}),
           ...(tone !== undefined && toneMap !== undefined ? { tone: { from: source(tone), map: stateMaps(toneMap).tone } } : {}),
           // a grid's cells draw the second channel a status names (a bar's row has none)
           ...(kind.kind === 'status-grid' && tone !== undefined && toneMap !== undefined && stateMaps(toneMap).emphasis ? { emphasis: { from: source(tone), map: stateMaps(toneMap).emphasis! } } : {}),

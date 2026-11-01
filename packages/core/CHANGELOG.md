@@ -25,6 +25,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- **A bar list and a status grid write a value in its field's unit and format.** A field declared with a `unit` or a `format` showed it on a stat, a table's
+  column and a stat list's row, but a bar-list's rows and a status-grid's cells took only the number — `72` where the field says `72 %`. They now hand the
+  widget the field's `unit` and `format` for every item, as the other parts do.
 - **A chart part can name a waterfall's total rows, a radar's axis and a scatter's opacity.** The widgets read `total` (a per-row flag that draws the row as an
   absolute bar from zero, not a delta stacked on the running total), `axis` and `opacity` from their mapping, but a part's list of mapping names left them out, so
   they were handed to the widget as plain options and ignored — a waterfall with an opening and a closing balance drew the closing one twice over. They are in the

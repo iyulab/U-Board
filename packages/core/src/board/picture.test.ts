@@ -188,6 +188,8 @@ describe('the picture model of a v2 board', () => {
       { field: 'id', label: 'id' }, { field: 'state', label: 'state', toneField: 'state$tone' }, { field: 'flow', label: 'Flow', unit: 'm³/h', format: 'number:1', align: 'right' },
     ] });
     expect((drawn(nodeOf(doc, 'bars').widget).data as Record<string, unknown>[]).map(r => [r.label, r.value])).toEqual([['P1', 41.5], ['P2', 0]]);
+    // the field's unit and format reach a bar's row and a cell, as they reach a table's column
+    expect((drawn(nodeOf(doc, 'bars').widget).data as Record<string, unknown>[]).map(r => [r.unit, r.format])).toEqual([['m³/h', 'number:1'], ['m³/h', 'number:1']]);
     expect((drawn(nodeOf(doc, 'cells').widget).data as Record<string, unknown>[]).map(r => [r.label, r.tone])).toEqual([['P1', 'ok'], ['P2', 'alarm']]);
     // a status's emphasis reaches the grid's cells (not a bar's row): the tripped pump's cell blinks
     expect((drawn(nodeOf(doc, 'cells').widget).data as Record<string, unknown>[]).map(r => r.emphasis)).toEqual(['', 'blink']);
