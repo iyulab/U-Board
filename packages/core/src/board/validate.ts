@@ -182,7 +182,8 @@ export function validateBoard(board: unknown): BoardIssue[] {
       return;
     }
     const word = (w: unknown, wordAt: string) => {
-      if (typeof w !== 'string' || w === '') fail(wordAt, what === 'state' ? 'a state maps to a status name' : 'a name is a word');
+      // a name may be empty: the value is then shown with no words — a link's label left off for the value that is normal
+      if (typeof w !== 'string' || (w === '' && what === 'state')) fail(wordAt, what === 'state' ? 'a state maps to a status name' : 'a name is a word, or "" for no words');
       else if (what === 'state' && !isStatus(w)) fail(wordAt, `no status "${w}" — ${statusHint()}`);
     };
     if (Array.isArray(m)) {

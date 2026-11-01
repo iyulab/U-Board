@@ -357,6 +357,26 @@ describe('the picture model of a v2 board', () => {
     expect([read('style.stroke'), read('style.dash'), read('style.strokeWidth'), read('label')]).toEqual(['alarm', 'dotted', 2, 0]);
   });
 
+  it('leaves a link without a label for the value whose name is empty — the normal one says nothing', () => {
+    const b = board(
+      { P1: { as: 'stat', of: 'pumps[P1]', show: 'flow' }, P2: { as: 'stat', of: 'pumps[P2]', show: 'flow' } },
+      {
+        kind: 'canvas', size: [600, 300],
+        place: { P1: [10, 10, 150, 80], P2: [300, 10, 150, 80] },
+        links: { ok: { from: 'P1', to: 'P2', of: 'pumps[P1]', label: '{{mode}}' }, bad: { from: 'P2', to: 'P1', of: 'pumps[P2]', label: '{{mode}}' } },
+      },
+    );
+    (b.data!.pumps as { fields: Record<string, unknown> }).fields = { ...pumps.fields, mode: { at: '/state', names: { run: '', '*': 'Stopped' } } };
+    const doc = view(b);
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    const wordsOf = (id: string) => {
+      const bound = doc.connectors!.find(c => c.id === id)!.bindings!.label!;
+      const reading = readHttpRef(SOURCE[(bound.ref as HttpRef).path], bound.ref as HttpRef, READ_AT);
+      return reading.ok ? (bound.map ? applyValueMap(bound.map, reading.value) : reading.value) : reading.message;
+    };
+    expect([wordsOf('link.ok'), wordsOf('link.bad')]).toEqual(['', 'Stopped']);
+  });
+
   it('turns a link’s arrowheads by a field — its words through a map, its sign through bands — and keeps fixed ones', () => {
     const doc = view(board(
       { P1: { as: 'stat', of: 'pumps[P1]', show: 'flow' }, P2: { as: 'stat', of: 'pumps[P2]', show: 'flow' } },

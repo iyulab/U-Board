@@ -292,6 +292,14 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('takes an empty name — a value shown with no words — but not an empty status', () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const problems = (fields: unknown) => validateBoard({ ...base, data: { d: { from: 'x', path: '/x', fields } } } as never).filter(i => !i.hint && i.at.startsWith('/data/d/fields')).map(i => `${i.at}: ${i.message}`);
+    expect(problems({ mode: { names: { run: '', '*': 'Stopped' } } })).toEqual([]);
+    expect(problems({ mode: { names: { run: 3 } } })).toEqual(['/data/d/fields/mode/names/run: a name is a word, or "" for no words']);
+    expect(problems({ mode: { state: { run: '' } } })).toEqual(['/data/d/fields/mode/state/run: a state maps to a status name']);
+  });
+
   it('checks the numerals of a skin: a scale word and a weight from 100 to 900, nothing else', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const at = (numerals: unknown) => validateBoard({ ...base, board: { skin: { numerals } } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);

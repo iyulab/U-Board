@@ -151,6 +151,22 @@ describe('toCanvasKit', () => {
     expect(line).toMatchObject({ points: [100, 50, 200, 50], stroke: '#94a3b8', strokeWidth: 2 });
   });
 
+  it('draws no chip for a connector whose label read as empty — a line with no words', () => {
+    const widget = { type: 'metric', props: {}, quality: {} };
+    const { scene } = toCanvasKit(
+      doc({
+        nodes: [
+          { id: 'a', x: 0, y: 0, width: 100, height: 100, anchored: false, widget },
+          { id: 'b', x: 300, y: 0, width: 100, height: 100, anchored: false, widget },
+        ],
+        connectors: [{ id: 'c1', fromNodeId: 'a', toNodeId: 'b', label: '' }],
+      })
+    );
+    const objects = scene.getObjects() as readonly object[] as readonly Record<string, unknown>[];
+    expect(objects.filter(o => o.type === 'line')).toHaveLength(1);
+    expect(objects.filter(o => String(o.id).startsWith('c1#'))).toEqual([]);
+  });
+
   it('draws a connector’s label on a chip at its middle, its style, and connectors of one pair side by side', () => {
     const widget = { type: 'metric', props: {}, quality: {} };
     const { scene } = toCanvasKit(

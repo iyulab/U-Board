@@ -51,6 +51,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- **A field's `names` can map a value to no words (`""`), so a link's label can be left off for the value that is normal.** `names` refused an empty
+  word ("a name is a word"), so a link labelled by a field showed the normal reading's words on every line — `"run": ""` now draws the line with
+  no label chip. A `state` still maps to a status, never to an empty one.
 - **A `focus` on the board's first drawing is no longer lost.** A trigger on `open` that brings a part into view did nothing: the first drawing asked before
   the view that shows it had a size (a canvas) or its cells existed (a grid), and the request was dropped, so the board stayed fitted whole or at its top.
   The request is now held until the view is measured, or the cells are drawn, and carried out then, so a board can open on the part it points at; a fit
