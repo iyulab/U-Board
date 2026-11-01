@@ -464,6 +464,28 @@ describe('ViewerPage with a grid view', () => {
   });
 });
 
+describe('triggers on a grid board', () => {
+  it('brings the item a trigger on open points at into view as the board is first drawn', async () => {
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push((this as HTMLElement).dataset.itemId ?? '');
+    };
+    try {
+      const board: GridView = {
+        kind: 'grid',
+        items: [{ id: 'pump', widget: { type: 'status' } }, { id: 'valve', widget: { type: 'status' } }],
+        triggers: [{ on: { event: 'open' }, do: [{ action: 'focus', node: 'valve' }] }],
+      };
+      render(<ViewerPage document={board} adapters={[]} />);
+      await screen.findByRole('region');
+      await waitFor(() => expect(scrolled).toEqual(['valve']));
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+});
+
 describe('onBoardState', () => {
   const stateDoc = (): GridView => ({
     kind: 'grid',

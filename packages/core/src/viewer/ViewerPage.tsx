@@ -122,7 +122,13 @@ export function ViewerPage({
   const { fitTo, focusOn } = view;
   const surface = useRef<HTMLDivElement>(null);
   // A part a trigger points at: on a canvas, its box brought into view; in a grid, its cell scrolled into view.
-  const focus = useCallback((node: string) => focusPart(resolved, node, focusOn, surface.current), [resolved, focusOn]);
+  // A grid's cells exist a draw after its document is resolved, so a part pointed at as the board is first drawn is kept
+  // until they do.
+  const pendingFocus = useRef<string | null>(null);
+  const focus = useCallback((node: string) => {
+    if (resolved?.kind === 'grid' && !surface.current) pendingFocus.current = node;
+    else focusPart(resolved, node, focusOn, surface.current);
+  }, [resolved, focusOn]);
   const triggers = useTriggers(document, resolved, { boardId, onTrigger, onNavigate, linkOrigins, focus });
   const { activatable, activate, elementEvent } = triggers;
   // Fit whenever a document covering a new area is shown — not on a preview refresh, which is only
@@ -144,6 +150,13 @@ export function ViewerPage({
     );
     reportState(boardStateOf(resolved, { now }));
   }, [resolved, labels, activatable, activate, elementEvent]);
+
+  useEffect(() => {
+    const node = pendingFocus.current;
+    if (node === null || drawn?.kind !== 'grid') return;
+    pendingFocus.current = null;
+    focusPart(drawn.doc, node, focusOn, surface.current);
+  }, [drawn, focusOn]);
 
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>

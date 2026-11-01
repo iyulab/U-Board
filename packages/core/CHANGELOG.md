@@ -29,8 +29,9 @@ All notable changes to this package are documented here. The format follows
 ### Fixed
 
 - **A `focus` on the board's first drawing is no longer lost.** A trigger on `open` that brings a part into view did nothing: the first drawing asked before
-  the view that shows it had a size, and the request was dropped, so the board stayed fitted whole. The request is now held until the view is measured and
-  carried out then, so a board can open on the part it points at; a fit asked for before that drops it.
+  the view that shows it had a size (a canvas) or its cells existed (a grid), and the request was dropped, so the board stayed fitted whole or at its top.
+  The request is now held until the view is measured, or the cells are drawn, and carried out then, so a board can open on the part it points at; a fit
+  asked for before that drops it.
 - **A part whose click trigger is guarded shut is no longer offered as a button.** A part with a `click` trigger drew as a button — focusable, `role="button"`,
   a pointer cursor — whether or not the trigger's `when` held, so a card the board meant to open a page only while it is under a warning was a button that did
   nothing the rest of the time. The viewer now offers a part as a button only while a click trigger of it can run (`clickableNow`, exported beside
