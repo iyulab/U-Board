@@ -282,7 +282,7 @@ The kinds come from three places, listed with their options as `PART_KINDS` (`pa
   `status-card`, `header`, `stat`, `stat-list`, `list`, `table`, `bar-list`, `status-grid`, `gauge`. The board reads
   some options itself, as fields of what the part reads — a `status-card`'s `meter` (`"<field>"`, or
   `{ field, min?, max?, form?: 'bar' | 'ring' }`, where `min` and `max` are numbers or the name of a field of the item, as a gauge's
-  `max` is) and `state`, a `stat`'s `trend`, a `list`'s `primary` · `secondary` ·
+  `max` is) and `state`, a `stat`'s `trend` (a field of the item holding its recent values, a list of numbers, drawn as a line under the value), a `list`'s `primary` · `secondary` ·
   `trailing` · `badge` · `time` — and hands any other option to the widget, which takes only those it lists.
 - **Charts** — every chart of the widget library (`chart.line`, `chart.bar` …), with their mapping options (`x`, `y`,
   `label`, `value`, `group` …) naming fields of the rows they read.
