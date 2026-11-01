@@ -18,9 +18,9 @@ describe('the entry points', () => {
   it('./domain exports the board language and the adapter contract', () => {
     expect(Object.keys(domain).sort()).toEqual([
       'DEFAULT_QUALITY_TEXT', 'EMPHASES', 'FRAMES', 'JsonPatchError', 'PART_KINDS', 'PictureError', 'TONES', 'ageText',
-      'applyJsonPatch', 'boardSchema', 'dataReadOf', 'describeQuality', 'drawBoard', 'elementDefinition',
+      'applyJsonPatch', 'boardSchema', 'dataReadOf', 'describeQuality', 'drawBoard', 'elementDefinition', 'expandVariables',
       'getByPointer', 'keyReadsOf', 'keysIn', 'partKind', 'pictureOf', 'readKeys', 'readLists', 'readerOf', 'toViewDocument', 'validateBoard',
-      'worstQuality',
+      'variableValues', 'variablesOf', 'worstQuality',
     ]);
   });
 

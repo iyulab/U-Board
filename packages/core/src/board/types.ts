@@ -116,7 +116,8 @@ export interface Query {
   list?: string;
   /** The field that names each item — parts address one as `<data>[<key>]`. */
   key?: string;
-  /** Only the items whose fields equal these values. */
+  /** Only the items whose fields equal these values. A board that reads a variable writes `{ "variable": "line" }` (`VariableRef`) in place of a value;
+   *  `expandVariables` writes it out before the board is drawn, so what is drawn has values only. */
   where?: Record<string, string | number | boolean>;
   /** The field holding when the source observed the item — its own name, or a field declared with where it lives (`at`). */
   time?: string;
@@ -356,12 +357,29 @@ export interface Trigger {
 }
 
 /** A board. */
+/** A value a `where` takes from the board's variable of that name. */
+export interface VariableRef { variable: string }
+
+/**
+ * A value the board takes from outside — the address, the host, a move from another board — and reads in a `where` (`{ "variable": name }`),
+ * an item an `of` names (`pumps[$name]`), a text (`{{$name}}`) and, when its options are listed, a data's `path`. The viewer gives one value at a
+ * time: one of the options, else the `default`, else the first.
+ */
+export interface Variable {
+  label?: string;
+  /** The values it can take: listed here, or the keys of the items a data reads (`{ from, key }`) — the server checks a value against them. */
+  options: string[] | { from: string; key: string };
+  /** A listed option, or `first` (the first key, when the options are read from a data). */
+  default?: string;
+}
+
 export interface Board {
   /** The board's title, theme, accent colour (the `accent` tone, a header's banner) and look. */
   board?: { title?: string; theme?: 'light' | 'dark'; accent?: string; skin?: Skin };
   statuses?: Record<string, Status>;
   symbols?: Record<string, { viewBox?: string; path?: string }>;
   elements?: Record<string, ElementDefinition>;
+  variables?: Record<string, Variable>;
   data?: Record<string, Query>;
   presets?: Record<string, Part>;
   parts: Record<string, Part>;

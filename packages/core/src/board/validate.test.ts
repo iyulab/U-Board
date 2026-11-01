@@ -27,7 +27,7 @@ describe('validateBoard', () => {
 
   it('names the sections a board has', () => {
     expect(issues({ ...canvas({}), nodes: [] })).toEqual([
-      '/nodes: a board has no "nodes" — its sections are board, statuses, symbols, elements, data, presets, parts, layout, triggers',
+      '/nodes: a board has no "nodes" — its sections are board, statuses, symbols, elements, variables, data, presets, parts, layout, triggers',
     ]);
   });
 
@@ -756,5 +756,53 @@ describe('validateBoard — triggers', () => {
       '/triggers/2/do/0/url: "{{node}}" is not a field of "equipment" — declare it in /data/equipment/fields, or write {{key}} (fields: state)',
       '/triggers/2/do/1/action: "write" is not an action — open-link · focus · emit · go-to-board',
     ]);
+  });
+});
+
+describe('the variables of a board', () => {
+  const declared = { line: { options: ['L1', 'L2'], default: 'L1' }, pump: { options: { from: 'equipment', key: 'id' } } };
+  const board = (variables: unknown, parts: Record<string, unknown>, dataExtra: Record<string, unknown> = {}) => {
+    const b = canvas(parts) as Record<string, unknown>;
+    return { ...b, variables, data: { ...(b.data as object), ...dataExtra } };
+  };
+  const problems = (b: unknown) => validateBoard(b as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
+  const card = { as: 'status-card', of: 'equipment[P1]', show: ['state'] };
+
+  it('takes the variables it declares, read in a text, an of and a where — and checks the rest with their defaults', () => {
+    expect(problems(board(declared, { c: { ...card, of: 'equipment[$pump]', title: '{{$line}} · {{key}}' } }, { line: { from: 'plant', path: '/x', list: '/v', key: 'id', where: { line: { variable: 'line' } } } }))).toEqual([]);
+  });
+
+  it('says what is wrong with a declaration — the options, the default, the data they read', () => {
+    expect(problems(board({ a: { options: [] }, b: { options: ['x'], default: 'y' }, c: { options: { from: 'nope', key: 'id' } }, d: { options: ['x', 'x'] }, e: { opts: ['x'] }, f: 'x' }, {})))
+      .toEqual(expect.arrayContaining([
+        '/variables/a/options: listed options are a list of words, at least one',
+        expect.stringContaining('/variables/b/default: "y" is not one of the options'),
+        expect.stringContaining('/variables/c/options/from: no data "nope"'),
+        '/variables/d/options: an option is listed once',
+        '/variables/e/opts: a variable has no "opts" — it has label, options, default',
+        '/variables/e/options: options are a list of words — ["L1", "L2"] — or { "from": "<data>", "key": "<field>" } to read the keys of the items a data reads',
+        expect.stringContaining('/variables/f: a variable is { "options"'),
+      ]));
+  });
+
+  it('names a variable that is not declared, where it is read', () => {
+    const b = board(declared, { c: { ...card, of: 'equipment[$nope]', title: 'Line {{$gone}}' } }, { w: { from: 'plant', path: '/x', where: { line: { variable: 'missing' } } } });
+    expect(problems(b)).toEqual(expect.arrayContaining([
+      '/parts/c/of: no variable "nope" — declared: line, pump',
+      '/parts/c/title: no variable "gone" — declared: line, pump',
+      '/data/w/where/line: no variable "missing" — declared: line, pump',
+    ]));
+    expect(problems(board(undefined, { c: { ...card, title: 'Line {{$gone}}' } }))).toContain('/parts/c/title: "$gone" reads a variable, but the board declares none — declare it under /variables');
+  });
+
+  it('lets a path take only a variable whose options the board lists', () => {
+    const at = (path: string) => problems(board(declared, {}, { w: { from: 'plant', path } }));
+    expect(at('/plant/{{$line}}/pumps')).toEqual([]);
+    expect(at('/plant/{{$pump}}')).toEqual(['/data/w/path: "pump" reads its options from a data — a path takes only a variable whose options the board lists; read it in a where ({ "variable": "pump" }) or an of (…[$pump]) instead']);
+  });
+
+  it('says a variable reference goes in a where, not anywhere else', () => {
+    const b = board(declared, { c: { ...card, title: { variable: 'line' } } });
+    expect(problems(b)).toContain("/parts/c/title: { \"variable\": \"line\" } is read in a data's where — a text takes {{$line}}, an of takes …[$line]");
   });
 });

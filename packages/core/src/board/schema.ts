@@ -41,6 +41,16 @@ export function boardSchema(): Schema {
       statuses: map(ref('status'), "The board's own statuses by name: each a tone, its words and optionally a glyph and an emphasis."),
       symbols: map({ type: 'object', additionalProperties: false, properties: { viewBox: { type: 'string' }, path: { type: 'string' } } }, 'Small drawings a marker shows, by name: an SVG path and its view box.'),
       elements: map(ref('element'), 'Drawings no built-in makes: markup with declared holes, shown by a part "as": "element".'),
+      variables: map({
+        type: 'object',
+        required: ['options'],
+        additionalProperties: false,
+        properties: {
+          label: { type: 'string' },
+          options: { anyOf: [{ type: 'array', items: { type: 'string' }, minItems: 1 }, { type: 'object', required: ['from', 'key'], additionalProperties: false, properties: { from: { type: 'string' }, key: { type: 'string' } } }], description: 'The values it can take: listed, or the keys of the items a data reads.' },
+          default: { type: 'string', description: 'A listed option, or "first".' },
+        },
+      }, "Values the board takes from outside, by name — read in the where of a data ({ \"variable\": name }), an of (pumps[$name]), a text ({{$name}}) and the path of a data (only a variable whose options are listed)."),
       data: map(ref('query'), 'Where values come from, read once for every part that shows them.'),
       presets: map(ref('part'), 'Settings a part takes with "use"; its own settings win.'),
       parts: map(ref('part'), 'What the board shows, by id — never where.'),
@@ -115,7 +125,7 @@ export function boardSchema(): Schema {
           ref: { description: 'What an adapter that is not an HTTP connector reads, as it defines it: one item, its fields under fields (at "" when the item is the value). Takes nothing but fields.' },
           list: { type: 'string', description: 'A JSON Pointer to the list of items in the answer.' },
           key: { type: 'string', description: 'The field that names each item: parts address one as <data>[<key>].' },
-          where: map({ type: ['string', 'number', 'boolean'] }, 'Only the items whose fields equal these values.'),
+          where: map({ anyOf: [{ type: ['string', 'number', 'boolean'] }, { type: 'object', required: ['variable'], additionalProperties: false, properties: { variable: { type: 'string' } } }] }, 'Only the items whose fields equal these values — a value, or a variable of the board: { "variable": "line" }.'),
           time: { type: 'string', description: 'The field of each item holding when the source observed it. A whole list has one time of its own: answerTime.' },
           pivot: {
             type: 'object',

@@ -8,6 +8,14 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A board can declare `variables` and read them — values it takes from outside.** `"variables": { "line": { "options": ["L1", "L2"], "default": "L1" } }`
+  names a value; `options` is a list of words, or `{ "from": "<data>", "key": "<field>" }` for the keys of the items a data reads. A variable is
+  read in the `where` of a data (`{ "variable": "line" }`), in the item an `of` names (`pumps[$pump]`), in a text (`{{$line}}`) and — for a variable
+  whose options the board lists — in a data's `path`. `validateBoard` checks the declarations and that each place that reads a variable names a declared
+  one, and that a `path` never takes a variable whose options are read from a data. `toViewDocument` takes `variables` (the values asked for)
+  and draws the board with each variable at the value asked for when it is one of its options, else at its default; `expandVariables`,
+  `variableValues` and `variablesOf` are exported from `./domain`. A board without `variables` is drawn exactly as before. Nothing in the viewer or
+  the server gives a variable a value yet — a board is drawn at its defaults until it is asked.
 - **A skin's `numerals` sets the headline figure of a `metric` or `stat-group`: `{ "scale": "large", "weight": 300 }`.** The big number of a card was one size
   and one weight for every board, so a board that wanted a large light figure, or a small plain one, could not say so. `scale` is
   `small` · `regular` · `large` · `xlarge` (0.75× · 1× · 1.25× · 1.75× of the size the widget would have drawn, at every width) and `weight`

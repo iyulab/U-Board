@@ -1119,3 +1119,55 @@ describe('a state that follows the clock', () => {
     expect(issues({ relative: ['idle', 0, 'ok'], raw: 'x' })).toEqual([['/data/pumps/fields/age/state', 'a relative state is { "relative": ["past", -60, "now", 60, "next"] } — bands of the seconds from now to the time; nothing beside "relative"']]);
   });
 });
+
+describe('a board that reads variables', () => {
+  const variables = { line: { options: ['L1', 'L2'], default: 'L1' }, pump: { options: { from: 'pumps', key: 'id' }, default: 'first' } };
+  const withVariables = (parts: Board['parts'], layout: Board['layout'], extra: Record<string, unknown> = {}): Board => {
+    const b = board(parts, layout) as Board & { variables?: unknown };
+    b.variables = variables as never;
+    (b.data as unknown as Record<string, Record<string, unknown>>).pumps = { ...pumps, where: { line: { variable: 'line' } } };
+    Object.assign(b, extra);
+    return b;
+  };
+  const keysOf = (d: string) => (d === 'pumps' ? ['P1', 'P2'] : []);
+  const drawnOf = (b: Board, values?: Record<string, string>) => {
+    const doc = toViewDocument(b, { keysOf, ...(values ? { variables: values } : {}) });
+    return JSON.stringify(doc);
+  };
+
+  it('reads the items of a where that names a variable with its value — the asked one when it is an option, else the default', () => {
+    const b = withVariables({ rows: { as: 'list', of: 'pumps', show: ['id'] } }, { kind: 'grid', items: ['rows'] });
+    expect(drawnOf(b, { line: 'L2' })).toContain('"where":{"line":"L2"}');
+    expect(drawnOf(b)).toContain('"where":{"line":"L1"}');
+    // a value that is not an option is not read — the default is
+    expect(drawnOf(b, { line: 'L9' })).toContain('"where":{"line":"L1"}');
+    expect(drawnOf(b, { line: 'L9' })).not.toContain('L9');
+  });
+
+  it('names the item an of reads by a variable, whose options are the keys the data has — a key it has not falls to the first', () => {
+    const b = withVariables({ one: { as: 'status-card', of: 'pumps[$pump]', show: ['state'], title: 'Pump {{$pump}} on {{$line}}' } }, { kind: 'grid', items: ['one'] });
+    const at = (values?: Record<string, string>) => {
+      const doc = toViewDocument(b, { keysOf, ...(values ? { variables: values } : {}) });
+      const node = (doc.kind === 'canvas' ? doc.nodes : doc.items)[0] as Node;
+      return JSON.stringify(node.widget);
+    };
+    expect(at({ pump: 'P2', line: 'L2' })).toContain('"id":"P2"');
+    expect(at({ pump: 'P2', line: 'L2' })).toContain('Pump P2 on L2');
+    expect(at()).toContain('"id":"P1"');
+    expect(at({ pump: 'P9' })).toContain('"id":"P1"');
+    expect(at({ pump: 'P9' })).toContain('Pump P1 on L1');
+  });
+
+  it('writes a listed variable into a path and leaves a board without variables as it was', () => {
+    const b = withVariables({ rows: { as: 'list', of: 'pumps', show: ['id'] } }, { kind: 'grid', items: ['rows'] });
+    (b.data as unknown as Record<string, { path?: string }>).pumps!.path = '/plant/{{$line}}/pumps';
+    expect(drawnOf(b, { line: 'L2' })).toContain('/plant/L2/pumps');
+    const plain = board({ rows: { as: 'list', of: 'pumps', show: ['id'] } }, { kind: 'grid', items: ['rows'] });
+    expect(JSON.stringify(toViewDocument(plain, { variables: { line: 'L2' } }))).toBe(JSON.stringify(toViewDocument(plain)));
+  });
+
+  it('is a valid board — the checks read it with each variable as its default', () => {
+    const b = withVariables({ one: { as: 'status-card', of: 'pumps[$pump]', show: ['state'], title: 'Pump {{$pump}}' } }, { kind: 'grid', items: ['one'] });
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+  });
+});

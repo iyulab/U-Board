@@ -36,6 +36,7 @@ function sideFreeOfLinks(nodes: Node[], connectors: Connector[], auto: ReadonlyS
   }
 }
 import { CHART_MAPPING, partKind } from './kinds.js';
+import { expandVariables, variableValues, variablesOf } from './variables.js';
 import { TONES } from './types.js';
 import type { Board, CanvasLayout, DataPlace, FlowPlace, RelativeRule, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
 
@@ -91,6 +92,8 @@ export interface PictureOptions {
    * lays out one item per key. A canvas names its items where it places them.
    */
   keysOf?: (data: string) => readonly string[];
+  /** The value each of the board's variables is asked to take — one that is not among its options (or none) takes its default. */
+  variables?: Readonly<Record<string, string>>;
   /**
    * The items of a data list, for a part a canvas places by its items' fields (`DataPlace`): each item as the list gave it.
    * Where the board names none of its own, nothing is drawn for an item whose field says nothing.
@@ -260,7 +263,9 @@ export function keysIn(board: Board, data: string, value: unknown): string[] {
 }
 
 /** Make the view document that draws `board`. */
-export function toViewDocument(board: Board, options: PictureOptions = {}): ViewDocument {
+export function toViewDocument(input: Board, options: PictureOptions = {}): ViewDocument {
+  // A board that reads variables is drawn with their values written out — the ones asked for that are among the options, else the defaults.
+  const board = expandVariables(input, variableValues(variablesOf(input), options.variables, options.keysOf));
   // The board's data, and — as parts that a group makes per item of a list inside its item need them — the lists inside
   // an item, each as a data of its own (`insideOf`).
   const data: Record<string, Query> = { ...board.data };

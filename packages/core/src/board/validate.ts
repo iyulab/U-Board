@@ -10,6 +10,7 @@ import { ELEMENT_THEME, accentTokens, skinTokens } from '../renderer/element-tem
 import { EMPHASES, FRAMES, NUMERAL_SCALES, TONES } from './types.js';
 import { isNumeralWeight } from '../numerals.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from '../elements/markup-policy.js';
+import { expandVariables, isListed, isVariableRef, variableValues, variablesOf } from './variables.js';
 import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor, isFontStack, isSkinColor } from '../css-color.js';
 import { THEME_COLORS, isThemeColor } from '../theme-colors.js';
@@ -77,7 +78,7 @@ const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'sha
 const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'];
 /** The sides of a marker's point its words may go on. */
 const MARKER_SIDES = ['right', 'left', 'above', 'below', 'auto'];
-const BOARD_SECTIONS = ['board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout', 'triggers'] as const;
+const BOARD_SECTIONS = ['board', 'statuses', 'symbols', 'elements', 'variables', 'data', 'presets', 'parts', 'layout', 'triggers'] as const;
 
 /** The types an element's prop may be. */
 const PROP_TYPES = ['number', 'string', 'boolean', 'list', 'object'];
@@ -90,14 +91,84 @@ const VALUE_AXIS_KINDS: ReadonlySet<string> = new Set(['chart.bar', 'chart.line'
 /** What a link has (`Link`). */
 const LINK_KEYS = ['from', 'to', 'of', 'show', 'label', 'tone', 'route', 'width', 'weight', 'dash', 'arrow'] as const;
 
-export function validateBoard(board: unknown): BoardIssue[] {
+/** The `{{$name}}` and `[$name]` a text reads, and the names they say. */
+const VARIABLE_NAMES = /\{\{\s*\$([\w-]+)\s*\}\}|\[\$([\w-]+)\]/g;
+
+/**
+ * The checks of a board's variables: what they declare, and that every place that reads one — a data's `where` and `path`, an `of`,
+ * a text — names a declared one. The rest of the board is then checked with each variable written out as its default.
+ */
+function checkVariables(raw: Obj, fail: (at: string, message: string) => void): void {
+  const declared = variablesOf(raw);
+  const names = Object.keys(declared);
+  const data = isObj(raw.data) ? raw.data : {};
+  if (raw.variables !== undefined && !isObj(raw.variables)) fail('/variables', 'variables is an object — { "line": { "options": ["L1", "L2"], "default": "L1" } }');
+  for (const [name, v] of Object.entries(isObj(raw.variables) ? raw.variables : {})) {
+    const at = `/variables/${name}`;
+    if (!/^[\w-]+$/.test(name)) fail(at, 'a variable is named with letters, digits, "_" and "-"');
+    if (!isObj(v)) { fail(at, 'a variable is { "options": ["L1", "L2"], "default": "L1" } — its options are a list of words, or { "from", "key" } to read them'); continue; }
+    for (const key of Object.keys(v)) if (!['label', 'options', 'default'].includes(key)) fail(`${at}/${key}`, `a variable has no "${key}" — it has label, options, default`);
+    if (v.label !== undefined && typeof v.label !== 'string') fail(`${at}/label`, 'a label is words');
+    const o = v.options;
+    if (Array.isArray(o)) {
+      if (o.length === 0 || !o.every(x => typeof x === 'string' && x !== '')) fail(`${at}/options`, 'listed options are a list of words, at least one');
+      else if (new Set(o).size !== o.length) fail(`${at}/options`, 'an option is listed once');
+    } else if (isObj(o)) {
+      if (typeof o.from !== 'string' || typeof o.key !== 'string' || Object.keys(o).length !== 2) fail(`${at}/options`, 'options read from a data are { "from": "<data>", "key": "<field>" }');
+      else if (!(o.from in data)) fail(`${at}/options/from`, `no data "${o.from}" — declare it under /data (${list(Object.keys(data))})`);
+    } else fail(`${at}/options`, 'options are a list of words — ["L1", "L2"] — or { "from": "<data>", "key": "<field>" } to read the keys of the items a data reads');
+    if (v.default !== undefined) {
+      if (typeof v.default !== 'string' || v.default === '') fail(`${at}/default`, 'a default is one of the options, or "first"');
+      else if (Array.isArray(o) && !o.includes(v.default)) fail(`${at}/default`, `"${v.default}" is not one of the options — ${list(o as string[])}`);
+    }
+  }
+
+  const unknown = (at: string, name: string) =>
+    fail(at, names.length === 0 ? `"$${name}" reads a variable, but the board declares none — declare it under /variables` : `no variable "${name}" — declared: ${list(names)}`);
+  const walk = (v: unknown, at: string, parent: string) => {
+    if (typeof v === 'string') {
+      for (const m of v.matchAll(VARIABLE_NAMES)) {
+        const name = (m[1] ?? m[2])!;
+        if (!(name in declared)) unknown(at, name);
+        else if (parent === 'data-path' && !isListed(declared[name]!)) {
+          fail(at, `"${name}" reads its options from a data — a path takes only a variable whose options the board lists; read it in a where ({ "variable": "${name}" }) or an of (…[$${name}]) instead`);
+        }
+      }
+    } else if (Array.isArray(v)) v.forEach((x, i) => walk(x, `${at}/${i}`, parent));
+    else if (isObj(v)) {
+      if (isVariableRef(v)) fail(at, `{ "variable": "${v.variable}" } is read in a data's where — a text takes {{$${v.variable}}}, an of takes …[$${v.variable}]`);
+      else for (const [k, x] of Object.entries(v)) walk(x, `${at}/${k}`, parent);
+    }
+  };
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === 'variables' || key === 'elements') continue;
+    if (key !== 'data' || !isObj(value)) { walk(value, `/${key}`, key); continue; }
+    for (const [q, query] of Object.entries(value)) {
+      if (!isObj(query)) continue;
+      for (const [k, x] of Object.entries(query)) {
+        const at = `/data/${q}/${k}`;
+        if (k === 'where' && isObj(x)) {
+          for (const [field, w] of Object.entries(x)) {
+            if (isVariableRef(w)) { if (!(w.variable in declared)) unknown(`${at}/${field}`, w.variable); }
+            else walk(w, `${at}/${field}`, 'data');
+          }
+        } else walk(x, at, k === 'path' ? 'data-path' : 'data');
+      }
+    }
+  }
+}
+
+export function validateBoard(input: unknown): BoardIssue[] {
   const issues: BoardIssue[] = [];
   const fail = (at: string, message: string) => void issues.push({ at, message });
 
-  if (!isObj(board)) return [{ at: '', message: 'a board is a JSON object' }];
-  for (const key of Object.keys(board)) {
+  if (!isObj(input)) return [{ at: '', message: 'a board is a JSON object' }];
+  for (const key of Object.keys(input)) {
     if (!(BOARD_SECTIONS as readonly string[]).includes(key)) fail(`/${key}`, `a board has no "${key}" — its sections are ${BOARD_SECTIONS.join(', ')}`);
   }
+  checkVariables(input, fail);
+  // The rest is checked with each variable written out as its default: the same structure, an ordinary board.
+  const board = expandVariables(input, variableValues(variablesOf(input)));
 
   // ── look ──
   const head = isObj(board.board) ? board.board : {};

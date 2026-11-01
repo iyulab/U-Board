@@ -5,6 +5,7 @@ export type * from './board/types.js';
 export { EMPHASES, FRAMES, TONES } from './board/types.js';
 export { boardSchema } from './board/schema.js';
 export { validateBoard } from './board/validate.js';
+export { expandVariables, variableValues, variablesOf } from './board/variables.js';
 export type { BoardIssue } from './board/validate.js';
 export { PART_KINDS, partKind } from './board/kinds.js';
 export type { PartKind } from './board/kinds.js';
