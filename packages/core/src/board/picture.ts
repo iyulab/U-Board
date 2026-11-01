@@ -662,8 +662,9 @@ export function toViewDocument(board: Board, options: PictureOptions = {}): View
           props: {
             data: {
               text: text(title, 'data.text') ?? '',
-              ...(kicker !== undefined ? { kicker } : {}),
-              ...(subtitle !== undefined ? { subtitle } : {}),
+              // the kicker and the subtitle read `{{field}}` as the title does: a bound one is filled in when the value is read
+              ...(kicker !== undefined ? { kicker: text(kicker, 'data.kicker') ?? '' } : {}),
+              ...(subtitle !== undefined ? { subtitle: text(subtitle, 'data.subtitle') ?? '' } : {}),
               ...(clock === true ? { clock: true } : {}),
             },
             ...(Object.keys(rest).length ? { options: rest } : {}),

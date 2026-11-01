@@ -20,6 +20,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **A header's `kicker` and `subtitle` read `{{field}}` as its title does.** They were fixed text, and a hole in one drew its braces — the check advised against
+  it, and the same slip kept coming back. They now take the fields of what the header reads: `"subtitle": "{{shift}} shift"`. The advice for a hole in them is gone;
+  a hole left open is refused in a kicker as in a title.
 - The viewer dependency `@canvas-kit/viewer` is raised to `^0.7.0` (a minor, so the earlier `^0.6.1` range no longer covers it). The new version lets a viewer
   that has an `onTap` be tapped from the keyboard; the board viewer sets none, so nothing changes in how a board is drawn or read.
 

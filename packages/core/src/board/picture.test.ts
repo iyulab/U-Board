@@ -154,6 +154,14 @@ describe('the picture model of a v2 board', () => {
     });
   });
 
+  it("fills a header's kicker and subtitle from the fields they name, as it does its title", () => {
+    const doc = view(board(
+      { head: { as: 'header', of: 'totals', title: 'Line {{output}}', kicker: 'Plant {{output}}', subtitle: '{{output}} made' } },
+      { kind: 'grid', items: [['head', 12]] },
+    ));
+    expect(drawn(nodeOf(doc, 'head').widget)).toEqual({ data: { text: 'Line 1280', kicker: 'Plant 1280', subtitle: '1280 made' } });
+  });
+
   it("puts a waterfall's total flag, a radar's axis and a scatter's opacity in the chart's mapping, where the widget reads them", () => {
     const doc = view(board(
       {

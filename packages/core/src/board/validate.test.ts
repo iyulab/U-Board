@@ -504,17 +504,17 @@ describe('validateBoard', () => {
     expect(found).toContain('/statuses/hot/color: "color" has no place here — it would be kept but never drawn; this holds tone, label, glyph, emphasis');
   });
 
-  it('advises, without refusing, a header kicker or subtitle written with a hole and a clock that names a field', () => {
+  it('advises, without refusing, a header clock that names a field — a kicker or subtitle with a hole reads its field', () => {
     const hints = (board: unknown) => validateBoard(board).filter(i => i.hint).map(i => `${i.at}: ${i.message}`);
     const head = (extra: Record<string, unknown>) => ({ ...canvas({ h: { as: 'header', of: 'plant', title: '{{name}}', ...extra } }), data: { ...data, plant: { from: 'plant', path: '/plant', fields: { name: {} } } } });
-    expect(hints(head({ subtitle: '{{name}} shift', kicker: 'Plant' }))).toEqual([
-      '/parts/h/subtitle: a header shows its "subtitle" as it is — only the title reads {{field}}; write the words, or put the field in the title',
-    ]);
+    expect(hints(head({ subtitle: '{{name}} shift', kicker: 'Plant {{name}}' }))).toEqual([]);
     expect(hints(head({ clock: 'time' }))).toEqual([
       '/parts/h/clock: "clock" is true (the time of day) — it does not read a field; leave it out, or put the time field in the title with {{field}}',
     ]);
     expect(hints(head({ clock: true, subtitle: 'Day shift' }))).toEqual([]);
     expect(issues(head({ subtitle: '{{name}}', clock: 'time' }))).toEqual([]);
+    // a hole the header's data does not close is refused in a kicker as in a title
+    expect(issues(head({ kicker: 'Plant {{name' }))).toEqual(['/parts/h/kicker: "Plant {{name" opens a {{ it does not close — write {{field}}']);
   });
 
   it('advises, without refusing, an element no part draws and a status a trigger waits for that its field never takes', () => {

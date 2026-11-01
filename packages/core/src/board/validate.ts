@@ -492,9 +492,9 @@ export function validateBoard(board: unknown): BoardIssue[] {
     }
   };
 
-  /** `{{field}}` in a part's title or a link's label names a field of what it reads, or `{{key}}` its item's key. */
+  /** `{{field}}` in a part's title, kicker, subtitle or note, or a link's label names a field of what it reads, or `{{key}}` its item's key. */
   const checkTexts = (holder: Obj, at: string, reads: string | null | undefined) => {
-    for (const prop of ['title', 'label', 'subtitle', 'note'] as const) {
+    for (const prop of ['title', 'label', 'kicker', 'subtitle', 'note'] as const) {
       const text = holder[prop];
       if (typeof text !== 'string') continue;
       // A hole left open would be shown as it is written.
@@ -508,16 +508,10 @@ export function validateBoard(board: unknown): BoardIssue[] {
   };
 
   /**
-   * A header shows its `kicker` and `subtitle` as written — only its title reads `{{field}}` — and its `clock` is on or off. Said
-   * as advice, not a refusal: the board is valid, it just draws the braces, or no clock, where the author meant a field.
+   * A header's `clock` is on or off — it does not read a field. Said as advice, not a refusal: the board is valid, it just draws
+   * no clock where the author meant a field.
    */
   const checkHeaderOptions = (part: Obj, at: string) => {
-    for (const prop of ['kicker', 'subtitle'] as const) {
-      const text = part[prop];
-      if (typeof text === 'string' && text.includes('{{')) {
-        issues.push({ at: `${at}/${prop}`, message: `a header shows its "${prop}" as it is — only the title reads {{field}}; write the words, or put the field in the title`, hint: true });
-      }
-    }
     if (part.clock !== undefined && typeof part.clock !== 'boolean') {
       issues.push({ at: `${at}/clock`, message: '"clock" is true (the time of day) — it does not read a field; leave it out, or put the time field in the title with {{field}}', hint: true });
     }
