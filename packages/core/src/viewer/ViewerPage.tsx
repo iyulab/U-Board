@@ -65,9 +65,10 @@ export interface ViewerPageProps {
    *  quality and why, how old its data is (`BoardState`, no values). A board that has stopped updating reports its
    *  parts `stale`. For a host that acts on what the board shows — a count of faults in its own header, a sound. */
   onBoardState?: (state: BoardState) => void;
-  /** Called when a person types into a part of the board or confirms on it (a `form`, a `confirm`) — the part and the values, as
-   * `BoardInput` says. The board tells and writes nothing: whether to ask for a confirmation, where the values go and who may send them is
-   * the host's, under its own rules. Left out, an input part shows but its values go nowhere. */
+  /** Called when a person types into an input widget of the picture or confirms on it (a `form`, a `confirm`) — the part and the values, as
+   * `BoardInput` says. The viewer tells and writes nothing: whether to ask for a confirmation, where the values go and who may send them is
+   * the host's, under its own rules. Left out, an input widget shows but its values go nowhere. A board's own kinds offer no input widget yet,
+   * so this is for a picture a host draws itself. */
   onInput?: (input: BoardInput) => void;
   /** The board's id — what `{{board}}` in a trigger's link becomes, and what the events it hands the host name. */
   boardId?: string;

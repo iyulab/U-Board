@@ -78,7 +78,7 @@ export function App() {
       ) : mode === 'input' ? (
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>
-            A form part. What is typed into it reaches the host through onInput — the board writes it nowhere.
+            An input widget in a picture the host draws itself. What is typed into it reaches the host through onInput — the viewer writes it nowhere.
           </p>
           <div style={{ height: 300, maxWidth: 420 }}>
             <ViewerPage adapters={adapters} document={ORDER_FORM} ariaLabel="Order" onInput={(input: BoardInput) => setHeard(input.type === 'change' ? `${input.part}: ${input.name} = ${String(input.value)}` : `${input.part}: submitted`)} />

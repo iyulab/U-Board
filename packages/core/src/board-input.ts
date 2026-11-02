@@ -1,5 +1,5 @@
-// What a person typed into or confirmed on a part of a board — the input parts (`form`, `confirm`) tell their host this
-// and nothing more: the board does not write it anywhere, it is not a binding, and it never reaches a data source. A host
+// What a person typed into or confirmed on a part of a picture — the library's input widgets (`form`, `confirm`) tell their host this
+// and nothing more: the viewer does not write it anywhere, it is not a binding, and it never reaches a data source. A host
 // that wants to act on it (ask the person to confirm, send it to its own service) does that itself, under its own rules.
 
 /** An input from one part of a board, as `onInput` receives it. */
