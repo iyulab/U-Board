@@ -43,12 +43,12 @@ export function boardSchema(): Schema {
       elements: map(ref('element'), 'Drawings no built-in makes: markup with declared holes, shown by a part "as": "element".'),
       variables: map({
         type: 'object',
-        required: ['options'],
         additionalProperties: false,
         properties: {
           label: { type: 'string' },
+          kind: { enum: ['text', 'number', 'date', 'datetime'], description: 'For a value no list names — a word, a number, a day, a moment: its shape. Instead of options; needs a default; read in a where or a text only.' },
           options: { anyOf: [{ type: 'array', items: { type: 'string' }, minItems: 1 }, { type: 'object', required: ['from', 'key'], additionalProperties: false, properties: { from: { type: 'string' }, key: { type: 'string' } } }], description: 'The values it can take: listed, or the keys of the items a data reads.' },
-          default: { type: 'string', description: 'A listed option, or "first".' },
+          default: { type: 'string', description: 'A listed option, or "first"; for a kind, a value of that kind.' },
         },
       }, "Values the board takes from outside, by name — read in the where of a data ({ \"variable\": name }), an of (pumps[$name]), a text ({{$name}}) and the path of a data (only a variable whose options are listed)."),
       data: map(ref('query'), 'Where values come from, read once for every part that shows them.'),

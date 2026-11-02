@@ -562,7 +562,9 @@ read value, `readKeys(board, read)` both, and `dataReadOf(board, data)` how a bo
 `elementDefinition(definition)` is an element as its picture draws it — what a server answers a script element's frame
 with.
 
-`BoardView` (from `@iyulab/u-board/viewer`) does all of this for a host, and redraws when the board changes.
+`BoardView` (from `@iyulab/u-board/viewer`) does all of this for a host, and redraws when the board changes. Its `variables` prop gives the
+board's variables the values the host chose (`variables={{ line: 'L2', day: '2026-11-03' }}`); it redraws when they change, and reads a value that
+is not one of a variable's options, or not of its kind, as the variable's default.
 
 A canvas with thousands of parts draws them as page elements, and a browser pays for each one every time the view moves
 (measured: a board of a thousand parts costs about five times what one of a hundred does, on a slowed processor). So

@@ -10,7 +10,7 @@ import { ELEMENT_THEME, accentTokens, skinTokens } from '../renderer/element-tem
 import { EMPHASES, FRAMES, NUMERAL_SCALES, TONES } from './types.js';
 import { isNumeralWeight } from '../numerals.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from '../elements/markup-policy.js';
-import { expandVariables, isListed, isVariableRef, variableValues, variablesOf } from './variables.js';
+import { expandVariables, isFree, isListed, isValueOfKind, isVariableRef, VARIABLE_KINDS, variableValues, variablesOf } from './variables.js';
 import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor, isFontStack, isSkinColor } from '../css-color.js';
 import { THEME_COLORS, isThemeColor } from '../theme-colors.js';
@@ -109,9 +109,18 @@ function checkVariables(raw: Obj, fail: (at: string, message: string) => void): 
     const at = `/variables/${name}`;
     if (!/^[\w-]+$/.test(name)) fail(at, 'a variable is named with letters, digits, "_" and "-"');
     if (!isObj(v)) { fail(at, 'a variable is { "options": ["L1", "L2"], "default": "L1" } — its options are a list of words, or { "from", "key" } to read them'); continue; }
-    for (const key of Object.keys(v)) if (!['label', 'options', 'default'].includes(key)) fail(`${at}/${key}`, `a variable has no "${key}" — it has label, options, default`);
+    for (const key of Object.keys(v)) if (!['label', 'options', 'kind', 'default'].includes(key)) fail(`${at}/${key}`, `a variable has no "${key}" — it has label, options, kind, default`);
     if (v.label !== undefined && typeof v.label !== 'string') fail(`${at}/label`, 'a label is words');
     const o = v.options;
+    if (v.kind !== undefined) {
+      const kinds = (VARIABLE_KINDS as readonly string[]).join(', ');
+      const sample = v.kind === 'number' ? '"0"' : v.kind === 'date' ? '"2026-01-01"' : v.kind === 'datetime' ? '"2026-01-01T00:00:00Z"' : '"all"';
+      if (o !== undefined) fail(at, 'a variable has options (a set of values) or a kind (a shape of value), not both');
+      else if (typeof v.kind !== 'string' || !(VARIABLE_KINDS as readonly string[]).includes(v.kind)) fail(`${at}/kind`, `a kind is one of ${kinds}`);
+      else if (typeof v.default !== 'string') fail(`${at}/default`, `a variable of a kind needs a default of that kind — e.g. ${sample}`);
+      else if (!isValueOfKind(v.kind as 'text', v.default)) fail(`${at}/default`, `"${v.default}" is not a ${v.kind} — e.g. ${sample}`);
+      continue;
+    }
     if (Array.isArray(o)) {
       if (o.length === 0 || !o.every(x => typeof x === 'string' && x !== '')) fail(`${at}/options`, 'listed options are a list of words, at least one');
       else if (new Set(o).size !== o.length) fail(`${at}/options`, 'an option is listed once');
@@ -132,7 +141,9 @@ function checkVariables(raw: Obj, fail: (at: string, message: string) => void): 
       for (const m of v.matchAll(VARIABLE_NAMES)) {
         const name = (m[1] ?? m[2])!;
         if (!(name in declared)) unknown(at, name);
-        else if (parent === 'data-path' && !isListed(declared[name]!)) {
+        else if (isFree(declared[name]!) && (parent === 'data-path' || m[2] !== undefined)) {
+          fail(at, `"${name}" is a variable of a kind — a value no list names — so it is read in a where ({ "variable": "${name}" }) or a text ({{$${name}}}); a ${parent === 'data-path' ? 'path' : 'of'} takes a value from a set the board or its data has named`);
+        } else if (parent === 'data-path' && !isListed(declared[name]!)) {
           fail(at, `"${name}" reads its options from a data — a path takes only a variable whose options the board lists; read it in a where ({ "variable": "${name}" }) or an of (…[$${name}]) instead`);
         }
       }

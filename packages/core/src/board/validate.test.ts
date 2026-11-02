@@ -855,7 +855,7 @@ describe('the variables of a board', () => {
         expect.stringContaining('/variables/b/default: "y" is not one of the options'),
         expect.stringContaining('/variables/c/options/from: no data "nope"'),
         '/variables/d/options: an option is listed once',
-        '/variables/e/opts: a variable has no "opts" — it has label, options, default',
+        '/variables/e/opts: a variable has no "opts" — it has label, options, kind, default',
         '/variables/e/options: options are a list of words — ["L1", "L2"] — or { "from": "<data>", "key": "<field>" } to read the keys of the items a data reads',
         expect.stringContaining('/variables/f: a variable is { "options"'),
       ]));
@@ -875,6 +875,36 @@ describe('the variables of a board', () => {
     const at = (path: string) => problems(board(declared, {}, { w: { from: 'plant', path } }));
     expect(at('/plant/{{$line}}/pumps')).toEqual([]);
     expect(at('/plant/{{$pump}}')).toEqual(['/data/w/path: "pump" reads its options from a data — a path takes only a variable whose options the board lists; read it in a where ({ "variable": "pump" }) or an of (…[$pump]) instead']);
+  });
+
+  describe('a variable of a kind — a value no list names', () => {
+    const free = { day: { kind: 'date', default: '2026-11-01' }, word: { kind: 'text', default: 'all' }, line: { options: ['L1', 'L2'], default: 'L1' } };
+    const where = { line: { from: 'plant', path: '/x', list: '/v', key: 'id', where: { day: { variable: 'day' }, name: { variable: 'word' } } } };
+
+    it('is read in a where and a text', () => {
+      expect(problems(board(free, { c: { ...card, title: 'On {{$day}} — {{$word}}' } }, where))).toEqual([]);
+    });
+
+    it('is not read in a path or an of, which take a value from a set the board or its data has named', () => {
+      expect(problems(board(free, {}, { w: { from: 'plant', path: '/plant/{{$day}}' } }))).toEqual([
+        '/data/w/path: "day" is a variable of a kind — a value no list names — so it is read in a where ({ "variable": "day" }) or a text ({{$day}}); a path takes a value from a set the board or its data has named',
+      ]);
+      expect(problems(board(free, { c: { ...card, of: 'equipment[$word]' } }))).toEqual([
+        '/parts/c/of: "word" is a variable of a kind — a value no list names — so it is read in a where ({ "variable": "word" }) or a text ({{$word}}); a of takes a value from a set the board or its data has named',
+      ]);
+    });
+
+    it('says what is wrong with its declaration — the kind, the default, options beside it', () => {
+      expect(problems(board({ a: { kind: 'hour', default: 'x' }, b: { kind: 'date' }, c: { kind: 'date', default: '2026-02-30' }, d: { kind: 'number', default: 'many' }, e: { kind: 'text', options: ['x'], default: 'x' }, f: { kind: 'datetime', default: '2026-11-03' } }, {})))
+        .toEqual([
+          '/variables/a/kind: a kind is one of text, number, date, datetime',
+          '/variables/b/default: a variable of a kind needs a default of that kind — e.g. "2026-01-01"',
+          '/variables/c/default: "2026-02-30" is not a date — e.g. "2026-01-01"',
+          '/variables/d/default: "many" is not a number — e.g. "0"',
+          '/variables/e: a variable has options (a set of values) or a kind (a shape of value), not both',
+          '/variables/f/default: "2026-11-03" is not a datetime — e.g. "2026-01-01T00:00:00Z"',
+        ]);
+    });
   });
 
   it('says a variable reference goes in a where, not anywhere else', () => {

@@ -4,7 +4,7 @@
 // data. All four are written out before anything else reads the board: `expandVariables` returns the board with every
 // reference replaced by the variable's value, so the checks and the picture see an ordinary board.
 
-import type { Expanded, Variable } from './types.js';
+import type { Expanded, Variable, VariableKind } from './types.js';
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -26,9 +26,46 @@ export function variablesOf(board: unknown): Record<string, Variable> {
 /** Whether a variable lists its options in the board (a variable whose options are read from a data does not). */
 export const isListed = (variable: Variable): boolean => Array.isArray(variable.options);
 
+/** The kinds of a value no list names, as `Variable.kind` says them. */
+export const VARIABLE_KINDS: readonly VariableKind[] = ['text', 'number', 'date', 'datetime'];
+
+/** Whether a variable takes any value of a shape (`kind`) rather than one of a set of options. */
+export const isFree = (variable: Variable): boolean => variable.kind !== undefined && variable.options === undefined;
+
+const NUMBER = /^-?(0|[1-9]\d*)(\.\d+)?$/;
+const DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DATETIME = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):[0-5]\d(:[0-5]\d(\.\d+)?)?(Z|[+-]([01]\d|2[0-3]):[0-5]\d)?$/;
+
+const isCalendarDate = (year: string, month: string, day: string): boolean => {
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return m >= 1 && m <= 12 && date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+};
+
+/** Whether `text` is a value of the kind: `number` a plain decimal, `date` a day that exists, `datetime` a moment in ISO 8601 (a time zone, or none),
+ *  `text` any words. */
+export function isValueOfKind(kind: VariableKind, text: string): boolean {
+  switch (kind) {
+    case 'text':
+      return true;
+    case 'number':
+      return NUMBER.test(text);
+    case 'date': {
+      const m = DATE.exec(text);
+      return m !== null && isCalendarDate(m[1]!, m[2]!, m[3]!);
+    }
+    case 'datetime': {
+      const m = DATETIME.exec(text);
+      return m !== null && isCalendarDate(m[1]!, m[2]!, m[3]!);
+    }
+  }
+}
+
 /**
- * The value each variable takes: the one `given` when it is one of its options, else its `default` when that is one, else
- * its first option. A variable whose options are read from a data reads them through `keysOf`; without the keys (a board
+ * The value each variable takes: the one `given` when it is one of its options (for a `kind`, a value of that kind), else its `default` when that
+ * is one, else its first option. A variable whose options are read from a data reads them through `keysOf`; without the keys (a board
  * being checked, a data not read yet) it takes its `default` as written, or `first`.
  */
 export function variableValues(
@@ -40,7 +77,10 @@ export function variableValues(
   for (const [name, variable] of Object.entries(variables)) {
     const wanted = given?.[name];
     const preset = typeof variable.default === 'string' ? variable.default : undefined;
-    if (Array.isArray(variable.options)) {
+    if (isFree(variable)) {
+      const kind = variable.kind!;
+      out[name] = wanted !== undefined && isValueOfKind(kind, wanted) ? wanted : preset !== undefined && isValueOfKind(kind, preset) ? preset : '';
+    } else if (Array.isArray(variable.options)) {
       const options = variable.options.filter((o): o is string => typeof o === 'string');
       out[name] = wanted !== undefined && options.includes(wanted) ? wanted : preset !== undefined && options.includes(preset) ? preset : options[0] ?? '';
     } else {

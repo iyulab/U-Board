@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expandVariables, isListed, variableValues, variablesOf } from './variables.js';
+import { expandVariables, isFree, isListed, isValueOfKind, variableValues, variablesOf } from './variables.js';
 import type { Variable } from './types.js';
 
 const declared: Record<string, Variable> = {
@@ -68,4 +68,38 @@ describe('what is a variable', () => {
     expect(isListed(declared.line!)).toBe(true);
     expect(isListed(declared.pump!)).toBe(false);
   });
+
+describe('a variable of a kind — a value no list names', () => {
+  it('knows a value of each kind', () => {
+    expect(['0', '12', '-3.5', '10.25'].every(v => isValueOfKind('number', v))).toBe(true);
+    expect(['', '1e3', '01', '1.', '.5', 'x', '1,5'].some(v => isValueOfKind('number', v))).toBe(false);
+    expect(['2026-11-03', '2024-02-29'].every(v => isValueOfKind('date', v))).toBe(true);
+    expect(['2026-02-29', '2026-13-01', '2026-11-3', '20261103', '2026-11-03T09:00'].some(v => isValueOfKind('date', v))).toBe(false);
+    expect(['2026-11-03T09:30', '2026-11-03T09:30:15Z', '2026-11-03T09:30:15.250+09:00'].every(v => isValueOfKind('datetime', v))).toBe(true);
+    expect(['2026-11-03', '2026-11-03T24:00', '2026-02-30T09:00', '2026-11-03 09:30', 'now'].some(v => isValueOfKind('datetime', v))).toBe(false);
+    expect(['', 'anything at all', '2026-11-03'].every(v => isValueOfKind('text', v))).toBe(true);
+  });
+
+  it('takes the value asked for when it is of its kind, else its default, else nothing', () => {
+    const day: Variable = { kind: 'date', default: '2026-11-01' };
+    expect(isFree(day)).toBe(true);
+    expect(isFree({ options: ['a'] })).toBe(false);
+    expect(variableValues({ day }, { day: '2026-12-25' })).toEqual({ day: '2026-12-25' });
+    expect(variableValues({ day }, { day: 'tomorrow' })).toEqual({ day: '2026-11-01' });
+    expect(variableValues({ day })).toEqual({ day: '2026-11-01' });
+    expect(variableValues({ day: { kind: 'date', default: 'soon' } })).toEqual({ day: '' });
+    expect(variableValues({ word: { kind: 'text', default: 'all' } }, { word: 'North wing' })).toEqual({ word: 'North wing' });
+  });
+
+  it('is written out in a where and a text like any other', () => {
+    const board = {
+      variables: { day: { kind: 'date', default: '2026-11-01' } },
+      data: { rows: { from: 'plant', path: '/x', where: { day: { variable: 'day' } } } },
+      parts: { c: { title: 'On {{$day}}' } },
+    };
+    const out = expandVariables(board, { day: '2026-12-25' }) as typeof board & { data: { rows: { where: unknown } } };
+    expect(out.data.rows.where).toEqual({ day: '2026-12-25' });
+    expect(out.parts.c.title).toBe('On 2026-12-25');
+  });
+});
 });

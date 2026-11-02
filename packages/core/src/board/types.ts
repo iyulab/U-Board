@@ -380,11 +380,19 @@ export type Expanded<T> = T extends VariableRef ? never : T extends object ? { [
  */
 export interface Variable {
   label?: string;
-  /** The values it can take: listed here, or the keys of the items a data reads (`{ from, key }`) — the server checks a value against them. */
-  options: string[] | { from: string; key: string };
-  /** A listed option, or `first` (the first key, when the options are read from a data). */
+  /** The values it can take: listed here, or the keys of the items a data reads (`{ from, key }`) — the server checks a value against them.
+   *  A variable has these or a `kind`, not both. */
+  options?: string[] | { from: string; key: string };
+  /** For a value that cannot be listed — a day, a moment, a number, a word the viewer chooses: what shape it takes. Such a variable is read in a
+   *  `where` and a text only — never in a `path` or an `of`, which take a value from a set the board or its data has named. Needs a `default`. */
+  kind?: VariableKind;
+  /** A listed option, or `first` (the first key, when the options are read from a data); for a `kind`, a value of that kind. */
   default?: string;
 }
+
+/** The shapes of a value no list names: `text` (any words), `number` (`12`, `-3.5`), `date` (`2026-11-03`) and `datetime` (`2026-11-03T09:30:00Z`, a moment
+ *  in ISO 8601). A value is compared in a `where` as text, as every field is. */
+export type VariableKind = 'text' | 'number' | 'date' | 'datetime';
 
 export interface Board {
   /** The board's title, theme, accent colour (the `accent` tone, a header's banner) and look. */
