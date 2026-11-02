@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-11-03
+
 ### Added
 
 - `ResolvedBinding.meta`: what an adapter knows about a value beyond how current it is — where it came from, whether it was read or worked out, what it went through — as a flat map of words, numbers and yes/no values under names of the host's own (`ValueMeta`; at most 16 entries, long names and words clipped, anything else left out). It reaches `ResolvedWidget.meta` per bound prop (kept for `live` and `stale` readings) and a viewer shows it as lines in the part's tooltip, after how current the value is. It is not a binding, a state rule does not read it, and it is not in the announcement a screen reader gets. A server that serves a board to the public must not pass it on.

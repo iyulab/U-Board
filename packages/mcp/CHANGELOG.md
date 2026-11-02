@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- Needs `@iyulab/u-board` `^0.41.0`. The rulebook the tools hand a model now says that a variable can be of a kind (a day, a number, a word) instead of listing its options.
+
 ## [0.27.0] - 2026-11-02
 
 ### Changed
