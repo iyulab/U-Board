@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 // to time the first test out when the suite runs under load.
 import * as domain from './domain-entry.js';
 import * as picture from './picture-entry.js';
+import * as check from './check-entry.js';
 import * as viewer from './viewer-entry.js';
 import * as examples from './examples-entry.js';
 import * as toolkit from './toolkit-entry.js';
@@ -35,6 +36,17 @@ describe('the entry points', () => {
       'readHttpRef', 'requestPath', 'requestTimeProblem', 'resolveConnector', 'resolveDocument', 'resolveShape', 'resolveWidget', 'resolvedReading', 'sizedNodes',
       'sourceErrorIn', 'stateChanges', 'withItemFields', 'worstQuality', 'writeText',
     ]);
+  });
+
+  it('./check exports the check a board meets and the rulebook an assistant writes by', () => {
+    expect(Object.keys(check).sort()).toEqual(['RULEBOOK_EXAMPLE', 'boardRulebook', 'checkBoard', 'emptyBoard', 'sourceAdvice']);
+  });
+
+  it('keeps ./check out of the package root, ./viewer and ./picture: the renderer reads a board, it does not help write one', () => {
+    for (const entry of [root, viewer, picture]) {
+      expect('checkBoard' in entry).toBe(false);
+      expect('boardRulebook' in entry).toBe(false);
+    }
   });
 
   it('./viewer re-exports the widget library’s own media origins setting — the one the viewer draws with, not a copy', () => {
@@ -74,7 +86,7 @@ describe('the entry points', () => {
   // reaches at runtime is listed here on purpose; a new one has to be one the server itself can resolve. The board
   // language's kinds come from the copy of the widget library's catalog written at build time
   // (widget-catalog.generated.ts), not from the library.
-  it.each(['src/domain-entry.ts', 'src/picture-entry.ts'])('%s reaches no package at runtime', entry => {
+  it.each(['src/domain-entry.ts', 'src/picture-entry.ts', 'src/check-entry.ts'])('%s reaches no package at runtime', entry => {
     expect(runtimePackagesReachedFrom(resolve(process.cwd(), entry))).toEqual([]);
   });
 });

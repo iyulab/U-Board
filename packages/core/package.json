@@ -52,6 +52,10 @@
       "types": "./dist/lib/toolkit-entry.d.ts",
       "import": "./dist/lib/toolkit-entry.js"
     },
+    "./check": {
+      "types": "./dist/lib/check-entry.d.ts",
+      "import": "./dist/lib/check-entry.js"
+    },
     "./examples": {
       "types": "./dist/lib/examples-entry.d.ts",
       "import": "./dist/lib/examples-entry.js"

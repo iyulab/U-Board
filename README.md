@@ -51,6 +51,7 @@ An adapter resolves a reference in your system to a value and its quality. The
 |---|---|
 | `@iyulab/u-board/domain` | The board language: types, JSON Schema, validation, the adapter contract. No React. |
 | `@iyulab/u-board/picture` | The model a renderer, a server or an assistant reads off a board. No React. |
+| `@iyulab/u-board/check` | The check a board meets before it is stored, and the rulebook an assistant writes boards by. No React. |
 | `@iyulab/u-board/viewer` | `BoardView`, the React viewer. |
 | `@iyulab/u-board/toolkit` | The renderer's building blocks, for tools that edit boards. |
 

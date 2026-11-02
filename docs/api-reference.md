@@ -61,10 +61,10 @@ the two can't quietly diverge from each other either.
 |---|---|---|
 | `@iyulab/u-board/domain` | The board language — its types, `boardSchema`, `validateBoard`, the part kinds — drawing a board's picture (`pictureOf`, `readerOf`, `toViewDocument`), the `Adapter` contract, JSON Patch, connection-quality text | No — and no package at runtime |
 | `@iyulab/u-board/picture` | The picture a board is drawn as: `ViewDocument` and its parts, `resolveDocument`, `boardStateOf`, the trigger decisions, the HTTP connector's reference, element frames, `lintViewDocument` — what a server or an assistant reads off a drawn board | No — and no package at runtime |
+| `@iyulab/u-board/check` | `checkBoard`, `emptyBoard`, `sourceAdvice`, `boardRulebook` — the board check an author or an assistant reads, and the rulebook it writes by | No — and no package reached at run time |
 | `@iyulab/u-board/viewer` | `BoardView`, `ViewerPage` (a picture drawn as given), the labels, `serverClock`, `setMediaOrigins` | Yes |
 | `@iyulab/u-board` | Everything in `domain` and `viewer` | Yes |
 | `@iyulab/u-board-designer` | `BoardAuthoring`, the authoring tool (a package that builds on this one) | Yes |
-| `@iyulab/u-board-designer/check` | `checkBoard`, `emptyBoard`, `sourceAdvice`, `boardRulebook` — the board check an author or an assistant reads, and the rulebook it writes by | No |
 
 A board is what is written, stored and sent; the picture is what the renderer makes of it, and nobody writes one.
 
