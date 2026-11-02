@@ -76,7 +76,7 @@ label, glyph. Never write colours for statuses.`,
     `## parts — what, of what, which fields
 
 \`{ "as": <kind>, "of": "<data>" | "<data>[<key>]", "show": "<field>" | ["<field>", …], "title"?, …options }\`. \`{{field}}\`
-in a title or a label reads a field of \`of\` (a status card's \`subtitle\` · \`note\` and a header's \`kicker\` · \`subtitle\` too; a header's \`clock\` is \`true\`); \`{{key}}\` is the item's key. \`presets\` hold shared settings a part takes
+in a title or a label reads a field of \`of\` (a status card's \`subtitle\` · \`note\` and a header's \`kicker\` · \`subtitle\` too; a header's \`clock\` is \`true\`; its \`time\` · \`date\` name a field of \`of\` that holds a date-time — the record's own, apart from \`clock\`, which is now — and \`since\` the same written as how long ago ("3 minutes ago"); an offset time shows on the clock of the read's \`zone\`); \`{{key}}\` is the item's key. \`presets\` hold shared settings a part takes
 with \`use\`; \`each: "<data>"\` makes one part per item (ids \`<part>/<key>\`) — it takes no \`of\`, and is placed once. A \`group\` is several parts on a small
 canvas of their own — its parts and links read the group's \`of\` unless they name their own.
 
@@ -100,7 +100,7 @@ Every \`chart.*\` also takes ${code(sharedChartOptions())}.`,
   coordinates when left out), \`size\` the box centred on the point (give one for a marker: a dot alone is [14, 14]; one with a name or note draws
   it right of the dot — about [150, 40] — and it is the box, not the dot, that is centred). An item with no number in a field, or
   outside the frame, is not drawn — \`look\` counts them. The data needs a \`key\`; the projection is linear (right for a plan or a flat map). A part is placed one way, not both. Or by a rule: \`"<part>": { "flow": { "cell": [w, h], "columns": n, "gap"?: [across, down], "at"?: [x, y] }, "by"?: "<field>", "boxes"?: { "columns": n, "label"?: "{{key}}" } }\` — items flow in columns, or with \`by\` are grouped into labelled boxes (\`flow.pad\` [sides, top] kept clear inside). A shape is a \`box\` (with \`label\`), a \`text\` at a point,
-  a \`line\` through points or a \`path\` (absolute M · L · C · Q · Z).
+  a \`line\` through points or a \`path\` (absolute M · L · C · Q · Z). A \`box\`, \`line\` or \`path\` with \`of\` and \`show\` takes its outline's colour from that field's status, as a link does; a box or path with \`fill\` (\`tone\` or \`hatch\`, which reads without colour) is filled with it too.
 - grid: \`{ "kind": "grid", "items": ["<part>", ["<part>", span], { "grid": [ … ], "span": n }, { "canvas": { … }, "span": n }] }\` —
   12 columns; an \`each\` part's items are cells (\`["pumps", 2]\`: six to a row); a grid in an item stacks what it holds.
 
