@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-02
+
 ### Changed
 
 - **The package is under the MIT licence and lives in the `U-Board` repository.** It was AGPL-3.0-or-later in the application repository; the language, the viewer, the board check and the rulebook (`@iyulab/u-board/check`) and now the MCP server — the surface a host embeds to let an assistant read and draw boards — share one licence. Earlier versions keep the licence they were published under. The tools, their arguments and their answers are unchanged; `@iyulab/u-board-designer` is no longer a dependency (the check and the rulebook come from `@iyulab/u-board/check`).

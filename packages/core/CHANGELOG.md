@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-11-02
+
 ### Added
 
 - **`@iyulab/u-board/check`: the board check and the rulebook, under the MIT licence with the rest of the board language.** `checkBoard` (the language's check plus "does it draw", in one list of problems and advice at JSON Pointers), `emptyBoard`, `sourceAdvice` and `boardRulebook` (the text an assistant writes boards by, generated from the same lists the schema reads) were part of the authoring tool's package; the rules they apply were already here, in `validateBoard` and `toViewDocument`. They now ship with the language, so a host that lets an assistant write boards can refuse the same boards in the same words without taking the authoring tool. The entry reaches no package at run time, and neither the package root, `./viewer` nor `./picture` reaches it.
