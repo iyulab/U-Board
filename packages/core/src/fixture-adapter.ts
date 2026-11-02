@@ -15,6 +15,14 @@ export class FixtureAdapter implements Adapter {
   };
 
   private answers: Record<string, unknown> = {
+    // A crowd of 800 events in a 40 × 20 lattice over the whole map — a board with more parts than one view holds.
+    '/crowd': {
+      features: Array.from({ length: 800 }, (_, i) => ({
+        id: `c${i}`,
+        properties: { mag: 1 + (i % 9) },
+        geometry: { coordinates: [-175 + (i % 40) * (350 / 39), 82 - Math.floor(i / 40) * (164 / 19), 0] },
+      })),
+    },
     '/pump-a/load': { value: [{ t: '09:00', load: 61 }, { t: '10:00', load: 68 }, { t: '11:00', load: 73 }, { t: '12:00', load: 70 }] },
     // Events with a position, as a GeoJSON feed gives them — one with none, one outside any map.
     '/quakes': {

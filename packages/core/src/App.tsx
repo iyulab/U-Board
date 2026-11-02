@@ -1,17 +1,18 @@
 import { useMemo, useState } from 'react';
 import { BoardView } from './viewer/BoardView.js';
 import { FixtureAdapter } from './fixture-adapter.js';
-import { demoBoard, demoGrid, demoMixed, demoQuakes, elementsDemo } from './examples/demo-boards.js';
+import { demoBoard, demoCrowd, demoGrid, demoMixed, demoQuakes, elementsDemo } from './examples/demo-boards.js';
 
 // The package's development harness: the demo boards drawn the way a host that only views them draws them — no
 // editor, no designer, no server. The browser tests in e2e/ run against it.
-type Mode = 'view' | 'grid' | 'mixed' | 'elements' | 'quakes';
+type Mode = 'view' | 'grid' | 'mixed' | 'elements' | 'quakes' | 'crowd';
 const MODES: ReadonlyArray<readonly [Mode, string]> = [
   ['view', 'View'],
   ['grid', 'Grid'],
   ['mixed', 'Mixed'],
   ['elements', 'Elements'],
   ['quakes', 'Quakes'],
+  ['crowd', 'Crowd'],
 ];
 
 export function App() {
@@ -21,7 +22,7 @@ export function App() {
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : mode === 'mixed' ? 'mixed board' : 'placed by fields'}</h1>
+      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : mode === 'mixed' ? 'mixed board' : mode === 'crowd' ? 'a crowd of parts' : 'placed by fields'}</h1>
       <div style={{ marginBottom: 12 }}>
         {MODES.map(([value, label]) => (
           <span key={value}>
@@ -59,6 +60,16 @@ export function App() {
           </p>
           <div style={{ height: 720, maxWidth: 1200, resize: 'horizontal', overflow: 'auto' }}>
             <BoardView board={demoGrid} adapters={adapters} />
+          </div>
+        </>
+      ) : mode === 'crowd' ? (
+        <>
+          <p style={{ color: '#64748b', maxWidth: 640 }}>
+            Eight hundred parts — more than one view holds. Zoomed out, all of them are in the page; zoomed in, the viewer
+            leaves out those well beyond the view and builds them again as it nears them.
+          </p>
+          <div style={{ height: 520, maxWidth: 900 }}>
+            <BoardView board={demoCrowd} adapters={adapters} boardId="crowd" />
           </div>
         </>
       ) : mode === 'quakes' ? (

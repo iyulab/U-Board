@@ -25,6 +25,7 @@ import { NodeFrame } from './node-frame.js';
 import { captionObjects, connectorObjects, placeOnCanvas } from './connector-drawing.js';
 import { connectorMark } from './connector-mark.js';
 import { elementListeners } from '../triggers.js';
+import { elementNameOf } from '../elements/element-type.js';
 
 /** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
  * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
@@ -50,6 +51,12 @@ export interface ToCanvasKitOptions {
   onNodeActivate?: (node: string) => void;
   /** An event a node's element raised. */
   onElementEvent?: (node: string, name: string) => void;
+}
+
+/** Whether a node's widget is a script element — a frame that keeps its own state. */
+function holdsState(type: string, elements: ResolvedCanvasView['elements']): boolean {
+  const name = elementNameOf(type);
+  return name !== undefined && elements?.[name]?.render === 'script';
 }
 
 /**
@@ -90,6 +97,8 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     y: node.y,
     width: node.width,
     height: node.height,
+    // A script element holds a frame with state of its own: it is not torn down when the view moves away from it.
+    ...(holdsState(node.widget.type, doc.elements) && { cull: false }),
     // A widget takes its node's box exactly — the box the author drew is the layout.
     content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} highlighted={node.highlighted} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} elementEvents={listened?.get(node.id)} name={node.caption} />,
   }));

@@ -588,6 +588,25 @@ export const elementsDemo: Board = {
   }
 };
 
+/** Eight hundred events placed by their own fields on the world — more parts than one view holds, so the viewer leaves
+ *  out those beyond the view once it is zoomed in. */
+export const demoCrowd: Board = {
+  board: { title: 'Crowd' },
+  statuses: { big: { tone: 'alarm', label: 'Strong' }, mid: { tone: 'warn', label: 'Moderate' }, small: { tone: 'info', label: 'Light' } },
+  data: {
+    crowd: {
+      from: 'fixture', path: '/crowd', list: '/features', key: 'id',
+      fields: {
+        lon: { at: '/geometry/coordinates/0' },
+        lat: { at: '/geometry/coordinates/1' },
+        mag: { at: '/properties/mag', state: ['small', 4, 'mid', 6, 'big'] },
+      },
+    },
+  },
+  parts: { crowd: { as: 'marker', each: 'crowd', show: 'mag' } },
+  layout: { kind: 'canvas', size: [720, 360], place: { crowd: { at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [16, 16] } } },
+};
+
 /** Events placed by their own fields on an equirectangular world — each opens its own page when clicked. */
 export const demoQuakes: Board = {
   board: { title: 'Earthquakes' },

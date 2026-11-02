@@ -38,6 +38,12 @@ export interface ViewerPageProps {
   ariaLabel?: string;
   /** Text to show instead of the English defaults — any subset of `UBoardLabels`. */
   labels?: Partial<UBoardLabels>;
+  /** Leave out of the page the parts of a canvas that lie well outside the view (they are drawn again when the view
+   * nears them), so a board with thousands of parts stays smooth to pan, zoom and update. A number: left out once the
+   * board has more parts than that; `true`: always; `false`: never. Default `500` — a smaller board is whole in the
+   * page, as a screen reader and the Tab key meet it; a larger one is met as far as the view has reached. A part that
+   * holds a state of its own (a script element's frame) is never left out. */
+  cullParts?: boolean | number;
   /** The current time in epoch milliseconds — what "N minutes ago", the time of the last update and
    * a state read against the clock (a session «now» or «next») are measured by. `Date.now` by default. The `observedAt` times adapters report come from the
    * source's side; when this machine's clock may be off from that one (an unattended screen whose
@@ -92,6 +98,7 @@ export function ViewerPage({
   pollIntervalMs,
   ariaLabel,
   labels: labelsProp,
+  cullParts,
   clock = Date.now,
   attribution = true,
   elementOrigins,
@@ -177,6 +184,7 @@ export function ViewerPage({
                 height={height}
                 scene={drawn.preview.scene}
                 overlays={drawn.preview.overlays}
+                cullOverlays={cullsParts(drawn.preview.overlays.length, cullParts)}
                 transform={view.transform}
                 onTransformChange={view.onUserTransform}
                 onViewportResize={view.onViewportResize}
@@ -203,6 +211,16 @@ export function ViewerPage({
       </div>
     </ElementHost>
   );
+}
+
+/** A board has more parts than this before its parts outside the view are left out (`cullParts`). */
+export const CULL_PARTS_ABOVE = 500;
+
+/** Whether a board of `count` parts leaves out those outside the view, as `cullParts` says. */
+export function cullsParts(count: number, cullParts: boolean | number | undefined): boolean {
+  if (cullParts === undefined) return count > CULL_PARTS_ABOVE;
+  if (typeof cullParts === 'number') return count > cullParts;
+  return cullParts;
 }
 
 /** A resolved document with every `live` binding read as `stale` — the values stay, their observation

@@ -694,4 +694,26 @@ describe('toCanvasKit', () => {
       expect(liveRegionFor(quality).props.children).toBe(overlayFor(quality).props.title);
     });
   });
+
+  describe('overlays that hold state', () => {
+    const scriptDoc = (render: 'script' | 'template') =>
+      doc({
+        elements: { gate: render === 'script' ? { render: 'script', script: 'ub.onProps(() => {})' } : { render: 'template', template: '<b>{{n}}</b>' } },
+        nodes: [
+          { id: 'plain', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, quality: {} } },
+          { id: 'el', x: 50, y: 0, anchored: false, widget: { type: 'element:gate', props: {}, quality: {} } },
+        ],
+      });
+
+    it('marks a script element as one the viewer keeps wherever the view is', () => {
+      const { overlays } = toCanvasKit(scriptDoc('script'));
+      expect(overlays.find(o => o.id === 'el')?.cull).toBe(false);
+      expect(overlays.find(o => o.id === 'plain')).not.toHaveProperty('cull');
+    });
+
+    it('leaves a template element, which keeps nothing, to be left out like any part', () => {
+      const { overlays } = toCanvasKit(scriptDoc('template'));
+      expect(overlays.find(o => o.id === 'el')).not.toHaveProperty('cull');
+    });
+  });
 });

@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `cullParts` on `BoardView` and `ViewerPage`: a canvas with more than 500 parts leaves out those well outside the view and builds them again as the view nears (a number sets that size, `true` always, `false` never). A board of thousands of parts no longer costs the view every part's share of the browser's per-frame work while panning, zooming and updating; a script element is never left out. A smaller board is unchanged, whole in the page for a screen reader and the Tab key.
+
+### Fixed
+
+- Reading the item a part names out of a long list scanned the list for every part, so a refresh of a board with a thousand parts did a million comparisons. A list of 64 or more elements is now indexed once per response on the fields asked about, and each part finds its item directly: a two-thousand-part board refreshed seven times, which spent about seven seconds of script (on a processor slowed fourfold), spends about one. Answers are the scan's in every case — which element comes first, `"12"` and `12` as one id, a field that is null or missing — including for a list changed in place after it was searched.
+
 ## [0.40.0] - 2026-11-02
 
 ### Added

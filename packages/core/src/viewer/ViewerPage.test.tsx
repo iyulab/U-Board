@@ -565,4 +565,43 @@ describe('ViewerPage with a background outside the allowed origins', () => {
     await screen.findByTestId('viewer');
     expect(screen.queryByText(/Background image not shown/)).toBeNull();
   });
+
+  describe('leaving out the parts beyond the view (cullParts)', () => {
+    const manyParts = (count: number): CanvasView => ({
+      kind: 'canvas',
+      background: {},
+      nodes: Array.from({ length: count }, (_, i) => ({
+        id: `n${i}`,
+        x: i,
+        y: 0,
+        anchored: false,
+        widget: { type: 'uw-status', bindings: { value: { adapter: 'cmms', ref: 'k' } } },
+      })),
+      connectors: [],
+    });
+
+    it('is off for a board of ordinary size, so a screen reader meets all of it', async () => {
+      render(<ViewerPage adapters={[new SpyAdapter()]} width={400} height={300} document={manyParts(10)} />);
+      await screen.findByTestId('viewer');
+      expect(lastViewerProps().cullOverlays).toBe(false);
+    });
+
+    it('is on once the board has more parts than 500', async () => {
+      render(<ViewerPage adapters={[new SpyAdapter()]} width={400} height={300} document={manyParts(501)} />);
+      await screen.findByTestId('viewer');
+      expect(lastViewerProps().cullOverlays).toBe(true);
+    });
+
+    it('takes the board size above which it starts, or true or false outright', async () => {
+      const { rerender } = render(<ViewerPage adapters={[new SpyAdapter()]} width={400} height={300} document={manyParts(10)} cullParts={5} />);
+      await screen.findByTestId('viewer');
+      expect(lastViewerProps().cullOverlays).toBe(true);
+      rerender(<ViewerPage adapters={[new SpyAdapter()]} width={400} height={300} document={manyParts(10)} cullParts={50} />);
+      await waitFor(() => expect(lastViewerProps().cullOverlays).toBe(false));
+      rerender(<ViewerPage adapters={[new SpyAdapter()]} width={400} height={300} document={manyParts(10)} cullParts />);
+      await waitFor(() => expect(lastViewerProps().cullOverlays).toBe(true));
+      rerender(<ViewerPage adapters={[new SpyAdapter()]} width={400} height={300} document={manyParts(501)} cullParts={false} />);
+      await waitFor(() => expect(lastViewerProps().cullOverlays).toBe(false));
+    });
+  });
 });

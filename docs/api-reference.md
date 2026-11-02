@@ -564,6 +564,13 @@ with.
 
 `BoardView` (from `@iyulab/u-board/viewer`) does all of this for a host, and redraws when the board changes.
 
+A canvas with thousands of parts draws them as page elements, and a browser pays for each one every time the view moves
+(measured: a board of a thousand parts costs about five times what one of a hundred does, on a slowed processor). So
+`BoardView` and `ViewerPage` leave out the parts that lie well outside the view once a board has more than 500 of them, and
+build them again as the view nears; set `cullParts` to a number to change that size, to `true` to always do it, or to `false`
+never to. A smaller board is whole in the page, as a screen reader and the Tab key meet it; a larger one is met as far as the
+view has reached. A script element, which holds a frame with state of its own, is never left out.
+
 ## The `Adapter` contract
 
 ```ts
