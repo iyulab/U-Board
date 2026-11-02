@@ -14,6 +14,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **`DocumentBoardStore`, from `@iyulab/u-board-mcp/tools`: one board an app keeps itself.** The board tools need a store that answers as a server does — a board with its
+  revision and picture, a change answered with the new revision and advice, a refused change with its issues at their paths — and the only one that did
+  without a U-Board server was the file the MCP server's `--board` mode opens. `DocumentBoardStore` is that store with the keeping left to the host:
+  `new DocumentBoardStore(document, { name?, revision?, save? })` checks every change, puts changes one after the other, calls `save` before it answers and undoes
+  the change if `save` rejects; `DocumentBoardStore.empty(kind)` starts one. Nothing in it needs Node. The `--board` file store is now a `DocumentBoardStore` that saves to a file.
+
 - **`edit_text`: a change inside a string of the board, by the words around it.** `edits` is a list of `{ pointer, old, new }`: each names a string of the
   board (an element's `/elements/<name>/style` or `/template`, a title …) and text that stands once in it, and the text replaces it; the edits are made
   together or not at all and saved on one revision, through the same check as any change. A JSON Patch can only replace a whole string, so an assistant

@@ -72,6 +72,28 @@ element's markup, style and script more than it moves parts. The board is still 
 | `get_bundle` | The board as files: `board.json` (parts, layout, states, skin — where an element's code or the background picture moved out it holds `{ "$file": path }`), `elements/<name>.html`, `.css`, `.js` (a name that is not word characters and dashes is percent-encoded) and `background.svg`. Without `files`: the list with sizes and `board.json`; with `files`: the text of those. |
 | `put_bundle` | Saves the board from files, checked as any change is: `files` replace the files of the same path, `edits` (`{ file, old, new }`) change a file in place — `old` stands exactly once in it — so a long style is not sent again for a small change; the rest stays. An issue names the file it is in. |
 
+## In your own app
+
+The tools are not tied to the MCP server. `@iyulab/u-board-mcp/tools` hands a host the same tools to give its own model — a chat
+panel in an admin screen, say — with nothing that needs Node, and `DocumentBoardStore` keeps the board in your app instead of on a U-Board
+server: it checks every change as a server would, answers with the new revision, and calls your `save` before it says "saved".
+
+```ts
+import { boardTools, DocumentBoardStore, functionTool } from '@iyulab/u-board-mcp/tools';
+
+const store = new DocumentBoardStore(await loadBoardFromMyDatabase(), {
+  name: 'Line 3',
+  revision: row.revision,
+  save: document => saveBoardToMyDatabase(document), // rejects → the change is undone and the model is told
+});
+const tools = boardTools(store); // get_board, patch_board, edit_text, validate, describe …
+const forYourModel = tools.map(functionTool); // chat-completions `tools`; call `tool.run(args)` for each call the model makes
+```
+
+A store that holds one board is offered the tools about that board; a store that is a whole workspace on a U-Board server
+(`UBoardClient`) is offered the ones about lists and data sources too. Draw the saved board with `@iyulab/u-board/viewer` for the people who
+only read it, and write the board's data side — what each `of` reads — as an adapter of your own.
+
 ## License
 
 MIT.

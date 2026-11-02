@@ -6,6 +6,8 @@ import type { BoardTool } from './tools.js';
 export { boardTools, type BoardTool, type BoardToolsOptions, type ToolHints, type ToolResult } from './tools.js';
 export { UBoardClient, UBoardApiError, type SessionAuth } from './client.js';
 export { isWorkspaceStore, type BoardStore, type WorkspaceStore } from './store.js';
+// One board an app keeps itself — what a host with no U-Board server hands the tools: checked as a server would, kept by the host's own `save`.
+export { DocumentBoardStore, DOCUMENT_BOARD_ID, type DocumentBoardOptions } from './document-board.js';
 export { TOPICS } from './describe.js';
 // What `look` checks on the page a board is drawn in, for a host that draws it itself (the console's chat panel).
 export { findProblems, countQualityMarks } from './look-page.js';
