@@ -68,7 +68,7 @@ data it shows. See [docs/scope.md](docs/scope.md).
 ## Documentation
 
 - [Overview](docs/overview.md) · [Concepts](docs/concepts.md) · [Architecture](docs/architecture.md)
-- [API reference](docs/api-reference.md)
+- [API reference](docs/api-reference.md) · [Embedding in your app](docs/embedding.md)
 - [Principles](docs/principles.md) · [Scope](docs/scope.md)
 
 ## Contributing
