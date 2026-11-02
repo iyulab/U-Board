@@ -89,7 +89,7 @@ export interface FieldDerive {
   /** The item field the number is taken from — not for `count`. */
   field?: string;
   /** Only the items whose fields equal these values. */
-  where?: Record<string, string | number | boolean>;
+  where?: Record<string, string | number | boolean | VariableRef>;
 }
 
 /** When a request's `{{now:…}}` places stand, for a source asked for the data of a given time. */
@@ -117,8 +117,8 @@ export interface Query {
   /** The field that names each item — parts address one as `<data>[<key>]`. */
   key?: string;
   /** Only the items whose fields equal these values. A board that reads a variable writes `{ "variable": "line" }` (`VariableRef`) in place of a value;
-   *  `expandVariables` writes it out before the board is drawn, so what is drawn has values only. */
-  where?: Record<string, string | number | boolean>;
+   *  `expandVariables` writes it out before the board is drawn, so what is drawn (`Expanded<Board>`) has values only. */
+  where?: Record<string, string | number | boolean | VariableRef>;
   /** The field holding when the source observed the item — its own name, or a field declared with where it lives (`at`). */
   time?: string;
   /** Where the answer says when it was observed as a whole (a JSON Pointer) — the time of a part that reads the whole
@@ -359,6 +359,12 @@ export interface Trigger {
 /** A board. */
 /** A value a `where` takes from the board's variable of that name. */
 export interface VariableRef { variable: string }
+
+/**
+ * A board, or a piece of one, after its variables are written out (`expandVariables`): a `where` holds values only. What reads a
+ * board to draw it takes this form; what a board is written as — and what `validateBoard` and `expandVariables` take — is `Board`.
+ */
+export type Expanded<T> = T extends VariableRef ? never : T extends object ? { [K in keyof T]: Expanded<T[K]> } : T;
 
 /**
  * A value the board takes from outside — the address, the host, a move from another board — and reads in a `where` (`{ "variable": name }`),

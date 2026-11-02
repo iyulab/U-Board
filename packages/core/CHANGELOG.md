@@ -60,6 +60,10 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- **A data's `where` and a derived field's `where` take a reference to a variable in the `Board` type: `{ "variable": "line" }` (`VariableRef`).** `validateBoard` and `expandVariables`
+  already read it, but the type said values only, so a board written in TypeScript had to cast. The form a board is drawn in, with every variable written out, is the new
+  `Expanded<Board>` (`expandVariables` returns it): its `where`s hold values only, and what reads a board to draw it takes that form.
+
 - **A skin's `density: "compact"` is drawn.** It was accepted and checked but did nothing, and the check said so. A board whose skin says `compact` now draws every
   part whose widget has a `compact` option (`list`, `table`, `steps`, `citation` — and any widget that gains the option) compact; a part that sets `compact` itself
   (`false` keeps it regular) is left as it says. A skin without `density`, or with `regular`, draws as before.
@@ -70,6 +74,10 @@ All notable changes to this package are documented here. The format follows
   that has an `onTap` be tapped from the keyboard; the board viewer sets none, so nothing changes in how a board is drawn or read.
 
 ### Fixed
+
+- **`dataReadOf` and `keyReadsOf` read the board with its variables written out, and take `{ variables }` as `toViewDocument` does.** They read the board as it was written, so for a
+  data whose `where` names a variable the read asked the source for `{ "variable": "line" }` instead of the value, and a host that read a board's lists before drawing it read the
+  wrong items. They now ask for the value asked for when it is one of the variable's options, else its default.
 
 - **A field's `names` can map a value to no words (`""`), so a link's label can be left off for the value that is normal.** `names` refused an empty
   word ("a name is a word"), so a link labelled by a field showed the normal reading's words on every line — `"run": ""` now draws the line with

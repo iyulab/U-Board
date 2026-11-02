@@ -3,7 +3,7 @@ import { checkSpec } from '@iyulab/u-widgets/tools';
 import { applyValueMap, deriveValue, withItemFields, writeText } from '../adapter.js';
 import { isHttpRef, readHttpRef, type HttpRef } from '../http-ref.js';
 import { placedIn, type Node, type ViewDocument, type Widget } from '../view-document.js';
-import { PictureError, isDataPlace, isFlowPlace, keyReadsOf, keysIn, toViewDocument } from './picture.js';
+import { PictureError, dataReadOf, isDataPlace, isFlowPlace, keyReadsOf, keysIn, toViewDocument } from './picture.js';
 import type { Board } from './types.js';
 import { validateBoard } from './validate.js';
 
@@ -1154,7 +1154,8 @@ describe('a board that reads variables', () => {
   const withVariables = (parts: Board['parts'], layout: Board['layout'], extra: Record<string, unknown> = {}): Board => {
     const b = board(parts, layout) as Board & { variables?: unknown };
     b.variables = variables as never;
-    (b.data as unknown as Record<string, Record<string, unknown>>).pumps = { ...pumps, where: { line: { variable: 'line' } } };
+    // a board is written with a reference to a variable where it reads one — the type admits it, with no cast
+    b.data!.pumps = { ...pumps, where: { line: { variable: 'line' } } };
     Object.assign(b, extra);
     return b;
   };
@@ -1171,6 +1172,14 @@ describe('a board that reads variables', () => {
     // a value that is not an option is not read — the default is
     expect(drawnOf(b, { line: 'L9' })).toContain('"where":{"line":"L1"}');
     expect(drawnOf(b, { line: 'L9' })).not.toContain('L9');
+  });
+
+  it('is read for a host that reads before it draws with the variables written out — the asked value, else the default', () => {
+    const b = withVariables({ rows: { as: 'status-card', each: 'pumps', show: ['state'] } }, { kind: 'grid', items: ['rows'] });
+    expect(dataReadOf(b, 'pumps').ref).toMatchObject({ items: { where: { line: 'L1' } } });
+    expect(dataReadOf(b, 'pumps', { variables: { line: 'L2' } }).ref).toMatchObject({ items: { where: { line: 'L2' } } });
+    expect(keyReadsOf(b, { variables: { line: 'L2' } }).map(r => r.ref)).toEqual([expect.objectContaining({ items: { list: '/value', where: { line: 'L2' } } })]);
+    expect(JSON.stringify(keyReadsOf(b))).not.toContain('variable');
   });
 
   it('names the item an of reads by a variable, whose options are the keys the data has — a key it has not falls to the first', () => {

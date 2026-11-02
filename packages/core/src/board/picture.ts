@@ -81,7 +81,11 @@ import { CHART_MAPPING, partKind } from './kinds.js';
 import { expandVariables, variableValues, variablesOf } from './variables.js';
 import { TONES } from './types.js';
 import { NUMERAL_SCALES, numeralTokens, type NumeralScale } from '../numerals.js';
-import type { Board, CanvasLayout, DataPlace, FlowPlace, RelativeRule, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
+import type { Board, CanvasLayout, DataPlace, FlowPlace, RelativeRule, ElementDefinition as BoardElementDefinition, Expanded, Field as WrittenField, GridItem as BoardGridItem, Link, Meter, Part, Place, Query as WrittenQuery, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
+
+// A board is drawn after its variables are written out: its `where`s hold values, never a reference to a variable.
+type Query = Expanded<WrittenQuery>;
+type Field = Expanded<WrittenField>;
 
 /** A weight's or an arrow's bands or map as the value map a connector binding takes: bands as ranges, a map as values
  *  and `otherwise`. */
@@ -277,10 +281,11 @@ export interface KeyRead extends Pick<Binding, 'adapter' | 'ref'> {
  * canvas names its items where it places them and needs none. Read each, give `keysIn` the value, and draw with the
  * keys (`toViewDocument(board, { keysOf })`).
  */
-export function keyReadsOf(board: Board): KeyRead[] {
+export function keyReadsOf(board: Board, options: Pick<PictureOptions, 'variables'> = {}): KeyRead[] {
   const needed = new Set<string>();
-  toViewDocument(board, { keysOf: name => (needed.add(name), []), rowsOf: name => (needed.add(name), []) });
-  const data = board.data ?? {};
+  toViewDocument(board, { ...options, keysOf: name => (needed.add(name), []), rowsOf: name => (needed.add(name), []) });
+  // The reads are of the board with its variables written out, as it is drawn.
+  const data = expandVariables(board, variableValues(variablesOf(board), options.variables)).data ?? {};
   return [...needed].map(name => {
     const { adapter, ref } = readOf(data, name, undefined, undefined, `/data/${name}`);
     return { data: name, adapter, ref };
@@ -288,8 +293,8 @@ export function keyReadsOf(board: Board): KeyRead[] {
 }
 
 /** How a board reads one of its data whole — the list, or the one item — as the parts that show it whole do. */
-export function dataReadOf(board: Board, data: string): KeyRead {
-  const { adapter, ref } = readOf(board.data ?? {}, data, undefined, undefined, `/data/${data}`);
+export function dataReadOf(board: Board, data: string, options: Pick<PictureOptions, 'variables'> = {}): KeyRead {
+  const { adapter, ref } = readOf(expandVariables(board, variableValues(variablesOf(board), options.variables)).data ?? {}, data, undefined, undefined, `/data/${data}`);
   return { data, adapter, ref };
 }
 

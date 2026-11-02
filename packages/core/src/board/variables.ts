@@ -4,7 +4,7 @@
 // data. All four are written out before anything else reads the board: `expandVariables` returns the board with every
 // reference replaced by the variable's value, so the checks and the picture see an ordinary board.
 
-import type { Variable } from './types.js';
+import type { Expanded, Variable } from './types.js';
 
 type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -59,8 +59,8 @@ export function variableValues(
  * markup is left alone (its `{{…}}` are its props), and a reference to a name that is not declared is left as written — the
  * check says so.
  */
-export function expandVariables<T>(board: T, values: Readonly<Record<string, string>>): T {
-  if (!isObj(board) || Object.keys(variablesOf(board)).length === 0) return board;
+export function expandVariables<T>(board: T, values: Readonly<Record<string, string>>): Expanded<T> {
+  if (!isObj(board) || Object.keys(variablesOf(board)).length === 0) return board as Expanded<T>;
   const text = (s: string) =>
     s.replace(HOLE, (whole, name: string) => (name in values ? values[name]! : whole)).replace(ITEM, (whole, name: string) => (name in values ? `[${values[name]}]` : whole));
   const walk = (v: unknown): unknown => {
@@ -77,5 +77,5 @@ export function expandVariables<T>(board: T, values: Readonly<Record<string, str
           ? Object.fromEntries(Object.entries(query).map(([k, x]) => [k, k === 'where' ? whereOf(x) : k === 'path' && typeof x === 'string' ? text(x) : x]))
           : query]))
       : d;
-  return Object.fromEntries(Object.entries(board).map(([k, v]) => [k, k === 'variables' || k === 'elements' ? v : k === 'data' ? data(v) : walk(v)])) as T;
+  return Object.fromEntries(Object.entries(board).map(([k, v]) => [k, k === 'variables' || k === 'elements' ? v : k === 'data' ? data(v) : walk(v)])) as Expanded<T>;
 }
