@@ -243,13 +243,15 @@ describe('the picture model of a v2 board', () => {
     b.statuses = { running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped', emphasis: 'hatch' } };
     expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
     const doc = toViewDocument(b, { keysOf: () => [] });
-    type Rect = { id: string; type: 'rect'; fill?: string; stroke?: string; hatch?: boolean; bindings?: Record<string, { ref: unknown; map?: unknown }> };
+    type Rect = { id: string; type: 'rect'; fill?: string; stroke?: string; hatch?: boolean; fillOpacity?: number; bindings?: Record<string, { ref: unknown; map?: unknown }> };
     const shape = (id: string) => ((doc as { decorations?: Rect[] }).decorations ?? []).find(d => d.id === `shape.${id}`)!;
     expect(shape('plain')).not.toHaveProperty('bindings');
     expect(shape('plain')).toMatchObject({ fill: 'none', stroke: 'idle' });
     // P2 is tripped: the outline and the fill follow its tone, and its status's emphasis is the hatch
     expect(Object.keys(shape('tint').bindings!).sort()).toEqual(['fill', 'hatch', 'stroke']);
     expect(Object.keys(shape('outline').bindings!)).toEqual(['stroke']);
+    expect(shape('tint')).toMatchObject({ fillOpacity: 0.16 });
+    expect(shape('hatched')).not.toHaveProperty('fillOpacity');
     expect(shape('hatched')).toMatchObject({ hatch: true });
     expect(Object.keys(shape('hatched').bindings!).sort()).toEqual(['fill', 'stroke']);
     // each binding reads the one item the box names, field `state`

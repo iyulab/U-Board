@@ -219,6 +219,9 @@ export interface RectShape {
   /** Draws the inside as a hatch of diagonal lines in the stroke's colour, in place of (under) a flat `fill` — a second channel
    *  a state shows by that reads without colour. */
   hatch?: boolean;
+  /** How opaque the `fill` is, 0 to 1 — a tint a state fills a box with, faint enough that what lies under it still reads. Left out:
+   *  as opaque as the colour is. */
+  fillOpacity?: number;
   /** Live values for `stroke`, `fill` or `hatch` (`SHAPE_BINDABLE`) — a box that shows a state: its tone as the outline's and the
    *  inside's colour, its status's emphasis as the hatch. Same shape as a widget's bindings; a binding that cannot be read leaves
    *  the static value in place. */

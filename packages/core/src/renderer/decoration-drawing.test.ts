@@ -31,6 +31,42 @@ describe('decorationObjects', () => {
     for (const shape of LEGACY) expect(decorationObjects(shape, appearance)).toEqual([drawnBefore(shape, appearance)]);
   });
 
+  it('tints a fill with the opacity it names, and leaves a colour that is no hex as it is', () => {
+    const [tint] = decorationObjects({ id: 'r', type: 'rect', x: 0, y: 0, width: 40, height: 20, fill: '#336699', fillOpacity: 0.16 });
+    expect(tint).toMatchObject({ fill: 'rgba(51, 102, 153, 0.16)' });
+    const [named] = decorationObjects({ id: 'r', type: 'rect', x: 0, y: 0, width: 40, height: 20, fill: 'alarm', fillOpacity: 0.25 });
+    expect(named).toMatchObject({ fill: 'rgba(220, 38, 38, 0.25)' });
+    const [other] = decorationObjects({ id: 'r', type: 'rect', x: 0, y: 0, width: 40, height: 20, fill: 'rebeccapurple', fillOpacity: 0.5 });
+    expect(other).toMatchObject({ fill: 'rebeccapurple' });
+  });
+
+  it('draws a hatched box as its outline and diagonal lines cut to the box, in the fill’s colour — locked, and never a flat fill', () => {
+    const box = { id: 'h', type: 'rect' as const, x: 10, y: 20, width: 40, height: 24, stroke: 'warn', strokeWidth: 1.5, fill: 'alarm', hatch: true };
+    const [rect, ...lines] = decorationObjects(box);
+    expect(rect).toMatchObject({ id: 'h', type: 'rect', stroke: '#d97706' });
+    expect(rect).not.toHaveProperty('fill');
+    expect(lines.length).toBeGreaterThan(5);
+    for (const line of lines) {
+      expect(line).toMatchObject({ type: 'line', stroke: '#dc2626', strokeWidth: 1, locked: true });
+      const [x1, y1, x2, y2] = (line as unknown as { points: number[] }).points;
+      for (const [x, y] of [[x1, y1], [x2, y2]] as const) {
+        expect(x).toBeGreaterThanOrEqual(10 - 1e-9); expect(x).toBeLessThanOrEqual(50 + 1e-9);
+        expect(y).toBeGreaterThanOrEqual(20 - 1e-9); expect(y).toBeLessThanOrEqual(44 + 1e-9);
+      }
+      // rising to the right: x grows as y falls
+      expect(x2 - x1).toBeCloseTo(y1 - y2);
+    }
+    expect(new Set(lines.map(l => l.id)).size).toBe(lines.length);
+    // no colour of its own: the outline's; and the name still comes last
+    const named = decorationObjects({ ...box, fill: undefined, label: 'Hall' });
+    expect(named[1]).toMatchObject({ type: 'line', stroke: '#d97706' });
+    expect(named.at(-1)).toMatchObject({ id: 'h#label', type: 'text' });
+    // a large area keeps to a bounded number of lines
+    expect(decorationObjects({ ...box, width: 4000, height: 3000 }).length).toBeLessThanOrEqual(122);
+    // a box with no hatch is one rect, as before
+    expect(decorationObjects({ ...box, hatch: undefined })).toHaveLength(1);
+  });
+
   it('rounds and dashes a frame in the canvas’s terms', () => {
     const [rect] = decorationObjects({ id: 'r', type: 'rect', x: 0, y: 0, width: 40, height: 20, stroke: '#333', strokeWidth: 1, radius: 6, dash: 'dotted' });
     expect(rect).toMatchObject({ cornerRadius: 6, dash: [2, 3] });

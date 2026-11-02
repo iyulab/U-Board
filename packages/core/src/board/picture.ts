@@ -1122,6 +1122,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
           const binding = (map: ValueMap): Binding => ({ ...readFor(query, item, shape.show, path), map });
           const bindings: Record<string, Binding> = { stroke: binding(maps.tone) };
           if (shape.fill !== undefined) bindings.fill = binding(maps.tone);
+          if (shape.fill === 'tone') rect.fillOpacity = STATE_TINT;
           if (shape.fill === 'hatch') rect.hatch = true;
           else if (shape.fill === 'tone' && maps.emphasis) bindings.hatch = binding(emphasisMap(maps.emphasis, e => e === 'hatch'));
           return { ...rect, bindings };
@@ -1451,6 +1452,9 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     return of === undefined ? {} : fieldOf(target(of).query, name);
   }
 }
+
+/** How opaque the tint is that a box shape shows its state's colour in (`fill: "tone"`) — faint, so the drawing under it still reads. */
+const STATE_TINT = 0.16;
 
 /** What a part reads: a data read, and the item when it names one. */
 type Reads = { query: string; item?: string };
