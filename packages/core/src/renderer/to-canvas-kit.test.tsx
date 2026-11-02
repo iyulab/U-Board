@@ -716,4 +716,20 @@ describe('toCanvasKit', () => {
       expect(overlays.find(o => o.id === 'el')).not.toHaveProperty('cull');
     });
   });
+
+  describe('input', () => {
+    const one = () => doc({ nodes: [{ id: 'form-1', x: 0, y: 0, anchored: false, widget: { type: 'form', props: {}, quality: {} } }] });
+    const propsOf = (overlays: ReturnType<typeof toCanvasKit>['overlays']) => (overlays[0].content as ReactElement<NodeFrameProps>).props;
+
+    it('gives each node a way to tell the host what was typed into it, named by the node', () => {
+      const heard: unknown[] = [];
+      const { overlays } = toCanvasKit(one(), { onInput: (node, input) => heard.push([node, input]) });
+      propsOf(overlays).onInput!({ type: 'submit', values: { a: 1 } });
+      expect(heard).toEqual([['form-1', { type: 'submit', values: { a: 1 } }]]);
+    });
+
+    it('gives it nothing to say to when the host hears nothing', () => {
+      expect(propsOf(toCanvasKit(one()).overlays).onInput).toBeUndefined();
+    });
+  });
 });

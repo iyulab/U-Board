@@ -604,4 +604,43 @@ describe('ViewerPage with a background outside the allowed origins', () => {
       await waitFor(() => expect(lastViewerProps().cullOverlays).toBe(false));
     });
   });
+
+  describe('input (onInput)', () => {
+    const form: CanvasView = {
+      kind: 'canvas',
+      background: {},
+      nodes: [{ id: 'order', x: 0, y: 0, anchored: false, widget: { type: 'form', props: {}, bindings: {} } }],
+      connectors: [],
+    };
+    const frameProps = () => (lastViewerProps().overlays[0].content as React.ReactElement<NodeFrameProps>).props;
+
+    it('tells the host what a person typed into a part or confirmed on it — the part, and the values', async () => {
+      const heard = vi.fn();
+      render(<ViewerPage adapters={[]} width={400} height={300} document={form} onInput={heard} />);
+      await screen.findByTestId('viewer');
+      frameProps().onInput!({ type: 'change', name: 'qty', value: 3 });
+      frameProps().onInput!({ type: 'submit', values: { qty: 3 } });
+      expect(heard.mock.calls).toEqual([[{ type: 'change', name: 'qty', value: 3, part: 'order' }], [{ type: 'submit', values: { qty: 3 }, part: 'order' }]]);
+    });
+
+    it('reaches the host’s newest function without drawing the board again', async () => {
+      const first = vi.fn();
+      const second = vi.fn();
+      const { rerender } = render(<ViewerPage adapters={[]} width={400} height={300} document={form} onInput={first} />);
+      await screen.findByTestId('viewer');
+      const before = viewerProps.mock.calls.length;
+      rerender(<ViewerPage adapters={[]} width={400} height={300} document={form} onInput={second} />);
+      frameProps().onInput!({ type: 'submit', values: {} });
+      expect(first).not.toHaveBeenCalled();
+      expect(second).toHaveBeenCalledTimes(1);
+      // a new function is not a new board: the overlays are the ones already drawn
+      expect(lastViewerProps().overlays).toBe(viewerProps.mock.calls[before - 1]![0].overlays);
+    });
+
+    it('does not listen when the host passes none', async () => {
+      render(<ViewerPage adapters={[]} width={400} height={300} document={form} />);
+      await screen.findByTestId('viewer');
+      expect(frameProps().onInput).toBeUndefined();
+    });
+  });
 });

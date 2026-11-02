@@ -1,5 +1,6 @@
 import React, { type ReactElement } from 'react';
 import { describe, it, expect, vi } from 'vitest';
+import { UWidget } from '@iyulab/u-widgets/react';
 import { NodeFrame, type NodeFrameProps } from './node-frame';
 import type { ResolvedWidget } from '../adapter';
 
@@ -92,5 +93,24 @@ describe('NodeFrame as a button', () => {
     const el = frame({});
     expect(el.props.role).toBeUndefined();
     expect(el.props.tabIndex).toBeUndefined();
+  });
+});
+
+describe('NodeFrame input', () => {
+  const widgetOf = (el: ReactElement<Record<string, any>>) =>
+    (React.Children.toArray(el.props.children) as ReactElement<Record<string, any>>[]).find(c => c?.type === UWidget)!;
+
+  it('tells the host what was typed into the widget or confirmed on it, and nothing else the widget says', () => {
+    const heard = vi.fn();
+    const onWidgetEvent = widgetOf(frame({ onInput: heard })).props.onWidgetEvent as (e: { detail: unknown }) => void;
+    onWidgetEvent({ detail: { type: 'change', data: { field: 'name', value: 'Ada' } } });
+    onWidgetEvent({ detail: { type: 'submit', data: { name: 'Ada' } } });
+    onWidgetEvent({ detail: { type: 'select', data: { _index: 1 } } });
+    onWidgetEvent({ detail: { type: 'action', action: 'cancel' } });
+    expect(heard.mock.calls).toEqual([[{ type: 'change', name: 'name', value: 'Ada' }], [{ type: 'submit', values: { name: 'Ada' } }]]);
+  });
+
+  it('listens for nothing when the host hears nothing', () => {
+    expect(widgetOf(frame({})).props.onWidgetEvent).toBeUndefined();
   });
 });

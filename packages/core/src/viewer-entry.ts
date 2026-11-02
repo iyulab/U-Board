@@ -6,6 +6,7 @@ export type { ViewerPageProps } from './viewer/ViewerPage.js';
 export { BoardView } from './viewer/BoardView.js';
 export type { BoardViewProps } from './viewer/BoardView.js';
 export type { BoardEvent } from './viewer/use-triggers.js';
+export type { BoardInput } from './board-input.js';
 export { DEFAULT_LABELS, timeText } from './labels.js';
 export { KO_LABELS } from './labels-ko.js';
 export type { UBoardLabels } from './labels.js';

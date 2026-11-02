@@ -9,6 +9,7 @@ import { accentTokens, skinTokens } from './element-template.js';
 import { drawingColor } from '../theme-colors.js';
 import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
+import { inputOf, type PartInput } from '../board-input.js';
 
 // Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
 // on screen. Kept off the frame `<div>` itself and off `UWidget` — each `uw-*` custom element
@@ -103,6 +104,8 @@ export interface NodeFrameProps {
   onActivate?: () => void;
   /** An event the part's element raised (`ElementView`'s `onEvent`). */
   onElementEvent?: (name: string) => void;
+  /** What a person typed into the part, or confirmed on it (a `form`, a `confirm`) — told to the host, written nowhere. */
+  onInput?: (input: PartInput) => void;
   /** What the part is called — a canvas node's caption. A part a click does something on is a button named by it, or
    *  by its id when it has none: a widget's drawing is no name (a chart has no text). */
   name?: string;
@@ -122,7 +125,7 @@ export interface NodeFrameProps {
  * When it has states, the one it is in is named on it and drawn by its look around the frame — never in place of the
  * quality’s border.
  */
-export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, highlighted, onActivate, onElementEvent, elementEvents, name }: NodeFrameProps) {
+export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, highlighted, onActivate, onElementEvent, onInput, elementEvents, name }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
   const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
@@ -164,7 +167,7 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.
-        <UWidget spec={withSkinFrame(widget, skin)} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent), ...skinTokens(skin), ...widget.tokens }} theme={appearance ?? 'light'} locale={locale} />
+        <UWidget spec={withSkinFrame(widget, skin)} {...(onInput && { onWidgetEvent: (event: CustomEvent) => { const input = inputOf(event.detail); if (input) onInput(input); } })} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent), ...skinTokens(skin), ...widget.tokens }} theme={appearance ?? 'light'} locale={locale} />
       )}
       {badge && quality && (
         <span aria-hidden="true" data-quality-badge="" style={{ ...BADGE_STYLE, ...QUALITY_BADGE_STYLE[quality] }}>

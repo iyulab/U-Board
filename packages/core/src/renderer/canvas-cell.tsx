@@ -7,6 +7,7 @@ import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { toCanvasKit } from './to-canvas-kit.js';
+import type { PartInput } from '../board-input.js';
 
 /** A grid's canvas cell as a canvas board: its spatial layer, with what the board defines once. */
 export function cellCanvasView(doc: ResolvedGridView, item: ResolvedCanvasItem): ResolvedCanvasView {
@@ -38,6 +39,7 @@ export interface CanvasCellProps {
   activatable?: ReadonlySet<string>;
   onNodeActivate?: (node: string) => void;
   onElementEvent?: (node: string, name: string) => void;
+  onInput?: (node: string, input: PartInput) => void;
   /** Whether it has its zoom buttons — not where the cell is shown, not used: an editor's grid. Default true. */
   controls?: boolean;
 }
@@ -47,11 +49,11 @@ export interface CanvasCellProps {
  * size, until the viewer pans or zooms it. The grid around it scrolls, so the wheel here scrolls the page and zooms
  * only with Ctrl or ⌘ held; drag, the keys and the zoom buttons work as on a canvas board.
  */
-export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAULT_LABELS, activatable, onNodeActivate, onElementEvent, controls = true }: CanvasCellProps) {
+export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAULT_LABELS, activatable, onNodeActivate, onElementEvent, onInput, controls = true }: CanvasCellProps) {
   const view = useMemo(() => cellCanvasView(doc, item), [doc, item]);
   const drawn = useMemo(
-    () => toCanvasKit(view, { qualityText, now, locale, activatable, onNodeActivate, onElementEvent }),
-    [view, qualityText, now, locale, activatable, onNodeActivate, onElementEvent]
+    () => toCanvasKit(view, { qualityText, now, locale, activatable, onNodeActivate, onElementEvent, onInput }),
+    [view, qualityText, now, locale, activatable, onNodeActivate, onElementEvent, onInput]
   );
   const fitted = useFittedView({ magnify: true });
   const { fitTo } = fitted;

@@ -26,6 +26,7 @@ import { captionObjects, connectorObjects, placeOnCanvas } from './connector-dra
 import { connectorMark } from './connector-mark.js';
 import { elementListeners } from '../triggers.js';
 import { elementNameOf } from '../elements/element-type.js';
+import type { PartInput } from '../board-input.js';
 
 /** Widgets sit on the board — its background drawing, or the board's paper — not on the page around
  * it, so they take the board's palette (`appearance`, light by default) whatever the system or page
@@ -51,6 +52,8 @@ export interface ToCanvasKitOptions {
   onNodeActivate?: (node: string) => void;
   /** An event a node's element raised. */
   onElementEvent?: (node: string, name: string) => void;
+  /** What a person typed into a node's part, or confirmed on it. */
+  onInput?: (node: string, input: PartInput) => void;
 }
 
 /** Whether a node's widget is a script element — a frame that keeps its own state. */
@@ -66,7 +69,7 @@ function holdsState(type: string, elements: ResolvedCanvasView['elements']): boo
  * (docs/principles.md) — it depends on canvas-kit and u-widgets so the document format itself
  * doesn't have to.
  */
-export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUALITY_TEXT, now, locale, activatable, onNodeActivate, onElementEvent }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
+export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUALITY_TEXT, now, locale, activatable, onNodeActivate, onElementEvent, onInput }: ToCanvasKitOptions = {}): CanvasKitRenderOutput {
   const scene = new Scene();
   const nodes = sizedNodes(doc);
 
@@ -100,7 +103,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     // A script element holds a frame with state of its own: it is not torn down when the view moves away from it.
     ...(holdsState(node.widget.type, doc.elements) && { cull: false }),
     // A widget takes its node's box exactly — the box the author drew is the layout.
-    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} highlighted={node.highlighted} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} elementEvents={listened?.get(node.id)} name={node.caption} />,
+    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} highlighted={node.highlighted} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} onInput={onInput && (input => onInput(node.id, input))} elementEvents={listened?.get(node.id)} name={node.caption} />,
   }));
   for (const placed of placeOnCanvas(nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 

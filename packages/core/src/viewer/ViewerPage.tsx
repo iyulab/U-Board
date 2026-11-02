@@ -17,6 +17,7 @@ import { isSkinColor } from '../css-color.js';
 import { AttributionLine, boardAttributions, showsExampleData } from './attribution.js';
 import { ElementHost } from '../renderer/element-view.js';
 import { boardStateOf, type BoardState } from '../board-state.js';
+import type { BoardInput, PartInput } from '../board-input.js';
 import { focusPart, useTriggers, type BoardEvent } from './use-triggers.js';
 
 export interface ViewerPageProps {
@@ -64,6 +65,10 @@ export interface ViewerPageProps {
    *  quality and why, how old its data is (`BoardState`, no values). A board that has stopped updating reports its
    *  parts `stale`. For a host that acts on what the board shows — a count of faults in its own header, a sound. */
   onBoardState?: (state: BoardState) => void;
+  /** Called when a person types into a part of the board or confirms on it (a `form`, a `confirm`) — the part and the values, as
+   * `BoardInput` says. The board tells and writes nothing: whether to ask for a confirmation, where the values go and who may send them is
+   * the host's, under its own rules. Left out, an input part shows but its values go nowhere. */
+  onInput?: (input: BoardInput) => void;
   /** The board's id — what `{{board}}` in a trigger's link becomes, and what the events it hands the host name. */
   boardId?: string;
   /** Called when one of the board's triggers emits an event (`emit`): its name, and the part and state it came from —
@@ -104,6 +109,7 @@ export function ViewerPage({
   elementOrigins,
   elementFrames,
   onBoardState,
+  onInput,
   boardId,
   onTrigger,
   onNavigate,
@@ -115,6 +121,17 @@ export function ViewerPage({
   // Read when a result is drawn, not watched: a new function on every render must not redraw the view.
   const readClock = useEffectEvent(() => clock());
   const reportState = useEffectEvent((state: BoardState) => onBoardState?.(state));
+  // The host's `onInput`, kept current without redrawing the board when the host passes a new function; none when it passes none,
+  // so a part shows no listener for what nobody hears.
+  const inputRef = useRef(onInput);
+  useEffect(() => {
+    inputRef.current = onInput;
+  });
+  const hearsInput = onInput !== undefined;
+  const tellInput = useMemo(
+    () => (hearsInput ? (part: string, input: PartInput) => inputRef.current?.({ ...input, part } as BoardInput) : undefined),
+    [hearsInput]
+  );
   const { resolved: received, resolvedAt, stalled } = useResolvedDocument(document, adapters, { pollIntervalMs, clock });
   // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
@@ -153,11 +170,11 @@ export function ViewerPage({
     const now = readClock();
     setDrawn(
       resolved.kind === 'canvas'
-        ? { kind: 'canvas', preview: toCanvasKit(resolved, { qualityText: labels.qualityText, now, locale: labels.locale, activatable, onNodeActivate: activate, onElementEvent: elementEvent }), now }
+        ? { kind: 'canvas', preview: toCanvasKit(resolved, { qualityText: labels.qualityText, now, locale: labels.locale, activatable, onNodeActivate: activate, onElementEvent: elementEvent, onInput: tellInput }), now }
         : { kind: 'grid', doc: resolved, now }
     );
     reportState(boardStateOf(resolved, { now }));
-  }, [resolved, labels, activatable, activate, elementEvent]);
+  }, [resolved, labels, activatable, activate, elementEvent, tellInput]);
 
   useEffect(() => {
     const node = pendingFocus.current;
@@ -201,6 +218,7 @@ export function ViewerPage({
                 activatable={activatable}
                 onItemActivate={activate}
                 onElementEvent={elementEvent}
+                onInput={tellInput}
               />
             )}
           </div>

@@ -1,11 +1,14 @@
 import { useMemo, useState } from 'react';
 import { BoardView } from './viewer/BoardView.js';
+import { ViewerPage } from './viewer/ViewerPage.js';
+import type { BoardInput } from './board-input.js';
+import type { CanvasView } from './view-document.js';
 import { FixtureAdapter } from './fixture-adapter.js';
 import { demoBoard, demoCrowd, demoGrid, demoMixed, demoQuakes, elementsDemo } from './examples/demo-boards.js';
 
 // The package's development harness: the demo boards drawn the way a host that only views them draws them — no
 // editor, no designer, no server. The browser tests in e2e/ run against it.
-type Mode = 'view' | 'grid' | 'mixed' | 'elements' | 'quakes' | 'crowd';
+type Mode = 'view' | 'grid' | 'mixed' | 'elements' | 'quakes' | 'crowd' | 'input';
 const MODES: ReadonlyArray<readonly [Mode, string]> = [
   ['view', 'View'],
   ['grid', 'Grid'],
@@ -13,16 +16,26 @@ const MODES: ReadonlyArray<readonly [Mode, string]> = [
   ['elements', 'Elements'],
   ['quakes', 'Quakes'],
   ['crowd', 'Crowd'],
+  ['input', 'Input'],
 ];
+
+// An input part: a form the viewer draws as given (a board's own kinds take no form spec), whose values reach the host and nowhere else.
+const ORDER_FORM: CanvasView = {
+  kind: 'canvas',
+  background: {},
+  nodes: [{ id: 'order', x: 0, y: 0, width: 360, height: 220, anchored: false, widget: { type: 'form', props: { formdown: '@name(Name): []\n@qty(Quantity): #[]' }, bindings: {} } }],
+  connectors: [],
+};
 
 export function App() {
   const adapters = useMemo(() => [new FixtureAdapter()], []);
   const [mode, setMode] = useState<Mode>('view');
   const [boardEvent, setBoardEvent] = useState<string | null>(null);
+  const [heard, setHeard] = useState<string | null>(null);
 
   return (
     <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : mode === 'mixed' ? 'mixed board' : mode === 'crowd' ? 'a crowd of parts' : 'placed by fields'}</h1>
+      <h1 style={{ fontSize: 18 }}>U-Board — {mode === 'view' ? 'viewer' : mode === 'grid' ? 'grid view' : mode === 'elements' ? 'elements' : mode === 'mixed' ? 'mixed board' : mode === 'crowd' ? 'a crowd of parts' : mode === 'input' ? 'input' : 'placed by fields'}</h1>
       <div style={{ marginBottom: 12 }}>
         {MODES.map(([value, label]) => (
           <span key={value}>
@@ -61,6 +74,18 @@ export function App() {
           <div style={{ height: 720, maxWidth: 1200, resize: 'horizontal', overflow: 'auto' }}>
             <BoardView board={demoGrid} adapters={adapters} />
           </div>
+        </>
+      ) : mode === 'input' ? (
+        <>
+          <p style={{ color: '#64748b', maxWidth: 640 }}>
+            A form part. What is typed into it reaches the host through onInput — the board writes it nowhere.
+          </p>
+          <div style={{ height: 300, maxWidth: 420 }}>
+            <ViewerPage adapters={adapters} document={ORDER_FORM} ariaLabel="Order" onInput={(input: BoardInput) => setHeard(input.type === 'change' ? `${input.part}: ${input.name} = ${String(input.value)}` : `${input.part}: submitted`)} />
+          </div>
+          <p role="status" style={{ color: '#64748b' }}>
+            Input: {heard ?? 'none yet'}
+          </p>
         </>
       ) : mode === 'crowd' ? (
         <>

@@ -7,6 +7,7 @@ import { CanvasCell } from './canvas-cell.js';
 import type { UBoardLabels } from '../labels.js';
 import { elementNameOf } from '../elements/element-type.js';
 import { elementListeners } from '../triggers.js';
+import type { PartInput } from '../board-input.js';
 
 /** Where a grid's width changes how it lays out — the width of the board's own container, not of the window:
  *  a board embedded in a narrow panel of a wide page lays out as a narrow one. */
@@ -163,6 +164,8 @@ export interface GridBoardProps {
   onItemActivate?: (item: string) => void;
   /** An event an item's element raised. */
   onElementEvent?: (item: string, name: string) => void;
+  /** What a person typed into an item's part, or confirmed on it. */
+  onInput?: (item: string, input: PartInput) => void;
 }
 
 /**
@@ -180,7 +183,7 @@ function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | 
   return name === undefined ? undefined : doc.elements?.[name]?.size?.height;
 }
 
-export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, renderCell, canvasControls, activatable, onItemActivate, onElementEvent }: GridBoardProps) {
+export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, renderCell, canvasControls, activatable, onItemActivate, onElementEvent, onInput }: GridBoardProps) {
   const listened = onElementEvent ? elementListeners(doc.triggers) : undefined;
   const spans = gridSpans(doc.items);
   return (
@@ -196,7 +199,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, re
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                isCanvasItem(item) ? <CanvasCell doc={doc} item={item} qualityText={qualityText} now={now} locale={locale} labels={labels} activatable={activatable} onNodeActivate={onItemActivate} onElementEvent={onElementEvent} controls={canvasControls} /> : <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} highlighted={item.highlighted} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} elementEvents={listened?.get(item.id)} />,
+                isCanvasItem(item) ? <CanvasCell doc={doc} item={item} qualityText={qualityText} now={now} locale={locale} labels={labels} activatable={activatable} onNodeActivate={onItemActivate} onElementEvent={onElementEvent} onInput={onInput} controls={canvasControls} /> : <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} highlighted={item.highlighted} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} onInput={onInput && (input => onInput(item.id, input))} elementEvents={listened?.get(item.id)} />,
                 index
               )}
             </div>

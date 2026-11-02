@@ -64,7 +64,8 @@ template element that places one.
 element raises, a part entering or leaving a status, the board opened), only `when` a part is in a given status if the
 trigger says so, `do` its actions in order — open a link, bring a part into view, hand the page the board is on an event,
 or ask that page to show another board. Triggers only show, move and tell: nothing a trigger does writes to the systems a
-board reads. Each trigger fires at most once a second. An editor runs none while editing — a click there selects.
+board reads. An input part (a `form`, a `confirm`) tells its host what a person typed or confirmed (`onInput`) in the same way: the board
+writes nothing, and what the host does with it is the host's. Each trigger fires at most once a second. An editor runs none while editing — a click there selects.
 
 **Adapter** — what reads a board's data from one external system. The core reading surface is generic; system-specific
 knowledge lives in an adapter, not in the core. The hosted server's HTTP connector is one; a host application gives the
