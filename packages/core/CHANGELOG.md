@@ -75,6 +75,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- **A marker's `shape` that is not one of the three it draws is reported.** `"shape": "square"` passed the check and was drawn as a dot, so a board that asked for another shape looked right and said nothing; the check now names the shapes (`dot` · `pin` · `ring`) and the part it found it on.
 - **`dataReadOf` and `keyReadsOf` read the board with its variables written out, and take `{ variables }` as `toViewDocument` does.** They read the board as it was written, so for a
   data whose `where` names a variable the read asked the source for `{ "variable": "line" }` instead of the value, and a host that read a board's lists before drawing it read the
   wrong items. They now ask for the value asked for when it is one of the variable's options, else its default.

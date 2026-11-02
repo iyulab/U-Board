@@ -365,6 +365,13 @@ describe('validateBoard', () => {
     expect(issuesOf('middle')).toEqual(['/parts/m/labelAt']);
   });
 
+  it('holds the shape of a marker to the shapes it draws, as its labelAt is held to its sides', () => {
+    const issuesOf = (shape: unknown) => validateBoard(canvas({ m: { as: 'marker', of: 'totals', shape } }, { kind: 'canvas', size: [100, 100], place: { m: [0, 0, 50, 20] } }) as never).filter(i => i.at.endsWith('/shape')).map(i => i.at);
+    for (const shape of ['dot', 'pin', 'ring']) expect(issuesOf(shape)).toEqual([]);
+    expect(issuesOf('square')).toEqual(['/parts/m/shape']);
+    expect(issuesOf(3)).toEqual(['/parts/m/shape']);
+  });
+
   it('holds the palette backdrop to a colour, as every palette colour is', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const at = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message.slice(0, 32)}`);

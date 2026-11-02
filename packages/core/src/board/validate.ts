@@ -78,6 +78,8 @@ const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'sha
 const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'];
 /** The sides of a marker's point its words may go on. */
 const MARKER_SIDES = ['right', 'left', 'above', 'below', 'auto'];
+/** The shapes a marker's point is drawn in — the same three its drawing (`MARKER` in `builtins.ts`) takes. */
+const MARKER_SHAPES = ['dot', 'pin', 'ring'];
 const BOARD_SECTIONS = ['board', 'statuses', 'symbols', 'elements', 'variables', 'data', 'presets', 'parts', 'layout', 'triggers'] as const;
 
 /** The types an element's prop may be. */
@@ -521,6 +523,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
       else if (wholeList || reads === null) fail(`${at}/highlight`, '"highlight" marks one item — the part reads one: "of": "<data>[<key>]", or "each"');
     }
     if (kind.kind === 'marker' && part.labelAt !== undefined && !MARKER_SIDES.includes(part.labelAt as string)) fail(`${at}/labelAt`, `"labelAt" is the side of the point its words go — ${MARKER_SIDES.join(' · ')} (auto: the side its links leave free)`);
+    if (kind.kind === 'marker' && part.shape !== undefined && !MARKER_SHAPES.includes(part.shape as string)) fail(`${at}/shape`, `"shape" is how the point is drawn — ${MARKER_SHAPES.join(' · ')} (a drawing of the board's own is "symbol")`);
     checkStyleOptions(part, kind.kind, at);
     if (kind.kind === 'stat' && part.trend !== undefined && typeof part.trend !== 'string') fail(`${at}/trend`, '"trend" names a field of the item holding its recent values, a list of numbers');
     // A `state` option names the field whose state colours the rows (or the card): it needs a state to give.
