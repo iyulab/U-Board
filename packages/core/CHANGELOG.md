@@ -8,6 +8,12 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A `header` shows the time and the date its data gives: `"time": "<field>"` and `"date": "<field>"`.** A header drew the time of day now (`clock`) or nothing, so a
+  board that says when its data was made — "14:10", "2026-11-02" — could not put it in the header's own place at the right. `time` and `date` name a field of what the
+  header reads (`"of"`), a text the widget library formats as a time or a date in the viewer's language (an ISO time such as `2026-11-02T14:10:00Z`; a time
+  without a `T` is shown as it is). They are the data's time: `clock` stays the time of day now, and with both, the clock takes the time's place. A header without
+  `time` and `date` is drawn exactly as before. `validateBoard` refuses either on a header that reads no data, or one that is not a field name; the advice on
+  a `clock` that names a field points at them.
 - **A board can declare `variables` and read them — values it takes from outside.** `"variables": { "line": { "options": ["L1", "L2"], "default": "L1" } }`
   names a value; `options` is a list of words, or `{ "from": "<data>", "key": "<field>" }` for the keys of the items a data reads. A variable is
   read in the `where` of a data (`{ "variable": "line" }`), in the item an `of` names (`pumps[$pump]`), in a text (`{{$line}}`) and — for a variable

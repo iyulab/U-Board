@@ -588,12 +588,26 @@ describe('validateBoard', () => {
     const head = (extra: Record<string, unknown>) => ({ ...canvas({ h: { as: 'header', of: 'plant', title: '{{name}}', ...extra } }), data: { ...data, plant: { from: 'plant', path: '/plant', fields: { name: {} } } } });
     expect(hints(head({ subtitle: '{{name}} shift', kicker: 'Plant {{name}}' }))).toEqual([]);
     expect(hints(head({ clock: 'time' }))).toEqual([
-      '/parts/h/clock: "clock" is true (the time of day) — it does not read a field; leave it out, or put the time field in the title with {{field}}',
+      '/parts/h/clock: "clock" is true (the time of day) — it does not read a field; leave it out, or name the field in "time" (or "date")',
     ]);
     expect(hints(head({ clock: true, subtitle: 'Day shift' }))).toEqual([]);
     expect(issues(head({ subtitle: '{{name}}', clock: 'time' }))).toEqual([]);
     // a hole the header's data does not close is refused in a kicker as in a title
     expect(issues(head({ kicker: 'Plant {{name' }))).toEqual(['/parts/h/kicker: "Plant {{name" opens a {{ it does not close — write {{field}}']);
+  });
+
+  it("takes a header's time and date as fields of what it reads — a field name, and data to read it from", () => {
+    const withData = { ...data, plant: { from: 'plant', path: '/plant', fields: { updatedAt: {} } } };
+    const head = (extra: Record<string, unknown>, reads = true) => ({ ...canvas({ h: { as: 'header', ...(reads ? { of: 'plant' } : {}), title: 'Plant', ...extra } }), data: withData });
+    expect(issues(head({ time: 'updatedAt', date: 'updatedAt' }))).toEqual([]);
+    expect(issues(head({ time: 'updatedAt', clock: true }))).toEqual([]);
+    expect(issues(head({ time: 'updatedAt' }, false))).toEqual([
+      '/parts/h/time: "time" reads a field, but this header reads no data — give "of": "<data>" or "<data>[<key>]"',
+    ]);
+    expect(issues(head({ time: 14, date: '' }))).toEqual([
+      '/parts/h/time: "time" names a field of what the header reads — the time the data gives, as a text like 2026-11-02T14:10:00Z',
+      '/parts/h/date: "date" names a field of what the header reads — the date the data gives, as a text like 2026-11-02T14:10:00Z',
+    ]);
   });
 
   it('advises, without refusing, an element no part draws and a status a trigger waits for that its field never takes', () => {

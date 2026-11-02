@@ -743,7 +743,11 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         };
       }
       case 'header': {
-        const { kicker, subtitle, clock, ...rest } = options as { kicker?: string; subtitle?: string; clock?: unknown };
+        const { kicker, subtitle, clock, time, date, ...rest } = options as { kicker?: string; subtitle?: string; clock?: unknown; time?: string; date?: string };
+        // The time and the date the data gives (a field of what the part reads, as an ISO string) are the widget's own — shown by
+        // the viewer in the language and the form it shows a time in. They are not the clock, which is the time of day now.
+        if (typeof time === 'string') bindValue('data.time', time);
+        if (typeof date === 'string') bindValue('data.date', date);
         return {
           type: 'header',
           props: {

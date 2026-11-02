@@ -512,7 +512,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     }
     if (kind.of === 'no' && (part.of !== undefined || part.each !== undefined)) fail(`${at}/of`, `a ${kind.kind} reads no data — leave "of" out`);
     checkTexts(part, at, reads);
-    if (kind.kind === 'header') checkHeaderOptions(part, at);
+    if (kind.kind === 'header') checkHeaderOptions(part, at, reads);
     checkOptions(raw, part, kind, at);
     if (kind.kind === 'status-card' && part.meter !== undefined) checkMeter(part.meter, `${at}/meter`);
     // `highlight` marks one item out from the others like it, apart from its status: a boolean field of the item the part reads.
@@ -628,9 +628,16 @@ export function validateBoard(input: unknown): BoardIssue[] {
    * A header's `clock` is on or off — it does not read a field. Said as advice, not a refusal: the board is valid, it just draws
    * no clock where the author meant a field.
    */
-  const checkHeaderOptions = (part: Obj, at: string) => {
+  const checkHeaderOptions = (part: Obj, at: string, reads: string | null | undefined) => {
     if (part.clock !== undefined && typeof part.clock !== 'boolean') {
-      issues.push({ at: `${at}/clock`, message: '"clock" is true (the time of day) — it does not read a field; leave it out, or put the time field in the title with {{field}}', hint: true });
+      issues.push({ at: `${at}/clock`, message: '"clock" is true (the time of day) — it does not read a field; leave it out, or name the field in "time" (or "date")', hint: true });
+    }
+    // `time` and `date` are the data's time: a field of what the header reads, shown as the time and the date of it.
+    for (const key of ['time', 'date'] as const) {
+      const field = part[key];
+      if (field === undefined) continue;
+      if (typeof field !== 'string' || field === '') fail(`${at}/${key}`, `"${key}" names a field of what the header reads — the ${key} the data gives, as a text like 2026-11-02T14:10:00Z`);
+      else if (reads === null) fail(`${at}/${key}`, `"${key}" reads a field, but this header reads no data — give "of": "<data>" or "<data>[<key>]"`);
     }
   };
 

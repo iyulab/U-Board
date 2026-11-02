@@ -36,7 +36,7 @@ const SOURCE: Record<string, unknown> = {
       { id: 'Z2', name: 'South', updatedAt: '2026-10-23T03:00:00Z', assets: [{ id: 'M1', state: 'trip' }, { id: 'M2', state: 'run' }, { id: 'a:b/c', state: 'trip' }] },
     ],
   },
-  '/plant/totals': { output: 1280, oee: 0.83, temp: 74 },
+  '/plant/totals': { output: 1280, oee: 0.83, temp: 74, updatedAt: '2026-10-23T03:00:00Z' },
   '/plant/hourly': { value: [{ hour: '09:00', count: 120 }, { hour: '10:00', count: 131 }] },
 };
 const READ_AT = Date.parse('2026-10-23T03:00:30Z');
@@ -196,6 +196,18 @@ describe('the picture model of a v2 board', () => {
       { kind: 'grid', items: [['head', 12]] },
     ));
     expect(drawn(nodeOf(doc, 'head').widget)).toEqual({ data: { text: 'Line 1280', kicker: 'Plant 1280', subtitle: '1280 made' } });
+  });
+
+  it("binds a header's time and date to the fields they name — the data's time, which the clock (the time of day now) is not", () => {
+    const grid: Board['layout'] = { kind: 'grid', items: [['head', 12]] };
+    const timed = view(board({ head: { as: 'header', of: 'totals', title: 'Line', time: 'updatedAt', date: 'updatedAt' } }, grid));
+    expect(drawn(nodeOf(timed, 'head').widget)).toEqual({ data: { text: 'Line', time: '2026-10-23T03:00:00Z', date: '2026-10-23T03:00:00Z' } });
+    expect(Object.keys(nodeOf(timed, 'head').widget.bindings ?? {}).sort()).toEqual(['data.date', 'data.time']);
+    // beside the clock, and not at all: a header with neither is as it was
+    expect(drawn(nodeOf(view(board({ head: { as: 'header', of: 'totals', title: 'Line', time: 'updatedAt', clock: true } }, grid)), 'head').widget).data).toMatchObject({ clock: true, time: '2026-10-23T03:00:00Z' });
+    const plain = nodeOf(view(board({ head: { as: 'header', of: 'totals', title: 'Line' } }, grid)), 'head').widget;
+    expect(plain.bindings ?? {}).toEqual({});
+    expect(drawn(plain)).toEqual({ data: { text: 'Line' } });
   });
 
   it("puts a waterfall's total flag, a radar's axis and a scatter's opacity in the chart's mapping, where the widget reads them", () => {
