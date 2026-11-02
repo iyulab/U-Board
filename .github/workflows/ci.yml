@@ -114,6 +114,13 @@ jobs:
         if: steps.check.outputs.pending != ''
         run: npm ci
 
+      # The MCP package is compiled against the library's build output (dist/lib). Publishing the library
+      # builds that as part of its own `prepack`, but a run that has only the MCP package left to publish
+      # (the library's version was already out) would otherwise compile it against nothing.
+      - name: Build the library the MCP package is compiled against
+        if: steps.check.outputs.pending != ''
+        run: npm run build:lib --workspace=packages/core
+
       # Each package's `prepack` (scripts/prepack.mjs) rebuilds its dist from clean and copies in the
       # LICENSE. A prerelease goes out under `next`, never as `latest` (npm refuses one without a tag).
       - name: Publish
