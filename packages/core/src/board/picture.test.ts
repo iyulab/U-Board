@@ -210,6 +210,25 @@ describe('the picture model of a v2 board', () => {
     expect(drawn(plain)).toEqual({ data: { text: 'Line' } });
   });
 
+  it("binds a header's since like its time, and gives its widget the zone the source writes times in", () => {
+    // not through `view()`: the widget library this core is tested with is the published one, which does not know `since` or `timeZone` yet
+    const header = (extra: Record<string, unknown>, zone?: string) => {
+      const b = board({ head: { as: 'header', of: 'totals', title: 'Line', ...extra } }, { kind: 'grid', items: [['head', 12]] });
+      if (zone) b.data!.totals = { ...b.data!.totals, zone };
+      expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+      return (toViewDocument(b, { keysOf: () => [] }) as Extract<ViewDocument, { kind: 'grid' }>).items[0] as Node;
+    };
+    const since = header({ since: 'updatedAt' });
+    expect(Object.keys(since.widget.bindings ?? {})).toEqual(['data.since']);
+    expect(drawn(since.widget)).toEqual({ data: { text: 'Line', since: '2026-10-23T03:00:00Z' } });
+    expect(since.widget.props?.options).toBeUndefined();
+    // the zone rides with a time or a date; a header that shows neither has no use for it, and a read with no zone has none to give
+    expect(header({ time: 'updatedAt' }, 'Asia/Seoul').widget.props?.options).toEqual({ timeZone: 'Asia/Seoul' });
+    expect(header({ date: 'updatedAt', size: 'large' }, 'Asia/Seoul').widget.props?.options).toEqual({ timeZone: 'Asia/Seoul' });
+    expect(header({ since: 'updatedAt' }, 'Asia/Seoul').widget.props?.options).toBeUndefined();
+    expect(header({ time: 'updatedAt' }).widget.props?.options).toBeUndefined();
+  });
+
   it("puts a waterfall's total flag, a radar's axis and a scatter's opacity in the chart's mapping, where the widget reads them", () => {
     const doc = view(board(
       {

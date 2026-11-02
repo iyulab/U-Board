@@ -35,7 +35,7 @@ export const CHART_MAPPING: readonly string[] = ['x', 'y', 'start', 'end', 'labe
  */
 const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['of'], own?: readonly string[], stands?: Readonly<Record<string, string>>])[] = [
   ['status-card', 'status-card', 'needs', ['meter', 'subtitle', 'note', 'state', 'numerals']],
-  ['header', 'header', 'may', ['kicker', 'subtitle', 'clock', 'time', 'date', 'size', 'kickerInk']],
+  ['header', 'header', 'may', ['kicker', 'subtitle', 'clock', 'time', 'date', 'since', 'size', 'kickerInk']],
   ['stat', 'metric', 'needs', ['trend', 'numerals']],
   ['stat-list', 'kv', 'needs', ['state']],
   ['list', 'list', 'needs', ['primary', 'secondary', 'trailing', 'badge', 'time', 'state', 'max', 'variant', 'numerals'], { max: 'maxItems', variant: 'layout' }],

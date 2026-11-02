@@ -599,10 +599,13 @@ describe('validateBoard', () => {
   it("takes a header's time and date as fields of what it reads — a field name, and data to read it from", () => {
     const withData = { ...data, plant: { from: 'plant', path: '/plant', fields: { updatedAt: {} } } };
     const head = (extra: Record<string, unknown>, reads = true) => ({ ...canvas({ h: { as: 'header', ...(reads ? { of: 'plant' } : {}), title: 'Plant', ...extra } }), data: withData });
-    expect(issues(head({ time: 'updatedAt', date: 'updatedAt' }))).toEqual([]);
+    expect(issues(head({ time: 'updatedAt', date: 'updatedAt', since: 'updatedAt' }))).toEqual([]);
     expect(issues(head({ time: 'updatedAt', clock: true }))).toEqual([]);
     expect(issues(head({ time: 'updatedAt' }, false))).toEqual([
       '/parts/h/time: "time" reads a field, but this header reads no data — give "of": "<data>" or "<data>[<key>]"',
+    ]);
+    expect(issues(head({ since: 14 }))).toEqual([
+      '/parts/h/since: "since" names a field of what the header reads — the time the data gives, shown as how long ago, as a text like 2026-11-02T14:10:00Z',
     ]);
     expect(issues(head({ time: 14, date: '' }))).toEqual([
       '/parts/h/time: "time" names a field of what the header reads — the time the data gives, as a text like 2026-11-02T14:10:00Z',

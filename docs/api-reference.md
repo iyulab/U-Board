@@ -294,7 +294,8 @@ The kinds come from three places, listed with their options as `PART_KINDS` (`pa
   `trailing` · `badge` · `time` — and hands any other option to the widget, which takes only those it lists. A part also sets how it is
   drawn with words, never pixels or colour codes: a `header`'s `size` (`small` · `regular` · `large` · `xlarge` · `xxlarge` — its heading) and
   `kickerInk` (`muted` · `accent`, the line above it); a `header` also shows the time and the date its data gives — `time` and `date` each name a field
-  of what it reads (an ISO time such as `2026-11-02T14:10:00Z`), apart from `clock`, which is the time of day now; the figures of a `stat`, a `status-card` and a `list` through `numerals`
+  of what it reads (an ISO time such as `2026-11-02T14:10:00Z`), apart from `clock`, which is the time of day now, and `since` shows that time as how long
+  ago it was; a data read's `zone` is the clock a time with an offset is shown on; the figures of a `stat`, a `status-card` and a `list` through `numerals`
   (`{ scale?, weight? }`, as a skin's — a `stat`'s is its headline figure over the skin's, a `status-card`'s the values of its readings, a
   `list`'s the value at the end of a row and its time; the skin's `numerals` reaches only a `stat`). Without them a part is drawn as before.
 - **Charts** — every chart of the widget library (`chart.line`, `chart.bar` …), with their mapping options (`x`, `y`,

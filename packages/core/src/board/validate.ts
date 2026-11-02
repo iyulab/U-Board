@@ -632,11 +632,12 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (part.clock !== undefined && typeof part.clock !== 'boolean') {
       issues.push({ at: `${at}/clock`, message: '"clock" is true (the time of day) — it does not read a field; leave it out, or name the field in "time" (or "date")', hint: true });
     }
-    // `time` and `date` are the data's time: a field of what the header reads, shown as the time and the date of it.
-    for (const key of ['time', 'date'] as const) {
+    // `time` and `date` are the data's time: a field of what the header reads, shown as the time and the date of it; `since`
+    // is the same time as how long ago it was.
+    for (const key of ['time', 'date', 'since'] as const) {
       const field = part[key];
       if (field === undefined) continue;
-      if (typeof field !== 'string' || field === '') fail(`${at}/${key}`, `"${key}" names a field of what the header reads — the ${key} the data gives, as a text like 2026-11-02T14:10:00Z`);
+      if (typeof field !== 'string' || field === '') fail(`${at}/${key}`, `"${key}" names a field of what the header reads — ${key === 'since' ? 'the time the data gives, shown as how long ago' : `the ${key} the data gives`}, as a text like 2026-11-02T14:10:00Z`);
       else if (reads === null) fail(`${at}/${key}`, `"${key}" reads a field, but this header reads no data — give "of": "<data>" or "<data>[<key>]"`);
     }
   };

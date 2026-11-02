@@ -743,11 +743,16 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         };
       }
       case 'header': {
-        const { kicker, subtitle, clock, time, date, ...rest } = options as { kicker?: string; subtitle?: string; clock?: unknown; time?: string; date?: string };
+        const { kicker, subtitle, clock, time, date, since, ...rest } = options as { kicker?: string; subtitle?: string; clock?: unknown; time?: string; date?: string; since?: string };
         // The time and the date the data gives (a field of what the part reads, as an ISO string) are the widget's own — shown by
         // the viewer in the language and the form it shows a time in. They are not the clock, which is the time of day now.
+        // `since` is the same time as how long ago it was.
         if (typeof time === 'string') bindValue('data.time', time);
         if (typeof date === 'string') bindValue('data.date', date);
+        if (typeof since === 'string') bindValue('data.since', since);
+        // A time with an offset is shown on the clock of the zone the source writes its times in (the read's `zone`), not the viewer's.
+        const zone = query !== undefined ? data[query]?.zone : undefined;
+        if (typeof zone === 'string' && (time !== undefined || date !== undefined)) (rest as Record<string, unknown>).timeZone = zone;
         return {
           type: 'header',
           props: {
