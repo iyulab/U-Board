@@ -187,6 +187,13 @@ export interface Shape {
   tone?: Tone;
   width?: number;
   dash?: boolean;
+  /** A box reads a state as a link does — the data item it reads and the field whose state colours its outline.
+   *  A text, a line and a path are drawn as they are. */
+  of?: string;
+  show?: string;
+  /** With `of` and `show`: the box is filled with the state's tone (`tone`), or hatched in it (`hatch` — a second
+   *  channel that reads without colour). A status whose emphasis is `hatch` draws a `tone` box hatched too. */
+  fill?: 'tone' | 'hatch';
 }
 
 /**

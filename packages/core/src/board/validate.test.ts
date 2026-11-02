@@ -574,11 +574,11 @@ describe('validateBoard', () => {
     const found = issues({
       ...canvas({ a: { as: 'label', title: 'A' } }),
       statuses: { hot: { tone: 'alarm', color: 'red' } },
-      layout: { kind: 'canvas', size: [100, 100], place: { a: [0, 0] }, nodes: [], shapes: { s: { box: [0, 0, 5, 5], fill: '#fff' } } },
+      layout: { kind: 'canvas', size: [100, 100], place: { a: [0, 0] }, nodes: [], shapes: { s: { box: [0, 0, 5, 5], color: '#fff' } } },
       triggers: [{ on: { event: 'open' }, do: [{ action: 'emit', name: 'x', target: 'y' }] }],
     });
     expect(found.filter(f => /has no place here/.test(f)).map(f => f.split(':')[0]).sort()).toEqual([
-      '/layout/nodes', '/layout/shapes/s/fill', '/statuses/hot/color', '/triggers/0/do/0/target',
+      '/layout/nodes', '/layout/shapes/s/color', '/statuses/hot/color', '/triggers/0/do/0/target',
     ]);
     expect(found).toContain('/statuses/hot/color: "color" has no place here — it would be kept but never drawn; this holds tone, label, glyph, emphasis');
   });
@@ -611,6 +611,27 @@ describe('validateBoard', () => {
       '/parts/h/time: "time" names a field of what the header reads — the time the data gives, as a text like 2026-11-02T14:10:00Z',
       '/parts/h/date: "date" names a field of what the header reads — the date the data gives, as a text like 2026-11-02T14:10:00Z',
     ]);
+  });
+
+  it('takes a box that shows a state — the item it reads, the field whose state colours it, how it is filled', () => {
+    const shapes = (shape: Record<string, unknown>, more: Record<string, unknown> = {}) => issues(canvas({ a: { as: 'stat', of: 'totals', show: 'count' } }, { shapes: { zone: shape }, ...more }));
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state', fill: 'tone' })).toEqual([]);
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state', fill: 'hatch' })).toEqual([]);
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state' })).toEqual([]);
+    expect(shapes({ box: [0, 0, 50, 30], show: 'state' })).toEqual(['/layout/shapes/zone/show: a box shows a field "of" a data item — give "of": "<data>" or "<data>[<key>]"']);
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', fill: 'tone' })).toEqual(['/layout/shapes/zone/show: a box shows the state of a field "of" a data item — give "show": "<field>"']);
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'count' })).toEqual(['/layout/shapes/zone/show: "count" has no "state" in /data/equipment/fields — the field that colours a box needs one']);
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state', fill: 'blue' })).toEqual([
+      '/layout/shapes/zone/fill: "fill" is how the inside of a box that shows a state is drawn — "tone" (filled in its colour) or "hatch" (hatched in it, which reads without colour)',
+    ]);
+    // only a box reads a state
+    expect(shapes({ text: 'North', at: [5, 5], of: 'equipment[PR-01]', show: 'state' })).toEqual([
+      '/layout/shapes/zone/of: only a box shows a state — a text, a line and a path are drawn as they are; leave "of", "show" out',
+    ]);
+    expect(shapes({ line: [[0, 0], [5, 5]], fill: 'tone' })).toEqual(['/layout/shapes/zone/fill: only a box shows a state — a text, a line and a path are drawn as they are; leave "fill" out']);
+    // a box in a group reads the group's data unless it names its own
+    const group = (shape: Record<string, unknown>) => issues(canvas({ g: { as: 'group', of: 'equipment[PR-01]', size: [100, 60], parts: { v: { as: 'stat', show: 'state' } }, place: { v: [0, 0] }, shapes: { z: shape } } }));
+    expect(group({ box: [0, 0, 100, 60], show: 'state', fill: 'tone' })).toEqual([]);
   });
 
   it('advises, without refusing, an element no part draws and a status a trigger waits for that its field never takes', () => {

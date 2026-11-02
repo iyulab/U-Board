@@ -244,6 +244,39 @@ describe('resolveDocument', () => {
   });
 });
 
+describe('a box shape that shows a state', () => {
+  const plant = new InMemoryAdapter('plant', { '/zone/a': { value: 'alarm', quality: 'live' }, '/zone/b': { value: true, quality: 'live' }, '/zone/gone': { value: undefined, quality: 'disconnected' } });
+  const box = { id: 'zone', type: 'rect' as const, x: 0, y: 0, width: 100, height: 60, fill: 'none', stroke: 'idle' };
+
+  it('reads its outline, its fill and its hatch from its bindings — a value of another form, or none, leaves the static one', async () => {
+    const doc: CanvasView = {
+      kind: 'canvas', background: {}, nodes: [], connectors: [],
+      decorations: [
+        { ...box, bindings: { stroke: { adapter: 'plant', ref: '/zone/a' }, fill: { adapter: 'plant', ref: '/zone/a' }, hatch: { adapter: 'plant', ref: '/zone/b' } } },
+        { ...box, id: 'other', bindings: { stroke: { adapter: 'plant', ref: '/zone/b' }, fill: { adapter: 'plant', ref: '/zone/gone' }, hatch: { adapter: 'plant', ref: '/zone/a' } } },
+        { id: 'plain', type: 'rect', x: 0, y: 0, width: 5, height: 5 },
+        { id: 'note', type: 'text', x: 0, y: 0, text: 'North' },
+      ],
+    };
+    const resolved = await resolveDocument(doc, [plant]);
+    expect(resolved.decorations![0]).toMatchObject({ stroke: 'alarm', fill: 'alarm', hatch: true });
+    // a boolean is no colour, a disconnected reading has no value, a word is no hatch: the static values stay
+    expect(resolved.decorations![1]).toMatchObject({ stroke: 'idle', fill: 'none' });
+    expect(resolved.decorations![1]).not.toHaveProperty('hatch');
+    expect(resolved.decorations![2]).toEqual(doc.decorations![2]);
+    expect(resolved.decorations![3]).toEqual(doc.decorations![3]);
+    // a canvas cell of a grid reads its shapes too
+    const grid: GridView = { kind: 'grid', items: [{ id: 'cell', span: 12, canvas: { size: [200, 100], nodes: [], connectors: [], decorations: [doc.decorations![0]] } } as never] };
+    const cell = (await resolveDocument(grid, [plant])).items[0] as { canvas: { decorations: unknown[] } };
+    expect(cell.canvas.decorations[0]).toMatchObject({ stroke: 'alarm', hatch: true });
+  });
+
+  it('leaves a document without decorations as it was', async () => {
+    const doc: CanvasView = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
+    expect(await resolveDocument(doc, [plant])).not.toHaveProperty('decorations');
+  });
+});
+
 describe('placedIn', () => {
   const widget = { type: 'gauge' };
   it("walks a canvas view's nodes and a grid view's items, resolved or not", async () => {

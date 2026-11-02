@@ -216,7 +216,17 @@ export interface RectShape {
   labelSize?: number;
   /** The name's colour — the stroke's when left out (a light frame line under a darker name sets it). */
   labelFill?: string;
+  /** Draws the inside as a hatch of diagonal lines in the stroke's colour, in place of (under) a flat `fill` — a second channel
+   *  a state shows by that reads without colour. */
+  hatch?: boolean;
+  /** Live values for `stroke`, `fill` or `hatch` (`SHAPE_BINDABLE`) — a box that shows a state: its tone as the outline's and the
+   *  inside's colour, its status's emphasis as the hatch. Same shape as a widget's bindings; a binding that cannot be read leaves
+   *  the static value in place. */
+  bindings?: Record<string, Binding>;
 }
+
+/** The parts of a box shape a binding may fill. */
+export const SHAPE_BINDABLE = ['stroke', 'fill', 'hatch'] as const;
 
 export interface TextShape {
   id: string;

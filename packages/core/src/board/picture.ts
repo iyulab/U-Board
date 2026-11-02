@@ -962,7 +962,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
       const moved = moveShape(shape, frame);
       if (moved.line !== undefined || moved.path !== undefined) lines.push(lineNode(moved, `${prefix}shape.${id}`));
-      else decorations.push(shapeOf(moved, `${prefix}shape.${id}`));
+      else decorations.push(shapeOf(moved, `${prefix}shape.${id}`, `${at}/shapes/${id}`, frame.reads ?? undefined));
     }
     for (const [id, link] of Object.entries(canvas.links ?? {})) {
       // A link inside a group reads the group's data unless it names its own, as the group's parts do.
@@ -1092,15 +1092,42 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     };
   };
 
-  /** A shape as a decoration: a box with its label, or a text at a point — in its tone, else the board's muted line. */
-  const shapeOf = (shape: Shape, id: string): ViewShape => {
+  /** A status's emphasis map with each word replaced by what `to` makes of it — a link's dash or width, a box's hatch. */
+  const emphasisMap = (emphasis: ValueMap, to: (e: string) => unknown): ValueMap => ({
+    ...emphasis,
+    ...(emphasis.values ? { values: Object.fromEntries(Object.entries(emphasis.values).map(([k, e]) => [k, to(e as string)])) } : {}),
+    ...(emphasis.ranges ? { ranges: emphasis.ranges.map(r => ({ ...r, value: to(r.value as string) })) } : {}),
+    ...('otherwise' in emphasis ? { otherwise: to(emphasis.otherwise as string) } : {}),
+  }) as ValueMap;
+
+  /**
+   * A shape as a decoration: a box with its label, or a text at a point — in its tone, else the board's muted line. A box that
+   * shows a state (`of` and `show`, the group's data when it names none) takes its outline's tone from the field's state, and
+   * `fill` fills it in that tone (`tone`) or hatches it (`hatch`) — a status whose emphasis is `hatch` hatches a `tone` box too.
+   */
+  const shapeOf = (shape: Shape, id: string, path?: string, reads?: Reads): ViewShape => {
     if (shape.box !== undefined) {
       const [x, y, width, height] = shape.box;
-      return {
+      const rect: ViewShape = {
         id, type: 'rect', x, y, width, height, fill: 'none', stroke: shape.tone ?? 'idle', strokeWidth: shape.width ?? 1.5,
         ...(shape.dash ? { dash: 'dashed' as const } : {}),
         ...(shape.label !== undefined ? { label: shape.label, labelAt: 'top-start' as const } : {}),
       };
+      const of = shape.of ?? (reads ? (reads.item !== undefined ? `${reads.query}[${reads.item}]` : reads.query) : undefined);
+      if (of !== undefined && shape.show !== undefined && path !== undefined) {
+        const { query, item } = target(of);
+        const rule = fieldOf(query, shape.show).state;
+        if (rule !== undefined) {
+          const maps = stateMaps(rule);
+          const binding = (map: ValueMap): Binding => ({ ...readFor(query, item, shape.show, path), map });
+          const bindings: Record<string, Binding> = { stroke: binding(maps.tone) };
+          if (shape.fill !== undefined) bindings.fill = binding(maps.tone);
+          if (shape.fill === 'hatch') rect.hatch = true;
+          else if (shape.fill === 'tone' && maps.emphasis) bindings.hatch = binding(emphasisMap(maps.emphasis, e => e === 'hatch'));
+          return { ...rect, bindings };
+        }
+      }
+      return rect;
     }
     const at = shape.at!;
     return { id, type: 'text', x: at[0], y: at[1], text: shape.text!, fill: shape.tone ?? 'next', ...(shape.size !== undefined ? { fontSize: shape.size } : {}) };
@@ -1144,7 +1171,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         const maps = stateMaps(rule);
         bindings['style.stroke'] = binding(link.show!, maps.tone);
         if (maps.emphasis) {
-          const form = (to: (e: string) => unknown) => ({ ...maps.emphasis!, ...(maps.emphasis!.values ? { values: Object.fromEntries(Object.entries(maps.emphasis!.values).map(([k, e]) => [k, to(e)])) } : {}), ...(maps.emphasis!.ranges ? { ranges: maps.emphasis!.ranges.map(r => ({ ...r, value: to(r.value) })) } : {}), ...('otherwise' in maps.emphasis! ? { otherwise: to(maps.emphasis!.otherwise!) } : {}) }) as ValueMap;
+          const form = (to: (e: string) => unknown) => emphasisMap(maps.emphasis!, to);
           bindings['style.dash'] = binding(link.show!, form(e => (e === 'hatch' ? 'dashed' : e === 'blink' ? 'dotted' : link.dash ? 'dashed' : 'solid')));
           bindings['style.strokeWidth'] = binding(link.show!, form(e => (e === 'invert' ? width * 2 : width)));
         }

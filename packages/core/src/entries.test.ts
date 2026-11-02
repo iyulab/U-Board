@@ -27,12 +27,12 @@ describe('the entry points', () => {
   it('./picture exports the model the renderer draws from', () => {
     expect(Object.keys(picture).sort()).toEqual([
       'CONNECTOR_ARROWS', 'CONNECTOR_BINDABLE', 'CONNECTOR_ROUTES', 'DEFAULT_NODE_HEIGHT', 'DEFAULT_NODE_WIDTH', 'DEFAULT_QUALITY_TEXT', 'FiringLimit',
-      'GRID_COLUMNS', 'GRID_COLUMNS_MEDIUM', 'GRID_DEFAULT_SPAN', 'GRID_MAX_ROW_SPAN', 'JsonPatchError', 'PLACEMENTS', 'STROKE_DASHES', 'TRIGGER_ACTIONS', 'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn',
+      'GRID_COLUMNS', 'GRID_COLUMNS_MEDIUM', 'GRID_DEFAULT_SPAN', 'GRID_MAX_ROW_SPAN', 'JsonPatchError', 'PLACEMENTS', 'SHAPE_BINDABLE', 'STROKE_DASHES', 'TRIGGER_ACTIONS', 'TRIGGER_EVENTS', 'ageText', 'applyJsonPatch', 'applyValueMap', 'bindingsIn',
       'boardStateOf',
       'clickableNow', 'coordinateOf', 'describeQuality', 'elementDefinitionHash', 'elementFrameHtml', 'elementFrameLabel', 'elementFrameScripts',
       'elementListeners', 'findHttpRefItem', 'firedBy', 'getByPointer', 'isCanvasItem', 'isHttpRef',
       'isSourceErrorField', 'isTriggerLink', 'linkFor', 'lintViewDocument', 'nodeSize', 'parseSourceTime', 'placeAt', 'placedAt', 'placedIn',
-      'readHttpRef', 'requestPath', 'requestTimeProblem', 'resolveConnector', 'resolveDocument', 'resolveWidget', 'resolvedReading', 'sizedNodes',
+      'readHttpRef', 'requestPath', 'requestTimeProblem', 'resolveConnector', 'resolveDocument', 'resolveShape', 'resolveWidget', 'resolvedReading', 'sizedNodes',
       'sourceErrorIn', 'stateChanges', 'withItemFields', 'worstQuality', 'writeText',
     ]);
   });

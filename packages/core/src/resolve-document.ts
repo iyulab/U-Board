@@ -1,4 +1,4 @@
-import type { ViewDocument, CanvasView, GridView, Placed, Node, GridWidgetItem, GridCanvasItem, CellCanvas, Connector, ConnectorArrow, StrokeDash } from './view-document.js';
+import type { ViewDocument, CanvasView, GridView, Placed, Node, GridWidgetItem, GridCanvasItem, CellCanvas, Connector, ConnectorArrow, Shape, StrokeDash } from './view-document.js';
 import { CONNECTOR_ARROWS, STROKE_DASHES, isCanvasItem } from './view-document.js';
 import type { Adapter, ConnectionQuality, ResolvedWidget } from './adapter.js';
 import { resolveBindings, resolveWidgetReadings } from './adapter.js';
@@ -77,15 +77,33 @@ export async function resolveDocument(doc: ViewDocument, adapters: readonly Adap
       })
     );
   const connectors = (list: readonly Connector[]) => Promise.all(list.map(c => resolveConnector(c, adapters)));
-  if (doc.kind === 'canvas') return { ...doc, nodes: await resolve(doc.nodes), connectors: await connectors(doc.connectors) };
+  // A box that shows a state is read like a connector; the others pass through as they are.
+  const decorations = async (list: readonly Shape[] | undefined) => (list === undefined ? {} : { decorations: await Promise.all(list.map(s => resolveShape(s, adapters))) });
+  if (doc.kind === 'canvas') return { ...doc, nodes: await resolve(doc.nodes), connectors: await connectors(doc.connectors), ...(await decorations(doc.decorations)) };
   const items = await Promise.all(
     doc.items.map(async (item): Promise<ResolvedGridItem> =>
       isCanvasItem(item)
-        ? { ...item, canvas: { ...item.canvas, nodes: await resolve(item.canvas.nodes), connectors: await connectors(item.canvas.connectors) } }
+        ? { ...item, canvas: { ...item.canvas, nodes: await resolve(item.canvas.nodes), connectors: await connectors(item.canvas.connectors), ...(await decorations(item.canvas.decorations)) } }
         : (await resolve([item]))[0]
     )
   );
   return { ...doc, items };
+}
+
+/**
+ * A box shape's bindings read into its outline, its fill and its hatch: a colour as text, the hatch as true or false — a value of
+ * another form leaves the static one in place, as for a disconnected binding. A shape without bindings passes through.
+ */
+export async function resolveShape(shape: Shape, adapters: readonly Adapter[]): Promise<Shape> {
+  if (shape.type !== 'rect' || !shape.bindings || Object.keys(shape.bindings).length === 0) return shape;
+  const { values } = await resolveBindings(
+    { ...(shape.stroke !== undefined && { stroke: shape.stroke }), ...(shape.fill !== undefined && { fill: shape.fill }), ...(shape.hatch !== undefined && { hatch: shape.hatch }) },
+    shape.bindings,
+    adapters,
+    (path, value) => (path === 'hatch' ? (typeof value === 'boolean' ? value : undefined) : path === 'stroke' || path === 'fill' ? (typeof value === 'string' ? value : undefined) : undefined)
+  );
+  const { stroke, fill, hatch } = values as Pick<Extract<Shape, { type: 'rect' }>, 'stroke' | 'fill' | 'hatch'>;
+  return { ...shape, ...(stroke !== undefined && { stroke }), ...(fill !== undefined && { fill }), ...(hatch !== undefined && { hatch }) };
 }
 
 /**

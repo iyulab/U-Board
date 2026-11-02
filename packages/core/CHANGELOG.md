@@ -8,6 +8,14 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- **A box shape shows a state: `"of"`, `"show"` and `"fill": "tone" | "hatch"`.** A shape was a fixed drawing, so an area of a plan, a map or a seating chart
+  could not take the colour of what it stands for — a zone's occupancy, a stand's load — except through an element of the board's own. A `box` in `shapes` now
+  reads like a link: `of` names the data item it reads (a box in a group reads the group's data), `show` a field whose `state` colours its outline, and `fill`
+  draws its inside — `tone` in the state's tone, `hatch` as diagonal lines in it, a second channel that reads on a printout or without colour; a status whose
+  `emphasis` is `hatch` hatches a `tone` box as well. `validateBoard` checks the three (only a box takes them, `show` needs a field that has a state).
+  In the view document a box shape (`RectShape`) takes `bindings` for `stroke`, `fill` and `hatch` (`SHAPE_BINDABLE`) and a static `hatch`; `resolveDocument`
+  reads them — in a canvas and in a grid's canvas cells — and `resolveShape` is exported beside `resolveConnector`. A shape without them is drawn as before.
+
 - **A `header` shows the time and the date its data gives: `"time": "<field>"` and `"date": "<field>"`.** A header drew the time of day now (`clock`) or nothing, so a
   board that says when its data was made — "14:10", "2026-11-02" — could not put it in the header's own place at the right. `time` and `date` name a field of what the
   header reads (`"of"`), a text the widget library formats as a time or a date in the viewer's language (an ISO time such as `2026-11-02T14:10:00Z`; a time

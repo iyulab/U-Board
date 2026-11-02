@@ -724,12 +724,12 @@ export function validateBoard(input: unknown): BoardIssue[] {
         else if (!byFields) for (const [key, one] of Object.entries(p)) if (!isPlace(one)) fail(`${at}/place/${id}/${key}`, 'a place is [x, y] or [x, y, width, height]');
       } else if (!isPlace(p)) fail(`${at}/place/${id}`, 'a place is [x, y] or [x, y, width, height]');
     }
-    checkShapes(group.shapes, `${at}/shapes`);
+    checkShapes(group.shapes, `${at}/shapes`, reads);
     checkLinks(group.links, `${at}/links`, id => id in inner, reads);
   };
 
   /** Shapes on a canvas: a box (with a label), a text at a point, a line through points, or a path. */
-  const checkShapes = (shapes: unknown, at: string) => {
+  const checkShapes = (shapes: unknown, at: string, groupReads?: string | null) => {
     if (shapes === undefined) return;
     if (!isObj(shapes)) { fail(at, 'shapes are { "<id>": { "box" | "text" | "line" | "path", … } }'); return; }
     for (const [id, s] of Object.entries(shapes)) {
@@ -753,6 +753,30 @@ export function validateBoard(input: unknown): BoardIssue[] {
       for (const key of ['text', 'label'] as const) if (s[key] !== undefined && typeof s[key] !== 'string') fail(`${shapeAt}/${key}`, `a shape's ${key} is words — a string`);
       for (const key of ['width', 'size'] as const) if (s[key] !== undefined && !(isNum(s[key]) && (s[key] as number) > 0)) fail(`${shapeAt}/${key}`, `a shape's ${key} is a number above 0`);
       if (s.dash !== undefined && typeof s.dash !== 'boolean') fail(`${shapeAt}/dash`, 'dash is true or false');
+      checkShapeState(s, shapeAt, groupReads);
+    }
+  };
+
+  /**
+   * A box that shows a state: `of` the data item it reads (a shape in a group reads the group's data unless it names its own),
+   * `show` the field whose state colours its outline, `fill` — `tone` or `hatch` — how its inside is drawn. Only a box reads
+   * a state; a state is what a field's `state` declares.
+   */
+  const checkShapeState = (s: Obj, at: string, groupReads?: string | null) => {
+    const reading = ['of', 'show', 'fill'].filter(k => s[k] !== undefined);
+    if (reading.length === 0) return;
+    if (s.box === undefined) { fail(`${at}/${reading[0]}`, `only a box shows a state — a text, a line and a path are drawn as they are; leave "${reading.join('", "')}" out`); return; }
+    const reads = s.of !== undefined ? checkOf(s.of, `${at}/of`) ?? null : groupReads ?? null;
+    if (s.of !== undefined && typeof s.of !== 'string') return;
+    if (s.fill !== undefined && s.fill !== 'tone' && s.fill !== 'hatch') fail(`${at}/fill`, '"fill" is how the inside of a box that shows a state is drawn — "tone" (filled in its colour) or "hatch" (hatched in it, which reads without colour)');
+    if (s.show === undefined) {
+      if (s.of !== undefined || s.fill !== undefined) fail(`${at}/show`, 'a box shows the state of a field "of" a data item — give "show": "<field>"');
+      return;
+    }
+    if (typeof s.show !== 'string') { fail(`${at}/show`, '"show" names a field of the item the box reads'); return; }
+    if (reads === null) fail(`${at}/show`, 'a box shows a field "of" a data item — give "of": "<data>" or "<data>[<key>]"');
+    else if (typeof reads === 'string' && fieldOf(reads, s.show)?.state === undefined) {
+      fail(`${at}/show`, `"${s.show}" has no "state" in /data/${reads}/fields — the field that colours a box needs one`);
     }
   };
 

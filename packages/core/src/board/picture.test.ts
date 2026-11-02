@@ -229,6 +229,33 @@ describe('the picture model of a v2 board', () => {
     expect(header({ time: 'updatedAt' }).widget.props?.options).toBeUndefined();
   });
 
+  it('draws a box that shows a state as a decoration whose outline, fill and hatch are read from the field', () => {
+    const b = board({ s: { as: 'stat', of: 'totals', show: 'output' } }, {
+      kind: 'canvas', size: [400, 200], place: { s: [0, 0, 100, 60] },
+      shapes: {
+        plain: { box: [0, 70, 100, 50], label: 'Hall' },
+        tint: { box: [110, 0, 100, 60], of: 'pumps[P2]', show: 'state', fill: 'tone' },
+        hatched: { box: [110, 70, 100, 50], of: 'pumps[P2]', show: 'state', fill: 'hatch' },
+        outline: { box: [220, 0, 100, 60], of: 'pumps[P1]', show: 'state' },
+      },
+    });
+    // a status that hatches: the second channel a state shows by
+    b.statuses = { running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped', emphasis: 'hatch' } };
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const doc = toViewDocument(b, { keysOf: () => [] });
+    type Rect = { id: string; type: 'rect'; fill?: string; stroke?: string; hatch?: boolean; bindings?: Record<string, { ref: unknown; map?: unknown }> };
+    const shape = (id: string) => ((doc as { decorations?: Rect[] }).decorations ?? []).find(d => d.id === `shape.${id}`)!;
+    expect(shape('plain')).not.toHaveProperty('bindings');
+    expect(shape('plain')).toMatchObject({ fill: 'none', stroke: 'idle' });
+    // P2 is tripped: the outline and the fill follow its tone, and its status's emphasis is the hatch
+    expect(Object.keys(shape('tint').bindings!).sort()).toEqual(['fill', 'hatch', 'stroke']);
+    expect(Object.keys(shape('outline').bindings!)).toEqual(['stroke']);
+    expect(shape('hatched')).toMatchObject({ hatch: true });
+    expect(Object.keys(shape('hatched').bindings!).sort()).toEqual(['fill', 'stroke']);
+    // each binding reads the one item the box names, field `state`
+    expect((shape('tint').bindings!.stroke!.ref as { item?: unknown }).item).toBeDefined();
+  });
+
   it("puts a waterfall's total flag, a radar's axis and a scatter's opacity in the chart's mapping, where the widget reads them", () => {
     const doc = view(board(
       {
