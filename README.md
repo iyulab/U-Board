@@ -55,9 +55,10 @@ An adapter resolves a reference in your system to a value and its quality. The
 | `@iyulab/u-board/viewer` | `BoardView`, the React viewer. |
 | `@iyulab/u-board/toolkit` | The renderer's building blocks, for tools that edit boards. |
 
-To edit boards, use [`@iyulab/u-board-designer`](https://www.npmjs.com/package/@iyulab/u-board-designer), which builds
-on this package. The authoring tool, the MCP server and the application server live in
-[u-board-studio](https://github.com/iyulab/u-board-studio).
+To let an assistant read and draw boards, use [`@iyulab/u-board-mcp`](packages/mcp) (MIT, in this repository): an MCP server
+and the same tools as a library, built on `@iyulab/u-board/check`. To edit boards, use
+[`@iyulab/u-board-designer`](https://www.npmjs.com/package/@iyulab/u-board-designer), which builds on this package. The authoring
+tool and the application server live in [u-board-studio](https://github.com/iyulab/u-board-studio).
 
 ## What it is not
 

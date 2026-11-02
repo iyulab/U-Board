@@ -66,7 +66,7 @@ jobs:
       - name: Library smoke
         run: npm run smoke:library
 
-  # Publishes the library (packages/core, @iyulab/u-board) once `verify` and `node-floor` have passed on a push to
+  # Publishes the library and the MCP server (packages/core, @iyulab/u-board; packages/mcp, @iyulab/u-board-mcp, after it) once `verify` and `node-floor` have passed on a push to
   # main, only if its version isn't on the registry yet. Kept in this workflow rather than a separate one so the
   # commit that gets published is exactly the commit that was verified — and so provenance records that commit.
   publish:
@@ -93,7 +93,7 @@ jobs:
         id: check
         run: |
           pending=""
-          for dir in packages/core; do
+          for dir in packages/core packages/mcp; do
             NAME=$(node -p "require('./${dir}/package.json').name")
             VERSION=$(node -p "require('./${dir}/package.json').version")
             # Only npm's 404 means "not published yet"; any other failure (registry down, rate limit)
