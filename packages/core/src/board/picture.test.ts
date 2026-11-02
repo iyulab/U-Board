@@ -549,7 +549,7 @@ describe('the picture model of a v2 board', () => {
     const compact = optionsOf(dense);
     expect(compact.rows).toMatchObject({ compact: true });
     // read from the catalog: a widget gets it once the library gives it the option, not by a list kept here
-    expect(compact.card === undefined || !('compact' in compact.card)).toBe(true);
+    expect(compact.card).toMatchObject({ compact: true });
     expect(compact.own).toMatchObject({ compact: false });
     // a widget with no compact option is not given one
     expect(compact.headline === undefined || !('compact' in compact.headline)).toBe(true);

@@ -46,8 +46,8 @@ describe('the v2 rulebook', () => {
   // fields computed from a list and the fields of a list's items; 16 500 → 17 000 for the options the widget library
   // grew and the board's variables — a line in the example and one sentence; 17 000 → 17 500 for the words a part's look is said
   // in — a sentence and two options in the example; 17 500 → 18 000 for the keys the schema grew — a header's time words
-  // and the state a shape shows).
+  // and the state a shape shows; 18 000 → 18 500 for the options the widget library grew — a status card's compact and frame).
   it('stays short enough to read whole', () => {
-    expect(rulebook.length).toBeLessThan(18_000);
+    expect(rulebook.length).toBeLessThan(18_500);
   });
 });

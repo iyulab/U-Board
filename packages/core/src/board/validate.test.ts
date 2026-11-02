@@ -244,7 +244,7 @@ describe('validateBoard', () => {
     ]);
     // A preset's key is the preset's mistake, said once however many parts use it.
     const board = { ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' }, b: { use: 'card', of: 'equipment[PR-02]' } }), presets: { card: { as: 'status-card', glow: true } } };
-    expect(issues(board)).toEqual(['/presets/card/glow: "glow" is not an option — options of a status-card: meter, subtitle, note, state, numerals, overflow']);
+    expect(issues(board)).toEqual(['/presets/card/glow: "glow" is not an option — options of a status-card: meter, subtitle, note, state, numerals, overflow, compact, frame']);
   });
 
   it('reports a wrong "of" once, not again in what reads through it', () => {
