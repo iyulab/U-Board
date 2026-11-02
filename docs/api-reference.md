@@ -332,10 +332,10 @@ type GridItem =
 
 - **Canvas** — parts placed by coordinates over a drawing. A part placed without a size takes its kind's. `shapes` are
   purely visual: a `box` (`[x, y, w, h]`, with a `label`), a `text` `at` a point (`size`), a `line` through points or a
-  `path` (absolute `M` · `L` · `C` · `Q` · `Z`), each with an optional `tone`, `width` and `dash`. A `box` can show a state as a link does:
-  `of` the data item it reads (a box in a group reads the group's data), `show` a field with a `state` — its outline takes the state's
-  tone — and `fill`: `tone` fills it in that tone, `hatch` draws diagonal lines in it (which read without colour); a status whose
-  `emphasis` is `hatch` hatches a `tone` box too. A text, a line and a path are drawn as they are. The items of an
+  `path` (absolute `M` · `L` · `C` · `Q` · `Z`), each with an optional `tone`, `width` and `dash`. A `box`, a `line` or a `path` can show a
+  state as a link does: `of` the data item it reads (a shape in a group reads the group's data), `show` a field with a `state` — its
+  outline takes the state's tone — and, for a box or a path, `fill`: `tone` fills it in that tone, `hatch` draws diagonal lines in it
+  (which read without colour); a status whose `emphasis` is `hatch` hatches a `tone` fill too. A text is drawn as it is. The items of an
   `each` part are placed one by one under its entry, or — for data whose items change and cannot be named — by their own
   fields: `{ "at": ["lon", "lat"], "frame": [-180, 90, 180, -90], "size": [14, 14] }` puts each item at the point the
   two fields say. `at` names the fields holding x and y (each where its field says it lives, `at` of the field); `frame`

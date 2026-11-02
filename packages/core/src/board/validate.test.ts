@@ -618,17 +618,20 @@ describe('validateBoard', () => {
     expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state', fill: 'tone' })).toEqual([]);
     expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state', fill: 'hatch' })).toEqual([]);
     expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state' })).toEqual([]);
-    expect(shapes({ box: [0, 0, 50, 30], show: 'state' })).toEqual(['/layout/shapes/zone/show: a box shows a field "of" a data item — give "of": "<data>" or "<data>[<key>]"']);
-    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', fill: 'tone' })).toEqual(['/layout/shapes/zone/show: a box shows the state of a field "of" a data item — give "show": "<field>"']);
-    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'count' })).toEqual(['/layout/shapes/zone/show: "count" has no "state" in /data/equipment/fields — the field that colours a box needs one']);
+    expect(shapes({ box: [0, 0, 50, 30], show: 'state' })).toEqual(['/layout/shapes/zone/show: a shape shows a field "of" a data item — give "of": "<data>" or "<data>[<key>]"']);
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', fill: 'tone' })).toEqual(['/layout/shapes/zone/show: a shape shows the state of a field "of" a data item — give "show": "<field>"']);
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'count' })).toEqual(['/layout/shapes/zone/show: "count" has no "state" in /data/equipment/fields — the field that colours a shape needs one']);
     expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state', fill: 'blue' })).toEqual([
-      '/layout/shapes/zone/fill: "fill" is how the inside of a box that shows a state is drawn — "tone" (filled in its colour) or "hatch" (hatched in it, which reads without colour)',
+      '/layout/shapes/zone/fill: "fill" is how the inside of a box or a path that shows a state is drawn — "tone" (filled in its colour) or "hatch" (hatched in it, which reads without colour)',
     ]);
     // only a box reads a state
     expect(shapes({ text: 'North', at: [5, 5], of: 'equipment[PR-01]', show: 'state' })).toEqual([
-      '/layout/shapes/zone/of: only a box shows a state — a text, a line and a path are drawn as they are; leave "of", "show" out',
+      '/layout/shapes/zone/of: only a box, a line or a path shows a state — a text is drawn as it is; leave "of", "show" out',
     ]);
-    expect(shapes({ line: [[0, 0], [5, 5]], fill: 'tone' })).toEqual(['/layout/shapes/zone/fill: only a box shows a state — a text, a line and a path are drawn as they are; leave "fill" out']);
+    expect(shapes({ line: [[0, 0], [5, 5]], fill: 'tone' })).toEqual(['/layout/shapes/zone/fill: "fill" is the inside of a box or a path — a line has none; leave it out']);
+    // a line and a path show a state; a path has an inside
+    expect(shapes({ line: [[0, 0], [5, 5]], of: 'equipment[PR-01]', show: 'state' })).toEqual([]);
+    expect(shapes({ path: 'M0 0 L40 0 L40 30 Z', of: 'equipment[PR-01]', show: 'state', fill: 'hatch' })).toEqual([]);
     // a box in a group reads the group's data unless it names its own
     const group = (shape: Record<string, unknown>) => issues(canvas({ g: { as: 'group', of: 'equipment[PR-01]', size: [100, 60], parts: { v: { as: 'stat', show: 'state' } }, place: { v: [0, 0] }, shapes: { z: shape } } }));
     expect(group({ box: [0, 0, 100, 60], show: 'state', fill: 'tone' })).toEqual([]);

@@ -6,6 +6,7 @@ import { placedIn, type Node, type ViewDocument, type Widget } from '../view-doc
 import { PictureError, dataReadOf, isDataPlace, isFlowPlace, keyReadsOf, keysIn, toViewDocument } from './picture.js';
 import type { Board } from './types.js';
 import { validateBoard } from './validate.js';
+import { checkStyle, checkTemplateMarkup } from '../elements/markup-policy.js';
 
 // What the source answers, by request path.
 const SOURCE: Record<string, unknown> = {
@@ -256,6 +257,38 @@ describe('the picture model of a v2 board', () => {
     expect(Object.keys(shape('hatched').bindings!).sort()).toEqual(['fill', 'stroke']);
     // each binding reads the one item the box names, field `state`
     expect((shape('tint').bindings!.stroke!.ref as { item?: unknown }).item).toBeDefined();
+  });
+
+  it('draws a path that shows a state as an element whose tone is read from the field — and one that does not, as before', () => {
+    const b = board({ s: { as: 'stat', of: 'totals', show: 'output' } }, {
+      kind: 'canvas', size: [400, 200], place: { s: [0, 0, 100, 60] },
+      shapes: {
+        wedge: { path: 'M10 10 L90 10 L90 60 Z', of: 'pumps[P2]', show: 'state', fill: 'tone' },
+        hall: { path: 'M110 10 L190 10 L190 60 Z', of: 'pumps[P2]', show: 'state', fill: 'hatch' },
+        edge: { line: [[0, 100], [90, 100]], of: 'pumps[P1]', show: 'state' },
+        plain: { path: 'M10 100 L90 100 L90 150 Z' },
+      },
+    });
+    b.statuses = { running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped', emphasis: 'hatch' } };
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const doc = toViewDocument(b, { keysOf: () => [] });
+    const node = (id: string) => nodeOf(doc, `shape.${id}`);
+    const wedge = node('wedge').widget;
+    expect(wedge.type).toMatch(/^element:u-board-shape-wedge/);
+    expect(wedge.props).toEqual({ tone: 'idle', fill: 'tone', hatch: '' });
+    // the tone follows the field's state; a status whose emphasis is hatch turns the hatch on for a tone fill
+    expect(Object.keys(wedge.bindings!).sort()).toEqual(['hatch', 'tone']);
+    expect(node('hall').widget.props).toEqual({ tone: 'idle', fill: 'hatch', hatch: 'true' });
+    expect(Object.keys(node('hall').widget.bindings!)).toEqual(['tone']);
+    expect(Object.keys(node('edge').widget.bindings!)).toEqual(['tone']);
+    expect(node('edge').widget.props).toMatchObject({ fill: 'none' });
+    // a path without a state is the element it always was: no props, no bindings
+    expect(node('plain').widget.bindings).toBeUndefined();
+    expect(node('plain').widget.props).toBeUndefined();
+    // the element's template and style pass the markup policy the viewer applies to a board's own elements
+    const definition = (doc as { elements?: Record<string, { template?: string; style?: string }> }).elements![wedge.type.slice('element:'.length)]!;
+    expect(checkTemplateMarkup(definition.template!, [])).toEqual([]);
+    expect(checkStyle(definition.style!, [])).toEqual([]);
   });
 
   it("puts a waterfall's total flag, a radar's axis and a scatter's opacity in the chart's mapping, where the widget reads them", () => {

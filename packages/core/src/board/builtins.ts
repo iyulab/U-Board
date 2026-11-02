@@ -87,3 +87,26 @@ export function lineElement(d: string, box: { width: number; height: number }, l
     style: `.ln{display:block;overflow:visible;pointer-events:none}.ln path{stroke:var(--c)}${TONE_RULES}`,
   };
 }
+
+/**
+ * A line or a path that shows a state: its outline in the tone of the field's state (`tone`, bound), and — for a path — its
+ * inside as a faint tint of the tone (`fill: "tone"`) or as diagonal lines in it (`fill: "hatch"`, or `hatch: "true"` — the
+ * state's emphasis, bound). The three are drawn and shown by the attributes `data-fill` and `data-hatch`, which the style reads.
+ */
+export function stateLineElement(d: string, box: { width: number; height: number }, look: { width: number; dash: boolean }): ElementDefinition {
+  return {
+    render: 'template',
+    props: { type: 'object', properties: { tone: text, fill: { enum: ['none', 'tone', 'hatch'] }, hatch: text } },
+    template:
+      `<svg class="ln" width="100%" height="100%" viewBox="0 0 ${box.width} ${box.height}" preserveAspectRatio="none" data-tone="{{tone}}" data-fill="{{fill}}" data-hatch="{{hatch}}">` +
+      '<defs><pattern id="h" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><path d="M0 0V8" stroke-width="1"/></pattern></defs>' +
+      `<path class="tint" d="${d}" stroke="none"/><path class="hat" d="${d}" fill="url(#h)" stroke="none"/>` +
+      `<path class="out" d="${d}" fill="none" stroke-width="${look.width}"${look.dash ? ' stroke-dasharray="8 6"' : ''} stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    style:
+      `.ln{--c:var(--u-widget-tone-idle);display:block;overflow:visible;pointer-events:none}${TONE_RULES}` +
+      '.out{stroke:var(--c)}.ln pattern path{stroke:var(--c)}.tint,.hat{display:none}' +
+      '.ln[data-fill="tone"] .tint{display:inline;fill:var(--c);fill-opacity:.16}' +
+      '.ln[data-fill="tone"][data-hatch="true"] .tint{display:none}' +
+      '.ln[data-fill="hatch"] .hat,.ln[data-hatch="true"] .hat{display:inline}',
+  };
+}

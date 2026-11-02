@@ -8,7 +8,7 @@
 import { placedAt, type Binding, type CellCanvas, type Connector, type ElementDefinition, type GridItem, type GridLayout, type ItemField, type Node, type Shape as ViewShape, type Trigger as ViewTrigger, type TriggerAction as ViewTriggerAction, type ValueMap, type ValueRange, type ViewDocument, type Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
-import { LABEL, LEGEND, MARKER, MARKER_JOINT, MARKER_SYMBOL, lineElement } from './builtins.js';
+import { LABEL, LEGEND, MARKER, MARKER_JOINT, MARKER_SYMBOL, lineElement, stateLineElement } from './builtins.js';
 
 const MARKER_JOINT_SIDES = ['right', 'left', 'above', 'below'];
 
@@ -961,7 +961,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     }
     for (const [id, shape] of Object.entries(canvas.shapes ?? {})) {
       const moved = moveShape(shape, frame);
-      if (moved.line !== undefined || moved.path !== undefined) lines.push(lineNode(moved, `${prefix}shape.${id}`));
+      if (moved.line !== undefined || moved.path !== undefined) lines.push(lineNode(moved, `${prefix}shape.${id}`, `${at}/shapes/${id}`, frame.reads ?? undefined));
       else decorations.push(shapeOf(moved, `${prefix}shape.${id}`, `${at}/shapes/${id}`, frame.reads ?? undefined));
     }
     for (const [id, link] of Object.entries(canvas.links ?? {})) {
@@ -1134,8 +1134,12 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     return { id, type: 'text', x: at[0], y: at[1], text: shape.text!, fill: shape.tone ?? 'next', ...(shape.size !== undefined ? { fontSize: shape.size } : {}) };
   };
 
-  /** A line or a path as a node of its own, boxed around its points with room for its width. */
-  const lineNode = (shape: Shape, id: string): Node => {
+  /**
+   * A line or a path as a node of its own, boxed around its points with room for its width. One that shows a state (`of` and
+   * `show` — the group's data when it names none) is drawn by an element whose tone is read from the field, and a path's inside
+   * by `fill` (a tint, or hatch lines, which a status whose emphasis is `hatch` also turns on for a `tone` fill).
+   */
+  const lineNode = (shape: Shape, id: string, path?: string, reads?: Reads): Node => {
     const width = shape.width ?? 3;
     const numbers = shape.line !== undefined ? shape.line.flat() : (shape.path!.match(/-?\d*\.?\d+/g) ?? []).map(Number);
     const xs = numbers.filter((_, i) => i % 2 === 0);
@@ -1153,6 +1157,19 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     let name = base;
     for (let n = 2; shapeNames.has(name) && shapeNames.get(name) !== id; n++) name = `${base}-${n}`;
     shapeNames.set(name, id);
+    const of = shape.of ?? (reads ? (reads.item !== undefined ? `${reads.query}[${reads.item}]` : reads.query) : undefined);
+    if (of !== undefined && shape.show !== undefined && path !== undefined) {
+      const { query, item } = target(of);
+      const rule = fieldOf(query, shape.show).state;
+      if (rule !== undefined) {
+        const maps = stateMaps(rule);
+        const binding = (map: ValueMap): Binding => ({ ...readFor(query, item, shape.show, path), map });
+        const bindings: Record<string, Binding> = { tone: binding(maps.tone) };
+        if (shape.fill === 'tone' && maps.emphasis) bindings.hatch = binding(emphasisMap(maps.emphasis, e => (e === 'hatch' ? 'true' : 'false')));
+        const props = { tone: shape.tone ?? 'idle', fill: shape.fill ?? 'none', hatch: shape.fill === 'hatch' ? 'true' : '' };
+        return { id, x, y, ...box, anchored: true, widget: { type: builtin(name, stateLineElement(d, box, { width, dash: shape.dash === true })), props, bindings } };
+      }
+    }
     return { id, x, y, ...box, anchored: true, widget: { type: builtin(name, lineElement(d, box, { tone: shape.tone, width, dash: shape.dash === true })) } };
   };
 

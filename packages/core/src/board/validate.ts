@@ -758,25 +758,26 @@ export function validateBoard(input: unknown): BoardIssue[] {
   };
 
   /**
-   * A box that shows a state: `of` the data item it reads (a shape in a group reads the group's data unless it names its own),
-   * `show` the field whose state colours its outline, `fill` — `tone` or `hatch` — how its inside is drawn. Only a box reads
-   * a state; a state is what a field's `state` declares.
+   * A box, a line or a path that shows a state: `of` the data item it reads (a shape in a group reads the group's data unless it
+   * names its own), `show` the field whose state colours its outline, `fill` — `tone` or `hatch` — how the inside of a box or a
+   * path is drawn. A text is drawn as it is; a state is what a field's `state` declares.
    */
   const checkShapeState = (s: Obj, at: string, groupReads?: string | null) => {
     const reading = ['of', 'show', 'fill'].filter(k => s[k] !== undefined);
     if (reading.length === 0) return;
-    if (s.box === undefined) { fail(`${at}/${reading[0]}`, `only a box shows a state — a text, a line and a path are drawn as they are; leave "${reading.join('", "')}" out`); return; }
+    if (s.text !== undefined) { fail(`${at}/${reading[0]}`, `only a box, a line or a path shows a state — a text is drawn as it is; leave "${reading.join('", "')}" out`); return; }
+    if (s.fill !== undefined && s.line !== undefined) { fail(`${at}/fill`, '"fill" is the inside of a box or a path — a line has none; leave it out'); return; }
     const reads = s.of !== undefined ? checkOf(s.of, `${at}/of`) ?? null : groupReads ?? null;
     if (s.of !== undefined && typeof s.of !== 'string') return;
-    if (s.fill !== undefined && s.fill !== 'tone' && s.fill !== 'hatch') fail(`${at}/fill`, '"fill" is how the inside of a box that shows a state is drawn — "tone" (filled in its colour) or "hatch" (hatched in it, which reads without colour)');
+    if (s.fill !== undefined && s.fill !== 'tone' && s.fill !== 'hatch') fail(`${at}/fill`, '"fill" is how the inside of a box or a path that shows a state is drawn — "tone" (filled in its colour) or "hatch" (hatched in it, which reads without colour)');
     if (s.show === undefined) {
-      if (s.of !== undefined || s.fill !== undefined) fail(`${at}/show`, 'a box shows the state of a field "of" a data item — give "show": "<field>"');
+      if (s.of !== undefined || s.fill !== undefined) fail(`${at}/show`, 'a shape shows the state of a field "of" a data item — give "show": "<field>"');
       return;
     }
-    if (typeof s.show !== 'string') { fail(`${at}/show`, '"show" names a field of the item the box reads'); return; }
-    if (reads === null) fail(`${at}/show`, 'a box shows a field "of" a data item — give "of": "<data>" or "<data>[<key>]"');
+    if (typeof s.show !== 'string') { fail(`${at}/show`, '"show" names a field of the item the shape reads'); return; }
+    if (reads === null) fail(`${at}/show`, 'a shape shows a field "of" a data item — give "of": "<data>" or "<data>[<key>]"');
     else if (typeof reads === 'string' && fieldOf(reads, s.show)?.state === undefined) {
-      fail(`${at}/show`, `"${s.show}" has no "state" in /data/${reads}/fields — the field that colours a box needs one`);
+      fail(`${at}/show`, `"${s.show}" has no "state" in /data/${reads}/fields — the field that colours a shape needs one`);
     }
   };
 
