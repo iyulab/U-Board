@@ -125,6 +125,62 @@ describe('findHttpRefItem', () => {
       index: 1,
     });
   });
+
+  // A long list is searched through an index built once per response, not by a scan for every element that asks:
+  // the answers must be the scan's, in every case it would give one.
+  describe('in a list long enough to be indexed', () => {
+    const scan = (rows: unknown[], where: Record<string, string | number>) =>
+      rows.findIndex(
+        row =>
+          row !== null &&
+          typeof row === 'object' &&
+          Object.entries(where).every(([field, expected]) => {
+            if (!Object.hasOwn(row, field)) return false;
+            const actual = (row as Record<string, unknown>)[field];
+            return actual !== undefined && actual !== null && String(actual) === String(expected);
+          })
+      );
+    const makeRows = () =>
+      Array.from({ length: 300 }, (_, i): Record<string, unknown> => ({ id: i, zone: `Z${i % 7}`, tag: i % 10 === 0 ? null : `t${i}` }));
+    const find = (rows: unknown[], where: Record<string, string | number>) => findHttpRefItem({ rows }, { list: '/rows', where });
+
+    it('answers every lookup as a scan would, a number and its text being one id', () => {
+      const rows = makeRows();
+      for (const id of [0, 1, 150, '150', 299, 300, -1, 'x']) {
+        const index = scan(rows, { id });
+        expect(find(rows, { id })).toEqual(index < 0 ? { found: false } : { found: true, value: rows[index], index });
+      }
+    });
+
+    it('answers the first of several elements that match', () => {
+      const rows = makeRows();
+      expect(find(rows, { zone: 'Z3' })).toEqual({ found: true, value: rows[3], index: 3 });
+    });
+
+    it('matches on several fields at once, whatever order they are named in', () => {
+      const rows = makeRows();
+      expect(find(rows, { zone: 'Z3', id: 10 })).toEqual({ found: true, value: rows[10], index: 10 });
+      expect(find(rows, { id: 10, zone: 'Z3' })).toEqual({ found: true, value: rows[10], index: 10 });
+      expect(find(rows, { id: 10, zone: 'Z4' })).toEqual({ found: false });
+    });
+
+    it('does not match a field that is null or missing', () => {
+      const rows = makeRows();
+      expect(find(rows, { tag: 'null' })).toEqual({ found: false });
+      expect(find(rows, { nothing: 'x' })).toEqual({ found: false });
+      expect(find([null, 'text', ...rows], { id: 0 })).toMatchObject({ found: true, index: 2 });
+    });
+
+    it('stays right for a list changed in place after it was first searched', () => {
+      const rows = makeRows();
+      expect(find(rows, { id: 5 })).toMatchObject({ found: true, index: 5 });
+      rows[5] = { id: 'moved' };
+      rows.push({ id: 'added' });
+      expect(find(rows, { id: 5 })).toEqual({ found: false });
+      expect(find(rows, { id: 'moved' })).toMatchObject({ found: true, index: 5 });
+      expect(find(rows, { id: 'added' })).toMatchObject({ found: true, index: 300 });
+    });
+  });
 });
 
 describe('readHttpRef — an item inside an item', () => {

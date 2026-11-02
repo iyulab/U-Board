@@ -241,8 +241,43 @@ export function valueAtPath(value: unknown, path: string): { found: true; value:
 export function findHttpRefItem(body: unknown, item: HttpRefItem): { found: true; value: unknown; index: number } | { found: false } {
   const list = valueAtPath(body, item.list);
   if (!list.found || !Array.isArray(list.value)) return { found: false };
-  const index = list.value.findIndex(element => matches(element, item.where));
+  const index = indexOfItem(list.value, item.where);
   return index < 0 ? { found: false } : { found: true, value: list.value[index], index };
+}
+
+/** A list at least this long is searched through an index; a shorter one is scanned, which costs less than building one. */
+const INDEXED_FROM = 64;
+
+/** The fields-to-first-index maps built for a list, by the fields they key on — kept as long as the response is. */
+const itemIndexes = new WeakMap<unknown[], Map<string, { length: number; first: Map<string, number> }>>();
+
+/** The place of the first element `where` names in `list`, or -1. A board that places a part for each of a thousand
+ *  items asks for each item of one response in turn; scanning for every one is a million comparisons, so a long list is
+ *  indexed once on the fields asked about. A response is read, not changed — but a list changed after it was indexed
+ *  still answers as a scan would: a hit is checked against its element, and a miss is scanned for. */
+function indexOfItem(list: unknown[], where: HttpRefItem['where']): number {
+  if (list.length < INDEXED_FROM) return list.findIndex(element => matches(element, where));
+  const fields = Object.keys(where).sort();
+  const keyOf = (value: (field: string) => unknown) => JSON.stringify(fields.map(field => String(value(field))));
+  let byFields = itemIndexes.get(list);
+  if (byFields === undefined) itemIndexes.set(list, (byFields = new Map()));
+  const fieldsKey = JSON.stringify(fields);
+  let index = byFields.get(fieldsKey);
+  if (index === undefined || index.length !== list.length) {
+    const first = new Map<string, number>();
+    list.forEach((element, i) => {
+      if (element === null || typeof element !== 'object') return;
+      const row = element as Record<string, unknown>;
+      if (!fields.every(field => Object.hasOwn(row, field) && row[field] !== undefined && row[field] !== null)) return;
+      const key = keyOf(field => row[field]);
+      if (!first.has(key)) first.set(key, i);
+    });
+    index = { length: list.length, first };
+    byFields.set(fieldsKey, index);
+  }
+  const at = index.first.get(keyOf(field => where[field]));
+  if (at !== undefined && matches(list[at], where)) return at;
+  return list.findIndex(element => matches(element, where));
 }
 
 /** Whether a list element's fields equal every one in `where`, as `findHttpRefItem` compares them. */
