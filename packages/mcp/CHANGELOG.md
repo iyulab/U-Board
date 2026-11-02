@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-11-03
+
+### Fixed
+
+- Depends on `@iyulab/u-board` `^0.41.0`. 0.27.0 asked for `^0.40.0`, which below 1.0 does not take 0.41, so an app on the current library that also used this package got a second copy of the library installed beside its own — and two copies of a web component registering the same name.
+
 ### Changed
 
 - Needs `@iyulab/u-board` `^0.41.0`. The rulebook the tools hand a model now says that a variable can be of a kind (a day, a number, a word) instead of listing its options.
