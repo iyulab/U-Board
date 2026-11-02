@@ -10,6 +10,7 @@ import { drawingColor } from '../theme-colors.js';
 import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
 import { inputOf, type PartInput } from '../board-input.js';
+import { metaLines } from '../value-meta.js';
 
 // Standard visually-hidden ("sr-only") technique: present in the accessibility tree, invisible
 // on screen. Kept off the frame `<div>` itself and off `UWidget` — each `uw-*` custom element
@@ -133,6 +134,9 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
   const said = describeQuality(widget, { text: qualityText, now });
   const label = state !== undefined ? (said ? `${state} — ${said}` : state) : said;
   const badge = key === undefined ? undefined : badgeText(widget, key, qualityText, now);
+  // What the adapter said about the headline value — the one the frame's quality is read from, else the first that said something.
+  const note = metaLines(widget.meta?.[key ?? ''] ?? Object.values(widget.meta ?? {})[0]);
+  const noted = note.length > 0 ? note.join('\n') : undefined;
   const element = elementNameOf(widget.type);
 
   return (
@@ -156,7 +160,7 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
           onActivate();
         },
       })}
-      title={label}
+      title={noted === undefined ? label : label === undefined ? noted : `${label}\n${noted}`}
       {...(nodeId !== undefined && { 'data-node-id': nodeId })}
       {...(quality && quality !== 'live' && { 'data-quality': quality })}
       {...(state !== undefined && { 'data-state': state })}

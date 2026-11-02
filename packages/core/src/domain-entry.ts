@@ -14,6 +14,7 @@ export type { KeyRead, PictureOptions } from './board/picture.js';
 export { drawBoard, pictureOf, readKeys, readLists, readerOf } from './board/draw.js';
 export type { DrawOptions, ValueReader } from './board/draw.js';
 export type { Adapter, Attribution, ConnectionQuality, QualityReason, ResolvedBinding } from './adapter.js';
+export type { MetaValue, ValueMeta } from './value-meta.js';
 export { applyJsonPatch, getByPointer, JsonPatchError } from './json-patch.js';
 export type { JsonPatchOperation } from './json-patch.js';
 export { DEFAULT_QUALITY_TEXT, ageText, worstQuality, describeQuality } from './quality-text.js';

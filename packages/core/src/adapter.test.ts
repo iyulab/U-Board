@@ -556,4 +556,30 @@ describe('a value map read against the clock', () => {
       vi.useRealTimers();
     }
   });
+
+describe('what a reading says about its value (meta)', () => {
+  const widget: Widget = { type: 'metric', props: {}, bindings: { 'data.value': { adapter: 'a', ref: 'x' }, 'data.limit': { adapter: 'a', ref: 'y' }, '$reading': { adapter: 'a', ref: 'x' } } };
+  const adapter = (readings: Record<string, ResolvedBinding>) => new InMemoryAdapter('a', readings);
+
+  it('is carried per bound prop, for the readings that have some', async () => {
+    const resolved = await resolveWidget(widget, [adapter({ x: { value: 4, quality: 'live', meta: { source: 'sensor 14', calibrated: true } }, y: { value: 9, quality: 'stale' } })]);
+    expect(resolved.meta).toEqual({ 'data.value': { source: 'sensor 14', calibrated: true } });
+  });
+
+  it('is kept for a stale reading, dropped for a disconnected one, and has nothing to say when no reading gave any', async () => {
+    const stale = await resolveWidget(widget, [adapter({ x: { value: 4, quality: 'stale', meta: { from: 'cache' } }, y: { value: 1, quality: 'disconnected', meta: { from: 'nowhere' } } })]);
+    expect(stale.meta).toEqual({ 'data.value': { from: 'cache' } });
+    expect(await resolveWidget(widget, [adapter({ x: { value: 4, quality: 'live' }, y: { value: 1, quality: 'live' } })])).not.toHaveProperty('meta');
+  });
+
+  it('keeps only words, numbers and yes/no values — whatever else the adapter hands over is left out', async () => {
+    const odd = { value: 4, quality: 'live', meta: { ok: 'kept', nested: { deep: 1 }, list: [1], nothing: null } } as unknown as ResolvedBinding;
+    expect((await resolveWidget(widget, [adapter({ x: odd, y: odd })])).meta).toEqual({ 'data.value': { ok: 'kept' }, 'data.limit': { ok: 'kept' } });
+  });
+
+  it('is not kept for a reading-only key, which says nothing about the widget’s own values', async () => {
+    const only: Widget = { type: 'metric', props: {}, bindings: { $reading: { adapter: 'a', ref: 'x' } } };
+    expect(await resolveWidget(only, [adapter({ x: { value: 4, quality: 'live', meta: { source: 'sensor 14' } } })])).not.toHaveProperty('meta');
+  });
+});
 });

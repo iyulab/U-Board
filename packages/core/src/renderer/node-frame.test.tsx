@@ -114,3 +114,24 @@ describe('NodeFrame input', () => {
     expect(widgetOf(frame({})).props.onWidgetEvent).toBeUndefined();
   });
 });
+
+describe('NodeFrame meta', () => {
+  const noted: ResolvedWidget = { ...widget, meta: { 'data.value': { source: 'sensor 14', calibrated: true } } };
+
+  it('shows what the reading said beside the value, after how current it is, in the tooltip only', () => {
+    const live = frame({ widget: noted });
+    expect(live.props.title).toBe('source: sensor 14\ncalibrated: yes');
+    const stale = frame({ widget: { ...noted, quality: { 'data.value': 'stale' } } });
+    expect(stale.props.title).toMatch(/^stale/);
+    expect(stale.props.title).toMatch(/\nsource: sensor 14\ncalibrated: yes$/);
+    // the announcement for a screen reader is the quality, not the note
+    expect(announced(live)).toBe('');
+  });
+
+  it('shows the headline value’s note, else the first there is, and nothing when there is none', () => {
+    const two: ResolvedWidget = { ...widget, quality: { 'data.value': 'live', 'data.limit': 'live' }, meta: { 'data.limit': { a: 'limit' }, 'data.value': { a: 'value' } } };
+    expect(frame({ widget: two }).props.title).toBe('a: value');
+    expect(frame({ widget: { ...two, meta: { 'data.limit': { a: 'limit' } } } }).props.title).toBe('a: limit');
+    expect(frame({ widget }).props.title).toBeUndefined();
+  });
+});

@@ -611,6 +611,7 @@ interface ResolvedBinding {
   reason?: QualityReason;
   message?: string;
   observedAt?: string; // ISO 8601
+  meta?: Record<string, string | number | boolean>;
 }
 ```
 
@@ -621,6 +622,12 @@ value of seconds ago from one of days ago. It is ignored on a `disconnected` rea
 the time the source gives (the read's `time`), else the time it read the source. `message`, on a reading that is not
 `live`, says what went wrong in words for whoever can fix the read or its data source — for `source`, what the source
 itself said. The hosted server sends it to signed-in members and to API tokens, never through a share link.
+`meta` is what the adapter knows about the value beyond how current it is — where it came from, whether it was read or worked out, what
+it went through — under names of the host's own (the board does not interpret them): a viewer shows it as lines in the part's tooltip,
+after how current the value is (`ResolvedWidget.meta`, per bound prop). It is not a binding, a state rule does not read it, and it is not
+in what a screen reader is told. Only words, finite numbers and yes/no values are kept, at most 16 entries, long names and words clipped;
+it is ignored on a `disconnected` reading. The hosted server never sends it through a share link — a note beside a value is for the
+host's own screens.
 
 ### `ConnectionQuality`
 
