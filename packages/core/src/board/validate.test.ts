@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { NUMERAL_SCALES } from '../numerals.js';
 import { validateBoard } from './validate.js';
+
+/** The words a scale is, as the messages list them — from the one list, not typed again. */
+const SCALES = Object.keys(NUMERAL_SCALES).join(' · ');
 
 const data = {
   equipment: { from: 'plant', path: '/plant/equipment', list: '/value', key: 'id', fields: { state: { state: 'raw' } } },
@@ -212,9 +216,9 @@ describe('validateBoard', () => {
       c: { as: 'chart.bar', of: 'equipment', x: 'name', y: 'load', horizontal: true },
       m: { as: 'marker', of: 'equipment[PR-01]', shape: 'ring' },
     }))).toEqual([]);
-    expect(issues(canvas({ s: { as: 'stat', of: 'totals', show: 'load', colour: 'red' }, l: { as: 'label', title: 'Line 1', size: 14 } }))).toEqual([
-      '/parts/s/colour: "colour" is not an option — options of a stat: trend, format',
-      '/parts/l/size: "size" is not an option — a label takes no options',
+    expect(issues(canvas({ s: { as: 'stat', of: 'totals', show: 'load', colour: 'red' }, l: { as: 'label', title: 'Line 1', weight: 700 } }))).toEqual([
+      '/parts/s/colour: "colour" is not an option — options of a stat: trend, numerals, format',
+      '/parts/l/weight: "weight" is not an option — options of a label: size, ink, face',
     ]);
     // One setting, one name: the widget's word for an option the board reads itself is not an option of the kind.
     expect(issues(canvas({ l: { as: 'list', of: 'equipment', primary: 'name', maxItems: 5 } }))).toEqual([
@@ -240,7 +244,7 @@ describe('validateBoard', () => {
     ]);
     // A preset's key is the preset's mistake, said once however many parts use it.
     const board = { ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' }, b: { use: 'card', of: 'equipment[PR-02]' } }), presets: { card: { as: 'status-card', glow: true } } };
-    expect(issues(board)).toEqual(['/presets/card/glow: "glow" is not an option — options of a status-card: meter, subtitle, note, state, overflow']);
+    expect(issues(board)).toEqual(['/presets/card/glow: "glow" is not an option — options of a status-card: meter, subtitle, note, state, numerals, overflow']);
   });
 
   it('reports a wrong "of" once, not again in what reads through it', () => {
@@ -306,10 +310,34 @@ describe('validateBoard', () => {
     expect(at({ scale: 'large', weight: 300 })).toEqual([]);
     expect(at({})).toEqual([]);
     expect(at('large')).toEqual(['/board/skin/numerals: numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy the big figures are']);
-    expect(at({ size: 40 })).toEqual(['/board/skin/numerals/size: numerals has no "size" — it has scale (small · regular · large · xlarge) and weight (100–900)']);
-    expect(at({ scale: 'huge' })).toEqual(['/board/skin/numerals/scale: a scale is small · regular · large · xlarge']);
+    expect(at({ size: 40 })).toEqual([`/board/skin/numerals/size: numerals has no "size" — it has scale (${SCALES}) and weight (100–900)`]);
+    expect(at({ scale: 'huge' })).toEqual([`/board/skin/numerals/scale: a scale is ${SCALES}`]);
     expect(at({ weight: 250.5 })).toEqual(['/board/skin/numerals/weight: a weight is a whole number from 100 (thin) to 900 (black)']);
     expect(at({ weight: 'bold' })).toEqual(['/board/skin/numerals/weight: a weight is a whole number from 100 (thin) to 900 (black)']);
+  });
+
+  it('checks the styling words of a part: a size, an ink, a face, a kicker ink, and numerals — words, never pixels or colour codes', () => {
+    expect(issues(canvas({
+      h: { as: 'header', title: 'Plant', size: 'xlarge', kickerInk: 'accent' },
+      l: { as: 'label', title: 'Unit', size: 'small', ink: 'muted', face: 'pill' },
+      s: { as: 'stat', of: 'totals', show: 'load', numerals: { scale: 'large', weight: 300 } },
+      w: { as: 'list', of: 'equipment', primary: 'name', numerals: { weight: 200 } },
+      c: { as: 'status-card', of: 'equipment[PR-01]', show: 'load', numerals: { scale: 'small' } },
+    }))).toEqual([]);
+    expect(issues(canvas({
+      h: { as: 'header', title: 'Plant', size: 40, kickerInk: 'text' },
+      l: { as: 'label', title: 'Unit', ink: '#f00', face: 'outline' },
+      s: { as: 'stat', of: 'totals', show: 'load', numerals: 'big' },
+      w: { as: 'list', of: 'equipment', primary: 'name', numerals: { scale: 'huge', size: 3 } },
+    }))).toEqual([
+      `/parts/h/size: "size" is how large the heading is — ${SCALES}`,
+      "/parts/h/kickerInk: \"kickerInk\" is the colour of the line above the heading — muted · accent (the board's accent colour)",
+      "/parts/l/ink: \"ink\" is the colour of the text — text · muted · accent (the board's accent colour); a status colours it over this",
+      '/parts/l/face: "face" is the surface under the text — plain · pill',
+      '/parts/s/numerals: numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy the headline figure are',
+      `/parts/w/numerals/size: numerals has no "size" — it has scale (${SCALES}) and weight (100–900)`,
+      `/parts/w/numerals/scale: a scale is ${SCALES}`,
+    ]);
   });
 
   it('says as a hint that a skin’s ground is not drawn yet — density is', () => {

@@ -3,6 +3,14 @@ import { resolveWidget, resolveWidgetReadings, secondsFromNow, applyValueMap, de
 import type { Adapter, ResolvedBinding } from './adapter';
 import type { Widget } from './view-document';
 
+describe('a widget’s own tokens', () => {
+  it('are carried to the resolved widget as they are, and absent when it has none', async () => {
+    const tokens = { '--u-widget-title-scale': '1.25' };
+    expect((await resolveWidget({ type: 'header', props: { data: { text: 'A' } }, tokens }, [])).tokens).toEqual(tokens);
+    expect(await resolveWidget({ type: 'header', props: { data: { text: 'A' } } }, [])).not.toHaveProperty('tokens');
+  });
+});
+
 class InMemoryAdapter implements Adapter {
   readonly id: string;
   private data: Map<string, ResolvedBinding>;

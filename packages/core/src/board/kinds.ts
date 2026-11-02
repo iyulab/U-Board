@@ -34,11 +34,11 @@ export const CHART_MAPPING: readonly string[] = ['x', 'y', 'start', 'end', 'labe
  * board's `stat` is the library's `metric`, its `stat-list` the library's `kv`.
  */
 const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['of'], own?: readonly string[], stands?: Readonly<Record<string, string>>])[] = [
-  ['status-card', 'status-card', 'needs', ['meter', 'subtitle', 'note', 'state']],
-  ['header', 'header', 'may', ['kicker', 'subtitle', 'clock']],
-  ['stat', 'metric', 'needs', ['trend']],
+  ['status-card', 'status-card', 'needs', ['meter', 'subtitle', 'note', 'state', 'numerals']],
+  ['header', 'header', 'may', ['kicker', 'subtitle', 'clock', 'size', 'kickerInk']],
+  ['stat', 'metric', 'needs', ['trend', 'numerals']],
   ['stat-list', 'kv', 'needs', ['state']],
-  ['list', 'list', 'needs', ['primary', 'secondary', 'trailing', 'badge', 'time', 'state', 'max', 'variant'], { max: 'maxItems', variant: 'layout' }],
+  ['list', 'list', 'needs', ['primary', 'secondary', 'trailing', 'badge', 'time', 'state', 'max', 'variant', 'numerals'], { max: 'maxItems', variant: 'layout' }],
   ['table', 'table', 'needs'],
   ['bar-list', 'bar-list', 'needs', ['label', 'value', 'state']],
   ['status-grid', 'status-grid', 'needs', ['label', 'value', 'state']],
@@ -48,7 +48,7 @@ const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['o
 /** The kinds only a spatial board has, and the two that structure a board: a group of parts, and an own drawing. */
 const BOARD_KINDS: readonly PartKind[] = [
   { kind: 'marker', shows: 'a point on a canvas, in its status, with a label', of: 'may', options: [], own: ['shape', 'symbol', 'note', 'labelAt'] },
-  { kind: 'label', shows: 'a text on a canvas, from a field or fixed', of: 'may', options: [], own: [] },
+  { kind: 'label', shows: 'a text on a canvas, from a field or fixed', of: 'may', options: [], own: ['size', 'ink', 'face'] },
   { kind: 'legend', shows: "the board's statuses that are in use", of: 'no', options: [], own: [] },
   { kind: 'group', shows: 'several parts drawn together on a small canvas of their own', of: 'may', options: [], own: ['size', 'parts', 'place', 'shapes', 'links'] },
   { kind: 'element', shows: "a drawing no built-in makes, from the board's elements", of: 'may', options: [], own: ['element', 'props', 'bind'] },

@@ -89,6 +89,8 @@ export interface ResolvedWidget {
   /** When each bound prop's value was obtained from its source (ISO 8601), per prop path, for the
    * `live` and `stale` bindings whose adapter reported it. Absent when none did. */
   observedAt?: Record<string, string>;
+  /** The widget's own tokens (`Widget.tokens`), carried through unchanged. */
+  tokens?: Record<string, string>;
 }
 
 /**
@@ -125,6 +127,7 @@ export async function resolveWidgetReadings(
 ): Promise<{ widget: ResolvedWidget; readings: Record<string, unknown> }> {
   const { values: props, quality, reasons, messages, observedAt, readings } = await resolveBindings({ ...widget.props }, widget.bindings, adapters, undefined, now);
   const resolved: ResolvedWidget = { type: widget.type, props, quality };
+  if (widget.tokens !== undefined) resolved.tokens = widget.tokens;
   if (Object.keys(reasons).length > 0) resolved.reasons = reasons;
   if (Object.keys(messages).length > 0) resolved.messages = messages;
   if (Object.keys(observedAt).length > 0) resolved.observedAt = observedAt;

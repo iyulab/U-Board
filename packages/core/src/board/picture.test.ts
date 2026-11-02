@@ -96,6 +96,35 @@ function view(b: Board, keys: Record<string, string[]> = {}): ViewDocument {
 const nodeOf = (doc: ViewDocument, id: string) => (doc.kind === 'canvas' ? doc.nodes : doc.items).find(n => n.id === id) as Node;
 
 describe('the picture model of a v2 board', () => {
+  it("hands a part's styling to its widget as tokens of that widget only — and as no option of the widget", () => {
+    const doc = view(board({
+      h: { as: 'header', title: 'Plant', size: 'large', kickerInk: 'accent' },
+      s: { as: 'stat', of: 'totals', show: 'oee', numerals: { scale: 'small', weight: 300 } },
+      l: { as: 'list', of: 'pumps', primary: 'id', trailing: 'flow', numerals: { scale: 'xlarge' } },
+      c: { as: 'status-card', of: 'pumps[P1]', show: ['state', 'flow'], numerals: { weight: 800 } },
+      plain: { as: 'header', title: 'Plain', kickerInk: 'muted' },
+    }, { kind: 'canvas', size: [800, 400], place: { h: [0, 0, 300, 60], s: [0, 70, 200, 100], l: [0, 180, 300, 120], c: [320, 70, 220, 110], plain: [320, 0, 300, 60] } }));
+    expect(nodeOf(doc, 'h').widget.tokens).toEqual({ '--u-widget-title-scale': '1.25', '--u-widget-kicker-color': 'var(--u-widget-primary)' });
+    // a stat's figure is the headline figure a skin's numerals sets too; the values in a card or a row are apart from it
+    expect(nodeOf(doc, 's').widget.tokens).toEqual({ '--u-widget-figure-scale': '0.75', '--u-widget-figure-weight': '300' });
+    expect(nodeOf(doc, 'l').widget.tokens).toEqual({ '--u-widget-value-scale': '1.75' });
+    expect(nodeOf(doc, 'c').widget.tokens).toEqual({ '--u-widget-value-weight': '800' });
+    expect(nodeOf(doc, 'plain').widget).not.toHaveProperty('tokens');
+    for (const id of ['h', 's', 'l', 'c']) expect(JSON.stringify(nodeOf(doc, id).widget.props)).not.toMatch(/numerals|kickerInk|"size"/);
+  });
+
+  it('draws a label in the size, ink and face it names, and with the props it always had when it names none', () => {
+    const doc = view(board({
+      plain: { as: 'label', title: 'Unit: million' },
+      note: { as: 'label', title: 'Source', size: 'small', ink: 'muted', face: 'pill' },
+      regular: { as: 'label', title: 'Same', size: 'regular', ink: 'text', face: 'plain' },
+    }, { kind: 'canvas', size: [400, 200], place: { plain: [0, 0, 200, 30], note: [0, 40, 200, 30], regular: [0, 80, 200, 30] } }));
+    expect(drawn(nodeOf(doc, 'plain').widget)).toEqual({ text: 'Unit: million', tone: '' });
+    expect(drawn(nodeOf(doc, 'note').widget)).toEqual({ text: 'Source', tone: '', size: 'small', ink: 'muted', face: 'pill' });
+    // `regular`, `text` and `plain` are what a label is anyway
+    expect(drawn(nodeOf(doc, 'regular').widget)).toEqual({ text: 'Same', tone: '' });
+  });
+
   it('draws a status card per placed item: its state as a tone and words, its other fields as readings', () => {
     const doc = view(board(
       { pump: { as: 'status-card', each: 'pumps', title: 'Pump {{key}}', show: ['state', 'flow', 'rpm'] } },

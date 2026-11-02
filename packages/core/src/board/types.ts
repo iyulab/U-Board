@@ -308,8 +308,8 @@ export interface Skin {
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';
   density?: 'regular' | 'compact';
-  /** The headline figure of a `metric` or `stat-group`: how large (`small` · `regular` · `large` · `xlarge`) and how heavy (100–900). */
-  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge'; weight?: number };
+  /** The headline figure of a `metric` or `stat-group`: how large (`small` · `regular` · `large` · `xlarge` · `xxlarge`) and how heavy (100–900). */
+  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number };
 }
 
 /**

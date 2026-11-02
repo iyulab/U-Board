@@ -161,6 +161,15 @@ function checkVariables(raw: Obj, fail: (at: string, message: string) => void): 
 export function validateBoard(input: unknown): BoardIssue[] {
   const issues: BoardIssue[] = [];
   const fail = (at: string, message: string) => void issues.push({ at, message });
+  /** A `numerals` setting — a skin's, or a part's: `{ scale, weight }`. `what` is what it sets, for the message. */
+  const checkNumerals = (value: unknown, at: string, what: string) => {
+    if (!isObj(value)) { fail(at, `numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy ${what} are`); return; }
+    for (const key of Object.keys(value)) {
+      if (key !== 'scale' && key !== 'weight') fail(`${at}/${key}`, `numerals has no "${key}" — it has scale (${Object.keys(NUMERAL_SCALES).join(' · ')}) and weight (100–900)`);
+    }
+    if (value.scale !== undefined && !Object.keys(NUMERAL_SCALES).includes(value.scale as string)) fail(`${at}/scale`, `a scale is ${Object.keys(NUMERAL_SCALES).join(' · ')}`);
+    if (value.weight !== undefined && !isNumeralWeight(value.weight)) fail(`${at}/weight`, 'a weight is a whole number from 100 (thin) to 900 (black)');
+  };
 
   if (!isObj(input)) return [{ at: '', message: 'a board is a JSON object' }];
   for (const key of Object.keys(input)) {
@@ -203,14 +212,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
   if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
   if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');
-  if (skin.numerals !== undefined && !isObj(skin.numerals)) fail('/board/skin/numerals', 'numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy the big figures are');
-  if (isObj(skin.numerals)) {
-    for (const key of Object.keys(skin.numerals)) {
-      if (key !== 'scale' && key !== 'weight') fail(`/board/skin/numerals/${key}`, `numerals has no "${key}" — it has scale (${Object.keys(NUMERAL_SCALES).join(' · ')}) and weight (100–900)`);
-    }
-    if (skin.numerals.scale !== undefined && !Object.keys(NUMERAL_SCALES).includes(skin.numerals.scale as string)) fail('/board/skin/numerals/scale', `a scale is ${Object.keys(NUMERAL_SCALES).join(' · ')}`);
-    if (skin.numerals.weight !== undefined && !isNumeralWeight(skin.numerals.weight)) fail('/board/skin/numerals/weight', 'a weight is a whole number from 100 (thin) to 900 (black)');
-  }
+  if (skin.numerals !== undefined) checkNumerals(skin.numerals, '/board/skin/numerals', 'the big figures');
   // The skin's values are written into the widgets' CSS: a colour is a colour and a font a list of names — never a url or a rule.
   if (isObj(skin.palette)) {
     for (const key of ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'] as const) {
@@ -519,6 +521,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
       else if (wholeList || reads === null) fail(`${at}/highlight`, '"highlight" marks one item — the part reads one: "of": "<data>[<key>]", or "each"');
     }
     if (kind.kind === 'marker' && part.labelAt !== undefined && !MARKER_SIDES.includes(part.labelAt as string)) fail(`${at}/labelAt`, `"labelAt" is the side of the point its words go — ${MARKER_SIDES.join(' · ')} (auto: the side its links leave free)`);
+    checkStyleOptions(part, kind.kind, at);
     if (kind.kind === 'stat' && part.trend !== undefined && typeof part.trend !== 'string') fail(`${at}/trend`, '"trend" names a field of the item holding its recent values, a list of numbers');
     // A `state` option names the field whose state colours the rows (or the card): it needs a state to give.
     if (part.state !== undefined && kind.own.includes('state')) {
@@ -593,6 +596,28 @@ export function validateBoard(input: unknown): BoardIssue[] {
         if (!/^[\w.-]+$/.test(name)) fail(`${at}/${prop}`, `"{{${m[1]}}}" — write {{field}} with a field name, or {{key}} for the item's key`);
         else if (reads === null) fail(`${at}/${prop}`, `"{{${name}}}" reads a field, but this reads no data — give "of"`);
       }
+    }
+  };
+
+  /**
+   * The settings that style a part rather than choose what it shows — each a word, never a size in pixels or a colour code: a
+   * heading's or a text's `size`, the `ink` a text is drawn in, a text's `face`, the colour of a header's kicker, and the
+   * `numerals` of the figures in a stat, a card or a list.
+   */
+  const checkStyleOptions = (part: Obj, kind: string, at: string) => {
+    const scales = Object.keys(NUMERAL_SCALES);
+    if ((kind === 'header' || kind === 'label') && part.size !== undefined && !scales.includes(part.size as string)) {
+      fail(`${at}/size`, `"size" is how large the ${kind === 'header' ? 'heading' : 'text'} is — ${scales.join(' · ')}`);
+    }
+    if (kind === 'header' && part.kickerInk !== undefined && !['muted', 'accent'].includes(part.kickerInk as string)) {
+      fail(`${at}/kickerInk`, '"kickerInk" is the colour of the line above the heading — muted · accent (the board\'s accent colour)');
+    }
+    if (kind === 'label') {
+      if (part.ink !== undefined && !['text', 'muted', 'accent'].includes(part.ink as string)) fail(`${at}/ink`, '"ink" is the colour of the text — text · muted · accent (the board\'s accent colour); a status colours it over this');
+      if (part.face !== undefined && !['plain', 'pill'].includes(part.face as string)) fail(`${at}/face`, '"face" is the surface under the text — plain · pill');
+    }
+    if (part.numerals !== undefined && (kind === 'stat' || kind === 'list' || kind === 'status-card')) {
+      checkNumerals(part.numerals, `${at}/numerals`, kind === 'stat' ? 'the headline figure' : kind === 'list' ? 'the values at the end of a row and its time' : 'the readings of the card');
     }
   };
 

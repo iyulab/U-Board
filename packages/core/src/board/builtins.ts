@@ -49,9 +49,16 @@ export const MARKER_SYMBOL: ElementDefinition = {
 /** A text on a canvas, in its status's colour when it has one. */
 export const LABEL: ElementDefinition = {
   render: 'template',
-  props: { type: 'object', properties: { text, tone: text } },
-  template: '<span class="lb" data-tone="{{tone}}">{{text}}</span>',
-  style: `.lb{--c:var(--u-widget-text);display:flex;align-items:center;height:100%;font:600 14px var(--u-widget-font-family);color:var(--c)}${TONE_RULES}`,
+  props: { type: 'object', properties: { text, tone: text, size: text, ink: text, face: text } },
+  template: '<span class="lb" data-tone="{{tone}}" data-size="{{size}}" data-ink="{{ink}}" data-face="{{face}}"><span class="tx">{{text}}</span></span>',
+  // The ink is the colour a label is drawn in unless it has a status: `:where` keeps the ink's rules as weak as the tones' and
+  // they come first, so a status wins. A pill is the text on a faint face of the ink, as wide as the text.
+  style:
+    '.lb{--c:var(--u-widget-text);display:flex;align-items:center;height:100%;font:600 14px var(--u-widget-font-family);color:var(--c)}' +
+    ':where(.lb)[data-ink="muted"]{--c:var(--u-widget-text-secondary)}:where(.lb)[data-ink="accent"]{--c:var(--u-widget-primary)}' +
+    TONE_RULES +
+    '.lb[data-size="small"]{font-size:10.5px}.lb[data-size="large"]{font-size:17.5px}.lb[data-size="xlarge"]{font-size:24.5px}.lb[data-size="xxlarge"]{font-size:35px}' +
+    '.lb[data-face="pill"] .tx{padding:.15em .7em;border-radius:999px;background:color-mix(in srgb,var(--c) 12%,transparent);line-height:1.4}',
 };
 
 /** The board's statuses, each its colour and words. */

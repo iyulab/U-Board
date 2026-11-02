@@ -164,7 +164,7 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.
-        <UWidget spec={withSkinFrame(widget, skin)} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent), ...skinTokens(skin) }} theme={appearance ?? 'light'} locale={locale} />
+        <UWidget spec={withSkinFrame(widget, skin)} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent), ...skinTokens(skin), ...widget.tokens }} theme={appearance ?? 'light'} locale={locale} />
       )}
       {badge && quality && (
         <span aria-hidden="true" data-quality-badge="" style={{ ...BADGE_STYLE, ...QUALITY_BADGE_STYLE[quality] }}>

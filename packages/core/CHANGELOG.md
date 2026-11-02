@@ -21,8 +21,17 @@ All notable changes to this package are documented here. The format follows
   until it is asked.
 - **A skin's `numerals` sets the headline figure of a `metric` or `stat-group`: `{ "scale": "large", "weight": 300 }`.** The big number of a card was one size
   and one weight for every board, so a board that wanted a large light figure, or a small plain one, could not say so. `scale` is
-  `small` · `regular` · `large` · `xlarge` (0.75× · 1× · 1.25× · 1.75× of the size the widget would have drawn, at every width) and `weight`
+  `small` · `regular` · `large` · `xlarge` · `xxlarge` (0.75× · 1× · 1.25× · 1.75× · 2.5× of the size the widget would have drawn, at every width) and `weight`
   a whole number from 100 to 900. A skin without `numerals` draws as before. Needs a widget library that reads the two figure tokens.
+- **A part sets how it is drawn with words: `size`, `ink` and `face` on a `label`, `size` and `kickerInk` on a `header`, `numerals` on a `stat`, a `status-card` and a `list`.**
+  A text on a board was one size, weight and colour, a heading one size by its level, and the figures of a card's readings and a list's
+  values one size whatever the board wanted. `size` is `small` · `regular` · `large` · `xlarge` · `xxlarge` — the same words as a skin's `numerals`;
+  `ink` is `text` · `muted` · `accent` (the board's accent colour; a status colours a label over it); `face` is `plain` · `pill` (a faint rounded surface under
+  the text); a header's `kickerInk` is `muted` · `accent`; `numerals` is `{ scale?, weight? }` as a skin's — for a `stat` its headline figure over the
+  skin's, for a `status-card` the values of its readings, for a `list` the value at the end of a row and its time. The skin's `numerals` still reaches only a `stat`'s figure.
+  `validateBoard` names a value that is none of these words. A part that sets none is drawn exactly as before. The part's settings reach the widget
+  library as `Widget.tokens` (CSS custom properties on that widget only), carried by `resolveWidget` to the resolved widget; they need a widget
+  library that reads `--u-widget-title-scale`, `--u-widget-kicker-color`, `--u-widget-value-scale` and `--u-widget-value-weight`.
 - **`marker` takes `labelAt` — the side of its point the words go on.** A marker's point sat at the left of its box with the words beside it, so a link
   to the marker ended at the middle of the box, missing the point, and every label was to the right whatever the line it stood on. With
   `labelAt: "right" | "left" | "above" | "below"` the point is the middle of the part's box and the words are on that side of it — a link meets the point,

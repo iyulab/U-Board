@@ -12,6 +12,48 @@ import { LABEL, LEGEND, MARKER, MARKER_JOINT, MARKER_SYMBOL, lineElement } from 
 
 const MARKER_JOINT_SIDES = ['right', 'left', 'above', 'below'];
 
+/** The options that style a part rather than choose what it shows, by kind — each a word, read by the board and never handed to the widget. */
+const STYLE_KEYS: Readonly<Record<string, readonly string[]>> = {
+  header: ['size', 'kickerInk'],
+  label: ['size', 'ink', 'face'],
+  stat: ['numerals'],
+  'status-card': ['numerals'],
+  list: ['numerals'],
+};
+
+/** A part's styling options, as written. */
+function styleOf(part: Record<string, unknown>, kind: string): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const key of STYLE_KEYS[kind] ?? []) if (key in part) out[key] = part[key];
+  return out;
+}
+
+/** A part's styling options, taken out of `options` — what is left is for the widget. */
+function takeStyle(options: Record<string, unknown>, kind: string): Record<string, unknown> {
+  const taken = styleOf(options, kind);
+  for (const key of Object.keys(taken)) delete options[key];
+  return taken;
+}
+
+/**
+ * The tokens a part's styling is handed to its widget as (`Widget.tokens`): a header's heading size and kicker colour, the
+ * numerals of a stat's headline figure (`figure`), and those of the values in a card or a row (`value`) — which a skin's
+ * `numerals` does not reach. A word that is not one gives none.
+ */
+function partTokens(kind: string, style: Record<string, unknown>): Record<string, string> {
+  const out: Record<string, string> = {};
+  const numerals = isRecord(style.numerals) ? style.numerals : undefined;
+  if (kind === 'header') {
+    const size = style.size;
+    if (typeof size === 'string' && Object.hasOwn(NUMERAL_SCALES, size)) out['--u-widget-title-scale'] = String(NUMERAL_SCALES[size as NumeralScale]);
+    if (style.kickerInk === 'accent') out['--u-widget-kicker-color'] = 'var(--u-widget-primary)';
+  } else if (kind === 'stat') Object.assign(out, numeralTokens(numerals, 'figure'));
+  else if (kind === 'list' || kind === 'status-card') Object.assign(out, numeralTokens(numerals, 'value'));
+  return out;
+}
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
+
 /**
  * Puts the words of each marker in `auto` on the first side its links do not leave — below, then right, above, left: a station on
  * a horizontal line names itself below it, one on a vertical line to its right. A marker every side of which has a link takes right.
@@ -38,6 +80,7 @@ function sideFreeOfLinks(nodes: Node[], connectors: Connector[], auto: ReadonlyS
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { expandVariables, variableValues, variablesOf } from './variables.js';
 import { TONES } from './types.js';
+import { NUMERAL_SCALES, numeralTokens, type NumeralScale } from '../numerals.js';
 import type { Board, CanvasLayout, DataPlace, FlowPlace, RelativeRule, ElementDefinition as BoardElementDefinition, Field, GridItem as BoardGridItem, Link, Meter, Part, Place, Query, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
 
 /** A weight's or an arrow's bands or map as the value map a connector binding takes: bands as ranges, a map as values
@@ -426,6 +469,8 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     const part = resolve(raw);
     const { as, use: _use, of: _of, each: _each, title, show, highlight, ...options } = part;
     const kind = partKind(as!)!;
+    // What styles the part (`size`, `ink`, …) is read here, not handed to the widget as an option of its own.
+    const partStyle = takeStyle(options, kind.kind);
     const fields = show === undefined ? [] : Array.isArray(show) ? show : [show];
     const query = reads?.query;
     const item = reads?.item;
@@ -742,7 +787,18 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         const name = fields[0];
         const textProp = title !== undefined ? text(title, 'text') : name !== undefined ? (bindValue('text', name), '') : '';
         if (name !== undefined) bindState('', name);
-        return { type: builtin('u-board-label', LABEL), props: { text: textProp ?? '', tone: '' }, bindings };
+        const { size, ink, face } = partStyle as { size?: string; ink?: string; face?: string };
+        return {
+          type: builtin('u-board-label', LABEL),
+          props: {
+            text: textProp ?? '', tone: '',
+            // only what the part sets: a label that styles nothing is the props it always had
+            ...(size !== undefined && size !== 'regular' && Object.hasOwn(NUMERAL_SCALES, size) ? { size } : {}),
+            ...(ink === 'muted' || ink === 'accent' ? { ink } : {}),
+            ...(face === 'pill' ? { face } : {}),
+          },
+          bindings,
+        };
       }
       case 'legend': {
         const items = usedStatuses().map(name => {
@@ -777,8 +833,12 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
    *  option compact, unless the part sets `compact` itself (`false` keeps it regular). */
   const compactBoard = board.board?.skin?.density === 'compact';
   const widgetFor = (raw: Part, at: string, reads?: { query: string; item?: string }): Widget => {
-    const widget = drawnWidget(raw, at, reads);
-    if (!compactBoard || !partKind(resolve(raw).as!)?.options.includes('compact')) return widget;
+    const drawn = drawnWidget(raw, at, reads);
+    // A part's own styling reaches the widget library as tokens on that widget only, over the skin's.
+    const part = resolve(raw);
+    const tokens = partTokens(part.as!, styleOf(part, part.as!));
+    const widget: Widget = Object.keys(tokens).length > 0 ? { ...drawn, tokens } : drawn;
+    if (!compactBoard || !partKind(part.as!)?.options.includes('compact')) return widget;
     const options = (widget.props?.options ?? {}) as Record<string, unknown>;
     if (options.compact !== undefined) return widget;
     return { ...widget, props: { ...widget.props, options: { ...options, compact: true } } };

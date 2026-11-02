@@ -3,10 +3,24 @@
 // multiplies the size it would have drawn); the weight is a CSS font weight.
 
 /** The scales a skin's `numerals.scale` names, and the multiple of the figure's own size each stands for. */
-export const NUMERAL_SCALES = { small: 0.75, regular: 1, large: 1.25, xlarge: 1.75 } as const;
+export const NUMERAL_SCALES = { small: 0.75, regular: 1, large: 1.25, xlarge: 1.75, xxlarge: 2.5 } as const;
 export type NumeralScale = keyof typeof NUMERAL_SCALES;
 
 /** Whether `value` is a weight a figure can take: a whole number from 100 (thin) to 900 (black). */
 export function isNumeralWeight(value: unknown): value is number {
   return typeof value === 'number' && Number.isInteger(value) && value >= 100 && value <= 900;
+}
+
+/**
+ * The tokens a numerals setting is handed to the widget library as. `figure` is the headline figure of a `metric` or
+ * `stat-group` (a skin's `numerals` sets it for the whole board, a `stat` part's for itself); `value` is the figures inside a
+ * card or a row — a `status-card` reading, a `list` row's trailing value and time — which a skin does not reach. Nothing for a
+ * word or a weight that is not one.
+ */
+export function numeralTokens(numerals: { scale?: unknown; weight?: unknown } | undefined, family: 'figure' | 'value'): Record<string, string> {
+  const out: Record<string, string> = {};
+  const scale = numerals?.scale;
+  if (typeof scale === 'string' && Object.hasOwn(NUMERAL_SCALES, scale)) out[`--u-widget-${family}-scale`] = String(NUMERAL_SCALES[scale as NumeralScale]);
+  if (isNumeralWeight(numerals?.weight)) out[`--u-widget-${family}-weight`] = String(numerals!.weight);
+  return out;
 }

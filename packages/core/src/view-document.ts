@@ -43,7 +43,7 @@ export interface ViewSkin {
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';
   density?: 'regular' | 'compact';
-  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge'; weight?: number };
+  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number };
 }
 
 /** A canvas view: widgets placed by position over a background, optionally joined by connectors. */
@@ -343,6 +343,10 @@ export interface Widget {
    * interpret). Keys listed in `bindings` are overwritten with a resolved value at render time. */
   props?: Record<string, unknown>;
   bindings?: Record<string, Binding>;
+  /** CSS custom properties set on this widget only — how a part's own settings (the size of a heading, the weight of a row's
+   * values) reach the widget library, which reads them as tokens over the board's skin. A prepared widget's only; an element
+   * takes its settings as props. */
+  tokens?: Record<string, string>;
 }
 
 /** What a board defines once and places by reference: `{ type: "element:<name>", props }` on any number

@@ -130,7 +130,7 @@ interface Skin {
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';
   density?: 'regular' | 'compact';
-  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge'; weight?: number };   // NUMERAL_SCALES
+  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number };   // NUMERAL_SCALES
 }
 ```
 
@@ -138,7 +138,7 @@ interface Skin {
 background picture is drawn over it); `ground` is text on the board's background. Every built-in
 reads the skin; no part sets fonts or colours of its own. `density: "compact"` draws every part whose widget has a `compact`
 option compact, unless the part sets `compact` itself. `numerals` sets the headline figure of a `metric` or `stat-group`: `scale` is
-`small` (0.75×) · `regular` (as drawn) · `large` (1.25×) · `xlarge` (1.75×) of its size at the width it is drawn in, `weight` a font
+`small` (0.75×) · `regular` (as drawn) · `large` (1.25×) · `xlarge` (1.75×) · `xxlarge` (2.5×) of its size at the width it is drawn in, `weight` a font
 weight from 100 to 900. `ground` is accepted but not drawn yet.
 A palette value is a colour — a hex colour, `rgb()`, `hsl()`, a CSS colour name or `transparent`; a font is family names
 separated by commas (`"Noto Sans KR", sans-serif`); a radius is a number of pixels, 0 or more. `validateBoard` names what
@@ -291,13 +291,18 @@ The kinds come from three places, listed with their options as `PART_KINDS` (`pa
   some options itself, as fields of what the part reads — a `status-card`'s `meter` (`"<field>"`, or
   `{ field, min?, max?, form?: 'bar' | 'ring' }`, where `min` and `max` are numbers or the name of a field of the item, as a gauge's
   `max` is) and `state`, a `stat`'s `trend` (a field of the item holding its recent values, a list of numbers, drawn as a line under the value), a `list`'s `primary` · `secondary` ·
-  `trailing` · `badge` · `time` — and hands any other option to the widget, which takes only those it lists.
+  `trailing` · `badge` · `time` — and hands any other option to the widget, which takes only those it lists. A part also sets how it is
+  drawn with words, never pixels or colour codes: a `header`'s `size` (`small` · `regular` · `large` · `xlarge` · `xxlarge` — its heading) and
+  `kickerInk` (`muted` · `accent`, the line above it); the figures of a `stat`, a `status-card` and a `list` through `numerals`
+  (`{ scale?, weight? }`, as a skin's — a `stat`'s is its headline figure over the skin's, a `status-card`'s the values of its readings, a
+  `list`'s the value at the end of a row and its time; the skin's `numerals` reaches only a `stat`). Without them a part is drawn as before.
 - **Charts** — every chart of the widget library (`chart.line`, `chart.bar` …), with their mapping options (`x`, `y`,
   `label`, `value`, `group` …) naming fields of the rows they read.
 - **The board's own**: `marker` — a point on a canvas in its status, with a label (`shape`, or `symbol` naming one of
   the board's symbols; `labelAt`: `right` · `left` · `above` · `below` — or `auto`, the first of below, right, above, left that none of its links leaves — puts the point at the middle of the part's box and
   its words on that side of it, so a link to the part meets the point — without it the point is at the box's left, the
-  words beside it); `label` — a text, fixed or from a field; `legend` — the statuses in use; `group` — several
+  words beside it); `label` — a text, fixed or from a field (`size` as a heading's; `ink`: `text` · `muted` · `accent`; `face`: `plain` · `pill` — a faint
+  rounded surface under the text; a status colours the text over `ink`); `legend` — the statuses in use; `group` — several
   parts drawn together on a small canvas of their own (`size`, `parts`, `place`, `shapes`, `links`), its parts reading
   the group's `of` unless they name their own and addressed `<group>/<part>`; `element` — a drawing of the board's
   `elements` (`element`, fixed `props`, and `bind` from a prop to a field — `"<field>"`, its status `"<field>.status"`
