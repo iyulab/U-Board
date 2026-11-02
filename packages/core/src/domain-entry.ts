@@ -12,7 +12,7 @@ export type { PartKind } from './board/kinds.js';
 export { toViewDocument, dataReadOf, elementDefinition, keyReadsOf, keysIn, PictureError } from './board/picture.js';
 export type { KeyRead, PictureOptions } from './board/picture.js';
 export { drawBoard, pictureOf, readKeys, readLists, readerOf } from './board/draw.js';
-export type { ValueReader } from './board/draw.js';
+export type { DrawOptions, ValueReader } from './board/draw.js';
 export type { Adapter, Attribution, ConnectionQuality, QualityReason, ResolvedBinding } from './adapter.js';
 export { applyJsonPatch, getByPointer, JsonPatchError } from './json-patch.js';
 export type { JsonPatchOperation } from './json-patch.js';
