@@ -7,6 +7,7 @@ import type { ResolvedCanvasView, ResolvedConnector } from '../resolve-document'
 import type { ResolvedWidget } from '../adapter';
 import type { Connector, ViewSkin } from '../view-document';
 import { KO_LABELS } from '../labels-ko';
+import { THEME_PALETTE } from '../theme-colors';
 
 /** What a node's overlay draws: its `NodeFrame`, expanded one level so the frame's own elements can be read. */
 function frameOf(content: React.ReactNode): ReactElement {
@@ -714,6 +715,37 @@ describe('toCanvasKit', () => {
     it('leaves a template element, which keeps nothing, to be left out like any part', () => {
       const { overlays } = toCanvasKit(scriptDoc('template'));
       expect(overlays.find(o => o.id === 'el')).not.toHaveProperty('cull');
+    });
+  });
+
+  describe('summary (what the viewer draws once too many parts are in view)', () => {
+    const markerNode = (id: string, props: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
+      id, x: 0, y: 0, anchored: false, widget: { type: 'element:u-board-marker', props, quality: {} }, ...extra,
+    });
+
+    it('gives a marker its point: the shape, and the colour of its status on this board', () => {
+      const { overlays } = toCanvasKit(doc({ appearance: 'dark', nodes: [markerNode('m1', { tone: 'alarm', shape: 'ring' })] }));
+      expect(overlays[0].summary).toEqual({ shape: 'ring', color: THEME_PALETTE.dark.alarm });
+    });
+
+    it('rings a marker whose state blinks or has an outline', () => {
+      const looks = { down: { blink: true }, fault: { outline: 'negative' }, quiet: {} };
+      const { overlays } = toCanvasKit(
+        doc({
+          nodes: ['down', 'fault', 'quiet'].map(state => markerNode(state, { tone: 'alarm' }, { state, states: { looks } })),
+        })
+      );
+      expect(overlays.map(o => o.summary?.halo ?? false)).toEqual([true, true, false]);
+    });
+
+    it('gives a part its state hides a point of no colour', () => {
+      const { overlays } = toCanvasKit(doc({ nodes: [markerNode('m1', { tone: 'ok' }, { state: 'gone', states: { looks: { gone: { hidden: true } } } })] }));
+      expect(overlays[0].summary).toEqual({ shape: 'dot', color: 'transparent' });
+    });
+
+    it('gives no summary to any other part — it stays page content', () => {
+      const { overlays } = toCanvasKit(doc({ nodes: [{ id: 'w', x: 0, y: 0, anchored: false, widget: { type: 'unknown-widget', props: {}, quality: {} } }] }));
+      expect(overlays[0]).not.toHaveProperty('summary');
     });
   });
 

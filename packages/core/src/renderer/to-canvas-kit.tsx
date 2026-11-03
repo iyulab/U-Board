@@ -24,6 +24,8 @@ import { decorationObjects } from './decoration-drawing.js';
 import { NodeFrame } from './node-frame.js';
 import { captionObjects, connectorObjects, placeOnCanvas } from './connector-drawing.js';
 import { connectorMark } from './connector-mark.js';
+import { boardTheme } from './element-template.js';
+import { markerSummary } from './marker-summary.js';
 import { elementListeners } from '../triggers.js';
 import { elementNameOf } from '../elements/element-type.js';
 import type { PartInput } from '../board-input.js';
@@ -54,6 +56,12 @@ export interface ToCanvasKitOptions {
   onElementEvent?: (node: string, name: string) => void;
   /** What a person typed into a node's part, or confirmed on it. */
   onInput?: (node: string, input: PartInput) => void;
+}
+
+/** A node's summary for the viewer's `summarizeOverlays` — a marker's; none for another part, which stays page content. */
+function summaryOf(node: ResolvedCanvasView['nodes'][number], theme: Readonly<Record<string, string>>): Pick<ViewerOverlayItem, 'summary'> {
+  const summary = markerSummary(node.widget, theme, node.state !== undefined ? node.states?.looks?.[node.state] : undefined);
+  return summary ? { summary } : {};
 }
 
 /** Whether a node's widget is a script element — a frame that keeps its own state. */
@@ -93,6 +101,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
   for (const object of captionObjects(nodes, doc.appearance)) scene.add(object);
 
   const at = now ?? Date.now();
+  const theme = boardTheme(doc.appearance ?? 'light', doc.accent, doc.skin);
   const listened = onElementEvent ? elementListeners(doc.triggers) : undefined;
   const overlays: ViewerOverlayItem[] = nodes.map(node => ({
     id: node.id,
@@ -102,6 +111,8 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     height: node.height,
     // A script element holds a frame with state of its own: it is not torn down when the view moves away from it.
     ...(holdsState(node.widget.type, doc.elements) && { cull: false }),
+    // What it is drawn as, once too many are in view to keep each as page content (`summarizeParts`): a marker's point.
+    ...summaryOf(node, theme),
     // A widget takes its node's box exactly — the box the author drew is the layout.
     content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} highlighted={node.highlighted} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} onInput={onInput && (input => onInput(node.id, input))} elementEvents={listened?.get(node.id)} name={node.caption} />,
   }));

@@ -48,6 +48,13 @@ export interface ViewerPageProps {
    * page, as a screen reader and the Tab key meet it; a larger one is met as far as the view has reached. A part that
    * holds a state of its own (a script element's frame) is never left out. */
   cullParts?: boolean | number;
+  /** Draw the markers of a canvas as points on the canvas instead of as parts of the page once too many are in the view —
+   * a page of thousands of parts pans and zooms slowly however light each one is. A number: turned on when more than that
+   * many markers are in the view (and turned off again below 0.8 × that, so a view at the edge does not flicker); `true`:
+   * always; `false`: never. Default `500`. While markers are points they take no click, hover or focus, and a screen
+   * reader is told so (`labels.partsSummarized`) — zoom in until fewer are in the view and they are parts again. A part
+   * that is not a marker is never drawn as a point. */
+  summarizeParts?: boolean | number;
   /** The current time in epoch milliseconds — what "N minutes ago", the time of the last update and
    * a state read against the clock (a session «now» or «next») are measured by. `Date.now` by default. The `observedAt` times adapters report come from the
    * source's side; when this machine's clock may be off from that one (an unattended screen whose
@@ -108,6 +115,7 @@ export function ViewerPage({
   ariaLabel,
   labels: labelsProp,
   cullParts,
+  summarizeParts,
   clock = Date.now,
   attribution = true,
   elementOrigins,
@@ -206,6 +214,8 @@ export function ViewerPage({
                 scene={drawn.preview.scene}
                 overlays={drawn.preview.overlays}
                 cullOverlays={cullsParts(drawn.preview.overlays.length, cullParts)}
+                summarizeOverlays={summarizesParts(summarizeParts)}
+                summaryLabel={count => labels.partsSummarized.replace('{count}', String(count))}
                 transform={view.transform}
                 onTransformChange={view.onUserTransform}
                 onViewportResize={view.onViewportResize}
@@ -243,6 +253,16 @@ export function cullsParts(count: number, cullParts: boolean | number | undefine
   if (cullParts === undefined) return count > CULL_PARTS_ABOVE;
   if (typeof cullParts === 'number') return count > cullParts;
   return cullParts;
+}
+
+/** A canvas turns its markers into points once more than this many are in the view (`summarizeParts`). */
+export const SUMMARIZE_PARTS_ABOVE = 500;
+
+/** What `summarizeParts` asks of the viewer: when to turn the markers into points. */
+export function summarizesParts(summarizeParts: boolean | number | undefined): false | { above: number } {
+  if (summarizeParts === false) return false;
+  if (summarizeParts === true) return { above: 0 };
+  return { above: typeof summarizeParts === 'number' ? summarizeParts : SUMMARIZE_PARTS_ABOVE };
 }
 
 /** A resolved document with every `live` binding read as `stale` — the values stay, their observation

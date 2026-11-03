@@ -575,6 +575,14 @@ build them again as the view nears; set `cullParts` to a number to change that s
 never to. A smaller board is whole in the page, as a screen reader and the Tab key meet it; a larger one is met as far as the
 view has reached. A script element, which holds a frame with state of its own, is never left out.
 
+Cutting what lies outside the view does not help when thousands of parts are *in* it — a zoomed-out view of a large site. There the
+parts cost the browser more than any one of them can be made to cost less, so once more than 500 markers are in the view, `BoardView`
+and `ViewerPage` draw them as points on the canvas instead — each marker's shape, in its status's colour, with a ring around one whose
+state blinks or has an outline — and take them out of the page. Set `summarizeParts` to a number to change that count, to `true` to
+always do it, or to `false` never to. While markers are points they take no click, hover or focus, and a screen reader is told so
+(`labels.partsSummarized`); zoom in until fewer are in the view (summarizing stops below 0.8 × the count) and they are parts again.
+Only markers are drawn as points — a widget, a chart, a label or an element of the board's own stays a part of the page.
+
 ## The `Adapter` contract
 
 ```ts

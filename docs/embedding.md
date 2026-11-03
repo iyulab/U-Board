@@ -111,7 +111,8 @@ Whoever may call `save` may change the board; put your own permission check in f
 
 A canvas with thousands of parts is met as far as the view has reached: past 500 parts the viewer leaves out those well outside the
 view and builds them again as the view nears (`cullParts` changes that). A smaller board is whole in the page, for a screen reader and
-the Tab key.
+the Tab key. A zoomed-out view with more than 500 markers in it draws them as points on the canvas, and zooming in brings them back as
+parts (`summarizeParts` changes that).
 
 ## What it does not do
 

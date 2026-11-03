@@ -20,6 +20,7 @@ export const KO_LABELS: UBoardLabels = {
   exampleData: '예시 데이터',
   resolving: '불러오는 중…',
   backgroundBlocked: '배경 그림을 표시하지 않음 — 허용된 출처가 아님',
+  partsSummarized: '부품 {count}개를 요약으로 보이는 중 — 확대하면 읽을 수 있음',
   lastUpdated: '갱신 {time}',
   notUpdating: '갱신이 멈춤 — 마지막 갱신 {time}',
   time: timeText('ko'),

@@ -605,6 +605,34 @@ describe('ViewerPage with a background outside the allowed origins', () => {
     });
   });
 
+  describe('drawing the markers as points when too many are in view (summarizeParts)', () => {
+    const marker = (i: number) => ({ id: `m${i}`, x: i, y: 0, anchored: false, widget: { type: 'element:u-board-marker', props: { tone: 'ok' } } });
+    const board = (count: number): CanvasView => ({ kind: 'canvas', background: {}, nodes: Array.from({ length: count }, (_, i) => marker(i)), connectors: [] });
+
+    it('is on by default, from 500 markers in the view', async () => {
+      render(<ViewerPage adapters={[]} width={400} height={300} document={board(3)} />);
+      await screen.findByTestId('viewer');
+      expect(lastViewerProps().summarizeOverlays).toEqual({ above: 500 });
+    });
+
+    it('takes the number of markers above which it starts, true for always, false for never', async () => {
+      const { rerender } = render(<ViewerPage adapters={[]} width={400} height={300} document={board(3)} summarizeParts={50} />);
+      await screen.findByTestId('viewer');
+      expect(lastViewerProps().summarizeOverlays).toEqual({ above: 50 });
+      rerender(<ViewerPage adapters={[]} width={400} height={300} document={board(3)} summarizeParts />);
+      await waitFor(() => expect(lastViewerProps().summarizeOverlays).toEqual({ above: 0 }));
+      rerender(<ViewerPage adapters={[]} width={400} height={300} document={board(3)} summarizeParts={false} />);
+      await waitFor(() => expect(lastViewerProps().summarizeOverlays).toBe(false));
+    });
+
+    it('hands each marker’s point to the viewer, and tells a screen reader in the language of the labels', async () => {
+      render(<ViewerPage adapters={[]} width={400} height={300} document={board(2)} labels={{ partsSummarized: '{count} 개' }} />);
+      await screen.findByTestId('viewer');
+      expect(lastViewerProps().overlays.every(o => o.summary?.shape === 'dot')).toBe(true);
+      expect(lastViewerProps().summaryLabel?.(7)).toBe('7 개');
+    });
+  });
+
   describe('input (onInput)', () => {
     const form: CanvasView = {
       kind: 'canvas',

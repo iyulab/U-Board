@@ -31,6 +31,9 @@ export interface UBoardLabels {
   /** Beside the view controls when the board's background picture is left out because its address is outside the
    * origins the host allowed (`setMediaOrigins`). */
   backgroundBlocked: string;
+  /** Said to a screen reader while a canvas shows its markers as points on the canvas (`summarizeParts`); `{count}` is replaced
+   * by how many. */
+  partsSummarized: string;
   /** A polling `ViewerPage`'s "last updated" line; `{time}` is replaced by the time of day. */
   lastUpdated: string;
   /** Shown instead, prominently, while a polling `ViewerPage` is not updating; `{time}` as above. */
@@ -64,6 +67,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   exampleData: 'Example data',
   resolving: 'Resolving…',
   backgroundBlocked: 'Background image not shown — its address is not an allowed origin',
+  partsSummarized: '{count} parts are shown as a summary — zoom in to read them',
   lastUpdated: 'Updated {time}',
   notUpdating: 'Not updating — last updated {time}',
   time: timeText('en'),
