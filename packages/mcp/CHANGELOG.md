@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `look` names a data read as an object keyed by names and not a list as a problem of that data, with the way to write the answer — a part made per item of it has no items. Needs a server that reports it (`notLists` of a board read); an older one reports nothing.
+
 ## [0.27.1] - 2026-11-03
 
 ### Fixed

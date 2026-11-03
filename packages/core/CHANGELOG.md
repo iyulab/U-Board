@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- `drawBoard` also returns `notLists`: the data a part is made per item of (`each`) whose answer was an object keyed by names (`{ "g1": {…} }`) and not a list. Such a data has no items, so the part was drawn zero times without a word. The rulebook now says an item list is a list.
 - A skin's `titles` draws the title above every part as a strip (`band`), as a tab that fits its words (`tab`), or plain (default): the skin's tokens for the widget library's new title tokens. Needs `@iyulab/u-widgets` with them; an older library draws the title plain.
 - A skin's `frame` takes four more words: `bevel` (raised), `well` (sunken), `block` (a thick rule and a hard offset shadow) and `double` (a double rule), the widget library's new frames. Needs `@iyulab/u-widgets` with them; an older library draws no frame for such a word and warns once.
 
