@@ -257,7 +257,7 @@ describe('readHttpRef', () => {
   it('says which part of the reference is missing when the time field is not there — the item or the response', () => {
     const list = { rows: [{ id: 'a', level: 3 }] };
     const inItem = readHttpRef(list, { path: '/r', item: { list: '/rows', where: { id: 'a' } }, valuePath: '/level', observedAtPath: '/updatedAt' }, READ_AT);
-    expect(inItem).toMatchObject({ ok: false, reason: 'address', message: 'the time field "/updatedAt" (observedAtPath) is not in the item' });
+    expect(inItem).toMatchObject({ ok: false, reason: 'address', message: 'the time field "/updatedAt" (observedAtPath) is not in the item — the "time" of a list read is a field of each item; when only the whole answer holds its time, write "answerTime": "<pointer>"' });
     const inResponse = readHttpRef({ level: 3 }, { path: '/r', valuePath: '/level', observedAtPath: '/updatedAt' }, READ_AT);
     expect(inResponse).toMatchObject({ ok: false, reason: 'address', message: 'the time field "/updatedAt" (observedAtPath) is not in the response' });
   });

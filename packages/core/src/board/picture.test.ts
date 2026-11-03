@@ -168,6 +168,25 @@ describe('the picture model of a v2 board', () => {
     expect(nodeOf(plain, 'card').widget.bindings!['data.glyph']).toBeUndefined();
   });
 
+  it("shows a state field's value in its status's words wherever a value is shown — a table, a stat list, a bar list — unless its own `names` say otherwise", () => {
+    const doc = view(board(
+      {
+        rows: { as: 'stat-list', of: 'pumps[P2]', show: ['state', 'flow'] },
+        grid: { as: 'table', of: 'pumps', show: ['id', 'state'] },
+      },
+      { kind: 'grid', items: ['rows', 'grid'] },
+    ));
+    // `run` and `trip` are the source's words; the board's statuses are `running` and `tripped`, with the words they show.
+    expect(drawn(nodeOf(doc, 'rows').widget).data).toEqual([expect.objectContaining({ label: 'state', value: 'Tripped' }), expect.objectContaining({ label: 'Flow', value: 0 })]);
+    const table = nodeOf(doc, 'grid').widget;
+    expect(table.props).toMatchObject({ mapping: { columns: [{ field: 'id' }, { field: 'state$name', toneField: 'state$tone' }] } });
+    expect((drawn(table).data as Array<Record<string, unknown>>).map(r => r['state$name'])).toEqual(['Running', 'Tripped']);
+    // A value the statuses do not name stays as the source wrote it; a field's own `names` win.
+    const own = board({ rows: { as: 'stat-list', of: 'pumps[P2]', show: ['state'] } }, { kind: 'grid', items: ['rows'] });
+    own.data!.pumps = { ...pumps, fields: { ...pumps.fields, state: { state: { run: 'running', trip: 'tripped', '*': 'off' }, names: { trip: 'Stopped', '*': '?' } } } } as never;
+    expect(drawn(nodeOf(view(own), 'rows').widget).data).toEqual([expect.objectContaining({ value: 'Stopped' })]);
+  });
+
   it('draws stats, a stat list, a gauge and a chart in a grid, each in the order and span the layout gives', () => {
     const doc = view(board(
       {
@@ -328,12 +347,12 @@ describe('the picture model of a v2 board', () => {
       { kind: 'grid', items: ['rows', 'table', 'bars', 'cells'] },
     ));
     const rows = drawn(nodeOf(doc, 'rows').widget);
-    expect(rows.mapping).toEqual({ primary: 'id', secondary: 'state', tone: 'state$tone' });
+    expect(rows.mapping).toEqual({ primary: 'id', secondary: 'state$name', tone: 'state$tone' });
     expect(rows.options).toEqual({ maxItems: 5 });
     expect((rows.data as Record<string, unknown>[]).map(r => r['state$tone'])).toEqual(['ok', 'alarm']);
     const table = drawn(nodeOf(doc, 'table').widget);
     expect(table.mapping).toEqual({ columns: [
-      { field: 'id', label: 'id' }, { field: 'state', label: 'state', toneField: 'state$tone' }, { field: 'flow', label: 'Flow', unit: 'm³/h', format: 'number:1', align: 'right' },
+      { field: 'id', label: 'id' }, { field: 'state$name', label: 'state', toneField: 'state$tone' }, { field: 'flow', label: 'Flow', unit: 'm³/h', format: 'number:1', align: 'right' },
     ] });
     expect((drawn(nodeOf(doc, 'bars').widget).data as Record<string, unknown>[]).map(r => [r.label, r.value])).toEqual([['P1', 41.5], ['P2', 0]]);
     // the field's unit and format reach a bar's row and a cell, as they reach a table's column
@@ -887,7 +906,7 @@ describe('the picture model of a v2 board', () => {
         expect.objectContaining({ id: 'q1', place: 'Alaska', mag: 4.5, state$tone: 'ok' }),
         expect.objectContaining({ id: 'q2', place: 'Chile', state$tone: 'alarm' }),
       ]);
-      expect((table.mapping as { columns: { field: string }[] }).columns.map(c => c.field)).toEqual(['place', 'mag', 'state']);
+      expect((table.mapping as { columns: { field: string }[] }).columns.map(c => c.field)).toEqual(['place', 'mag', 'state$name']);
       expect((drawn(nodeOf(doc, 'l').widget).mapping as Record<string, string>)).toMatchObject({ primary: 'place', time: 'mag' });
     });
   });

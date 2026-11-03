@@ -343,6 +343,10 @@ export function validateBoard(input: unknown): BoardIssue[] {
       }
       if (f.digits !== undefined && !(Number.isInteger(f.digits) && (f.digits as number) >= 0)) fail(`${fieldAt}/digits`, '"digits" is a whole number of decimal places');
       if (f.format !== undefined && typeof f.format !== 'string') fail(`${fieldAt}/format`, 'a format is a string, as the widgets write values: "number:1", "percent", "time" …');
+      // The widgets read these words, then a number code (`#,##0.0`); anything else is written as the source wrote it.
+      if (typeof f.format === 'string' && !/^(number|compact|currency|percent|date|datetime|time|bytes)(:.*)?$/.test(f.format) && !/[0#]/.test(f.format)) {
+        fail(`${fieldAt}/format`, `"${f.format}" is not a format the widgets read — number · compact · currency · percent · date · datetime · time · bytes (digits after a colon: "number:1"), or a number code such as "#,##0.0"`);
+      }
       if (typeof f.format === 'string' && /^percent\b/.test(f.format) && typeof f.unit === 'string' && /^\s*[%％]\s*$/.test(f.unit)) {
         issues.push({ at: `${fieldAt}/unit`, message: '"percent" writes the % sign itself — the value shows it twice; leave "unit" out', hint: true });
       }

@@ -205,6 +205,14 @@ describe('validateBoard', () => {
     expect(issues(canvas({ l: { as: 'list', of: 'equipment', primary: 'name', variant: 'tiles' }, h: { as: 'header', title: 'Plant', timeZone: 'Asia/Seoul' } }))).toEqual([]);
   });
 
+  it("refuses a format the widgets do not read — written as is, a value would show as the source wrote it", () => {
+    const withFormat = (format: string) => ({ data: { totals: { from: 'plant', path: '/plant/totals', fields: { load: { format } } } }, parts: { s: { as: 'stat', of: 'totals', show: 'load' } }, layout: { kind: 'grid', items: [['s', 12]] } });
+    expect(issues(withFormat('HH:mm:ss'))).toEqual([
+      '/data/totals/fields/load/format: "HH:mm:ss" is not a format the widgets read — number · compact · currency · percent · date · datetime · time · bytes (digits after a colon: "number:1"), or a number code such as "#,##0.0"',
+    ]);
+    for (const ok of ['number', 'number:2', 'compact', 'currency:KRW', 'percent', 'date', 'datetime', 'time', 'bytes', '#,##0.0', '0.00%']) expect(issues(withFormat(ok)), ok).toEqual([]);
+  });
+
   it('names the kinds there are for a kind that is not one, and asks what a kind shows', () => {
     const [unknown] = issues(canvas({ g: { as: 'timeline', of: 'equipment' } }));
     expect(unknown).toMatch(/^\/parts\/g\/as: unknown kind "timeline" — one of status-card, header, stat, /);

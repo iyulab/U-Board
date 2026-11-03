@@ -369,7 +369,7 @@ function readValueAndTime(
   if (ref.observedAtPath === undefined) return { ok: true, value: value.value, observedAt: readAt };
 
   const time = valueAtPath(timeScope, ref.observedAtPath);
-  if (!time.found) return { ok: false, reason: 'address', message: `the time field "${ref.observedAtPath}" (observedAtPath) is not in ${ref.item ? 'the item' : 'the response'}` };
+  if (!time.found) return { ok: false, reason: 'address', message: `the time field "${ref.observedAtPath}" (observedAtPath) is not in ${ref.item ? 'the item' : 'the response'}${ref.item ? ' — the "time" of a list read is a field of each item; when only the whole answer holds its time, write "answerTime": "<pointer>"' : ''}` };
   if (time.value === null || time.value === '') return { ok: true, value: value.value, observedAt: readAt };
   const observedAt = parseSourceTime(time.value, ref.timeZone);
   if (observedAt === null) {

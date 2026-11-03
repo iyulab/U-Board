@@ -10,6 +10,10 @@ All notable changes to this package are documented here. The format follows
 
 - The board check refuses an option value its widget does not take. A widget given a word outside its list (`"dial"` as a gauge's `form`, `"row"` as a stat list's `layout`) drew it its own default way without a word; now the part's path names the value and lists the words the option takes. A board that wrote such a value reads again with that part's option corrected.
 
+- A state field's value is shown in its status's words wherever a value is shown on its own — a table's column, a stat list's row, a bar list's label, a list's line, a text of fields — when the field gives no `names` of its own: the source's word becomes the label of the status it stands for (a value the statuses do not name stays as written). Before, a table showed `departed` where the board's status said «Departed», and the field had to repeat the words in `names`.
+- The board check refuses a field `format` the widgets do not read (`"HH:mm:ss"`): the value was written as the source wrote it, without a word. The words are `number` · `compact` · `currency` · `percent` · `date` · `datetime` · `time` · `bytes`, a number code such as `#,##0.0` also reads.
+- A time field missing from an item says what to write instead: the `time` of a list read is a field of each item; a time the whole answer holds is `answerTime`. The rulebook line of a stat list says what the board's one does (one pair for each field `show` names), and the skin line names `palette.ground` and `palette.backdrop`.
+
 ### Fixed
 
 - A `header` part now shows what its `show` names, as a status card does: the first field with a state is the state of the whole header (its tone and words), the others are the values set beside its title (`aside`). `show` on a header was accepted and then ignored.

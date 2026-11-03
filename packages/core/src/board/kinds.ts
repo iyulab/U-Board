@@ -56,6 +56,12 @@ const BOARD_KINDS: readonly PartKind[] = [
   { kind: 'element', shows: "a drawing no built-in makes, from the board's elements", of: 'may', options: [], own: ['element', 'props', 'bind'] },
 ];
 
+/** What a board's kind shows where the widget's own line says it otherwise: a board's stat list reads the fields `show` names of
+ *  what it reads — it is not handed the widget's array of rows. */
+const BOARD_SHOWS: Readonly<Record<string, string>> = {
+  'stat-list': 'Label · value pairs — one for each field `show` names, in its state’s colour',
+};
+
 function generate(): PartKind[] {
   const catalog = WIDGET_CATALOG;
   const entry = (widget: string) => {
@@ -69,7 +75,7 @@ function generate(): PartKind[] {
     return {
       kind,
       widget,
-      shows: entry(widget).description,
+      shows: BOARD_SHOWS[kind] ?? entry(widget).description,
       of,
       options: entry(widget).options.filter(option => !replaced.has(option)),
       ...(choices.length > 0 ? { choices: Object.fromEntries(choices.map(([option, words]) => [option, [...words]])) } : {}),

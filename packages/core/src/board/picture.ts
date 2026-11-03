@@ -331,7 +331,30 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
   /** Where a binding reads, for a part of this board. */
   const readFor = (query: string, item: string | undefined, field: string | undefined, at: string) => readOf(data, query, item, field, at);
 
-  const fieldOf = (query: string | undefined, name: string): Field => (query === undefined ? {} : data[query]?.fields?.[name] ?? {});
+  /**
+   * A state field's value in its status's words — what a value shown on its own reads as, where the field gives no `names` of
+   * its own: the source's word to the label of the status it stands for. A value no status words are given for is left as the
+   * source wrote it. A state of bands (numbers) has none: its value is the number.
+   */
+  const wordsOfState = (f: Field): ValueMapping | undefined => {
+    if (f.names !== undefined || f.state === undefined || Array.isArray(f.state)) return undefined;
+    const words: Record<string, string> = {};
+    if (f.state === 'raw') {
+      for (const [name, s] of Object.entries(statuses)) if (s.label !== undefined) words[name] = s.label;
+    } else {
+      for (const [raw, word] of Object.entries(f.state)) {
+        const label = typeof word === 'string' ? statuses[word]?.label : undefined;
+        if (raw !== '*' && label !== undefined) words[raw] = label;
+      }
+    }
+    return Object.keys(words).length > 0 ? words : undefined;
+  };
+  /** A field with the words it is shown in: its own `names`, else its status's. */
+  const withWords = (f: Field): Field => {
+    const names = wordsOfState(f);
+    return names === undefined ? f : { ...f, names };
+  };
+  const fieldOf = (query: string | undefined, name: string): Field => withWords(query === undefined ? {} : data[query]?.fields?.[name] ?? {});
 
   /**
    * Where a field lives in an item, as an item field reads it (`ItemField.from`): its key — `at` (`/sky` → `sky`), else
@@ -549,7 +572,8 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
      */
     const itemFieldsOf = (items: Record<string, Field>): Record<string, ItemField> => {
       const gained: Record<string, ItemField> = {};
-      for (const [name, f] of Object.entries(items)) {
+      for (const [name, field] of Object.entries(items)) {
+        const f = withWords(field);
         const from = f.at === undefined ? name : f.at.indexOf('/', 1) >= 0 ? f.at : f.at.slice(1);
         if (f.names !== undefined) gained[name] = { from, map: mapOf(f.names, w => w) };
         else if (from !== name) gained[name] = { from };
