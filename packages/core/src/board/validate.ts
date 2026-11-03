@@ -974,7 +974,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
         const owner = id.includes('/') ? id.slice(0, id.indexOf('/')) : undefined;
         fail(placeAt, owner && ids.get(owner)?.part.each !== undefined
           ? `"${id}" is an item of the "each" part "${owner}" — place it inside it: "${owner}": { "${id.slice(owner.length + 1)}": [x, y, w, h], … }`
-          : `no part "${id}" — parts: ${list(ids.keys())}`);
+          : `no part "${id}" — parts: ${list(ids.keys())}; add "/parts/${id}" in the same patch, or take it out of the layout`);
         continue;
       }
       if (placed.has(id)) fail(placeAt, twice(id));
@@ -1003,7 +1003,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
         if (typeof id === 'string' && ids.has(id)) {
           if (placed.has(id)) fail(idAt, twice(id));
           placed.add(id);
-        } else fail(idAt, `no part "${String(id)}" — parts: ${list(ids.keys())}`);
+        } else fail(idAt, `no part "${String(id)}" — parts: ${list(ids.keys())}; add "/parts/${String(id)}" in the same patch, or take it out of the layout`);
       };
       const span = (s: unknown, spanAt: string) => {
         if (!(Number.isInteger(s) && (s as number) >= 1 && (s as number) <= 12)) fail(spanAt, 'a span is a whole number of the 12 columns, 1 to 12');
@@ -1070,7 +1070,10 @@ export function validateBoard(input: unknown): BoardIssue[] {
   else fail('/layout/kind', 'layout.kind is "canvas" or "grid"');
 
   if (isObj(layout)) {
-    for (const [id, { at }] of ids) if (!placed.has(id)) fail(at, `"${id}" is not placed — put it in the layout, or remove it`);
+    const how = layout.kind === 'canvas'
+      ? (id: string) => ids.get(id)?.part.each !== undefined ? `add "/layout/place/${id}": { "at": ["<x field>", "<y field>"], "frame": [left, top, right, bottom] }` : `add "/layout/place/${id}": [x, y, width, height]`
+      : layout.kind === 'grid' ? (id: string) => `add "/layout/items/-": "${id}"` : undefined;
+    for (const [id, { at }] of ids) if (!placed.has(id)) fail(at, `"${id}" is not placed — put it in the layout${how ? ` (${how(id)} in the same patch as the part)` : ''}, or remove it`);
   }
 
   // ── triggers ──

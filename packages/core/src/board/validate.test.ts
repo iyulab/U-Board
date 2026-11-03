@@ -87,8 +87,8 @@ describe('validateBoard', () => {
     const board = canvas({ a: { as: 'stat', of: 'totals' } });
     (board.layout as Record<string, unknown>).place = { b: [0, 0] };
     expect(issues({ ...board, parts: { a: { as: 'stat', of: 'totals' } } })).toEqual([
-      '/layout/place/b: no part "b" — parts: a',
-      '/parts/a: "a" is not placed — put it in the layout, or remove it',
+      '/layout/place/b: no part "b" — parts: a; add "/parts/b" in the same patch, or take it out of the layout',
+      '/parts/a: "a" is not placed — put it in the layout (add "/layout/place/a": [x, y, width, height] in the same patch as the part), or remove it',
     ]);
   });
 
@@ -106,7 +106,7 @@ describe('validateBoard', () => {
     expect(issues(board)).toEqual([]);
     expect(issues({ ...board, layout: { ...board.layout, place: { 'm/PR-01': [0, 0] } } })).toEqual([
       '/layout/place/m/PR-01: "m/PR-01" is an item of the "each" part "m" — place it inside it: "m": { "PR-01": [x, y, w, h], … }',
-      '/parts/m: "m" is not placed — put it in the layout, or remove it',
+      '/parts/m: "m" is not placed — put it in the layout (add "/layout/place/m": { "at": ["<x field>", "<y field>"], "frame": [left, top, right, bottom] } in the same patch as the part), or remove it',
     ]);
   });
 
@@ -116,14 +116,14 @@ describe('validateBoard', () => {
     expect(issues(grid([['map', 8], { grid: ['chart', ['alarms', 12]], span: 4 }]))).toEqual([]);
     expect(issues(grid(['map', { id: 'right', grid: ['chart', 'alarms'] }]))).toEqual([
       '/layout/items/1: "id" names the part a cell holds — a cell holding a canvas or a grid has none: leave "id" out',
-      '/parts/chart: "chart" is not placed — put it in the layout, or remove it',
-      '/parts/alarms: "alarms" is not placed — put it in the layout, or remove it',
+      '/parts/chart: "chart" is not placed — put it in the layout (add "/layout/items/-": "chart" in the same patch as the part), or remove it',
+      '/parts/alarms: "alarms" is not placed — put it in the layout (add "/layout/items/-": "alarms" in the same patch as the part), or remove it',
     ]);
     expect(issues(grid([['map', 13], { grid: ['chart', 'alarms'], canvas: {} }]))).toEqual([
       '/layout/items/0/1: a span is a whole number of the 12 columns, 1 to 12',
       '/layout/items/1: a grid item holds one thing: a part ("id"), a "canvas" or a "grid"',
-      '/parts/chart: "chart" is not placed — put it in the layout, or remove it',
-      '/parts/alarms: "alarms" is not placed — put it in the layout, or remove it',
+      '/parts/chart: "chart" is not placed — put it in the layout (add "/layout/items/-": "chart" in the same patch as the part), or remove it',
+      '/parts/alarms: "alarms" is not placed — put it in the layout (add "/layout/items/-": "alarms" in the same patch as the part), or remove it',
     ]);
   });
 
