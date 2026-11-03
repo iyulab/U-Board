@@ -100,6 +100,27 @@ and your key stay yours; see [In your own app](../packages/mcp/README.md#in-your
 The loop closes where you hold the board: when `save` resolves, give `BoardView` the saved document, and people who only read it see
 what the assistant drew.
 
+## Checking a board from a host that is not a JavaScript program
+
+The check that tells a board's author what is wrong with it — every problem with the path it is at, and what to do about it — is a pure
+function of the board: it needs no browser, no network and no package. A host written in another language, a .NET service say, does not
+write it a second time; it runs the one the library ships on a JavaScript engine it embeds (Jint, ClearScript, QuickJS, V8):
+
+- `@iyulab/u-board/check.bundle.js` is the check as one script of ES2019, with nothing it imports left outside. Load it once into a
+  context of its own; it defines one global, `UBoardCheck`, with what `@iyulab/u-board/check` exports — `checkBoard`, `emptyBoard`,
+  `sourceAdvice`, `boardRulebook` and `RULEBOOK_EXAMPLE`. It uses nothing of a page or of Node (no `URL`, `console`, timers or
+  `process`) and nothing the language got after ES2019.
+- Hand it a board as the engine's own object: `UBoardCheck.checkBoard(JSON.parse(text))` answers `{ issues: [{ path, message }], advice }`,
+  the same as the package does. An address in a board is read by its shape — an `https://` host written as ASCII, with no user name, and
+  an IP address only in dotted decimal — so an exotic one (a bracketed IPv6 host, a non-ASCII name) is refused here as it is everywhere;
+  write such a host in the form a resolver gives it.
+- `@iyulab/u-board/check-vectors.json` is a dozen boards with the paths the check tells each one off at, and nothing about the wording of
+  a message. Run them on your engine to see the bundle answers there as it does here: compare the set of `path`s of `issues` with `paths`.
+  It is a smoke test of the engine, not a copy of the rules.
+
+The bundle is the library's own check, so a board that passes it passes the same check anywhere the library runs. It does not draw a
+board or read its data.
+
 ## Who may do what
 
 The library has no accounts. A board's reader sees what your adapters give, so serve a public page from adapters that answer for the

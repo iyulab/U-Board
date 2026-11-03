@@ -45,7 +45,9 @@ function entrySources(): string[] {
   return Object.values(manifest.exports).flatMap(target => {
     const path = typeof target === 'string' ? target : target.import;
     const match = path?.match(/^\.\/dist\/lib\/(.+)\.js$/);
-    return match ? [resolve(root, 'src', `${match[1]}.ts`)] : [];
+    // The check bundle is built from `check-entry`, an entry of its own: it has no source of its name.
+    const source = match ? resolve(root, 'src', `${match[1]}.ts`) : undefined;
+    return source !== undefined && existsSync(source) ? [source] : [];
   });
 }
 

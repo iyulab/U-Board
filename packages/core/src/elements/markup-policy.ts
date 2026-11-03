@@ -1,3 +1,5 @@
+import { httpsOrigin } from '../https-url.js';
+import { matchesOf } from '../portable.js';
 import { maskTemplateValues } from './template.js';
 
 /**
@@ -43,24 +45,13 @@ export function isAllowedUrl(url: string, resources: readonly string[]): boolean
   const value = url.trim();
   if (value.startsWith('#')) return true;
   if (INLINE_IMAGE.test(value)) return true;
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    return false;
-  }
-  return parsed.protocol === 'https:' && resources.includes(parsed.origin);
+  const origin = httpsOrigin(value);
+  return origin !== undefined && resources.includes(origin);
 }
 
 /** Whether `value` is an origin as `resources` lists one: the https scheme, a host and an optional port, nothing after. */
 export function isResourceOrigin(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && url.origin === value;
-  } catch {
-    return false;
-  }
+  return typeof value === 'string' && httpsOrigin(value) === value;
 }
 
 export interface MarkupIssue {
@@ -192,7 +183,7 @@ export function checkStyle(css: string, resources: readonly string[]): MarkupIss
   const text = maskTemplateValues(css, VALUE_MARK);
   if (/@import\b/i.test(text)) issues.push({ message: '@import is not allowed — list the stylesheet\'s origin in resources and use url() for fonts and images' });
   if (/javascript:/i.test(text)) issues.push({ message: '"javascript:" is not allowed' });
-  for (const match of text.matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*?))\s*\)/gi)) {
+  for (const match of matchesOf(text, /url\(\s*(?:"([^"]*)"|'([^']*)'|([^)]*?))\s*\)/gi)) {
     const url = match[1] ?? match[2] ?? match[3] ?? '';
     if (!url.includes(VALUE_MARK) && !isAllowedUrl(url, resources)) issues.push({ message: `url(${url}): ${URL_RULE}` });
   }

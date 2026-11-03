@@ -5,6 +5,7 @@
 // The board is taken as valid (`validateBoard` first): what is wrong in it is reported there, with where and how to
 // write it instead. What the picture model cannot draw yet is a `PictureError`.
 
+import { has, last, matchesOf, replaceEvery } from '../portable.js';
 import { placedAt, type Binding, type CellCanvas, type Connector, type ElementDefinition, type GridItem, type GridLayout, type ItemField, type Node, type Shape as ViewShape, type Trigger as ViewTrigger, type TriggerAction as ViewTriggerAction, type ValueMap, type ValueRange, type ViewDocument, type Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
@@ -45,7 +46,7 @@ function partTokens(kind: string, style: Record<string, unknown>): Record<string
   const numerals = isRecord(style.numerals) ? style.numerals : undefined;
   if (kind === 'header') {
     const scale = style.scale;
-    if (typeof scale === 'string' && Object.hasOwn(NUMERAL_SCALES, scale)) out['--u-widget-title-scale'] = String(NUMERAL_SCALES[scale as NumeralScale]);
+    if (typeof scale === 'string' && has(NUMERAL_SCALES, scale)) out['--u-widget-title-scale'] = String(NUMERAL_SCALES[scale as NumeralScale]);
     if (style.kickerInk === 'accent') out['--u-widget-kicker-color'] = 'var(--u-widget-primary)';
   } else if (kind === 'stat') Object.assign(out, numeralTokens(numerals, 'figure'));
   else if (kind === 'list' || kind === 'status-card') Object.assign(out, numeralTokens(numerals, 'value'));
@@ -601,7 +602,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     const stateIn = (names: readonly (string | undefined)[]) => names.find(n => n !== undefined && field(n).state !== undefined);
     const text = (t: string | undefined, key: string): string | undefined => {
       if (t === undefined) return undefined;
-      const holes = [...t.matchAll(/\{\{\s*([\w.-]+)\s*\}\}/g)];
+      const holes = matchesOf(t, /\{\{\s*([\w.-]+)\s*\}\}/g);
       if (holes.length === 0) return t;
       const only = /^\{\{\s*([\w.-]+)\s*\}\}$/.exec(t);
       if (only && only[1] !== 'key') { bindValue(key, only[1]!); return ''; }
@@ -855,7 +856,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
           props: {
             text: textProp ?? '', tone: '',
             // only what the part sets: a label that styles nothing is the props it always had
-            ...(scale !== undefined && scale !== 'regular' && Object.hasOwn(NUMERAL_SCALES, scale) ? { scale } : {}),
+            ...(scale !== undefined && scale !== 'regular' && has(NUMERAL_SCALES, scale) ? { scale } : {}),
             ...(ink === 'muted' || ink === 'accent' ? { ink } : {}),
             ...(face === 'pill' ? { face } : {}),
           },
@@ -1110,7 +1111,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
       [...groups.entries()].forEach(([value, members], gi) => {
         const x0 = ox + (gi % boxes.columns) * (bw + bgx);
         const y0 = oy + Math.floor(gi / boxes.columns) * (bh + bgy);
-        addBox({ box: [x0, y0, bw, bh], label: (boxes.label ?? '{{key}}').replaceAll('{{key}}', value) }, `${partId}-box-${gi}`);
+        addBox({ box: [x0, y0, bw, bh], label: replaceEvery(boxes.label ?? '{{key}}', '{{key}}', value) }, `${partId}-box-${gi}`);
         members.forEach((key, i) => put(key, x0 + padX + (i % flow.columns) * (cw + gx), y0 + padTop + Math.floor(i / flow.columns) * (ch + gy)));
       });
     }
@@ -1332,7 +1333,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         rows.push([]);
         used = 0;
       }
-      rows.at(-1)!.push({ unit, span });
+      last(rows)!.push({ unit, span });
       used += twelfths;
     }
     if (used < 12) throw new PictureError(at, `each row of a grid in a cell fills the cell — the last row takes ${used} of 12`);

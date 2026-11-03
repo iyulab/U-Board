@@ -12,6 +12,8 @@
  * `Placed` — and only how they are placed differs. Narrow on `kind` before reading a kind's fields.
  */
 
+import { httpsOrigin } from './https-url.js';
+
 export type ViewDocument = CanvasView | GridView;
 
 /** The kinds a view can be — `ViewDocument['kind']`. */
@@ -568,10 +570,5 @@ export interface Trigger {
 export function isTriggerLink(url: unknown): url is string {
   if (typeof url !== 'string') return false;
   if (url.startsWith('/')) return url[1] !== '/' && url[1] !== '\\';
-  if (!url.startsWith('https://')) return false;
-  try {
-    return new URL(url).protocol === 'https:';
-  } catch {
-    return false;
-  }
+  return url.startsWith('https://') && httpsOrigin(url) !== undefined;
 }

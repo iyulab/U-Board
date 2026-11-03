@@ -1,3 +1,4 @@
+import { has as owns } from './portable.js';
 /**
  * JSON Patch (RFC 6902) — a document changed by a list of operations, each naming where by a JSON Pointer
  * (RFC 6901). How a program changes one part of a board without sending it whole: `[{ "op": "replace",
@@ -38,7 +39,7 @@ export function applyJsonPatch<T>(document: T, patch: unknown): T {
 function applyOperation(root: unknown, operation: unknown): unknown {
   if (typeof operation !== 'object' || operation === null) throw new Error('expected an operation object');
   const { op, path, from } = operation as Record<string, unknown>;
-  const has = (key: string) => Object.hasOwn(operation, key);
+  const has = (key: string) => owns(operation, key);
   const value = (operation as Record<string, unknown>).value;
   // A writer that nests the operation in its own first key — { "op": { "op": "add", … } } — sees only "path is
   // missing" and tries again the same way; say what it sent.
@@ -102,7 +103,7 @@ function get(root: unknown, tokens: string[]): unknown {
       at = at[index];
     } else if (isObject(at)) {
       // "/" names a member whose key is empty — not the whole document, which is "".
-      if (!Object.hasOwn(at, token)) throw new Error(`nothing at ${where()} — ${where() === '/' ? 'the whole document is the path "", not "/"' : membersOf(at, tokens.slice(0, i), token)}`);
+      if (!owns(at, token)) throw new Error(`nothing at ${where()} — ${where() === '/' ? 'the whole document is the path "", not "/"' : membersOf(at, tokens.slice(0, i), token)}`);
       at = at[token];
     } else {
       throw new Error(`nothing at ${where()} — its parent is not an object or array`);
@@ -119,7 +120,7 @@ function membersOf(object: Record<string, unknown>, at: string[], missing: strin
   if (keys.length === 0) return `${here} is empty`;
   const MAX = 12;
   const listed = keys.slice(0, MAX).join(', ') + (keys.length > MAX ? `, … (${keys.length} in all)` : '');
-  const inside = keys.find(key => isObject(object[key]) && !Array.isArray(object[key]) && Object.hasOwn(object[key] as object, missing));
+  const inside = keys.find(key => isObject(object[key]) && !Array.isArray(object[key]) && owns(object[key] as object, missing));
   return `${here} has ${listed}${inside === undefined ? '' : `; "${missing}" is at ${pointerOf([...at, inside, missing])}`}`;
 }
 
@@ -184,7 +185,7 @@ function remove(root: unknown, tokens: string[]): { root: unknown; value: unknow
     if (index === undefined) throw new Error(`no item at ${pointerOf(tokens)}${listSize(parent)}`);
     return { root, value: parent.splice(index, 1)[0] };
   }
-  if (isObject(parent) && Object.hasOwn(parent, key)) {
+  if (isObject(parent) && owns(parent, key)) {
     const value = parent[key];
     delete parent[key];
     return { root, value };
@@ -217,7 +218,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
   if (Array.isArray(a)) return Array.isArray(b) && a.length === b.length && a.every((item, i) => deepEqual(item, b[i]));
   if (isObject(a) && isObject(b)) {
     const keys = Object.keys(a);
-    return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && deepEqual(a[key], b[key]));
+    return keys.length === Object.keys(b).length && keys.every(key => owns(b, key) && deepEqual(a[key], b[key]));
   }
   return false;
 }

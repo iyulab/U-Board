@@ -27,6 +27,7 @@
   "files": [
     "dist/lib",
     "styles.css",
+    "check-vectors.json",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"
@@ -60,12 +61,14 @@
       "types": "./dist/lib/examples-entry.d.ts",
       "import": "./dist/lib/examples-entry.js"
     },
+    "./check.bundle.js": "./dist/lib/check.bundle.js",
+    "./check-vectors.json": "./check-vectors.json",
     "./styles.css": "./styles.css"
   },
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "build:lib": "tsc -p tsconfig.build.json",
+    "build:lib": "tsc -p tsconfig.build.json && node scripts/build-check-bundle.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

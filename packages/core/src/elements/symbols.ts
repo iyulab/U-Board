@@ -1,3 +1,4 @@
+import { has, matchesOf } from '../portable.js';
 import type { SymbolDefinition } from '../view-document.js';
 
 /** A `viewBox`: four numbers — min-x, min-y, width, height. */
@@ -6,7 +7,7 @@ export const VIEW_BOX = /^\s*-?\d+(?:\.\d+)?(?:[\s,]+-?\d+(?:\.\d+)?){3}\s*$/;
 /** The ids a piece of markup points at with `href="#id"` (or `xlink:href`) — the symbols it places. */
 export function symbolReferences(markup: string): string[] {
   const names = new Set<string>();
-  for (const match of markup.matchAll(/(?:xlink:)?href\s*=\s*(?:"#([^"]*)"|'#([^']*)')/gi)) names.add(match[1] ?? match[2]);
+  for (const match of matchesOf(markup, /(?:xlink:)?href\s*=\s*(?:"#([^"]*)"|'#([^']*)')/gi)) names.add(match[1] ?? match[2]);
   return [...names];
 }
 
@@ -16,7 +17,7 @@ export function symbolsUsed(markup: string, symbols: Readonly<Record<string, Sym
   const used: string[] = [];
   const visit = (names: string[]) => {
     for (const name of names) {
-      if (used.includes(name) || !Object.hasOwn(symbols, name)) continue;
+      if (used.includes(name) || !has(symbols, name)) continue;
       used.push(name);
       visit(symbolReferences(symbols[name].markup));
     }

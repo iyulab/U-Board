@@ -10,6 +10,9 @@
 //   npm run smoke:library     # exit 1 on the first wrong result
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
 import { describeQuality, pictureOf, readerOf, validateBoard } from '@iyulab/u-board/domain';
 import { resolveDocument } from '@iyulab/u-board/picture';
 
@@ -46,4 +49,16 @@ assert.equal(
   'disconnected — no value has been reached (bound value not found at the source)'
 );
 
-console.log(`Library smoke on Node ${process.versions.node}: validate, draw, resolve and describe all behave.`);
+// The check as one script (`./check.bundle.js`), loaded into a context that has the language and nothing else — what a host with a
+// JavaScript engine of its own does — and held to the smoke vectors the package ships (`./check-vectors.json`).
+const pathOf = specifier => fileURLToPath(import.meta.resolve(specifier));
+const context = vm.createContext({});
+vm.runInContext(readFileSync(pathOf('@iyulab/u-board/check.bundle.js'), 'utf8'), context);
+const { vectors } = JSON.parse(readFileSync(pathOf('@iyulab/u-board/check-vectors.json'), 'utf8'));
+for (const vector of vectors) {
+  context.__board = JSON.stringify(vector.board);
+  const issues = JSON.parse(vm.runInContext('JSON.stringify(UBoardCheck.checkBoard(JSON.parse(__board)).issues)', context));
+  assert.deepEqual([...new Set(issues.map(i => i.path))].sort(), [...vector.paths].sort(), vector.name);
+}
+
+console.log(`Library smoke on Node ${process.versions.node}: validate, draw, resolve and describe all behave; the check bundle answers ${vectors.length} vectors in a bare context.`);

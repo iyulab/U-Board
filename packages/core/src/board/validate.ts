@@ -4,6 +4,7 @@
 // This covers the board's shape: its version, look, statuses, data reads and what their fields mean, its elements,
 // parts — their kinds, what they read, how they are reused — and every layout with its shapes and links.
 
+import { matchesOf } from '../portable.js';
 import { groupReach } from './group-reach.js';
 import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
 import { isTriggerLink, type ViewSkin } from '../view-document.js';
@@ -52,7 +53,7 @@ const QUOTED_URL = /url\(\s*(?:"[^"]*"|'[^']*')\s*\)/g;
  * reads no CSS variables, so there the fallback is the colour drawn (and the skin's, where it names the token) — left out here.
  */
 function deadFallback(css: string, at: string, named: ReadonlySet<string>): BoardIssue[] {
-  const found = [...css.replace(QUOTED_URL, '').matchAll(TOKEN_WITH_FALLBACK)].filter(m => m[1]!.toLowerCase() in ELEMENT_THEME.light && !named.has(m[1]!.toLowerCase()));
+  const found = matchesOf(css.replace(QUOTED_URL, ''), TOKEN_WITH_FALLBACK).filter(m => m[1]!.toLowerCase() in ELEMENT_THEME.light && !named.has(m[1]!.toLowerCase()));
   if (found.length === 0) return [];
   const token = found[0]![1]!.toLowerCase();
   const others = [...new Set(found.map(m => m[1]!.toLowerCase()))].filter(t => t !== token);
@@ -139,7 +140,7 @@ function checkVariables(raw: Obj, fail: (at: string, message: string) => void): 
     fail(at, names.length === 0 ? `"$${name}" reads a variable, but the board declares none — declare it under /variables` : `no variable "${name}" — declared: ${list(names)}`);
   const walk = (v: unknown, at: string, parent: string) => {
     if (typeof v === 'string') {
-      for (const m of v.matchAll(VARIABLE_NAMES)) {
+      for (const m of matchesOf(v, VARIABLE_NAMES)) {
         const name = (m[1] ?? m[2])!;
         if (!(name in declared)) unknown(at, name);
         else if (isFree(declared[name]!) && (parent === 'data-path' || m[2] !== undefined)) {
@@ -455,7 +456,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     // A hole is a prop — or, inside a list's section ({{#items}} … {{/items}}), a field of its item or {{.}}, the item
     // itself. Nothing is computed in it.
     let sections = 0;
-    for (const m of el.template.matchAll(HOLE)) {
+    for (const m of matchesOf(el.template, HOLE)) {
       const body = m[1]!.split('|')[0]!.trim();
       const hole = body.replace(/^[#/^]/, '').split('.')[0]!;
       const computed = !/^[#/^]?[\w$-]*(\.[\w$-]+)*$|^\.$/.test(body);
@@ -626,7 +627,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
       if (typeof text !== 'string') continue;
       // A hole left open would be shown as it is written.
       if (text.replace(HOLE, '').includes('{{')) fail(`${at}/${prop}`, `"${text}" opens a {{ it does not close — write {{field}}`);
-      for (const m of text.matchAll(HOLE)) {
+      for (const m of matchesOf(text, HOLE)) {
         const name = m[1]!.trim();
         if (!/^[\w.-]+$/.test(name)) fail(`${at}/${prop}`, `"{{${m[1]}}}" — write {{field}} with a field name, or {{key}} for the item's key`);
         else if (reads === null) fail(`${at}/${prop}`, `"{{${name}}}" reads a field, but this reads no data — give "of"`);
@@ -1147,7 +1148,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
         if (!isTriggerLink(a.url)) fail(`${actionAt}/url`, 'a link is an https:// address or a path here ("/…")');
         else {
           const authority = /^https:\/\/[^/?#]*/.exec(a.url)?.[0] ?? '';
-          for (const [, name] of a.url.matchAll(HOLE)) {
+          for (const [, name] of matchesOf(a.url, HOLE)) {
             const hole = name!.trim();
             if (['part', 'status', 'board'].includes(hole)) continue;
             if (!eachItem) fail(`${actionAt}/url`, `a link fills in {{part}}, {{status}} and {{board}} — not {{${name}}}; {{key}} and {{<field>}} are an item's, for an event of a part made per item (each)`);

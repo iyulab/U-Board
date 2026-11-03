@@ -2,6 +2,7 @@
 // The scale is a word, not a number of pixels, so a figure stays in proportion to the card it is in at every width (the widget
 // multiplies the size it would have drawn); the weight is a CSS font weight.
 
+import { has } from './portable.js';
 /** The scales a skin's `numerals.scale` names, and the multiple of the figure's own size each stands for. */
 export const NUMERAL_SCALES = { small: 0.75, regular: 1, large: 1.25, xlarge: 1.75, xxlarge: 2.5 } as const;
 export type NumeralScale = keyof typeof NUMERAL_SCALES;
@@ -20,7 +21,7 @@ export function isNumeralWeight(value: unknown): value is number {
 export function numeralTokens(numerals: { scale?: unknown; weight?: unknown } | undefined, family: 'figure' | 'value'): Record<string, string> {
   const out: Record<string, string> = {};
   const scale = numerals?.scale;
-  if (typeof scale === 'string' && Object.hasOwn(NUMERAL_SCALES, scale)) out[`--u-widget-${family}-scale`] = String(NUMERAL_SCALES[scale as NumeralScale]);
+  if (typeof scale === 'string' && has(NUMERAL_SCALES, scale)) out[`--u-widget-${family}-scale`] = String(NUMERAL_SCALES[scale as NumeralScale]);
   if (isNumeralWeight(numerals?.weight)) out[`--u-widget-${family}-weight`] = String(numerals!.weight);
   return out;
 }

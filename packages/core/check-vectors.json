@@ -1,0 +1,526 @@
+{
+  "about": "Smoke vectors for the board check. Each is a board and the paths of the problems `checkBoard` reports for it — the set of paths, in any order; the wording of a message is not part of the vector. A host that runs the check bundle (`check.bundle.js`, global `UBoardCheck`) on its own JavaScript engine reads each `board`, passes it to `UBoardCheck.checkBoard`, and compares the paths of `issues` with `paths`.",
+  "vectors": [
+    {
+      "name": "valid-grid",
+      "about": "A part that reads a read and is placed: nothing to say.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        }
+      },
+      "paths": []
+    },
+    {
+      "name": "unknown-data",
+      "about": "A part reads data the board does not define.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "nope",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        }
+      },
+      "paths": [
+        "/parts/a/of"
+      ]
+    },
+    {
+      "name": "unknown-part-kind",
+      "about": "A part of a kind the board language does not have.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "nope",
+            "of": "d"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        }
+      },
+      "paths": [
+        "/parts/a/as"
+      ]
+    },
+    {
+      "name": "part-not-placed",
+      "about": "A part the layout never places.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": []
+        }
+      },
+      "paths": [
+        "/parts/a"
+      ]
+    },
+    {
+      "name": "unknown-tone",
+      "about": "A status in a tone that is none.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "statuses": {
+          "s": {
+            "tone": "purple"
+          }
+        }
+      },
+      "paths": [
+        "/statuses/s/tone"
+      ]
+    },
+    {
+      "name": "unknown-emphasis",
+      "about": "A status with an emphasis that is none.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "statuses": {
+          "s": {
+            "tone": "ok",
+            "emphasis": "shake"
+          }
+        }
+      },
+      "paths": [
+        "/statuses/s/emphasis"
+      ]
+    },
+    {
+      "name": "unknown-layout-kind",
+      "about": "A layout of a kind that does not exist.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "wall",
+          "items": [
+            "a"
+          ]
+        }
+      },
+      "paths": [
+        "/layout/kind",
+        "/parts/a"
+      ]
+    },
+    {
+      "name": "link-to-unknown-part",
+      "about": "A link that ends at a part the board does not have.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "canvas",
+          "size": [
+            200,
+            100
+          ],
+          "place": {
+            "a": [
+              0,
+              0,
+              50,
+              50
+            ]
+          },
+          "links": {
+            "l": {
+              "from": "a",
+              "to": "ghost"
+            }
+          }
+        }
+      },
+      "paths": [
+        "/layout/links/l/to"
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "about": "A key the board language does not have, at the top.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "wat": 1
+      },
+      "paths": [
+        "/wat"
+      ]
+    },
+    {
+      "name": "unknown-frame",
+      "about": "A skin frame that is none of the frames.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "board": {
+          "skin": {
+            "frame": "wood"
+          }
+        }
+      },
+      "paths": [
+        "/board/skin/frame"
+      ]
+    },
+    {
+      "name": "element-loads-unlisted-address",
+      "about": "An element that loads an address it was not given.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "element",
+            "element": "e"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "elements": {
+          "e": {
+            "template": "<img src=\"https://evil.example/x.png\">"
+          }
+        }
+      },
+      "paths": [
+        "/elements/e/template"
+      ]
+    },
+    {
+      "name": "script-lists-origins",
+      "about": "A script element that lists the origins it loads from, each as an origin: nothing to say.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "element",
+            "element": "e"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "elements": {
+          "e": {
+            "script": "ub.onProps(() => {})",
+            "resources": [
+              "https://cdn.example",
+              "https://cdn.example:8443"
+            ]
+          }
+        }
+      },
+      "paths": []
+    },
+    {
+      "name": "script-origin-with-a-path",
+      "about": "A script element that lists an address, not an origin.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "element",
+            "element": "e"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "elements": {
+          "e": {
+            "script": "ub.onProps(() => {})",
+            "resources": [
+              "https://cdn.example/lib.js"
+            ]
+          }
+        }
+      },
+      "paths": [
+        "/elements/e/resources/0"
+      ]
+    },
+    {
+      "name": "trigger-opens-plain-http",
+      "about": "A trigger that opens an address that is not https.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "triggers": [
+          {
+            "on": {
+              "event": "click",
+              "part": "a"
+            },
+            "do": [
+              {
+                "action": "open-link",
+                "url": "http://plain.example"
+              }
+            ]
+          }
+        ]
+      },
+      "paths": [
+        "/triggers/0/do/0/url"
+      ]
+    }
+  ]
+}

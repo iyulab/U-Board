@@ -5,6 +5,7 @@
  * viewer another.
  */
 
+import { has } from './portable.js';
 import type { ResolvedBinding } from './adapter.js';
 
 /** One item of a list in the response, named by its fields rather than its place: the first element of the
@@ -226,7 +227,7 @@ export function valueAtPath(value: unknown, path: string): { found: true; value:
     if (Array.isArray(cursor)) {
       if (!/^(0|[1-9][0-9]*)$/.test(token) || Number(token) >= cursor.length) return { found: false };
       cursor = cursor[Number(token)];
-    } else if (cursor && typeof cursor === 'object' && Object.hasOwn(cursor, token)) {
+    } else if (cursor && typeof cursor === 'object' && has(cursor, token)) {
       cursor = (cursor as Record<string, unknown>)[token];
     } else {
       return { found: false };
@@ -268,7 +269,7 @@ function indexOfItem(list: unknown[], where: HttpRefItem['where']): number {
     list.forEach((element, i) => {
       if (element === null || typeof element !== 'object') return;
       const row = element as Record<string, unknown>;
-      if (!fields.every(field => Object.hasOwn(row, field) && row[field] !== undefined && row[field] !== null)) return;
+      if (!fields.every(field => has(row, field) && row[field] !== undefined && row[field] !== null)) return;
       const key = keyOf(field => row[field]);
       if (!first.has(key)) first.set(key, i);
     });
@@ -286,7 +287,7 @@ function matches(element: unknown, where: HttpRefItem['where']): boolean {
     element !== null &&
     typeof element === 'object' &&
     Object.entries(where).every(([field, expected]) => {
-      if (!Object.hasOwn(element, field)) return false;
+      if (!has(element, field)) return false;
       const actual = (element as Record<string, unknown>)[field];
       return actual !== undefined && actual !== null && String(actual) === String(expected);
     })

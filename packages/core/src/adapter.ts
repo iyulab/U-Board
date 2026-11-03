@@ -1,3 +1,4 @@
+import { has } from './portable.js';
 import type { Binding, Derive, ItemField, Widget, ValueMap } from './view-document.js';
 import { formatValue, parseTemplate } from './elements/template.js';
 import { getByPointer } from './json-patch.js';
@@ -269,7 +270,7 @@ export function applyValueMap(map: ValueMap, value: unknown, now: number = Date.
     return range ? range.value : 'otherwise' in map ? map.otherwise : value;
   }
   const key = value === null || ['string', 'number', 'boolean'].includes(typeof value) ? String(value) : undefined;
-  if (key !== undefined && isObject(map.values) && Object.hasOwn(map.values, key)) return map.values[key];
+  if (key !== undefined && isObject(map.values) && has(map.values, key)) return map.values[key];
   const n = numericValue(value);
   if (n !== undefined && Array.isArray(map.ranges)) {
     const range = map.ranges.find(r => inRange(r, n));
