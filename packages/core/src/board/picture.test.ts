@@ -168,6 +168,15 @@ describe('the picture model of a v2 board', () => {
     expect(nodeOf(plain, 'card').widget.bindings!['data.glyph']).toBeUndefined();
   });
 
+  it("colours a whole table row by a state field — `state` on the table, a field it need not show", () => {
+    const doc = view(board({ grid: { as: 'table', of: 'pumps', show: ['id', 'flow'], state: 'state' } }, { kind: 'grid', items: ['grid'] }));
+    const table = nodeOf(doc, 'grid').widget;
+    expect(table.props).toMatchObject({ mapping: { tone: 'state$tone', columns: [{ field: 'id' }, { field: 'flow' }] } });
+    expect((drawn(table).data as Array<Record<string, unknown>>).map(r => r['state$tone'])).toEqual(['ok', 'alarm']);
+    // A table with no `state` has no row tone.
+    expect(nodeOf(view(board({ grid: { as: 'table', of: 'pumps', show: ['id'] } }, { kind: 'grid', items: ['grid'] })), 'grid').widget.props).not.toHaveProperty('mapping.tone');
+  });
+
   it("shows a state field's value in its status's words wherever a value is shown — a table, a stat list, a bar list — unless its own `names` say otherwise", () => {
     const doc = view(board(
       {

@@ -702,8 +702,10 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         };
       }
       case 'table': {
-        // A column whose field has a state colours each of its cells by it.
-        bindList('data', Object.assign({}, ...fields.map(rowFields)));
+        // A column whose field has a state colours each of its cells by it; `state` names the field whose state colours the whole row
+        // (a field the table need not show).
+        const { state: rowState, ...tableOptions } = options as { state?: string };
+        bindList('data', Object.assign({}, ...fields.map(rowFields), rowState !== undefined && field(rowState).state !== undefined ? { [`${rowState}$tone`]: rowFields(rowState)[`${rowState}$tone`] } : {}));
         const columns = fields.map(name => {
           const f = field(name);
           const format = formatOf(f);
@@ -715,7 +717,11 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         });
         return {
           type: 'table',
-          props: { ...(title !== undefined ? { title: text(title, 'title') } : {}), data: [], ...(columns.length ? { mapping: { columns } } : {}), ...(Object.keys(options).length ? { options } : {}) },
+          props: {
+            ...(title !== undefined ? { title: text(title, 'title') } : {}), data: [],
+            ...(columns.length || rowState !== undefined ? { mapping: { ...(columns.length ? { columns } : {}), ...(rowState !== undefined ? { tone: `${rowState}$tone` } : {}) } } : {}),
+            ...(Object.keys(tableOptions).length ? { options: tableOptions } : {}),
+          },
           bindings,
         };
       }
