@@ -80,6 +80,7 @@ function sideFreeOfLinks(nodes: Node[], connectors: Connector[], auto: ReadonlyS
 import { CHART_MAPPING, partKind } from './kinds.js';
 import { expandVariables, variableValues, variablesOf } from './variables.js';
 import { TONES } from './types.js';
+import { groupReach } from './group-reach.js';
 import { NUMERAL_SCALES, numeralTokens, type NumeralScale } from '../numerals.js';
 import type { Board, CanvasLayout, DataPlace, FlowPlace, RelativeRule, ElementDefinition as BoardElementDefinition, Expanded, Field as WrittenField, GridItem as BoardGridItem, Link, Meter, Part, Place, Query as WrittenQuery, Shape, StateRule, Status, Tone, Trigger, ValueMapping } from './types.js';
 
@@ -485,7 +486,12 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
   // ── parts ──
 
   /** A part as drawn: its preset's settings under its own. */
-  const resolve = (part: Part): Part => (part.use !== undefined ? { ...presets[part.use], ...part } : part);
+  const resolve = (part: Part): Part => {
+    const resolved = part.use !== undefined ? { ...presets[part.use], ...part } : part;
+    // A group that gives no size is as large as the boxes of its parts reach.
+    const reach = resolved.as === 'group' && resolved.size === undefined ? groupReach(resolved as { place?: unknown }) : undefined;
+    return reach !== undefined ? { ...resolved, size: reach } : resolved;
+  };
 
   /** The widget a part is drawn with, reading `query[item]` — or the whole of `query` when there is no item. */
   /** For each part (by its pointer), the binding key its fields' states are read at — what a trigger reads a status by. */

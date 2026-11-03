@@ -12,6 +12,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- A `group` may leave its `size` out when every part is placed with a box (`[x, y, width, height]`): its canvas is as large as the boxes reach (the largest `x + width` and `y + height`, counting the boxes of each item of a part made per item). A part placed at a point has no reach, and the size is then asked for as before. The schema no longer lists `size` among a group's required keys. A group written without a size was refused outright, though a model writing one rarely knows which size the canvas should have.
 - The board check refuses an option value its widget does not take. A widget given a word outside its list (`"dial"` as a gauge's `form`, `"row"` as a stat list's `layout`) drew it its own default way without a word; now the part's path names the value and lists the words the option takes. A board that wrote such a value reads again with that part's option corrected.
 
 - A state field's value is shown in its status's words wherever a value is shown on its own — a table's column, a stat list's row, a bar list's label, a list's line, a text of fields — when the field gives no `names` of its own: the source's word becomes the label of the status it stands for (a value the statuses do not name stays as written). Before, a table showed `departed` where the board's status said «Departed», and the field had to repeat the words in `names`.

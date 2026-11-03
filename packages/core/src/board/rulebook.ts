@@ -78,7 +78,7 @@ label, glyph. Never write colours for statuses.`,
 \`{ "as": <kind>, "of": "<data>" | "<data>[<key>]", "show": "<field>" | ["<field>", …], "title"?, …options }\`. \`{{field}}\`
 in a title or a label reads a field of \`of\` (a status card's \`subtitle\` · \`note\` and a header's \`kicker\` · \`subtitle\` too; a header's \`clock\` is \`true\`; its \`time\` · \`date\` name a field of \`of\` that holds a date-time — the record's own, apart from \`clock\`, which is now — and \`since\` the same written as how long ago ("3 minutes ago"); an offset time shows on the clock of the read's \`zone\`); \`{{key}}\` is the item's key. \`presets\` hold shared settings a part takes
 with \`use\`; \`each: "<data>"\` makes one part per item (ids \`<part>/<key>\`) — it takes no \`of\`, and is placed once. A \`group\` is several parts on a small
-canvas of their own — its parts and links read the group's \`of\` unless they name their own.
+canvas of their own (\`size\` [w, h], or the reach of their boxes) — its parts and links read the group's \`of\` unless they name their own.
 
 The board's own options take fields of what the part reads: a \`status-card\`'s \`meter\` is \`"<field>"\` or
 \`{ "field", "min"?, "max"? (a number, or a field of the item), "form"?: "bar" | "ring" }\`, its \`state\` (and a \`stat-list\`'s) the field whose status colours

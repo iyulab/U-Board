@@ -168,7 +168,7 @@ export function boardSchema(): Schema {
         },
         not: { required: ['of', 'each'] },
         // A group draws its parts on a canvas of its own: «not a group, or a group with its size, parts and places».
-        anyOf: [{ not: { properties: { as: { const: 'group' } }, required: ['as'] } }, { required: ['size', 'parts', 'place'] }],
+        anyOf: [{ not: { properties: { as: { const: 'group' } }, required: ['as'] } }, { required: ['parts', 'place'] }],
       },
       place: {
         description: '[x, y] or [x, y, width, height] on the canvas.',

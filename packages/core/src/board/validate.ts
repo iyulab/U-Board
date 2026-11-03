@@ -4,6 +4,7 @@
 // This covers the board's shape: its version, look, statuses, data reads and what their fields mean, its elements,
 // parts — their kinds, what they read, how they are reused — and every layout with its shapes and links.
 
+import { groupReach } from './group-reach.js';
 import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
 import { isTriggerLink, type ViewSkin } from '../view-document.js';
 import { ELEMENT_THEME, accentTokens, skinTokens } from '../renderer/element-template.js';
@@ -726,7 +727,9 @@ export function validateBoard(input: unknown): BoardIssue[] {
 
   /** A group: its parts, each placed on its own small canvas, reading what the group reads unless they name their own. */
   const checkGroup = (group: Obj, at: string, reads: string | null | undefined) => {
-    if (!isSize(group.size)) fail(`${at}/size`, 'a group needs "size": [width, height]');
+    if (!isSize(group.size) && !(group.size === undefined && groupReach(group) !== undefined)) {
+      fail(`${at}/size`, group.size === undefined ? 'a group needs "size": [width, height] — or a box [x, y, width, height] for every part, which sizes the canvas as far as they reach' : 'a group needs "size": [width, height]');
+    }
     const inner = isObj(group.parts) ? group.parts : undefined;
     if (!inner) { fail(`${at}/parts`, 'a group needs "parts": the parts drawn together'); return; }
     const place = isObj(group.place) ? group.place : {};

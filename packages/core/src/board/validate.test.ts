@@ -144,6 +144,16 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it("lets a group leave its size out when every part is placed with a box — its canvas is as large as the boxes reach", () => {
+    const parts = { card: { as: 'status-card', show: ['state'] }, level: { as: 'gauge', show: 'level' } };
+    const grouped = (place: Record<string, unknown>) => ({ data, parts: { pumps: { as: 'group', each: 'equipment', parts, place } }, layout: { kind: 'grid', items: ['pumps'] } });
+    expect(issues(grouped({ card: [0, 0, 150, 140], level: [160, 0, 60, 140] }))).toEqual([]);
+    // A part placed at a point has no reach: the size is then written.
+    expect(issues(grouped({ card: [0, 0], level: [160, 0, 60, 140] }))).toEqual([
+      '/parts/pumps/size: a group needs "size": [width, height] — or a box [x, y, width, height] for every part, which sizes the canvas as far as they reach',
+    ]);
+  });
+
   it('checks a group: its parts placed on its canvas, read of the group', () => {
     const pump = {
       as: 'group', size: [220, 140],

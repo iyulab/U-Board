@@ -827,6 +827,18 @@ describe('the picture model of a v2 board', () => {
     ]);
   });
 
+  it("sizes a group's canvas by the boxes of its parts when it gives no size — drawn into the box it is placed in as if it had", () => {
+    const pump = { as: 'group', parts: { card: { as: 'status-card', show: ['state'] }, flow: { as: 'stat', show: 'flow' } }, place: { card: [0, 0, 100, 100], flow: [100, 0, 100, 100] } };
+    const withSize = { ...pump, size: [200, 100] };
+    const nodesOf = (g: unknown) => {
+      const doc = view({ ...board({ pumps: { use: 'pump', each: 'pumps' } }, { kind: 'canvas', size: [800, 400], place: { pumps: { P1: [10, 10, 400, 200] } } }), presets: { pump: g } } as Board);
+      if (doc.kind !== 'canvas') throw new Error('a canvas');
+      return doc.nodes.map(n => [n.id, n.x, n.y, n.width, n.height]);
+    };
+    expect(nodesOf(pump)).toEqual([['pumps/P1/card', 10, 10, 200, 200], ['pumps/P1/flow', 210, 10, 200, 200]]);
+    expect(nodesOf(pump)).toEqual(nodesOf(withSize));
+  });
+
   it('stacks the items of a grid in a cell, the row beside it spanning them all', () => {
     const parts = { map: { as: 'stat', of: 'totals', show: 'output' }, a: { as: 'stat', of: 'totals', show: 'temp' }, b: { as: 'stat', of: 'totals', show: 'oee' }, c: { as: 'stat', of: 'totals', show: 'output' } };
     const doc = view(board(parts, { kind: 'grid', items: [['map', 8], { grid: ['a', 'b'], span: 4 }, ['c', 12]] }));
