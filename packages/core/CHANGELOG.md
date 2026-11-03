@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A skin's `frame` takes four more words: `bevel` (raised), `well` (sunken), `block` (a thick rule and a hard offset shadow) and `double` (a double rule), the widget library's new frames. Needs `@iyulab/u-widgets` with them; an older library draws no frame for such a word and warns once.
+
 ### Changed
 
 - The board check refuses an option value its widget does not take. A widget given a word outside its list (`"dial"` as a gauge's `form`, `"row"` as a stat list's `layout`) drew it its own default way without a word; now the part's path names the value and lists the words the option takes. A board that wrote such a value reads again with that part's option corrected.

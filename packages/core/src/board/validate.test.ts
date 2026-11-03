@@ -452,7 +452,7 @@ describe('validateBoard', () => {
     };
     expect(issues(board)).toEqual([
       '/board/theme: a theme is "light" or "dark"',
-      '/board/skin/frame: "stamp" is not a frame — use card · flat · glow · plate · ticket · postage · tape',
+      '/board/skin/frame: "stamp" is not a frame — use card · flat · glow · plate · ticket · postage · tape · bevel · well · block · double',
       '/layout/shapes/bad/line: a line is two or more [x, y] points',
       '/layout/shapes/rel/path: a path uses absolute M · L · C · Q · Z and numbers only',
       '/layout/shapes/two: a shape is one of a "box", a "text" with "at", a "line" or a "path"',

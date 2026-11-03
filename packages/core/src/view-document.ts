@@ -39,7 +39,7 @@ export interface ViewSkin {
   display?: string;
   mono?: string;
   palette?: { paper?: string; ink?: string; muted?: string; rule?: string; ground?: string; backdrop?: string };
-  frame?: 'card' | 'flat' | 'glow' | 'plate' | 'ticket' | 'postage' | 'tape';
+  frame?: 'card' | 'flat' | 'glow' | 'plate' | 'ticket' | 'postage' | 'tape' | 'bevel' | 'well' | 'block' | 'double';
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';
   density?: 'regular' | 'compact';

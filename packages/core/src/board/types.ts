@@ -15,7 +15,7 @@ export { EMPHASES, TONES } from '../tones.js';
 export type { Emphasis, Tone };
 
 /** The panel a framed part is drawn in. */
-export const FRAMES = ['card', 'flat', 'glow', 'plate', 'ticket', 'postage', 'tape'] as const;
+export const FRAMES = ['card', 'flat', 'glow', 'plate', 'ticket', 'postage', 'tape', 'bevel', 'well', 'block', 'double'] as const;
 export { NUMERAL_SCALES, type NumeralScale } from '../numerals.js';
 export type Frame = (typeof FRAMES)[number];
 
