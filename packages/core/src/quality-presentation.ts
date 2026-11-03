@@ -9,9 +9,16 @@ import { getPrimaryDataField } from '@iyulab/u-widgets';
 // colorblind viewer — or anyone on a touch device without a hover tooltip — can still tell the
 // two abnormal states apart without relying on color perception at all.
 // The colors are `--ub-quality-stale` / `--ub-quality-disconnected` when a host defines them.
+// The border style and colour of each, once: the frame reads them as CSS, and a part drawn as a point (a marker summarized on
+// the canvas, which cannot read a CSS variable) reads them as an edge — so a far view says what a near one says.
+export const QUALITY_EDGE = {
+  stale: { dash: 'dashed', token: '--ub-quality-stale', fallback: '#f59e0b' },
+  disconnected: { dash: 'dotted', token: '--ub-quality-disconnected', fallback: '#6b7280' },
+} as const;
+
 export const QUALITY_FRAME_STYLE: Partial<Record<ConnectionQuality, CSSProperties>> = {
-  stale: { border: '2px dashed var(--ub-quality-stale, #f59e0b)', boxSizing: 'border-box' },
-  disconnected: { border: '2px dotted var(--ub-quality-disconnected, #6b7280)', boxSizing: 'border-box' },
+  stale: { border: `2px ${QUALITY_EDGE.stale.dash} var(${QUALITY_EDGE.stale.token}, ${QUALITY_EDGE.stale.fallback})`, boxSizing: 'border-box' },
+  disconnected: { border: `2px ${QUALITY_EDGE.disconnected.dash} var(${QUALITY_EDGE.disconnected.token}, ${QUALITY_EDGE.disconnected.fallback})`, boxSizing: 'border-box' },
 };
 
 /**

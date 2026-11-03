@@ -738,6 +738,18 @@ describe('toCanvasKit', () => {
       expect(overlays.map(o => o.summary?.halo ?? false)).toEqual([true, true, false]);
     });
 
+    it('edges a marker whose value is not current — apart from its status — as its frame does', () => {
+      const withQuality = (id: string, quality: Record<string, 'live' | 'stale' | 'disconnected'>) => ({
+        id, x: 0, y: 0, anchored: false, widget: { type: 'element:u-board-marker', props: { tone: 'ok' }, quality },
+      });
+      const { overlays } = toCanvasKit(
+        doc({ nodes: [withQuality('a', {}), withQuality('b', { tone: 'live' }), withQuality('c', { tone: 'stale' }), withQuality('d', { tone: 'live', note: 'disconnected' })] })
+      );
+      // No reading, or a current one: no edge. A stale one: dashed. Several readings: the least current one decides, as it does for the frame.
+      expect(overlays.map(o => o.summary?.edge?.dash)).toEqual([undefined, undefined, 'dashed', 'dotted']);
+      expect(overlays[2].summary?.color).toBe(THEME_PALETTE.light.ok);
+    });
+
     it('gives a part its state hides a point of no colour', () => {
       const { overlays } = toCanvasKit(doc({ nodes: [markerNode('m1', { tone: 'ok' }, { state: 'gone', states: { looks: { gone: { hidden: true } } } })] }));
       expect(overlays[0].summary).toEqual({ shape: 'dot', color: 'transparent' });
