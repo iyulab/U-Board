@@ -198,7 +198,7 @@ export interface Shape {
 
 /**
  * A link between two parts. With `of` and `show` it carries a field's status — its colour is the status's tone, its
- * emphasis the line's form (`hatch` dashed · `blink` a moving dash · `invert` thick); `width` and `dash` are fixed, and
+ * emphasis the line's form (`hatch` dashed · `blink` dotted · `invert` thick); `width` and `dash` are fixed, and
  * its arrowheads are fixed or read from a field (`arrow`).
  */
 export interface Link {

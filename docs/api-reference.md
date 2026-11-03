@@ -375,8 +375,8 @@ type GridItem =
   }
   ```
 
-  A link that shows a status takes its tone, and its emphasis as the line's form — `hatch` dashed, `blink` a moving
-  dash, `invert` thick. `orthogonal` runs with one turn between the two parts, as pipes and wiring are drawn;
+  A link that shows a status takes its tone, and its emphasis as the line's form — `hatch` dashed, `blink` dotted,
+  `invert` thick. `orthogonal` runs with one turn between the two parts, as pipes and wiring are drawn;
   `curved` bows to the left of the way it runs, as flows on a map are drawn. `weight` reads the width from a field —
   an amount, not a status: bands from the width below the first number up (`[2, 8, 3.5, 15, 5]`), or a map of raw
   values (`"*"` for the rest). `arrow` puts arrowheads at the `end` (toward `to`), the `start` (toward `from`) or

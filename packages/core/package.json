@@ -74,6 +74,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "gen:widget-catalog": "tsx scripts/gen-widget-catalog.ts",
+    "gen:check-vectors": "node scripts/gen-check-vectors.mjs",
     "prepack": "node scripts/prepack.mjs"
   },
   "engines": {
