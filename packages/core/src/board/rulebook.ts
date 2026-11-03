@@ -117,7 +117,7 @@ Use a built-in whenever one shows the thing — a title, a status and a few valu
 \`"as": "element", "element": "tank"\`, fixed \`props\` and \`bind\` (\`{ "level": "<field>", "tone": "<field>.tone" }\`). What markup cannot draw runs as a
 \`"script"\` in place of the template — in a sandboxed frame with no network, its props through \`ub.onProps\`, \`"resources"\` the
 https:// origins it loads from. The look is \`board.skin\`, once for the board; parts never set fonts or colours:
-\`{ "palette"?: { "paper", "ink", "muted", "rule", "ground"? (text on the board), "backdrop"? (the board's own colour) }, "font"? · "display"? · "mono"? (font stacks), "frame"?, "radius"? (px), "shadow"?: "none" | "soft" | "hard" }\`
+\`{ "palette"?: { "paper", "ink", "muted", "rule", "ground"? (text on the board), "backdrop"? (the board's own colour) }, "font"? · "display"? · "mono"? (font stacks), "frame"?, "radius"? (px), "shadow"?: "none" | "soft" | "hard", "titles"?: "plain" | "band" | "tab" }\`
 — a frame is ${code(FRAMES)}; paper is the ground the widgets sit on, ink their text, muted the quieter text, rule their lines; an element's CSS reads them as
 \`var(--u-widget-bg)\` · \`var(--u-widget-text)\` · \`var(--u-widget-text-secondary)\` · \`var(--u-widget-border)\`; a background picture follows the skin when it writes a colour as \`var(--u-widget-bg, #f6f4ef)\` (its own colour is the fallback).`,
 

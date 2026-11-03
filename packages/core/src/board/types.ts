@@ -314,6 +314,8 @@ export interface Skin {
   frame?: Frame;
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';
+  /** The title above a part: `plain` (default), a filled strip (`band`) or a filled tab that fits its words (`tab`). */
+  titles?: 'plain' | 'band' | 'tab';
   density?: 'regular' | 'compact';
   /** The headline figure of a `metric` or `stat-group`: how large (`small` · `regular` · `large` · `xlarge` · `xxlarge`) and how heavy (100–900). */
   numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number };

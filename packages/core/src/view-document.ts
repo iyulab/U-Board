@@ -42,6 +42,7 @@ export interface ViewSkin {
   frame?: 'card' | 'flat' | 'glow' | 'plate' | 'ticket' | 'postage' | 'tape' | 'bevel' | 'well' | 'block' | 'double';
   radius?: number;
   shadow?: 'none' | 'soft' | 'hard';
+  titles?: 'plain' | 'band' | 'tab';
   density?: 'regular' | 'compact';
   numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number };
 }

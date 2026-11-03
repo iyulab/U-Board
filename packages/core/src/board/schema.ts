@@ -354,6 +354,7 @@ export function boardSchema(): Schema {
           frame: { enum: [...FRAMES] },
           radius: { type: 'number', minimum: 0 },
           shadow: { enum: ['none', 'soft', 'hard'] },
+          titles: { enum: ['plain', 'band', 'tab'] },
           density: { enum: ['regular', 'compact'] },
           numerals: {
             type: 'object',

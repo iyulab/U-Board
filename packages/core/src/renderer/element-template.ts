@@ -94,6 +94,18 @@ export function skinTokens(skin: ViewSkin | undefined): Record<string, string> {
   if (sans !== undefined) out['--u-widget-font-family'] = sans;
   if (display !== undefined) out['--u-widget-font-display'] = display;
   if (mono !== undefined) out['--u-widget-font-mono'] = mono;
+  // The title above a widget: a strip in the ink on the paper (`band`), or the same strip that fits its words with its top corners
+  // rounded (`tab`) — the tokens the widget library reads; `plain` (or none) leaves the title as it is.
+  if (skin.titles === 'band' || skin.titles === 'tab') {
+    out['--u-widget-title-bg'] = 'var(--u-widget-text)';
+    out['--u-widget-title-ink'] = 'var(--u-widget-bg)';
+    out['--u-widget-title-pad'] = skin.titles === 'band' ? '3px 10px' : '2px 14px';
+    if (skin.titles === 'tab') {
+      out['--u-widget-title-radius'] = '6px 6px 0 0';
+      out['--u-widget-title-display'] = 'inline-block';
+      out['--u-widget-title-width'] = 'max-content';
+    }
+  }
   Object.assign(out, numeralTokens(skin.numerals, 'figure'));
   if (typeof skin.radius === 'number' && Number.isFinite(skin.radius) && skin.radius >= 0) out['--u-widget-radius'] = `${skin.radius}px`;
   if (skin.shadow === 'none' || skin.shadow === 'soft') out['--u-widget-shadow'] = SKIN_SHADOW[skin.shadow];

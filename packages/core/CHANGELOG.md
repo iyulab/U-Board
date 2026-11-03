@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A skin's `titles` draws the title above every part as a strip (`band`), as a tab that fits its words (`tab`), or plain (default): the skin's tokens for the widget library's new title tokens. Needs `@iyulab/u-widgets` with them; an older library draws the title plain.
 - A skin's `frame` takes four more words: `bevel` (raised), `well` (sunken), `block` (a thick rule and a hard offset shadow) and `double` (a double rule), the widget library's new frames. Needs `@iyulab/u-widgets` with them; an older library draws no frame for such a word and warns once.
 
 ### Changed

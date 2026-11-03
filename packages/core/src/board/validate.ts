@@ -75,7 +75,7 @@ const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i 
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
 /** What a board says at its top, in the order it is written. */
-const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'density', 'numerals'];
+const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'titles', 'density', 'numerals'];
 const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'];
 /** The sides of a marker's point its words may go on. */
 const MARKER_SIDES = ['right', 'left', 'above', 'below', 'auto'];
@@ -225,6 +225,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
   }
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
   if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
+  if (skin.titles !== undefined && !['plain', 'band', 'tab'].includes(skin.titles as string)) fail('/board/skin/titles', 'a title is drawn plain · band · tab');
   if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');
   if (skin.numerals !== undefined) checkNumerals(skin.numerals, '/board/skin/numerals', 'the big figures');
   // The skin's values are written into the widgets' CSS: a colour is a colour and a font a list of names — never a url or a rule.

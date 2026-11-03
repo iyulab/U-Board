@@ -331,6 +331,13 @@ describe('validateBoard', () => {
     expect(problems({ mode: { state: { run: '' } } })).toEqual(['/data/d/fields/mode/state/run: a state maps to a status name']);
   });
 
+  it("checks the titles of a skin: plain, band or tab", () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const at = (titles: unknown) => validateBoard({ ...base, board: { skin: { titles } } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
+    for (const ok of ['plain', 'band', 'tab']) expect(at(ok), ok).toEqual([]);
+    expect(at('ribbon')).toEqual(['/board/skin/titles: a title is drawn plain · band · tab']);
+  });
+
   it('checks the numerals of a skin: a scale word and a weight from 100 to 900, nothing else', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const at = (numerals: unknown) => validateBoard({ ...base, board: { skin: { numerals } } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
@@ -434,8 +441,8 @@ describe('validateBoard', () => {
     expect(at(['flat'])).toHaveLength(1);
     expect(at(null)).toHaveLength(1);
     expect(at({ frame: 'ticket', background: '#123', colors: {} })).toEqual([
-      '/board/skin/background: a skin has no "background" — it has font, display, mono, palette, frame, radius, shadow, density, numerals',
-      '/board/skin/colors: a skin has no "colors" — it has font, display, mono, palette, frame, radius, shadow, density, numerals',
+      '/board/skin/background: a skin has no "background" — it has font, display, mono, palette, frame, radius, shadow, titles, density, numerals',
+      '/board/skin/colors: a skin has no "colors" — it has font, display, mono, palette, frame, radius, shadow, titles, density, numerals',
     ]);
     expect(at({ palette: 'dark' })).toEqual(['/board/skin/palette: a palette is an object — { "paper", "ink", "muted", "rule" }, each a colour']);
     expect(at({ palette: { bg: '#111', text: '#eee', paper: '#111' } })).toEqual([

@@ -37,6 +37,10 @@ describe('the tokens a skin sets', () => {
     });
     expect(skinTokens({ shadow: 'hard', palette: { rule: '#222' } })['--u-widget-shadow']).toBe('3px 3px 0 #222');
     expect(skinTokens({ shadow: 'hard' })['--u-widget-shadow']).toBe('3px 3px 0 currentColor');
+    // The title above a widget: plain draws none of the tokens; a band is a strip in the ink and the paper's colour, a tab a strip that fits its words.
+    expect(Object.keys(skinTokens({ titles: 'plain' })).filter(k => k.includes('title'))).toEqual([]);
+    expect(skinTokens({ titles: 'band' })).toMatchObject({ '--u-widget-title-bg': 'var(--u-widget-text)', '--u-widget-title-ink': 'var(--u-widget-bg)', '--u-widget-title-pad': '3px 10px' });
+    expect(skinTokens({ titles: 'tab' })).toMatchObject({ '--u-widget-title-display': 'inline-block', '--u-widget-title-width': 'max-content', '--u-widget-title-radius': '6px 6px 0 0' });
   });
 
   it('leaves out what is not a colour, a font or a radius — a document need not have been validated', () => {
