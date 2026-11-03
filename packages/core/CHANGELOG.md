@@ -30,6 +30,8 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- A marker's `pin` shape no longer has its tip cut off by its box: the pin was drawn from a square turned 45°, which is wider than the box it stands in, so it looked like a dot with a flat foot. It is scaled to fit, its tip at the foot of the box.
+
 - A `header` part now shows what its `show` names, as a status card does: the first field with a state is the state of the whole header (its tone and words), the others are the values set beside its title (`aside`). `show` on a header was accepted and then ignored.
 
 ## [0.41.0] - 2026-11-03

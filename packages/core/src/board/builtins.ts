@@ -22,7 +22,7 @@ export const MARKER: ElementDefinition = {
   style:
     `.mk{--c:var(--u-widget-tone-idle);display:flex;align-items:center;gap:6px;height:100%;font:12px var(--u-widget-font-family);color:var(--u-widget-text)}${TONE_RULES}` +
     '.mk i{flex:none;width:14px;height:14px;border-radius:50%;background:var(--c)}.mk.ring i{background:none;border:3px solid var(--c)}' +
-    '.mk.pin i{border-radius:50% 50% 50% 0;transform:rotate(-45deg)}.txt{display:grid;line-height:1.2;min-width:0}' +
+    '.mk.pin i{border-radius:50% 50% 50% 0;transform:rotate(-45deg) scale(.7071)}.txt{display:grid;line-height:1.2;min-width:0}' +
     '.txt b,.st,small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.st{color:var(--c);font-weight:600}.st:empty,small:empty{display:none}' +
     'small{color:var(--u-widget-text-secondary)}' +
     // With `labelAt` the point is the middle of the box and the words go on a side of it — so a link to the box meets the point.

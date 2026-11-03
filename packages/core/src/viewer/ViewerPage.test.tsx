@@ -628,7 +628,7 @@ describe('ViewerPage with a background outside the allowed origins', () => {
     it('hands each marker’s point to the viewer, and tells a screen reader in the language of the labels', async () => {
       render(<ViewerPage adapters={[]} width={400} height={300} document={board(2)} labels={{ partsSummarized: '{count} 개' }} />);
       await screen.findByTestId('viewer');
-      expect(lastViewerProps().overlays.every(o => o.summary?.shape === 'dot')).toBe(true);
+      expect(lastViewerProps().overlays.every((o: { summary?: { shape: string } }) => o.summary?.shape === 'dot')).toBe(true);
       expect(lastViewerProps().summaryLabel?.(7)).toBe('7 개');
     });
   });
