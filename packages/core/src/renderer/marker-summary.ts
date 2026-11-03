@@ -34,7 +34,7 @@ export function markerSummary(
   const props = widget.props ?? {};
   const shape = SHAPES.find(s => s === props.shape) ?? 'dot';
   if (look?.hidden) return { shape, color: 'transparent' };
-  const halo = look?.blink === true || look?.outline !== undefined;
+  const halo = look?.blink === true || look?.outline !== undefined || props.emphasis === 'blink';
   const edge = quality === 'stale' || quality === 'disconnected' ? QUALITY_EDGE[quality] : undefined;
   return {
     shape,

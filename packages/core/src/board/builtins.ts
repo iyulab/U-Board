@@ -10,15 +10,21 @@ const TONE_RULES = TONES.map(t => `[data-tone="${t}"]{--c:var(--u-widget-tone-${
 
 const text = { type: 'string' } as const;
 
+/** A status's words drawn as a stamp — a heavy frame, a little turned — when its emphasis is `stamp`. */
+const STAMP = '.sm[data-emphasis="stamp"] .st:not(:empty),.mk[data-emphasis="stamp"] .st:not(:empty){display:inline-block;width:fit-content;padding:1px 6px;border:2px solid var(--c);border-radius:3px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;transform:rotate(-6deg)}';
+
+/** The blink of an emphasis — the drawing at `TARGET` gone and back, or ringed when the reader asks for less motion. */
+const BLINK = '@keyframes ub-blink{to{visibility:hidden}}TARGET{animation:ub-blink 1.2s steps(2,start) infinite}@media (prefers-reduced-motion:reduce){TARGET{animation:none;outline:2px solid var(--c);outline-offset:2px}}';
+
 /** The size of a marker's point — what a link meets when the marker's words are on a side of it (`labelAt`). */
 export const MARKER_JOINT = 14;
 
 /** A point on a canvas, in its status, with its name, its status's words and a note. */
 export const MARKER: ElementDefinition = {
   render: 'template',
-  props: { type: 'object', properties: { name: text, tone: text, status: text, note: text, shape: { enum: ['dot', 'pin', 'ring'] }, labelAt: { enum: ['', 'right', 'left', 'above', 'below'] } } },
+  props: { type: 'object', properties: { name: text, tone: text, status: text, emphasis: text, note: text, shape: { enum: ['dot', 'pin', 'ring'] }, labelAt: { enum: ['', 'right', 'left', 'above', 'below'] } } },
   template:
-    '<div class="mk {{shape}} at-{{labelAt}}" data-tone="{{tone}}"><i></i><span class="txt"><b>{{name}}</b><span class="st">{{status}}</span><small>{{note}}</small></span></div>',
+    '<div class="mk {{shape}} at-{{labelAt}}" data-tone="{{tone}}" data-emphasis="{{emphasis}}"><i></i><span class="txt"><b>{{name}}</b><span class="st">{{status}}</span><small>{{note}}</small></span></div>',
   style:
     `.mk{--c:var(--u-widget-tone-idle);display:flex;align-items:center;gap:6px;height:100%;font:12px var(--u-widget-font-family);color:var(--u-widget-text)}${TONE_RULES}` +
     '.mk i{flex:none;width:14px;height:14px;border-radius:50%;background:var(--c)}.mk.ring i{background:none;border:3px solid var(--c)}' +
@@ -29,21 +35,29 @@ export const MARKER: ElementDefinition = {
     '.mk[class*=" at-"]:not(.at-){position:relative;display:block}.mk[class*=" at-"]:not(.at-) i{position:absolute;left:50%;top:50%;box-sizing:border-box;margin:-7px 0 0 -7px}' +
     '.mk[class*=" at-"]:not(.at-) .txt{position:absolute}.at-right .txt{left:calc(50% + 14px);top:50%;transform:translateY(-50%)}' +
     '.at-left .txt{right:calc(50% + 14px);top:50%;transform:translateY(-50%);text-align:right}' +
-    '.at-below .txt{left:0;right:0;top:calc(50% + 14px);text-align:center}.at-above .txt{left:0;right:0;bottom:calc(50% + 14px);text-align:center}',
+    '.at-below .txt{left:0;right:0;top:calc(50% + 14px);text-align:center}.at-above .txt{left:0;right:0;bottom:calc(50% + 14px);text-align:center}' +
+    // A status's emphasis, the second channel besides colour, as the widgets draw it: the point inverted (a dot hollow, a ring filled), hatched,
+    // or blinking — outlined instead for a reader who asks for less motion — and the status's words as a stamp.
+    '.mk[data-emphasis="invert"] i{background:var(--u-widget-bg,#fff);box-shadow:inset 0 0 0 3px var(--c)}.mk.ring[data-emphasis="invert"] i{background:var(--c);box-shadow:none}' +
+    '.mk[data-emphasis="hatch"] i{background:repeating-linear-gradient(-45deg,var(--c) 0 2px,transparent 2px 4px);box-shadow:inset 0 0 0 2px var(--c)}' +
+    STAMP + BLINK.replace(/TARGET/g, '.mk[data-emphasis="blink"] i'),
 };
 
 /** A marker drawn as one of the board's symbols — in its status's colour — with its name, status and note under it. */
 export const MARKER_SYMBOL: ElementDefinition = {
   render: 'template',
-  props: { type: 'object', properties: { symbol: text, name: text, tone: text, status: text, note: text } },
+  props: { type: 'object', properties: { symbol: text, name: text, tone: text, status: text, emphasis: text, note: text } },
   template:
-    '<figure class="sm" data-tone="{{tone}}"><svg class="sym" aria-hidden="true"><use href="#{{symbol}}" width="100%" height="100%"/></svg>' +
+    '<figure class="sm" data-tone="{{tone}}" data-emphasis="{{emphasis}}"><svg class="sym" aria-hidden="true"><use href="#{{symbol}}" width="100%" height="100%"/></svg>' +
     '<figcaption><b>{{name}}</b><span class="st">{{status}}</span><small>{{note}}</small></figcaption></figure>',
   style:
     `.sm{--c:var(--u-widget-tone-idle);margin:0;display:grid;grid-template-rows:minmax(0,1fr) auto;height:100%;font:12px var(--u-widget-font-family);color:var(--u-widget-text)}${TONE_RULES}` +
     '.sym{width:100%;height:100%;fill:var(--c)}figcaption{display:flex;gap:6px;align-items:baseline;min-width:0}' +
     'figcaption b,.st,small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.st{color:var(--c);font-weight:600}.st:empty,small:empty{display:none}' +
-    'small{color:var(--u-widget-text-secondary)}',
+    'small{color:var(--u-widget-text-secondary)}' +
+    '.sm[data-emphasis="invert"] .sym{background:var(--c);fill:var(--u-widget-bg,#fff);border-radius:4px;padding:2px;box-sizing:border-box}' +
+    '.sm[data-emphasis="hatch"] .sym{background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--c) 22%,transparent) 0 6px,transparent 6px 13px)}' +
+    STAMP + BLINK.replace(/TARGET/g, '.sm[data-emphasis="blink"] .sym'),
 };
 
 /** A text on a canvas, in its status's colour when it has one. */

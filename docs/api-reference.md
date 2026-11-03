@@ -163,7 +163,9 @@ A board names its own statuses — the words a field's `state` gives (`running`,
 tones (`TONES`: `ok` `info` `watch` `warn` `alarm` `off` `idle` `accent`, and the places in a sequence `past` `now`
 `next`), with its words, optionally a mark and an emphasis (`EMPHASES`) that adds a second channel besides colour.
 Anything showing a field with a state takes the status's colour, words and mark; a board never writes colours for
-statuses. A part `as: "legend"` shows the statuses the board uses.
+statuses. A status's emphasis reaches the status card, the stat, the status grid's cells, a link's line, a shape's fill and
+a marker — which draws it on its point (`invert` a dot hollow and a ring filled, `hatch` hatched, `blink` blinking, or ringed
+for a reader who asks for less motion) and `stamp` on its status words. A part `as: "legend"` shows the statuses the board uses.
 
 ### `data` — where values come from, and what they mean
 

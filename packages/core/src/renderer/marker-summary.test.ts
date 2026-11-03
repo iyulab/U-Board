@@ -35,6 +35,11 @@ describe('markerSummary', () => {
     expect(markerSummary(marker({ tone: 'alarm' }), light, {})).not.toHaveProperty('halo');
   });
 
+  it('rings a status whose emphasis is blink — the marker blinks, so its point rings — and no other emphasis', () => {
+    expect(markerSummary(marker({ tone: 'alarm', emphasis: 'blink' }), light)).toMatchObject({ halo: true });
+    for (const emphasis of ['invert', 'hatch', 'stamp', '']) expect(markerSummary(marker({ tone: 'alarm', emphasis }), light), emphasis).not.toHaveProperty('halo');
+  });
+
   it('is a point of no colour for a part its state hides, so it leaves the page without being seen', () => {
     expect(markerSummary(marker({ tone: 'alarm' }), light, { hidden: true })).toEqual({ shape: 'dot', color: 'transparent' });
   });

@@ -645,7 +645,9 @@ describe('the picture model of a v2 board', () => {
     ));
     if (doc.kind !== 'canvas') throw new Error('a canvas');
     expect(Object.keys(doc.elements ?? {}).sort()).toEqual(['u-board-legend', 'u-board-label', 'u-board-marker', 'u-board-shape-edge', 'u-board-shape-pipe'].sort());
-    expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', note: '', shape: 'ring', labelAt: '' });
+    // A marker draws its status's emphasis as the status card and the grid cell do: the tripped pump's status blinks, the running one's says nothing.
+    expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', emphasis: 'blink', note: '', shape: 'ring', labelAt: '' });
+    expect(drawn(nodeOf(doc, 'm/P1').widget)).toMatchObject({ tone: 'ok', status: 'Running', emphasis: '' });
     expect(drawn(nodeOf(doc, 'l').widget)).toEqual({ text: 41.5, tone: '' });
     expect(drawn(nodeOf(doc, 'key').widget)).toEqual({ items: [{ tone: 'ok', label: 'Running', glyph: '' }, { tone: 'alarm', label: 'Tripped', glyph: '' }] });
     // A line is a node boxed around its points, under the parts, drawn in the box's own coordinates.
@@ -942,7 +944,26 @@ describe('the picture model of a v2 board', () => {
     b.symbols = { 'pump-a': { viewBox: '0 0 24 24', path: 'M2 2h20v20H2z' }, 'pump-b': { path: 'M2 2h10v10H2z' } };
     const doc = view(b);
     expect(doc.kind === 'canvas' && doc.symbols).toEqual({ 'pump-a': { viewBox: '0 0 24 24', markup: '<path d="M2 2h20v20H2z"/>' }, 'pump-b': { markup: '<path d="M2 2h10v10H2z"/>' } });
-    expect(drawn(nodeOf(doc, 'm/P1').widget)).toEqual({ name: 'P1', tone: 'ok', status: 'Running', note: '1,450 rpm', symbol: 'pump-a' });
+    expect(drawn(nodeOf(doc, 'm/P1').widget)).toEqual({ name: 'P1', tone: 'ok', status: 'Running', emphasis: '', note: '1,450 rpm', symbol: 'pump-a' });
+  });
+
+  it("draws a marker's emphasis in the four ways the widgets do — blink, invert, hatch, stamp — and blinking stops for a reader who asks", () => {
+    for (const element of ['u-board-marker', 'u-board-marker-symbol']) {
+      const b = board(
+        { m: { as: 'marker', each: 'pumps', show: 'state', ...(element === 'u-board-marker-symbol' && { symbol: 'pump' }) } },
+        { kind: 'canvas', size: [400, 200], place: { m: { P1: [0, 0, 120, 60] } } },
+      );
+      b.symbols = { pump: { path: 'M2 2h20v20H2z' } };
+      const doc = view(b);
+      const definition = (doc.kind === 'canvas' && doc.elements?.[element]) as { template: string; style: string };
+      // The element reads the status's emphasis from its `emphasis` prop, and draws each word.
+      expect(definition.template, element).toContain('data-emphasis="{{emphasis}}"');
+      for (const word of ['invert', 'hatch', 'stamp', 'blink']) expect(definition.style, `${element} ${word}`).toContain(`[data-emphasis="${word}"]`);
+      expect(definition.style, element).toContain('prefers-reduced-motion');
+      // Nothing it draws leaves the markup policy: no script, no import, no address.
+      expect(checkStyle(definition.style, []), element).toEqual([]);
+      expect(checkTemplateMarkup(definition.template, []), element).toEqual([]);
+    }
   });
 
   it('reads the whole of a list kept by "where" as the items it keeps', () => {
