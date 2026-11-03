@@ -38,14 +38,23 @@ export interface DrawOptions {
  * a list read that depends on such a variable is therefore read with the default's value.
  */
 export async function readLists(board: Board, read: ValueReader, options: DrawOptions = {}): Promise<Record<string, unknown[]>> {
+  return (await readListsNoted(board, read, options)).lists;
+}
+
+/** `readLists`, and the data whose answer is an object — keyed by names, as `{ "g1": {…}, "g6": {…} }` — and not a list:
+ *  it has no items, and a part made per item of it makes none. */
+async function readListsNoted(board: Board, read: ValueReader, options: DrawOptions): Promise<{ lists: Record<string, unknown[]>; notLists: string[] }> {
   const written = expandVariables(board, variableValues(variablesOf(board), options.variables));
   const entries = await Promise.all(
     keyReadsOf(written).map(async ({ data, adapter, ref }) => {
       const { value } = await read(adapter, ref);
-      return [data, Array.isArray(value) ? value : []] as const;
+      return { data, items: Array.isArray(value) ? value : [], keyed: typeof value === 'object' && value !== null && !Array.isArray(value) && Object.keys(value).length > 0 } as const;
     })
   );
-  return Object.fromEntries(entries);
+  return {
+    lists: Object.fromEntries(entries.map(e => [e.data, e.items])),
+    notLists: entries.filter(e => e.keyed).map(e => e.data),
+  };
 }
 
 /** The keys of those items — what a grid lays them out by. */
@@ -65,14 +74,15 @@ export async function pictureOf(board: Board, read: ValueReader, options: DrawOp
 
 /** A board drawn — its picture, and for each part a canvas places by its items' fields, how many of its items it could
  *  not place (no number in a field, or outside the frame). `unplaced` has the parts that left some out and no other.
+ *  `notLists` has the data a part is made per item of whose answer was an object keyed by names and not a list — they have no items.
  *  `variables` is what the board's variables took — each declared name's value, and the names asked for with a value
  *  that is not one of its options (they took their default instead). */
 export async function drawBoard(
   board: Board,
   read: ValueReader,
   options: DrawOptions = {},
-): Promise<{ picture: ViewDocument; unplaced: Record<string, number>; variables: { values: Record<string, string>; unknown: string[] } }> {
-  const lists = await readLists(board, read, options);
+): Promise<{ picture: ViewDocument; unplaced: Record<string, number>; notLists: string[]; variables: { values: Record<string, string>; unknown: string[] } }> {
+  const { lists, notLists } = await readListsNoted(board, read, options);
   const keysOf = (data: string) => keysIn(board, data, lists[data] ?? []);
   const declared = variablesOf(board);
   const values = variableValues(declared, options.variables, keysOf);
@@ -84,5 +94,5 @@ export async function drawBoard(
     rowsOf: data => lists[data] ?? [],
     onUnplaced: (part, count) => { unplaced[part] = (unplaced[part] ?? 0) + count; },
   });
-  return { picture, unplaced, variables: { values, unknown } };
+  return { picture, unplaced, notLists, variables: { values, unknown } };
 }

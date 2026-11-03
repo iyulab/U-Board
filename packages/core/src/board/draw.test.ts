@@ -27,6 +27,18 @@ describe('drawing a board wherever it is hosted', () => {
     expect(await readKeys(board, readerOf([failing]))).toEqual({ pumps: [] });
   });
 
+  it('names the data whose answer is an object keyed by names and not a list — it has no items', async () => {
+    const keyed: Adapter = { id: 'plant', resolve: async () => ({ value: { P1: { flow: 41.5 }, P2: { flow: 0 } }, quality: 'live' }) };
+    const drawn = await drawBoard(board, readerOf([keyed]));
+    expect(drawn.notLists).toEqual(['pumps']);
+    expect(await readKeys(board, readerOf([keyed]))).toEqual({ pumps: [] });
+    // A list, an answer that cannot be read and an empty object are not it.
+    expect((await drawBoard(board, readerOf([plant]))).notLists).toEqual([]);
+    expect((await drawBoard(board, readerOf([]))).notLists).toEqual([]);
+    const empty: Adapter = { id: 'plant', resolve: async () => ({ value: {}, quality: 'live' }) };
+    expect((await drawBoard(board, readerOf([empty]))).notLists).toEqual([]);
+  });
+
 });
 
 describe('drawing a board that reads variables', () => {

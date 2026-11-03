@@ -83,8 +83,8 @@ function fakeServer() {
     if (method === 'GET') {
       // A board comes with the picture its viewers draw it from, as the server answers.
       const picture = toViewDocument(board.document, { keysOf: () => [] });
-      const { unplaced } = board as { unplaced?: Record<string, number> };
-      return json(200, { id, name: board.name, document: board.document, picture, ...(unplaced && { unplaced }), revision: board.revision, updatedAt: 't' });
+      const { unplaced, notLists } = board as { unplaced?: Record<string, number>; notLists?: string[] };
+      return json(200, { id, name: board.name, document: board.document, picture, ...(unplaced && { unplaced }), ...(notLists && { notLists }), revision: board.revision, updatedAt: 't' });
     }
     if (method === 'DELETE') {
       boards.delete(id);
@@ -231,6 +231,14 @@ describe('u-board-mcp', () => {
     const { look } = await looking();
     const { report } = await look('b7');
     expect(report.problems).toEqual([{ path: '/parts/a', message: '3 items of "a" are not drawn: no number in the fields its place names, or outside its frame — check "at" and "frame"' }]);
+    expect(report.status).toMatch(/^not done/);
+  });
+
+  it('says a data read as an object keyed by names is no list, as a problem of the data', async () => {
+    server.boards.set('b8', { name: 'Keyed', revision: 1, document: gaugeBoard(), notLists: ['wells'] } as never);
+    const { look } = await looking();
+    const { report } = await look('b8');
+    expect(report.problems).toEqual([{ path: '/data/wells', message: expect.stringContaining('"wells" is read as an object keyed by names, not a list') }]);
     expect(report.status).toMatch(/^not done/);
   });
 

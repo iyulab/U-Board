@@ -36,6 +36,8 @@ export interface SavedBoard {
   picture: ViewDocument;
   /** For each part a canvas places by its items' fields, how many of its items were not drawn — absent when none. */
   unplaced?: Record<string, number>;
+  /** The data a part is made per item of whose answer was an object keyed by names, not a list — absent when none. */
+  notLists?: string[];
   revision: number;
   updatedAt: string;
 }
