@@ -361,7 +361,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
         if (!d) fail(deriveAt, '"derive" is { "op": "count" | "sum" | "min" | "max" | "avg", "field"?, "where"? }');
         else {
           if (!['count', 'sum', 'min', 'max', 'avg'].includes(d.op as string)) fail(`${deriveAt}/op`, '"op" is count, sum, min, max or avg');
-          else if (d.op === 'count' && d.field !== undefined) fail(`${deriveAt}/field`, 'a count has no field — it counts items; "where" narrows which');
+          else if (d.op === 'count' && d.field !== undefined) fail(`${deriveAt}/field`, 'a count has no field — it counts the items; to count only some write "where": { "<item field>": value }, and to total a field use "sum"');
           else if (d.op !== 'count' && typeof d.field !== 'string') fail(`${deriveAt}/field`, `a ${String(d.op)} takes "field": the item field the number is read from`);
           if (d.where !== undefined && !(isObj(d.where) && Object.values(d.where).every(v => ['string', 'number', 'boolean'].includes(typeof v)))) fail(`${deriveAt}/where`, '"where" is { "<item field>": value } — only the items equal to these values');
           if (q.list === undefined) fail(deriveAt, 'a derived field is computed from the items of a list — this data has no "list"');
@@ -463,7 +463,9 @@ export function validateBoard(input: unknown): BoardIssue[] {
       if (body.startsWith('/')) { sections = Math.max(0, sections - 1); continue; }
       const known = hole === '' || hole in props || (sections > 0 && !computed);
       if (computed || !known) {
-        fail(`${at}/template`, `"{{${m[1]}}}" — a hole is a prop this element declares (${list(Object.keys(props))}); compute with CSS calc() on a prop, not inside the braces`);
+        fail(`${at}/template`, computed
+          ? `"{{${m[1]}}}" — a hole is a prop this element declares (${list(Object.keys(props))}); compute with CSS calc() on a prop, not inside the braces`
+          : `"{{${m[1]}}}" — "${hole}" is not a prop this element declares (${list(Object.keys(props))}); declare it in "props" ("${hole}": "string" | "number" | "boolean" | "list" | "object") and give it a value with the part's "bind"`);
       }
       if (body.startsWith('#') || body.startsWith('^')) sections++;
     }
@@ -687,7 +689,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
       const type = declared[key];
       const fits = type === 'number' ? isNum(value) : type === 'string' ? typeof value === 'string' : type === 'boolean' ? typeof value === 'boolean'
         : type === 'list' ? Array.isArray(value) : type === 'object' ? isObj(value) : true;
-      if (!fits) fail(`${at}/props/${key}`, `"${key}" is a ${String(type)} — ${JSON.stringify(value)} is not one`);
+      if (!fits) fail(`${at}/props/${key}`, `"${key}" is a ${String(type)} — ${JSON.stringify(value)} is not one; props hold a fixed value — one read from data is bound: "bind": { "${key}": "<field>" }`);
     }
     if (part.bind === undefined) return;
     if (!isObj(part.bind)) { fail(`${at}/bind`, 'bind is { "<prop>": "<field>" | "<field>.status" | "<field>.tone" }'); return; }

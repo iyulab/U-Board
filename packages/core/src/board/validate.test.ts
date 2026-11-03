@@ -519,7 +519,7 @@ describe('validateBoard', () => {
     };
     expect(issues({ ...canvas({}), elements: listed })).toEqual([
       '/elements/sums/template: "{{ a + b }}" — a hole is a prop this element declares (rows); compute with CSS calc() on a prop, not inside the braces',
-      '/elements/sums/template: "{{count}}" — a hole is a prop this element declares (rows); compute with CSS calc() on a prop, not inside the braces',
+      "/elements/sums/template: \"{{count}}\" — \"count\" is not a prop this element declares (rows); declare it in \"props\" (\"count\": \"string\" | \"number\" | \"boolean\" | \"list\" | \"object\") and give it a value with the part's \"bind\"",
     ]);
     expect(issues({ ...canvas({}), symbols: { L1: { path: 'M0 0h1v1z' }, pump: { markup: '<path/>' } } })).toEqual([
       `/symbols/L1: a symbol's name is lowercase letters, digits and "-", starting with a letter, at most 40 — not "L1"`,
@@ -595,9 +595,9 @@ describe('validateBoard', () => {
     ]);
     const el = { tank: { template: '<svg><rect height="{{n}}"/></svg>{{#items}}{{.}}{{/items}}', props: { n: 'number', items: 'list', on: 'boolean' } } };
     expect(issues({ ...canvas({ t: { as: 'element', element: 'tank', props: { n: 'abc', items: 'x', on: 'yes' } } }), elements: el })).toEqual([
-      '/parts/t/props/n: "n" is a number — "abc" is not one',
-      '/parts/t/props/items: "items" is a list — "x" is not one',
-      '/parts/t/props/on: "on" is a boolean — "yes" is not one',
+      '/parts/t/props/n: "n" is a number — "abc" is not one; props hold a fixed value — one read from data is bound: "bind": { "n": "<field>" }',
+      '/parts/t/props/items: "items" is a list — "x" is not one; props hold a fixed value — one read from data is bound: "bind": { "items": "<field>" }',
+      '/parts/t/props/on: "on" is a boolean — "yes" is not one; props hold a fixed value — one read from data is bound: "bind": { "on": "<field>" }',
     ]);
   });
 
