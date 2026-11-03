@@ -611,7 +611,11 @@ export function validateBoard(input: unknown): BoardIssue[] {
       const axisEnd = (key === 'max' || key === 'min') && VALUE_AXIS_KINDS.has(kind.kind)
         ? `the end of a ${kind.kind}'s value axis is set through "echarts": { "yAxis": { "${key}": … } } ("xAxis" for a horizontal bar); `
         : '';
-      fail(keyAt, word !== undefined ? `"${key}" is the widget's name for it — a ${kind.kind} writes "${word}"` : `"${key}" is not an option — ${axisEnd}${offered}`);
+      // `size` is [width, height] — of a group's canvas or a placed box; how large a heading or a text is, is `scale`.
+      const sizeWord = key === 'size' && kind.own.includes('scale')
+        ? `"size" is [width, height]; how large a ${kind.kind === 'header' ? 'heading' : 'text'} is, is "scale" — ${Object.keys(NUMERAL_SCALES).join(' · ')}`
+        : undefined;
+      fail(keyAt, sizeWord ?? (word !== undefined ? `"${key}" is the widget's name for it — a ${kind.kind} writes "${word}"` : `"${key}" is not an option — ${axisEnd}${offered}`));
     }
   };
 
@@ -632,13 +636,13 @@ export function validateBoard(input: unknown): BoardIssue[] {
 
   /**
    * The settings that style a part rather than choose what it shows — each a word, never a size in pixels or a colour code: a
-   * heading's or a text's `size`, the `ink` a text is drawn in, a text's `face`, the colour of a header's kicker, and the
+   * heading's or a text's `scale`, the `ink` a text is drawn in, a text's `face`, the colour of a header's kicker, and the
    * `numerals` of the figures in a stat, a card or a list.
    */
   const checkStyleOptions = (part: Obj, kind: string, at: string) => {
     const scales = Object.keys(NUMERAL_SCALES);
-    if ((kind === 'header' || kind === 'label') && part.size !== undefined && !scales.includes(part.size as string)) {
-      fail(`${at}/size`, `"size" is how large the ${kind === 'header' ? 'heading' : 'text'} is — ${scales.join(' · ')}`);
+    if ((kind === 'header' || kind === 'label') && part.scale !== undefined && !scales.includes(part.scale as string)) {
+      fail(`${at}/scale`, `"scale" is how large the ${kind === 'header' ? 'heading' : 'text'} is — ${scales.join(' · ')}`);
     }
     if (kind === 'header' && part.kickerInk !== undefined && !['muted', 'accent'].includes(part.kickerInk as string)) {
       fail(`${at}/kickerInk`, '"kickerInk" is the colour of the line above the heading — muted · accent (the board\'s accent colour)');
@@ -729,7 +733,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
   /** A group: its parts, each placed on its own small canvas, reading what the group reads unless they name their own. */
   const checkGroup = (group: Obj, at: string, reads: string | null | undefined) => {
     if (!isSize(group.size) && !(group.size === undefined && groupReach(group) !== undefined)) {
-      fail(`${at}/size`, group.size === undefined ? 'a group needs "size": [width, height] — or a box [x, y, width, height] for every part, which sizes the canvas as far as they reach' : 'a group needs "size": [width, height]');
+      fail(`${at}/size`, group.size === undefined ? 'a group needs "size": [width, height] — or a box [x, y, width, height] for every part, which sizes the canvas as far as they reach' : typeof group.size === 'string' ? '"size" of a group is [width, height] — how large a heading or a text is, is "scale" on a header or a label' : 'a group needs "size": [width, height]');
     }
     const inner = isObj(group.parts) ? group.parts : undefined;
     if (!inner) { fail(`${at}/parts`, 'a group needs "parts": the parts drawn together'); return; }

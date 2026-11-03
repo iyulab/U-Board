@@ -14,8 +14,8 @@ const MARKER_JOINT_SIDES = ['right', 'left', 'above', 'below'];
 
 /** The options that style a part rather than choose what it shows, by kind — each a word, read by the board and never handed to the widget. */
 const STYLE_KEYS: Readonly<Record<string, readonly string[]>> = {
-  header: ['size', 'kickerInk'],
-  label: ['size', 'ink', 'face'],
+  header: ['scale', 'kickerInk'],
+  label: ['scale', 'ink', 'face'],
   stat: ['numerals'],
   'status-card': ['numerals'],
   list: ['numerals'],
@@ -44,8 +44,8 @@ function partTokens(kind: string, style: Record<string, unknown>): Record<string
   const out: Record<string, string> = {};
   const numerals = isRecord(style.numerals) ? style.numerals : undefined;
   if (kind === 'header') {
-    const size = style.size;
-    if (typeof size === 'string' && Object.hasOwn(NUMERAL_SCALES, size)) out['--u-widget-title-scale'] = String(NUMERAL_SCALES[size as NumeralScale]);
+    const scale = style.scale;
+    if (typeof scale === 'string' && Object.hasOwn(NUMERAL_SCALES, scale)) out['--u-widget-title-scale'] = String(NUMERAL_SCALES[scale as NumeralScale]);
     if (style.kickerInk === 'accent') out['--u-widget-kicker-color'] = 'var(--u-widget-primary)';
   } else if (kind === 'stat') Object.assign(out, numeralTokens(numerals, 'figure'));
   else if (kind === 'list' || kind === 'status-card') Object.assign(out, numeralTokens(numerals, 'value'));
@@ -503,7 +503,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     const part = resolve(raw);
     const { as, use: _use, of: _of, each: _each, title, show, highlight, ...options } = part;
     const kind = partKind(as!)!;
-    // What styles the part (`size`, `ink`, …) is read here, not handed to the widget as an option of its own.
+    // What styles the part (`scale`, `ink`, …) is read here, not handed to the widget as an option of its own.
     const partStyle = takeStyle(options, kind.kind);
     const fields = show === undefined ? [] : Array.isArray(show) ? show : [show];
     const query = reads?.query;
@@ -849,13 +849,13 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         const name = fields[0];
         const textProp = title !== undefined ? text(title, 'text') : name !== undefined ? (bindValue('text', name), '') : '';
         if (name !== undefined) bindState('', name);
-        const { size, ink, face } = partStyle as { size?: string; ink?: string; face?: string };
+        const { scale, ink, face } = partStyle as { scale?: string; ink?: string; face?: string };
         return {
           type: builtin('u-board-label', LABEL),
           props: {
             text: textProp ?? '', tone: '',
             // only what the part sets: a label that styles nothing is the props it always had
-            ...(size !== undefined && size !== 'regular' && Object.hasOwn(NUMERAL_SCALES, size) ? { size } : {}),
+            ...(scale !== undefined && scale !== 'regular' && Object.hasOwn(NUMERAL_SCALES, scale) ? { scale } : {}),
             ...(ink === 'muted' || ink === 'accent' ? { ink } : {}),
             ...(face === 'pill' ? { face } : {}),
           },

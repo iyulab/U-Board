@@ -245,7 +245,7 @@ describe('validateBoard', () => {
     }))).toEqual([]);
     expect(issues(canvas({ s: { as: 'stat', of: 'totals', show: 'load', colour: 'red' }, l: { as: 'label', title: 'Line 1', weight: 700 } }))).toEqual([
       '/parts/s/colour: "colour" is not an option — options of a stat: trend, numerals, format',
-      '/parts/l/weight: "weight" is not an option — options of a label: size, ink, face',
+      '/parts/l/weight: "weight" is not an option — options of a label: scale, ink, face',
     ]);
     // One setting, one name: the widget's word for an option the board reads itself is not an option of the kind.
     expect(issues(canvas({ l: { as: 'list', of: 'equipment', primary: 'name', maxItems: 5 } }))).toEqual([
@@ -350,21 +350,35 @@ describe('validateBoard', () => {
     expect(at({ weight: 'bold' })).toEqual(['/board/skin/numerals/weight: a weight is a whole number from 100 (thin) to 900 (black)']);
   });
 
+  it('says which "size" is meant: [width, height] is a box, how large a heading or a text is, is "scale"', () => {
+    expect(issues(canvas({
+      h: { as: 'header', title: 'Plant', size: 'large' },
+      l: { as: 'label', title: 'Unit', size: 'small' },
+    }))).toEqual([
+      `/parts/h/size: "size" is [width, height]; how large a heading is, is "scale" — ${SCALES}`,
+      `/parts/l/size: "size" is [width, height]; how large a text is, is "scale" — ${SCALES}`,
+    ]);
+    const parts = { card: { as: 'status-card', show: ['state'] } };
+    expect(issues({ data, parts: { pumps: { as: 'group', each: 'equipment', parts, place: { card: [0, 0] }, size: 'large' } }, layout: { kind: 'grid', items: ['pumps'] } })).toEqual([
+      '/parts/pumps/size: "size" of a group is [width, height] — how large a heading or a text is, is "scale" on a header or a label',
+    ]);
+  });
+
   it('checks the styling words of a part: a size, an ink, a face, a kicker ink, and numerals — words, never pixels or colour codes', () => {
     expect(issues(canvas({
-      h: { as: 'header', title: 'Plant', size: 'xlarge', kickerInk: 'accent' },
-      l: { as: 'label', title: 'Unit', size: 'small', ink: 'muted', face: 'pill' },
+      h: { as: 'header', title: 'Plant', scale: 'xlarge', kickerInk: 'accent' },
+      l: { as: 'label', title: 'Unit', scale: 'small', ink: 'muted', face: 'pill' },
       s: { as: 'stat', of: 'totals', show: 'load', numerals: { scale: 'large', weight: 300 } },
       w: { as: 'list', of: 'equipment', primary: 'name', numerals: { weight: 200 } },
       c: { as: 'status-card', of: 'equipment[PR-01]', show: 'load', numerals: { scale: 'small' } },
     }))).toEqual([]);
     expect(issues(canvas({
-      h: { as: 'header', title: 'Plant', size: 40, kickerInk: 'text' },
+      h: { as: 'header', title: 'Plant', scale: 40, kickerInk: 'text' },
       l: { as: 'label', title: 'Unit', ink: '#f00', face: 'outline' },
       s: { as: 'stat', of: 'totals', show: 'load', numerals: 'big' },
       w: { as: 'list', of: 'equipment', primary: 'name', numerals: { scale: 'huge', size: 3 } },
     }))).toEqual([
-      `/parts/h/size: "size" is how large the heading is — ${SCALES}`,
+      `/parts/h/scale: "scale" is how large the heading is — ${SCALES}`,
       "/parts/h/kickerInk: \"kickerInk\" is the colour of the line above the heading — muted · accent (the board's accent colour)",
       "/parts/l/ink: \"ink\" is the colour of the text — text · muted · accent (the board's accent colour); a status colours it over this",
       '/parts/l/face: "face" is the surface under the text — plain · pill',

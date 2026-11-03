@@ -99,7 +99,7 @@ const nodeOf = (doc: ViewDocument, id: string) => (doc.kind === 'canvas' ? doc.n
 describe('the picture model of a v2 board', () => {
   it("hands a part's styling to its widget as tokens of that widget only — and as no option of the widget", () => {
     const doc = view(board({
-      h: { as: 'header', title: 'Plant', size: 'large', kickerInk: 'accent' },
+      h: { as: 'header', title: 'Plant', scale: 'large', kickerInk: 'accent' },
       s: { as: 'stat', of: 'totals', show: 'oee', numerals: { scale: 'small', weight: 300 } },
       l: { as: 'list', of: 'pumps', primary: 'id', trailing: 'flow', numerals: { scale: 'xlarge' } },
       c: { as: 'status-card', of: 'pumps[P1]', show: ['state', 'flow'], numerals: { weight: 800 } },
@@ -117,11 +117,11 @@ describe('the picture model of a v2 board', () => {
   it('draws a label in the size, ink and face it names, and with the props it always had when it names none', () => {
     const doc = view(board({
       plain: { as: 'label', title: 'Unit: million' },
-      note: { as: 'label', title: 'Source', size: 'small', ink: 'muted', face: 'pill' },
-      regular: { as: 'label', title: 'Same', size: 'regular', ink: 'text', face: 'plain' },
+      note: { as: 'label', title: 'Source', scale: 'small', ink: 'muted', face: 'pill' },
+      regular: { as: 'label', title: 'Same', scale: 'regular', ink: 'text', face: 'plain' },
     }, { kind: 'canvas', size: [400, 200], place: { plain: [0, 0, 200, 30], note: [0, 40, 200, 30], regular: [0, 80, 200, 30] } }));
     expect(drawn(nodeOf(doc, 'plain').widget)).toEqual({ text: 'Unit: million', tone: '' });
-    expect(drawn(nodeOf(doc, 'note').widget)).toEqual({ text: 'Source', tone: '', size: 'small', ink: 'muted', face: 'pill' });
+    expect(drawn(nodeOf(doc, 'note').widget)).toEqual({ text: 'Source', tone: '', scale: 'small', ink: 'muted', face: 'pill' });
     // `regular`, `text` and `plain` are what a label is anyway
     expect(drawn(nodeOf(doc, 'regular').widget)).toEqual({ text: 'Same', tone: '' });
   });
@@ -264,7 +264,7 @@ describe('the picture model of a v2 board', () => {
     expect(since.widget.props?.options).toBeUndefined();
     // the zone rides with a time or a date; a header that shows neither has no use for it, and a read with no zone has none to give
     expect(header({ time: 'updatedAt' }, 'Asia/Seoul').widget.props?.options).toEqual({ timeZone: 'Asia/Seoul' });
-    expect(header({ date: 'updatedAt', size: 'large' }, 'Asia/Seoul').widget.props?.options).toEqual({ timeZone: 'Asia/Seoul' });
+    expect(header({ date: 'updatedAt', scale: 'large' }, 'Asia/Seoul').widget.props?.options).toEqual({ timeZone: 'Asia/Seoul' });
     expect(header({ since: 'updatedAt' }, 'Asia/Seoul').widget.props?.options).toBeUndefined();
     expect(header({ time: 'updatedAt' }).widget.props?.options).toBeUndefined();
   });

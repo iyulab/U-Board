@@ -24,7 +24,7 @@ export const RULEBOOK_EXAMPLE: Board = {
     P1: { as: 'status-card', of: 'pumps[P1]', title: '펌프 1', show: ['state', 'flow'], numerals: { scale: 'large', weight: 300 } },
     P2: { as: 'status-card', of: 'pumps[P2]', title: '펌프 2', show: ['state', 'flow'] },
     flow: { as: 'chart.line', of: 'hourly', title: '시간대별 유량', x: 'hour', y: 'flow' },
-    note: { as: 'label', title: '예시 데이터', size: 'small', ink: 'muted' },
+    note: { as: 'label', title: '예시 데이터', scale: 'small', ink: 'muted' },
   },
   layout: {
     kind: 'canvas', size: [720, 360],
@@ -83,7 +83,7 @@ canvas of their own (\`size\` [w, h], or the reach of their boxes) — its parts
 The board's own options take fields of what the part reads: a \`status-card\`'s \`meter\` is \`"<field>"\` or
 \`{ "field", "min"?, "max"? (a number, or a field of the item), "form"?: "bar" | "ring" }\`, its \`state\` (and a \`stat-list\`'s) the field whose status colours
 it, a \`stat\`'s \`trend\` a field holding its recent values, a \`list\`'s \`primary\` · \`secondary\` · \`trailing\` ·
-\`badge\` · \`time\` fields of each row. A part that reads one item takes \`highlight: "<boolean field>"\`: a ring while it is true, apart from the status. A part's look is said in words (\`size\`: \`small\` … \`xxlarge\`): a \`label\`'s \`size\` · \`ink\` (\`text\` · \`muted\` · \`accent\`) · \`face\` (\`pill\`), a header's \`size\` · \`kickerInk\`, and \`numerals: { scale?, weight? }\` for the figures of a \`stat\`, \`status-card\`, \`list\` (a skin's: only a \`stat\`). Any other option is the widget's own — only those listed.
+\`badge\` · \`time\` fields of each row. A part that reads one item takes \`highlight: "<boolean field>"\`: a ring while it is true, apart from the status. A part's look is said in words (\`scale\`: \`small\` … \`xxlarge\`): a \`label\`'s \`scale\` · \`ink\` (\`text\` · \`muted\` · \`accent\`) · \`face\` (\`pill\`), a header's \`scale\` · \`kickerInk\`, and \`numerals: { scale?, weight? }\` for the figures of a \`stat\`, \`status-card\`, \`list\` (a skin's: only a \`stat\`). Any other option is the widget's own — only those listed.
 
 | kind | shows | reads data | options |
 |---|---|---|---|

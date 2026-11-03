@@ -292,7 +292,7 @@ The kinds come from three places, listed with their options as `PART_KINDS` (`pa
   `{ field, min?, max?, form?: 'bar' | 'ring' }`, where `min` and `max` are numbers or the name of a field of the item, as a gauge's
   `max` is) and `state`, a `stat`'s `trend` (a field of the item holding its recent values, a list of numbers, drawn as a line under the value), a `list`'s `primary` · `secondary` ·
   `trailing` · `badge` · `time` — and hands any other option to the widget, which takes only those it lists. A part also sets how it is
-  drawn with words, never pixels or colour codes: a `header`'s `size` (`small` · `regular` · `large` · `xlarge` · `xxlarge` — its heading) and
+  drawn with words, never pixels or colour codes: a `header`'s `scale` (`small` · `regular` · `large` · `xlarge` · `xxlarge` — its heading) and
   `kickerInk` (`muted` · `accent`, the line above it); a `header` also shows the time and the date its data gives — `time` and `date` each name a field
   of what it reads (an ISO time such as `2026-11-02T14:10:00Z`), apart from `clock`, which is the time of day now, and `since` shows that time as how long
   ago it was; a data read's `zone` is the clock a time with an offset is shown on; the figures of a `stat`, a `status-card` and a `list` through `numerals`
@@ -303,7 +303,7 @@ The kinds come from three places, listed with their options as `PART_KINDS` (`pa
 - **The board's own**: `marker` — a point on a canvas in its status, with a label (`shape`, or `symbol` naming one of
   the board's symbols; `labelAt`: `right` · `left` · `above` · `below` — or `auto`, the first of below, right, above, left that none of its links leaves — puts the point at the middle of the part's box and
   its words on that side of it, so a link to the part meets the point — without it the point is at the box's left, the
-  words beside it); `label` — a text, fixed or from a field (`size` as a heading's; `ink`: `text` · `muted` · `accent`; `face`: `plain` · `pill` — a faint
+  words beside it); `label` — a text, fixed or from a field (`scale` as a heading's; `ink`: `text` · `muted` · `accent`; `face`: `plain` · `pill` — a faint
   rounded surface under the text; a status colours the text over `ink`); `legend` — the statuses in use; `group` — several
   parts drawn together on a small canvas of their own (`size`, `parts`, `place`, `shapes`, `links`), its parts reading
   the group's `of` unless they name their own and addressed `<group>/<part>`; `element` — a drawing of the board's
