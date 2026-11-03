@@ -84,7 +84,7 @@ export function LineView() {
 - **`variables`** are values your app gives the board — a line, a shift, a day (`kind: 'date'` for one no list names). The board is
   drawn again when they change; a value the board does not accept is read as the variable's default.
 - **`onTrigger` and `onInput`** are how the board talks back. A trigger tells you an event happened on a part (a click, a status
-  change); `onInput` tells you what a person typed into an input widget of a picture you draw yourself. Whether to ask for a
+  change); `onInput` tells you what a person typed into an input widget of a picture you draw yourself, and the value a script element of a board raised (`ub.emit(name, value)`). Whether to ask for a
   confirmation, where the values go and who may send them are yours: the viewer writes to no system the board reads.
 - **Pass the same `board` object until the board changes**, and the same `adapters`: each new one is drawn again.
 

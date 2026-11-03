@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ELEMENT_FRAME_RUNTIME, elementEventName, elementFrameHtml, elementFrameScripts } from './frame';
+import { ELEMENT_EVENT_VALUE_LIMIT, ELEMENT_FRAME_RUNTIME, elementEventName, elementEventValue, elementFrameHtml, elementFrameScripts } from './frame';
 import { canonicalJson, elementDefinitionHash, elementFrameLabel } from './definition-hash';
 
 describe('elementFrameHtml', () => {
@@ -54,7 +54,38 @@ describe('elementDefinitionHash', () => {
 
 describe('element events', () => {
   it('gives the runtime an emit that sends the event by name', () => {
-    expect(ELEMENT_FRAME_RUNTIME).toContain("emit: function (name) { send({ type: 'ub:event', name: String(name) }); }");
+    expect(ELEMENT_FRAME_RUNTIME).toContain("var message = { type: 'ub:event', name: String(name) };");
+    expect(ELEMENT_FRAME_RUNTIME).toContain('if (arguments.length > 1) message.value = value;');
+  });
+
+  it('runs: the runtime’s emit sends the name alone, or with the value when one is given, and reports a value that cannot be sent', () => {
+    const sent: unknown[] = [];
+    const parent = { postMessage: (message: unknown) => { sent.push(message); } };
+    const win: Record<string, unknown> = {};
+    new Function('window', 'parent', 'addEventListener', 'document', ELEMENT_FRAME_RUNTIME)(win, parent, () => {}, { documentElement: { style: {} } });
+    const ub = win.ub as { emit: (name: unknown, value?: unknown) => void };
+    sent.length = 0;
+    ub.emit('reset');
+    ub.emit('pick', { id: 'P1' });
+    ub.emit('none', undefined);
+    expect(sent).toEqual([{ type: 'ub:event', name: 'reset' }, { type: 'ub:event', name: 'pick', value: { id: 'P1' } }, { type: 'ub:event', name: 'none', value: undefined }]);
+    sent.length = 0;
+    parent.postMessage = (message: unknown) => { sent.push(message); if ((message as { type: string }).type === 'ub:event') throw new Error('could not be cloned'); };
+    ub.emit('bad', () => 1);
+    expect(sent.map(m => (m as { type: string }).type)).toEqual(['ub:event', 'ub:error']);
+  });
+
+  it('takes the value an event carries as plain JSON of at most 2,048 characters, and says when it is not', () => {
+    expect(elementEventValue({ type: 'ub:event', name: 'a' })).toEqual({});
+    expect(elementEventValue({ type: 'ub:event', name: 'a', value: undefined })).toEqual({});
+    expect(elementEventValue({ type: 'ub:event', name: 'a', value: { id: 'P1', n: [1, null, 'x'] } })).toEqual({ value: { id: 'P1', n: [1, null, 'x'] } });
+    expect(elementEventValue({ type: 'ub:event', name: 'a', value: 0 })).toEqual({ value: 0 });
+    expect(elementEventValue({ type: 'ub:event', name: 'a', value: 'x'.repeat(ELEMENT_EVENT_VALUE_LIMIT - 2) })).toHaveProperty('value');
+    const cycle: Record<string, unknown> = {};
+    cycle.self = cycle;
+    for (const value of ['x'.repeat(ELEMENT_EVENT_VALUE_LIMIT), cycle, () => 1, 10n]) {
+      expect(elementEventValue({ type: 'ub:event', name: 'a', value }), String(typeof value)).toEqual({ invalid: true });
+    }
   });
 
   it('takes an event name of 1 to 64 characters of text, and nothing else', () => {

@@ -2,6 +2,7 @@ import React, { type ReactElement } from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { UWidget } from '@iyulab/u-widgets/react';
 import { NodeFrame, type NodeFrameProps } from './node-frame';
+import { ElementView } from './element-view';
 import type { ResolvedWidget } from '../adapter';
 
 const widget: ResolvedWidget = { type: 'status', props: {}, quality: { 'data.value': 'live' } };
@@ -108,6 +109,18 @@ describe('NodeFrame input', () => {
     onWidgetEvent({ detail: { type: 'select', data: { _index: 1 } } });
     onWidgetEvent({ detail: { type: 'action', action: 'cancel' } });
     expect(heard.mock.calls).toEqual([[{ type: 'change', name: 'name', value: 'Ada' }], [{ type: 'submit', values: { name: 'Ada' } }]]);
+  });
+
+  it('tells the host the value an element of the part raised, as an input of its own', () => {
+    const heard = vi.fn();
+    const asElement = { ...widget, type: 'element:pick' } as ResolvedWidget;
+    const el = frame({ widget: asElement, elements: { pick: { render: 'script', script: 'ub.emit("pick", 1)' } }, onInput: heard });
+    const view = (React.Children.toArray(el.props.children) as ReactElement<Record<string, any>>[]).find(c => c?.type === ElementView)!;
+    (view.props.onValue as (name: string, value: unknown) => void)('pick', { id: 'P1' });
+    expect(heard.mock.calls).toEqual([[{ type: 'element', name: 'pick', value: { id: 'P1' } }]]);
+    // A host that hears nothing has no listener on the element.
+    const quiet = (React.Children.toArray(frame({ widget: asElement, elements: { pick: { render: 'script', script: '' } } }).props.children) as ReactElement<Record<string, any>>[]).find(c => c?.type === ElementView)!;
+    expect(quiet.props.onValue).toBeUndefined();
   });
 
   it('listens for nothing when the host hears nothing', () => {

@@ -239,10 +239,10 @@ describe('ElementView — a template element’s events from the keyboard', () =
 describe('ElementView — script element', () => {
   const chart: ElementDefinition = { render: 'script', script: 'ub.onProps(draw)' };
 
-  async function mounted(props: unknown = { value: 3 }, onEvent?: (name: string) => void) {
+  async function mounted(props: unknown = { value: 3 }, onEvent?: (name: string) => void, onValue?: (name: string, value: unknown) => void) {
     const view = render(
       <ElementHost frames="/api/element-frames/b1">
-        <ElementView definition={chart} name="chart" props={props} appearance="dark" onEvent={onEvent} />
+        <ElementView definition={chart} name="chart" props={props} appearance="dark" onEvent={onEvent} onValue={onValue} />
       </ElementHost>,
     );
     const frame = await waitFor(() => {
@@ -298,6 +298,20 @@ describe('ElementView — script element', () => {
     send({ type: 'ub:event', name: 'reset' }, window); // not from this frame
     send({ type: 'ub:event', name: 'x'.repeat(65) }, frame.contentWindow);
     expect(onEvent.mock.calls).toEqual([['reset']]);
+  });
+
+  it('hands on the value an event carries as plain JSON, and says so when it is not one it can pass on', async () => {
+    const onEvent = vi.fn();
+    const onValue = vi.fn();
+    const { view, frame } = await mounted({ value: 3 }, onEvent, onValue);
+    const send = (data: unknown, source: MessageEventSource | null) => act(() => window.dispatchEvent(new MessageEvent('message', { data, source })));
+    send({ type: 'ub:event', name: 'pick', value: { id: 'P1', on: true, n: [1, 2] } }, frame.contentWindow);
+    send({ type: 'ub:event', name: 'reset' }, frame.contentWindow); // no value: an event for triggers, no input
+    send({ type: 'ub:event', name: 'pick', value: 'x'.repeat(3000) }, frame.contentWindow); // too long
+    send({ type: 'ub:event', name: 'pick', value: { id: 'P2' } }, window); // not from this frame
+    expect(onEvent.mock.calls.map(c => c[0])).toEqual(['pick', 'reset', 'pick']);
+    expect(onValue.mock.calls).toEqual([['pick', { id: 'P1', on: true, n: [1, 2] }]]);
+    expect(view.container.querySelector('[data-element-error]')!.textContent).toContain('is not JSON of at most 2048 characters');
   });
 
   it('shows what the element reports going wrong', async () => {

@@ -26,7 +26,7 @@ export type ElementFrameMessage =
   | { type: 'ub:error'; message: string }
   | { type: 'ub:ping' }
   | { type: 'ub:pong' }
-  | { type: 'ub:event'; name: string };
+  | { type: 'ub:event'; name: string; value?: unknown };
 
 /** The name of an element event a frame sent (`ub.emit(name)` → `{ type: 'ub:event', name }`): text of 1 to 64
  *  characters, or `undefined` for anything else — a frame's message is the element's code speaking, not to be trusted. */
@@ -34,6 +34,27 @@ export function elementEventName(message: unknown): string | undefined {
   if (typeof message !== 'object' || message === null) return undefined;
   const { type, name } = message as { type?: unknown; name?: unknown };
   return type === 'ub:event' && typeof name === 'string' && name.length >= 1 && name.length <= 64 ? name : undefined;
+}
+
+/** The longest value, as JSON, a script element's event may carry — a note to the host, not a payload. */
+export const ELEMENT_EVENT_VALUE_LIMIT = 2048;
+
+/**
+ * The value a frame's event carries (`ub.emit(name, value)`), as plain JSON: `{ value }` when it has one that is JSON of at most
+ * `ELEMENT_EVENT_VALUE_LIMIT` characters, `{ tooLong: true }` when it has one that is not (a function, a cycle, too much), and
+ * `{}` when it has none. What a frame sends is the element's code speaking, not to be trusted: the host gets a copy it parsed itself.
+ */
+export function elementEventValue(message: unknown): { value?: unknown; invalid?: true } {
+  if (typeof message !== 'object' || message === null || !('value' in message)) return {};
+  const raw = (message as { value?: unknown }).value;
+  if (raw === undefined) return {};
+  try {
+    const json = JSON.stringify(raw);
+    if (json === undefined || json.length > ELEMENT_EVENT_VALUE_LIMIT) return { invalid: true };
+    return { value: JSON.parse(json) as unknown };
+  } catch {
+    return { invalid: true };
+  }
 }
 
 /** How long a loop in a script element's code may run without finishing before it is stopped. */
@@ -53,7 +74,11 @@ export const ELEMENT_FRAME_RUNTIME = `(function () {
   window.ub = {
     onProps: function (handler) { handlers.push(handler); if (last) call(handler); },
     reportError: report,
-    emit: function (name) { send({ type: 'ub:event', name: String(name) }); }
+    emit: function (name, value) {
+      var message = { type: 'ub:event', name: String(name) };
+      if (arguments.length > 1) message.value = value;
+      try { send(message); } catch (error) { report(error); }
+    }
   };
   addEventListener('message', function (event) {
     var message = event.data;

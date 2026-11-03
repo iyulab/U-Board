@@ -167,7 +167,7 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
       {...(highlighted && { 'data-highlighted': '' })}
     >
       {element !== undefined ? (
-        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} skin={skin} symbols={symbols} onEvent={onElementEvent} events={elementEvents} />
+        <ElementView definition={elements?.[element]} name={element} props={widget.props ?? {}} appearance={appearance} accent={accent} skin={skin} symbols={symbols} onEvent={onElementEvent} onValue={onInput && ((name, value) => onInput({ type: 'element', name, value }))} events={elementEvents} />
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.

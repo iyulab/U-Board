@@ -433,6 +433,7 @@ the viewer's session — and no network: its data arrives as its props. Its code
 ```js
 ub.onProps((props, appearance) => draw(props));   // now, if props have arrived, and on every change
 ub.emit('open-details');                          // an event the board's triggers can listen for
+ub.emit('pick', { id: 'P1' });                    // with a value (JSON, up to 2,048 characters), also an `onInput` of the host
 ub.reportError(error);                            // shown on the element's box
 ```
 
@@ -498,7 +499,7 @@ The viewer runs them; `BoardAuthoring` runs them in View only. Both take the hos
 |---|---|
 | `boardId` | The board's id — what `{{board}}` becomes, and what the events it hands the host name. |
 | `onTrigger(event: BoardEvent)` | An `emit`: `{ name, board?, node?, state? }` — the event's name and the part and status it came from, never a value. |
-| `onInput(input: BoardInput)` | A person typed into an input widget of the picture or confirmed on it (a `form`, a `confirm`): `{ type: 'change', part, name, value }` for an edited field, `{ type: 'submit', part, values }` for a submit (a confirm or a pick: `{ value }`). A picture a host draws itself (`ViewerPage`'s `document`) can hold such a widget; the board language offers no input kind of its own yet, so a board drawn by `BoardView` has none to hear. The board tells and writes nothing — it is not a binding, and nothing reaches a data source; whether to ask for a confirmation, where the values go and who may send them is the host's. Without it an input part shows, and its values go nowhere. |
+| `onInput(input: BoardInput)` | A person typed into an input widget of the picture or confirmed on it (a `form`, a `confirm`): `{ type: 'change', part, name, value }` for an edited field, `{ type: 'submit', part, values }` for a submit (a confirm or a pick: `{ value }`), `{ type: 'element', part, name, value }` for an event a script element raised with a value (`ub.emit(name, value)`). A picture a host draws itself (`ViewerPage`'s `document`) can hold an input widget; the board language offers no input kind of its own, so a board drawn by `BoardView` is heard only through its script elements. The board tells and writes nothing — it is not a binding, and nothing reaches a data source; whether to ask for a confirmation, where the values go and who may send them is the host's. Without it an input part shows, and its values go nowhere. |
 | `onNavigate({ board })` | A `go-to-board`. Without it, nothing happens: the viewer does not go anywhere on its own. |
 | `linkOrigins` | The origins an `open-link` may open besides this installation's paths. Left out: any `https` address. |
 

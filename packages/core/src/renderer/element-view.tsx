@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { BoardAppearance, ElementDefinition, SymbolDefinition, ViewSkin } from '../view-document.js';
-import { elementEventName, type ElementFrameMessage } from '../elements/frame.js';
+import { ELEMENT_EVENT_VALUE_LIMIT, elementEventName, elementEventValue, type ElementFrameMessage } from '../elements/frame.js';
 import { elementDefinitionHash, elementFrameLabel } from '../elements/definition-hash.js';
 import { skinStyleImages } from './background-skin.js';
 import { boardTheme, renderTemplateElement } from './element-template.js';
@@ -74,6 +74,9 @@ export interface ElementViewProps {
   /** An event the element raised: `ub.emit(name)` in a script element, or a click on a part of a template element's
    *  markup marked `data-ub-event="name"`. */
   onEvent?: (name: string) => void;
+  /** A script element's event that carries a value (`ub.emit(name, value)`): its name and the value, as JSON the element's code cannot reach
+   *  back into. A template element raises none. */
+  onValue?: (name: string, value: unknown) => void;
   /** The event names something listens for. A template element's regions marked with one of them take the keyboard:
    *  focusable (`tabindex="0"`), a button to assistive technology (`role="button"`) unless the markup says otherwise,
    *  and raised by Enter or Space as by a click. */
@@ -86,13 +89,13 @@ export interface ElementViewProps {
  * element runs in a sandboxed frame its server builds — a frame of its own origin, with no network — and receives
  * its props by message. An element it cannot draw says so in its box rather than leaving it blank.
  */
-export function ElementView({ definition, name, props, appearance = 'light', accent, skin, symbols, onEvent, events }: ElementViewProps) {
+export function ElementView({ definition, name, props, appearance = 'light', accent, skin, symbols, onEvent, onValue, events }: ElementViewProps) {
   const frames = useContext(ElementFrameContext);
   const theme = useMemo(() => boardTheme(appearance, accent, skin), [appearance, accent, skin]);
   if (!definition) return <div style={NOTICE_STYLE} data-element-notice="">{`No element “${name}”`}</div>;
   if (definition.render === 'script') {
     if (!frames) return <div style={NOTICE_STYLE} data-element-notice="">{`“${name}” runs a script — shown where the board is served`}</div>;
-    return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} theme={theme} onEvent={onEvent} />;
+    return <ScriptElement name={name} definition={definition} frames={frames} props={props} appearance={appearance} theme={theme} onEvent={onEvent} onValue={onValue} />;
   }
   return <TemplateElement definition={definition} name={name} props={props} theme={theme} skin={skin} symbols={symbols} onEvent={onEvent} events={events} />;
 }
@@ -155,7 +158,7 @@ function TemplateElement({ definition, name, props, theme, skin, symbols, onEven
 
 /** A script element's frame. `sandbox="allow-scripts"` without `allow-same-origin` gives it an origin of its own: it
  *  cannot reach this page, its storage or the viewer's session. A frame off screen is not loaded until it nears it. */
-function ScriptElement({ name, definition, frames, props, appearance, theme, onEvent }: { name: string; definition: ElementDefinition; frames: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string>; onEvent?: (name: string) => void }) {
+function ScriptElement({ name, definition, frames, props, appearance, theme, onEvent, onValue }: { name: string; definition: ElementDefinition; frames: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string>; onEvent?: (name: string) => void; onValue?: (name: string, value: unknown) => void }) {
   const [url, setUrl] = useState<string>();
 
   useEffect(() => {
@@ -171,16 +174,18 @@ function ScriptElement({ name, definition, frames, props, appearance, theme, onE
   // A frame of its own for each address: what one frame said (ready, an error) does not carry over to the next.
   return (
     <div style={{ ...FILL, position: 'relative' }} data-element={name}>
-      {url && <ElementFrame key={url} name={name} url={url} props={props} appearance={appearance} theme={theme} onEvent={onEvent} />}
+      {url && <ElementFrame key={url} name={name} url={url} props={props} appearance={appearance} theme={theme} onEvent={onEvent} onValue={onValue} />}
     </div>
   );
 }
 
-function ElementFrame({ name, url, props, appearance, theme, onEvent }: { name: string; url: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string>; onEvent?: (name: string) => void }) {
+function ElementFrame({ name, url, props, appearance, theme, onEvent, onValue }: { name: string; url: string; props: unknown; appearance: BoardAppearance; theme: Record<string, string>; onEvent?: (name: string) => void; onValue?: (name: string, value: unknown) => void }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const latest = useRef(onEvent);
+  const latestValue = useRef(onValue);
   useLayoutEffect(() => {
     latest.current = onEvent;
+    latestValue.current = onValue;
   });
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -202,7 +207,12 @@ function ElementFrame({ name, url, props, appearance, theme, onEvent }: { name: 
       else if (message?.type === 'ub:error') setError(String(message.message).slice(0, 300));
       else {
         const named = elementEventName(message);
-        if (named !== undefined) latest.current?.(named);
+        if (named !== undefined) {
+          latest.current?.(named);
+          const { value, invalid } = elementEventValue(message);
+          if (invalid) setError(`"${named}" carries a value that is not JSON of at most ${ELEMENT_EVENT_VALUE_LIMIT} characters — it was not passed on`);
+          else if (value !== undefined) latestValue.current?.(named, value);
+        }
       }
     };
     window.addEventListener('message', onMessage);

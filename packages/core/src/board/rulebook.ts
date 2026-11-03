@@ -77,7 +77,7 @@ label, glyph. Never write colours for statuses.`,
 
 \`{ "as": <kind>, "of": "<data>" | "<data>[<key>]", "show": "<field>" | ["<field>", …], "title"?, …options }\`. \`{{field}}\`
 in a title or a label reads a field of \`of\` (a status card's \`subtitle\` · \`note\` and a header's \`kicker\` · \`subtitle\` too; a header's \`clock\` is \`true\`; its \`time\` · \`date\` name a field of \`of\` that holds a date-time — the record's own, apart from \`clock\`, which is now — and \`since\` the same written as how long ago ("3 minutes ago"); an offset time shows on the clock of the read's \`zone\`); \`{{key}}\` is the item's key. \`presets\` hold shared settings a part takes
-with \`use\`; \`each: "<data>"\` makes one part per item (ids \`<part>/<key>\`) — it takes no \`of\`, and is placed once. An answer keyed by names (\`{"g1": {…}}\`) is no list: write a list whose items hold the name, and give that field as \`key\`. A \`group\` is several parts on a small
+with \`use\`; \`each: "<data>"\` makes one part per item (ids \`<part>/<key>\`) — it takes no \`of\`, and is placed once. An answer keyed by names (\`{"g1": {…}}\`) is no list: write a list whose items hold the name, as \`key\`. A \`group\` is several parts on a small
 canvas of their own (\`size\` [w, h], or the reach of their boxes) — its parts and links read the group's \`of\` unless they name their own.
 
 The board's own options take fields of what the part reads: a \`status-card\`'s \`meter\` is \`"<field>"\` or
@@ -115,7 +115,7 @@ Use a built-in whenever one shows the thing — a title, a status and a few valu
 \`"elements": { "tank": { "template": "<svg …>{{level}}</svg>", "style"?: "…", "props": { "level": "number", "tone": "string" } } }\`
 — every \`{{hole}}\` is a declared prop (\`number\` · \`string\` · \`boolean\` · \`list\` · \`object\`). A part places it with
 \`"as": "element", "element": "tank"\`, fixed \`props\` and \`bind\` (\`{ "level": "<field>", "tone": "<field>.tone" }\`). What markup cannot draw runs as a
-\`"script"\` in place of the template — in a sandboxed frame with no network, its props through \`ub.onProps\`, \`"resources"\` the
+\`"script"\` in place of the template — in a sandboxed frame with no network, its props through \`ub.onProps\`, values out by \`ub.emit(name, value)\`, \`"resources"\` the
 https:// origins it loads from. The look is \`board.skin\`, once for the board; parts never set fonts or colours:
 \`{ "palette"?: { "paper", "ink", "muted", "rule", "ground"? (text on the board), "backdrop"? (the board's own colour) }, "font"? · "display"? · "mono"? (font stacks), "frame"?, "radius"? (px), "shadow"?: "none" | "soft" | "hard", "titles"?: "plain" | "band" | "tab" }\`
 — a frame is ${code(FRAMES)}; paper is the ground the widgets sit on, ink their text, muted the quieter text, rule their lines; an element's CSS reads them as

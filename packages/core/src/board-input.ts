@@ -17,6 +17,14 @@ export type BoardInput =
       type: 'submit';
       part: string;
       values: Record<string, unknown>;
+    }
+  | {
+      /** A script element of the part raised an event that carries a value (`ub.emit(name, value)`): the part, the event's name and
+       *  its value, JSON of at most 2,048 characters. An event without a value is no input — a board's triggers hear those. */
+      type: 'element';
+      part: string;
+      name: string;
+      value: unknown;
     };
 
 /** An input without the part it came from — what one part's frame reports. */
