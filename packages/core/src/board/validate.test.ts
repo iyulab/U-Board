@@ -328,7 +328,7 @@ describe('validateBoard', () => {
     const problems = (fields: unknown) => validateBoard({ ...base, data: { d: { from: 'x', path: '/x', fields } } } as never).filter(i => !i.hint && i.at.startsWith('/data/d/fields')).map(i => `${i.at}: ${i.message}`);
     expect(problems({ mode: { names: { run: '', '*': 'Stopped' } } })).toEqual([]);
     expect(problems({ mode: { names: { run: 3 } } })).toEqual(['/data/d/fields/mode/names/run: a name is a word, or "" for no words']);
-    expect(problems({ mode: { state: { run: '' } } })).toEqual(['/data/d/fields/mode/state/run: a state maps to a status name']);
+    expect(problems({ mode: { state: { run: '' } } })).toEqual(['/data/d/fields/mode/state/run: a state maps to a status name (a string) — a map is { "<value>": "<status>", "*": "<status>" }; when the value already is a status name, write "state": "raw"']);
   });
 
   it("checks the titles of a skin: plain, band or tab", () => {
@@ -829,6 +829,18 @@ describe('validateBoard', () => {
     };
     expect(issues(board)).toEqual(['/parts/g/bind/a: "summary.queue" reads "summary", but this part reads "gate" — a part binds only fields of what it reads; show "summary" with a part of its own (in a group they sit together)']);
     expect(issues({ ...board, parts: { g: { ...board.parts.g, bind: { a: '190' } } } })).toEqual(['/parts/g/bind/a: "190" is a fixed value — it goes in "props"; "bind" names a field of "gate"']);
+  });
+
+  it('says a bind names one field when it is given a text made of several', () => {
+    const board = {
+      data: { rooms: { from: 'x', path: '/rooms' } },
+      elements: { card: { template: '<b>{{meta}}</b>', props: { meta: 'string' } } },
+      parts: { r: { as: 'element', element: 'card', of: 'rooms', bind: { meta: 'age · {{teachers}}' } } },
+      layout: { kind: 'grid', items: ['r'] },
+    };
+    expect(issues(board)).toEqual(['/parts/r/bind/meta: "age · {{teachers}}" — "bind" names one field of "rooms" ("<field>", "<field>.status" or "<field>.tone"); to show two fields in one text, give the element a prop for each and bind each of them']);
+    // a plain name that is none still gets the short form
+    expect(issues({ ...board, parts: { r: { ...board.parts.r, bind: { meta: '/age' } } } })).toEqual(['/parts/r/bind/meta: "/age" — write a field of "rooms", "<field>.status" or "<field>.tone"']);
   });
 
   it('places a part once — an each part makes one per item by itself', () => {

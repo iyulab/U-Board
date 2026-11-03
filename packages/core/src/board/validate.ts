@@ -271,7 +271,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     }
     const word = (w: unknown, wordAt: string) => {
       // a name may be empty: the value is then shown with no words — a link's label left off for the value that is normal
-      if (typeof w !== 'string' || (w === '' && what === 'state')) fail(wordAt, what === 'state' ? 'a state maps to a status name' : 'a name is a word, or "" for no words');
+      if (typeof w !== 'string' || (w === '' && what === 'state')) fail(wordAt, what === 'state' ? 'a state maps to a status name (a string) — a map is { "<value>": "<status>", "*": "<status>" }; when the value already is a status name, write "state": "raw"' : 'a name is a word, or "" for no words');
       else if (what === 'state' && !isStatus(w)) fail(wordAt, `no status "${w}" — ${statusHint()}`);
     };
     if (Array.isArray(m)) {
@@ -706,7 +706,9 @@ export function validateBoard(input: unknown): BoardIssue[] {
         const other = typeof ref === 'string' ? /^([\w-]+)(?:\[[^\]]*\])?\.([\w-]+)/.exec(ref) : null;
         fail(bindAt, other && other[1] !== reads && other[1]! in data
           ? `"${String(ref)}" reads "${other[1]}", but this part reads "${reads}" — a part binds only fields of what it reads; show "${other[1]}" with a part of its own (in a group they sit together)`
-          : `"${String(ref)}" — write a field of "${reads}", "<field>.status" or "<field>.tone"`);
+          : typeof ref === 'string' && /[{}\s]/.test(ref)
+            ? `"${ref}" — "bind" names one field of "${reads}" ("<field>", "<field>.status" or "<field>.tone"); to show two fields in one text, give the element a prop for each and bind each of them`
+            : `"${String(ref)}" — write a field of "${reads}", "<field>.status" or "<field>.tone"`);
         continue;
       }
       if (m[2] && fieldOf(reads, m[1]!)?.state === undefined) fail(bindAt, `"${m[1]}" has no "state" in /data/${reads}/fields — its ${m[2]} needs one`);
