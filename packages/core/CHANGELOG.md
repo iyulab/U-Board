@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- The `adapters` prop of `BoardView` and `ViewerPage` has a documented contract: another array (by identity) reads the board again and the same array reads nothing again, so a host can carry a value it chose — a point in time, a site — to its source by passing a new array of adapters bound to it. This is how it already behaved; it is now documented in the prop's comment and `docs/embedding.md`, and a test keeps it.
 - A script element can hand the host a value: `ub.emit(name, value)` carries JSON of at most 2,048 characters, and `onInput` hears it as `{ type: 'element', part, name, value }`. An event without a value stays what it was — one the board's triggers listen for. A value that is not such JSON is not passed on, and the element's box says so. The sandbox is as it was: no network, and the value only leaves the frame — nothing writes it anywhere.
 - `drawBoard` also returns `notLists`: the data a part is made per item of (`each`) whose answer was an object keyed by names (`{ "g1": {…} }`) and not a list. Such a data has no items, so the part was drawn zero times without a word. The rulebook now says an item list is a list.
 - A skin's `titles` draws the title above every part as a strip (`band`), as a tab that fits its words (`tab`), or plain (default): the skin's tokens for the widget library's new title tokens. Needs `@iyulab/u-widgets` with them; an older library draws the title plain.

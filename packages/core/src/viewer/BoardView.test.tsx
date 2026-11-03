@@ -21,6 +21,24 @@ describe('BoardView', () => {
     await waitFor(() => expect([...region.querySelectorAll<HTMLElement>('[data-item-id]')].map(item => item.dataset.itemId)).toEqual(['pump/P1', 'pump/P2']));
   });
 
+  it('reads again when the host passes other adapters, and not when it passes the same ones — the way a host carries a value it chose to the source', async () => {
+    let reads = 0;
+    // An adapter bound to what the host chose (a point in time, say): another choice is another adapter.
+    const asOf = (answer: string): Adapter => ({ id: 'plant', resolve: async () => { reads += 1; return { value: [{ id: answer, flow: 1 }], quality: 'live' }; } });
+    const items = (region: HTMLElement) => [...region.querySelectorAll<HTMLElement>('[data-item-id]')].map(item => item.dataset.itemId);
+    const first = [asOf('T1')];
+    const { rerender } = render(<BoardView board={board} adapters={first} ariaLabel="Pumps" />);
+    const region = await screen.findByRole('region', { name: 'Pumps' });
+    await waitFor(() => expect(items(region)).toEqual(['pump/T1']));
+    const settled = reads;
+    rerender(<BoardView board={board} adapters={first} ariaLabel="Pumps" />);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(reads).toBe(settled);
+    rerender(<BoardView board={board} adapters={[asOf('T2')]} ariaLabel="Pumps" />);
+    await waitFor(() => expect(items(region)).toEqual(['pump/T2']));
+    expect(reads).toBeGreaterThan(settled);
+  });
+
   describe('variables', () => {
     const lines: Board = {
       variables: { line: { options: ['L1', 'L2'], default: 'L1' }, day: { kind: 'date', default: '2026-11-01' } },

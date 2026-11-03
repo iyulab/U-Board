@@ -6,7 +6,8 @@ import { ViewerPage, type ViewerPageProps } from './ViewerPage.js';
 
 export interface BoardViewProps extends Omit<ViewerPageProps, 'document'> {
   /** The board to show, drawn from its picture, made here with `adapters`: a grid laying out a part per item of a list reads which items the
-   *  list has when the board opens. Pass the same object until the board changes: each new one is drawn again. */
+   *  list has when the board opens. Pass the same object until the board changes: each new one is drawn again.
+   *  `adapters` (see `ViewerPageProps`) is read the same way: another array reads again, the same one does not. */
   board: Board;
   /** The values the board's variables take, by name — what the host chose: a line, a day, a shift. A value that is not one of a variable's options (or not of its
    *  kind) is read as its default; a name the board does not declare is ignored. The board is drawn again whenever a value changes; an unchanged set, in

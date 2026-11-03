@@ -21,6 +21,9 @@ import type { BoardInput, PartInput } from '../board-input.js';
 import { focusPart, useTriggers, type BoardEvent } from './use-triggers.js';
 
 export interface ViewerPageProps {
+  /** Where the values come from. The page reads again when this is another array (by identity) and not when it is the same one — so a host
+   *  that carries a value it chose to the source (a point in time, a site) makes an adapter bound to that value and passes a new array when
+   *  the choice changes. Keep the array while nothing changed: a new one on every render reads on every render. */
   adapters: readonly Adapter[];
   /** Viewport size in CSS px. Omit either to have the view follow its container along that axis —
    * `ViewerPage` then fills its parent, so give the parent a definite size. */

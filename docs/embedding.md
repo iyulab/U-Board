@@ -86,7 +86,9 @@ export function LineView() {
 - **`onTrigger` and `onInput`** are how the board talks back. A trigger tells you an event happened on a part (a click, a status
   change); `onInput` tells you what a person typed into an input widget of a picture you draw yourself, and the value a script element of a board raised (`ub.emit(name, value)`). Whether to ask for a
   confirmation, where the values go and who may send them are yours: the viewer writes to no system the board reads.
-- **Pass the same `board` object until the board changes**, and the same `adapters`: each new one is drawn again.
+- **Pass the same `board` object until the board changes**, and the same `adapters`: each new one is drawn again. That is a contract, and the way to carry a value your
+  app chose (a point in time, a site) to a source: make an adapter bound to it and pass a new array when the choice changes — the board reads again; the same
+  array reads nothing again. A new array on every render reads on every render.
 
 ## Letting an assistant draw boards
 
