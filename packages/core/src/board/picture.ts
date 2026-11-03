@@ -750,6 +750,17 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         if (typeof time === 'string') bindValue('data.time', time);
         if (typeof date === 'string') bindValue('data.date', date);
         if (typeof since === 'string') bindValue('data.since', since);
+        // The fields it shows: the first with a state is the state of the whole (its tone and words), the others are the values
+        // set beside the title — as a status card reads its fields.
+        const stateField = stateIn(fields);
+        if (stateField) bindState('data.', stateField, { words: true });
+        const aside = fields.filter(n => n !== stateField).map((name, i) => {
+          const f = field(name);
+          bindValue(`data.aside.${i}.value`, name);
+          bindState(`data.aside.${i}.`, name);
+          const format = formatOf(f);
+          return { label: f.label ?? name, value: '', ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}) };
+        });
         // A time with an offset is shown on the clock of the zone the source writes its times in (the read's `zone`), not the viewer's.
         const zone = query !== undefined ? data[query]?.zone : undefined;
         if (typeof zone === 'string' && (time !== undefined || date !== undefined)) (rest as Record<string, unknown>).timeZone = zone;
@@ -762,6 +773,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
               ...(kicker !== undefined ? { kicker: text(kicker, 'data.kicker') ?? '' } : {}),
               ...(subtitle !== undefined ? { subtitle: text(subtitle, 'data.subtitle') ?? '' } : {}),
               ...(clock === true ? { clock: true } : {}),
+              ...(aside.length > 0 ? { aside } : {}),
             },
             ...(Object.keys(rest).length ? { options: rest } : {}),
           },

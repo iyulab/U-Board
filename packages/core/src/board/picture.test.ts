@@ -199,6 +199,17 @@ describe('the picture model of a v2 board', () => {
     expect(drawn(nodeOf(doc, 'head').widget)).toEqual({ data: { text: 'Line 1280', kicker: 'Plant 1280', subtitle: '1280 made' } });
   });
 
+  it("shows a header's values beside its title, and the state of the whole, from the fields its `show` names — as a status card does", () => {
+    const doc = view(board(
+      { head: { as: 'header', of: 'totals', title: 'Line', show: ['temp', 'oee'] } },
+      { kind: 'grid', items: [['head', 12]] },
+    ));
+    // The first field with a state is the header's state; the others are its values.
+    expect(drawn(nodeOf(doc, 'head').widget).data).toMatchObject({ text: 'Line', tone: 'warn', aside: [{ label: 'oee', value: 0.83, format: 'percent' }] });
+    // A header that shows nothing is as it was.
+    expect(drawn(nodeOf(view(board({ head: { as: 'header', of: 'totals', title: 'Line' } }, { kind: 'grid', items: [['head', 12]] })), 'head').widget).data).toEqual({ text: 'Line' });
+  });
+
   it("binds a header's time and date to the fields they name — the data's time, which the clock (the time of day now) is not", () => {
     const grid: Board['layout'] = { kind: 'grid', items: [['head', 12]] };
     const timed = view(board({ head: { as: 'header', of: 'totals', title: 'Line', time: 'updatedAt', date: 'updatedAt' } }, grid));

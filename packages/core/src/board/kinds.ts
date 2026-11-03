@@ -17,6 +17,8 @@ export interface PartKind {
   of: 'needs' | 'may' | 'no';
   /** The options the widget takes, by name — empty for a kind the board draws itself. */
   options: string[];
+  /** For an option of the widget that lets only some words through (a gauge's `form`), those words. */
+  choices?: Record<string, string[]>;
   /** The options the board reads itself, before it hands the rest to the widget: which field a list's line shows, a
    *  chart's mapping, a marker's shape. */
   own: string[];
@@ -63,12 +65,14 @@ function generate(): PartKind[] {
   };
   const fromWidget = (kind: string, widget: string, of: PartKind['of'], own: readonly string[] = [], stands?: Readonly<Record<string, string>>): PartKind => {
     const replaced = new Set(Object.values(stands ?? {}));
+    const choices = Object.entries(entry(widget).choices ?? {}).filter(([option]) => !replaced.has(option));
     return {
       kind,
       widget,
       shows: entry(widget).description,
       of,
       options: entry(widget).options.filter(option => !replaced.has(option)),
+      ...(choices.length > 0 ? { choices: Object.fromEntries(choices.map(([option, words]) => [option, [...words]])) } : {}),
       own: [...own],
       ...(stands !== undefined ? { stands: { ...stands } } : {}),
     };

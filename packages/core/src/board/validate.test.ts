@@ -196,6 +196,15 @@ describe('validateBoard', () => {
     expect(issues(board({ field: 'state', bands: ['start', 5, 'end', 1, 'both'] }))).toEqual(['/layout/links/a/arrow/bands/3: the numbers of bands go up']);
   });
 
+  it("names the values a closed option takes — a widget given another would draw it its own way, without a word", () => {
+    expect(issues(canvas({ g: { as: 'gauge', of: 'totals', show: 'load', form: 'dial' } }))).toEqual([
+      '/parts/g/form: "dial" is not a form of a gauge — arc · vertical · tank · thermometer',
+    ]);
+    expect(issues(canvas({ g: { as: 'gauge', of: 'totals', show: 'load', form: 'thermometer' } }))).toEqual([]);
+    // An option the board reads itself, or one that takes any text, is not closed by a widget's list.
+    expect(issues(canvas({ l: { as: 'list', of: 'equipment', primary: 'name', variant: 'tiles' }, h: { as: 'header', title: 'Plant', timeZone: 'Asia/Seoul' } }))).toEqual([]);
+  });
+
   it('names the kinds there are for a kind that is not one, and asks what a kind shows', () => {
     const [unknown] = issues(canvas({ g: { as: 'timeline', of: 'equipment' } }));
     expect(unknown).toMatch(/^\/parts\/g\/as: unknown kind "timeline" — one of status-card, header, stat, /);

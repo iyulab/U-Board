@@ -580,6 +580,17 @@ export function validateBoard(input: unknown): BoardIssue[] {
   const checkOptions = (raw: Obj, part: Obj, kind: PartKind, at: string) => {
     const known = new Set([...PART_FIELDS, ...kind.own, ...kind.options]);
     const unknown = Object.keys(part).filter(key => !known.has(key));
+    // An option the widget lets only some words through: another would be drawn the widget's default way, without a word.
+    for (const [key, words] of Object.entries(kind.choices ?? {})) {
+      const value = part[key];
+      if (typeof value !== 'string' || words.includes(value)) continue;
+      const keyAt = key in raw ? `${at}/${key}` : `/presets/${String(raw.use)}/${key}`;
+      if (!(key in raw)) {
+        if (reportedPresetOptions.has(keyAt)) continue;
+        reportedPresetOptions.add(keyAt);
+      }
+      fail(keyAt, `"${value}" is not a ${key} of a ${kind.kind} — ${words.join(' · ')}`);
+    }
     if (unknown.length === 0) return;
     const options = [...kind.own, ...kind.options];
     const offered = options.length === 0 ? `a ${kind.kind} takes no options` : `options of a ${kind.kind}: ${list(options, 24)}`;

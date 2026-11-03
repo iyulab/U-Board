@@ -11,23 +11,31 @@ export interface WidgetCatalogEntry {
   description: string;
   /** The option names the widget takes, in the library's order. */
   options: string[];
+  /** For an option the widget lets only some words through (a gauge's `form`), those words — an option that takes any text, or a
+   *  number, is not here. Left out when no option of the widget is closed. */
+  choices?: Record<string, string[]>;
 }
 
 /** The two functions of the library's `./tools` entry this reads. */
 export interface WidgetLibraryTools {
   help(): unknown;
-  getWidgetOptions(widget: string): readonly { key: string }[] | null | undefined;
+  getWidgetOptions(widget: string): readonly { key: string; enum?: readonly string[] }[] | null | undefined;
 }
 
 /** The catalog as the library reports it now. */
 export function readWidgetCatalog(tools: WidgetLibraryTools): WidgetCatalogEntry[] {
   const catalog = tools.help() as { widget: string; category: string; description: string }[];
-  return catalog.map(({ widget, category, description }) => ({
-    widget,
-    category,
-    description,
-    options: (tools.getWidgetOptions(widget) ?? []).map(o => o.key),
-  }));
+  return catalog.map(({ widget, category, description }) => {
+    const options = tools.getWidgetOptions(widget) ?? [];
+    const closed = options.filter(o => o.enum !== undefined && o.enum.length > 0);
+    return {
+      widget,
+      category,
+      description,
+      options: options.map(o => o.key),
+      ...(closed.length > 0 ? { choices: Object.fromEntries(closed.map(o => [o.key, [...o.enum!]])) } : {}),
+    };
+  });
 }
 
 /** The source of `widget-catalog.generated.ts` for a catalog. */

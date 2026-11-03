@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The board check refuses an option value its widget does not take. A widget given a word outside its list (`"dial"` as a gauge's `form`, `"row"` as a stat list's `layout`) drew it its own default way without a word; now the part's path names the value and lists the words the option takes. A board that wrote such a value reads again with that part's option corrected.
+
+### Fixed
+
+- A `header` part now shows what its `show` names, as a status card does: the first field with a state is the state of the whole header (its tone and words), the others are the values set beside its title (`aside`). `show` on a header was accepted and then ignored.
+
 ## [0.41.0] - 2026-11-03
 
 ### Added

@@ -239,7 +239,15 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "form",
       "band",
       "marks"
-    ]
+    ],
+    "choices": {
+      "form": [
+        "arc",
+        "vertical",
+        "tank",
+        "thermometer"
+      ]
+    }
   },
   {
     "widget": "progress",
@@ -265,7 +273,13 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "glyphValue",
       "maxItems",
       "compact"
-    ]
+    ],
+    "choices": {
+      "form": [
+        "bar",
+        "pictogram"
+      ]
+    }
   },
   {
     "widget": "table",
@@ -288,7 +302,13 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "compact",
       "layout",
       "maxItems"
-    ]
+    ],
+    "choices": {
+      "layout": [
+        "list",
+        "tiles"
+      ]
+    }
   },
   {
     "widget": "form",
@@ -322,7 +342,13 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "description": "Callout/alert banner",
     "options": [
       "live"
-    ]
+    ],
+    "choices": {
+      "live": [
+        "auto",
+        "off"
+      ]
+    }
   },
   {
     "widget": "code",
@@ -350,7 +376,13 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "description": "Status indicators with label, value, and a tone (colour and mark)",
     "options": [
       "face"
-    ]
+    ],
+    "choices": {
+      "face": [
+        "plain",
+        "pill"
+      ]
+    }
   },
   {
     "widget": "status-grid",
@@ -360,7 +392,14 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "columns",
       "cell",
       "counts"
-    ]
+    ],
+    "choices": {
+      "cell": [
+        "square",
+        "chip",
+        "dot"
+      ]
+    }
   },
   {
     "widget": "status-card",
@@ -370,7 +409,24 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "overflow",
       "compact",
       "frame"
-    ]
+    ],
+    "choices": {
+      "overflow": [
+        "clip",
+        "fade",
+        "scroll"
+      ],
+      "frame": [
+        "card",
+        "flat",
+        "glow",
+        "plate",
+        "ticket",
+        "postage",
+        "tape",
+        "none"
+      ]
+    }
   },
   {
     "widget": "steps",
@@ -379,7 +435,13 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "options": [
       "layout",
       "compact"
-    ]
+    ],
+    "choices": {
+      "layout": [
+        "vertical",
+        "horizontal"
+      ]
+    }
   },
   {
     "widget": "rating",
@@ -390,7 +452,14 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "interactive",
       "icon",
       "label"
-    ]
+    ],
+    "choices": {
+      "icon": [
+        "star",
+        "heart",
+        "thumb"
+      ]
+    }
   },
   {
     "widget": "video",
@@ -419,7 +488,14 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "options": [
       "layout",
       "columns"
-    ]
+    ],
+    "choices": {
+      "layout": [
+        "vertical",
+        "horizontal",
+        "grid"
+      ]
+    }
   },
   {
     "widget": "math",
@@ -435,7 +511,13 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "description": "Standalone action buttons (quick replies, suggested actions)",
     "options": [
       "layout"
-    ]
+    ],
+    "choices": {
+      "layout": [
+        "wrap",
+        "column"
+      ]
+    }
   },
   {
     "widget": "divider",
@@ -444,7 +526,14 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "options": [
       "label",
       "spacing"
-    ]
+    ],
+    "choices": {
+      "spacing": [
+        "small",
+        "default",
+        "large"
+      ]
+    }
   },
   {
     "widget": "header",
@@ -461,6 +550,18 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "options": [
       "widths",
       "frame"
-    ]
+    ],
+    "choices": {
+      "frame": [
+        "card",
+        "flat",
+        "glow",
+        "plate",
+        "ticket",
+        "postage",
+        "tape",
+        "none"
+      ]
+    }
   }
 ];
