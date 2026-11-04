@@ -1,6 +1,7 @@
 import type { CSSProperties, KeyboardEvent } from 'react';
 import { UWidget } from '@iyulab/u-widgets/react';
 import '@iyulab/u-widgets';
+import { needChartEntry } from './chart-entry.js';
 import type { ResolvedWidget } from '../adapter.js';
 import type { BoardAppearance, ElementDefinition, StateLook, SymbolDefinition, ViewSkin } from '../view-document.js';
 import { elementNameOf } from '../elements/element-type.js';
@@ -140,6 +141,9 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
   const note = metaLines(widget.meta?.[key ?? ''] ?? Object.values(widget.meta ?? {})[0]);
   const noted = note.length > 0 ? note.join('\n') : undefined;
   const element = elementNameOf(widget.type);
+  // Whatever way a board reaches the screen, a chart drawn here has its entry loading (a viewer with the document
+  // starts it earlier, before the first reading is back).
+  needChartEntry([widget.type]);
 
   return (
     <div

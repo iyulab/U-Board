@@ -1,20 +1,8 @@
 import { Scene } from '@canvas-kit/core';
 import type { ViewerOverlayItem } from '@canvas-kit/viewer';
 import '@iyulab/u-widgets';
-// u-widgets keeps chart.* behind this opt-in subpath (echarts is an optional peer dep) so
-// consumers who don't need charts avoid the bundle cost. Without this import, a node whose
-// widget.type starts with "chart." silently renders as an "Unknown widget" fallback instead of
-// the chart — this renderer doesn't otherwise restrict which widget types a document can use, so
-// it opts every u-widgets entry point in rather than special-casing chart.* as excluded.
-//
-// Loaded dynamically rather than statically: echarts alone pushes a
-// consuming app's bundle past Vite's 500kB single-chunk warning, even for documents that never
-// use a chart.* widget. This still loads unconditionally on module init — no widget-type
-// inspection, same "opt every entry point in" policy as a static import — but as its own chunk
-// fetched in parallel, so it no longer blocks parsing/evaluating the app's main chunk. A chart node
-// drawn before it arrives shows u-widgets' "module not loaded" card for that moment, and the
-// widget re-renders itself once the entry registers — nothing here has to render again.
-void import('@iyulab/u-widgets/charts');
+// The chart entry (`@iyulab/u-widgets/charts`) is not loaded here: `NodeFrame` and the viewer load it when a board
+// names a `chart.*` widget (`chart-entry.ts`), so a board without a chart does not fetch the chart engine.
 import type { ResolvedCanvasView } from '../resolve-document.js';
 import { sizedNodes } from '../node-size.js';
 import { DEFAULT_QUALITY_TEXT, type QualityText } from '../quality-text.js';

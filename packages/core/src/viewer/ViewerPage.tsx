@@ -8,7 +8,8 @@ import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { GridBoard } from '../renderer/grid-board.js';
 import type { Adapter, ResolvedWidget } from '../adapter.js';
-import { isCanvasItem, type ViewDocument } from '../view-document.js';
+import { isCanvasItem, placedIn, type ViewDocument } from '../view-document.js';
+import { needChartEntry } from '../renderer/chart-entry.js';
 import type { UBoardLabels } from '../labels.js';
 import type { ResolvedGridView, ResolvedViewDocument } from '../resolve-document.js';
 import { useLabels } from '../use-labels.js';
@@ -144,6 +145,9 @@ export function ViewerPage({
     () => (hearsInput ? (part: string, input: PartInput) => inputRef.current?.({ ...input, part } as BoardInput) : undefined),
     [hearsInput]
   );
+  // A chart is drawn by an entry of the widget library that loads when a board names one: start it with the document,
+  // before the first reading is back, so a chart is not first drawn as «module not loaded».
+  useEffect(() => needChartEntry(placedIn(document).map(placed => placed.widget.type)), [document]);
   const { resolved: received, resolvedAt, stalled } = useResolvedDocument(document, adapters, { pollIntervalMs, clock });
   // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);
