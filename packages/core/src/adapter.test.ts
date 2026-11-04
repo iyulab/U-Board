@@ -320,6 +320,12 @@ describe('deriveValue', () => {
     expect(deriveValue({ op: 'count', where: { kind: 'valve' } }, items)).toBe(0);
   });
 
+  it('counts the items a field is not, or is one of', () => {
+    expect(deriveValue({ op: 'count', where: { kind: { not: 'pump' } } }, items)).toBe(1);
+    expect(deriveValue({ op: 'count', where: { kind: { in: ['pump', 'fan'] }, state: { not: 'trip' } } }, items)).toBe(3);
+    expect(deriveValue({ op: 'count', where: { '/at/rack': { not: 'A' } } }, items)).toBe(3);
+  });
+
   it('takes the sum, smallest, largest and mean of the numbers a field holds — a number in text counts, text that is not one does not', () => {
     expect(deriveValue({ op: 'sum', field: 'flow' }, items)).toBe(60.5);
     expect(deriveValue({ op: 'min', field: 'flow' }, items)).toBe(0);

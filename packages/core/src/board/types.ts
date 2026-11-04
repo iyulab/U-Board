@@ -5,6 +5,7 @@
 // id, within its own map, and there is one way to write each thing. Coordinates appear only in a canvas layout.
 
 import type { Emphasis, Tone } from '../tones.js';
+import type { WhereValue } from '../where.js';
 
 /**
  * The eleven tones a status is drawn in (`ok` · `info` · `watch` · `warn` · `alarm` · `off` · `idle` · `accent`, and
@@ -88,8 +89,8 @@ export interface FieldDerive {
   op: 'count' | 'sum' | 'min' | 'max' | 'avg';
   /** The item field the number is taken from — not for `count`. */
   field?: string;
-  /** Only the items whose fields equal these values. */
-  where?: Record<string, string | number | boolean | VariableRef>;
+  /** Only the items whose fields are what these say: a value (equal to it), `{ "not": value }` or `{ "in": [values] }`. */
+  where?: Record<string, WhereValue | VariableRef>;
 }
 
 /** When a request's `{{now:…}}` places stand, for a source asked for the data of a given time. */
@@ -116,9 +117,10 @@ export interface Query {
   list?: string;
   /** The field that names each item — parts address one as `<data>[<key>]`. */
   key?: string;
-  /** Only the items whose fields equal these values. A board that reads a variable writes `{ "variable": "line" }` (`VariableRef`) in place of a value;
-   *  `expandVariables` writes it out before the board is drawn, so what is drawn (`Expanded<Board>`) has values only. */
-  where?: Record<string, string | number | boolean | VariableRef>;
+  /** Only the items whose fields are what these say: a value (equal to it), `{ "not": value }` or `{ "in": [values] }`. A board that reads a variable writes
+   *  `{ "variable": "line" }` (`VariableRef`) in place of a value; `expandVariables` writes it out before the board is drawn, so what is drawn
+   *  (`Expanded<Board>`) has values only. */
+  where?: Record<string, WhereValue | VariableRef>;
   /** The field holding when the source observed the item — its own name, or a field declared with where it lives (`at`). */
   time?: string;
   /** Where the answer says when it was observed as a whole (a JSON Pointer) — the time of a part that reads the whole

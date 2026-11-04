@@ -12,6 +12,11 @@ type Schema = Record<string, unknown>;
 
 const ref = (name: string): Schema => ({ $ref: `#/$defs/${name}` });
 const map = (of: Schema, description?: string): Schema => ({ type: 'object', additionalProperties: of, ...(description ? { description } : {}) });
+/** What a `where` can say of a field beside a value: it is not that value, or it is one of these. */
+const whereOperators: Schema[] = [
+  { type: 'object', required: ['not'], additionalProperties: false, properties: { not: { type: ['string', 'number', 'boolean'] } } },
+  { type: 'object', required: ['in'], additionalProperties: false, properties: { in: { type: 'array', minItems: 1, items: { type: ['string', 'number', 'boolean'] } } } },
+];
 const point: Schema = { type: 'array', prefixItems: [{ type: 'number' }, { type: 'number' }], items: false, minItems: 2 };
 const size: Schema = { type: 'array', prefixItems: [{ type: 'number', exclusiveMinimum: 0 }, { type: 'number', exclusiveMinimum: 0 }], items: false, minItems: 2 };
 
@@ -103,7 +108,7 @@ export function boardSchema(): Schema {
             properties: {
               op: { enum: ['count', 'sum', 'min', 'max', 'avg'] },
               field: { type: 'string', description: 'The item field the number is taken from — not for count.' },
-              where: { type: 'object', additionalProperties: { type: ['string', 'number', 'boolean'] }, description: 'Only the items whose fields equal these values.' },
+              where: { type: 'object', additionalProperties: { anyOf: [{ type: ['string', 'number', 'boolean'] }, ...whereOperators] }, description: 'Only the items whose fields are what these say — a value (equal), { "not": value } or { "in": [values] }.' },
             },
             description: 'A field computed from the items of the list, not sent by the source: count, or the sum, min, max or avg of one field, over the items equal to where. Shown by a part that reads the list.',
           },
@@ -125,7 +130,7 @@ export function boardSchema(): Schema {
           ref: { description: 'What an adapter that is not an HTTP connector reads, as it defines it: one item, its fields under fields (at "" when the item is the value). Takes nothing but fields.' },
           list: { type: 'string', description: 'A JSON Pointer to the list of items in the answer.' },
           key: { type: 'string', description: 'The field that names each item: parts address one as <data>[<key>].' },
-          where: map({ anyOf: [{ type: ['string', 'number', 'boolean'] }, { type: 'object', required: ['variable'], additionalProperties: false, properties: { variable: { type: 'string' } } }] }, 'Only the items whose fields equal these values — a value, or a variable of the board: { "variable": "line" }.'),
+          where: map({ anyOf: [{ type: ['string', 'number', 'boolean'] }, { type: 'object', required: ['variable'], additionalProperties: false, properties: { variable: { type: 'string' } } }, ...whereOperators] }, 'Only the items whose fields are what these say — a value (equal), { "not": value } or { "in": [values] }; or a variable of the board: { "variable": "line" }.'),
           time: { type: 'string', description: 'The field of each item holding when the source observed it. A whole list has one time of its own: answerTime.' },
           pivot: {
             type: 'object',

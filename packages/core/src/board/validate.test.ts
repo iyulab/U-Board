@@ -799,6 +799,16 @@ describe('validateBoard', () => {
     });
   });
 
+  it('takes a where that says a field is not a value or is one of some, in a data read and in a derived field', () => {
+    const withWhere = (where: unknown, derive?: unknown) => ({ ...canvas({ s: { as: 'stat', of: 'totals', show: 'n' } }), data: { ...data, rooms: { from: 'plant', path: '/plant/rooms', list: '/value', key: 'id', where, ...(derive !== undefined && { fields: { n: { derive } } }) }, totals: { from: 'plant', path: '/plant/totals', list: '/value', fields: { n: { derive } } } } });
+    expect(issues(withWhere({ room: { not: '704' }, floor: { in: [1, 2] } }))).toEqual([]);
+    expect(issues(withWhere({ room: { not: {} } }))).toEqual(['/data/rooms/where/room: a "where" value is a string, a number or true/false — or { "not": value } (any other), { "in": [values] } (one of them)']);
+    expect(issues(withWhere({ room: { in: [] } }))[0]).toContain('/data/rooms/where/room: a "where" value is');
+    expect(issues(withWhere({ room: { like: '7' } }))[0]).toContain('/data/rooms/where/room: a "where" value is');
+    expect(issues(withWhere({ room: '704' }, { op: 'count', where: { state: { not: 'free' } } }))).toEqual([]);
+    expect(issues(withWhere({ room: '704' }, { op: 'count', where: { state: { in: [] } } }))[0]).toContain('/derive/where: "where" is');
+  });
+
   it('checks a data read: where on a list, the request time, and statuses', () => {
     const board = {
       ...canvas({}),
@@ -812,7 +822,7 @@ describe('validateBoard', () => {
       '/statuses/down/tone: "red" is not a tone — use ok · info · watch · warn · alarm · off · idle · accent · past · now · next',
       '/statuses/slow/emphasis: "glow" is not an emphasis — use invert · hatch · stamp · blink',
       '/data/bad/path: a data read needs "path": the request, starting with "/" — or "ref" for an adapter that is not an HTTP connector',
-      '/data/bad/where: "where" keeps the items of a "list" whose fields equal its values: { "field": value }',
+      '/data/bad/where: "where" keeps the items of a "list" whose fields are what it says: { "field": value }, { "field": { "not": value } } or { "field": { "in": [values] } }',
       '/data/bad/now/step: "step" is how often the source has new data, in seconds (more than 0)',
     ]);
   });

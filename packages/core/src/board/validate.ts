@@ -12,6 +12,7 @@ import { ELEMENT_THEME, accentTokens, skinTokens } from '../renderer/element-tem
 import { EMPHASES, FRAMES, NUMERAL_SCALES, TONES } from './types.js';
 import { isNumeralWeight } from '../numerals.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from '../elements/markup-policy.js';
+import { isWhereValue } from '../where.js';
 import { expandVariables, isFree, isListed, isValueOfKind, isVariableRef, VARIABLE_KINDS, variableValues, variablesOf } from './variables.js';
 import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor, isFontStack, isSkinColor } from '../css-color.js';
@@ -67,6 +68,8 @@ function deadFallback(css: string, at: string, named: ReadonlySet<string>): Boar
 }
 
 /** The keys every part may have, whatever its kind. */
+/** What a `where` value is, in words: the one message every place that checks one gives. */
+const WHERE_VALUE_SAYS = 'a "where" value is a string, a number or true/false — or { "not": value } (any other), { "in": [values] } (one of them)';
 const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show', 'highlight', 'dim'] as const;
 
 /** The spans (twelfths) that take whole columns of a cell `cell` columns wide. */
@@ -324,9 +327,9 @@ export function validateBoard(input: unknown): BoardIssue[] {
       else if (q.list === undefined) fail(`${at}/answerTime`, 'without a "list" the answer is the item, and when it was observed is the field "time" names ("time": "<field>") — leave "answerTime" out');
     }
     if (q.where !== undefined) {
-      if (!isObj(q.where) || q.list === undefined) fail(`${at}/where`, '"where" keeps the items of a "list" whose fields equal its values: { "field": value }');
+      if (!isObj(q.where) || q.list === undefined) fail(`${at}/where`, '"where" keeps the items of a "list" whose fields are what it says: { "field": value }, { "field": { "not": value } } or { "field": { "in": [values] } }');
       else for (const [field, value] of Object.entries(q.where)) {
-        if (!['string', 'number', 'boolean'].includes(typeof value)) fail(`${at}/where/${field}`, 'a "where" value is a string, a number or true/false');
+        if (!isWhereValue(value)) fail(`${at}/where/${field}`, WHERE_VALUE_SAYS);
       }
     }
     if (q.now !== undefined) {
@@ -363,7 +366,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
           if (!['count', 'sum', 'min', 'max', 'avg'].includes(d.op as string)) fail(`${deriveAt}/op`, '"op" is count, sum, min, max or avg');
           else if (d.op === 'count' && d.field !== undefined) fail(`${deriveAt}/field`, 'a count has no field — it counts the items; to count only some write "where": { "<item field>": value }, and to total a field use "sum"');
           else if (d.op !== 'count' && typeof d.field !== 'string') fail(`${deriveAt}/field`, `a ${String(d.op)} takes "field": the item field the number is read from`);
-          if (d.where !== undefined && !(isObj(d.where) && Object.values(d.where).every(v => ['string', 'number', 'boolean'].includes(typeof v)))) fail(`${deriveAt}/where`, '"where" is { "<item field>": value } — only the items equal to these values');
+          if (d.where !== undefined && !(isObj(d.where) && Object.values(d.where).every(isWhereValue))) fail(`${deriveAt}/where`, '"where" is { "<item field>": value }, with { "not": value } or { "in": [values] } for a field that is not equal to, or one of — only the items it says');
           if (q.list === undefined) fail(deriveAt, 'a derived field is computed from the items of a list — this data has no "list"');
           if (f.at !== undefined) fail(`${fieldAt}/at`, 'a derived field is not in the source — leave "at" out');
         }

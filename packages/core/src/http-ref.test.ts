@@ -308,6 +308,19 @@ describe('readHttpRef', () => {
       });
     });
 
+    it('keeps the elements a field is not, or is one of, by `{ not }` and `{ in }` — an element without the field is not equal to anything', () => {
+      const rows = { items: [...air.items, { station: 'east', value: 7 }] };
+      const read = (where: Record<string, unknown>) => (readHttpRef(rows, { path: '/air', items: { list: '/items', where } } as never, READ_AT) as { value: unknown[] }).value;
+      expect(read({ item: { not: 'PM10' } })).toEqual([rows.items[1], rows.items[3]]);
+      expect(read({ item: { in: ['PM10', 'O3'] } })).toEqual([rows.items[0], rows.items[1], rows.items[2]]);
+      expect(read({ station: 'north', item: { not: 'O3' } })).toEqual([rows.items[0]]);
+      expect(read({ item: { not: 'CO' } })).toHaveLength(4);
+      expect(read({ item: { in: ['CO'] } })).toEqual([]);
+      expect(isHttpRef({ path: '/air', items: { list: '/items', where: { item: { not: 'PM10' } } } })).toBe(true);
+      expect(isHttpRef({ path: '/air', items: { list: '/items', where: { item: { in: [] } } } })).toBe(false);
+      expect(isHttpRef({ path: '/air', items: { list: '/items', where: { item: { like: 'PM' } } } })).toBe(false);
+    });
+
     it('reads an empty list when no element matches — the rows are there, none of them this kind', () => {
       expect(readHttpRef(air, { path: '/air', items: { list: '/items', where: { item: 'CO' } } }, READ_AT)).toMatchObject({ ok: true, value: [] });
     });

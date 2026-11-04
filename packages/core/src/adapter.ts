@@ -2,6 +2,7 @@ import { has } from './portable.js';
 import type { Binding, Derive, ItemField, Widget, ValueMap } from './view-document.js';
 import { formatValue, parseTemplate } from './elements/template.js';
 import { getByPointer } from './json-patch.js';
+import { whereMatches } from './where.js';
 import { metaOf, type ValueMeta } from './value-meta.js';
 
 /**
@@ -296,7 +297,7 @@ export function deriveValue(derive: Derive, value: unknown): number | undefined 
     }
   };
   const where = isObject(derive.where) ? Object.entries(derive.where) : [];
-  const kept = value.filter(item => where.every(([from, equals]) => String(read(item, from)) === String(equals)));
+  const kept = value.filter(item => where.every(([from, expected]) => whereMatches(read(item, from), expected)));
   if (derive.op === 'count') return kept.length;
   if (typeof derive.field !== 'string') return undefined;
   const numbers = kept.map(item => numericValue(read(item, derive.field!))).filter((n): n is number => n !== undefined);

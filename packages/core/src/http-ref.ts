@@ -6,6 +6,7 @@
  */
 
 import { has } from './portable.js';
+import { isEquality, isWhereValue, whereMatches, whereText, type WhereValue } from './where.js';
 import type { ResolvedBinding } from './adapter.js';
 
 /** One item of a list in the response, named by its fields rather than its place: the first element of the
@@ -14,7 +15,7 @@ import type { ResolvedBinding } from './adapter.js';
  *  item, and show its value as live. */
 export interface HttpRefItem {
   list: string;
-  where: Record<string, string | number | boolean>;
+  where: Record<string, WhereValue>;
   /** One level further in: the element of the list at `list` — a JSON Pointer read from the element found above —
    *  whose fields equal every one in `where`. The value is then read inside this one. It names an item of a list
    *  that sits inside an item, by its fields as well, so a reordering of the inner list cannot change which item
@@ -26,7 +27,7 @@ export interface HttpRefItem {
 /** The inner selector of an `HttpRefItem`: see `HttpRefItem.inside`. */
 export interface HttpRefInside {
   list: string;
-  where: Record<string, string | number | boolean>;
+  where: Record<string, WhereValue>;
 }
 
 /** An HTTP connector binding's reference. */
@@ -193,7 +194,7 @@ function isPointer(path: unknown): path is string {
 function isNamingWhere(where: unknown): boolean {
   if (!where || typeof where !== 'object' || Array.isArray(where)) return false;
   const values = Object.values(where);
-  return values.length > 0 && values.every(v => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean');
+  return values.length > 0 && values.every(isWhereValue);
 }
 
 function isHttpRefItem(item: unknown): item is HttpRefItem {
@@ -257,7 +258,8 @@ const itemIndexes = new WeakMap<unknown[], Map<string, { length: number; first: 
  *  indexed once on the fields asked about. A response is read, not changed — but a list changed after it was indexed
  *  still answers as a scan would: a hit is checked against its element, and a miss is scanned for. */
 function indexOfItem(list: unknown[], where: HttpRefItem['where']): number {
-  if (list.length < INDEXED_FROM) return list.findIndex(element => matches(element, where));
+  // An index looks a value up by equality; a `where` that says another thing about a field is scanned for.
+  if (list.length < INDEXED_FROM || !Object.values(where).every(isEquality)) return list.findIndex(element => matches(element, where));
   const fields = Object.keys(where).sort();
   const keyOf = (value: (field: string) => unknown) => JSON.stringify(fields.map(field => String(value(field))));
   let byFields = itemIndexes.get(list);
@@ -287,9 +289,9 @@ function matches(element: unknown, where: HttpRefItem['where']): boolean {
     element !== null &&
     typeof element === 'object' &&
     Object.entries(where).every(([field, expected]) => {
-      if (!has(element, field)) return false;
-      const actual = (element as Record<string, unknown>)[field];
-      return actual !== undefined && actual !== null && String(actual) === String(expected);
+      // A field the element lacks equals nothing: only a `not` keeps it.
+      if (!has(element, field)) return isEquality(expected) ? false : whereMatches(undefined, expected);
+      return whereMatches((element as Record<string, unknown>)[field], expected);
     })
   );
 }
@@ -351,7 +353,7 @@ function readValueAndTime(
   if (ref.item) {
     const found = findHttpRefItem(body, ref.item);
     if (!found.found) {
-      const where = Object.entries(ref.item.where).map(([field, expected]) => `${field}=${String(expected)}`).join(', ');
+      const where = Object.entries(ref.item.where).map(([field, expected]) => whereText(field, expected)).join(', ');
       return { ok: false, reason: 'address', message: `no item of "${ref.item.list}" where ${where}` };
     }
     scope = found.value;
@@ -359,7 +361,7 @@ function readValueAndTime(
     if (ref.item.inside) {
       const within = findHttpRefItem(scope, ref.item.inside);
       if (!within.found) {
-        const where = Object.entries(ref.item.inside.where).map(([field, expected]) => `${field}=${String(expected)}`).join(', ');
+        const where = Object.entries(ref.item.inside.where).map(([field, expected]) => whereText(field, expected)).join(', ');
         return { ok: false, reason: 'address', message: `no item of "${ref.item.inside.list}" inside the item of "${ref.item.list}" where ${where}` };
       }
       scope = within.value;

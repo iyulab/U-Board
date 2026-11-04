@@ -207,7 +207,9 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
 
 - **An HTTP connector** is asked a `path`, relative to the connector's address — a path starting with one `/`, with
   its query. `list` points at the items in the answer; `where` keeps the items whose fields equal those values
-  (`"12"` and `12` match) — the rows a list or a table is about. `pivot` reads a list of one row per name
+  (`"12"` and `12` match) — the rows a list or a table is about. A field can be said not to be a value
+  (`{ "room": { "not": "704" } }`) or to be one of some (`{ "room": { "in": ["701", "702"] } }`); an item without the field
+  equals nothing, so `not` keeps it and `in` leaves it out. Nothing else is a condition. `pivot` reads a list of one row per name
   (`{ "category": "T1H", "obsrValue": 3.1 }`) as one item: each row's `key` field names a field, its `value` field is
   that field's value.
 - **Any other adapter** — one the host provides — is given its own `ref` and answers one item (an object of fields, or
@@ -253,7 +255,7 @@ statuses live in `fields`, never in the data. Parts name a read whole (`"pumps"`
 - **Fields computed from the list.** A read with a `list` can declare a field the source does not send — `"down": { "derive":
   { "op": "count", "where": { "state": "trip" } } }`, `"mean": { "derive": { "op": "avg", "field": "flow" }, "digits": 1 }` —
   the number of items, or the sum, smallest, largest or mean (`sum` · `min` · `max` · `avg`) of one field of them, over the
-  items equal to `where`. A part that reads the list (`"of": "<data>"`, no item) shows it like any field and it has `names`,
+  items `where` keeps (equal to a value, or `{ "not" }` / `{ "in" }` as in a data's `where`). A part that reads the list (`"of": "<data>"`, no item) shows it like any field and it has `names`,
   `digits`, `format` and a `state`, so "the number of products out of stock" can raise a status. The list is read once, whole;
   a derived field is as current as the list (`lagging` and `disconnected` follow it). An item's field that is not a number
   is left out; the count and the sum of nothing are 0, the smallest, largest and mean of nothing are no value (`disconnected`
@@ -916,7 +918,7 @@ interface HttpRef {
 
 The reference a data read with a `path` becomes, and what the hosted HTTP connector reads — implement it in an adapter
 that stands in for one. `path` is the read's request; `item` one element of the list (by `key`, or a `pivot`'s row),
-`items` the elements `where` keeps, `valuePath` a JSON Pointer to the value inside the item or the answer. `inside` goes one
+`items` the elements `where` keeps (a value, `{ "not": value }` or `{ "in": [values] }` for each field), `valuePath` a JSON Pointer to the value inside the item or the answer. `inside` goes one
 level further in: the element of the list at `inside.list` (a JSON Pointer read from the item) whose fields equal
 `inside.where` — an item of a list that sits inside an item, found by its fields rather than its place; `valuePath` then
 reads inside it, and `observedAtPath` still reads inside the outer item. `observedAtPath`, `timeZone`, `maxAgeSeconds` and `requestTime` the read's `time`, `zone`, `fresh` and `now`.

@@ -13,6 +13,7 @@
  */
 
 import { httpsOrigin } from './https-url.js';
+import type { WhereValue } from './where.js';
 
 export type ViewDocument = CanvasView | GridView;
 
@@ -468,8 +469,8 @@ export interface Derive {
   op: 'count' | 'sum' | 'min' | 'max' | 'avg';
   /** The item's field the number is taken from — a key, or a JSON Pointer when it starts with `/`. Not for `count`. */
   field?: string;
-  /** Only the items whose fields equal these values (a key or a JSON Pointer each). */
-  where?: Record<string, string | number | boolean>;
+  /** Only the items whose fields are what these say — a value, `{ not }` or `{ in }` (a key or a JSON Pointer each). */
+  where?: Record<string, WhereValue>;
 }
 
 /** A field each item of a list value gains: see `Binding.itemFields`. */
