@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-11-04
+
 ### Added
 
 - Items placed by their own fields can take a `matrix` in place of `frame`: `[a, b, c, d, e, f]` puts an item at (x, y) at (a·x + c·y + e, b·x + d·y + f) on the canvas — a plan turned on the page, a floor drawn in isometric, a slanted map — where `frame` could only stretch the values straight across. An item that lands off the canvas is not drawn, as one outside a `frame` is not. The check says it for both at once, a matrix that flattens the plane, or one of the wrong length.
