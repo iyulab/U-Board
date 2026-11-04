@@ -253,6 +253,10 @@ describe('validateBoard', () => {
       '/parts/s/colour: "colour" is not an option — options of a stat: trend, numerals, format',
       '/parts/l/weight: "weight" is not an option — options of a label: scale, ink, face',
     ]);
+    // A part has no `where` — the data it reads is what a `where` narrows.
+    expect(issues(canvas({ s: { as: 'stat', of: 'totals', show: 'load', where: { room: '704' } } }))).toEqual([
+      '/parts/s/where: "where" narrows the list of a data, not a part — put it on the data ("data": { "<name>": { …, "where": { "<field>": "<value>" } } }) and let the part read that data',
+    ]);
     // One setting, one name: the widget's word for an option the board reads itself is not an option of the kind.
     expect(issues(canvas({ l: { as: 'list', of: 'equipment', primary: 'name', maxItems: 5 } }))).toEqual([
       `/parts/l/maxItems: "maxItems" is the widget's name for it — a list writes "max"`,

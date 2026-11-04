@@ -624,7 +624,11 @@ export function validateBoard(input: unknown): BoardIssue[] {
       const sizeWord = key === 'size' && kind.own.includes('scale')
         ? `"size" is [width, height]; how large a ${kind.kind === 'header' ? 'heading' : 'text'} is, is "scale" — ${Object.keys(NUMERAL_SCALES).join(' · ')}`
         : undefined;
-      fail(keyAt, sizeWord ?? (word !== undefined ? `"${key}" is the widget's name for it — a ${kind.kind} writes "${word}"` : `"${key}" is not an option — ${axisEnd}${offered}`));
+      // `where` narrows a data's list; a part reads what its data holds.
+      const whereWord = key === 'where'
+        ? '"where" narrows the list of a data, not a part — put it on the data ("data": { "<name>": { …, "where": { "<field>": "<value>" } } }) and let the part read that data'
+        : undefined;
+      fail(keyAt, sizeWord ?? whereWord ?? (word !== undefined ? `"${key}" is the widget's name for it — a ${kind.kind} writes "${word}"` : `"${key}" is not an option — ${axisEnd}${offered}`));
     }
   };
 
