@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-11-05
+
 ### Added
 
 - A box or a path can be filled with no state: `fill` (`tone`, a tint of the shape's own `tone`; `hatch`, lines of it) without `of` and `show`, and `width: 0` draws no outline around a filled box or path — a wash of colour, a cut of ground, a patch. Before, `fill` needed a state to read and a shape always had an outline.

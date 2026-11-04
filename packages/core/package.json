@@ -1,6 +1,6 @@
 {
   "name": "@iyulab/u-board",
-  "version": "0.42.0",
+  "version": "0.43.0",
   "description": "The board language and the renderer that draws it",
   "type": "module",
   "license": "MIT",
@@ -81,9 +81,9 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
-    "@canvas-kit/core": "^0.8.0",
-    "@canvas-kit/viewer": "^0.9.0",
-    "@iyulab/u-widgets": "^0.47.0",
+    "@canvas-kit/core": "^0.9.0",
+    "@canvas-kit/viewer": "^0.10.0",
+    "@iyulab/u-widgets": "^0.48.0",
     "@lit/react": "^1.0.8",
     "echarts": "^6.1.0"
   },
