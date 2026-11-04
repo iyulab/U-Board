@@ -1,6 +1,6 @@
 import type { ViewDocument, CanvasView, GridView, Placed, Node, GridWidgetItem, GridCanvasItem, CellCanvas, Connector, ConnectorArrow, Shape, StrokeDash } from './view-document.js';
 import { CONNECTOR_ARROWS, STROKE_DASHES, isCanvasItem } from './view-document.js';
-import type { Adapter, ConnectionQuality, ResolvedWidget } from './adapter.js';
+import type { Adapter, ConnectionQuality, QualityReason, ResolvedWidget } from './adapter.js';
 import { resolveBindings, resolveWidgetReadings } from './adapter.js';
 import { stateOf } from './states.js';
 import { fillLabel, isLabelPattern } from './connector-label.js';
@@ -25,8 +25,9 @@ export interface ResolvedCellCanvas extends Omit<CellCanvas, 'nodes' | 'connecto
 }
 
 /** A connector with its bound label and style read: the static values replaced where a binding read a value, and how
- *  each binding read, per path. A connector without bindings has an empty `quality`. */
-export type ResolvedConnector = Connector & { quality: Record<string, ConnectionQuality> };
+ *  each binding read, per path. A connector without bindings has an empty `quality`. `reasons` names, per path, why a
+ *  binding is not `live` where its adapter could tell — as a widget's does; absent when no adapter said. */
+export type ResolvedConnector = Connector & { quality: Record<string, ConnectionQuality>; reasons?: Record<string, QualityReason> };
 
 /** A canvas view with every node's widget and every connector's bindings resolved. The background passes through
  * unchanged — it carries no bindings. */
@@ -115,7 +116,7 @@ export async function resolveShape(shape: Shape, adapters: readonly Adapter[]): 
 export async function resolveConnector(connector: Connector, adapters: readonly Adapter[]): Promise<ResolvedConnector> {
   if (!connector.bindings || Object.keys(connector.bindings).length === 0) return { ...connector, quality: {} };
   const pattern = connector.bindings.label && isLabelPattern(connector.label) ? connector.label : undefined;
-  const { values, quality } = await resolveBindings(
+  const { values, quality, reasons } = await resolveBindings(
     { label: connector.label, style: { ...connector.style } },
     connector.bindings,
     adapters,
@@ -131,5 +132,5 @@ export async function resolveConnector(connector: Connector, adapters: readonly 
   const { style } = values as Pick<Connector, 'label' | 'style'>;
   // A pattern whose value did not come keeps its text around a dash, never its `{{value}}`.
   const label = pattern && (values as Pick<Connector, 'label'>).label === pattern ? fillLabel(pattern, undefined) : (values as Pick<Connector, 'label'>).label;
-  return { ...connector, ...(label !== undefined && { label }), ...(style && Object.keys(style).length > 0 && { style }), quality };
+  return { ...connector, ...(label !== undefined && { label }), ...(style && Object.keys(style).length > 0 && { style }), quality, ...(Object.keys(reasons).length > 0 && { reasons }) };
 }

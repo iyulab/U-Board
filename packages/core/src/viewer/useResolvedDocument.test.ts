@@ -433,6 +433,75 @@ describe('useResolvedDocument', () => {
       expect(result.current.resolved?.nodes[0].widget.quality.value).toBe('disconnected'); // still shown as it is
     });
 
+    it('does not count a remembered value as an update, so a view that only shows the last values still says it is not updating', async () => {
+      vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
+      let reachable = true;
+      const adapter: Adapter = {
+        id: 'cmms',
+        resolve: async () => (reachable ? { value: 'running', quality: 'live' } : { value: 'running', quality: 'stale', reason: 'transport' }),
+      };
+      const doc = docWithBinding();
+      const adapters = [adapter];
+      const { result } = renderHook(() => useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      const updatedAt = result.current.resolvedAt;
+
+      reachable = false; // the source is gone; the adapter keeps showing its last value as `stale`
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      expect(result.current.resolvedAt).toBe(updatedAt);
+      expect(result.current.stalled).toBe(true);
+      expect(result.current.resolved?.nodes[0].widget.quality.value).toBe('stale');
+
+      reachable = true; // it answers again
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1000);
+      });
+      expect(result.current.stalled).toBe(false);
+      expect(result.current.resolvedAt).toBeGreaterThan(updatedAt!);
+    });
+
+    it('counts a value from a source that answered late (`lagging`) as an update — it was reached just now', async () => {
+      vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
+      const adapter: Adapter = { id: 'cmms', resolve: async () => ({ value: 'running', quality: 'stale', reason: 'lagging' }) };
+      const doc = docWithBinding();
+      const adapters = [adapter];
+      const { result } = renderHook(() => useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      expect(result.current.resolvedAt).toBe(Date.parse('2026-10-07T05:00:03Z'));
+      expect(result.current.stalled).toBe(false);
+    });
+
+    it('counts a connector’s binding the same way as a widget’s', async () => {
+      vi.useFakeTimers({ now: new Date('2026-10-07T05:00:00Z') });
+      let reachable = true;
+      const adapter: Adapter = {
+        id: 'cmms',
+        resolve: async () => (reachable ? { value: 'a', quality: 'live' } : { value: 'a', quality: 'stale', reason: 'throttled' }),
+      };
+      const doc: CanvasView = {
+        kind: 'canvas',
+        background: {},
+        nodes: [],
+        connectors: [{ id: 'c1', fromNodeId: 'a', toNodeId: 'b', bindings: { label: { adapter: 'cmms', ref: 'k' } } }],
+      };
+      const adapters = [adapter];
+      const { result } = renderHook(() => useResolvedDocument(doc, adapters, { pollIntervalMs: 1000 }));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      reachable = false;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      expect(result.current.stalled).toBe(true);
+    });
+
     it('forgets when it last updated once the document is gone', async () => {
       vi.useFakeTimers();
       const adapters = [new SpyAdapter()];

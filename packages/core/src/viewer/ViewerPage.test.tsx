@@ -367,7 +367,9 @@ describe('ViewerPage clock', () => {
 
   it('tells the time of the last update by the clock it is given', async () => {
     vi.useFakeTimers({ now: new Date('2026-10-07T05:10:00Z') });
-    render(<ViewerPage adapters={[new StaleAdapter()]} document={docWithBinding()} pollIntervalMs={1000} clock={clock} />);
+    // A value that arrived (`live`) is an update; a remembered one (`stale`) is not, so it would leave the time unset.
+    const live: Adapter = { id: 'cmms', resolve: async () => ({ value: 'running', quality: 'live' }) };
+    render(<ViewerPage adapters={[live]} document={docWithBinding()} pollIntervalMs={1000} clock={clock} />);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });

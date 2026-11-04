@@ -1,8 +1,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { resolveDocument } from '../resolve-document.js';
 import type { ResolvedOf, ResolvedViewDocument } from '../resolve-document.js';
-import type { Adapter } from '../adapter.js';
-import { placedIn, type ViewDocument } from '../view-document.js';
+import type { Adapter, ConnectionQuality, QualityReason } from '../adapter.js';
+import { isCanvasItem, placedIn, type ViewDocument } from '../view-document.js';
 
 export interface UseResolvedDocumentOptions {
   /** Re-resolve every N ms while a document is loaded. Omitted — the document is resolved once
@@ -24,24 +24,36 @@ export interface UseResolvedDocumentResult<D extends ViewDocument = ViewDocument
   /** When the latest resolve completed (epoch ms, by `options.clock`), or `null` before the first.
    * What a view left open shows as "last updated". */
   resolvedAt: number | null;
-  /** `true` while a polling view has gone two intervals without a completed resolve — a poll that
-   * never answered, or a page whose timers were suspended (a sleeping machine, a frozen tab). The
-   * values on screen are then the last ones received, however their bindings read: show it. Always
-   * `false` without `pollIntervalMs`. */
+  /** `true` while a polling view has gone two intervals without a resolve in which a value arrived — a
+   * poll that never answered, a page whose timers were suspended (a sleeping machine, a frozen tab), or
+   * polls that return only what an adapter remembers (`stale` for any reason but `lagging`, where the
+   * source did answer) or nothing (`disconnected`). The values on screen are then the last ones received,
+   * however their bindings read: show it. Always `false` without `pollIntervalMs`. */
   stalled: boolean;
 }
 
 /** The longest wait (ms) before re-resolving a page that is shown again. */
 const SHOWN_SPREAD_MS = 3000;
 
-/** Whether any binding in `doc` came back with a value — `live` or `stale` — or there are no bindings
+/** Whether a binding's reading is a value the source gave just now: `live`, or `stale` because the source answered with
+ * a value older than the binding expects (`lagging`). Any other `stale` is the adapter showing the last value it had
+ * while the source did not answer — the value stays on screen, but nothing arrived — and `disconnected` is no value. */
+function arrived(quality: ConnectionQuality, reason: QualityReason | undefined): boolean {
+  return quality === 'live' || (quality === 'stale' && reason === 'lagging');
+}
+
+/** Whether any binding in `doc` came back with a value that arrived (see `arrived`), or there are no bindings
  * at all, in which case there is nothing that could have failed to arrive. */
 function receivedAnyValue(doc: ResolvedViewDocument): boolean {
-  const qualities = [
-    ...placedIn(doc).flatMap(placed => Object.values(placed.widget.quality)),
-    ...(doc.kind === 'canvas' ? doc.connectors.flatMap(connector => Object.values(connector.quality)) : []),
-  ];
-  return qualities.length === 0 || qualities.some(quality => quality !== 'disconnected');
+  const readings: [ConnectionQuality, QualityReason | undefined][] = [];
+  const collect = (quality: Record<string, ConnectionQuality>, reasons: Record<string, QualityReason> | undefined) => {
+    for (const [path, one] of Object.entries(quality)) readings.push([one, reasons?.[path]]);
+  };
+  for (const placed of placedIn(doc)) collect(placed.widget.quality, placed.widget.reasons);
+  const connectors =
+    doc.kind === 'canvas' ? doc.connectors : doc.items.flatMap(item => (isCanvasItem(item) ? item.canvas.connectors : []));
+  for (const connector of connectors) collect(connector.quality, connector.reasons);
+  return readings.length === 0 || readings.some(([quality, reason]) => arrived(quality, reason));
 }
 
 /**
@@ -99,8 +111,9 @@ export function useResolvedDocument<D extends ViewDocument>(
         setResolved(result as ResolvedOf<D>);
         setIsRefreshing(false);
         // A result is shown whatever it holds, but only one in which some value arrived is an update:
-        // a viewer that reaches nothing gets every binding back `disconnected` on schedule, and that
-        // must not read as "updated just now".
+        // a viewer that reaches nothing gets every binding back `disconnected` on schedule — or, from
+        // an adapter that remembers, `stale` with the last value — and neither must read as "updated
+        // just now".
         if (!receivedAnyValue(result)) return;
         completedAt = performance.now();
         setResolvedAt(readClock());
