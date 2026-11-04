@@ -39,6 +39,11 @@ const WIDGET_FILL_STYLE: CSSProperties = { width: '100%', height: '100%' };
 // covers none of it, and in full however narrow the node: cut to fit, the age (the part that matters
 // most) would be the first to go. Hidden from assistive technology: the status region below announces
 // the full text.
+// What the board shows must be what it prints: a browser leaves backgrounds out of a page it prints unless asked, and a mark
+// that says a value is not current (the badge's fill, a state's colour) is one of them. Inherited, so the widget inside prints
+// in its tones as well.
+const PRINT_EXACT_STYLE: CSSProperties = { printColorAdjust: 'exact', WebkitPrintColorAdjust: 'exact' };
+
 const BADGE_STYLE: CSSProperties = {
   position: 'absolute',
   left: 0,
@@ -149,7 +154,7 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
     <div
       className={look?.blink ? (look.outline ? 'ub-state-blink ub-state-blink--ring' : 'ub-state-blink') : undefined}
       style={{
-        position: 'relative', width: '100%', height: '100%', ...frameStyle,
+        position: 'relative', width: '100%', height: '100%', ...PRINT_EXACT_STYLE, ...frameStyle,
         ...(look?.outline && { boxShadow: `0 0 0 3px ${drawingColor(look.outline, appearance ?? 'light', accent)}` }),
         ...(look?.hidden && { visibility: 'hidden' as const }),
         ...(dimmed && { opacity: 0.35 }),

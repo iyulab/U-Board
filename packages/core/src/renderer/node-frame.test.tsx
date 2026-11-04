@@ -173,3 +173,11 @@ describe('NodeFrame meta', () => {
     expect(frame({ widget }).props.title).toBeUndefined();
   });
 });
+
+describe('NodeFrame print', () => {
+  it('asks a browser to print the part’s colours, so a mark that says a value is not current is not left out of a page', () => {
+    const style = frame({}).props.style;
+    expect(style.printColorAdjust).toBe('exact');
+    expect(style.WebkitPrintColorAdjust).toBe('exact');
+  });
+});

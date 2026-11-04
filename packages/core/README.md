@@ -218,6 +218,10 @@ colour and the first colour of a chart, `--ub-font-sans` their typeface and `--u
 else crosses — a board's paper, ink and status colours are the board's own, set by its `theme`, `skin` and `accent`,
 and its skin and accent win over these three too. With none of them defined the widgets look as they always did.
 
+Printed, or saved as PDF from the browser's print dialog, a board is the screen it is drawn on: its colours print (the
+paper, the widgets, and the marks that say a value is not current — the frame and the badge), a blinking state stays
+drawn on instead of blinking, the zoom controls are left out, and the line of when it was last updated stays.
+
 The tokens marked for failures, the "not updating" notice and node frames apply without the
 stylesheet too — those colors carry meaning. The sheet's rules select these class names, mostly one
 class each: they hold against a host's element styles (`h2`, `button`), and a host rule on the same

@@ -197,3 +197,21 @@
   --u-widget-font-family: var(--ub-font-sans, system-ui, -apple-system, sans-serif);
   --u-widget-radius: var(--ub-radius-md, 6px);
 }
+
+/* Printed (or saved as PDF), a board is the screen it is drawn on: its colours print — the paper, the widgets, the marks that
+   say a value is not current — nothing moves (a blinking state stays drawn on), and the controls that only work on a screen
+   are left out. The line of when it was last updated stays: it is part of what the page says. */
+@media print {
+  .ub-viewer {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  /* The controls carry their layout inline, which outranks a rule here: only !important can leave them out. */
+  .ub-viewer .ub-view-controls {
+    display: none !important;
+  }
+  .ub-state-blink,
+  .ub-state-blink--ring {
+    animation: none;
+  }
+}

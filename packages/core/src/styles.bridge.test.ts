@@ -37,7 +37,7 @@ describe('the stylesheet’s bridge to the widgets', () => {
   });
 
   it('applies to a widget of a board that has a theme, with no specificity of its own', () => {
-    const tail = sheet.slice(sheet.indexOf(":where(u-widget[theme='light'])"));
+    const tail = sheet.slice(sheet.indexOf(":where(u-widget[theme='light'])"), sheet.indexOf('@media print'));
     const selectors = [...tail.matchAll(/^([^{\n]+)\{/gm)].map(m => m[1].trim());
     expect(selectors.length).toBe(3);
     for (const selector of selectors) expect(selector.startsWith(':where(')).toBe(true);

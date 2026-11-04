@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A board prints as the screen it is drawn on: printed, or saved as PDF from the browser's print dialog, its colours print — the paper, the widgets, and the frame and badge that say a value is not current, which a browser leaves out of a page unless asked — a blinking state stays drawn on, and the zoom controls are left out. The default stylesheet carries the controls and the blink; the colours are asked for on the part itself, so they print without it.
 - A host's identity reaches the widgets of a board through the default stylesheet: `--ub-brand-solid` (with `--ub-text-inverse` for the text on it) is the widgets' primary colour and the first colour of a chart, `--ub-font-sans` their typeface and `--ub-radius-md` their corners. Nothing else crosses — a board's paper, ink and status colours stay the board's own (its `theme`, `skin` and `accent`, which also win over these three), and a host that defines none of them sees no change. Needs `styles.css`.
 
 ### Fixed
