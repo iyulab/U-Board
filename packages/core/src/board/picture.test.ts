@@ -148,6 +148,18 @@ describe('the picture model of a v2 board', () => {
     });
   });
 
+  it('draws a marker’s status mark in the point and beside a symbol, and binds nothing when no status names one', () => {
+    const parts = { dot: { as: 'marker' as const, of: 'pumps[P2]', show: ['state'] }, drawing: { as: 'marker' as const, of: 'pumps[P2]', show: ['state'], symbol: 'pump-a' } };
+    const place = { kind: 'canvas' as const, size: [400, 200] as [number, number], place: { dot: [0, 0] as [number, number], drawing: [100, 0] as [number, number] } };
+    const marked: Board = { ...board(parts, place), statuses: { running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped', glyph: '△' } } };
+    const doc = view(marked);
+    expect(drawn(nodeOf(doc, 'dot').widget)).toMatchObject({ tone: 'alarm', status: 'Tripped', glyph: '△' });
+    expect(drawn(nodeOf(doc, 'drawing').widget)).toMatchObject({ tone: 'alarm', glyph: '△' });
+    const plain = view(board(parts, place));
+    expect(nodeOf(plain, 'dot').widget.bindings!['glyph']).toBeUndefined();
+    expect(drawn(nodeOf(plain, 'dot').widget)).toMatchObject({ glyph: '' });
+  });
+
   it('marks a value with its status’s glyph where the widget draws a mark — none bound when no status names one', () => {
     const marked: Board = { ...board(
       {
@@ -664,7 +676,7 @@ describe('the picture model of a v2 board', () => {
     if (doc.kind !== 'canvas') throw new Error('a canvas');
     expect(Object.keys(doc.elements ?? {}).sort()).toEqual(['u-board-legend', 'u-board-label', 'u-board-marker', 'u-board-shape-edge', 'u-board-shape-pipe'].sort());
     // A marker draws its status's emphasis as the status card and the grid cell do: the tripped pump's status blinks, the running one's says nothing.
-    expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', emphasis: 'blink', note: '', shape: 'ring', labelAt: '' });
+    expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', emphasis: 'blink', glyph: '', note: '', shape: 'ring', labelAt: '' });
     expect(drawn(nodeOf(doc, 'm/P1').widget)).toMatchObject({ tone: 'ok', status: 'Running', emphasis: '' });
     expect(drawn(nodeOf(doc, 'l').widget)).toEqual({ text: 41.5, tone: '' });
     expect(drawn(nodeOf(doc, 'key').widget)).toEqual({ items: [{ tone: 'ok', label: 'Running', glyph: '' }, { tone: 'alarm', label: 'Tripped', glyph: '' }] });
@@ -962,7 +974,7 @@ describe('the picture model of a v2 board', () => {
     b.symbols = { 'pump-a': { viewBox: '0 0 24 24', path: 'M2 2h20v20H2z' }, 'pump-b': { path: 'M2 2h10v10H2z' } };
     const doc = view(b);
     expect(doc.kind === 'canvas' && doc.symbols).toEqual({ 'pump-a': { viewBox: '0 0 24 24', markup: '<path d="M2 2h20v20H2z"/>' }, 'pump-b': { markup: '<path d="M2 2h10v10H2z"/>' } });
-    expect(drawn(nodeOf(doc, 'm/P1').widget)).toEqual({ name: 'P1', tone: 'ok', status: 'Running', emphasis: '', note: '1,450 rpm', symbol: 'pump-a' });
+    expect(drawn(nodeOf(doc, 'm/P1').widget)).toEqual({ name: 'P1', tone: 'ok', status: 'Running', emphasis: '', glyph: '', note: '1,450 rpm', symbol: 'pump-a' });
   });
 
   it("draws a marker's emphasis in the four ways the widgets do — blink, invert, hatch, stamp — and blinking stops for a reader who asks", () => {

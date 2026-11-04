@@ -845,8 +845,8 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
       case 'marker': {
         const { shape = 'dot', symbol, note, labelAt } = options as { shape?: string; symbol?: string; note?: string; labelAt?: string };
         const stateField = stateIn(fields);
-        if (stateField) bindState('', stateField, { words: true, emphasis: true });
-        const props = { name: text(title, 'name') ?? item ?? '', tone: '', status: '', emphasis: '', note: text(note, 'note') ?? '' };
+        if (stateField) bindState('', stateField, { words: true, emphasis: true, glyph: true });
+        const props = { name: text(title, 'name') ?? item ?? '', tone: '', status: '', emphasis: '', glyph: '', note: text(note, 'note') ?? '' };
         // A marker with a symbol draws the board's drawing — one, or the one a field names — in its status's colour.
         if (symbol !== undefined) return { type: builtin('u-board-marker-symbol', MARKER_SYMBOL), props: { ...props, symbol: text(symbol, 'symbol') ?? '' }, bindings };
         return { type: builtin('u-board-marker', MARKER), props: { ...props, shape, labelAt: labelAt === 'right' || labelAt === 'left' || labelAt === 'above' || labelAt === 'below' ? labelAt : labelAt === 'auto' ? 'below' : '' }, bindings };
