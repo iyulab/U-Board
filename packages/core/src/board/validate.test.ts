@@ -74,6 +74,12 @@ describe('validateBoard', () => {
     expect(issues(noList)).toContain('/data/equipment/fields/down/derive: a derived field is computed from the items of a list — this data has no "list"');
   });
 
+  it('says a preset is not built on another preset, instead of reporting a part with no "as"', () => {
+    const base = canvas({ a: { use: 'wide', of: 'equipment[PR-01]' } });
+    const board = { ...base, presets: { card: { as: 'stat' }, wide: { use: 'card' } } };
+    expect(issues(board)).toEqual(['/presets/wide/use: a preset does not use another preset — write what "card" gives into "wide", or let the part use "card" and add its own options']);
+  });
+
   it('checks presets and each', () => {
     expect(issues(canvas({ a: { use: 'card', of: 'equipment[PR-01]' } }))[0]).toBe('/parts/a/use: no preset "card" — presets: none');
     expect(issues(canvas({ a: { as: 'stat', each: 'equipment', of: 'equipment[PR-01]' } }))).toContain(

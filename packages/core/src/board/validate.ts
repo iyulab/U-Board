@@ -491,6 +491,12 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (raw.use === undefined) return raw;
     const preset = typeof raw.use === 'string' ? presets[raw.use] : undefined;
     if (!isObj(preset)) { fail(`${at}/use`, `no preset "${String(raw.use)}" — presets: ${list(Object.keys(presets))}`); return raw; }
+    // A preset is not built on another preset: its `use` would be lost under the part's own and the part would end up with no "as".
+    if (preset.use !== undefined) {
+      fail(`/presets/${String(raw.use)}/use`, `a preset does not use another preset — write what "${String(preset.use)}" gives into "${String(raw.use)}", or let the part use "${String(preset.use)}" and add its own options`);
+      const under = typeof preset.use === 'string' ? presets[preset.use] : undefined;
+      return { ...(isObj(under) ? under : {}), ...preset, ...raw };
+    }
     return { ...preset, ...raw };
   };
 
