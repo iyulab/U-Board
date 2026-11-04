@@ -7,7 +7,7 @@ import { elementNameOf } from '../elements/element-type.js';
 import { ElementView } from './element-view.js';
 import { accentTokens, skinTokens } from './element-template.js';
 import { drawingColor } from '../theme-colors.js';
-import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding } from '../quality-presentation.js';
+import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding, qualityLook } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
 import { inputOf, type PartInput } from '../board-input.js';
 import { metaLines } from '../value-meta.js';
@@ -131,7 +131,7 @@ export interface NodeFrameProps {
 export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityText = DEFAULT_QUALITY_TEXT, now, locale, elements, nodeId, state, looks, highlighted, dimmed, onActivate, onElementEvent, onInput, elementEvents, name }: NodeFrameProps) {
   const key = frameBinding(widget.quality, widget.type);
   const quality = key === undefined ? undefined : widget.quality[key];
-  const frameStyle = quality ? QUALITY_FRAME_STYLE[quality] : undefined;
+  const frameStyle = quality ? QUALITY_FRAME_STYLE[qualityLook(quality, key === undefined ? undefined : widget.reasons?.[key])] : undefined;
   const look = state !== undefined ? looks?.[state] : undefined;
   const said = describeQuality(widget, { text: qualityText, now });
   const label = state !== undefined ? (said ? `${state} — ${said}` : state) : said;

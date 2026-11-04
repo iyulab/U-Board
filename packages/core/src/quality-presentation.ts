@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { ConnectionQuality } from './adapter.js';
+import type { ConnectionQuality, QualityReason } from './adapter.js';
 import { worstQuality } from './quality-text.js';
 import { getPrimaryDataField } from '@iyulab/u-widgets';
 
@@ -13,10 +13,28 @@ import { getPrimaryDataField } from '@iyulab/u-widgets';
 // the canvas, which cannot read a CSS variable) reads them as an edge — so a far view says what a near one says.
 export const QUALITY_EDGE = {
   stale: { dash: 'dashed', token: '--ub-quality-stale', fallback: '#f59e0b' },
+  // A stale value whose source answered but is late (`lagging`) is the same amber — it is the same kind of «not current» — in a double
+  // rule: «the last value, the source is not reachable» (dashed) and «the source has fallen behind» (double) are two things to do.
+  lagging: { dash: 'double', token: '--ub-quality-stale', fallback: '#f59e0b' },
   disconnected: { dash: 'dotted', token: '--ub-quality-disconnected', fallback: '#6b7280' },
 } as const;
 
-export const QUALITY_FRAME_STYLE: Partial<Record<ConnectionQuality, CSSProperties>> = {
+/** How a quality is looked at: `stale` is two looks, by the reason the adapter gave — `lagging`, or any other (or none). */
+export type QualityLook = ConnectionQuality | 'lagging';
+
+/** The look of a value's quality, from the quality and the reason the adapter gave for it. */
+export function qualityLook(quality: ConnectionQuality, reason?: QualityReason): QualityLook {
+  return quality === 'stale' && reason === 'lagging' ? 'lagging' : quality;
+}
+
+/** The edge a value that is not current draws on a point: none for a current one or one with no quality known. */
+export function qualityEdge(quality: ConnectionQuality | undefined, reason?: QualityReason): (typeof QUALITY_EDGE)[keyof typeof QUALITY_EDGE] | undefined {
+  return quality === 'stale' || quality === 'disconnected' ? QUALITY_EDGE[qualityLook(quality, reason) as keyof typeof QUALITY_EDGE] : undefined;
+}
+
+export const QUALITY_FRAME_STYLE: Partial<Record<QualityLook, CSSProperties>> = {
+  // 3px: a double rule needs room to show its two lines.
+  lagging: { border: `3px ${QUALITY_EDGE.lagging.dash} var(${QUALITY_EDGE.lagging.token}, ${QUALITY_EDGE.lagging.fallback})`, boxSizing: 'border-box' },
   stale: { border: `2px ${QUALITY_EDGE.stale.dash} var(${QUALITY_EDGE.stale.token}, ${QUALITY_EDGE.stale.fallback})`, boxSizing: 'border-box' },
   disconnected: { border: `2px ${QUALITY_EDGE.disconnected.dash} var(${QUALITY_EDGE.disconnected.token}, ${QUALITY_EDGE.disconnected.fallback})`, boxSizing: 'border-box' },
 };

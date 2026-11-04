@@ -39,6 +39,16 @@ describe('NodeFrame dim', () => {
   });
 });
 
+describe('NodeFrame quality frame', () => {
+  it('draws a stale value whose source is late (lagging) in a double rule and any other stale one dashed — one colour, two rules', () => {
+    const stale = (reasons?: ResolvedWidget['reasons']): ResolvedWidget => ({ ...widget, quality: { 'data.value': 'stale' }, ...(reasons && { reasons }) });
+    expect(frame({ widget: stale({ 'data.value': 'lagging' }) }).props.style.border).toBe('3px double var(--ub-quality-stale, #f59e0b)');
+    expect(frame({ widget: stale({ 'data.value': 'transport' }) }).props.style.border).toBe('2px dashed var(--ub-quality-stale, #f59e0b)');
+    expect(frame({ widget: stale() }).props.style.border).toBe('2px dashed var(--ub-quality-stale, #f59e0b)');
+    expect(frame({ widget: { ...widget, quality: { 'data.value': 'disconnected' }, reasons: { 'data.value': 'lagging' } } }).props.style.border).toBe('2px dotted var(--ub-quality-disconnected, #6b7280)');
+  });
+});
+
 describe('NodeFrame states', () => {
   it('marks the state and says its name, with no look of its own', () => {
     const el = frame({ state: 'running' });

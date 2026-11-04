@@ -16,7 +16,8 @@ it never stores the value. A value carries its connection quality — `live` (th
 (the value shown is not current: the source could not be reached and the last-known value is shown, or the source's
 latest value is older than the read expects of it), or `disconnected` (no value has been reached) — and, when the
 adapter can tell, the reason it is not live: the source unreachable, credentials refused, the value not found at the
-source, an answer it cannot read, rate limiting, or the source behind on its own updates. This is deliberately narrower
+source, an answer it cannot read, rate limiting, or the source behind on its own updates. A part's frame shows the difference for a stale value: a dashed
+amber rule when the source could not be reached, a double one when it answered but is behind. This is deliberately narrower
 than a full alarm model (priority, acknowledgement, shelving) — that belongs to the system a board reads, not to the
 board.
 

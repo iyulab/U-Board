@@ -3,9 +3,9 @@
 // that is not current an edge: the same marker, from the same tokens the marker element and its frame draw with, so the two never disagree.
 
 import type { OverlaySummary } from '@canvas-kit/viewer';
-import type { ConnectionQuality } from '../adapter.js';
+import type { ConnectionQuality, QualityReason } from '../adapter.js';
 import { elementNameOf } from '../elements/element-type.js';
-import { QUALITY_EDGE } from '../quality-presentation.js';
+import { qualityEdge } from '../quality-presentation.js';
 import { TONES } from '../tones.js';
 import type { StateLook } from '../view-document.js';
 
@@ -28,14 +28,15 @@ export function markerSummary(
   widget: { type: string; props?: Record<string, unknown> },
   theme: Readonly<Record<string, string>>,
   look?: StateLook,
-  quality?: ConnectionQuality
+  quality?: ConnectionQuality,
+  reason?: QualityReason
 ): OverlaySummary | undefined {
   if (elementNameOf(widget.type) !== MARKER) return undefined;
   const props = widget.props ?? {};
   const shape = SHAPES.find(s => s === props.shape) ?? 'dot';
   if (look?.hidden) return { shape, color: 'transparent' };
   const halo = look?.blink === true || look?.outline !== undefined || props.emphasis === 'blink';
-  const edge = quality === 'stale' || quality === 'disconnected' ? QUALITY_EDGE[quality] : undefined;
+  const edge = qualityEdge(quality, reason);
   return {
     shape,
     color: toneColor(typeof props.tone === 'string' ? props.tone : '', theme),

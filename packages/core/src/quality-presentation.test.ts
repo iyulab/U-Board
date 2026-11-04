@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { frameQuality } from './quality-presentation.js';
+import { QUALITY_FRAME_STYLE, frameQuality, qualityLook } from './quality-presentation.js';
 
 describe('frameQuality', () => {
   it("uses the widget's own primary-field quality when the widget type has a known one (gauge → value)", () => {
@@ -47,5 +47,19 @@ describe('frameQuality', () => {
   it('returns undefined for a widget with no bindings at all', () => {
     expect(frameQuality({}, 'gauge')).toBeUndefined();
     expect(frameQuality({}, 'chart.line')).toBeUndefined();
+  });
+});
+
+describe('qualityLook', () => {
+  it('tells a stale value whose source is late from one whose source cannot be reached — a double rule against a dashed one', () => {
+    expect(qualityLook('stale', 'lagging')).toBe('lagging');
+    for (const reason of [undefined, 'transport', 'auth', 'address', 'format', 'source', 'throttled', 'pending'] as const) expect(qualityLook('stale', reason), String(reason)).toBe('stale');
+    // A reason does not change what a value that is live or never reached looks like.
+    expect(qualityLook('live', 'lagging')).toBe('live');
+    expect(qualityLook('disconnected', 'lagging')).toBe('disconnected');
+    expect(QUALITY_FRAME_STYLE.lagging?.border).toContain('double');
+    expect(QUALITY_FRAME_STYLE.stale?.border).toContain('dashed');
+    // Same colour — both are «not current» — so the two differ by their rule, as a colour-blind reader needs.
+    expect(QUALITY_FRAME_STYLE.lagging?.border).toContain('--ub-quality-stale');
   });
 });

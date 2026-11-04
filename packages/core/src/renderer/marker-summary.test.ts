@@ -56,6 +56,18 @@ describe('markerSummary', () => {
     expect(markerSummary(marker({ tone: 'alarm' }), light, { blink: true }, 'stale')).toMatchObject({ halo: true, edge: { dash: 'dashed' } });
   });
 
+  it('draws a stale value whose source is only late as a double edge — apart from one the source cannot be reached for', () => {
+    // `lagging` is a reason the adapter gives for `stale`: the same amber, in a double rule instead of a dashed one.
+    expect(markerSummary(marker({ tone: 'ok' }), light, undefined, 'stale', 'lagging')).toEqual({
+      shape: 'dot', color: THEME_PALETTE.light.ok, edge: { dash: 'double', color: '#f59e0b' },
+    });
+    for (const reason of [undefined, 'transport', 'auth', 'throttled'] as const) {
+      expect(markerSummary(marker({ tone: 'ok' }), light, undefined, 'stale', reason), String(reason)).toMatchObject({ edge: { dash: 'dashed' } });
+    }
+    // A reason is about a value that is not current: it changes nothing for a disconnected one.
+    expect(markerSummary(marker({ tone: 'ok' }), light, undefined, 'disconnected', 'lagging')).toMatchObject({ edge: { dash: 'dotted' } });
+  });
+
   it('has no edge for a current value, or when the quality is not known', () => {
     expect(markerSummary(marker({ tone: 'ok' }), light, undefined, 'live')).not.toHaveProperty('edge');
     expect(markerSummary(marker({ tone: 'ok' }), light, undefined, undefined)).not.toHaveProperty('edge');

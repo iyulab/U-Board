@@ -26,7 +26,7 @@ import { captionObjects, connectorObjects, placeOnCanvas } from './connector-dra
 import { connectorMark } from './connector-mark.js';
 import { boardTheme } from './element-template.js';
 import { markerSummary } from './marker-summary.js';
-import { frameQuality } from '../quality-presentation.js';
+import { frameBinding, frameQuality } from '../quality-presentation.js';
 import { elementListeners } from '../triggers.js';
 import { elementNameOf } from '../elements/element-type.js';
 import type { PartInput } from '../board-input.js';
@@ -61,11 +61,13 @@ export interface ToCanvasKitOptions {
 
 /** A node's summary for the viewer's `summarizeOverlays` — a marker's; none for another part, which stays page content. */
 function summaryOf(node: ResolvedCanvasView['nodes'][number], theme: Readonly<Record<string, string>>): Pick<ViewerOverlayItem, 'summary'> {
+  const key = frameBinding(node.widget.quality, node.widget.type);
   const summary = markerSummary(
     node.widget,
     theme,
     node.state !== undefined ? node.states?.looks?.[node.state] : undefined,
-    frameQuality(node.widget.quality, node.widget.type)
+    frameQuality(node.widget.quality, node.widget.type),
+    key === undefined ? undefined : node.widget.reasons?.[key]
   );
   return summary ? { summary } : {};
 }
