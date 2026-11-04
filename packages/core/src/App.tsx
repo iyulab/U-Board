@@ -48,8 +48,8 @@ export function App() {
       {mode === 'mixed' ? (
         <>
           <p style={{ color: '#64748b', maxWidth: 640 }}>
-            A grid whose first cell holds a canvas — the floor plan with its nodes and line, fitted to the cell — and the
-            other widgets as cards around it. The page scrolls over the canvas; Ctrl (⌘) + wheel zooms it.
+            A grid whose cell holds a canvas — the floor plan with its nodes and line, fitted to the cell, which follows the
+            grid as the container narrows. The page scrolls over the canvas; Ctrl (⌘) + wheel zooms it.
           </p>
           <div style={{ height: 720, maxWidth: 1200, resize: 'horizontal', overflow: 'auto' }}>
             <BoardView board={demoMixed} adapters={adapters} />
