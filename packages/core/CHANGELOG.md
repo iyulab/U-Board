@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- A `stat-list` part's `title` is drawn. The part took it (the check accepts it, the rulebook lists it for every part) and handed it to no one, so a stat list showed no title where a list, a table, a bar list and a status grid showed theirs.
 - `useResolvedDocument` (and `ViewerPage`'s "Updated …" line built on it) no longer counts a remembered value as an update. A poll in which every binding is `stale` for any reason but `lagging` — the adapter keeping the last value it had while its source did not answer — left `resolvedAt` moving and `stalled` forever `false`, so a screen left open never said it had stopped updating. Only a binding that is `live`, or `stale` because the source answered with a value that is behind (`lagging`), arrived; the values stay on screen as they were. A bound connector now carries `reasons` as a widget does, and a connector inside a grid's canvas cell is read like one on a canvas.
 
 ## [0.42.0] - 2026-11-04

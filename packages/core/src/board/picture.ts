@@ -645,7 +645,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
           const format = formatOf(f);
           return { label: f.label ?? name, value: '', ...(f.unit ? { unit: f.unit } : {}), ...(format ? { format } : {}) };
         });
-        return { type: 'kv', props: { data: rows, ...(Object.keys(rest).length ? { options: rest } : {}) }, bindings };
+        return { type: 'kv', props: { ...(title !== undefined ? { title: text(title, 'title') } : {}), data: rows, ...(Object.keys(rest).length ? { options: rest } : {}) }, bindings };
       }
       case 'status-card': {
         // The first field with a state is the card's state; the others are its readings. A meter shows one field

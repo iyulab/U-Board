@@ -208,6 +208,18 @@ describe('the picture model of a v2 board', () => {
     expect(drawn(nodeOf(view(own), 'rows').widget).data).toEqual([expect.objectContaining({ value: 'Stopped' })]);
   });
 
+  it('gives a stat list its title, as a list and a table have theirs', () => {
+    const doc = view(board(
+      {
+        plain: { as: 'stat-list', of: 'totals', show: ['oee'], title: 'Line KPIs' },
+        bare: { as: 'stat-list', of: 'totals', show: ['oee'] },
+      },
+      { kind: 'grid', items: ['plain', 'bare'] },
+    ));
+    expect(nodeOf(doc, 'plain').widget.props).toMatchObject({ title: 'Line KPIs' });
+    expect(nodeOf(doc, 'bare').widget.props).not.toHaveProperty('title');
+  });
+
   it('draws stats, a stat list, a gauge and a chart in a grid, each in the order and span the layout gives', () => {
     const doc = view(board(
       {
