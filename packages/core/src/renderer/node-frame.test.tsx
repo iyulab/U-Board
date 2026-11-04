@@ -24,6 +24,21 @@ describe('NodeFrame highlight', () => {
   });
 });
 
+describe('NodeFrame dim', () => {
+  it('fades a dimmed part and says so, apart from its state — and a part that is both is still ringed', () => {
+    const faded = frame({ dimmed: true, state: 'fault', looks: { fault: { outline: '#dc2626' } } });
+    expect(faded.props.style.opacity).toBe(0.35);
+    expect(faded.props['data-dimmed']).toBe('');
+    expect(faded.props.style.boxShadow).toBe('0 0 0 3px #dc2626');
+    const both = frame({ dimmed: true, highlighted: true });
+    expect(both.props.style.opacity).toBe(0.35);
+    expect(both.props['data-highlighted']).toBe('');
+    const plain = frame({});
+    expect(plain.props.style.opacity).toBeUndefined();
+    expect(plain.props['data-dimmed']).toBeUndefined();
+  });
+});
+
 describe('NodeFrame states', () => {
   it('marks the state and says its name, with no look of its own', () => {
     const el = frame({ state: 'running' });

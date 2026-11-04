@@ -462,6 +462,24 @@ describe('the picture model of a v2 board', () => {
     expect(nodeOf(doc, 'plain').widget.bindings).not.toHaveProperty('$highlight');
   });
 
+  it('fades one item with a dim field, read beside the widget the way a highlight is', () => {
+    const doc = view(board(
+      {
+        pump: { as: 'status-card', each: 'pumps', title: 'Pump {{key}}', show: ['state'], dim: 'current' },
+        plain: { as: 'stat', of: 'pumps[P1]', show: 'flow' },
+      },
+      { kind: 'canvas', size: [800, 400], place: { pump: { P1: [0, 0, 180, 160], P2: [200, 0, 180, 160] }, plain: [400, 120, 150, 100] } },
+    ), { pumps: ['P1', 'P2'] });
+    const p1 = nodeOf(doc, 'pump/P1');
+    expect(p1.dim).toEqual({ from: '$dim' });
+    expect(p1.highlight).toBeUndefined();
+    expect(p1.widget.bindings!['$dim']!.ref).toMatchObject({ path: '/plant/pumps', valuePath: '/current' });
+    expect(JSON.stringify(p1.widget.props)).not.toContain('dim');
+    expect(nodeOf(doc, 'plain').dim).toBeUndefined();
+    const whole = board({ s: { as: 'stat', of: 'totals', show: 'temp', dim: 'current' } }, { kind: 'canvas', size: [100, 100], place: { s: [0, 0] } });
+    expect(validateBoard(whole)).toEqual([{ at: '/parts/s/dim', message: '"dim" marks one item — the part reads one: "of": "<data>[<key>]", or "each"' }]);
+  });
+
   it('finds an item by its key when the key holds a colon — a time of day — in a grid and in a canvas cell', () => {
     const keys = { pumps: ['12:30', '13:30', '14:30'] };
     const parts = { pump: { as: 'status-card' as const, each: 'pumps', title: '{{key}}', show: ['state'], highlight: 'current' } };

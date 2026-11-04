@@ -67,7 +67,7 @@ function deadFallback(css: string, at: string, named: ReadonlySet<string>): Boar
 }
 
 /** The keys every part may have, whatever its kind. */
-const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show', 'highlight'] as const;
+const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show', 'highlight', 'dim'] as const;
 
 /** The spans (twelfths) that take whole columns of a cell `cell` columns wide. */
 const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i + 1).filter(s => (cell * s) % 12 === 0).map(String));
@@ -542,11 +542,13 @@ export function validateBoard(input: unknown): BoardIssue[] {
     checkOptions(raw, part, kind, at);
     if (kind.kind === 'status-card' && part.meter !== undefined) checkMeter(part.meter, `${at}/meter`);
     // `highlight` marks one item out from the others like it, apart from its status: a boolean field of the item the part reads.
-    if (part.highlight !== undefined) {
+    // `dim` is its opposite — the same field, and while it is true the part is drawn faded.
+    for (const word of ['highlight', 'dim'] as const) {
+      if (part[word] === undefined) continue;
       const wholeList = part.each === undefined && typeof part.of === 'string' && !/\[[^\]]+\]$/.test(part.of);
-      if (typeof part.highlight !== 'string') fail(`${at}/highlight`, '"highlight" names a boolean field of the item the part reads');
-      else if (kind.of === 'no' || kind.kind === 'group') fail(`${at}/highlight`, `a ${kind.kind} marks no item — "highlight" is for a part that reads one item`);
-      else if (wholeList || reads === null) fail(`${at}/highlight`, '"highlight" marks one item — the part reads one: "of": "<data>[<key>]", or "each"');
+      if (typeof part[word] !== 'string') fail(`${at}/${word}`, `"${word}" names a boolean field of the item the part reads`);
+      else if (kind.of === 'no' || kind.kind === 'group') fail(`${at}/${word}`, `a ${kind.kind} marks no item — "${word}" is for a part that reads one item`);
+      else if (wholeList || reads === null) fail(`${at}/${word}`, `"${word}" marks one item — the part reads one: "of": "<data>[<key>]", or "each"`);
     }
     if (kind.kind === 'marker' && part.labelAt !== undefined && !MARKER_SIDES.includes(part.labelAt as string)) fail(`${at}/labelAt`, `"labelAt" is the side of the point its words go — ${MARKER_SIDES.join(' · ')} (auto: the side its links leave free)`);
     if (kind.kind === 'marker' && part.shape !== undefined && !MARKER_SHAPES.includes(part.shape as string)) fail(`${at}/shape`, `"shape" is how the point is drawn — ${MARKER_SHAPES.join(' · ')} (a drawing of the board's own is "symbol")`);

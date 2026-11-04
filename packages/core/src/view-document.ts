@@ -30,6 +30,9 @@ export interface Placed {
    *  out from the others like it while it is true: a ring around the frame, apart from the states it is in and the colour
    *  they give. Absent: nothing marks it. */
   highlight?: { from: string };
+  /** The reading (as `highlight`'s) that fades the part while it is true — the others among those like it, when one set is
+   *  marked out by the ones left dim. Absent: nothing fades it. */
+  dim?: { from: string };
 }
 
 /**

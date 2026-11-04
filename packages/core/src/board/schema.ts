@@ -157,6 +157,7 @@ export function boardSchema(): Schema {
           title: { type: 'string', description: '{{field}} reads a field of what the part shows, {{key}} its item.' },
           show: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
           highlight: { type: 'string', description: 'A boolean field of the item the part reads: while it is true, a ring marks this one out from the others, apart from its status.' },
+          dim: { type: 'string', description: 'A boolean field of the item the part reads: while it is true, this one is drawn faded — the others stand out, apart from its status.' },
           size,
           parts: map(ref('part')),
           place: map(ref('place')),

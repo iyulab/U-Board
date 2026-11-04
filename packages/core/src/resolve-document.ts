@@ -7,7 +7,7 @@ import { fillLabel, isLabelPattern } from './connector-label.js';
 
 /** A placed widget resolved against a set of adapters — everything a renderer needs to paint it without
  *  itself knowing how bindings are resolved — and, when it has states, the one it is in now (`stateOf`). */
-export type Resolved<T extends Placed> = Omit<T, 'widget'> & { widget: ResolvedWidget; state?: string; highlighted?: true };
+export type Resolved<T extends Placed> = Omit<T, 'widget'> & { widget: ResolvedWidget; state?: string; highlighted?: true; dimmed?: true };
 
 /** A canvas view's node, resolved. */
 export type ResolvedNode = Resolved<Node>;
@@ -41,10 +41,10 @@ export interface ResolvedGridView extends Omit<GridView, 'items'> {
 }
 
 /**
- * Whether a placed widget's highlight is on: the reading it names says yes — `true`, the text `true`, or a number other than 0.
+ * Whether a placed widget's highlight (or dim) is on: the reading it names says yes — `true`, the text `true`, or a number other than 0.
  * A reading that is not there (the source did not answer, or has no such field) switches nothing on.
  */
-function isHighlighted(rule: Placed['highlight'], readings: Readonly<Record<string, unknown>>): boolean {
+function isHighlighted(rule: Placed['highlight'] | Placed['dim'], readings: Readonly<Record<string, unknown>>): boolean {
   if (!rule || typeof rule.from !== 'string' || !Object.hasOwn(readings, rule.from)) return false;
   const read = readings[rule.from];
   return read === true || read === 'true' || (typeof read === 'number' && Number.isFinite(read) && read !== 0);
@@ -73,7 +73,7 @@ export async function resolveDocument(doc: ViewDocument, adapters: readonly Adap
       placed.map(async (p): Promise<Resolved<T>> => {
         const { widget, readings } = await resolveWidgetReadings(p.widget, adapters, now);
         const state = stateOf(p.states, readings, widget.quality, now);
-        return { ...p, widget, ...(state !== undefined && { state }), ...(isHighlighted(p.highlight, readings) && { highlighted: true as const }) };
+        return { ...p, widget, ...(state !== undefined && { state }), ...(isHighlighted(p.highlight, readings) && { highlighted: true as const }), ...(isHighlighted(p.dim, readings) && { dimmed: true as const }) };
       })
     );
   const connectors = (list: readonly Connector[]) => Promise.all(list.map(c => resolveConnector(c, adapters)));

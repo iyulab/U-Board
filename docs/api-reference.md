@@ -284,7 +284,7 @@ reads, `{{key}}` its item's key. `presets` hold settings parts share (`use`). `e
 of a list, with the ids `<part>/<key>`; it takes no `of`, and the layout places it once — a grid lays out its items in
 order, a canvas places them item by item inside its entry. `highlight: "<field>"` marks one item out from the others like it,
 apart from its status: while that field of the item the part reads is true (`true`, the text `true`, or a number other than 0),
-a ring in the board's accent is drawn around the part. It needs a part that reads one item — `"of": "<data>[<key>]"`, or `each`.
+a ring in the board's accent is drawn around the part. `dim: "<field>"` is its opposite, read the same way: while the field is true the part is drawn faded, so a set of items the field picks out stands out among the rest. (A marker that is drawn as a point because too many are in view is not faded.) Both need a part that reads one item — `"of": "<data>[<key>]"`, or `each`.
 
 The kinds come from three places, listed with their options as `PART_KINDS` (`partKind(as)` finds one):
 

@@ -120,7 +120,7 @@ export function toCanvasKit(doc: ResolvedCanvasView, { qualityText = DEFAULT_QUA
     // What it is drawn as, once too many are in view to keep each as page content (`summarizeParts`): a marker's point.
     ...summaryOf(node, theme),
     // A widget takes its node's box exactly — the box the author drew is the layout.
-    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} highlighted={node.highlighted} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} onInput={onInput && (input => onInput(node.id, input))} elementEvents={listened?.get(node.id)} name={node.caption} />,
+    content: <NodeFrame widget={node.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={at} locale={locale} elements={doc.elements} nodeId={node.id} state={node.state} looks={node.states?.looks} highlighted={node.highlighted} dimmed={node.dimmed} onActivate={onNodeActivate && activatable?.has(node.id) ? () => onNodeActivate(node.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(node.id, name))} onInput={onInput && (input => onInput(node.id, input))} elementEvents={listened?.get(node.id)} name={node.caption} />,
   }));
   for (const placed of placeOnCanvas(nodes, doc.connectors)) overlays.push(connectorMark(placed, qualityText, at));
 

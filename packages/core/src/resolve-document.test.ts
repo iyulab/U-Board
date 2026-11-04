@@ -85,6 +85,19 @@ describe('resolveDocument', () => {
     expect(plain.nodes[0]!.highlighted).toBeUndefined();
   });
 
+  it('fades a node while its dim reading says yes — the opposite of a highlight, read the same way', async () => {
+    const source = new InMemoryAdapter('cmms', { yes: { value: true, quality: 'live' }, no: { value: false, quality: 'live' } });
+    const node = (id: string, ref: string) => ({
+      id, x: 0, y: 0, width: 10, height: 10, anchored: false,
+      widget: { type: 'status', props: {}, bindings: { $dim: { adapter: 'cmms', ref } } },
+      dim: { from: '$dim' },
+    });
+    const doc: CanvasView = { kind: 'canvas', background: {}, connectors: [], nodes: [node('a', 'yes'), node('b', 'no'), node('c', 'missing')] };
+    const resolved = await resolveDocument(doc, [source]);
+    expect(resolved.nodes.filter(n => n.dimmed).map(n => n.id)).toEqual(['a']);
+    expect(resolved.nodes.some(n => n.highlighted)).toBe(false);
+  });
+
   it('measures a state read against the clock from the moment it is given, the current time when it is not', async () => {
     const source = new InMemoryAdapter('cmms', { start: { value: '2026-10-23T03:30:00Z', quality: 'live' } });
     const rule = { from: 'when', map: { relativeTo: 'now' as const, ranges: [{ max: 0, value: 'past' }, { min: 0, max: 3600, value: 'soon' }], otherwise: 'later' } };

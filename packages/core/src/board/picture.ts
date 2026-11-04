@@ -502,7 +502,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
 
   const drawnWidget = (raw: Part, at: string, reads?: { query: string; item?: string }): Widget => {
     const part = resolve(raw);
-    const { as, use: _use, of: _of, each: _each, title, show, highlight, ...options } = part;
+    const { as, use: _use, of: _of, each: _each, title, show, highlight, dim, ...options } = part;
     const kind = partKind(as!)!;
     // What styles the part (`scale`, `ink`, …) is read here, not handed to the widget as an option of its own.
     const partStyle = takeStyle(options, kind.kind);
@@ -535,6 +535,11 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     if (highlight !== undefined) {
       if (typeof highlight !== 'string' || item === undefined) throw new PictureError(`${at}/highlight`, '"highlight" names a boolean field of one item — the part reads one: "of": "<data>[<key>]", or "each"');
       bind('$highlight', highlight);
+    }
+    // `dim` is `highlight`'s opposite: the same kind of field, and while it is true the part is drawn faded.
+    if (dim !== undefined) {
+      if (typeof dim !== 'string' || item === undefined) throw new PictureError(`${at}/dim`, '"dim" names a boolean field of one item — the part reads one: "of": "<data>[<key>]", or "each"');
+      bind('$dim', dim);
     }
     const formatOf = (f: Field) => f.format ?? (f.digits !== undefined ? `number:${f.digits}` : undefined);
     /** A field's value bound at `key`, in its words when it names them. */
@@ -1417,6 +1422,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     }));
     for (const [id, placed] of nodes) {
       if (placed.widget.bindings?.['$highlight'] !== undefined) placed.highlight = { from: '$highlight' };
+      if (placed.widget.bindings?.['$dim'] !== undefined) placed.dim = { from: '$dim' };
       const raw = board.parts[id.split('/')[0]!];
       if (raw === undefined) continue;
       const part = resolve(raw);
