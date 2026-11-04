@@ -733,6 +733,28 @@ describe('the picture model of a v2 board', () => {
     expect(doc.elements!['u-board-shape-edge']!.template).toContain('d="M 3 3 L 43 43"');
   });
 
+  it('fills a box or a path in its own tone when it reads no state — a tint, or lines — and draws no outline for a width of 0', () => {
+    const b = board({ s: { as: 'stat', of: 'totals', show: 'output' } }, {
+      kind: 'canvas', size: [400, 200], place: { s: [0, 0, 100, 60] },
+      shapes: {
+        wash: { box: [120, 0, 100, 60], tone: 'warn', fill: 'tone', width: 0 },
+        lines: { box: [240, 0, 100, 60], tone: 'ok', fill: 'hatch' },
+        wedge: { path: 'M10 100 L90 100 L90 150 Z', tone: 'info', fill: 'tone', width: 0 },
+      },
+    });
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const doc = toViewDocument(b, { keysOf: () => [] });
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(doc.decorations).toEqual([
+      { id: 'shape.wash', type: 'rect', x: 120, y: 0, width: 100, height: 60, fill: 'warn', fillOpacity: 0.16, stroke: 'warn', strokeWidth: 0 },
+      { id: 'shape.lines', type: 'rect', x: 240, y: 0, width: 100, height: 60, fill: 'ok', hatch: true, stroke: 'ok', strokeWidth: 1.5 },
+    ]);
+    // a path is the state element with nothing bound: its own tone, its fill, no outline of width 0
+    const wedge = nodeOf(doc, 'shape.wedge').widget;
+    expect(wedge.props).toEqual({ tone: 'info', fill: 'tone', hatch: '', form: '' });
+    expect(wedge.bindings).toBeUndefined();
+  });
+
   it("hands a part's own frame and title style to the widget it is drawn by", () => {
     // Not through `view`: the widget library's own spec check knows `titles` as the board's, and `frame` as every widget's only from its next version.
     const b = board(

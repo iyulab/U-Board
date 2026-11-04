@@ -1178,6 +1178,13 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         ...(shape.label !== undefined ? { label: shape.label, labelAt: 'top-start' as const } : {}),
       };
       const of = shape.of ?? (reads ? (reads.item !== undefined ? `${reads.query}[${reads.item}]` : reads.query) : undefined);
+      // A fill with no state: the box's own tone, a tint of it or lines of it.
+      if (shape.fill !== undefined && shape.show === undefined) {
+        if (shape.fill === 'tone') rect.fillOpacity = STATE_TINT;
+        else rect.hatch = true;
+        rect.fill = shape.tone ?? 'idle';
+        return rect;
+      }
       if (of !== undefined && shape.show !== undefined && path !== undefined) {
         const { query, item } = target(of);
         const rule = fieldOf(query, shape.show).state;
@@ -1222,6 +1229,11 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     for (let n = 2; shapeNames.has(name) && shapeNames.get(name) !== id; n++) name = `${base}-${n}`;
     shapeNames.set(name, id);
     const of = shape.of ?? (reads ? (reads.item !== undefined ? `${reads.query}[${reads.item}]` : reads.query) : undefined);
+    // A path with a fill and no state: its own tone, the inside a tint of it or lines of it — the state element with nothing bound.
+    if (shape.fill !== undefined && shape.show === undefined) {
+      const props = { tone: shape.tone ?? 'idle', fill: shape.fill, hatch: shape.fill === 'hatch' ? 'true' : '', form: '' };
+      return { id, x, y, ...box, anchored: true, widget: { type: builtin(name, stateLineElement(d, box, { width, dash: shape.dash === true })), props } };
+    }
     if (of !== undefined && shape.show !== undefined && path !== undefined) {
       const { query, item } = target(of);
       const rule = fieldOf(query, shape.show).state;

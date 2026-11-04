@@ -370,6 +370,20 @@ describe('validateBoard', () => {
     expect(at({ as: 'label', title: 'T', titles: 'band' })).toEqual([expect.stringContaining('/parts/p/titles: "titles" is not an option')]);
   });
 
+  it("lets a box or a path be filled in its own tone with no state, and an outline of width 0 only when it is filled", () => {
+    const at = (shape: Record<string, unknown>) => validateBoard(canvas({}, { kind: 'canvas', size: [100, 100], place: {}, shapes: { z: shape } }) as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
+    expect(at({ box: [0, 0, 50, 50], tone: 'warn', fill: 'tone' })).toEqual([]);
+    expect(at({ box: [0, 0, 50, 50], tone: 'warn', fill: 'hatch', width: 0 })).toEqual([]);
+    expect(at({ path: 'M0 0 L50 0 L50 50 Z', tone: 'ok', fill: 'tone', width: 0 })).toEqual([]);
+    // no fill, no outline: nothing to draw; a line has no inside
+    expect(at({ box: [0, 0, 50, 50], width: 0 })).toEqual([expect.stringContaining("/layout/shapes/z/width: a shape's width is a number above 0")]);
+    expect(at({ line: [[0, 0], [5, 5]], width: 0, tone: 'ok' })).toEqual([expect.stringContaining('/layout/shapes/z/width')]);
+    expect(at({ line: [[0, 0], [5, 5]], fill: 'tone' })).toEqual([expect.stringContaining('/layout/shapes/z/fill: "fill" is the inside of a box or a path')]);
+    // reading a state still takes a `show`, and a word other than tone · hatch is no fill
+    expect(at({ box: [0, 0, 50, 50], of: 'equipment[PR-01]', fill: 'tone' })).toEqual([expect.stringContaining('/layout/shapes/z/show')]);
+    expect(at({ box: [0, 0, 50, 50], fill: 'stripes' })).toEqual([expect.stringContaining('/layout/shapes/z/fill: "fill" is how the inside')]);
+  });
+
   it('checks the numerals of a skin: a scale word and a weight from 100 to 900, nothing else', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const at = (numerals: unknown) => validateBoard({ ...base, board: { skin: { numerals } } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
@@ -612,7 +626,7 @@ describe('validateBoard', () => {
       '/layout/shapes/s/dash: dash is true or false',
       "/layout/shapes/t/text: a shape's text is words — a string",
       "/layout/shapes/t/size: a shape's size is a number above 0",
-      "/layout/shapes/w/width: a shape's width is a number above 0",
+      "/layout/shapes/w/width: a shape's width is a number above 0 — or 0, for a box or a path that has a \"fill\" and no outline",
     ]);
     const parts = { a: { as: 'label', title: 'A' }, b: { as: 'label', title: 'B' } };
     const links = issues({ ...canvas(parts), layout: { kind: 'canvas', size: [400, 200], place: { a: [0, 0], b: [200, 0] }, links: { l: { from: 'a', to: 'b', width: -3, label: 5, dash: 'yes' } } } });

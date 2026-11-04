@@ -826,7 +826,12 @@ export function validateBoard(input: unknown): BoardIssue[] {
       }
       if (s.tone !== undefined && !(TONES as readonly unknown[]).includes(s.tone)) fail(`${shapeAt}/tone`, `"${String(s.tone)}" is not a tone — use ${TONES.join(' · ')}`);
       for (const key of ['text', 'label'] as const) if (s[key] !== undefined && typeof s[key] !== 'string') fail(`${shapeAt}/${key}`, `a shape's ${key} is words — a string`);
-      for (const key of ['width', 'size'] as const) if (s[key] !== undefined && !(isNum(s[key]) && (s[key] as number) > 0)) fail(`${shapeAt}/${key}`, `a shape's ${key} is a number above 0`);
+      // A box or a path that is filled needs no outline: its width may be 0.
+      const fillsInside = s.fill !== undefined && (s.box !== undefined || s.path !== undefined);
+      for (const key of ['width', 'size'] as const) {
+        if (s[key] === undefined || (isNum(s[key]) && ((s[key] as number) > 0 || (key === 'width' && s[key] === 0 && fillsInside)))) continue;
+        fail(`${shapeAt}/${key}`, key === 'width' ? `a shape's width is a number above 0 — or 0, for a box or a path that has a "fill" and no outline` : `a shape's ${key} is a number above 0`);
+      }
       if (s.dash !== undefined && typeof s.dash !== 'boolean') fail(`${shapeAt}/dash`, 'dash is true or false');
       checkShapeState(s, shapeAt, groupReads);
     }
@@ -835,7 +840,8 @@ export function validateBoard(input: unknown): BoardIssue[] {
   /**
    * A box, a line or a path that shows a state: `of` the data item it reads (a shape in a group reads the group's data unless it
    * names its own), `show` the field whose state colours its outline, `fill` — `tone` or `hatch` — how the inside of a box or a
-   * path is drawn. A text is drawn as it is; a state is what a field's `state` declares.
+   * path is drawn; a `fill` with no `of` and `show` is drawn in the shape's own tone. A text is drawn as it is; a state is what a
+   * field's `state` declares.
    */
   const checkShapeState = (s: Obj, at: string, groupReads?: string | null) => {
     const reading = ['of', 'show', 'fill'].filter(k => s[k] !== undefined);
@@ -846,7 +852,9 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (s.of !== undefined && typeof s.of !== 'string') return;
     if (s.fill !== undefined && s.fill !== 'tone' && s.fill !== 'hatch') fail(`${at}/fill`, '"fill" is how the inside of a box or a path that shows a state is drawn — "tone" (filled in its colour) or "hatch" (hatched in it, which reads without colour)');
     if (s.show === undefined) {
-      if (s.of !== undefined || s.fill !== undefined) fail(`${at}/show`, 'a shape shows the state of a field "of" a data item — give "show": "<field>"');
+      // A fill with no state is the shape's own tone, drawn the same way (`tone`: a tint of it, `hatch`: lines of it).
+      if (s.of === undefined && s.fill !== undefined) return;
+      if (s.of !== undefined) fail(`${at}/show`, 'a shape shows the state of a field "of" a data item — give "show": "<field>"');
       return;
     }
     if (typeof s.show !== 'string') { fail(`${at}/show`, '"show" names a field of the item the shape reads'); return; }
