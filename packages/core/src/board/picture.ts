@@ -1225,7 +1225,9 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         const binding = (map: ValueMap): Binding => ({ ...readFor(query, item, shape.show, path), map });
         const bindings: Record<string, Binding> = { tone: binding(maps.tone) };
         if (shape.fill === 'tone' && maps.emphasis) bindings.hatch = binding(emphasisMap(maps.emphasis, e => (e === 'hatch' ? 'true' : 'false')));
-        const props = { tone: shape.tone ?? 'idle', fill: shape.fill ?? 'none', hatch: shape.fill === 'hatch' ? 'true' : '' };
+        // The outline takes the status's emphasis as a link does: `hatch` dashed, `blink` dots that travel along it, `invert` thick.
+        if (maps.emphasis) bindings.form = binding(emphasisMap(maps.emphasis, e => (e === 'hatch' ? 'dashed' : e === 'blink' ? 'flowing' : e === 'invert' ? 'thick' : '')));
+        const props = { tone: shape.tone ?? 'idle', fill: shape.fill ?? 'none', hatch: shape.fill === 'hatch' ? 'true' : '', form: '' };
         return { id, x, y, ...box, anchored: true, widget: { type: builtin(name, stateLineElement(d, box, { width, dash: shape.dash === true })), props, bindings } };
       }
     }
@@ -1234,7 +1236,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
 
   /**
    * A link as a connector between the nodes of its parts. With `of` and `show` it carries the field's state: its colour
-   * is the tone, its emphasis the line's form — `hatch` dashed, `blink` dotted, `invert` twice as thick.
+   * is the tone, its emphasis the line's form — `hatch` dashed, `blink` dots that travel along it, `invert` twice as thick.
    */
   const connectorOf = (link: Link, id: string, at: string): Connector => {
     const width = link.width ?? 2;
@@ -1249,7 +1251,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         bindings['style.stroke'] = binding(link.show!, maps.tone);
         if (maps.emphasis) {
           const form = (to: (e: string) => unknown) => emphasisMap(maps.emphasis!, to);
-          bindings['style.dash'] = binding(link.show!, form(e => (e === 'hatch' ? 'dashed' : e === 'blink' ? 'dotted' : link.dash ? 'dashed' : 'solid')));
+          bindings['style.dash'] = binding(link.show!, form(e => (e === 'hatch' ? 'dashed' : e === 'blink' ? 'flowing' : link.dash ? 'dashed' : 'solid')));
           bindings['style.strokeWidth'] = binding(link.show!, form(e => (e === 'invert' ? width * 2 : width)));
         }
       }

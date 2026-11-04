@@ -339,7 +339,8 @@ type GridItem =
   `path` (absolute `M` · `L` · `C` · `Q` · `Z`), each with an optional `tone`, `width` and `dash`. A `box`, a `line` or a `path` can show a
   state as a link does: `of` the data item it reads (a shape in a group reads the group's data), `show` a field with a `state` — its
   outline takes the state's tone — and, for a box or a path, `fill`: `tone` fills it in that tone, `hatch` draws diagonal lines in it
-  (which read without colour); a status whose `emphasis` is `hatch` hatches a `tone` fill too. A text is drawn as it is. The items of an
+  (which read without colour); a status whose `emphasis` is `hatch` hatches a `tone` fill too. The outline of a line or a path takes the
+  emphasis as a link's does (`hatch` dashed, `blink` travelling dots, `invert` thick). A text is drawn as it is. The items of an
   `each` part are placed one by one under its entry, or — for data whose items change and cannot be named — by their own
   fields: `{ "at": ["lon", "lat"], "frame": [-180, 90, 180, -90], "size": [14, 14] }` puts each item at the point the
   two fields say. `at` names the fields holding x and y (each where its field says it lives, `at` of the field); `frame`
@@ -379,7 +380,7 @@ type GridItem =
   }
   ```
 
-  A link that shows a status takes its tone, and its emphasis as the line's form — `hatch` dashed, `blink` dotted,
+  A link that shows a status takes its tone, and its emphasis as the line's form — `hatch` dashed, `blink` dots that travel along it (a dotted line, still, for a reader who asks for less motion),
   `invert` thick. `orthogonal` runs with one turn between the two parts, as pipes and wiring are drawn;
   `curved` bows to the left of the way it runs, as flows on a map are drawn. `weight` reads the width from a field —
   an amount, not a status: bands from the width below the first number up (`[2, 8, 3.5, 15, 5]`), or a map of raw

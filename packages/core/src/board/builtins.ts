@@ -110,13 +110,15 @@ export function lineElement(d: string, box: { width: number; height: number }, l
  * A line or a path that shows a state: its outline in the tone of the field's state (`tone`, bound), and — for a path — its
  * inside as a faint tint of the tone (`fill: "tone"`) or as diagonal lines in it (`fill: "hatch"`, or `hatch: "true"` — the
  * state's emphasis, bound). The three are drawn and shown by the attributes `data-fill` and `data-hatch`, which the style reads.
+ * Its outline takes the state's emphasis as a link does (`form`, bound): `dashed`, `flowing` (a dotted line whose dots travel along
+ * it, and stand still for a reader who asks for less motion — still a dotted line, apart from a dashed one) or `thick`.
  */
 export function stateLineElement(d: string, box: { width: number; height: number }, look: { width: number; dash: boolean }): ElementDefinition {
   return {
     render: 'template',
-    props: { type: 'object', properties: { tone: text, fill: { enum: ['none', 'tone', 'hatch'] }, hatch: text } },
+    props: { type: 'object', properties: { tone: text, fill: { enum: ['none', 'tone', 'hatch'] }, hatch: text, form: text } },
     template:
-      `<svg class="ln" width="100%" height="100%" viewBox="0 0 ${box.width} ${box.height}" preserveAspectRatio="none" data-tone="{{tone}}" data-fill="{{fill}}" data-hatch="{{hatch}}">` +
+      `<svg class="ln" width="100%" height="100%" viewBox="0 0 ${box.width} ${box.height}" preserveAspectRatio="none" data-tone="{{tone}}" data-fill="{{fill}}" data-hatch="{{hatch}}" data-form="{{form}}">` +
       '<defs><pattern id="h" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><path d="M0 0V8" stroke-width="1"/></pattern></defs>' +
       `<path class="tint" d="${d}" stroke="none"/><path class="hat" d="${d}" fill="url(#h)" stroke="none"/>` +
       `<path class="out" d="${d}" fill="none" stroke-width="${look.width}"${look.dash ? ' stroke-dasharray="8 6"' : ''} stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -125,6 +127,10 @@ export function stateLineElement(d: string, box: { width: number; height: number
       '.out{stroke:var(--c)}.ln pattern path{stroke:var(--c)}.tint,.hat{display:none}' +
       '.ln[data-fill="tone"] .tint{display:inline;fill:var(--c);fill-opacity:.16}' +
       '.ln[data-fill="tone"][data-hatch="true"] .tint{display:none}' +
-      '.ln[data-fill="hatch"] .hat,.ln[data-hatch="true"] .hat{display:inline}',
+      '.ln[data-fill="hatch"] .hat,.ln[data-hatch="true"] .hat{display:inline}' +
+      // Dashed is 8 on, 6 off. Flowing is dots — a hair of line the width apart, which the round caps make a dot each — and its period (the
+      // offset the animation runs back by) is one dot and its gap, so the pattern travels forward along the line.
+      `.ln[data-form="dashed"] .out{stroke-dasharray:8 6}.ln[data-form="flowing"] .out{stroke-dasharray:.01 ${look.width * 2}}.ln[data-form="thick"] .out{stroke-width:${look.width * 2}}` +
+      `@keyframes ub-flow{to{stroke-dashoffset:-${look.width * 2 + 0.01}}}.ln[data-form="flowing"] .out{animation:ub-flow .5s linear infinite}@media (prefers-reduced-motion:reduce){.ln[data-form="flowing"] .out{animation:none}}`,
   };
 }

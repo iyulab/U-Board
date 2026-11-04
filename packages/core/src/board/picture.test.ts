@@ -350,12 +350,12 @@ describe('the picture model of a v2 board', () => {
     const node = (id: string) => nodeOf(doc, `shape.${id}`);
     const wedge = node('wedge').widget;
     expect(wedge.type).toMatch(/^element:u-board-shape-wedge/);
-    expect(wedge.props).toEqual({ tone: 'idle', fill: 'tone', hatch: '' });
+    expect(wedge.props).toEqual({ tone: 'idle', fill: 'tone', hatch: '', form: '' });
     // the tone follows the field's state; a status whose emphasis is hatch turns the hatch on for a tone fill
-    expect(Object.keys(wedge.bindings!).sort()).toEqual(['hatch', 'tone']);
-    expect(node('hall').widget.props).toEqual({ tone: 'idle', fill: 'hatch', hatch: 'true' });
-    expect(Object.keys(node('hall').widget.bindings!)).toEqual(['tone']);
-    expect(Object.keys(node('edge').widget.bindings!)).toEqual(['tone']);
+    expect(Object.keys(wedge.bindings!).sort()).toEqual(['form', 'hatch', 'tone']);
+    expect(node('hall').widget.props).toEqual({ tone: 'idle', fill: 'hatch', hatch: 'true', form: '' });
+    expect(Object.keys(node('hall').widget.bindings!)).toEqual(['tone', 'form']);
+    expect(Object.keys(node('edge').widget.bindings!)).toEqual(['tone', 'form']);
     expect(node('edge').widget.props).toMatchObject({ fill: 'none' });
     // a path without a state is the element it always was: no props, no bindings
     expect(node('plain').widget.bindings).toBeUndefined();
@@ -364,6 +364,23 @@ describe('the picture model of a v2 board', () => {
     const definition = (doc as { elements?: Record<string, { template?: string; style?: string }> }).elements![wedge.type.slice('element:'.length)]!;
     expect(checkTemplateMarkup(definition.template!, [])).toEqual([]);
     expect(checkStyle(definition.style!, [])).toEqual([]);
+  });
+
+  it("draws the outline of a path that shows a state in the status's emphasis, as a link does — dashed, travelling dots, thick", () => {
+    const b = board({ s: { as: 'stat', of: 'totals', show: 'output' } }, {
+      kind: 'canvas', size: [400, 200], place: { s: [0, 0, 100, 60] },
+      shapes: { pipe: { line: [[0, 100], [90, 100]], of: 'pumps[P2]', show: 'state' } },
+    });
+    for (const [emphasis, form] of [['blink', 'flowing'], ['hatch', 'dashed'], ['invert', 'thick'], ['stamp', '']] as const) {
+      b.statuses = { running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped', emphasis } };
+      const pipe = nodeOf(toViewDocument(b, { keysOf: () => [] }), 'shape.pipe').widget;
+      expect((pipe.bindings!.form!.map as { values: Record<string, string> }).values.trip).toBe(form);
+    }
+    // a path with no state keeps the element it always was
+    const plain = board({ s: { as: 'stat', of: 'totals', show: 'output' } }, {
+      kind: 'canvas', size: [400, 200], place: { s: [0, 0, 100, 60] }, shapes: { pipe: { line: [[0, 100], [90, 100]] } },
+    });
+    expect(nodeOf(toViewDocument(plain, { keysOf: () => [] }), 'shape.pipe').widget.bindings).toBeUndefined();
   });
 
   it("puts a waterfall's total flag, a radar's axis and a scatter's opacity in the chart's mapping, where the widget reads them", () => {
@@ -568,8 +585,8 @@ describe('the picture model of a v2 board', () => {
       const reading = readHttpRef(SOURCE[(b.ref as HttpRef).path], b.ref as HttpRef, READ_AT);
       return reading.ok ? (b.map ? applyValueMap(b.map, reading.value) : reading.value) : reading.message;
     };
-    // P2 has tripped: the link is in the alarm tone, dotted for the status's blink, and labelled with its flow.
-    expect([read('style.stroke'), read('style.dash'), read('style.strokeWidth'), read('label')]).toEqual(['alarm', 'dotted', 2, 0]);
+    // P2 has tripped: the link is in the alarm tone, its dashes travelling for the status's blink, and labelled with its flow.
+    expect([read('style.stroke'), read('style.dash'), read('style.strokeWidth'), read('label')]).toEqual(['alarm', 'flowing', 2, 0]);
   });
 
   it('leaves a link without a label for the value whose name is empty — the normal one says nothing', () => {

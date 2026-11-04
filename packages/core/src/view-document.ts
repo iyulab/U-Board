@@ -341,9 +341,11 @@ export interface ConnectorStyle {
   route?: ConnectorRoute;
 }
 
-export type StrokeDash = 'solid' | 'dashed' | 'dotted';
+/** A stroke's line style. `flowing` is a dotted line whose dots travel along it — from `fromNodeId` toward `toNodeId` for a connector — and
+ *  stand still for a reader who asks for less motion. */
+export type StrokeDash = 'solid' | 'dashed' | 'dotted' | 'flowing';
 export type ConnectorArrow = 'none' | 'end' | 'start' | 'both';
-export const STROKE_DASHES: readonly StrokeDash[] = ['solid', 'dashed', 'dotted'];
+export const STROKE_DASHES: readonly StrokeDash[] = ['solid', 'dashed', 'dotted', 'flowing'];
 export const CONNECTOR_ARROWS: readonly ConnectorArrow[] = ['none', 'end', 'start', 'both'];
 export type ConnectorRoute = 'straight' | 'orthogonal' | 'curved';
 export const CONNECTOR_ROUTES: readonly ConnectorRoute[] = ['straight', 'orthogonal', 'curved'];

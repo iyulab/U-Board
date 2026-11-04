@@ -7,7 +7,17 @@ import { drawingColor } from '../theme-colors.js';
 const DARK_BOARD_TEXT = '#e5e7eb';
 
 /** A line style as the canvas strokes it — connectors and frames alike. */
-export const DASH_PATTERNS: Record<StrokeDash, number[]> = { solid: [], dashed: [6, 4], dotted: [2, 3] };
+export const DASH_PATTERNS: Record<StrokeDash, number[]> = { solid: [], dashed: [6, 4], dotted: [2, 3], flowing: [2, 3] };
+
+/** How fast flowing dots travel, in scene units per second — three periods of the pattern. A flowing stroke is dotted, not dashed:
+ *  stood still (for a reader who asks for less motion) it stays apart from a dashed one, as a status's two emphases are. */
+export const DASH_FLOW = 15;
+
+/** What a stroke of this line style adds to a drawing object: its pattern, and the flow of one that flows. */
+export function dashOf(dash: StrokeDash | undefined): { dash?: number[]; dashFlow?: number } {
+  const pattern = dash ? DASH_PATTERNS[dash] : [];
+  return { ...(pattern.length > 0 && { dash: pattern }), ...(dash === 'flowing' && { dashFlow: DASH_FLOW }) };
+}
 
 const ALIGN: Record<Column, 'left' | 'center' | 'right'> = { start: 'left', center: 'center', end: 'right' };
 
@@ -31,14 +41,13 @@ export function decorationObjects(shape: Shape, appearance: BoardAppearance = 'l
   const stroke = paint(shape.stroke);
   // A hatched box has no flat fill: its inside is the lines, in the fill's colour — the outline's when it has none.
   const fill = hatch === true || colour === undefined ? undefined : fillOpacity === undefined ? colour : withAlpha(colour, fillOpacity);
-  const pattern = dash ? DASH_PATTERNS[dash] : [];
   const rect: DrawingObject = {
     id, type: 'rect', x, y, width, height,
     ...(fill !== undefined && { fill }),
     ...(stroke !== undefined && { stroke }),
     ...(strokeWidth !== undefined && { strokeWidth }),
     ...(radius !== undefined && radius > 0 && { cornerRadius: radius }),
-    ...(pattern.length > 0 && { dash: pattern }),
+    ...dashOf(dash),
   };
   const lines = hatch === true ? hatchLines(shape, colour ?? stroke) : [];
   if (!shape.label?.trim()) return [rect, ...lines];

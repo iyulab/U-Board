@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { getObjectBounds } from '@canvas-kit/core';
-import { decorationObjects } from './decoration-drawing';
+import { DASH_FLOW, dashOf, decorationObjects } from './decoration-drawing';
+import { connectorObjects } from './connector-drawing';
 import type { BoardAppearance, Shape } from '../view-document';
 
 /** How a decoration was drawn before frames had names and texts had anchors — the shape itself, colours of `none`
@@ -111,5 +112,36 @@ describe('decorationObjects', () => {
     expect(box.x + box.width / 2).toBeCloseTo(50);
     const [none] = decorationObjects({ id: 't', type: 'text', x: 0, y: 0, text: 'x', background: 'none' });
     expect(none).not.toHaveProperty('background');
+  });
+});
+
+describe('flowing dashes', () => {
+  it('is a pattern and a flow for a stroke that flows, a pattern for a dashed or dotted one, and nothing for a solid one', () => {
+    expect(dashOf('flowing')).toEqual({ dash: [2, 3], dashFlow: DASH_FLOW });
+    expect(dashOf('dashed')).toEqual({ dash: [6, 4] });
+    expect(dashOf('dotted')).toEqual({ dash: [2, 3] });
+    expect(dashOf('solid')).toEqual({});
+    expect(dashOf(undefined)).toEqual({});
+  });
+
+  it('draws a frame with a flowing dash as travelling dots', () => {
+    const [rect] = decorationObjects({ id: 'f', type: 'rect', x: 0, y: 0, width: 40, height: 20, stroke: '#333', strokeWidth: 1, dash: 'flowing' });
+    expect(rect).toMatchObject({ dash: [2, 3], dashFlow: DASH_FLOW });
+    const [still] = decorationObjects({ id: 'g', type: 'rect', x: 0, y: 0, width: 40, height: 20, stroke: '#333', strokeWidth: 1, dash: 'dashed' });
+    expect(still).not.toHaveProperty('dashFlow');
+  });
+
+  it('draws a connector with a flowing dash from its first node toward its second, and a dashed one still', () => {
+    const nodes = [
+      { id: 'a', x: 0, y: 0, width: 40, height: 40 },
+      { id: 'b', x: 200, y: 0, width: 40, height: 40 },
+    ] as unknown as Parameters<typeof connectorObjects>[0];
+    const draw = (dash: 'flowing' | 'dashed') =>
+      connectorObjects(nodes, [{ id: 'c', fromNodeId: 'a', toNodeId: 'b', style: { dash } }]).find(o => o.id === 'c');
+    expect(draw('flowing')).toMatchObject({ type: 'line', dash: [2, 3], dashFlow: DASH_FLOW });
+    expect(draw('dashed')).not.toHaveProperty('dashFlow');
+    // the line runs from a to b, so a positive flow carries the dashes toward b
+    const points = (draw('flowing') as { points: number[] }).points;
+    expect(points[0]!).toBeLessThan(points[points.length - 2]!);
   });
 });
