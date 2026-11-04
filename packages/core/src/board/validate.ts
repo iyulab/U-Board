@@ -321,7 +321,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     }
     if (q.answerTime !== undefined) {
       if (typeof q.answerTime !== 'string' || !q.answerTime.startsWith('/')) fail(`${at}/answerTime`, '"answerTime" is where the answer holds its time, a JSON Pointer starting with "/"');
-      else if (q.list === undefined) fail(`${at}/answerTime`, 'without a "list" the answer is the item — its time is "time"');
+      else if (q.list === undefined) fail(`${at}/answerTime`, 'without a "list" the answer is the item, and when it was observed is the field "time" names ("time": "<field>") — leave "answerTime" out');
     }
     if (q.where !== undefined) {
       if (!isObj(q.where) || q.list === undefined) fail(`${at}/where`, '"where" keeps the items of a "list" whose fields equal its values: { "field": value }');
@@ -691,7 +691,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
   const checkElementPart = (part: Obj, at: string, reads: string | null | undefined) => {
     const name = part.element;
     const el = typeof name === 'string' ? elements[name] : undefined;
-    if (!isObj(el)) { fail(`${at}/element`, `no element "${String(name)}" — elements: ${list(Object.keys(elements))}`); return; }
+    if (!isObj(el)) { fail(`${at}/element`, `no element "${String(name)}" — elements: ${list(Object.keys(elements))}; define it under "elements": { "${String(name)}": { "template": "<div>{{text}}</div>", "props": { "text": "string" } } } — in the same patch as the part, since a refused patch leaves nothing behind`); return; }
     const declared = isObj(el.props) ? el.props : {};
     const holes = `props: ${list(Object.keys(declared))}`;
     for (const [key, value] of Object.entries(isObj(part.props) ? part.props : {})) {

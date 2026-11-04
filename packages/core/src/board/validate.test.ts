@@ -520,7 +520,7 @@ describe('validateBoard', () => {
       '/parts/u/props/colour: "tank" has no prop "colour" — props: level, name, state',
       '/parts/u/bind/level: "count" has no "state" in /data/totals/fields — its status needs one',
       '/parts/u/bind/zz: "tank" has no prop "zz" — props: level, name, state',
-      '/parts/v/element: no element "pump" — elements: tank, bad',
+      '/parts/v/element: no element "pump" — elements: tank, bad; define it under "elements": { "pump": { "template": "<div>{{text}}</div>", "props": { "text": "string" } } } — in the same patch as the part, since a refused patch leaves nothing behind',
     ]);
     // Inside a list's section a hole names a field of its item; still nothing is computed there.
     const listed = {
@@ -864,7 +864,7 @@ describe('validateBoard', () => {
     expect(read({ list: '/value', answerTime: '/updatedAt' })).toEqual([]);
     expect(read({ list: '/value', answerTime: 'updatedAt' })).toEqual(['/data/q/answerTime: "answerTime" is where the answer holds its time, a JSON Pointer starting with "/"']);
     expect(read({ time: '/observedAt' })).toEqual(['/data/q/time: "time" names the field holding when the source observed the item — "observedAt", not a JSON Pointer; a field that lives deeper says where with its "at"']);
-    expect(read({ answerTime: '/updatedAt' })).toEqual(['/data/q/answerTime: without a "list" the answer is the item — its time is "time"']);
+    expect(read({ answerTime: '/updatedAt' })).toEqual(['/data/q/answerTime: without a "list" the answer is the item, and when it was observed is the field "time" names ("time": "<field>") — leave "answerTime" out']);
   });
 });
 
