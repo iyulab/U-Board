@@ -185,6 +185,12 @@ describe('the picture model of a v2 board', () => {
     const table = nodeOf(doc, 'grid').widget;
     expect(table.props).toMatchObject({ mapping: { tone: 'state$tone', columns: [{ field: 'id' }, { field: 'flow' }] } });
     expect((drawn(table).data as Array<Record<string, unknown>>).map(r => r['state$tone'])).toEqual(['ok', 'alarm']);
+    // The row takes its status's emphasis too, where a status names one (the board's tripped pump blinks) — and not otherwise.
+    expect(table.props).toMatchObject({ mapping: { tone: 'state$tone', emphasis: 'state$emphasis' } });
+    expect((drawn(table).data as Array<Record<string, unknown>>).map(r => r['state$emphasis'])).toEqual(['', 'blink']);
+    const plain = board({ grid: { as: 'table', of: 'pumps', show: ['id', 'flow'], state: 'state' } }, { kind: 'grid', items: ['grid'] });
+    plain.statuses = { running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped' } };
+    expect(nodeOf(view(plain), 'grid').widget.props).not.toHaveProperty('mapping.emphasis');
     // A table with no `state` has no row tone.
     expect(nodeOf(view(board({ grid: { as: 'table', of: 'pumps', show: ['id'] } }, { kind: 'grid', items: ['grid'] })), 'grid').widget.props).not.toHaveProperty('mapping.tone');
   });

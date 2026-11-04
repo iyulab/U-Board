@@ -717,7 +717,12 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         // A column whose field has a state colours each of its cells by it; `state` names the field whose state colours the whole row
         // (a field the table need not show).
         const { state: rowState, ...tableOptions } = options as { state?: string };
-        bindList('data', Object.assign({}, ...fields.map(rowFields), rowState !== undefined && field(rowState).state !== undefined ? { [`${rowState}$tone`]: rowFields(rowState)[`${rowState}$tone`] } : {}));
+        // The row takes its status's emphasis too — inverted, hatched, its mark blinking — as the status card draws it.
+        const rowEmphasis = rowState !== undefined && field(rowState).state !== undefined ? stateMaps(field(rowState).state!).emphasis : undefined;
+        bindList('data', Object.assign({}, ...fields.map(rowFields), rowState !== undefined && field(rowState).state !== undefined ? {
+          [`${rowState}$tone`]: rowFields(rowState)[`${rowState}$tone`],
+          ...(rowEmphasis ? { [`${rowState}$emphasis`]: { from: source(rowState), map: rowEmphasis } } : {}),
+        } : {}));
         const columns = fields.map(name => {
           const f = field(name);
           const format = formatOf(f);
@@ -731,7 +736,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
           type: 'table',
           props: {
             ...(title !== undefined ? { title: text(title, 'title') } : {}), data: [],
-            ...(columns.length || rowState !== undefined ? { mapping: { ...(columns.length ? { columns } : {}), ...(rowState !== undefined ? { tone: `${rowState}$tone` } : {}) } } : {}),
+            ...(columns.length || rowState !== undefined ? { mapping: { ...(columns.length ? { columns } : {}), ...(rowState !== undefined ? { tone: `${rowState}$tone`, ...(rowEmphasis ? { emphasis: `${rowState}$emphasis` } : {}) } : {}) } } : {}),
             ...(Object.keys(tableOptions).length ? { options: tableOptions } : {}),
           },
           bindings,
