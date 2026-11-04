@@ -89,7 +89,7 @@ it, a \`stat\`'s \`trend\` a field holding its recent values, a \`list\`'s \`pri
 |---|---|---|---|
 ${PART_KINDS.map(kindRow).join('\n')}
 
-Every \`chart.*\` also takes ${code(sharedChartOptions())}.`,
+Every \`chart.*\` also takes ${code(sharedChartOptions())}. A \`chart.gantt\`'s \`texture\` names a field whose words say how its interval is drawn: \`hatch\` (diagonal lines), \`dashed\` (a dashed outline), or both — what a colour does not say.`,
 
     `## layout — where, per view kind
 

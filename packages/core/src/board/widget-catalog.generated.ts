@@ -24,6 +24,10 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "x",
+      "y"
     ]
   },
   {
@@ -48,6 +52,10 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "x",
+      "y"
     ]
   },
   {
@@ -71,6 +79,10 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "x",
+      "y"
     ]
   },
   {
@@ -84,6 +96,10 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "label",
+      "value"
     ]
   },
   {
@@ -101,6 +117,13 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "x",
+      "y",
+      "color",
+      "size",
+      "opacity"
     ]
   },
   {
@@ -113,6 +136,10 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "axis",
+      "y"
     ]
   },
   {
@@ -126,6 +153,11 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "x",
+      "y",
+      "value"
     ]
   },
   {
@@ -138,6 +170,10 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "grid",
       "animate",
       "echarts"
+    ],
+    "mappingKeys": [
+      "x",
+      "y"
     ]
   },
   {
@@ -150,6 +186,10 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "label",
+      "value"
     ]
   },
   {
@@ -163,6 +203,11 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "x",
+      "y",
+      "total"
     ]
   },
   {
@@ -190,6 +235,9 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "grid",
       "animate",
       "echarts"
+    ],
+    "mappingKeys": [
+      "value"
     ]
   },
   {
@@ -206,6 +254,14 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "animate",
       "showLabel",
       "echarts"
+    ],
+    "mappingKeys": [
+      "y",
+      "start",
+      "end",
+      "label",
+      "color",
+      "texture"
     ]
   },
   {
@@ -292,6 +348,11 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "sortable",
       "interactive",
       "maxItems"
+    ],
+    "mappingKeys": [
+      "columns",
+      "tone",
+      "glyph"
     ]
   },
   {
@@ -302,6 +363,18 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "compact",
       "layout",
       "maxItems"
+    ],
+    "mappingKeys": [
+      "primary",
+      "secondary",
+      "avatar",
+      "icon",
+      "trailing",
+      "badge",
+      "time",
+      "tone",
+      "glyph",
+      "columns"
     ],
     "choices": {
       "layout": [

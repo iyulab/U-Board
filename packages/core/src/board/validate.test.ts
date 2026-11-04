@@ -234,6 +234,9 @@ describe('validateBoard', () => {
     expect(unknown).toMatch(/^\/parts\/g\/as: unknown kind "timeline" — one of status-card, header, stat, /);
     expect(unknown).toContain('chart.gantt');
     expect(issues(canvas({ g: { as: 'chart.gantt', of: 'equipment' } }))).toEqual([]);
+    // a gantt's `texture` names a field, like its other mapping; no other chart reads one
+    expect(issues(canvas({ g: { as: 'chart.gantt', of: 'equipment', texture: 'status' } }))).toEqual([]);
+    expect(issues(canvas({ g: { as: 'chart.bar', of: 'equipment', texture: 'status' } }))[0]).toMatch(/^\/parts\/g\/texture: "texture" is not an option — options of a chart\.bar:/);
     expect(issues(canvas({ m: { as: 'metric', of: 'totals' }, s: { as: 'status', of: 'equipment[PR-01]' } }))).toEqual([
       '/parts/m/as: a board writes "stat" for the widget library\'s "metric" — "as": "stat"',
       '/parts/s/as: a board writes "stat-list" for the widget library\'s "status" — "as": "stat-list"',

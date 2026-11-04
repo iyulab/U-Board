@@ -31,6 +31,15 @@ export interface PartKind {
 /** The options of a chart part that are its mapping — which field is x, y, … */
 export const CHART_MAPPING: readonly string[] = ['x', 'y', 'start', 'end', 'label', 'name', 'value', 'group', 'color', 'size', 'task', 'category', 'axis', 'total', 'opacity'];
 
+/** The mapping a chart of this widget takes: the shared ones, and what the library names for it alone — a gantt's `texture`, the field
+ *  of the words (`hatch`, `dashed`) that say how an interval is drawn. Read from the catalog, so a key the library gives a chart
+ *  is one a part of it takes once the catalog is written again. */
+export function chartMapping(widget: string): readonly string[] {
+  const named = WIDGET_CATALOG.find(c => c.widget === widget)?.mappingKeys ?? [];
+  const alone = named.filter(key => !CHART_MAPPING.includes(key));
+  return alone.length > 0 ? [...CHART_MAPPING, ...alone] : CHART_MAPPING;
+}
+
 /**
  * The general built-ins, each drawn by a widget of the library — under the board's name where the two differ: a
  * board's `stat` is the library's `metric`, its `stat-list` the library's `kv`.
@@ -85,7 +94,7 @@ function generate(): PartKind[] {
   };
   return [
     ...GENERAL.map(([kind, widget, of, own, stands]) => fromWidget(kind, widget, of, own, stands)),
-    ...catalog.filter(c => c.category === 'chart').map(c => fromWidget(c.widget, c.widget, 'needs', CHART_MAPPING)),
+    ...catalog.filter(c => c.category === 'chart').map(c => fromWidget(c.widget, c.widget, 'needs', chartMapping(c.widget))),
     ...BOARD_KINDS,
   ];
 }

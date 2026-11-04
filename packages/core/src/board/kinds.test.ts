@@ -27,3 +27,15 @@ describe('part kinds', () => {
     expect(new Set(PART_KINDS.map(k => k.kind)).size).toBe(PART_KINDS.length);
   });
 });
+
+describe('chartMapping', () => {
+  it('gives every chart the mapping keys the library names for it, and a gantt its texture alone', async () => {
+    const { chartMapping } = await import('./kinds.js');
+    const { WIDGET_CATALOG } = await import('./widget-catalog.generated.js');
+    for (const entry of WIDGET_CATALOG.filter(c => c.category === 'chart')) {
+      for (const key of entry.mappingKeys ?? []) expect(chartMapping(entry.widget), `${entry.widget} ${key}`).toContain(key);
+    }
+    expect(chartMapping('chart.gantt')).toContain('texture');
+    expect(chartMapping('chart.bar')).not.toContain('texture');
+  });
+});

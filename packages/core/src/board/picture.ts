@@ -78,7 +78,7 @@ function sideFreeOfLinks(nodes: Node[], connectors: Connector[], auto: ReadonlyS
     node.widget = { ...node.widget, props: { ...widget.props, labelAt: side } } as Node['widget'];
   }
 }
-import { CHART_MAPPING, partKind } from './kinds.js';
+import { chartMapping, partKind } from './kinds.js';
 import { expandVariables, variableValues, variablesOf } from './variables.js';
 import { TONES } from './types.js';
 import { groupReach } from './group-reach.js';
@@ -826,7 +826,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         if (kind.widget !== undefined && kind.widget.startsWith('chart.')) {
           // A chart reads a list; its mapping (x, y, …) and options sit on the part.
           bind('data', undefined);
-          const mappingKeys = CHART_MAPPING;
+          const mappingKeys = chartMapping(kind.widget);
           const mapping = Object.fromEntries(Object.entries(options).filter(([k]) => mappingKeys.includes(k)));
           const rest = Object.fromEntries(Object.entries(options).filter(([k]) => !mappingKeys.includes(k)));
           return {

@@ -220,6 +220,18 @@ describe('the picture model of a v2 board', () => {
     expect(nodeOf(doc, 'bare').widget.props).not.toHaveProperty('title');
   });
 
+  it('hands a gantt the field that says how each interval is drawn, and no other chart', () => {
+    const doc = view(board(
+      {
+        gantt: { as: 'chart.gantt', of: 'hourly', y: 'hour', start: 'hour', end: 'hour', texture: 'count' },
+        bar: { as: 'chart.bar', of: 'hourly', x: 'hour', y: 'count' },
+      },
+      { kind: 'grid', items: ['gantt', 'bar'] },
+    ));
+    expect(nodeOf(doc, 'gantt').widget.props).toMatchObject({ mapping: { y: 'hour', start: 'hour', end: 'hour', texture: 'count' } });
+    expect(nodeOf(doc, 'bar').widget.props).toMatchObject({ mapping: { x: 'hour', y: 'count' } });
+  });
+
   it('draws stats, a stat list, a gauge and a chart in a grid, each in the order and span the layout gives', () => {
     const doc = view(board(
       {
