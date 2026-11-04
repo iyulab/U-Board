@@ -1055,6 +1055,16 @@ describe('items placed by their own fields (a canvas)', () => {
   };
   const centre = (n: Node) => [n.x + (n.width ?? 160) / 2, n.y + (n.height ?? 100) / 2];
 
+  it('keeps the order of the list in the nodes (the later is drawn over the earlier) and lets a link end on an item', () => {
+    const b = world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [10, 10] });
+    (b.layout as { links?: unknown }).links = { q: { from: 'quake/q3', to: 'quake/q1' } };
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const { doc } = draw(b, [rows[2]!, rows[0]!, rows[1]!]);
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(doc.nodes.map(n => n.id)).toEqual(['quake/q3', 'quake/q1', 'quake/q2']);
+    expect(doc.connectors?.map(c => [c.fromNodeId, c.toNodeId])).toEqual([['quake/q3', 'quake/q1']]);
+  });
+
   it('puts each item at its fields’ place in the frame — linearly, its box centred there', () => {
     const b = world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [10, 10] });
     expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
