@@ -252,6 +252,10 @@ export interface Weight {
 export interface DataPlace {
   at: [string, string];
   frame?: [number, number, number, number];
+  /** Instead of `frame`, for coordinates that do not run straight across the canvas — a plan turned on the page, a floor drawn
+   *  in isometric: `[a, b, c, d, e, f]`, so that an item at (x, y) is at (a·x + c·y + e, b·x + d·y + f) on the canvas — the order
+   *  of an SVG or CSS `matrix`. An item whose point falls outside the canvas is not drawn. */
+  matrix?: [number, number, number, number, number, number];
   size?: [number, number];
   /** Which point of the part's box the position is: its middle (`center`, the default) or the middle of its `left`,
    *  `right`, `top` or `bottom` edge — a marker whose dot sits at the left of its label is `left`, a pin that rises from

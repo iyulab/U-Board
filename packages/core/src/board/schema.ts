@@ -256,6 +256,7 @@ export function boardSchema(): Schema {
         properties: {
           at: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2, description: '[the field holding x, the field holding y].' },
           frame: { type: 'array', items: { type: 'number' }, minItems: 4, maxItems: 4, description: '[left, top, right, bottom] — the values at the canvas’s edges; [-180, 90, 180, -90] for longitude and latitude over a picture of the whole world.' },
+          matrix: { type: 'array', items: { type: 'number' }, minItems: 6, maxItems: 6, description: 'Instead of frame, for coordinates turned or slanted on the canvas (a plan turned on the page, isometric): [a, b, c, d, e, f] puts an item at (x, y) at (a·x + c·y + e, b·x + d·y + f).' },
           size: { type: 'array', items: { type: 'number', exclusiveMinimum: 0 }, minItems: 2, maxItems: 2, description: '[width, height] of each item’s box.' },
           anchor: { enum: ['center', 'left', 'right', 'top', 'bottom'], description: 'The point of the box that is the position: its middle (default), or the middle of its left, right, top or bottom edge.' },
         },

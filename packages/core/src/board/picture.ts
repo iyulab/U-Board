@@ -1054,11 +1054,16 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
       const named = keyField === undefined ? String(i) : item[keyField];
       const x = valueAtPointer(item, xAt);
       const y = valueAtPointer(item, yAt);
-      const inside = typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y)
-        && x >= Math.min(left, right) && x <= Math.max(left, right) && y >= Math.min(top, bottom) && y <= Math.max(top, bottom);
+      const numbers = typeof x === 'number' && typeof y === 'number' && Number.isFinite(x) && Number.isFinite(y);
+      // The point on the canvas: `frame` puts the values at its edges linearly; `matrix` turns and slants them (a plan turned on the page, isometric).
+      const [cx, cy] = !numbers ? [NaN, NaN]
+        : where.matrix !== undefined
+          ? [where.matrix[0] * (x as number) + where.matrix[2] * (y as number) + where.matrix[4], where.matrix[1] * (x as number) + where.matrix[3] * (y as number) + where.matrix[5]]
+          : [((x as number) - left) / (right - left) * canvasSize[0], ((y as number) - top) / (bottom - top) * canvasSize[1]];
+      const inside = numbers && (where.matrix !== undefined
+        ? cx >= 0 && cx <= canvasSize[0] && cy >= 0 && cy <= canvasSize[1]
+        : (x as number) >= Math.min(left, right) && (x as number) <= Math.max(left, right) && (y as number) >= Math.min(top, bottom) && (y as number) <= Math.max(top, bottom));
       if ((typeof named !== 'string' && typeof named !== 'number') || !inside) { skipped += 1; return; }
-      const cx = ((x as number) - left) / (right - left) * canvasSize[0];
-      const cy = ((y as number) - top) / (bottom - top) * canvasSize[1];
       // The point of the box that is the position: its middle, or the middle of an edge (a dot at the left of its label).
       const reach = [where.anchor === 'left' ? 0 : where.anchor === 'right' ? w : w / 2, where.anchor === 'top' ? 0 : where.anchor === 'bottom' ? h : h / 2] as const;
       const corner = [cx - reach[0], cy - reach[1]] as const;

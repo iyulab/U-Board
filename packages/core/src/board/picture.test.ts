@@ -1085,6 +1085,21 @@ describe('items placed by their own fields (a canvas)', () => {
   };
   const centre = (n: Node) => [n.x + (n.width ?? 160) / 2, n.y + (n.height ?? 100) / 2];
 
+  it('puts each item where a matrix takes its fields — turned or slanted on the canvas — and leaves out one that lands off it', () => {
+    // An isometric floor: x runs down and to the right, y down and to the left, a canvas 360 × 180 with the origin at the top middle.
+    const b = world({ at: ['lon', 'lat'], matrix: [1, 0.5, -1, 0.5, 180, 0], size: [10, 10] });
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const floor = [{ id: 'o', lon: 0, lat: 0 }, { id: 'x', lon: 100, lat: 0 }, { id: 'y', lon: 0, lat: 100 }, { id: 'far', lon: 500, lat: 0 }, { id: 'none', lat: 5 }];
+    const { doc, unplaced } = draw(b, floor);
+    expect(['o', 'x', 'y'].map(id => centre(nodeOf(doc, `quake/${id}`)))).toEqual([[180, 0], [280, 50], [80, 50]]);
+    expect(doc.kind === 'canvas' && doc.nodes.map(n => n.id)).toEqual(['quake/o', 'quake/x', 'quake/y']);
+    expect(unplaced).toEqual([['quake', 2]]);
+    // Both ways to reach the canvas at once, a matrix that flattens the plane, one of the wrong length: said, with the way out.
+    expect(validateBoard(world({ at: ['lon', 'lat'], frame: [0, 0, 1, 1], matrix: [1, 0, 0, 1, 0, 0] })).map(i => i.message)[0]).toContain('"frame" or "matrix", not both');
+    expect(validateBoard(world({ at: ['lon', 'lat'], matrix: [1, 2, 2, 4, 0, 0] })).map(i => i.message)[0]).toContain('must not flatten the plane');
+    expect(validateBoard(world({ at: ['lon', 'lat'], matrix: [1, 0, 0, 1] })).map(i => i.message)[0]).toContain('"matrix" is [a, b, c, d, e, f]');
+  });
+
   it('keeps the order of the list in the nodes (the later is drawn over the earlier) and lets a link end on an item', () => {
     const b = world({ at: ['lon', 'lat'], frame: [-180, 90, 180, -90], size: [10, 10] });
     (b.layout as { links?: unknown }).links = { q: { from: 'quake/q3', to: 'quake/q1' } };

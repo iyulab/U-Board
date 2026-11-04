@@ -349,7 +349,9 @@ type GridItem =
   label is `left`, a pin that rises from its point is `bottom`. An item with no number in either field, or
   outside the frame, is not drawn — `look` and `pictureOf`'s `unplaced` count them. The data needs a `key`, and a part is
   placed one way, not both. The projection is linear: right for a plan and an equirectangular map, off for a Mercator one
-  over a wide range. Items can also be placed by a rule: `{ "flow": { "at": [16, 140], "cell": [114, 98], "gap": [6, 52], "columns": 7 } }`
+  over a wide range. A plan turned on the page, or a floor drawn in isometric, takes `"matrix": [a, b, c, d, e, f]` in place
+  of `frame`: an item at (x, y) is at (a·x + c·y + e, b·x + d·y + f) on the canvas (an SVG or CSS `matrix`), and one that
+  lands off the canvas is not drawn. Items can also be placed by a rule: `{ "flow": { "at": [16, 140], "cell": [114, 98], "gap": [6, 52], "columns": 7 } }`
   lays them out in the order the data gives them, `columns` to a row, each in a `cell`, `gap` apart. With `"by": "<field>"` and
   `"boxes": { "columns": 4, "at": [16, 104], "gap": [10, 10], "label": "{{key}}" }` they are grouped by the field's value instead: each
   group in a labelled box (every box the size of the biggest group's, or `boxes.cell`), the items flowing inside it with

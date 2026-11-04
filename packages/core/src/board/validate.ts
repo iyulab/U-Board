@@ -941,7 +941,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     /** A part's items placed by their own fields: which fields, what values the canvas's edges stand for, how big. */
     const checkPlaceByFields = (p: Record<string, unknown>, placeAt: string) => {
       for (const key of Object.keys(p)) {
-        if (!['at', 'frame', 'size', 'anchor'].includes(key)) fail(`${placeAt}/${key}`, `items placed by their fields take "at", "frame", "size" and "anchor" — "${key}" is not one (items are not also placed by hand)`);
+        if (!['at', 'frame', 'matrix', 'size', 'anchor'].includes(key)) fail(`${placeAt}/${key}`, `items placed by their fields take "at", "frame" (or "matrix"), "size" and "anchor" — "${key}" is not one (items are not also placed by hand)`);
       }
       const names = p.at as unknown[];
       if (names.length !== 2) fail(`${placeAt}/at`, '"at" names two fields of an item: [the field holding x, the field holding y]');
@@ -949,6 +949,12 @@ export function validateBoard(input: unknown): BoardIssue[] {
         const f = p.frame;
         if (!Array.isArray(f) || f.length !== 4 || !f.every(isNum)) fail(`${placeAt}/frame`, '"frame" is the values at the canvas’s left, top, right and bottom edges: [left, top, right, bottom]');
         else if (f[0] === f[2] || f[1] === f[3]) fail(`${placeAt}/frame`, '"frame" needs different values at the left and right edges, and at the top and bottom');
+      }
+      if (p.matrix !== undefined) {
+        const m = p.matrix;
+        if (p.frame !== undefined) fail(`${placeAt}/matrix`, 'a place takes "frame" or "matrix", not both — each says how the fields reach the canvas');
+        else if (!Array.isArray(m) || m.length !== 6 || !m.every(isNum)) fail(`${placeAt}/matrix`, '"matrix" is [a, b, c, d, e, f]: an item at (x, y) is at (a·x + c·y + e, b·x + d·y + f) on the canvas');
+        else if (m[0]! * m[3]! - m[1]! * m[2]! === 0) fail(`${placeAt}/matrix`, '"matrix" must not flatten the plane onto a line — a·d − b·c is not 0');
       }
       if (p.size !== undefined && !isSize(p.size)) fail(`${placeAt}/size`, '"size" is [width, height], both above 0');
       if (p.anchor !== undefined && !['center', 'left', 'right', 'top', 'bottom'].includes(p.anchor as string)) fail(`${placeAt}/anchor`, '"anchor" is the point of the box the position is: center, left, right, top or bottom');
