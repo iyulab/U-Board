@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- A host's identity reaches the widgets of a board through the default stylesheet: `--ub-brand-solid` (with `--ub-text-inverse` for the text on it) is the widgets' primary colour and the first colour of a chart, `--ub-font-sans` their typeface and `--ub-radius-md` their corners. Nothing else crosses — a board's paper, ink and status colours stay the board's own (its `theme`, `skin` and `accent`, which also win over these three), and a host that defines none of them sees no change. Needs `styles.css`.
+
 ### Fixed
 
 - The chart engine is fetched when a board names a `chart.*` widget, not when the viewer module is read. A board without a chart no longer downloads it (about 243 KB gzipped in a typical build); `ViewerPage` starts the fetch with the document, before the first reading is back, and any other way a chart reaches the screen starts it when the chart is drawn. A chart drawn before the entry arrives still shows the widget library's «module not loaded» card for that moment and draws itself when it registers.

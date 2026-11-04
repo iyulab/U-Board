@@ -177,3 +177,23 @@
     animation: none;
   }
 }
+
+/* The host's identity reaches the widgets of a board: its brand colour, typeface and corner radius. A board keeps its
+   own tone — paper, ink and the status colours follow the board's theme and skin, not the page — so these three are
+   all that cross. Every value falls back to the widget library's own default for the board's theme, so a host that
+   defines none sees no change. Zero specificity: a board's skin or accent (set on the widget itself) and any rule a
+   host writes for `u-widget` win over it. */
+:where(u-widget[theme='light']) {
+  --u-widget-primary: var(--ub-brand-solid, #4f46e5);
+  --u-widget-chart-color-1: var(--ub-brand-solid, #4f46e5);
+  --u-widget-on-primary: var(--ub-text-inverse, #ffffff);
+}
+:where(u-widget[theme='dark']) {
+  --u-widget-primary: var(--ub-brand-solid, #818cf8);
+  --u-widget-chart-color-1: var(--ub-brand-solid, #818cf8);
+  --u-widget-on-primary: var(--ub-text-inverse, #1e1e2e);
+}
+:where(u-widget[theme='light'], u-widget[theme='dark']) {
+  --u-widget-font-family: var(--ub-font-sans, system-ui, -apple-system, sans-serif);
+  --u-widget-radius: var(--ub-radius-md, 6px);
+}

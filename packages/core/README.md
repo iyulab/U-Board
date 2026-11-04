@@ -212,6 +212,12 @@ tone in both: its paper and the widgets on it sit on the board's drawing rather 
 they follow the board's `theme` — light (`--ub-board-bg`) unless the author made a dark board
 for a dark drawing (`--ub-board-bg-dark`, the widgets in their dark palette).
 
+Three of the tokens also reach the widgets drawn on the board, so a host's identity runs through the viewer and the
+board in one vocabulary: `--ub-brand-solid` (with `--ub-text-inverse` for the text on it) is the widgets' primary
+colour and the first colour of a chart, `--ub-font-sans` their typeface and `--ub-radius-md` their corners. Nothing
+else crosses — a board's paper, ink and status colours are the board's own, set by its `theme`, `skin` and `accent`,
+and its skin and accent win over these three too. With none of them defined the widgets look as they always did.
+
 The tokens marked for failures, the "not updating" notice and node frames apply without the
 stylesheet too — those colors carry meaning. The sheet's rules select these class names, mostly one
 class each: they hold against a host's element styles (`h2`, `button`), and a host rule on the same
