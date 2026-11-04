@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { ReactElement } from 'react';
-import { skinTokens, boardTheme } from './element-template';
+import { skinTokens, titleTokens, boardTheme } from './element-template';
 import { NodeFrame } from './node-frame';
 import type { ResolvedWidget } from '../adapter';
 
@@ -40,6 +40,7 @@ describe('the tokens a skin sets', () => {
     // The title above a widget: plain draws none of the tokens; a band is a strip in the ink and the paper's colour, a tab a strip that fits its words.
     expect(Object.keys(skinTokens({ titles: 'plain' })).filter(k => k.includes('title'))).toEqual([]);
     expect(skinTokens({ titles: 'band' })).toMatchObject({ '--u-widget-title-bg': 'var(--u-widget-text)', '--u-widget-title-ink': 'var(--u-widget-bg)', '--u-widget-title-pad': '3px 10px' });
+    expect(titleTokens('band', true)).toMatchObject({ '--u-widget-title-radius': 'initial', '--u-widget-title-display': 'initial', '--u-widget-title-width': 'initial' });
     expect(skinTokens({ titles: 'tab' })).toMatchObject({ '--u-widget-title-display': 'inline-block', '--u-widget-title-width': 'max-content', '--u-widget-title-radius': '6px 6px 0 0' });
   });
 
@@ -77,6 +78,18 @@ describe('a widget drawn in a skin', () => {
 
   it('keeps a frame the widget names itself', () => {
     expect(widgetOf({ frame: 'plate' }, { options: { frame: 'tape', dense: true } }).spec.options).toEqual({ frame: 'tape', dense: true });
+  });
+
+  it("takes the title style a part names for itself over the skin's, and keeps it out of the widget's options", () => {
+    const tab = widgetOf({ titles: 'band' }, { options: { titles: 'tab', frame: 'block' } });
+    expect(tab.style).toMatchObject({ '--u-widget-title-display': 'inline-block', '--u-widget-title-radius': '6px 6px 0 0', '--u-widget-title-pad': '2px 14px' });
+    expect(tab.spec.options).toEqual({ frame: 'block' });
+    // a plain title under a skin that bands them sets each token back to the widget's own
+    const plain = widgetOf({ titles: 'band' }, { options: { titles: 'plain' } });
+    for (const key of ['bg', 'ink', 'pad', 'radius', 'display', 'width']) expect(plain.style[`--u-widget-title-${key}`], key).toBe('initial');
+    expect(plain.spec.options).toEqual({});
+    // a part that names none follows the skin
+    expect(widgetOf({ titles: 'band' }, { options: { compact: true } }).style['--u-widget-title-pad']).toBe('3px 10px');
   });
 
   it('is drawn as it was with no skin', () => {

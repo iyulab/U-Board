@@ -727,6 +727,18 @@ describe('the picture model of a v2 board', () => {
     expect(doc.elements!['u-board-shape-edge']!.template).toContain('d="M 3 3 L 43 43"');
   });
 
+  it("hands a part's own frame and title style to the widget it is drawn by", () => {
+    // Not through `view`: the widget library's own spec check knows `titles` as the board's, and `frame` as every widget's only from its next version.
+    const b = board(
+      { h: { as: 'header', title: 'Plant', frame: 'block', titles: 'tab' } },
+      { kind: 'canvas', size: [300, 100], place: { h: [0, 0, 280, 60] } },
+    );
+    expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+    const doc = toViewDocument(b, { keysOf: () => [] });
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(nodeOf(doc, 'h').widget.props).toMatchObject({ options: { frame: 'block', titles: 'tab' } });
+  });
+
   it("draws a legend's title above its statuses", () => {
     const doc = view(board(
       { key: { as: 'legend', title: 'Status' } },

@@ -6,7 +6,7 @@ import type { ResolvedWidget } from '../adapter.js';
 import type { BoardAppearance, ElementDefinition, StateLook, SymbolDefinition, ViewSkin } from '../view-document.js';
 import { elementNameOf } from '../elements/element-type.js';
 import { ElementView } from './element-view.js';
-import { accentTokens, skinTokens } from './element-template.js';
+import { accentTokens, skinTokens, titleTokens } from './element-template.js';
 import { drawingColor } from '../theme-colors.js';
 import { QUALITY_BADGE_STYLE, QUALITY_FRAME_STYLE, frameBinding, qualityLook } from '../quality-presentation.js';
 import { describeQuality, DEFAULT_QUALITY_TEXT, type QualitySummary, type QualityText } from '../quality-text.js';
@@ -70,12 +70,23 @@ function badgeText(widget: QualitySummary, key: string, text: QualityText, now: 
   return Number.isNaN(observed) ? what : `${what} · ${text.age(now - observed)}`;
 }
 
-/** What u-widgets is given for a widget: its type and props, with the skin's frame as its `options.frame` where the widget names none. */
+/**
+ * What u-widgets is given for a widget: its type and props, with the skin's frame as its `options.frame` where the widget names none.
+ * The part's own `titles` is the board's, not the widget's: it leaves the options and becomes the title's tokens (`partTitles`).
+ */
 function withSkinFrame(widget: ResolvedWidget, skin: ViewSkin | undefined) {
   const spec = { widget: widget.type, ...widget.props };
-  if (skin?.frame === undefined) return spec;
-  const options = ((spec as { options?: Record<string, unknown> }).options ?? {});
-  return options.frame === undefined ? { ...spec, options: { ...options, frame: skin.frame } } : spec;
+  const { titles: _titles, ...options } = ((spec as { options?: Record<string, unknown> }).options ?? {});
+  const hasOptions = (spec as { options?: unknown }).options !== undefined;
+  const named = hasOptions ? { ...spec, options } : spec;
+  if (skin?.frame === undefined) return named;
+  return options.frame === undefined ? { ...named, options: { ...options, frame: skin.frame } } : named;
+}
+
+/** The title style a part names for itself, in place of the skin's: its tokens, set on the widget after the skin's. */
+function partTitles(widget: ResolvedWidget): Record<string, string> {
+  const titles = (widget.props as { options?: { titles?: unknown } }).options?.titles;
+  return titles === 'plain' || titles === 'band' || titles === 'tab' ? titleTokens(titles, true) : {};
 }
 
 export interface NodeFrameProps {
@@ -184,7 +195,7 @@ export function NodeFrame({ widget, appearance, accent, skin, symbols, qualityTe
       ) : (
         // u-widgets takes one `spec` object with `widget` as the type discriminator alongside
         // `data`/`mapping`/`options` — `type` + `props` recombine into exactly that shape.
-        <UWidget spec={withSkinFrame(widget, skin)} {...(onInput && { onWidgetEvent: (event: CustomEvent) => { const input = inputOf(event.detail); if (input) onInput(input); } })} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent), ...skinTokens(skin), ...widget.tokens }} theme={appearance ?? 'light'} locale={locale} />
+        <UWidget spec={withSkinFrame(widget, skin)} {...(onInput && { onWidgetEvent: (event: CustomEvent) => { const input = inputOf(event.detail); if (input) onInput(input); } })} style={{ ...WIDGET_FILL_STYLE, ...accentTokens(accent), ...skinTokens(skin), ...partTitles(widget), ...widget.tokens }} theme={appearance ?? 'light'} locale={locale} />
       )}
       {badge && quality && (
         <span aria-hidden="true" data-quality-badge="" style={{ ...BADGE_STYLE, ...QUALITY_BADGE_STYLE[quality] }}>

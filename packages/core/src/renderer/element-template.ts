@@ -66,6 +66,27 @@ export function accentTokens(accent: string | undefined): Record<string, string>
 const SKIN_SHADOW = { none: 'none', soft: '0 1px 3px rgb(0 0 0 / 14%)' } as const;
 
 /**
+ * The title above a widget: a strip in the ink on the paper (`band`), or the same strip that fits its words with its top corners
+ * rounded (`tab`) — the tokens the widget library reads. `plain` (or none) leaves the title as it is.
+ * `reset` — for one part that must be plain under a skin that is not — sets each token back to the widget's own value.
+ */
+export function titleTokens(titles: 'plain' | 'band' | 'tab' | undefined, reset = false): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (titles === 'band' || titles === 'tab') {
+    out['--u-widget-title-bg'] = 'var(--u-widget-text)';
+    out['--u-widget-title-ink'] = 'var(--u-widget-bg)';
+    out['--u-widget-title-pad'] = titles === 'band' ? '3px 10px' : '2px 14px';
+    out['--u-widget-title-radius'] = titles === 'tab' ? '6px 6px 0 0' : reset ? 'initial' : '';
+    out['--u-widget-title-display'] = titles === 'tab' ? 'inline-block' : reset ? 'initial' : '';
+    out['--u-widget-title-width'] = titles === 'tab' ? 'max-content' : reset ? 'initial' : '';
+    for (const key of Object.keys(out)) if (out[key] === '') delete out[key];
+  } else if (titles === 'plain' && reset) {
+    for (const key of ['bg', 'ink', 'pad', 'radius', 'display', 'width']) out[`--u-widget-title-${key}`] = 'initial';
+  }
+  return out;
+}
+
+/**
  * The tokens a board's `skin` sets — paper · ink · muted · rule as the widgets' background, text, secondary text and
  * border; the fonts, the corner radius and the shadow. For a widget's host
  * or an element's root, after the theme's and the accent's. None for a skin that names none of these.
@@ -94,18 +115,7 @@ export function skinTokens(skin: ViewSkin | undefined): Record<string, string> {
   if (sans !== undefined) out['--u-widget-font-family'] = sans;
   if (display !== undefined) out['--u-widget-font-display'] = display;
   if (mono !== undefined) out['--u-widget-font-mono'] = mono;
-  // The title above a widget: a strip in the ink on the paper (`band`), or the same strip that fits its words with its top corners
-  // rounded (`tab`) — the tokens the widget library reads; `plain` (or none) leaves the title as it is.
-  if (skin.titles === 'band' || skin.titles === 'tab') {
-    out['--u-widget-title-bg'] = 'var(--u-widget-text)';
-    out['--u-widget-title-ink'] = 'var(--u-widget-bg)';
-    out['--u-widget-title-pad'] = skin.titles === 'band' ? '3px 10px' : '2px 14px';
-    if (skin.titles === 'tab') {
-      out['--u-widget-title-radius'] = '6px 6px 0 0';
-      out['--u-widget-title-display'] = 'inline-block';
-      out['--u-widget-title-width'] = 'max-content';
-    }
-  }
+  Object.assign(out, titleTokens(skin.titles));
   Object.assign(out, numeralTokens(skin.numerals, 'figure'));
   if (typeof skin.radius === 'number' && Number.isFinite(skin.radius) && skin.radius >= 0) out['--u-widget-radius'] = `${skin.radius}px`;
   if (skin.shadow === 'none' || skin.shadow === 'soft') out['--u-widget-shadow'] = SKIN_SHADOW[skin.shadow];

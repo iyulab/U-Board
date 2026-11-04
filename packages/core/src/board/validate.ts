@@ -71,6 +71,9 @@ function deadFallback(css: string, at: string, named: ReadonlySet<string>): Boar
 /** What a `where` value is, in words: the one message every place that checks one gives. */
 const WHERE_VALUE_SAYS = 'a "where" value is a string, a number or true/false — or { "not": value } (any other), { "in": [values] } (one of them)';
 const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show', 'highlight', 'dim'] as const;
+/** What a part drawn by a widget may also say: the frame it is drawn in and the style of its title, in place of the skin's. */
+const PART_LOOK = ['frame', 'titles'] as const;
+const TITLE_STYLES = ['plain', 'band', 'tab'] as const;
 
 /** The spans (twelfths) that take whole columns of a cell `cell` columns wide. */
 const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i + 1).filter(s => (cell * s) % 12 === 0).map(String));
@@ -602,8 +605,22 @@ export function validateBoard(input: unknown): BoardIssue[] {
    * neither knows would be dropped without a word. A preset's key is reported at the preset.
    */
   const checkOptions = (raw: Obj, part: Obj, kind: PartKind, at: string) => {
-    const known = new Set([...PART_FIELDS, ...kind.own, ...kind.options]);
+    // A part a widget draws may name its own frame and title style, over the skin's (`frame` · `titles`); a part the board draws itself has none.
+    const known = new Set([...PART_FIELDS, ...kind.own, ...kind.options, ...(kind.widget !== undefined ? PART_LOOK : [])]);
     const unknown = Object.keys(part).filter(key => !known.has(key));
+    if (kind.widget !== undefined) {
+      const looks: Array<[string, readonly string[]]> = [['frame', [...FRAMES, 'none']], ['titles', TITLE_STYLES]];
+      for (const [key, words] of looks) {
+        const value = part[key];
+        if (value === undefined || (typeof value === 'string' && words.includes(value))) continue;
+        const keyAt = key in raw ? `${at}/${key}` : `/presets/${String(raw.use)}/${key}`;
+        if (!(key in raw)) {
+          if (reportedPresetOptions.has(keyAt)) continue;
+          reportedPresetOptions.add(keyAt);
+        }
+        fail(keyAt, `"${String(value)}" is not a ${key} of a ${kind.kind} — ${words.join(' · ')}`);
+      }
+    }
     // An option the widget lets only some words through: another would be drawn the widget's default way, without a word.
     for (const [key, words] of Object.entries(kind.choices ?? {})) {
       const value = part[key];

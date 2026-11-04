@@ -360,6 +360,16 @@ describe('validateBoard', () => {
     expect(at('band', '#fff')).toEqual([]);
   });
 
+  it("lets a part a widget draws name its own frame and title style — and no part the board draws itself", () => {
+    const at = (part: Record<string, unknown>) => validateBoard(canvas({ p: part }, { kind: 'canvas', size: [100, 100], place: { p: [0, 0, 50, 50] } }) as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
+    expect(at({ as: 'header', title: 'T', frame: 'block', titles: 'tab' })).toEqual([]);
+    expect(at({ as: 'chart.line', of: 'equipment', x: 'id', y: 'flow', frame: 'none', titles: 'plain' })).toEqual([]);
+    expect(at({ as: 'header', title: 'T', frame: 'frilly' })).toEqual(['/parts/p/frame: "frilly" is not a frame of a header — card · flat · glow · plate · ticket · postage · tape · bevel · well · block · double · none']);
+    expect(at({ as: 'header', title: 'T', titles: 'ribbon' })).toEqual(['/parts/p/titles: "ribbon" is not a titles of a header — plain · band · tab']);
+    expect(at({ as: 'legend', frame: 'block' })).toEqual([expect.stringContaining('/parts/p/frame: "frame" is not an option')]);
+    expect(at({ as: 'label', title: 'T', titles: 'band' })).toEqual([expect.stringContaining('/parts/p/titles: "titles" is not an option')]);
+  });
+
   it('checks the numerals of a skin: a scale word and a weight from 100 to 900, nothing else', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const at = (numerals: unknown) => validateBoard({ ...base, board: { skin: { numerals } } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
