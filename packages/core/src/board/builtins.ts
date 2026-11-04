@@ -79,16 +79,18 @@ export const LABEL: ElementDefinition = {
     '.lb[data-face="pill"] .tx{padding:.15em .7em;border-radius:999px;background:color-mix(in srgb,var(--c) 12%,transparent);line-height:1.4}',
 };
 
-/** The board's statuses, each its colour and words. */
+/** The board's statuses, each its colour and words, under a title when it has one. */
 export const LEGEND: ElementDefinition = {
   render: 'template',
   props: {
     type: 'object',
-    properties: { items: { type: 'array', items: { type: 'object', properties: { tone: text, label: text, glyph: text } } } },
+    properties: { title: text, items: { type: 'array', items: { type: 'object', properties: { tone: text, label: text, glyph: text } } } },
   },
-  template: '<ul class="lg">{{#items}}<li data-tone="{{tone}}"><i>{{glyph}}</i>{{label}}</li>{{/items}}</ul>',
+  template: '<div class="lgw"><p class="lt">{{title}}</p><ul class="lg">{{#items}}<li data-tone="{{tone}}"><i>{{glyph}}</i>{{label}}</li>{{/items}}</ul></div>',
   style:
-    `.lg{list-style:none;margin:0;padding:4px 6px;display:flex;flex-wrap:wrap;align-content:center;gap:4px 14px;height:100%;box-sizing:border-box;font:12px var(--u-widget-font-family);color:var(--u-widget-text)}${TONE_RULES}` +
+    '.lgw{display:flex;flex-direction:column;height:100%;box-sizing:border-box;font:12px var(--u-widget-font-family);color:var(--u-widget-text)}' +
+    '.lt{margin:0;padding:4px 6px 0;font-weight:700}.lt:empty{display:none}' +
+    `.lg{list-style:none;margin:0;padding:4px 6px;display:flex;flex:1;flex-wrap:wrap;align-content:center;gap:4px 14px;min-height:0;box-sizing:border-box}${TONE_RULES}` +
     '.lg li{display:flex;align-items:center;gap:5px}.lg i{display:grid;place-items:center;min-width:12px;height:12px;border-radius:3px;background:var(--c);color:var(--u-widget-bg);font-style:normal;font-size:9px}',
 };
 

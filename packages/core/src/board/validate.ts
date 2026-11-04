@@ -230,6 +230,10 @@ export function validateBoard(input: unknown): BoardIssue[] {
   if (skin.frame !== undefined && !(FRAMES as readonly unknown[]).includes(skin.frame)) fail('/board/skin/frame', `"${String(skin.frame)}" is not a frame — use ${FRAMES.join(' · ')}`);
   if (skin.shadow !== undefined && !['none', 'soft', 'hard'].includes(skin.shadow as string)) fail('/board/skin/shadow', 'a shadow is none · soft · hard');
   if (skin.titles !== undefined && !['plain', 'band', 'tab'].includes(skin.titles as string)) fail('/board/skin/titles', 'a title is drawn plain · band · tab');
+  // A title in a band or a tab is written in the paper's colour on the ink: a transparent paper leaves it no colour to be written in.
+  if ((skin.titles === 'band' || skin.titles === 'tab') && isObj(skin.palette) && typeof skin.palette.paper === 'string' && skin.palette.paper.trim().toLowerCase() === 'transparent') {
+    fail('/board/skin/titles', `a "${skin.titles}" title is written in the paper's colour on the ink — a transparent paper leaves it unreadable; give the palette an opaque paper, or draw the titles plain`);
+  }
   if (skin.density !== undefined && !['regular', 'compact'].includes(skin.density as string)) fail('/board/skin/density', 'a density is regular · compact');
   if (skin.numerals !== undefined) checkNumerals(skin.numerals, '/board/skin/numerals', 'the big figures');
   // The skin's values are written into the widgets' CSS: a colour is a colour and a font a list of names — never a url or a rule.

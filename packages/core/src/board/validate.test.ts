@@ -351,6 +351,15 @@ describe('validateBoard', () => {
     expect(at('ribbon')).toEqual(['/board/skin/titles: a title is drawn plain · band · tab']);
   });
 
+  it("refuses a band or a tab title on a transparent paper — it is written in the paper's colour, and would have none", () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const at = (titles: unknown, paper: string) => validateBoard({ ...base, board: { skin: { titles, palette: { paper, ink: '#111', muted: '#555', rule: '#999' } } } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
+    for (const titles of ['band', 'tab']) expect(at(titles, ' Transparent ')).toEqual([expect.stringContaining(`/board/skin/titles: a "${titles}" title is written in the paper's colour`)]);
+    // plain titles do not need a paper, and a band on an opaque paper is as before
+    expect(at('plain', 'transparent')).toEqual([]);
+    expect(at('band', '#fff')).toEqual([]);
+  });
+
   it('checks the numerals of a skin: a scale word and a weight from 100 to 900, nothing else', () => {
     const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
     const at = (numerals: unknown) => validateBoard({ ...base, board: { skin: { numerals } } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);

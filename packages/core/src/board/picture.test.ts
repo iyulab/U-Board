@@ -720,11 +720,24 @@ describe('the picture model of a v2 board', () => {
     expect(drawn(nodeOf(doc, 'm/P2').widget)).toEqual({ name: 'P2', tone: 'alarm', status: 'Tripped', emphasis: 'blink', glyph: '', note: '', shape: 'ring', labelAt: '' });
     expect(drawn(nodeOf(doc, 'm/P1').widget)).toMatchObject({ tone: 'ok', status: 'Running', emphasis: '' });
     expect(drawn(nodeOf(doc, 'l').widget)).toEqual({ text: 41.5, tone: '' });
-    expect(drawn(nodeOf(doc, 'key').widget)).toEqual({ items: [{ tone: 'ok', label: 'Running', glyph: '' }, { tone: 'alarm', label: 'Tripped', glyph: '' }] });
+    expect(drawn(nodeOf(doc, 'key').widget)).toEqual({ title: '', items: [{ tone: 'ok', label: 'Running', glyph: '' }, { tone: 'alarm', label: 'Tripped', glyph: '' }] });
     // A line is a node boxed around its points, under the parts, drawn in the box's own coordinates.
     expect(doc.nodes[0]).toMatchObject({ id: 'shape.pipe', x: 96, y: 96, width: 208, height: 108, widget: { type: 'element:u-board-shape-pipe' } });
     expect(doc.elements!['u-board-shape-pipe']!.template).toContain('d="M4 4 L204 4 L204 104"');
     expect(doc.elements!['u-board-shape-edge']!.template).toContain('d="M 3 3 L 43 43"');
+  });
+
+  it("draws a legend's title above its statuses", () => {
+    const doc = view(board(
+      { key: { as: 'legend', title: 'Status' } },
+      { kind: 'canvas', size: [300, 100], place: { key: [0, 0, 280, 60] } },
+    ));
+    if (doc.kind !== 'canvas') throw new Error('a canvas');
+    expect(drawn(nodeOf(doc, 'key').widget)).toMatchObject({ title: 'Status' });
+    const definition = doc.elements!['u-board-legend']!;
+    expect(definition.template).toContain('<p class="lt">{{title}}</p>');
+    expect(checkTemplateMarkup(definition.template!, [])).toEqual([]);
+    expect(checkStyle(definition.style!, [])).toEqual([]);
   });
 
   it('gives each item of a list an element reads the meaning of its fields — words under their own name, tone beside', () => {

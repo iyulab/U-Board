@@ -873,7 +873,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
           const s = statuses[name]!;
           return { tone: s.tone, label: s.label ?? name, glyph: s.glyph ?? '' };
         });
-        return { type: builtin('u-board-legend', LEGEND), props: { items } };
+        return { type: builtin('u-board-legend', LEGEND), props: { items, title: title ?? '' } };
       }
       case 'element': {
         // One of the board's own drawings: its fixed props, and props bound to a field, its status or its tone.
