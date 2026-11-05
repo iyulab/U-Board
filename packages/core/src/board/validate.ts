@@ -593,7 +593,8 @@ export function validateBoard(input: unknown): BoardIssue[] {
   /**
    * The kinds that draw from the fields `show` names and nothing without them (a status card also from its `state` and `meter`): a
    * part of one with none is drawn empty — a stat as "[object Object]", a gauge as "NaN" — and nothing else in the board says why.
-   * (A table, a list and a status grid take their columns, lines and cells from the data when `show` is left out.)
+   * (A table, a list and a status grid take their columns, lines and cells from the data when `show` is left out; a card, a list or a bar
+   * list with a title is a titled frame and says what it is.)
    */
   const checkShown = (part: Obj, kind: string, at: string, reads: string | null | undefined) => {
     if (part.show !== undefined && !(Array.isArray(part.show) && part.show.length === 0)) return;
@@ -601,14 +602,17 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (kind === 'status-card' && (part.state !== undefined || part.meter !== undefined)) return;
     const one = kind === 'stat' || kind === 'gauge';
     if (!one && kind !== 'stat-list' && kind !== 'status-card' && !(kind === 'bar-list' && part.value === undefined)) return;
+    // A card, a list or a bar list with a title and nothing else is a titled frame — the skeleton of a window, a panel, a button: it
+    // draws what it says. (A stat or a gauge with no field is not: it draws "[object Object]" or "NaN".)
+    if (!one && typeof part.title === 'string' && part.title.trim() !== '') return;
     if (reads === null || reads === undefined) return;
     fail(`${at}/show`, one
       ? `a ${kind} shows one field of what it reads — give "show": "<field>"`
       : kind === 'bar-list'
-        ? 'a bar-list draws a bar for a field of each item — give "show": "<field>" (or "value": "<field>")'
+        ? 'a bar-list draws a bar for a field of each item — give "show": "<field>" (or "value": "<field>"), or a "title" (a titled frame); without any it draws nothing'
         : kind === 'status-card'
-          ? 'a status-card shows the fields "show" names, the status of its "state" and its "meter" — give at least one; without them only the title is drawn'
-          : 'a stat-list shows the fields "show" names — give "show": ["<field>", …]; without it only the title is drawn');
+          ? 'a status-card shows the fields "show" names, the status of its "state" and its "meter" — give at least one, or a "title" (a card with only a title is a titled frame); without any it draws nothing'
+          : 'a stat-list shows the fields "show" names — give "show": ["<field>", …], or a "title" (a list with only a title is a titled frame); without any it draws nothing');
   };
 
   /**

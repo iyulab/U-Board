@@ -36,13 +36,15 @@ describe('validateBoard', () => {
       list: { as: 'stat-list', of: 'equipment[PR-01]' },
       card: { as: 'status-card', of: 'equipment[PR-01]', show: [] },
       bars: { as: 'bar-list', of: 'equipment' },
+      statTitled: { as: 'stat', of: 'equipment[PR-01]', title: 'Stat with a title is still no field' },
     };
     expect(issues(canvas(parts))).toEqual([
       '/parts/stat/show: a stat shows one field of what it reads — give "show": "<field>"',
       '/parts/gauge/show: a gauge shows one field of what it reads — give "show": "<field>"',
-      '/parts/list/show: a stat-list shows the fields "show" names — give "show": ["<field>", …]; without it only the title is drawn',
-      '/parts/card/show: a status-card shows the fields "show" names, the status of its "state" and its "meter" — give at least one; without them only the title is drawn',
-      '/parts/bars/show: a bar-list draws a bar for a field of each item — give "show": "<field>" (or "value": "<field>")',
+      '/parts/list/show: a stat-list shows the fields "show" names — give "show": ["<field>", …], or a "title" (a list with only a title is a titled frame); without any it draws nothing',
+      '/parts/card/show: a status-card shows the fields "show" names, the status of its "state" and its "meter" — give at least one, or a "title" (a card with only a title is a titled frame); without any it draws nothing',
+      '/parts/bars/show: a bar-list draws a bar for a field of each item — give "show": "<field>" (or "value": "<field>"), or a "title" (a titled frame); without any it draws nothing',
+      '/parts/statTitled/show: a stat shows one field of what it reads — give "show": "<field>"',
     ]);
   });
 
@@ -56,6 +58,9 @@ describe('validateBoard', () => {
       bars: { as: 'bar-list', of: 'equipment', value: 'state' },
       shown: { use: 'card', of: 'equipment[PR-01]' },
       gauged: { as: 'status-card', of: 'equipment[PR-01]', state: 'state', meter: 'state' },
+      // a titled frame: the skeleton of a window or a button draws its title and nothing else, by design
+      frame: { as: 'status-card', of: 'equipment[PR-01]', title: 'Window' },
+      framedList: { as: 'stat-list', of: 'equipment[PR-01]', title: 'Panel' },
     };
     expect(issues({ ...canvas(parts), presets: { card: { as: 'status-card', show: ['state'] } } })).toEqual([]);
   });
