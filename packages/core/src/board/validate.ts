@@ -1288,6 +1288,17 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (!drawn.has(name)) issues.push({ at: `/elements/${name}`, message: `no part draws "${name}" — add a part { "as": "element", "element": "${name}" }, or remove it`, hint: true });
   }
 
+  // The paper of a palette is the fill of a part drawn in a frame. A board that sets it and draws no frame anywhere — no skin frame,
+  // no part of its own, and nothing else that reads the paper (a band or tab title, an element or a symbol, a background picture) —
+  // looks as if it had no paper: said, so a board that colours its cards is not left wondering why they stayed transparent.
+  const framed = (part: unknown): boolean =>
+    isObj(part) && ((typeof part.frame === 'string' && part.frame !== 'none') || (isObj(part.parts) && Object.values(part.parts).some(framed)));
+  if (isObj(skin.palette) && skin.palette.paper !== undefined && skin.frame === undefined && skin.titles !== 'band' && skin.titles !== 'tab'
+    && Object.keys(elements).length === 0 && !isObj(board.symbols) && !JSON.stringify(board.layout ?? {}).includes('"background"')
+    && !Object.values(parts).some(framed) && !Object.values(presets).some(framed)) {
+    issues.push({ at: '/board/skin/palette/paper', message: `"paper" fills a part drawn in a frame, and no part of this board is — they stay transparent on the board's background; give the skin a "frame" (${FRAMES.slice(0, 3).join(', ')}, …) or a part its own`, hint: true });
+  }
+
   // ── keys the board has no place for — kept and never drawn — where nothing above has said so ──
   const said = new Set(issues.map(i => i.at));
   for (const { at, key, known } of unknownKeys(board)) {

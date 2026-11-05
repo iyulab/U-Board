@@ -499,6 +499,21 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('says as a hint that a palette’s paper changes nothing where the board draws no frame — and keeps quiet where anything reads it', () => {
+    const hints = (extra: Record<string, unknown>, skin: Record<string, unknown> = {}, parts: Record<string, unknown> = { a: { as: 'stat', of: 'totals', show: 'count' } }) =>
+      validateBoard({ ...canvas(parts), board: { skin: { palette: { paper: '#fff8e8' }, ...skin } }, ...extra } as never).filter(i => i.hint).map(i => i.at);
+    expect(hints({})).toEqual(['/board/skin/palette/paper']);
+    // a frame of the skin, of one part (or one in a group), a title that is written in the paper, an element or a symbol, a background picture
+    expect(hints({}, { frame: 'plate' })).toEqual([]);
+    expect(hints({}, {}, { a: { as: 'stat', of: 'totals', show: 'count', frame: 'ticket' } })).toEqual([]);
+    expect(hints({}, {}, { g: { as: 'group', size: [10, 10], parts: { a: { as: 'stat', of: 'totals', show: 'count', frame: 'ticket' } }, place: {} } })).toEqual([]);
+    expect(hints({}, { titles: 'band' })).toEqual([]);
+    expect(hints({ symbols: { s: { paths: [] } } })).toEqual([]);
+    // no paper, no hint; a part that turns the frame off does not count as a frame
+    expect(validateBoard(canvas({ a: { as: 'stat', of: 'totals', show: 'count' } }) as never).filter(i => i.hint)).toEqual([]);
+    expect(hints({}, {}, { a: { as: 'stat', of: 'totals', show: 'count', frame: 'none' } })).toEqual(['/board/skin/palette/paper']);
+  });
+
   it("tells a chart's max / min where the end of its value axis is set", () => {
     const parts = (as: string, extra: Record<string, unknown> = {}) => canvas({ c: { as, of: 'equipment', x: 'name', y: 'load', max: 100, ...extra } });
     for (const as of ['chart.bar', 'chart.line', 'chart.area']) {
