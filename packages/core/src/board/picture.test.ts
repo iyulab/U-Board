@@ -846,6 +846,21 @@ describe('the picture model of a v2 board', () => {
     expect(nodeOf(view(element), 'hours').widget.bindings!['items']!.scalar).toBeUndefined();
   });
 
+  it('gives a treemap the rows it reads from the fields the part names — the library’s treemap takes no mapping, so `name` and `value` are made here', () => {
+    const b = board(
+      { shelf: { as: 'chart.treemap', of: 'hourly', name: 'hour', value: 'count' } },
+      { kind: 'canvas', size: [400, 200], place: { shelf: [0, 0, 400, 200] } },
+    );
+    const widget = nodeOf(view(b), 'shelf').widget;
+    // Drawn with its mapping left to the library: nothing for a chart that takes none.
+    expect(widget.props).not.toHaveProperty('mapping');
+    expect(widget.bindings!['data']!.itemFields).toEqual({ name: { from: 'hour' }, value: { from: 'count' } });
+    expect(drawn(widget).data).toEqual([{ hour: '09:00', count: 120, name: '09:00', value: 120 }, { hour: '10:00', count: 131, name: '10:00', value: 131 }]);
+    // Another chart keeps them as the mapping it reads.
+    const bar = nodeOf(view(board({ bars: { as: 'chart.bar', of: 'hourly', x: 'hour', y: 'count' } }, { kind: 'canvas', size: [400, 200], place: { bars: [0, 0, 400, 200] } })), 'bars').widget;
+    expect(bar.props).toMatchObject({ mapping: { x: 'hour', y: 'count' } });
+  });
+
   it('gives each item of a list an element reads the meaning of its fields — words under their own name, tone beside', () => {
     const b = board(
       { hours: { as: 'element', element: 'hours', of: 'hourly', bind: { items: 'value' } } },

@@ -23,6 +23,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- A `chart.treemap` part takes the `name` and `value` options the rulebook gives every chart: it drew nothing — with an empty report — for a list shaped any other way than `{ name, value }`, because the library's treemap takes no mapping. The part now gives its rows `name` and `value` from the fields it names; a treemap whose rows are already `{ name, value }` is as it was.
 - A skin's `palette.ground` is drawn: it is the colour of a text shape that has no tone of its own — the words written on the board's own background (`palette.backdrop`), which stayed in the theme's text colour whatever the backdrop was. It was accepted and checked, and the check said it was not drawn yet; that notice is gone.
 
 ### Changed

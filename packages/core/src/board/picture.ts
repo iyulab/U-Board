@@ -837,6 +837,16 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
           const mappingKeys = chartMapping(kind.widget);
           const mapping = Object.fromEntries(Object.entries(options).filter(([k]) => mappingKeys.includes(k)));
           const rest = Object.fromEntries(Object.entries(options).filter(([k]) => !mappingKeys.includes(k)));
+          // The library's treemap reads rows that are already `{ name, value }` and takes no mapping; the part says which fields they are,
+          // as every other chart's `name` and `value` do, so the rows gain them here.
+          if (kind.widget === 'chart.treemap' && bindings['data'] !== undefined) {
+            const named = Object.fromEntries((['name', 'value'] as const).flatMap(k => (typeof mapping[k] === 'string' ? [[k, { from: source(mapping[k] as string) }]] : [])));
+            if (Object.keys(named).length > 0) {
+              bindings['data'] = { ...bindings['data']!, itemFields: named };
+              delete mapping['name'];
+              delete mapping['value'];
+            }
+          }
           return {
             type: kind.widget,
             props: {
