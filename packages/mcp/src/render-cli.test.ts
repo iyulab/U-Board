@@ -58,12 +58,12 @@ describe('a call of u-board-render', () => {
       render: async o => { options.push(o); return { png, report }; },
       clock: () => 1_000,
     };
-    return { io: real, out, err, stdout, options };
+    return { deps: real, out, err, stdout, options };
   };
 
   it('draws the board of a file with the answers of another, writes the picture and says its report', async () => {
     const t = io({ 'board.json': JSON.stringify(board), 'a.json': JSON.stringify({ plant: { '/x': {} } }) });
-    expect(await runRender([...base, '--data', 'a.json', '--appearance', 'dark'], t.io)).toBe(0);
+    expect(await runRender([...base, '--data', 'a.json', '--appearance', 'dark'], t.deps)).toBe(0);
     expect(t.out['board.png']).toBe(png);
     expect(JSON.parse(t.stdout[0] as string)).toEqual(report);
     expect(t.options[0]).toMatchObject({ board, width: 480, height: 320, now: 1_000, appearance: 'dark' });
@@ -72,34 +72,34 @@ describe('a call of u-board-render', () => {
 
   it('reads the board from the standard input, and puts the picture on the standard output with the report on the standard error', async () => {
     const t = io({}, JSON.stringify(board));
-    expect(await runRender(['-', '--width', '480', '--height', '320', '--out', '-'], t.io)).toBe(0);
+    expect(await runRender(['-', '--width', '480', '--height', '320', '--out', '-'], t.deps)).toBe(0);
     expect(t.stdout).toEqual([png]);
     expect(JSON.parse(t.err.join(''))).toEqual(report);
   });
 
   it('writes the report to a file when asked', async () => {
     const t = io({ 'board.json': JSON.stringify(board) });
-    expect(await runRender([...base, '--report', 'r.json'], t.io)).toBe(0);
+    expect(await runRender([...base, '--report', 'r.json'], t.deps)).toBe(0);
     expect(JSON.parse(t.out['r.json'] as string)).toEqual(report);
     expect(t.stdout).toEqual([]);
   });
 
   it('does not draw a board that has problems — it says where they are, and exits 2', async () => {
     const t = io({ 'board.json': JSON.stringify({ parts: { a: { as: 'nonsense' } }, layout: { kind: 'canvas', size: [200, 100], place: { a: [0, 0, 10, 10] } } }) });
-    expect(await runRender(base, t.io)).toBe(2);
+    expect(await runRender(base, t.deps)).toBe(2);
     expect(t.options).toEqual([]);
     expect(t.err.join('')).toMatch(/the board has 1 problem and was not drawn:\n {2}\/parts\/a\/as: unknown kind "nonsense"/);
   });
 
   it('says what it could not read or could not do, and exits 1', async () => {
-    expect(await runRender(base, io().io)).toBe(1);
+    expect(await runRender(base, io().deps)).toBe(1);
     const unreadable = io({ 'board.json': '{ not json' });
-    expect(await runRender(base, unreadable.io)).toBe(1);
+    expect(await runRender(base, unreadable.deps)).toBe(1);
     expect(unreadable.err.join('')).toContain('the board "board.json" could not be read as JSON');
     const failing = io({ 'board.json': JSON.stringify(board) });
-    failing.io.render = async () => { throw new Error('no Chrome or Edge found'); };
-    expect(await runRender(base, failing.io)).toBe(1);
+    failing.deps.render = async () => { throw new Error('no Chrome or Edge found'); };
+    expect(await runRender(base, failing.deps)).toBe(1);
     expect(failing.err.join('')).toContain('no Chrome or Edge found');
-    expect(await runRender(['--width', '1'], io().io)).toBe(1);
+    expect(await runRender(['--width', '1'], io().deps)).toBe(1);
   });
 });
