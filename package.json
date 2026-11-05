@@ -21,6 +21,7 @@
     "build:lib": "npm run build:lib --workspaces --if-present",
     "test:tooling": "node --test scripts/*.test.mjs",
     "smoke:library": "node scripts/smoke-library.mjs",
+    "take:widgets": "node scripts/take-widgets.mjs",
     "check": "node scripts/check.mjs",
     "check:dependency-drift": "node scripts/check-dependency-drift.mjs --strict",
     "check:public-text": "node scripts/check-public-text.mjs",
