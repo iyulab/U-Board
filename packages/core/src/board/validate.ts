@@ -77,7 +77,7 @@ const TITLE_STYLES = ['plain', 'band', 'tab'] as const;
 /** The kinds that draw their title inside themselves (a stat's label, a card's title, a gauge's subtitle, a header's text): the
  *  band and the tab are drawn by the widget host around the title it draws itself, so they never reach these. */
 const OWN_TITLE_KINDS = ['stat', 'status-card', 'gauge', 'header'];
-/** The kinds that show a state by its colour (and a glyph, a word) and draw none of its emphasis — a stat, a status card, a table's rows, a status grid and a marker do. */
+/** The kinds that show a state by its colour (and a glyph, a word) and draw none of its emphasis — a stat, a status card, a table's rows, a status grid and a marker do. (A table's cells are checked apart: a column's state is its colour only.) */
 const COLOUR_ONLY_KINDS = ['stat-list', 'gauge', 'list', 'bar-list', 'header'];
 
 /** The spans (twelfths) that take whole columns of a cell `cell` columns wide. */
@@ -565,7 +565,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     }
     if (kind.of === 'no' && (part.of !== undefined || part.each !== undefined)) fail(`${at}/of`, `a ${kind.kind} reads no data — leave "of" out`);
     checkShown(part, kind.kind, at, reads);
-    if (COLOUR_ONLY_KINDS.includes(kind.kind) && typeof reads === 'string') checkEmphasisDrawn(part, kind.kind, at, reads);
+    if ((COLOUR_ONLY_KINDS.includes(kind.kind) || kind.kind === 'table') && typeof reads === 'string') checkEmphasisDrawn(part, kind.kind, at, reads);
     checkTexts(part, at, reads);
     if (kind.kind === 'header') checkHeaderOptions(part, at, reads);
     checkOptions(raw, part, kind, at);
@@ -637,11 +637,15 @@ export function validateBoard(input: unknown): BoardIssue[] {
     const named = (['show', 'state', 'value'] as const).flatMap(key => (Array.isArray(part[key]) ? part[key] as unknown[] : [part[key]]).map(name => [key, name] as const));
     for (const [key, name] of named) {
       if (typeof name !== 'string') continue;
+      // A table draws a status's emphasis on a row — its `state` — and the colour of a column's state on the cell.
+      if (kind === 'table' && (key === 'state' || name === part.state)) continue;
       const rule = fieldOf(reads, name)?.state;
       for (const word of statusWordsOf(rule)) {
         const status = statuses[word];
         if (!isObj(status) || status.emphasis === undefined) continue;
-        issues.push({ at: `${at}/${key}`, message: `a ${kind} shows "${name}"'s state by its colour only — the "${String(status.emphasis)}" of the status "${word}" is drawn on a stat, a status card, a table row, a status grid or a marker, not on this`, hint: true });
+        issues.push({ at: `${at}/${key}`, message: kind === 'table'
+          ? `a table draws the state of the column "${name}" in its cells by their colour only — the "${String(status.emphasis)}" of the status "${word}" is drawn on a row: name the field as the table's "state"`
+          : `a ${kind} shows "${name}"'s state by its colour only — the "${String(status.emphasis)}" of the status "${word}" is drawn on a stat, a status card, a table row, a status grid or a marker, not on this`, hint: true });
         return;
       }
     }

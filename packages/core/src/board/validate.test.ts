@@ -528,7 +528,10 @@ describe('validateBoard', () => {
     expect(hints({ a: part('stat-list', { show: ['state', 'load'] }), b: part('gauge'), c: { as: 'list', of: 'equipment', show: 'state' }, d: { as: 'bar-list', of: 'equipment', value: 'state' } }))
       .toEqual(['/parts/a/show', '/parts/b/show', '/parts/c/show', '/parts/d/value']);
     // where the emphasis is drawn, there is nothing to say; so for a status with none, and for a field with no state
-    expect(hints({ a: part('stat'), b: part('status-card'), c: { as: 'table', of: 'equipment', show: ['state'] }, d: { as: 'status-grid', of: 'equipment', state: 'state' } })).toEqual([]);
+    expect(hints({ a: part('stat'), b: part('status-card'), c: { as: 'table', of: 'equipment', show: ['state'], state: 'state' }, d: { as: 'status-grid', of: 'equipment', state: 'state' } })).toEqual([]);
+    // a table draws the emphasis on a row (its `state`), and a column's state in the cells by colour only
+    expect(hints({ a: { as: 'table', of: 'equipment', show: ['state', 'load'] } })).toEqual(['/parts/a/show']);
+    expect(hints({ a: { as: 'table', of: 'equipment', show: ['load'], state: 'state' } })).toEqual([]);
     expect(hints({ a: part('stat-list', { show: ['state'] }) }, '')).toEqual([]);
     expect(hints({ a: part('stat-list', { show: ['load'] }) })).toEqual([]);
   });
