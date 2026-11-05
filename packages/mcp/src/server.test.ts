@@ -116,12 +116,12 @@ async function call(name: string, args: Record<string, unknown> = {}) {
 }
 
 /** `look` on a board, through a looker that answers `problems` — the report's text, and what the looker was asked. */
-async function looking(problems: Array<{ path?: string; message: string }> = [], quality: Record<string, number> = {}) {
+async function looking(problems: Array<{ path?: string; message: string }> = [], quality: Record<string, number> = {}, unchecked?: number) {
   const asked: Array<{ request: unknown; document: ViewDocument }> = [];
   const looker: Looker = {
     look: async (request, document) => {
       asked.push({ request, document });
-      return { image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems, quality, console: [] } };
+      return { image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems, quality, console: [], ...(unchecked !== undefined && { unchecked }) } };
     },
   };
   const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), looker);
@@ -261,6 +261,17 @@ describe('u-board-mcp', () => {
     server.boards.set('b4', { name: 'Clean', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
     expect((await (await looking([{ message: 'x' }, { message: 'y' }])).look('b4')).report.status).toBe('not done — 2 problems to fix');
     expect((await (await looking()).look('b4')).report.status).toBe('done — nothing to fix');
+  });
+
+  it('does not call a board done over parts it could not look at — a crowded view draws markers as points, which are not page content', async () => {
+    server.boards.set('b4', { name: 'Crowded', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
+    const status = async (...args: Parameters<typeof looking>) => (await (await looking(...args)).look('b4')).report.status as string;
+    expect(await status([], {}, 520)).toBe('nothing found in what could be read — but 520 parts are drawn as points and not checked — what is wrong with them and how current their values are is not in this report; board_state says the values');
+    expect(await status([], {}, 1)).toContain('1 part is drawn as points and not checked — what is wrong with it and how current its value is');
+    expect(await status([{ message: 'x' }], {}, 3)).toMatch(/^not done — 1 problem to fix — and 3 parts are drawn as points and not checked/);
+    expect(await status([], {}, 0)).toBe('done — nothing to fix');
+    // Up close the part itself was looked at, whatever the rest of the board is drawn as.
+    expect((await (await looking([], {}, 520)).look('b1', { focus: '/parts/a' })).report.status).not.toContain('drawn as points');
   });
 
   it('does not call a board done while a part is disconnected — it draws its own «no value» notice', async () => {

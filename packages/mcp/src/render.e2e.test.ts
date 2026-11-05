@@ -35,6 +35,7 @@ describe('renderBoard', () => {
     expect(report.picture).toEqual({ width: 480, height: 320 });
     expect(report.quality).toEqual({});
     expect(report.console).toEqual([]);
+    expect(report).not.toHaveProperty('unchecked');
   });
 
   it('draws a binding that no adapter answers for as disconnected, and says so in its report', async () => {
@@ -78,6 +79,8 @@ describe('renderBoard', () => {
     const { png, report } = await renderBoard({ board: crowded, adapters: [live()], width: 1600, height: 900 });
     expect(pngSize(png)).toEqual({ width: 1600, height: 900 });
     expect(report.picture).toEqual({ width: 1600, height: 900 });
+    // Drawn as points, they are not page content: the report says how many it could not look at instead of «all fine».
+    expect(report.unchecked).toBe(count);
   }, 60_000);
 
   it('refuses a size that is not a whole number of pixels', async () => {

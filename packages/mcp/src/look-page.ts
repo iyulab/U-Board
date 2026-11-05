@@ -149,6 +149,25 @@ export function findProblems(
   return out;
 }
 
+/**
+ * How many of the placed parts have no element on the page at all — a part the viewer draws as a point on its canvas once a
+ * view is crowded enough (a marker among hundreds) is not page content, so nothing here can measure it or read its quality: the
+ * report says how many it could not look at rather than answering as if they were fine.
+ */
+export function countUnchecked(placed: Array<{ id: string; attr: string }>): number {
+  const present = new Map<string, Set<string>>();
+  let missing = 0;
+  for (const { id, attr } of placed) {
+    let ids = present.get(attr);
+    if (!ids) {
+      ids = new Set(Array.from(document.querySelectorAll(`[${attr}]`), element => element.getAttribute(attr) ?? ''));
+      present.set(attr, ids);
+    }
+    if (!ids.has(id)) missing++;
+  }
+  return missing;
+}
+
 /** How many parts — nodes, grid items, connectors — show each quality short of live (`stale`, `disconnected`). */
 // `void` in the type too: Playwright calls it with no argument (`page.evaluate(countQualityMarks)`).
 export function countQualityMarks(root?: ParentNode | void): Record<string, number> {

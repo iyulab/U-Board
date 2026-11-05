@@ -1,7 +1,7 @@
 import type { Browser, Page } from 'playwright-core';
 import { getByPointer } from '@iyulab/u-board/domain';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH, nodeSize, type ViewDocument } from '@iyulab/u-board/picture';
-import { countQualityMarks, findLowContrast, findProblems } from './look-page.js';
+import { countQualityMarks, countUnchecked, findLowContrast, findProblems } from './look-page.js';
 import { placedParts } from './look-parts.js';
 
 export { placedParts } from './look-parts.js';
@@ -39,6 +39,10 @@ export interface LookReport {
   quality: Record<string, number>;
   /** What the page itself complained about (script errors, failed requests), at most a few. */
   console: string[];
+  /** How many parts the viewer drew as points, not as page content (a crowded view of hundreds of markers): the checks above read
+   *  the page, so they say nothing of these — their problems and the quality of their values are not in this report. Left out when
+   *  every part was checked, and always up close. */
+  unchecked?: number;
 }
 
 export interface Looker {
@@ -114,6 +118,7 @@ export async function photograph(
   // The whole view is taken in any case: the contrast check reads what is drawn behind each text off it.
   const whole = await page.screenshot(PICTURE);
   const png = clip ? await page.screenshot({ ...PICTURE, clip }) : whole;
+  const unchecked = request.focus ? 0 : await page.evaluate(countUnchecked, placedParts(document));
   const lowContrast = await page.evaluate(findLowContrast, {
     picture: `data:image/png;base64,${whole.toString('base64')}`,
     ratio: request.focus ? 2 : 1,
@@ -128,6 +133,7 @@ export async function photograph(
       problems: [...(await problems(page, document)), ...lowContrast],
       quality: await quality(page),
       console: console.slice(0, MAX_CONSOLE_LINES),
+      ...(unchecked > 0 && { unchecked }),
     },
   };
 }

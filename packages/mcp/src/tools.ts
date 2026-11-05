@@ -40,7 +40,7 @@ function failed(error: unknown): ToolResult {
 
 /** What is left after a look, in one line — first in the answer, so a writer that skims to the picture still reads that
  *  the board is not done while problems or advice stand. A part seen up close says so for the part only. */
-function lookStatus(problems: number, advice: number, focus: string | undefined, disconnected = 0): string {
+function lookStatus(problems: number, advice: number, focus: string | undefined, disconnected = 0, unchecked = 0): string {
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   // A part whose read answers nothing draws its own «no value» notice — a board with one is not done, however clean the layout.
   const left = [
@@ -48,7 +48,10 @@ function lookStatus(problems: number, advice: number, focus: string | undefined,
     advice > 0 && count(advice, 'piece of advice', 'pieces of advice'),
     disconnected > 0 && `${count(disconnected, 'disconnected part', 'disconnected parts')} (board_state says which, and why)`,
   ].filter(Boolean).join(' and ');
-  if (left) return `not done — ${left} to fix${focus ? ' on this part' : ''}`;
+  // Parts drawn as points in a crowded view are not page content: what was read says nothing of them, and the line must not.
+  const blind = unchecked > 0 ? `${count(unchecked, 'part is', 'parts are')} drawn as points and not checked — what is wrong with ${unchecked === 1 ? 'it' : 'them'} and how current ${unchecked === 1 ? 'its value is' : 'their values are'} is not in this report; board_state says the values` : '';
+  if (left) return `not done — ${left} to fix${focus ? ' on this part' : ''}${blind ? ` — and ${blind}` : ''}`;
+  if (blind) return `nothing found in what could be read — but ${blind}`;
   return focus ? 'nothing to fix on this part — look at the whole board before finishing' : 'done — nothing to fix';
 }
 
@@ -560,7 +563,7 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
             })),
           ];
           const problems = focus ? seen.filter(p => concerns(p, focus)) : seen;
-          const said = { type: 'text' as const, text: JSON.stringify({ revision: found.revision, status: lookStatus(problems.length, left, focus, focus ? 0 : report.quality.disconnected ?? 0), ...report, problems, advice }) };
+          const said = { type: 'text' as const, text: JSON.stringify({ revision: found.revision, status: lookStatus(problems.length, left, focus, focus ? 0 : report.quality.disconnected ?? 0, focus ? 0 : report.unchecked ?? 0), ...report, problems, advice }) };
           return { content: image ? [{ type: 'image' as const, data: image, mimeType: 'image/png' }, said] : [said] };
         } catch (error) {
           return failed(error);
