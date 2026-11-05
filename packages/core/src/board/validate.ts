@@ -9,7 +9,7 @@ import { groupReach } from './group-reach.js';
 import { PART_KINDS, boardWordFor, partKind, type PartKind } from './kinds.js';
 import { isTriggerLink, type ViewSkin } from '../view-document.js';
 import { ELEMENT_THEME, accentTokens, skinTokens } from '../renderer/element-template.js';
-import { EMPHASES, FRAMES, NUMERAL_SCALES, TONES } from './types.js';
+import { EMPHASES, FRAMES, NUMERAL_FACES, NUMERAL_SCALES, TONES } from './types.js';
 import { isNumeralWeight } from '../numerals.js';
 import { checkStyle, checkTemplateMarkup, isResourceOrigin } from '../elements/markup-policy.js';
 import { isWhereValue } from '../where.js';
@@ -186,10 +186,11 @@ export function validateBoard(input: unknown): BoardIssue[] {
   const checkNumerals = (value: unknown, at: string, what: string) => {
     if (!isObj(value)) { fail(at, `numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy ${what} are`); return; }
     for (const key of Object.keys(value)) {
-      if (key !== 'scale' && key !== 'weight') fail(`${at}/${key}`, `numerals has no "${key}" — it has scale (${Object.keys(NUMERAL_SCALES).join(' · ')}) and weight (100–900)`);
+      if (key !== 'scale' && key !== 'weight' && key !== 'face') fail(`${at}/${key}`, `numerals has no "${key}" — it has scale (${Object.keys(NUMERAL_SCALES).join(' · ')}), weight (100–900) and face (${Object.keys(NUMERAL_FACES).join(' · ')})`);
     }
     if (value.scale !== undefined && !Object.keys(NUMERAL_SCALES).includes(value.scale as string)) fail(`${at}/scale`, `a scale is ${Object.keys(NUMERAL_SCALES).join(' · ')}`);
     if (value.weight !== undefined && !isNumeralWeight(value.weight)) fail(`${at}/weight`, 'a weight is a whole number from 100 (thin) to 900 (black)');
+    if (value.face !== undefined && !Object.keys(NUMERAL_FACES).includes(value.face as string)) fail(`${at}/face`, `a face is ${Object.keys(NUMERAL_FACES).join(' · ')} — the body's font, or the skin's mono (digits of one width)`);
   };
 
   if (!isObj(input)) return [{ at: '', message: 'a board is a JSON object' }];

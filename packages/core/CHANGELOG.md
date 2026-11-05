@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `numerals.face` (`plain` · `mono`) of a skin, and of a `stat`, `list` or `status-card` part: `mono` draws the figures in the skin's own `mono` font, digits of one width — a table's right-aligned column, a bar's value, a gauge's reading, a metric's figure. The widget library already read one font token for every figure and nothing a board said set it; the board still names no font here, only which of the two it has.
+
 ## [0.43.0] - 2026-11-05
 
 ### Added

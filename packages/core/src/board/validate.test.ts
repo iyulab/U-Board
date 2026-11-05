@@ -390,10 +390,13 @@ describe('validateBoard', () => {
     expect(at({ scale: 'large', weight: 300 })).toEqual([]);
     expect(at({})).toEqual([]);
     expect(at('large')).toEqual(['/board/skin/numerals: numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy the big figures are']);
-    expect(at({ size: 40 })).toEqual([`/board/skin/numerals/size: numerals has no "size" — it has scale (${SCALES}) and weight (100–900)`]);
+    expect(at({ size: 40 })).toEqual([`/board/skin/numerals/size: numerals has no "size" — it has scale (${SCALES}), weight (100–900) and face (plain · mono)`]);
     expect(at({ scale: 'huge' })).toEqual([`/board/skin/numerals/scale: a scale is ${SCALES}`]);
     expect(at({ weight: 250.5 })).toEqual(['/board/skin/numerals/weight: a weight is a whole number from 100 (thin) to 900 (black)']);
     expect(at({ weight: 'bold' })).toEqual(['/board/skin/numerals/weight: a weight is a whole number from 100 (thin) to 900 (black)']);
+    expect(at({ face: 'mono' })).toEqual([]);
+    expect(at({ face: 'plain', scale: 'large' })).toEqual([]);
+    expect(at({ face: 'serif' })).toEqual(["/board/skin/numerals/face: a face is plain · mono — the body's font, or the skin's mono (digits of one width)"]);
   });
 
   it('says which "size" is meant: [width, height] is a box, how large a heading or a text is, is "scale"', () => {
@@ -429,7 +432,7 @@ describe('validateBoard', () => {
       "/parts/l/ink: \"ink\" is the colour of the text — text · muted · accent (the board's accent colour); a status colours it over this",
       '/parts/l/face: "face" is the surface under the text — plain · pill',
       '/parts/s/numerals: numerals is an object — { "scale": "large", "weight": 300 }: how large and how heavy the headline figure are',
-      `/parts/w/numerals/size: numerals has no "size" — it has scale (${SCALES}) and weight (100–900)`,
+      `/parts/w/numerals/size: numerals has no "size" — it has scale (${SCALES}), weight (100–900) and face (plain · mono)`,
       `/parts/w/numerals/scale: a scale is ${SCALES}`,
     ]);
   });

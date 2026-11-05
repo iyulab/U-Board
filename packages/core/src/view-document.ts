@@ -50,7 +50,7 @@ export interface ViewSkin {
   shadow?: 'none' | 'soft' | 'hard';
   titles?: 'plain' | 'band' | 'tab';
   density?: 'regular' | 'compact';
-  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number };
+  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number; face?: 'plain' | 'mono' };
 }
 
 /** A canvas view: widgets placed by position over a background, optionally joined by connectors. */

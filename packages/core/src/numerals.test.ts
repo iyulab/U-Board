@@ -14,4 +14,13 @@ describe('numeralTokens', () => {
     expect(numeralTokens({ scale: 'toString' }, 'figure')).toEqual({});
     expect(numeralTokens(undefined, 'figure')).toEqual({});
   });
+
+  it('draws the figures in the skin’s mono font, or in the body’s, by one token every figure reads — whichever family it is asked for', () => {
+    expect(numeralTokens({ face: 'mono' }, 'figure')).toEqual({ '--u-widget-font-numeric': 'var(--u-widget-font-mono)' });
+    expect(numeralTokens({ face: 'mono', scale: 'large' }, 'value')).toEqual({ '--u-widget-value-scale': '1.25', '--u-widget-font-numeric': 'var(--u-widget-font-mono)' });
+    expect(numeralTokens({ face: 'plain' }, 'value')).toEqual({ '--u-widget-font-numeric': 'var(--u-widget-font-family)' });
+    // A name is not a face: the board names no font here.
+    expect(numeralTokens({ face: 'Comic Sans' }, 'figure')).toEqual({});
+    expect(numeralTokens({ face: 'toString' }, 'figure')).toEqual({});
+  });
 });

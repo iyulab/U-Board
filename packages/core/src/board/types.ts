@@ -17,7 +17,7 @@ export type { Emphasis, Tone };
 
 /** The panel a framed part is drawn in. */
 export const FRAMES = ['card', 'flat', 'glow', 'plate', 'ticket', 'postage', 'tape', 'bevel', 'well', 'block', 'double'] as const;
-export { NUMERAL_SCALES, type NumeralScale } from '../numerals.js';
+export { NUMERAL_FACES, NUMERAL_SCALES, type NumeralFace, type NumeralScale } from '../numerals.js';
 export type Frame = (typeof FRAMES)[number];
 
 /** One of the board's own statuses: the tone it is drawn in, its words, and optionally a glyph and an emphasis. */
@@ -324,7 +324,7 @@ export interface Skin {
   titles?: 'plain' | 'band' | 'tab';
   density?: 'regular' | 'compact';
   /** The headline figure of a `metric` or `stat-group`: how large (`small` · `regular` · `large` · `xlarge` · `xxlarge`) and how heavy (100–900). */
-  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number };
+  numerals?: { scale?: 'small' | 'regular' | 'large' | 'xlarge' | 'xxlarge'; weight?: number; face?: 'plain' | 'mono' };
 }
 
 /**

@@ -114,6 +114,15 @@ describe('the picture model of a v2 board', () => {
     for (const id of ['h', 's', 'l', 'c']) expect(JSON.stringify(nodeOf(doc, id).widget.props)).not.toMatch(/numerals|kickerInk|"size"/);
   });
 
+  it('hands a part the mono face for its figures as the one token every figure reads, and the body’s when it asks for that', () => {
+    const doc = view(board({
+      s: { as: 'stat', of: 'totals', show: 'oee', numerals: { face: 'mono', scale: 'small' } },
+      c: { as: 'status-card', of: 'pumps[P1]', show: ['state', 'flow'], numerals: { face: 'plain' } },
+    }, { kind: 'canvas', size: [800, 400], place: { s: [0, 70, 200, 100], c: [320, 70, 220, 110] } }));
+    expect(nodeOf(doc, 's').widget.tokens).toEqual({ '--u-widget-figure-scale': '0.75', '--u-widget-font-numeric': 'var(--u-widget-font-mono)' });
+    expect(nodeOf(doc, 'c').widget.tokens).toEqual({ '--u-widget-font-numeric': 'var(--u-widget-font-family)' });
+  });
+
   it('draws a label in the size, ink and face it names, and with the props it always had when it names none', () => {
     const doc = view(board({
       plain: { as: 'label', title: 'Unit: million' },
