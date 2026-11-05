@@ -220,7 +220,9 @@ and its skin and accent win over these three too. With none of them defined the 
 
 Printed, or saved as PDF from the browser's print dialog, a board is the screen it is drawn on: its colours print (the
 paper, the widgets, and the marks that say a value is not current — the frame and the badge), a blinking state stays
-drawn on instead of blinking, the zoom controls are left out, and the line of when it was last updated stays.
+drawn on instead of blinking, the zoom controls are left out, and the line of when it was last updated stays. A board in a box
+sized from the window (`100vw`, `100%`) is fitted again to the paper when the printing starts, so it prints whole whatever the
+window it was printed from; a box of a fixed size prints at that size.
 
 The tokens marked for failures, the "not updating" notice and node frames apply without the
 stylesheet too — those colors carry meaning. The sheet's rules select these class names, mostly one
