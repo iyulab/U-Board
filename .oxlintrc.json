@@ -12,6 +12,10 @@
     // reset-on-input and load-on-mount effects this codebase uses on purpose. The hooks gate is
     // the classic pair above.
     "react/set-state-in-effect": "off",
+    // Another React Compiler-era heuristic (oxlint 1.91): it flags a variable an effect declares and its
+    // cleanup or callback reassigns — the `let cancelled = false; return () => { cancelled = true }` idiom
+    // React's own documentation uses to drop a stale async result. The variable is local to the effect.
+    "react/immutability": "off",
     // Live regions stay `role="status"`: the ARIA pattern screen readers announce reliably, where
     // support for announcing an `<output>` element varies.
     "jsx-a11y/prefer-tag-over-role": "off"
