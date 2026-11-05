@@ -499,13 +499,6 @@ describe('validateBoard', () => {
     ]);
   });
 
-  it('says as a hint that a skin’s ground is not drawn yet — density is', () => {
-    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
-    const hints = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => i.hint).map(i => i.at);
-    expect(hints({ palette: { paper: '#fff' }, radius: 2, density: 'compact' })).toEqual([]);
-    expect(hints({ palette: { ground: '#111' } })).toEqual(['/board/skin/palette/ground']);
-  });
-
   it("tells a chart's max / min where the end of its value axis is set", () => {
     const parts = (as: string, extra: Record<string, unknown> = {}) => canvas({ c: { as, of: 'equipment', x: 'name', y: 'load', max: 100, ...extra } });
     for (const as of ['chart.bar', 'chart.line', 'chart.area']) {

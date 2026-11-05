@@ -573,6 +573,20 @@ describe('the picture model of a v2 board', () => {
     expect(() => toViewDocument(whole)).toThrow(/"highlight" names a boolean field of one item/);
   });
 
+  it('draws a text shape with no tone in the skin’s ground — the colour of the board’s own text — and a toned one in its tone', () => {
+    const shapes = { note: { text: 'North', at: [5, 40] as [number, number] }, tagged: { text: 'Alarm', at: [5, 60] as [number, number], tone: 'alarm' as const } };
+    const drawn = (skin: Board['board'] | undefined, check: boolean) => {
+      const b: Board = { ...board({ p: { as: 'stat', of: 'totals', show: 'temp' } }, { kind: 'canvas', size: [100, 100], place: { p: [0, 0, 50, 30] }, shapes }), ...(skin && { board: skin }) };
+      const doc = check ? view(b) : toViewDocument(b, { keysOf: () => [] });
+      if (doc.kind !== 'canvas') throw new Error('a canvas');
+      return (doc.decorations ?? []).map(d => (d as { fill?: string }).fill);
+    };
+    expect(drawn(undefined, true)).toEqual(['next', 'alarm']);
+    expect(drawn({ skin: { palette: { ground: '#9fd3ff' } } }, true)).toEqual(['#9fd3ff', 'alarm']);
+    // a value that is no colour (the check refuses it; were it to get here, it never reaches the drawing)
+    expect(drawn({ skin: { palette: { ground: 'url(https://example.test/x)' } } }, false)).toEqual(['next', 'alarm']);
+  });
+
   it('reads a request time and a fixed filter with the item', () => {
     const b = board({ p: { as: 'stat', of: 'air[중구]', show: 'pm10' } }, { kind: 'canvas', size: [100, 100], place: { p: [0, 0] } });
     b.data!.air = { from: 'gov', path: '/air?date={{now:yyyyMMdd}}', list: '/items', key: 'station', where: { item: 'PM10' }, now: { delay: 2400, step: 3600 }, zone: 'Asia/Seoul' };

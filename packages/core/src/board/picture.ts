@@ -9,6 +9,7 @@ import { has, last, matchesOf, replaceEvery } from '../portable.js';
 import { placedAt, type Binding, type CellCanvas, type Connector, type ElementDefinition, type GridItem, type GridLayout, type ItemField, type Node, type Shape as ViewShape, type Trigger as ViewTrigger, type TriggerAction as ViewTriggerAction, type ValueMap, type ValueRange, type ViewDocument, type Widget } from '../view-document.js';
 import type { HttpRef } from '../http-ref.js';
 import { DEFAULT_NODE_HEIGHT, DEFAULT_NODE_WIDTH } from '../layout-defaults.js';
+import { isSkinColor } from '../css-color.js';
 import { LABEL, LEGEND, MARKER, MARKER_JOINT, MARKER_SYMBOL, lineElement, stateLineElement } from './builtins.js';
 
 const MARKER_JOINT_SIDES = ['right', 'left', 'above', 'below'];
@@ -1166,7 +1167,8 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
   }) as ValueMap;
 
   /**
-   * A shape as a decoration: a box with its label, or a text at a point — in its tone, else the board's muted line. A box that
+   * A shape as a decoration: a box with its label, or a text at a point — in its tone, else (a text) the skin's `ground`, else the
+   * board's own text, and a box in the board's muted line. A box that
    * shows a state (`of` and `show`, the group's data when it names none) takes its outline's tone from the field's state, and
    * `fill` fills it in that tone (`tone`) or hatches it (`hatch`) — a status whose emphasis is `hatch` hatches a `tone` box too.
    */
@@ -1203,7 +1205,8 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
       return rect;
     }
     const at = shape.at!;
-    return { id, type: 'text', x: at[0], y: at[1], text: shape.text!, fill: shape.tone ?? 'next', ...(shape.size !== undefined ? { fontSize: shape.size } : {}) };
+    const ground = board.board?.skin?.palette?.ground;
+    return { id, type: 'text', x: at[0], y: at[1], text: shape.text!, fill: shape.tone ?? (isSkinColor(ground) ? ground : 'next'), ...(shape.size !== undefined ? { fontSize: shape.size } : {}) };
   };
 
   /**

@@ -264,8 +264,6 @@ export function validateBoard(input: unknown): BoardIssue[] {
   if (isNum(skin.radius) && skin.radius > 0 && typeof skin.frame === 'string' && SQUARE_FRAMES.includes(skin.frame)) {
     issues.push({ at: '/board/skin/radius', message: `a "${skin.frame}" frame has square corners — the radius changes nothing under it; use another frame, or leave the radius out`, hint: true });
   }
-  // declared and checked, but not drawn yet — say so, so a board that sets it is not left wondering why nothing changed
-  if (isObj(skin.palette) && skin.palette.ground !== undefined) issues.push({ at: '/board/skin/palette/ground', message: '"ground" is not drawn yet — the board looks the same with it; the board own background colour is the palette "backdrop"', hint: true });
 
   // ── statuses ──
   const statuses = isObj(board.statuses) ? board.statuses : {};

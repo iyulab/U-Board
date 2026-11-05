@@ -139,7 +139,7 @@ background picture is drawn over it); `ground` is text on the board's background
 reads the skin; no part sets fonts or colours of its own. `density: "compact"` draws every part whose widget has a `compact`
 option compact, unless the part sets `compact` itself. `numerals` sets the headline figure of a `metric` or `stat-group`: `scale` is
 `small` (0.75×) · `regular` (as drawn) · `large` (1.25×) · `xlarge` (1.75×) · `xxlarge` (2.5×) of its size at the width it is drawn in, `weight` a font
-weight from 100 to 900. `face: "mono"` draws every figure of the board — a table column, a bar's value, a gauge's reading — in the skin's `mono` font, digits of one width; `"plain"` is the body's font, and what a part's own `numerals.face` says wins over the skin's. `ground` is accepted but not drawn yet.
+weight from 100 to 900. `face: "mono"` draws every figure of the board — a table column, a bar's value, a gauge's reading — in the skin's `mono` font, digits of one width; `"plain"` is the body's font, and what a part's own `numerals.face` says wins over the skin's. `ground` is the colour of a text shape that has no tone of its own — the words written on the board's background.
 A palette value is a colour — a hex colour, `rgb()`, `hsl()`, a CSS colour name or `transparent`; a font is family names
 separated by commas (`"Noto Sans KR", sans-serif`); a radius is a number of pixels, 0 or more. `validateBoard` names what
 is none of these, and the viewer leaves such a value out — a skin never carries a `url()` or a rule into the page's CSS. A skin and
