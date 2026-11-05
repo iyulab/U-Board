@@ -137,7 +137,7 @@ export function classify(
   if (compareVersions(latest, current) < 0) {
     return {
       verdict: 'info',
-      reason: `installed ahead of ${latest}, the newest version offered for this Node — the installed one may need a newer Node (check its engines)`,
+      reason: `installed ahead of ${latest}, the newest version offered for this Node — a release that needs a newer Node is not shown to this check but is to CI ('npm view ${name} dist-tags' says; the installed one may also need a newer Node)`,
     };
   }
   if (breakingLine(latest) !== breakingLine(current)) {
