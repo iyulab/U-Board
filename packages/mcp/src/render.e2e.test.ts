@@ -55,6 +55,22 @@ describe('renderBoard', () => {
     expect(report.quality).not.toEqual({});
   });
 
+  it('says in its report what an adapter that throws said, once for the adapter and not once for each read', async () => {
+    const broken: Adapter = {
+      id: 'plant',
+      async resolve() {
+        throw new Error('token expired');
+      },
+    };
+    const { report } = await renderBoard({ board, adapters: [broken], width: 480, height: 320 });
+    const said = report.problems.filter(p => p.message.includes('adapter "plant" threw'));
+    expect(said).toHaveLength(1);
+    expect(said[0]!.message).toMatch(/threw on \d+ reads? — drawn as disconnected: "token expired"/);
+    // An adapter that answers adds nothing of the kind.
+    const fine = await renderBoard({ board, adapters: [live()], width: 480, height: 320 });
+    expect(fine.report.problems.filter(p => p.message.includes('threw'))).toEqual([]);
+  });
+
   it('draws the other paper when asked', async () => {
     const light = await renderBoard({ board, adapters: [live()], width: 480, height: 320, appearance: 'light' });
     const dark = await renderBoard({ board, adapters: [live()], width: 480, height: 320, appearance: 'dark' });

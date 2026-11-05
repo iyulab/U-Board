@@ -5,6 +5,7 @@ import type { ViewKind } from '@iyulab/u-board/picture';
 export type Start =
   | { mode: 'server'; url: string; token: string; bundle?: true }
   | { mode: 'document'; path: string; kind: ViewKind; bundle?: true }
+  | { mode: 'help'; message: string }
   | { mode: 'refused'; message: string };
 
 const USAGE = [
@@ -26,6 +27,8 @@ export function startOf(args: readonly string[], env: Record<string, string | un
       bundle = true;
       continue;
     }
+    // Asking how it is used is not a failure: the usage, and exit status 0.
+    if (arg === '--help' || arg === '-h') return { mode: 'help', message: USAGE };
     const [name, inline] = arg.startsWith('--') && arg.includes('=') ? [arg.slice(0, arg.indexOf('=')), arg.slice(arg.indexOf('=') + 1)] : [arg, undefined];
     if (name !== '--board' && name !== '--kind') return { mode: 'refused', message: `u-board-mcp: unknown argument "${arg}"\n${USAGE}` };
     const value = inline ?? args[++i];

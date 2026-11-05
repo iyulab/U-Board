@@ -112,4 +112,8 @@ describe('starting with the bundle tools', () => {
     expect(startOf(['--board', 'a.json'], { UBOARD_BUNDLE: '1' })).toMatchObject({ bundle: true });
     expect(startOf(['--board', 'a.json'], {})).not.toHaveProperty('bundle');
   });
+
+  it('says how it is used when asked — that is not a refusal', () => {
+    for (const ask of ['--help', '-h']) expect(startOf([ask], {})).toMatchObject({ mode: 'help', message: expect.stringContaining('u-board-mcp works on boards') });
+  });
 });

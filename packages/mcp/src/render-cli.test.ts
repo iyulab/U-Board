@@ -77,6 +77,16 @@ describe('a call of u-board-render', () => {
     expect(JSON.parse(t.err.join(''))).toEqual(report);
   });
 
+  it('says how it is used on the standard output and exits 0 when asked — asking is not a failure', async () => {
+    for (const ask of ['--help', '-h']) {
+      const t = io();
+      expect(await runRender([ask], t.deps)).toBe(0);
+      expect(t.stdout.join('')).toContain('u-board-render draws a board');
+      expect(t.err).toEqual([]);
+      expect(t.options).toEqual([]);
+    }
+  });
+
   it('writes the report to a file when asked', async () => {
     const t = io({ 'board.json': JSON.stringify(board) });
     expect(await runRender([...base, '--report', 'r.json'], t.deps)).toBe(0);

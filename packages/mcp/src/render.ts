@@ -49,6 +49,18 @@ const TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
 };
 
+/** How many different messages one adapter's failures name in the report; the rest are counted, not listed. */
+const MAX_FAILURE_MESSAGES = 3;
+
+/** One problem per adapter that threw: what it said (the first few different answers) and how many reads it failed. */
+function adapterProblems(failures: ReadonlyMap<string, { messages: ReadonlyMap<string, number>; reads: number }>): LookReport['problems'] {
+  return [...failures].map(([id, { messages, reads }]) => {
+    const said = [...messages].slice(0, MAX_FAILURE_MESSAGES).map(([message, times]) => `"${message}"${messages.size > 1 ? ` ×${times}` : ''}`);
+    const more = messages.size > MAX_FAILURE_MESSAGES ? ` and ${messages.size - MAX_FAILURE_MESSAGES} other message${messages.size - MAX_FAILURE_MESSAGES === 1 ? '' : 's'}` : '';
+    return { message: `adapter "${id}" threw on ${reads} read${reads === 1 ? '' : 's'} — drawn as disconnected: ${said.join(', ')}${more}` };
+  });
+}
+
 /** Where the page lives: next to this module in a published package, or in the build output when run from source. */
 function pageDirectory(): string {
   const here = dirname(fileURLToPath(import.meta.url));
@@ -74,9 +86,27 @@ export async function renderBoard(options: RenderBoardOptions): Promise<Rendered
   }
   const board: Board = options.appearance ? { ...options.board, board: { ...options.board.board, theme: options.appearance } } : options.board;
   // The same picture the viewer draws, made here: `look` finds the parts it names and reports on them by it.
-  const document = await pictureOf(board, readerOf(adapters), { ...(options.variables && { variables: { ...options.variables } }) });
+  // An adapter that throws is drawn as disconnected, which is all the page can say; why is what the host needs, and only this
+  // process saw it — so each adapter is watched here, and what it threw goes to the report.
+  const failures = new Map<string, { messages: Map<string, number>; reads: number }>();
+  const watched: Adapter[] = adapters.map(adapter => ({
+    ...adapter,
+    async resolve(ref) {
+      try {
+        return await adapter.resolve(ref);
+      } catch (error) {
+        const seen = failures.get(adapter.id) ?? { messages: new Map<string, number>(), reads: 0 };
+        const message = error instanceof Error ? error.message : String(error);
+        seen.messages.set(message, (seen.messages.get(message) ?? 0) + 1);
+        seen.reads += 1;
+        failures.set(adapter.id, seen);
+        throw error;
+      }
+    },
+  }));
+  const document = await pictureOf(board, readerOf(watched), { ...(options.variables && { variables: { ...options.variables } }) });
   const directory = pageDirectory();
-  const byId = new Map(adapters.map(a => [a.id, a]));
+  const byId = new Map(watched.map(a => [a.id, a]));
   const now = options.now instanceof Date ? options.now.getTime() : options.now;
 
   const browser = await launch(options.browser);
@@ -117,7 +147,7 @@ export async function renderBoard(options: RenderBoardOptions): Promise<Rendered
     );
     await page.goto(`${ORIGIN}/index.html`);
     const { image, report } = await photograph(page, document, { width, height }, console);
-    return { png: Buffer.from(image ?? '', 'base64'), report };
+    return { png: Buffer.from(image ?? '', 'base64'), report: { ...report, problems: [...adapterProblems(failures), ...report.problems] } };
   } finally {
     await browser.close();
   }

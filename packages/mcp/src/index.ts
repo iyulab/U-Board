@@ -11,6 +11,10 @@ import { startOf } from './start.js';
 // edit_text is offered; UBOARD_EDIT_TEXT=0 leaves it out (to measure an assistant with and without it)
 const editText = process.env['UBOARD_EDIT_TEXT'] !== '0';
 const start = startOf(process.argv.slice(2), process.env);
+if (start.mode === 'help') {
+  console.log(start.message);
+  process.exit(0);
+}
 if (start.mode === 'refused') {
   console.error(start.message);
   process.exit(1);

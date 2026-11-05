@@ -34,7 +34,7 @@ export const RENDER_USAGE = [
   '2: the board has problems, listed by where they are, and was not drawn.',
 ].join('\n');
 
-export type RenderArgsResult = { ok: true; args: RenderArgs } | { ok: false; message: string };
+export type RenderArgsResult = { ok: true; args: RenderArgs } | { ok: false; help?: boolean; message: string };
 
 const VALUE_FLAGS = ['--width', '--height', '--out', '--report', '--data', '--appearance', '--variables', '--now', '--locale', '--browser'];
 
@@ -45,6 +45,8 @@ export function renderArgsOf(argv: readonly string[]): RenderArgsResult {
   let board: string | undefined;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
+    // Asking how it is used is not a failure: the usage, and exit status 0.
+    if (arg === '--help' || arg === '-h') return { ok: false, help: true, message: RENDER_USAGE };
     if (arg !== '-' && !arg.startsWith('--')) {
       if (board !== undefined) return fail(`one board at a time — "${arg}" comes after "${board}"`);
       board = arg;
@@ -156,6 +158,10 @@ export const REAL_IO: RenderIo = {
 export async function runRender(argv: readonly string[], io: RenderIo = REAL_IO): Promise<number> {
   const parsed = renderArgsOf(argv);
   if (!parsed.ok) {
+    if (parsed.help) {
+      io.stdout(`${parsed.message}\n`);
+      return 0;
+    }
     io.stderr(`${parsed.message}\n`);
     return 1;
   }
