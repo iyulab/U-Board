@@ -77,6 +77,8 @@ const TITLE_STYLES = ['plain', 'band', 'tab'] as const;
 /** The kinds that draw their title inside themselves (a stat's label, a card's title, a gauge's subtitle, a header's text): the
  *  band and the tab are drawn by the widget host around the title it draws itself, so they never reach these. */
 const OWN_TITLE_KINDS = ['stat', 'status-card', 'gauge', 'header'];
+/** The kinds that show a state by its colour (and a glyph, a word) and draw none of its emphasis — a stat, a status card, a table's rows, a status grid and a marker do. */
+const COLOUR_ONLY_KINDS = ['stat-list', 'gauge', 'list', 'bar-list', 'header'];
 
 /** The spans (twelfths) that take whole columns of a cell `cell` columns wide. */
 const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i + 1).filter(s => (cell * s) % 12 === 0).map(String));
@@ -563,6 +565,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     }
     if (kind.of === 'no' && (part.of !== undefined || part.each !== undefined)) fail(`${at}/of`, `a ${kind.kind} reads no data — leave "of" out`);
     checkShown(part, kind.kind, at, reads);
+    if (COLOUR_ONLY_KINDS.includes(kind.kind) && typeof reads === 'string') checkEmphasisDrawn(part, kind.kind, at, reads);
     checkTexts(part, at, reads);
     if (kind.kind === 'header') checkHeaderOptions(part, at, reads);
     checkOptions(raw, part, kind, at);
@@ -616,6 +619,32 @@ export function validateBoard(input: unknown): BoardIssue[] {
         : kind === 'status-card'
           ? 'a status-card shows the fields "show" names, the status of its "state" and its "meter" — give at least one, or a "title" (a card with only a title is a titled frame); without any it draws nothing'
           : 'a stat-list shows the fields "show" names — give "show": ["<field>", …], or a "title" (a list with only a title is a titled frame); without any it draws nothing');
+  };
+
+  /** The words of a state rule — a map of raw values (`"*"` for anything else), bands of numbers between the words, or a relative one. */
+  const statusWordsOf = (rule: unknown): string[] => {
+    if (Array.isArray(rule)) return rule.filter((w, i) => i % 2 === 0 && typeof w === 'string') as string[];
+    if (!isObj(rule)) return [];
+    if (Array.isArray(rule.relative)) return statusWordsOf(rule.relative);
+    return Object.values(rule).filter((w): w is string => typeof w === 'string');
+  };
+
+  /**
+   * A part of a kind that draws a state's colour and none of its emphasis, showing a field whose state maps to a status that has one: the
+   * second channel the board gave that status — a hatch, an inverted block, a blink — is not drawn on it, and nothing says so.
+   */
+  const checkEmphasisDrawn = (part: Obj, kind: string, at: string, reads: string) => {
+    const named = (['show', 'state', 'value'] as const).flatMap(key => (Array.isArray(part[key]) ? part[key] as unknown[] : [part[key]]).map(name => [key, name] as const));
+    for (const [key, name] of named) {
+      if (typeof name !== 'string') continue;
+      const rule = fieldOf(reads, name)?.state;
+      for (const word of statusWordsOf(rule)) {
+        const status = statuses[word];
+        if (!isObj(status) || status.emphasis === undefined) continue;
+        issues.push({ at: `${at}/${key}`, message: `a ${kind} shows "${name}"'s state by its colour only — the "${String(status.emphasis)}" of the status "${word}" is drawn on a stat, a status card, a table row, a status grid or a marker, not on this`, hint: true });
+        return;
+      }
+    }
   };
 
   /**

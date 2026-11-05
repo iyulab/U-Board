@@ -516,6 +516,23 @@ describe('validateBoard', () => {
     expect(hints({ a: { use: 'tabbed', of: 'totals', show: 'count' }, b: { use: 'tabbed', of: 'totals', show: 'count' } }, { presets: { tabbed: { as: 'status-card', titles: 'tab' } } })).toEqual(['/presets/tabbed/titles']);
   });
 
+  it('says as a hint that a kind that draws a state by its colour only is not drawing the emphasis of a status it shows — and keeps quiet where the emphasis is drawn', () => {
+    const board = (parts: Record<string, unknown>, emphasis: string) => ({
+      ...canvas(parts),
+      statuses: { running: { tone: 'ok' }, tripped: { tone: 'alarm', ...(emphasis ? { emphasis } : {}) } },
+      data: { ...data, equipment: { ...data.equipment, fields: { state: { state: { run: 'running', trip: 'tripped' } }, load: {} } } },
+    });
+    const hints = (parts: Record<string, unknown>, emphasis = 'invert') => validateBoard(board(parts, emphasis) as never).filter(i => i.hint).map(i => i.at);
+    const part = (as: string, extra: Record<string, unknown> = {}) => ({ as, of: 'equipment[PR-01]', show: 'state', ...extra });
+    // a stat-list, a gauge, a list and a bar list show the colour; so does a header that names the field as its state
+    expect(hints({ a: part('stat-list', { show: ['state', 'load'] }), b: part('gauge'), c: { as: 'list', of: 'equipment', show: 'state' }, d: { as: 'bar-list', of: 'equipment', value: 'state' } }))
+      .toEqual(['/parts/a/show', '/parts/b/show', '/parts/c/show', '/parts/d/value']);
+    // where the emphasis is drawn, there is nothing to say; so for a status with none, and for a field with no state
+    expect(hints({ a: part('stat'), b: part('status-card'), c: { as: 'table', of: 'equipment', show: ['state'] }, d: { as: 'status-grid', of: 'equipment', state: 'state' } })).toEqual([]);
+    expect(hints({ a: part('stat-list', { show: ['state'] }) }, '')).toEqual([]);
+    expect(hints({ a: part('stat-list', { show: ['load'] }) })).toEqual([]);
+  });
+
   it('says as a hint that a palette’s paper changes nothing where the board draws no frame — and keeps quiet where anything reads it', () => {
     const hints = (extra: Record<string, unknown>, skin: Record<string, unknown> = {}, parts: Record<string, unknown> = { a: { as: 'stat', of: 'totals', show: 'count' } }) =>
       validateBoard({ ...canvas(parts), board: { skin: { palette: { paper: '#fff8e8' }, ...skin } }, ...extra } as never).filter(i => i.hint).map(i => i.at);
