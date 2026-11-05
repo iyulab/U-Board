@@ -347,14 +347,33 @@ describe('the picture model of a v2 board', () => {
     expect(shape('plain')).not.toHaveProperty('bindings');
     expect(shape('plain')).toMatchObject({ fill: 'none', stroke: 'idle' });
     // P2 is tripped: the outline and the fill follow its tone, and its status's emphasis is the hatch
-    expect(Object.keys(shape('tint').bindings!).sort()).toEqual(['fill', 'hatch', 'stroke']);
-    expect(Object.keys(shape('outline').bindings!)).toEqual(['stroke']);
+    expect(Object.keys(shape('tint').bindings!).sort()).toEqual(['dash', 'fill', 'hatch', 'stroke', 'strokeWidth']);
+    expect(Object.keys(shape('outline').bindings!).sort()).toEqual(['dash', 'stroke', 'strokeWidth']);
     expect(shape('tint')).toMatchObject({ fillOpacity: 0.16 });
     expect(shape('hatched')).not.toHaveProperty('fillOpacity');
     expect(shape('hatched')).toMatchObject({ hatch: true });
-    expect(Object.keys(shape('hatched').bindings!).sort()).toEqual(['fill', 'stroke']);
+    expect(Object.keys(shape('hatched').bindings!).sort()).toEqual(['dash', 'fill', 'stroke', 'strokeWidth']);
     // each binding reads the one item the box names, field `state`
     expect((shape('tint').bindings!.stroke!.ref as { item?: unknown }).item).toBeDefined();
+  });
+
+  it("gives a box that shows a state the outline form of its status's emphasis, as a link and a path have it — and none when no status has an emphasis", () => {
+    const drawnWith = (statuses: NonNullable<Board['statuses']>) => {
+      const b = board({ s: { as: 'stat', of: 'totals', show: 'output' } }, { kind: 'canvas', size: [400, 200], place: { s: [0, 0, 100, 60] }, shapes: { frame: { box: [0, 0, 100, 60], of: 'pumps[P2]', show: 'state', width: 2 } } });
+      b.statuses = statuses;
+      b.data!.pumps = { ...pumps, fields: { ...pumps.fields, state: { state: { run: 'running', trip: 'tripped', flap: 'flapping', '*': 'off' } } } } as never;
+      expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+      const doc = toViewDocument(b, { keysOf: () => [] });
+      return ((doc as { decorations?: Array<{ id: string; strokeWidth?: number; bindings?: Record<string, { map?: { values?: Record<string, unknown>; otherwise?: unknown } }> }> }).decorations ?? []).find(d => d.id === 'shape.frame')!;
+    };
+    const emphasised = drawnWith({ running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped', emphasis: 'hatch' }, flapping: { tone: 'warn', label: 'Flapping', emphasis: 'blink' }, off: { tone: 'idle', label: 'Off', emphasis: 'invert' } });
+    expect(emphasised.strokeWidth).toBe(2);
+    // run · trip · flap are the words of the field; any other word is `off`, here inverted: its line is as it was, twice as thick
+    expect(emphasised.bindings!.dash!.map).toMatchObject({ values: { run: 'solid', trip: 'dashed', flap: 'flowing' }, otherwise: 'solid' });
+    expect(emphasised.bindings!.strokeWidth!.map).toMatchObject({ values: { run: 2, trip: 2, flap: 2 }, otherwise: 4 });
+    // no status has an emphasis: the outline has colour only, as before
+    const plain = drawnWith({ running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped' }, flapping: { tone: 'warn', label: 'Flapping' }, off: { tone: 'idle', label: 'Off' } });
+    expect(Object.keys(plain.bindings!)).toEqual(['stroke']);
   });
 
   it('draws a path that shows a state as an element whose tone is read from the field — and one that does not, as before', () => {

@@ -92,19 +92,32 @@ export async function resolveDocument(doc: ViewDocument, adapters: readonly Adap
 }
 
 /**
- * A box shape's bindings read into its outline, its fill and its hatch: a colour as text, the hatch as true or false — a value of
- * another form leaves the static one in place, as for a disconnected binding. A shape without bindings passes through.
+ * A box shape's bindings read into its outline, its fill, its hatch and its outline's form: a colour as text, the hatch as true or
+ * false, the line style as one of its words, the width as a positive number — a value of another form leaves the static one in
+ * place, as for a disconnected binding. A shape without bindings passes through.
  */
 export async function resolveShape(shape: Shape, adapters: readonly Adapter[]): Promise<Shape> {
   if (shape.type !== 'rect' || !shape.bindings || Object.keys(shape.bindings).length === 0) return shape;
   const { values } = await resolveBindings(
-    { ...(shape.stroke !== undefined && { stroke: shape.stroke }), ...(shape.fill !== undefined && { fill: shape.fill }), ...(shape.hatch !== undefined && { hatch: shape.hatch }) },
+    {
+      ...(shape.stroke !== undefined && { stroke: shape.stroke }), ...(shape.fill !== undefined && { fill: shape.fill }), ...(shape.hatch !== undefined && { hatch: shape.hatch }),
+      ...(shape.dash !== undefined && { dash: shape.dash }), ...(shape.strokeWidth !== undefined && { strokeWidth: shape.strokeWidth }),
+    },
     shape.bindings,
     adapters,
-    (path, value) => (path === 'hatch' ? (typeof value === 'boolean' ? value : undefined) : path === 'stroke' || path === 'fill' ? (typeof value === 'string' ? value : undefined) : undefined)
+    (path, value) => {
+      if (path === 'hatch') return typeof value === 'boolean' ? value : undefined;
+      if (path === 'stroke' || path === 'fill') return typeof value === 'string' ? value : undefined;
+      if (path === 'dash') return STROKE_DASHES.includes(value as StrokeDash) ? value : undefined;
+      if (path === 'strokeWidth') return typeof value === 'number' && value > 0 ? value : undefined;
+      return undefined;
+    }
   );
-  const { stroke, fill, hatch } = values as Pick<Extract<Shape, { type: 'rect' }>, 'stroke' | 'fill' | 'hatch'>;
-  return { ...shape, ...(stroke !== undefined && { stroke }), ...(fill !== undefined && { fill }), ...(hatch !== undefined && { hatch }) };
+  const { stroke, fill, hatch, dash, strokeWidth } = values as Pick<Extract<Shape, { type: 'rect' }>, 'stroke' | 'fill' | 'hatch' | 'dash' | 'strokeWidth'>;
+  return {
+    ...shape, ...(stroke !== undefined && { stroke }), ...(fill !== undefined && { fill }), ...(hatch !== undefined && { hatch }),
+    ...(dash !== undefined && { dash }), ...(strokeWidth !== undefined && { strokeWidth }),
+  };
 }
 
 /**

@@ -229,14 +229,14 @@ export interface RectShape {
   /** How opaque the `fill` is, 0 to 1 — a tint a state fills a box with, faint enough that what lies under it still reads. Left out:
    *  as opaque as the colour is. */
   fillOpacity?: number;
-  /** Live values for `stroke`, `fill` or `hatch` (`SHAPE_BINDABLE`) — a box that shows a state: its tone as the outline's and the
-   *  inside's colour, its status's emphasis as the hatch. Same shape as a widget's bindings; a binding that cannot be read leaves
-   *  the static value in place. */
+  /** Live values for `stroke`, `fill`, `hatch`, `dash` or `strokeWidth` (`SHAPE_BINDABLE`) — a box that shows a state: its tone as the
+   *  outline's and the inside's colour, its status's emphasis as the hatch and as the outline's form (dashed, dots that travel, thicker).
+   *  Same shape as a widget's bindings; a binding that cannot be read leaves the static value in place. */
   bindings?: Record<string, Binding>;
 }
 
 /** The parts of a box shape a binding may fill. */
-export const SHAPE_BINDABLE = ['stroke', 'fill', 'hatch'] as const;
+export const SHAPE_BINDABLE = ['stroke', 'fill', 'hatch', 'dash', 'strokeWidth'] as const;
 
 export interface TextShape {
   id: string;

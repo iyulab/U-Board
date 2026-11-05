@@ -1170,7 +1170,8 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
    * A shape as a decoration: a box with its label, or a text at a point — in its tone, else (a text) the skin's `ground`, else the
    * board's own text, and a box in the board's muted line. A box that
    * shows a state (`of` and `show`, the group's data when it names none) takes its outline's tone from the field's state, and
-   * `fill` fills it in that tone (`tone`) or hatches it (`hatch`) — a status whose emphasis is `hatch` hatches a `tone` box too.
+   * `fill` fills it in that tone (`tone`) or hatches it (`hatch`) — a status whose emphasis is `hatch` hatches a `tone` box too. Its
+   * outline takes the emphasis's form as a link's does: dashed, dots that travel along it, twice as thick.
    */
   const shapeOf = (shape: Shape, id: string, path?: string, reads?: Reads): ViewShape => {
     if (shape.box !== undefined) {
@@ -1199,6 +1200,12 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
           if (shape.fill === 'tone') rect.fillOpacity = STATE_TINT;
           if (shape.fill === 'hatch') rect.hatch = true;
           else if (shape.fill === 'tone' && maps.emphasis) bindings.hatch = binding(emphasisMap(maps.emphasis, e => e === 'hatch'));
+          // The outline takes the status's emphasis as a link and a path do: `hatch` dashed, `blink` dots that travel along it, `invert` thick.
+          if (maps.emphasis) {
+            const width = rect.strokeWidth ?? 1.5;
+            bindings.dash = binding(emphasisMap(maps.emphasis, e => (e === 'hatch' ? 'dashed' : e === 'blink' ? 'flowing' : shape.dash ? 'dashed' : 'solid')));
+            bindings.strokeWidth = binding(emphasisMap(maps.emphasis, e => (e === 'invert' ? width * 2 : width)));
+          }
           return { ...rect, bindings };
         }
       }

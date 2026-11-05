@@ -284,6 +284,26 @@ describe('a box shape that shows a state', () => {
     expect(cell.canvas.decorations[0]).toMatchObject({ stroke: 'alarm', hatch: true });
   });
 
+  it("reads its outline's line style and width — a word of the line styles and a positive number; anything else leaves the static one", async () => {
+    const form = new InMemoryAdapter('form', {
+      '/dash/ok': { value: 'flowing', quality: 'live' }, '/dash/bad': { value: 'wavy', quality: 'live' },
+      '/width/ok': { value: 3, quality: 'live' }, '/width/zero': { value: 0, quality: 'live' }, '/width/text': { value: 'thick', quality: 'live' },
+    });
+    const doc: CanvasView = {
+      kind: 'canvas', background: {}, nodes: [], connectors: [],
+      decorations: [
+        { ...box, dash: 'dashed', strokeWidth: 1.5, bindings: { dash: { adapter: 'form', ref: '/dash/ok' }, strokeWidth: { adapter: 'form', ref: '/width/ok' } } },
+        { ...box, id: 'other', dash: 'dashed', strokeWidth: 1.5, bindings: { dash: { adapter: 'form', ref: '/dash/bad' }, strokeWidth: { adapter: 'form', ref: '/width/zero' } } },
+        { ...box, id: 'third', strokeWidth: 1.5, bindings: { strokeWidth: { adapter: 'form', ref: '/width/text' } } },
+      ],
+    };
+    const resolved = await resolveDocument(doc, [form]);
+    expect(resolved.decorations![0]).toMatchObject({ dash: 'flowing', strokeWidth: 3 });
+    expect(resolved.decorations![1]).toMatchObject({ dash: 'dashed', strokeWidth: 1.5 });
+    expect(resolved.decorations![2]).toMatchObject({ strokeWidth: 1.5 });
+    expect(resolved.decorations![2]).not.toHaveProperty('dash');
+  });
+
   it('leaves a document without decorations as it was', async () => {
     const doc: CanvasView = { kind: 'canvas', background: {}, nodes: [], connectors: [] };
     expect(await resolveDocument(doc, [plant])).not.toHaveProperty('decorations');
