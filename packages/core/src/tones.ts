@@ -9,5 +9,5 @@ export const TONES = ['ok', 'info', 'watch', 'warn', 'alarm', 'off', 'idle', 'ac
 export type Tone = (typeof TONES)[number];
 
 /** A second channel besides colour, for a state that must not be missed. */
-export const EMPHASES = ['invert', 'hatch', 'stamp', 'blink'] as const;
+export const EMPHASES = ['invert', 'hatch', 'stamp', 'blink', 'strike'] as const;
 export type Emphasis = (typeof EMPHASES)[number];

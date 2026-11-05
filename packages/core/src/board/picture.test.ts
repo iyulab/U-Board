@@ -386,7 +386,7 @@ describe('the picture model of a v2 board', () => {
       kind: 'canvas', size: [400, 200], place: { s: [0, 0, 100, 60] },
       shapes: { pipe: { line: [[0, 100], [90, 100]], of: 'pumps[P2]', show: 'state' } },
     });
-    for (const [emphasis, form] of [['blink', 'flowing'], ['hatch', 'dashed'], ['invert', 'thick'], ['stamp', '']] as const) {
+    for (const [emphasis, form] of [['blink', 'flowing'], ['hatch', 'dashed'], ['invert', 'thick'], ['stamp', ''], ['strike', '']] as const) {
       b.statuses = { running: { tone: 'ok', label: 'Running' }, tripped: { tone: 'alarm', label: 'Tripped', emphasis } };
       const pipe = nodeOf(toViewDocument(b, { keysOf: () => [] }), 'shape.pipe').widget;
       expect((pipe.bindings!.form!.map as { values: Record<string, string> }).values.trip).toBe(form);
@@ -1091,7 +1091,7 @@ describe('the picture model of a v2 board', () => {
       const definition = (doc.kind === 'canvas' && doc.elements?.[element]) as { template: string; style: string };
       // The element reads the status's emphasis from its `emphasis` prop, and draws each word.
       expect(definition.template, element).toContain('data-emphasis="{{emphasis}}"');
-      for (const word of ['invert', 'hatch', 'stamp', 'blink']) expect(definition.style, `${element} ${word}`).toContain(`[data-emphasis="${word}"]`);
+      for (const word of ['invert', 'hatch', 'stamp', 'blink', 'strike']) expect(definition.style, `${element} ${word}`).toContain(`[data-emphasis="${word}"]`);
       expect(definition.style, element).toContain('prefers-reduced-motion');
       // Nothing it draws leaves the markup policy: no script, no import, no address.
       expect(checkStyle(definition.style, []), element).toEqual([]);

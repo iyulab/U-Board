@@ -13,6 +13,9 @@ const text = { type: 'string' } as const;
 /** A status's words drawn as a stamp — a heavy frame, a little turned — when its emphasis is `stamp`. */
 const STAMP = '.sm[data-emphasis="stamp"] .st:not(:empty),.mk[data-emphasis="stamp"] .st:not(:empty){display:inline-block;width:fit-content;padding:1px 6px;border:2px solid var(--c);border-radius:3px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;transform:rotate(-6deg)}';
 
+/** A status's words struck through, in the status's colour — when its emphasis is `strike`: cancelled, withdrawn. */
+const STRIKE = '.sm[data-emphasis="strike"] figcaption,.mk[data-emphasis="strike"] .txt{text-decoration:line-through;text-decoration-color:var(--c);text-decoration-thickness:2px}';
+
 /** The blink of an emphasis — the drawing at `TARGET` gone and back, or ringed when the reader asks for less motion. */
 const BLINK = '@keyframes ub-blink{to{visibility:hidden}}TARGET{animation:ub-blink 1.2s steps(2,start) infinite}@media (prefers-reduced-motion:reduce){TARGET{animation:none;outline:2px solid var(--c);outline-offset:2px}}';
 
@@ -44,7 +47,7 @@ export const MARKER: ElementDefinition = {
     '.mk i{display:flex;align-items:center;justify-content:center;box-sizing:border-box}.gl{display:block;font:700 9px/1 var(--u-widget-font-family);color:var(--u-widget-bg,#fff)}.gl:empty{display:none}.mk.ring .gl{font-size:7px}' +
     '.mk.ring .gl,.mk[data-emphasis="invert"] .gl{color:var(--c)}.mk.ring[data-emphasis="invert"] .gl{color:var(--u-widget-bg,#fff)}' +
     '.mk[data-emphasis="hatch"] .gl{color:var(--u-widget-text);text-shadow:0 0 2px var(--u-widget-bg,#fff),0 0 2px var(--u-widget-bg,#fff)}.mk.pin .gl{transform:rotate(45deg) scale(1.414)}' +
-    STAMP + BLINK.replace(/TARGET/g, '.mk[data-emphasis="blink"] i'),
+    STAMP + STRIKE + BLINK.replace(/TARGET/g, '.mk[data-emphasis="blink"] i'),
 };
 
 /** A marker drawn as one of the board's symbols — in its status's colour — with its name, status and note under it. */
@@ -61,7 +64,7 @@ export const MARKER_SYMBOL: ElementDefinition = {
     'small{color:var(--u-widget-text-secondary)}.gl{color:var(--c);font-weight:700}.gl:empty{display:none}' +
     '.sm[data-emphasis="invert"] .sym{background:var(--c);fill:var(--u-widget-bg,#fff);border-radius:4px;padding:2px;box-sizing:border-box}' +
     '.sm[data-emphasis="hatch"] .sym{background:repeating-linear-gradient(-45deg,color-mix(in srgb,var(--c) 22%,transparent) 0 6px,transparent 6px 13px)}' +
-    STAMP + BLINK.replace(/TARGET/g, '.sm[data-emphasis="blink"] .sym'),
+    STAMP + STRIKE + BLINK.replace(/TARGET/g, '.sm[data-emphasis="blink"] .sym'),
 };
 
 /** A text on a canvas, in its status's colour when it has one. */

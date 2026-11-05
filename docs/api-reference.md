@@ -165,7 +165,7 @@ tones (`TONES`: `ok` `info` `watch` `warn` `alarm` `off` `idle` `accent`, and th
 Anything showing a field with a state takes the status's colour, words and mark; a board never writes colours for
 statuses. A status's emphasis reaches the status card, the stat, the status grid's cells, a link's line, a shape's fill and
 a marker — which draws it on its point (`invert` a dot hollow and a ring filled, `hatch` hatched, `blink` blinking, or ringed
-for a reader who asks for less motion) and `stamp` on its status words. A part `as: "legend"` shows the statuses the board uses.
+for a reader who asks for less motion), `stamp` on its status words and `strike` through them (cancelled, withdrawn; a link's line and a shape's fill have no words to strike). A part `as: "legend"` shows the statuses the board uses.
 
 ### `data` — where values come from, and what they mean
 

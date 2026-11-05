@@ -70,7 +70,7 @@ first number, then from each number up); a time's \`state\` can follow the clock
     `## statuses — how each status looks
 
 Tones (always there): ${code(TONES)}. A board names its own statuses, each with a \`tone\`, a \`label\`, and optionally a
-\`glyph\` and an \`emphasis\` (${code(EMPHASES)}). Anything showing a field with a \`state\` takes its status — colour,
+\`glyph\` and an \`emphasis\` (${code(EMPHASES)}; \`strike\` strikes the words through — cancelled, withdrawn). Anything showing a field with a \`state\` takes its status — colour,
 label, glyph. Never write colours for statuses.`,
 
     `## parts — what, of what, which fields

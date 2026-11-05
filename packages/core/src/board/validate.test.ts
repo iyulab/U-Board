@@ -859,7 +859,7 @@ describe('validateBoard', () => {
     };
     expect(issues(board)).toEqual([
       '/statuses/down/tone: "red" is not a tone — use ok · info · watch · warn · alarm · off · idle · accent · past · now · next',
-      '/statuses/slow/emphasis: "glow" is not an emphasis — use invert · hatch · stamp · blink',
+      '/statuses/slow/emphasis: "glow" is not an emphasis — use invert · hatch · stamp · blink · strike',
       '/data/bad/path: a data read needs "path": the request, starting with "/" — or "ref" for an adapter that is not an HTTP connector',
       '/data/bad/where: "where" keeps the items of a "list" whose fields are what it says: { "field": value }, { "field": { "not": value } } or { "field": { "in": [values] } }',
       '/data/bad/now/step: "step" is how often the source has new data, in seconds (more than 0)',
