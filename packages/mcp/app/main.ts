@@ -8,6 +8,7 @@ import { App } from '@modelcontextprotocol/ext-apps/app-with-deps';
 import { BoardView, KO_LABELS, type Adapter, type Attribution, type ResolvedBinding } from '@iyulab/u-board/viewer';
 import type { Board } from '@iyulab/u-board/domain';
 import '@iyulab/u-board/styles.css';
+import { frameHeight } from './frame.js';
 
 /** What `show_board` answers the page with (its `structuredContent`). */
 interface Shown {
@@ -24,7 +25,8 @@ const GATHER_MS = 5;
 const POLL_MS = 30_000;
 
 const app = new App({ name: 'u-board-board-page', version: '1' }, {});
-const root = createRoot(document.getElementById('root')!);
+const frame = document.getElementById('root')!;
+const root = createRoot(frame);
 
 const disconnected = (message: string): ResolvedBinding => ({ value: undefined, quality: 'disconnected', reason: 'transport', message });
 
@@ -65,6 +67,14 @@ function notice(text: string): void {
 
 const read = reader();
 
+/** The frame is as tall as the board is shaped — a wide board does not sit in a tall empty frame — and follows the host when it
+ *  gives the page another width. The host is told the page's height as it changes. */
+let shaped: Board | undefined;
+function fit(): void {
+  if (shaped) frame.style.height = `${frameHeight(shaped, document.documentElement.clientWidth || window.innerWidth)}px`;
+}
+window.addEventListener('resize', fit);
+
 app.ontoolresult = result => {
   const shown = result.structuredContent as Shown | undefined;
   if (result.isError || !shown?.board) {
@@ -77,6 +87,8 @@ app.ontoolresult = result => {
     ...(a.sample !== undefined && { sample: a.sample }),
     resolve: ref => read(a.id, ref),
   }));
+  shaped = shown.board;
+  fit();
   const korean = app.getHostContext()?.locale?.toLowerCase().startsWith('ko') === true;
   root.render(
     createElement(BoardView, {
