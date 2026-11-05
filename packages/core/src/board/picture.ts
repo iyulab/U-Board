@@ -512,7 +512,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
     const query = reads?.query;
     const item = reads?.item;
     const bindings: Record<string, Binding> = {};
-    const bind = (key: string, field: string | undefined, map?: ValueMap) => {
+    const bind = (key: string, field: string | undefined, map?: ValueMap, scalar = false) => {
       if (query === undefined) return;
       const derive = field !== undefined ? fieldOf(query, field).derive : undefined;
       if (derive !== undefined) {
@@ -529,7 +529,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         };
         return;
       }
-      bindings[key] = { ...readFor(query, item, field, at), ...(map ? { map } : {}) };
+      bindings[key] = { ...readFor(query, item, field, at), ...(map ? { map } : {}), ...(scalar ? { scalar: true } : {}) };
     };
     const field = (name: string) => fieldOf(query, name);
     // `highlight` marks one item out from the others like it: the field's value, read beside the widget's own and drawn as a ring
@@ -544,8 +544,9 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
       bind('$dim', dim);
     }
     const formatOf = (f: Field) => f.format ?? (f.digits !== undefined ? `number:${f.digits}` : undefined);
-    /** A field's value bound at `key`, in its words when it names them. */
-    const bindValue = (key: string, name: string) => bind(key, name, field(name).names ? mapOf(field(name).names!, w => w) : undefined);
+    /** A field's value bound at `key`, in its words when it names them. It is a text or a number the widget shows (`scalar`), unless the prop
+     *  takes a structure: a trend's series, the data of a template element. */
+    const bindValue = (key: string, name: string, scalar = true) => bind(key, name, field(name).names ? mapOf(field(name).names!, w => w) : undefined, scalar);
     /** A field's state bound at `<prefix>tone`, and at its words, emphasis and mark where the widget takes them. */
     const bindState = (prefix: string, name: string, takes: { words?: boolean; emphasis?: boolean; glyph?: boolean } = {}) => {
       const rule = field(name).state;
@@ -626,7 +627,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         bindState('data.', name, { emphasis: true });
         // A trend is another field of the same item: the values the reading came from, drawn as a line under it.
         const { trend, ...rest } = options as { trend?: string };
-        if (trend !== undefined) bindValue('data.sparkline', trend);
+        if (trend !== undefined) bindValue('data.sparkline', trend, false);
         const format = formatOf(f);
         return {
           type: 'metric',
@@ -890,7 +891,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
         for (const [prop, ref] of Object.entries(bound)) {
           const [name, what] = ref.split('.') as [string, 'status' | 'tone' | undefined];
           if (what === undefined) {
-            bindValue(prop, name);
+            bindValue(prop, name, false);
             const items = field(name).items;
             if (items !== undefined && bindings[prop] !== undefined) bindings[prop] = { ...bindings[prop]!, itemFields: itemFieldsOf(items) };
           } else bind(prop, name, what === 'tone' ? stateMaps(field(name).state!).tone : statusNames(field(name).state!));

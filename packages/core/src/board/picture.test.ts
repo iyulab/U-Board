@@ -830,6 +830,22 @@ describe('the picture model of a v2 board', () => {
     expect(checkStyle(definition.style!, [])).toEqual([]);
   });
 
+  it('marks what a part shows as a text or a number, and not what takes a structure — an element’s data', () => {
+    const grid: Board['layout'] = { kind: 'grid', items: [['figure', 12], ['card', 12]] };
+    const b = board({ figure: { as: 'stat', of: 'totals', show: 'temp' }, card: { as: 'status-card', of: 'totals', show: ['temp', 'oee'], title: 'Card' } }, grid);
+    expect(nodeOf(view(b), 'figure').widget.bindings!['data.value']!.scalar).toBe(true);
+    expect(nodeOf(view(b), 'card').widget.bindings!['data.readings.0.value']!.scalar).toBe(true);
+
+    const element = board(
+      { hours: { as: 'element', element: 'hours', of: 'hourly', bind: { items: 'value' } } },
+      { kind: 'canvas', size: [400, 200], place: { hours: [0, 0, 400, 200] } },
+    );
+    element.data!.hourly = { from: 'plant', path: '/plant/hourly', fields: { value: { items: { hour: {}, count: {} } } } };
+    element.elements = { hours: { template: '<ul>{{#items}}<li>{{hour}}</li>{{/items}}</ul>', props: { items: 'list' } } };
+    // A template takes its data as it comes: a list.
+    expect(nodeOf(view(element), 'hours').widget.bindings!['items']!.scalar).toBeUndefined();
+  });
+
   it('gives each item of a list an element reads the meaning of its fields — words under their own name, tone beside', () => {
     const b = board(
       { hours: { as: 'element', element: 'hours', of: 'hourly', bind: { items: 'value' } } },

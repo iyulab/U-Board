@@ -823,7 +823,7 @@ element's).
 
 ```ts
 interface Widget { type: string; props?: Record<string, unknown>; bindings?: Record<string, Binding> }
-interface Binding { adapter: string; ref: unknown; at?: string; map?: ValueMap; itemFields?: Record<string, ItemField>; text?: string }
+interface Binding { adapter: string; ref: unknown; at?: string; map?: ValueMap; itemFields?: Record<string, ItemField>; text?: string; scalar?: boolean }
 ```
 
 A widget's `type` is a widget of the widget library, or a drawing of U-Board's own (`element:<name>`); `bindings` map a
@@ -832,7 +832,11 @@ at its path — copying, never mutating — so the static `props` keep the defau
 A binding's `map` is the board's mapping as the picture writes it (`applyValueMap(map, value)`), `itemFields` what each
 row of a list gains (`withItemFields`), `text` a value written into a text (`writeText`). An `ItemField`'s `from` is the
 item's key, or — when it starts with `/` — a JSON Pointer into the item (`/properties/mag`), so a field that lives deeper
-in an item gains a name the widget reads it by; an item without it gains nothing to show.
+in an item gains a name the widget reads it by; an item without it gains nothing to show. A binding marked `scalar` is a
+value the widget shows as a text or a number: a reading that is an object or a list is no value for it, so it is read as
+`disconnected` for the reason `format` (the `message` says where in the answer the value has to be named) and the prop keeps
+its static value — it would otherwise be drawn as `[object Object]` with its quality `live`. The picture marks what a part
+shows (a figure, a reading, a state's word), and not what takes a structure (an element's data).
 
 ### `resolveDocument(picture, adapters)`
 

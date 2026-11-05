@@ -464,6 +464,10 @@ export interface Binding {
    * `"Berth 1 · {{vessel}}"` — read from one item. Applied last, after `itemFields`, so a text can show the words a
    * field gained. A value that is not shown (`disconnected`) leaves the prop as it is. */
   text?: string;
+  /** The value is shown as a text or a number — a figure, a reading, a state's word. A reading that is an object or a list is then no
+   *  value for it: it is read as `disconnected` for the reason `format` — saying so in `message` — and the prop keeps its static value,
+   *  where it would be drawn as "[object Object]". Not for a binding whose widget takes a structure (a list, a series, a template's data). */
+  scalar?: boolean;
 }
 
 /** What a list value is reduced to: see `Binding.derive`. */

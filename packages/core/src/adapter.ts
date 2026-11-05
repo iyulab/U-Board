@@ -217,6 +217,13 @@ export async function resolveBindings(
             }
             read = derived;
           }
+          // A part that shows a text or a number cannot show an object or a list: it would be drawn as "[object Object]", live.
+          if (binding.scalar === true && typeof read === 'object' && read !== null) {
+            quality[propPath] = 'disconnected';
+            reasons[propPath] = 'format';
+            messages[propPath] = `the reading is ${Array.isArray(read) ? 'a list' : 'an object'} where the part shows a text or a number — say where in the answer the value is (a valuePath on the read, or the field's own pointer)`;
+            return;
+          }
           readings[propPath] = read;
           const mapped = binding.map ? applyValueMap(binding.map, read, now) : read;
           const gained = binding.itemFields ? withItemFields(binding.itemFields, mapped, now) : mapped;

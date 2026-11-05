@@ -55,6 +55,32 @@ describe('resolveWidget', () => {
     expect(resolved.quality).toEqual({ value: 'live' });
   });
 
+  it('reads an object or a list as no value for a binding that shows a text or a number, and says why', async () => {
+    const source = new InMemoryAdapter('src', {
+      object: { value: { flow: 128.4 }, quality: 'live' },
+      list: { value: [1, 2], quality: 'live' },
+      number: { value: 128.4, quality: 'live' },
+      nothing: { value: null, quality: 'live' },
+    });
+    const widget = (ref: string, scalar?: boolean): Widget => ({
+      type: 'metric',
+      props: { data: { label: 'Flow', value: '—' } },
+      bindings: { 'data.value': { adapter: 'src', ref, ...(scalar !== undefined && { scalar }) } },
+    });
+    // An object where a figure goes: the placeholder stays, and the part is disconnected for its format — not live, drawn as "[object Object]".
+    const object = await resolveWidget(widget('object', true), [source]);
+    expect(object.props).toEqual({ data: { label: 'Flow', value: '—' } });
+    expect(object.quality).toEqual({ 'data.value': 'disconnected' });
+    expect(object.reasons).toEqual({ 'data.value': 'format' });
+    expect(object.messages?.['data.value']).toMatch(/an object where the part shows a text or a number — say where in the answer the value is/);
+    expect((await resolveWidget(widget('list', true), [source])).messages?.['data.value']).toMatch(/a list where/);
+    // A number, and nothing at all, are what such a part can show.
+    expect((await resolveWidget(widget('number', true), [source])).props).toEqual({ data: { label: 'Flow', value: 128.4 } });
+    expect((await resolveWidget(widget('nothing', true), [source])).quality).toEqual({ 'data.value': 'live' });
+    // A binding not marked takes what the source answered, as it always has: a widget may take a structure.
+    expect((await resolveWidget(widget('object'), [source])).props).toEqual({ data: { label: 'Flow', value: { flow: 128.4 } } });
+  });
+
   it('reads a `$` key without writing it into the props or saying anything about the widget’s own quality', async () => {
     const source = new InMemoryAdapter('cmms', { 'pump-a.state': { value: 'running', quality: 'live' }, 'pump-a.current': { value: true, quality: 'live' } });
     const widget: Widget = {
