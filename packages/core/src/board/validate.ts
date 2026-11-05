@@ -82,6 +82,8 @@ const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i 
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
 /** What a board says at its top, in the order it is written. */
+/** The frames whose corners are square — a skin's `radius` does not round them. */
+const SQUARE_FRAMES: readonly string[] = ['bevel', 'well', 'block', 'double'];
 const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'titles', 'density', 'numerals'];
 const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'];
 /** The sides of a marker's point its words may go on. */
@@ -251,6 +253,10 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (skin[key] !== undefined && !isFontStack(skin[key])) fail(`/board/skin/${key}`, 'a font is family names separated by commas — "Noto Sans KR", serif — not a url, a function or a rule');
   }
   if (skin.radius !== undefined && !(isNum(skin.radius) && skin.radius >= 0)) fail('/board/skin/radius', 'a radius is a number of pixels, 0 or more');
+  // A frame with square corners draws no radius: said, so a board that rounds its cards is not left wondering why the corners stayed square.
+  if (isNum(skin.radius) && skin.radius > 0 && typeof skin.frame === 'string' && SQUARE_FRAMES.includes(skin.frame)) {
+    issues.push({ at: '/board/skin/radius', message: `a "${skin.frame}" frame has square corners — the radius changes nothing under it; use another frame, or leave the radius out`, hint: true });
+  }
   // declared and checked, but not drawn yet — say so, so a board that sets it is not left wondering why nothing changed
   if (isObj(skin.palette) && skin.palette.ground !== undefined) issues.push({ at: '/board/skin/palette/ground', message: '"ground" is not drawn yet — the board looks the same with it; the board own background colour is the palette "backdrop"', hint: true });
 

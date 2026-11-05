@@ -399,6 +399,17 @@ describe('validateBoard', () => {
     expect(at({ face: 'serif' })).toEqual(["/board/skin/numerals/face: a face is plain · mono — the body's font, or the skin's mono (digits of one width)"]);
   });
 
+  it('says a radius changes nothing under a frame with square corners, and nothing of one under a frame that rounds', () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const hints = (skin: unknown) => validateBoard({ ...base, board: { skin } } as never).filter(i => i.hint).map(i => `${i.at}: ${i.message}`);
+    for (const frame of ['bevel', 'well', 'block', 'double']) {
+      expect(hints({ frame, radius: 12 })).toEqual([`/board/skin/radius: a "${frame}" frame has square corners — the radius changes nothing under it; use another frame, or leave the radius out`]);
+    }
+    expect(hints({ frame: 'card', radius: 12 })).toEqual([]);
+    expect(hints({ frame: 'bevel' })).toEqual([]);
+    expect(hints({ frame: 'bevel', radius: 0 })).toEqual([]);
+  });
+
   it('checks the numerals of a stat list as it does those of a list', () => {
     expect(issues(canvas({ k: { as: 'stat-list', of: 'totals', show: ['load'], numerals: { scale: 'large', face: 'mono' } } }))).toEqual([]);
     expect(issues(canvas({ k: { as: 'stat-list', of: 'totals', show: ['load'], numerals: { scale: 'huge' } } }))).toEqual([`/parts/k/numerals/scale: a scale is ${SCALES}`]);

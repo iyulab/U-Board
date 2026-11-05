@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- The check says a skin's `radius` changes nothing under a frame with square corners (`bevel`, `well`, `block`, `double`) — it was accepted and the corners stayed square, with no word of why.
 - A `stat-list` takes `numerals` (`scale`, `weight`, `face`) for its values, as a `list` and a `status-card` do. The scale and the weight need a widget library whose `kv` reads them (the version after 0.48.0); the face reaches it already.
 - A status takes the emphasis `strike`: the words it shows are struck through in its colour — a cancelled flight, a withdrawn order, a retired machine — on a table row, a status card, a stat, a status grid cell, and a marker's label. A link's line and a shape's outline have no words to strike and draw as they did. Needs a widget library that reads `strike` on its own widgets (the version after 0.48.0); an older one draws the item with no emphasis.
 - `numerals.face` (`plain` · `mono`) of a skin, and of a `stat`, `list` or `status-card` part: `mono` draws the figures in the skin's own `mono` font, digits of one width — a table's right-aligned column, a bar's value, a gauge's reading, a metric's figure. The widget library already read one font token for every figure and nothing a board said set it; the board still names no font here, only which of the two it has.
