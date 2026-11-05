@@ -536,6 +536,12 @@ describe('validateBoard', () => {
     expect(hints({ a: part('stat-list', { show: ['load'] }) })).toEqual([]);
   });
 
+  it('says as a hint that a marker that draws a symbol has no side for its words — and keeps quiet for the others', () => {
+    const hints = (parts: Record<string, unknown>) => validateBoard(canvas(parts) as never).filter(i => i.hint).map(i => i.at);
+    expect(hints({ a: { as: 'marker', each: 'equipment', title: '{{key}}', show: 'state', symbol: '{{shape}}', labelAt: 'below' } })).toEqual(['/parts/a/labelAt']);
+    expect(hints({ a: { as: 'marker', each: 'equipment', title: '{{key}}', show: 'state', symbol: '{{shape}}' }, b: { as: 'marker', each: 'equipment', title: '{{key}}', show: 'state', labelAt: 'below' } })).toEqual([]);
+  });
+
   it('says as a hint that a palette’s paper changes nothing where the board draws no frame — and keeps quiet where anything reads it', () => {
     const hints = (extra: Record<string, unknown>, skin: Record<string, unknown> = {}, parts: Record<string, unknown> = { a: { as: 'stat', of: 'totals', show: 'count' } }) =>
       validateBoard({ ...canvas(parts), board: { skin: { palette: { paper: '#fff8e8' }, ...skin } }, ...extra } as never).filter(i => i.hint).map(i => i.at);

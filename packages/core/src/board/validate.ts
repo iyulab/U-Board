@@ -581,6 +581,8 @@ export function validateBoard(input: unknown): BoardIssue[] {
       else if (wholeList || reads === null) fail(`${at}/${word}`, `"${word}" marks one item — the part reads one: "of": "<data>[<key>]", or "each"`);
     }
     if (kind.kind === 'marker' && part.labelAt !== undefined && !MARKER_SIDES.includes(part.labelAt as string)) fail(`${at}/labelAt`, `"labelAt" is the side of the point its words go — ${MARKER_SIDES.join(' · ')} (auto: the side its links leave free)`);
+    // A marker that draws a symbol puts its words under the symbol; the side a point's words go (`labelAt`) is for the others.
+    if (kind.kind === 'marker' && part.symbol !== undefined && part.labelAt !== undefined) issues.push({ at: `${at}/labelAt`, message: `a marker that draws a symbol puts its words under the symbol — "labelAt" is the side of a point's words (the other markers), and changes nothing on it`, hint: true });
     if (kind.kind === 'marker' && part.shape !== undefined && !MARKER_SHAPES.includes(part.shape as string)) fail(`${at}/shape`, `"shape" is how the point is drawn — ${MARKER_SHAPES.join(' · ')} (a drawing of the board's own is "symbol")`);
     checkStyleOptions(part, kind.kind, at);
     if (kind.kind === 'stat' && part.trend !== undefined && typeof part.trend !== 'string') fail(`${at}/trend`, '"trend" names a field of the item holding its recent values, a list of numbers');
