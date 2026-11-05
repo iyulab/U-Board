@@ -410,6 +410,11 @@ describe('validateBoard', () => {
     expect(hints({ frame: 'bevel', radius: 0 })).toEqual([]);
   });
 
+  it('takes `header` on a table — the rows alone, the headers kept for a screen reader — and says what a table takes', () => {
+    expect(issues(canvas({ t: { as: 'table', of: 'totals', header: false } }))).toEqual([]);
+    expect(issues(canvas({ t: { as: 'table', of: 'totals', heading: false } }))[0]).toContain('is not an option — options of a table: state, pageSize, compact, searchable, sortable, interactive, maxItems, header');
+  });
+
   it('checks the numerals of a stat list as it does those of a list', () => {
     expect(issues(canvas({ k: { as: 'stat-list', of: 'totals', show: ['load'], numerals: { scale: 'large', face: 'mono' } } }))).toEqual([]);
     expect(issues(canvas({ k: { as: 'stat-list', of: 'totals', show: ['load'], numerals: { scale: 'huge' } } }))).toEqual([`/parts/k/numerals/scale: a scale is ${SCALES}`]);

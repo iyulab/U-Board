@@ -142,9 +142,13 @@ describe('findProblems', () => {
       </u-widget></div>
       <div data-node-id="e"><u-widget style="display:block;width:200px;height:100px">
         <template shadowrootmode="open"><div style="width:200px;height:100px"><div style="width:100px;height:40px;overflow:hidden"><div style="margin-left:150px;height:30px">aside</div></div></div></template>
+      </u-widget></div>
+      <div data-node-id="f"><u-widget style="display:block;width:200px;height:100px">
+        <template shadowrootmode="open"><div style="width:200px;height:100px"><div style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)"><div style="height:25px">headers kept for a screen reader</div></div><div>rows</div></div></template>
       </u-widget></div>`);
     // `e` is a box pushed out of its clip sideways: it keeps its height, nothing of it is cut off downward.
-    expect(await page.evaluate(findProblems, [node('a'), node('b'), node('c'), node('d'), node('e')])).toEqual([
+    // `f` is a visually hidden box (a pixel across): what it holds is not meant to be seen, so nothing of it is cut off.
+    expect(await page.evaluate(findProblems, [node('a'), node('b'), node('c'), node('d'), node('e'), node('f')])).toEqual([
       { path: '/nodes/a', message: 'its content is cut off inside the widget — up to 20 px of it sits past a box that clips it; give it more room' },
       { path: '/nodes/d', message: 'its content is cut off inside the widget — up to 10 px of it sits past a box that clips it; give it more room' },
     ]);

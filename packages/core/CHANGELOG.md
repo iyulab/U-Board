@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A `table` part takes `header: false`: the rows alone on screen, with no column headers (they stay in the page for a screen reader, and a column cannot then be sorted by clicking its header). Needs a widget library that has the option (the version after 0.48.0).
 - The check says a skin's `radius` changes nothing under a frame with square corners (`bevel`, `well`, `block`, `double`) — it was accepted and the corners stayed square, with no word of why.
 - A `stat-list` takes `numerals` (`scale`, `weight`, `face`) for its values, as a `list` and a `status-card` do. The scale and the weight need a widget library whose `kv` reads them (the version after 0.48.0); the face reaches it already.
 - A status takes the emphasis `strike`: the words it shows are struck through in its colour — a cancelled flight, a withdrawn order, a retired machine — on a table row, a status card, a stat, a status grid cell, and a marker's label. A link's line and a shape's outline have no words to strike and draw as they did. Needs a widget library that reads `strike` on its own widgets (the version after 0.48.0); an older one draws the item with no emphasis.

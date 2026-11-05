@@ -99,7 +99,12 @@ export function findProblems(
   function clippedByHidden(part: Element): boolean {
     for (let a = part.parentElement; a; a = a.parentElement) {
       const overflow = getComputedStyle(a).overflowY;
-      if (overflow === 'hidden' || overflow === 'clip') return true;
+      if (overflow === 'hidden' || overflow === 'clip') {
+        // A box a pixel across that clips is a visually hidden one (a table's headers kept for a screen reader): what it holds is
+        // not cut off, it is not meant to be seen.
+        const box = a.getBoundingClientRect();
+        return box.width > 2 && box.height > 2;
+      }
       if (overflow === 'auto' || overflow === 'scroll') return false;
     }
     return false;
