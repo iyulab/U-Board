@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- The check says a part's `titles: "band"` or `"tab"` changes nothing on a `stat`, `status-card`, `gauge` or `header`: those draw their own title inside themselves, and the band and the tab are drawn around the title of a stat list, table, list, bar list, status grid or chart. It was accepted and the title stayed plain.
 - The check says a palette's `paper` changes nothing where the board draws no frame — no skin `frame`, no part of its own, and nothing else that reads the paper (a band or tab title, an element or a symbol, a background picture): the parts stay transparent on the board's background, and nothing said why.
 - The check says `"key"` is not a field where an option names a field of each item — a bar list's or status grid's `label` and `value`, a list's `primary` and its other lines: the part draws nothing for it, and the message names the field that does name the items (`key: "id"` on the data → write `"id"`). Advice, not an error: an item may have a field called key.
 - A `table` part takes `header: false`: the rows alone on screen, with no column headers (they stay in the page for a screen reader, and a column cannot then be sorted by clicking its header). Needs a widget library that has the option (the version after 0.48.0).

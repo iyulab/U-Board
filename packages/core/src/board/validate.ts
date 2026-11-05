@@ -74,6 +74,9 @@ const PART_FIELDS = ['as', 'use', 'of', 'each', 'title', 'show', 'highlight', 'd
 /** What a part drawn by a widget may also say: the frame it is drawn in and the style of its title, in place of the skin's. */
 const PART_LOOK = ['frame', 'titles'] as const;
 const TITLE_STYLES = ['plain', 'band', 'tab'] as const;
+/** The kinds that draw their title inside themselves (a stat's label, a card's title, a gauge's subtitle, a header's text): the
+ *  band and the tab are drawn by the widget host around the title it draws itself, so they never reach these. */
+const OWN_TITLE_KINDS = ['stat', 'status-card', 'gauge', 'header'];
 
 /** The spans (twelfths) that take whole columns of a cell `cell` columns wide. */
 const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i + 1).filter(s => (cell * s) % 12 === 0).map(String));
@@ -658,6 +661,14 @@ export function validateBoard(input: unknown): BoardIssue[] {
           reportedPresetOptions.add(keyAt);
         }
         fail(keyAt, `"${String(value)}" is not a ${key} of a ${kind.kind} — ${words.join(' · ')}`);
+      }
+      // A band or a tab is the widget host's drawing of the title it draws: a kind that draws its own title is left plain, said.
+      if ((part.titles === 'band' || part.titles === 'tab') && OWN_TITLE_KINDS.includes(kind.kind)) {
+        const keyAt = 'titles' in raw ? `${at}/titles` : `/presets/${String(raw.use)}/titles`;
+        if ('titles' in raw || !reportedPresetOptions.has(keyAt)) {
+          if (!('titles' in raw)) reportedPresetOptions.add(keyAt);
+          issues.push({ at: keyAt, message: `a ${kind.kind} draws its own title, so a "${part.titles}" title changes nothing on it — the band and the tab are drawn around the title of a stat list, table, list, bar list, status grid or chart`, hint: true });
+        }
       }
     }
     // An option the widget lets only some words through: another would be drawn the widget's default way, without a word.

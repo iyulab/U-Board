@@ -504,6 +504,18 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('says as a hint that a part’s title style is not drawn on a kind that draws its own title', () => {
+    const hints = (parts: Record<string, unknown>, more: Record<string, unknown> = {}) =>
+      validateBoard({ ...canvas(parts), ...more } as never).filter(i => i.hint).map(i => i.at);
+    const part = (as: string, extra: Record<string, unknown> = {}) => ({ as, of: 'totals', show: 'count', ...extra });
+    expect(hints({ a: part('stat', { titles: 'band' }), b: part('status-card', { titles: 'tab' }), c: part('gauge', { titles: 'band' }), d: part('header', { titles: 'band' }) }))
+      .toEqual(['/parts/a/titles', '/parts/b/titles', '/parts/c/titles', '/parts/d/titles']);
+    // where the host draws the title the band is drawn, and `plain` is nothing to say
+    expect(hints({ a: part('stat-list', { titles: 'band' }), b: part('table', { titles: 'tab' }), c: part('stat', { titles: 'plain' }) })).toEqual([]);
+    // a preset's `titles` is said once, at the preset, however many parts use it
+    expect(hints({ a: { use: 'tabbed', of: 'totals', show: 'count' }, b: { use: 'tabbed', of: 'totals', show: 'count' } }, { presets: { tabbed: { as: 'status-card', titles: 'tab' } } })).toEqual(['/presets/tabbed/titles']);
+  });
+
   it('says as a hint that a palette’s paper changes nothing where the board draws no frame — and keeps quiet where anything reads it', () => {
     const hints = (extra: Record<string, unknown>, skin: Record<string, unknown> = {}, parts: Record<string, unknown> = { a: { as: 'stat', of: 'totals', show: 'count' } }) =>
       validateBoard({ ...canvas(parts), board: { skin: { palette: { paper: '#fff8e8' }, ...skin } }, ...extra } as never).filter(i => i.hint).map(i => i.at);
