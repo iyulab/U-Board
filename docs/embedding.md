@@ -11,6 +11,7 @@ go. [Concepts](concepts.md) explains the terms; the [API reference](api-referenc
 | The values a person chooses (a line, a day) | `variables`: the board is drawn at them, and again when they change |
 | What happens when a person acts on a part | Calls to your code (`onTrigger`, `onInput`) — nothing is written anywhere |
 | A chat panel and a model, if an assistant should draw boards | The same tools as an MCP server, as functions you give your own model (`@iyulab/u-board-mcp/tools`) |
+| A board as a file — for a report, a record, a share | A picture of it as a PNG (`renderBoard` in `@iyulab/u-board-mcp/render`, with Chrome or Edge on the computer), and a print that keeps its colours |
 
 ## A host's side, end to end
 
@@ -99,6 +100,14 @@ and your key stay yours; see [In your own app](../packages/mcp/README.md#in-your
 
 The loop closes where you hold the board: when `save` resolves, give `BoardView` the saved document, and people who only read it see
 what the assistant drew.
+
+## A board as a picture
+
+A report, a record or a share wants the board as a file, as the people who read it see it. On a server or in a script, `renderBoard` from
+`@iyulab/u-board-mcp/render` draws a board with the viewer in Chrome or Edge on that computer and answers a PNG: you give it the board and the
+adapters your app already has (they run in your process, and the picture shows what they answer now), and a size. In a browser app the viewer is
+already on the page: printing it, or saving it as PDF, keeps its colours and leaves the zoom controls out. See
+[A board as a picture](../packages/mcp/README.md#a-board-as-a-picture).
 
 ## Checking a board from a host that is not a JavaScript program
 

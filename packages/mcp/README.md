@@ -94,6 +94,30 @@ A store that holds one board is offered the tools about that board; a store that
 (`UBoardClient`) is offered the ones about lists and data sources too. Draw the saved board with `@iyulab/u-board/viewer` for the people who
 only read it, and write the board's data side — what each `of` reads — as an adapter of your own.
 
+### A board as a picture
+
+A report, a record or a share wants the board as a file: what it looks like now, as the people who read it see it. `renderBoard` from
+`@iyulab/u-board-mcp/render` draws a board the way `BoardView` does, in a browser on this computer, and answers a PNG.
+
+```ts
+import { renderBoard } from '@iyulab/u-board-mcp/render';
+
+const { png, report } = await renderBoard({
+  board, // the board, as `BoardView` takes it
+  adapters: [myAdapter], // read here, in your process — the browser asks them one reference at a time
+  width: 1280,
+  height: 720,
+  appearance: 'dark', // optional: the other paper
+});
+await writeFile('line-3.png', png);
+console.log(report.problems); // parts that did not draw as written, as `look` says them
+```
+
+It needs Chrome or Edge on the computer (or `browser`, or `UBOARD_BROWSER`, the path of a Chromium-based browser). There is no server
+and no network of its own: the page it draws in ships with this package and is served from it, and a blinking state is drawn on, still. A
+binding no adapter answers for, or an adapter that throws, is drawn as disconnected and counted in `report.quality`. In a browser app
+there is nothing to run: the viewer is already on the page, and printing it (or saving it as PDF) gives the same colours.
+
 ## License
 
 MIT.

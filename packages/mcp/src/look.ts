@@ -86,41 +86,55 @@ export class BrowserLooker implements Looker {
       page.on('console', message => message.type() === 'error' && console.push(message.text()));
       page.on('pageerror', error => console.push(error.message));
       await page.goto(`${origin}/share/?board=${encodeURIComponent(request.board)}&token=look`);
-      await page.waitForSelector('.ub-viewer__surface', { timeout: 20_000 });
-      await page.waitForLoadState('networkidle', { timeout: 20_000 }).catch(() => {});
-      await page.waitForTimeout(SETTLE_MS);
-      await untilReadsAnswer(page);
-
-      const scale = await sceneScale(page, document);
-      const clip = request.focus ? await focusClip(page, document, request.focus, scale) : undefined;
-      // The whole view is taken in any case: the contrast check reads what is drawn behind each text off it.
-      const whole = await page.screenshot(PICTURE);
-      const png = clip ? await page.screenshot({ ...PICTURE, clip }) : whole;
-      const lowContrast = await page.evaluate(findLowContrast, {
-        picture: `data:image/png;base64,${whole.toString('base64')}`,
-        ratio: request.focus ? 2 : 1,
-        placed: placedParts(document),
-        limit: MAX_CONTRAST_PROBLEMS,
-      });
-      return {
-        image: png.toString('base64'),
-        report: {
-          ...(scale && { scale: Math.round(scale.factor * 1000) / 1000 }),
-          picture: clip ? { width: Math.round(clip.width), height: Math.round(clip.height) } : { width: request.width, height: request.height },
-          problems: [...(await problems(page, document)), ...lowContrast],
-          quality: await quality(page),
-          console: console.slice(0, MAX_CONSOLE_LINES),
-        },
-      };
+      return await photograph(page, document, request, console);
     } finally {
       await browser.close();
     }
   }
 }
 
-export async function launch(): Promise<Browser> {
+/**
+ * Takes the picture of a board drawn in `page` — once its viewer has settled and each part has had its first read — and
+ * what the page reported while drawing it. What `look` answers, and what `renderBoard` does: one way to photograph a board, so
+ * the picture and its report are the same wherever the board was drawn.
+ */
+export async function photograph(
+  page: Page,
+  document: ViewDocument,
+  request: Pick<LookRequest, 'focus' | 'width' | 'height'>,
+  console: string[]
+): Promise<LookResult> {
+  await page.waitForSelector('.ub-viewer__surface', { timeout: 20_000 });
+  await page.waitForLoadState('networkidle', { timeout: 20_000 }).catch(() => {});
+  await page.waitForTimeout(SETTLE_MS);
+  await untilReadsAnswer(page);
+
+  const scale = await sceneScale(page, document);
+  const clip = request.focus ? await focusClip(page, document, request.focus, scale) : undefined;
+  // The whole view is taken in any case: the contrast check reads what is drawn behind each text off it.
+  const whole = await page.screenshot(PICTURE);
+  const png = clip ? await page.screenshot({ ...PICTURE, clip }) : whole;
+  const lowContrast = await page.evaluate(findLowContrast, {
+    picture: `data:image/png;base64,${whole.toString('base64')}`,
+    ratio: request.focus ? 2 : 1,
+    placed: placedParts(document),
+    limit: MAX_CONTRAST_PROBLEMS,
+  });
+  return {
+    image: png.toString('base64'),
+    report: {
+      ...(scale && { scale: Math.round(scale.factor * 1000) / 1000 }),
+      picture: clip ? { width: Math.round(clip.width), height: Math.round(clip.height) } : { width: request.width, height: request.height },
+      problems: [...(await problems(page, document)), ...lowContrast],
+      quality: await quality(page),
+      console: console.slice(0, MAX_CONSOLE_LINES),
+    },
+  };
+}
+
+export async function launch(browser?: string): Promise<Browser> {
   const { chromium } = await import('playwright-core');
-  const executablePath = process.env.UBOARD_BROWSER;
+  const executablePath = browser ?? process.env.UBOARD_BROWSER;
   if (executablePath) return chromium.launch({ executablePath });
   for (const channel of ['chrome', 'msedge']) {
     try {

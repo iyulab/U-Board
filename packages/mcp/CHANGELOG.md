@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `renderBoard` (`@iyulab/u-board-mcp/render`): a board as a PNG, for a host that keeps its boards itself — a report, a record, a share. It draws the board with the library's own viewer in Chrome or Edge on this computer, reads its values through the host's own adapters (they stay in the host's process; the page asks them one reference at a time), and answers the picture with the report `look` gives: what did not draw as written, how current the values were, what the page complained of. No server and no network: the page it draws in ships with the package. `look` takes its pictures the same way.
+
 ## [0.28.1] - 2026-11-05
 
 ### Changed
