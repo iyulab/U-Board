@@ -20,7 +20,7 @@ const canvas = (parts: Record<string, unknown>, more: Record<string, unknown> = 
   parts,
   layout: { kind: 'canvas', size: [400, 600], place: Object.fromEntries(Object.keys(parts).map((id, i) => [id, [10, 10 + i * 80, 150, 70]])), ...more },
 });
-const grid = (items: unknown[], parts: Record<string, unknown> = { a: { as: 'stat', of: 'totals' }, b: { as: 'chart.line', of: 'equipment' } }) => ({
+const grid = (items: unknown[], parts: Record<string, unknown> = { a: { as: 'stat', show: 'v', of: 'totals' }, b: { as: 'chart.line', of: 'equipment' } }) => ({
   data, parts, layout: { kind: 'grid', items },
 });
 const pump = {
@@ -32,7 +32,7 @@ const pump = {
 
 const AGREED: [string, unknown, boolean][] = [
   ['a canvas board with statuses, a look, shapes and links', {
-    ...canvas({ P1: { as: 'status-card', of: 'equipment[P1]', title: '{{key}}', show: ['state', 'temp'] }, T: { as: 'stat', of: 'totals' } }, {
+    ...canvas({ P1: { as: 'status-card', of: 'equipment[P1]', title: '{{key}}', show: ['state', 'temp'] }, T: { as: 'stat', of: 'totals', show: 'temp' } }, {
       shapes: { zone: { box: [0, 0, 100, 60], label: 'Zone A', tone: 'accent' }, note: { text: 'North', at: [5, 5], size: 12 }, edge: { path: 'M 0 0 L 10 10' } },
       links: { feed: { from: 'P1', to: 'T', of: 'equipment[P1]', show: 'state', label: '{{temp}}', arrow: 'end' } },
     }),
@@ -47,25 +47,25 @@ const AGREED: [string, unknown, boolean][] = [
   }, true],
   ['every kind there is', { elements: { e: { template: '<svg/>' } }, ...grid(PART_KINDS.map(k => k.kind), Object.fromEntries(PART_KINDS.map(k => [k.kind, k.kind === 'group'
     ? { as: 'group', size: [10, 10], parts: {}, place: {} }
-    : { as: k.kind, ...(k.of === 'no' ? {} : { of: 'equipment' }), ...(k.kind === 'element' ? { element: 'e' } : {}) }]))) }, true],
+    : { as: k.kind, ...(k.of === 'no' ? {} : { of: 'equipment', show: 'state' }), ...(k.kind === 'element' ? { element: 'e' } : {}) }]))) }, true],
 
   ['a word at the top the language does not have', { ...canvas({}), widgets: {} }, false],
   ['a kind that is not one', canvas({ a: { as: 'timeline', of: 'totals' } }), false],
-  ['a part with both of and each', canvas({ a: { as: 'stat', of: 'equipment[P1]', each: 'equipment' } }), false],
-  ['an item named with a slash', canvas({ a: { as: 'stat', of: 'equipment/P1' } }), false],
+  ['a part with both of and each', canvas({ a: { as: 'stat', show: 'v', of: 'equipment[P1]', each: 'equipment' } }), false],
+  ['an item named with a slash', canvas({ a: { as: 'stat', show: 'v', of: 'equipment/P1' } }), false],
   ['a status in a tone that is not one', { ...canvas({}), statuses: { down: { tone: 'red' } } }, false],
   ['a frame that is not one', { ...canvas({}), board: { skin: { frame: 'stamp' } } }, false],
   ['a word in the board head it does not have', { ...canvas({}), board: { title: 'x', colour: '#000' } }, false],
   ['a data read with a relative path', { ...canvas({}), data: { x: { from: 'p', path: 'x' } } }, false],
   ['a request time that does not step', { ...canvas({}), data: { x: { from: 'p', path: '/x', list: '/v', now: { step: 0 } } } }, false],
   ['a field with a fraction of digits', { ...canvas({}), data: { x: { from: 'p', path: '/x', fields: { v: { digits: 1.5 } } } } }, false],
-  ['a place of three numbers', { ...canvas({ a: { as: 'stat', of: 'totals' } }), layout: { kind: 'canvas', size: [10, 10], place: { a: [0, 0, 1] } } }, false],
+  ['a place of three numbers', { ...canvas({ a: { as: 'stat', show: 'v', of: 'totals' } }), layout: { kind: 'canvas', size: [10, 10], place: { a: [0, 0, 1] } } }, false],
   ['a span past the columns', grid([['a', 13], 'b']), false],
   ['a grid cell holding a part and a grid', grid([{ id: 'a', grid: ['b'] }]), false],
   ['a shape that is a box and a text', canvas({}, { shapes: { s: { box: [0, 0, 1, 1], text: 'x', at: [0, 0] } } }), false],
   ['a line of one point', canvas({}, { shapes: { s: { line: [[0, 0]] } } }), false],
   ['a relative path', canvas({}, { shapes: { s: { path: 'm 0 0 l 1 1' } } }), false],
-  ['a link that shows a field of nothing', { ...canvas({ a: { as: 'stat', of: 'totals' } }, { links: { l: { from: 'a', to: 'a', show: 'state' } } }) }, false],
+  ['a link that shows a field of nothing', { ...canvas({ a: { as: 'stat', of: 'totals', show: 'temp' } }, { links: { l: { from: 'a', to: 'a', show: 'state' } } }) }, false],
   ['a group with no place', canvas({ g: { as: 'group', size: [10, 10], parts: {} } }), false],
   ['an element prop of a type there is not', { ...canvas({}), elements: { e: { template: '<svg/>', props: { a: 'float' } } } }, false],
   ['an element bound to an expression', { ...canvas({ t: { as: 'element', element: 'e', of: 'totals', bind: { a: 'count + 1' } } }), elements: { e: { template: '<svg>{{a}}</svg>', props: { a: 'number' } } } }, false],

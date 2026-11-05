@@ -29,6 +29,37 @@ describe('validateBoard', () => {
     expect(issues(canvas({ a: { as: 'status-card', of: 'equipment[PR-01]', show: 'state' }, t: { as: 'stat', of: 'totals', show: 'count' } }))).toEqual([]);
   });
 
+  it('says a part that draws the fields "show" names has none — it would be drawn empty, or as "[object Object]" or "NaN"', () => {
+    const parts = {
+      stat: { as: 'stat', of: 'equipment[PR-01]' },
+      gauge: { as: 'gauge', of: 'equipment[PR-01]' },
+      list: { as: 'stat-list', of: 'equipment[PR-01]' },
+      card: { as: 'status-card', of: 'equipment[PR-01]', show: [] },
+      bars: { as: 'bar-list', of: 'equipment' },
+    };
+    expect(issues(canvas(parts))).toEqual([
+      '/parts/stat/show: a stat shows one field of what it reads — give "show": "<field>"',
+      '/parts/gauge/show: a gauge shows one field of what it reads — give "show": "<field>"',
+      '/parts/list/show: a stat-list shows the fields "show" names — give "show": ["<field>", …]; without it only the title is drawn',
+      '/parts/card/show: a status-card shows the fields "show" names, the status of its "state" and its "meter" — give at least one; without them only the title is drawn',
+      '/parts/bars/show: a bar-list draws a bar for a field of each item — give "show": "<field>" (or "value": "<field>")',
+    ]);
+  });
+
+  it('takes a part with no "show" where the data supplies what it draws', () => {
+    // A table, a list and a status grid take their columns, lines and cells from the data; a bar list may name its field as "value";
+    // a part inside a group, or one made from a preset, is judged by what it comes to.
+    const parts = {
+      table: { as: 'table', of: 'equipment' },
+      lines: { as: 'list', of: 'equipment' },
+      grid: { as: 'status-grid', of: 'equipment' },
+      bars: { as: 'bar-list', of: 'equipment', value: 'state' },
+      shown: { use: 'card', of: 'equipment[PR-01]' },
+      gauged: { as: 'status-card', of: 'equipment[PR-01]', state: 'state', meter: 'state' },
+    };
+    expect(issues({ ...canvas(parts), presets: { card: { as: 'status-card', show: ['state'] } } })).toEqual([]);
+  });
+
   it('names the sections a board has', () => {
     expect(issues({ ...canvas({}), nodes: [] })).toEqual([
       '/nodes: a board has no "nodes" — its sections are board, statuses, symbols, elements, variables, data, presets, parts, layout, triggers',
@@ -36,11 +67,11 @@ describe('validateBoard', () => {
   });
 
   it('says how to write an item of data, and names what there is', () => {
-    expect(issues(canvas({ a: { as: 'stat', of: 'equipment/PR-01' } }))).toEqual([
+    expect(issues(canvas({ a: { as: 'stat', show: 'v', of: 'equipment/PR-01' } }))).toEqual([
       '/parts/a/of: an item of data is written "equipment[PR-01]" — "/" is only in the ids of parts "each" makes',
     ]);
-    expect(issues(canvas({ a: { as: 'stat', of: 'machines[M1]' } }))).toEqual(['/parts/a/of: no data "machines" — data: equipment, totals']);
-    expect(issues(canvas({ a: { as: 'stat', of: 'totals[T1]' } }))[0]).toContain('"totals" has no "list"');
+    expect(issues(canvas({ a: { as: 'stat', show: 'v', of: 'machines[M1]' } }))).toEqual(['/parts/a/of: no data "machines" — data: equipment, totals']);
+    expect(issues(canvas({ a: { as: 'stat', show: 'v', of: 'totals[T1]' } }))[0]).toContain('"totals" has no "list"');
   });
 
   it('checks what the fields of the items a field holds mean — a mapping, a pointer from the item, no nesting', () => {
@@ -76,23 +107,23 @@ describe('validateBoard', () => {
 
   it('says a preset is not built on another preset, instead of reporting a part with no "as"', () => {
     const base = canvas({ a: { use: 'wide', of: 'equipment[PR-01]' } });
-    const board = { ...base, presets: { card: { as: 'stat' }, wide: { use: 'card' } } };
+    const board = { ...base, presets: { card: { as: 'stat', show: 'v' }, wide: { use: 'card' } } };
     expect(issues(board)).toEqual(['/presets/wide/use: a preset does not use another preset — write what "card" gives into "wide", or let the part use "card" and add its own options']);
   });
 
   it('checks presets and each', () => {
     expect(issues(canvas({ a: { use: 'card', of: 'equipment[PR-01]' } }))[0]).toBe('/parts/a/use: no preset "card" — presets: none');
-    expect(issues(canvas({ a: { as: 'stat', each: 'equipment', of: 'equipment[PR-01]' } }))).toContain(
+    expect(issues(canvas({ a: { as: 'stat', show: 'v', each: 'equipment', of: 'equipment[PR-01]' } }))).toContain(
       '/parts/a/of: a part with "each" takes its items from "each" — leave "of" out',
     );
-    expect(issues(canvas({ a: { as: 'stat', each: 'totals' } }))).toContain('/parts/a/each: "each" makes a part per item of a "list" — "totals" has none');
-    expect(issues({ ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' } }), presets: { card: { as: 'status-card' } } })).toEqual([]);
+    expect(issues(canvas({ a: { as: 'stat', show: 'v', each: 'totals' } }))).toContain('/parts/a/each: "each" makes a part per item of a "list" — "totals" has none');
+    expect(issues({ ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' } }), presets: { card: { as: 'status-card', show: 'v' } } })).toEqual([]);
   });
 
   it('finds a part that is not placed, and a place of no part', () => {
-    const board = canvas({ a: { as: 'stat', of: 'totals' } });
+    const board = canvas({ a: { as: 'stat', show: 'v', of: 'totals' } });
     (board.layout as Record<string, unknown>).place = { b: [0, 0] };
-    expect(issues({ ...board, parts: { a: { as: 'stat', of: 'totals' } } })).toEqual([
+    expect(issues({ ...board, parts: { a: { as: 'stat', show: 'v', of: 'totals' } } })).toEqual([
       '/layout/place/b: no part "b" — parts: a; add "/parts/b" in the same patch, or take it out of the layout',
       '/parts/a: "a" is not placed — put it in the layout (add "/layout/place/a": [x, y, width, height] in the same patch as the part), or remove it',
     ]);
@@ -100,7 +131,7 @@ describe('validateBoard', () => {
 
   it('lays out the items of a list with no key in a grid, and asks for a key to place them one by one', () => {
     const queue = { from: 'kitchen', path: '/tickets', list: '/value' };
-    const parts = { t: { as: 'status-card', each: 'queue' } };
+    const parts = { t: { as: 'status-card', show: 'v', each: 'queue' } };
     expect(issues({ data: { queue }, parts, layout: { kind: 'grid', items: [['t', 3]] } })).toEqual([]);
     expect(issues({ data: { queue }, parts, layout: { kind: 'canvas', size: [400, 300], place: { t: { '1': [0, 0] } } } })).toEqual([
       '/layout/place/t: items placed one by one are named by their "key" — give "queue" a "key", or lay them out in a grid',
@@ -108,7 +139,7 @@ describe('validateBoard', () => {
   });
 
   it('places an each part item by item, inside its own entry', () => {
-    const board = { data, parts: { m: { as: 'status-card', each: 'equipment' } }, layout: { kind: 'canvas', size: [400, 300], place: { m: { 'PR-01': [0, 0, 100, 60] } } } };
+    const board = { data, parts: { m: { as: 'status-card', show: 'v', each: 'equipment' } }, layout: { kind: 'canvas', size: [400, 300], place: { m: { 'PR-01': [0, 0, 100, 60] } } } };
     expect(issues(board)).toEqual([]);
     expect(issues({ ...board, layout: { ...board.layout, place: { 'm/PR-01': [0, 0] } } })).toEqual([
       '/layout/place/m/PR-01: "m/PR-01" is an item of the "each" part "m" — place it inside it: "m": { "PR-01": [x, y, w, h], … }',
@@ -117,7 +148,7 @@ describe('validateBoard', () => {
   });
 
   it('stacks parts in a grid cell that holds a grid, and checks spans', () => {
-    const parts = { map: { as: 'stat', of: 'totals' }, chart: { as: 'chart.bar', of: 'equipment' }, alarms: { as: 'list', of: 'equipment' } };
+    const parts = { map: { as: 'stat', show: 'v', of: 'totals' }, chart: { as: 'chart.bar', of: 'equipment' }, alarms: { as: 'list', of: 'equipment' } };
     const grid = (items: unknown[]) => ({ data, parts, layout: { kind: 'grid', items } });
     expect(issues(grid([['map', 8], { grid: ['chart', ['alarms', 12]], span: 4 }]))).toEqual([]);
     expect(issues(grid(['map', { id: 'right', grid: ['chart', 'alarms'] }]))).toEqual([
@@ -134,7 +165,7 @@ describe('validateBoard', () => {
   });
 
   it('lays a grid in a cell out in rows that fill the cell, of whole columns', () => {
-    const parts = { map: { as: 'stat', of: 'totals' }, a: { as: 'stat', of: 'totals' }, b: { as: 'stat', of: 'totals' }, c: { as: 'stat', of: 'totals' } };
+    const parts = { map: { as: 'stat', show: 'v', of: 'totals' }, a: { as: 'stat', show: 'v', of: 'totals' }, b: { as: 'stat', show: 'v', of: 'totals' }, c: { as: 'stat', show: 'v', of: 'totals' } };
     const grid = (items: unknown[]) => ({ data, parts, layout: { kind: 'grid', items } });
     expect(issues(grid([{ grid: [['a', 6], ['b', 6], 'c'], span: 4 }, ['map', 8]]))).toEqual([]);
     expect(issues(grid([{ grid: [['a', 6], 'b', ['c', 6]], span: 4 }, ['map', 8]]))).toEqual([
@@ -177,7 +208,7 @@ describe('validateBoard', () => {
 
   it('links parts, items of each parts and parts in groups; a link with a status reads a data item', () => {
     const parts = {
-      P1: { as: 'status-card', of: 'equipment[P1]' },
+      P1: { as: 'status-card', show: 'v', of: 'equipment[P1]' },
       pumps: { as: 'group', each: 'equipment', size: [100, 60], parts: { valve: { as: 'stat', show: 'state' } }, place: { valve: [0, 0] } },
     };
     const board = (links: Record<string, unknown>) => ({
@@ -197,7 +228,7 @@ describe('validateBoard', () => {
 
   it('takes a link’s arrowheads as fixed ends or from a field, by a map of words or bands of a number', () => {
     const board = (arrow: unknown, of: string | null = 'equipment[P1]') => ({
-      data, parts: { P1: { as: 'status-card', of: 'equipment[P1]' }, P2: { as: 'status-card', of: 'equipment[P2]' } },
+      data, parts: { P1: { as: 'status-card', show: 'v', of: 'equipment[P1]' }, P2: { as: 'status-card', show: 'v', of: 'equipment[P2]' } },
       layout: { kind: 'canvas', size: [800, 400], place: { P1: [0, 0], P2: [200, 0] }, links: { a: { from: 'P1', to: 'P2', ...(of ? { of } : {}), arrow } } },
     });
     expect(issues(board('both', null))).toEqual([]);
@@ -265,15 +296,15 @@ describe('validateBoard', () => {
       `/parts/l/maxItems: "maxItems" is the widget's name for it — a list writes "max"`,
     ]);
     expect(issues(canvas({
-      a: { as: 'status-card', of: 'equipment[PR-01]', meter: 'load', note: 'Seal {{seal}}', subtitle: 'Line 1' },
-      b: { as: 'status-card', of: 'equipment[PR-02]', meter: { field: 'load', min: 10, max: 5, form: 'dial', colour: 'red' } },
-      c: { as: 'status-card', of: 'equipment[PR-03]', meter: 42 },
+      a: { as: 'status-card', show: 'v', of: 'equipment[PR-01]', meter: 'load', note: 'Seal {{seal}}', subtitle: 'Line 1' },
+      b: { as: 'status-card', show: 'v', of: 'equipment[PR-02]', meter: { field: 'load', min: 10, max: 5, form: 'dial', colour: 'red' } },
+      c: { as: 'status-card', show: 'v', of: 'equipment[PR-03]', meter: 42 },
       // An end is a number, or — as a gauge's `max` is — the name of a field of the item (a capacity).
-      d: { as: 'status-card', of: 'equipment[PR-04]', meter: { field: 'load', max: 'capacity' } },
-      e: { as: 'status-card', of: 'equipment[PR-05]', meter: { field: 'load', min: true } },
-      f: { as: 'status-card', of: 'equipment[PR-06]', meter: { field: 'load', min: 'floor', max: 'capacity' } },
-      g: { as: 'status-card', of: 'equipment[PR-07]', meter: { field: 'load', min: 5, max: 'capacity' } },
-      h: { as: 'status-card', of: 'equipment[PR-08]', meter: { field: 'load', max: '' } },
+      d: { as: 'status-card', show: 'v', of: 'equipment[PR-04]', meter: { field: 'load', max: 'capacity' } },
+      e: { as: 'status-card', show: 'v', of: 'equipment[PR-05]', meter: { field: 'load', min: true } },
+      f: { as: 'status-card', show: 'v', of: 'equipment[PR-06]', meter: { field: 'load', min: 'floor', max: 'capacity' } },
+      g: { as: 'status-card', show: 'v', of: 'equipment[PR-07]', meter: { field: 'load', min: 5, max: 'capacity' } },
+      h: { as: 'status-card', show: 'v', of: 'equipment[PR-08]', meter: { field: 'load', max: '' } },
     }))).toEqual([
       '/parts/b/meter/colour: a meter is "<field>" or { "field": "<field>", "min"?, "max"?, "form"?: "bar" | "ring" }',
       '/parts/b/meter/max: a meter’s max is above its min (10)',
@@ -283,7 +314,7 @@ describe('validateBoard', () => {
       '/parts/h/meter/max: "max" is a number, or the name of a field of what the part reads',
     ]);
     // A preset's key is the preset's mistake, said once however many parts use it.
-    const board = { ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' }, b: { use: 'card', of: 'equipment[PR-02]' } }), presets: { card: { as: 'status-card', glow: true } } };
+    const board = { ...canvas({ a: { use: 'card', of: 'equipment[PR-01]' }, b: { use: 'card', of: 'equipment[PR-02]' } }), presets: { card: { as: 'status-card', show: 'v', glow: true } } };
     expect(issues(board)).toEqual(['/presets/card/glow: "glow" is not an option — options of a status-card: meter, subtitle, note, state, numerals, overflow, compact, frame']);
   });
 
@@ -296,8 +327,8 @@ describe('validateBoard', () => {
   });
 
   it('reads {{field}} in a title of what the part reads, and {{key}} as its item', () => {
-    expect(issues(canvas({ a: { as: 'status-card', of: 'equipment[PR-01]', title: '{{key}} · {{state}}' } }))).toEqual([]);
-    expect(issues(canvas({ h: { as: 'header', title: 'Line {{line}}' }, a: { as: 'stat', of: 'totals', title: '{{ count + 1 }}' } }))).toEqual([
+    expect(issues(canvas({ a: { as: 'status-card', show: 'v', of: 'equipment[PR-01]', title: '{{key}} · {{state}}' } }))).toEqual([]);
+    expect(issues(canvas({ h: { as: 'header', title: 'Line {{line}}' }, a: { as: 'stat', show: 'v', of: 'totals', title: '{{ count + 1 }}' } }))).toEqual([
       '/parts/h/title: "{{line}}" reads a field, but this reads no data — give "of"',
       '/parts/a/title: "{{ count + 1 }}" — write {{field}} with a field name, or {{key}} for the item\'s key',
     ]);
@@ -413,11 +444,11 @@ describe('validateBoard', () => {
   it('says "key" is not a field where an option names one — and names the field that names the items', () => {
     const entry = { from: 'plant', path: '/plant/pumps', list: '/value', key: 'id' };
     const hints = (parts: Record<string, unknown>, data = { pumps: entry }) => validateBoard({ data, parts, layout: { kind: 'canvas', size: [400, 300], place: Object.fromEntries(Object.keys(parts).map((id, i) => [id, [10, 10 + i * 80, 150, 70]])) } } as never).filter(i => i.hint).map(i => `${i.at}: ${i.message}`);
-    expect(hints({ b: { as: 'bar-list', of: 'pumps', label: 'key', value: 'flow' } })).toEqual(['/parts/b/label: "key" is not a field — "label" names a field of each item, and the items of "pumps" are named by their "id" field: write "id"']);
+    expect(hints({ b: { as: 'bar-list', show: 'v', of: 'pumps', label: 'key', value: 'flow' } })).toEqual(['/parts/b/label: "key" is not a field — "label" names a field of each item, and the items of "pumps" are named by their "id" field: write "id"']);
     expect(hints({ l: { as: 'list', of: 'pumps', primary: 'key' } })).toEqual(['/parts/l/primary: "key" is not a field — "primary" names a field of each item, and the items of "pumps" are named by their "id" field: write "id"']);
     // an item that has a field called key is read; an entry with no key named has nothing to point at
-    expect(hints({ b: { as: 'bar-list', of: 'pumps', label: 'key', value: 'flow' } }, { pumps: { ...entry, fields: { key: { label: 'Key' } } } } as never)).toEqual([]);
-    expect(hints({ b: { as: 'bar-list', of: 'pumps', label: 'key', value: 'flow' } }, { pumps: { from: 'plant', path: '/plant/pumps', list: '/value' } } as never)).toEqual([]);
+    expect(hints({ b: { as: 'bar-list', show: 'v', of: 'pumps', label: 'key', value: 'flow' } }, { pumps: { ...entry, fields: { key: { label: 'Key' } } } } as never)).toEqual([]);
+    expect(hints({ b: { as: 'bar-list', show: 'v', of: 'pumps', label: 'key', value: 'flow' } }, { pumps: { from: 'plant', path: '/plant/pumps', list: '/value' } } as never)).toEqual([]);
   });
 
   it('takes `header` on a table — the rows alone, the headers kept for a screen reader — and says what a table takes', () => {
@@ -934,7 +965,7 @@ describe('validateBoard', () => {
   });
 
   it('places a part once — an each part makes one per item by itself', () => {
-    const board = { data: { b: { from: 'x', path: '/b', list: '/v', key: 'id' } }, parts: { berth: { as: 'status-card', each: 'b' }, h: { as: 'header', title: 'H' } }, layout: { kind: 'grid', items: ['h', ['berth', 4], ['berth', 4]] } };
+    const board = { data: { b: { from: 'x', path: '/b', list: '/v', key: 'id' } }, parts: { berth: { as: 'status-card', show: 'v', each: 'b' }, h: { as: 'header', title: 'H' } }, layout: { kind: 'grid', items: ['h', ['berth', 4], ['berth', 4]] } };
     expect(issues(board)).toEqual(['/layout/items/2/0: "berth" is placed twice — an "each" part makes one per item by itself: place it once']);
     expect(issues({ ...board, layout: { kind: 'grid', items: ['h', ['berth', 4], 'h'] } })).toEqual(['/layout/items/2: "h" is placed twice — a part is placed once; for another like it, add a part (a preset keeps them alike)']);
   });

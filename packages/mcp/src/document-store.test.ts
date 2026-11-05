@@ -137,7 +137,7 @@ describe('the board tools over a board in a file', () => {
 
   it('does not call a read wrong for naming a source: a board in a file has none to name', async () => {
     const read = { op: 'add', path: '/data', value: { v: { from: 'plant', path: '/v' } } };
-    const checked = await call('validate', { patch: [read, { op: 'add', path: '/parts/a', value: { as: 'stat', of: 'v' } }, { op: 'add', path: '/layout/items/-', value: 'a' }] });
+    const checked = await call('validate', { patch: [read, { op: 'add', path: '/parts/a', value: { as: 'stat', of: 'v', show: 'x' } }, { op: 'add', path: '/layout/items/-', value: 'a' }] });
     expect(checked.value).toMatchObject({ valid: true, advice: [] });
   });
 

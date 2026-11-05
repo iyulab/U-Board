@@ -15,6 +15,10 @@ All notable changes to this package are documented here. The format follows
 - A status takes the emphasis `strike`: the words it shows are struck through in its colour — a cancelled flight, a withdrawn order, a retired machine — on a table row, a status card, a stat, a status grid cell, and a marker's label. A link's line and a shape's outline have no words to strike and draw as they did. Needs a widget library that reads `strike` on its own widgets (the version after 0.48.0); an older one draws the item with no emphasis.
 - `numerals.face` (`plain` · `mono`) of a skin, and of a `stat`, `list` or `status-card` part: `mono` draws the figures in the skin's own `mono` font, digits of one width — a table's right-aligned column, a bar's value, a gauge's reading, a metric's figure. The widget library already read one font token for every figure and nothing a board said set it; the board still names no font here, only which of the two it has.
 
+### Changed
+
+- The check refuses a `stat`, a `gauge`, a `stat-list` or a `bar-list` with no field to draw — no `show` (a bar list may name its field as `value`) — and a `status-card` with none of `show`, `state` or `meter`. They were accepted and drawn empty, a `stat` as "[object Object]" and a `gauge` as "NaN", with nothing in the board saying why. A `table`, a `list` and a `status-grid` still take their columns, lines and cells from the data when `show` is left out.
+
 ## [0.43.0] - 2026-11-05
 
 ### Added

@@ -468,7 +468,7 @@ describe('the picture model of a v2 board', () => {
 
   it('carries a board skin to the picture, on a canvas and on a grid', () => {
     const skin = { palette: { paper: '#fff', ink: '#111' }, frame: 'plate', radius: 0 } as const;
-    const parts = { pump: { as: 'status-card', each: 'pumps', title: 'Pump {{key}}' } } as Board['parts'];
+    const parts = { pump: { as: 'status-card', show: ['state', 'flow'], each: 'pumps', title: 'Pump {{key}}' } } as Board['parts'];
     const canvas = view({ ...board(parts, { kind: 'canvas', size: [800, 400], place: { pump: { P1: [10, 10, 220, 110] } } }), board: { skin } }, { pumps: ['P1'] });
     const grid = view({ ...board(parts, { kind: 'grid', items: [['pump', 4]] }), board: { skin } }, { pumps: ['P1'] });
     expect(canvas).toMatchObject({ kind: 'canvas', skin });
