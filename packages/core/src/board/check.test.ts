@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkBoard, emptyBoard, sourceAdvice } from './check.js';
+import { checkBoard, emptyBoard, foldRepeats, sourceAdvice } from './check.js';
 import { RULEBOOK_EXAMPLE } from './rulebook.js';
 import { validateBoard } from './validate.js';
 
@@ -60,6 +60,36 @@ describe('checkBoard', () => {
       { path: '/data/byName/from', message: '"Line 1" is the name of a data source — "from" takes its id: "s1". Nothing is read until it does' },
       { path: '/data/gone/from', message: '"nowhere" is no data source of this workspace — "from" takes a source\'s id (list_sources). Nothing is read until it does' },
     ]);
+  });
+});
+
+describe('foldRepeats', () => {
+  const at = (n: number) => Array.from({ length: n }, (_, i) => ({ path: `/data/p${i}/from`, message: 'the same words' }));
+
+  it('gives the same finding in full a few times and counts the rest in one line', () => {
+    const folded = foldRepeats(at(520));
+    expect(folded).toHaveLength(4);
+    expect(folded.slice(0, 3)).toEqual(at(3));
+    expect(folded[3]).toEqual({ path: '/data/p3/from', message: 'and 517 more the same (/data/p3/from, /data/p4/from, /data/p5/from, …) — the fix is the same: the same words', count: 517 });
+  });
+
+  it('leaves alone what is said so few times that a line to count it would save nothing', () => {
+    expect(foldRepeats(at(4))).toEqual(at(4));
+    expect(foldRepeats([])).toEqual([]);
+  });
+
+  it('folds each kind of finding on its own, keeps the order, and counts a late one with the rest of its kind', () => {
+    const mixed = [...at(6), { path: '/x', message: 'another' }, { path: '/late', message: 'the same words' }];
+    const folded = foldRepeats(mixed);
+    expect(folded.map(f => f.path)).toEqual(['/data/p0/from', '/data/p1/from', '/data/p2/from', '/data/p3/from', '/x']);
+    expect(folded[3]).toMatchObject({ count: 4, message: expect.stringContaining('/data/p3/from, /data/p4/from, /data/p5/from, …') });
+  });
+
+  it('is what a board of many reads of one unknown source is answered with', () => {
+    const data = Object.fromEntries(Array.from({ length: 50 }, (_, i) => [`p${i}`, { from: 'nowhere', path: `/${i}` }]));
+    const advice = sourceAdvice({ data, parts: {}, layout: { kind: 'grid' as const, items: [] } }, []);
+    expect(advice).toHaveLength(4);
+    expect(advice[3]).toMatchObject({ count: 47 });
   });
 });
 

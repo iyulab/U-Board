@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- The advice of `validate` (and of `create_board` and `patch_board` against a file) no longer grows with the board: the same finding made at many places — one unknown source named by hundreds of data reads — is given three times and then counted in one line.
 - `look` and `renderBoard` no longer answer "done — nothing to fix" for a board whose markers are drawn as points: a view crowded enough to draw them so (more than 500) has no page element for them, so what is wrong with them and how current their values are could not be read — a board whose every value was disconnected passed as clean. The report now has `unchecked` (how many parts it could not look at) and the status line says so; `board_state` tells their values.
 - `look` (and `renderBoard`) no longer hang on a board crowded enough that its markers are drawn as points: with more than 500 markers in view there is no element of the page to measure, and the picture waited out a browser timeout for each one before it answered. The boxes are now read off the page in one pass, and a part with nothing drawn is passed over at once. Focusing such a marker says it has no box of its own.
 - `look` no longer reports a visually hidden box (a pixel across, clipping) as content cut off inside a widget — a table's headers kept for a screen reader are not cut off, they are not meant to be seen.

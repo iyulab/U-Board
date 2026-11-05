@@ -11,6 +11,37 @@ import type { ViewKind } from '../view-document.js';
 export interface BoardFinding {
   path: string;
   message: string;
+  /** How many findings this line stands for, when it folds the same finding made at many places (`foldRepeats`). */
+  count?: number;
+}
+
+/** How many times the same finding is given in full before the rest are counted. */
+const SAME_FINDING_KEPT = 3;
+
+/**
+ * Findings that say the same words at different places — the same unknown source named by hundreds of data reads, the same hint on
+ * every part of a big board — are given in full a few times and then counted in one line: the fix is the same, and an answer that
+ * grows with the board is a cost the reader pays for each of them. A finding made fewer times than that is left as it is.
+ */
+export function foldRepeats(findings: readonly BoardFinding[], kept = SAME_FINDING_KEPT): BoardFinding[] {
+  const places = new Map<string, BoardFinding[]>();
+  for (const finding of findings) places.set(finding.message, [...(places.get(finding.message) ?? []), finding]);
+  const shown = new Map<string, number>();
+  const out: BoardFinding[] = [];
+  for (const finding of findings) {
+    const all = places.get(finding.message)!;
+    // one hidden would be a line to say it: fold only where it saves some
+    if (all.length <= kept + 1) { out.push(finding); continue; }
+    const n = shown.get(finding.message) ?? 0;
+    shown.set(finding.message, n + 1);
+    if (n < kept) out.push(finding);
+    else if (n === kept) {
+      const hidden = all.slice(kept);
+      const where = hidden.slice(0, 3).map(h => h.path).join(', ');
+      out.push({ path: hidden[0]!.path, message: `and ${hidden.length} more the same (${where}${hidden.length > 3 ? ', …' : ''}) — the fix is the same: ${finding.message}`, count: hidden.length });
+    }
+  }
+  return out;
 }
 
 /** What a board is refused for (`issues`), and — when there is nothing to refuse — what could be written better
@@ -43,7 +74,7 @@ export function checkBoard(board: unknown): BoardCheck {
       issues.push({ path: error.at, message: error.message.slice(error.at.length + 2) });
     }
   }
-  return { issues, advice: issues.length > 0 ? [] : found.filter(f => f.hint).map(({ at, message }) => ({ path: at, message })) };
+  return { issues, advice: issues.length > 0 ? [] : foldRepeats(found.filter(f => f.hint).map(({ at, message }) => ({ path: at, message }))) };
 }
 
 /** A data source of the workspace a board is saved in, as a board names it: by its id. */
@@ -59,7 +90,7 @@ export interface KnownSource {
  */
 export function sourceAdvice(board: Board, sources: readonly KnownSource[]): BoardFinding[] {
   const ids = new Set(sources.map(s => s.id));
-  return Object.entries(board.data ?? {}).flatMap(([name, query]) => {
+  return foldRepeats(Object.entries(board.data ?? {}).flatMap(([name, query]) => {
     if (query.path === undefined || typeof query.from !== 'string' || ids.has(query.from)) return [];
     const said = query.from.trim().toLowerCase();
     const named = sources.filter(s => s.name.trim().toLowerCase() === said);
@@ -68,5 +99,5 @@ export function sourceAdvice(board: Board, sources: readonly KnownSource[]): Boa
         ? `"${query.from}" is the name of a data source — "from" takes its id: "${named[0]!.id}". Nothing is read until it does`
         : `"${query.from}" is no data source of this workspace — "from" takes a source's id (list_sources). Nothing is read until it does`;
     return [{ path: `/data/${name.replace(/~/g, '~0').replace(/\//g, '~1')}/from`, message }];
-  });
+  }));
 }
