@@ -48,7 +48,7 @@ const GENERAL: readonly (readonly [kind: string, widget: string, of: PartKind['o
   ['status-card', 'status-card', 'needs', ['meter', 'subtitle', 'note', 'state', 'numerals']],
   ['header', 'header', 'may', ['kicker', 'subtitle', 'clock', 'time', 'date', 'since', 'scale', 'kickerInk']],
   ['stat', 'metric', 'needs', ['trend', 'numerals']],
-  ['stat-list', 'kv', 'needs', ['state']],
+  ['stat-list', 'kv', 'needs', ['state', 'numerals']],
   ['list', 'list', 'needs', ['primary', 'secondary', 'trailing', 'badge', 'time', 'state', 'max', 'variant', 'numerals'], { max: 'maxItems', variant: 'layout' }],
   ['table', 'table', 'needs', ['state']],
   ['bar-list', 'bar-list', 'needs', ['label', 'value', 'state']],

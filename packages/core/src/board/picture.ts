@@ -19,6 +19,7 @@ const STYLE_KEYS: Readonly<Record<string, readonly string[]>> = {
   label: ['scale', 'ink', 'face'],
   stat: ['numerals'],
   'status-card': ['numerals'],
+  'stat-list': ['numerals'],
   list: ['numerals'],
 };
 
@@ -38,7 +39,7 @@ function takeStyle(options: Record<string, unknown>, kind: string): Record<strin
 
 /**
  * The tokens a part's styling is handed to its widget as (`Widget.tokens`): a header's heading size and kicker colour, the
- * numerals of a stat's headline figure (`figure`), and those of the values in a card or a row (`value`) — which a skin's
+ * numerals of a stat's headline figure (`figure`), and those of the values in a card, a row or a stat list (`value`) — which a skin's
  * `numerals` does not reach. A word that is not one gives none.
  */
 function partTokens(kind: string, style: Record<string, unknown>): Record<string, string> {
@@ -49,7 +50,7 @@ function partTokens(kind: string, style: Record<string, unknown>): Record<string
     if (typeof scale === 'string' && has(NUMERAL_SCALES, scale)) out['--u-widget-title-scale'] = String(NUMERAL_SCALES[scale as NumeralScale]);
     if (style.kickerInk === 'accent') out['--u-widget-kicker-color'] = 'var(--u-widget-primary)';
   } else if (kind === 'stat') Object.assign(out, numeralTokens(numerals, 'figure'));
-  else if (kind === 'list' || kind === 'status-card') Object.assign(out, numeralTokens(numerals, 'value'));
+  else if (kind === 'list' || kind === 'status-card' || kind === 'stat-list') Object.assign(out, numeralTokens(numerals, 'value'));
   return out;
 }
 

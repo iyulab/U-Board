@@ -399,6 +399,11 @@ describe('validateBoard', () => {
     expect(at({ face: 'serif' })).toEqual(["/board/skin/numerals/face: a face is plain · mono — the body's font, or the skin's mono (digits of one width)"]);
   });
 
+  it('checks the numerals of a stat list as it does those of a list', () => {
+    expect(issues(canvas({ k: { as: 'stat-list', of: 'totals', show: ['load'], numerals: { scale: 'large', face: 'mono' } } }))).toEqual([]);
+    expect(issues(canvas({ k: { as: 'stat-list', of: 'totals', show: ['load'], numerals: { scale: 'huge' } } }))).toEqual([`/parts/k/numerals/scale: a scale is ${SCALES}`]);
+  });
+
   it('says which "size" is meant: [width, height] is a box, how large a heading or a text is, is "scale"', () => {
     expect(issues(canvas({
       h: { as: 'header', title: 'Plant', size: 'large' },

@@ -123,6 +123,14 @@ describe('the picture model of a v2 board', () => {
     expect(nodeOf(doc, 'c').widget.tokens).toEqual({ '--u-widget-font-numeric': 'var(--u-widget-font-family)' });
   });
 
+  it('hands a stat list the numerals of its values, as a list and a card have theirs', () => {
+    const doc = view(board({
+      k: { as: 'stat-list', of: 'totals', show: ['output', 'oee'], numerals: { scale: 'large', weight: 300, face: 'mono' } },
+    }, { kind: 'canvas', size: [800, 400], place: { k: [0, 0, 240, 120] } }));
+    expect(nodeOf(doc, 'k').widget.tokens).toEqual({ '--u-widget-value-scale': '1.25', '--u-widget-value-weight': '300', '--u-widget-font-numeric': 'var(--u-widget-font-mono)' });
+    expect(JSON.stringify(nodeOf(doc, 'k').widget.props)).not.toMatch(/numerals/);
+  });
+
   it('draws a label in the size, ink and face it names, and with the props it always had when it names none', () => {
     const doc = view(board({
       plain: { as: 'label', title: 'Unit: million' },

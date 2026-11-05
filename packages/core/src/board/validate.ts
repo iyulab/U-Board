@@ -691,8 +691,8 @@ export function validateBoard(input: unknown): BoardIssue[] {
       if (part.ink !== undefined && !['text', 'muted', 'accent'].includes(part.ink as string)) fail(`${at}/ink`, '"ink" is the colour of the text — text · muted · accent (the board\'s accent colour); a status colours it over this');
       if (part.face !== undefined && !['plain', 'pill'].includes(part.face as string)) fail(`${at}/face`, '"face" is the surface under the text — plain · pill');
     }
-    if (part.numerals !== undefined && (kind === 'stat' || kind === 'list' || kind === 'status-card')) {
-      checkNumerals(part.numerals, `${at}/numerals`, kind === 'stat' ? 'the headline figure' : kind === 'list' ? 'the values at the end of a row and its time' : 'the readings of the card');
+    if (part.numerals !== undefined && (kind === 'stat' || kind === 'list' || kind === 'status-card' || kind === 'stat-list')) {
+      checkNumerals(part.numerals, `${at}/numerals`, kind === 'stat' ? 'the headline figure' : kind === 'list' ? 'the values at the end of a row and its time' : kind === 'stat-list' ? 'the values of the list' : 'the readings of the card');
     }
   };
 
