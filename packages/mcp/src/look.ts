@@ -153,11 +153,37 @@ interface Scale {
   originY: number;
 }
 
+/** The screen box of the first element drawn for any of these ids, by the attribute that names it (`data-node-id`, …) — read in
+ *  one go off the page as it stands. An id with nothing drawn (a part the viewer keeps as a summary point on its canvas in a crowded
+ *  view, a hidden one) is passed over at once: asking the browser for each one would wait out its default timeout per id, and a board
+ *  of hundreds of summarized parts would never answer. */
+async function drawnBoxes(page: Page, attribute: string, ids: readonly string[]): Promise<Map<string, { x: number; y: number; width: number; height: number }>> {
+  const found = await page.evaluate(
+    ({ attribute, ids }) => {
+      const wanted = new Set(ids);
+      const boxes: Array<[string, number, number, number, number]> = [];
+      const seen = new Set<string>();
+      for (const element of document.querySelectorAll(`[${attribute}]`)) {
+        const id = element.getAttribute(attribute) ?? '';
+        if (!wanted.has(id) || seen.has(id)) continue;
+        const box = element.getBoundingClientRect();
+        if (box.width <= 0 || box.height <= 0) continue;
+        seen.add(id);
+        boxes.push([id, box.x, box.y, box.width, box.height]);
+      }
+      return boxes;
+    },
+    { attribute, ids: [...ids] }
+  );
+  return new Map(found.map(([id, x, y, width, height]) => [id, { x, y, width, height }]));
+}
+
 /** How the viewer placed the scene, read off a drawn node: its screen box against its scene box. */
 async function sceneScale(page: Page, document: ViewDocument): Promise<Scale | undefined> {
   if (document.kind !== 'canvas') return undefined;
+  const boxes = await drawnBoxes(page, 'data-node-id', document.nodes.map(node => node.id));
   for (const node of document.nodes) {
-    const box = await page.locator(`[data-node-id="${cssString(node.id)}"]`).first().boundingBox().catch(() => null);
+    const box = boxes.get(node.id);
     if (!box) continue;
     const factor = box.width / nodeSize(node, document.elements).width;
     return { factor, originX: box.x - node.x * factor, originY: box.y - node.y * factor };
@@ -173,16 +199,16 @@ async function focusClip(page: Page, document: ViewDocument, focus: string, scal
   const part = getByPointer(document, focus) as { id?: string; type?: string; x?: number; y?: number; width?: number; height?: number; text?: string; fontSize?: number } | undefined;
   if (!part || typeof part !== 'object') throw new Error(`nothing at ${focus} — focus a node ("/nodes/3"), a grid item ("/items/0"), a connector ("/connectors/2") or a decoration ("/decorations/5")`);
   let box: { x: number; y: number; width: number; height: number } | null = null;
-  if (focus.startsWith('/nodes/') && part.id) box = await page.locator(`[data-node-id="${cssString(part.id)}"]`).first().boundingBox();
-  else if (focus.startsWith('/items/') && part.id) box = await page.locator(`[data-item-id="${cssString(part.id)}"]`).first().boundingBox();
-  else if (focus.startsWith('/connectors/') && part.id) box = await page.locator(`[data-connector-id="${cssString(part.id)}"]`).first().boundingBox();
+  if (focus.startsWith('/nodes/') && part.id) box = (await drawnBoxes(page, 'data-node-id', [part.id])).get(part.id) ?? null;
+  else if (focus.startsWith('/items/') && part.id) box = (await drawnBoxes(page, 'data-item-id', [part.id])).get(part.id) ?? null;
+  else if (focus.startsWith('/connectors/') && part.id) box = (await drawnBoxes(page, 'data-connector-id', [part.id])).get(part.id) ?? null;
   else if (focus.startsWith('/decorations/') && scale && typeof part.x === 'number' && typeof part.y === 'number') {
     const size = part.fontSize ?? 16;
     const width = part.type === 'text' ? [...(part.text ?? '')].length * size * 0.6 : (part.width ?? DEFAULT_NODE_WIDTH);
     const height = part.type === 'text' ? size : (part.height ?? DEFAULT_NODE_HEIGHT);
     box = { x: scale.originX + part.x * scale.factor, y: scale.originY + part.y * scale.factor, width: width * scale.factor, height: height * scale.factor };
   }
-  if (!box) throw new Error(`could not find ${focus} on the drawn board — focus a node, a grid item, a connector or a decoration`);
+  if (!box) throw new Error(`could not find ${focus} on the drawn board — focus a node, a grid item, a connector or a decoration (a marker in a view crowded enough to draw them as points has no box of its own — look at the whole board)`);
   const viewport = page.viewportSize() ?? { width: box.x + box.width, height: box.y + box.height };
   const margin = Math.max(FOCUS_MARGIN, Math.max(box.width, box.height) / 2);
   const x = Math.max(0, box.x - margin);
@@ -214,6 +240,3 @@ export async function untilReadsAnswer(page: Pick<Page, 'evaluate' | 'waitForTim
   }
 }
 
-function cssString(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-}

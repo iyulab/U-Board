@@ -60,6 +60,26 @@ describe('renderBoard', () => {
     expect(Buffer.from(light.png).equals(Buffer.from(dark.png))).toBe(false);
   });
 
+  it('takes the picture of a board crowded enough that its markers are drawn as points', async () => {
+    // Past the viewer's `summarizeParts` threshold (500) a marker is a point on the canvas, not an element of the page: nothing
+    // is there to measure, and the picture must still come — it once waited out a browser timeout for each marker.
+    const count = 520;
+    const crowded: Board = {
+      statuses: board.statuses,
+      data: {},
+      parts: {},
+      layout: { kind: 'canvas', size: [2420, 560], place: {} },
+    };
+    for (let i = 0; i < count; i++) {
+      crowded.data![`p${i}`] = { from: 'plant', ref: `p${i}`, fields: { value: { at: '', label: `P${i}`, state: { running: 'running', '*': 'stopped' } } } };
+      crowded.parts![`p${i}`] = { as: 'marker', of: `p${i}`, show: ['value'] };
+      (crowded.layout as { place: Record<string, number[]> }).place[`p${i}`] = [(i % 40) * 60 + 10, Math.floor(i / 40) * 40 + 10, 20, 20];
+    }
+    const { png, report } = await renderBoard({ board: crowded, adapters: [live()], width: 1600, height: 900 });
+    expect(pngSize(png)).toEqual({ width: 1600, height: 900 });
+    expect(report.picture).toEqual({ width: 1600, height: 900 });
+  }, 60_000);
+
   it('refuses a size that is not a whole number of pixels', async () => {
     await expect(renderBoard({ board, width: 0, height: 100 })).rejects.toThrow(/width must be a whole number/);
     await expect(renderBoard({ board, width: 100, height: 1.5 })).rejects.toThrow(/height must be a whole number/);

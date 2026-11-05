@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- `look` (and `renderBoard`) no longer hang on a board crowded enough that its markers are drawn as points: with more than 500 markers in view there is no element of the page to measure, and the picture waited out a browser timeout for each one before it answered. The boxes are now read off the page in one pass, and a part with nothing drawn is passed over at once. Focusing such a marker says it has no box of its own.
 - `look` no longer reports a visually hidden box (a pixel across, clipping) as content cut off inside a widget — a table's headers kept for a screen reader are not cut off, they are not meant to be seen.
 
 ### Added
