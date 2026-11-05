@@ -21,7 +21,7 @@ if (start.mode === 'refused') {
 }
 
 if (start.mode === 'server') {
-  await createServer(new UBoardClient(start.url, start.token), new BrowserLooker(start.url, start.token), { bundle: start.bundle === true, editText: editText }).connect(new StdioServerTransport());
+  await createServer(new UBoardClient(start.url, start.token), new BrowserLooker(start.url, start.token), { bundle: start.bundle === true, editText: editText, app: start.boardApp === true }).connect(new StdioServerTransport());
 } else {
   let store: DocumentStore;
   try {

@@ -72,6 +72,20 @@ element's markup, style and script more than it moves parts. The board is still 
 | `get_bundle` | The board as files: `board.json` (parts, layout, states, skin — where an element's code or the background picture moved out it holds `{ "$file": path }`), `elements/<name>.html`, `.css`, `.js` (a name that is not word characters and dashes is percent-encoded) and `background.svg`. Without `files`: the list with sizes and `board.json`; with `files`: the text of those. |
 | `put_bundle` | Saves the board from files, checked as any change is: `files` replace the files of the same path, `edits` (`{ file, old, new }`) change a file in place — `old` stands exactly once in it — so a long style is not sent again for a small change; the rest stays. An issue names the file it is in. |
 
+### A board in the assistant's window (optional)
+
+Against a server, start with `--app` (or `UBOARD_APP=1`) and one more tool, `show_board`, draws a saved board live in the conversation where the host
+can show an [MCP App](https://modelcontextprotocol.io/extensions/apps/overview) — the library's own viewer in the host's sandboxed frame, its values kept
+current. A host that cannot show an app gets the board's name, kind and size from `show_board` and nothing else changes; `look` still answers a picture and what
+is wrong with the board, which is what to check a board with.
+
+The page reads its values through `read_sources`, a tool offered to the page and not to the assistant. It asks the server to read, by the data source's id and
+the binding's reference, exactly as the console does: the server's own rules for a data source apply (its address limits, its credential, what the API token may
+read), and this process never fetches an address itself. A read that cannot be made is drawn as a disconnected part. `--app` is for a server — a board kept in
+a file (`--board`) has no data sources to read through, and the two are refused together.
+
+The page is one file of about 2 MB (the viewer with its chart and form parts inside it, as a host takes an app's page in one piece).
+
 ## In your own app
 
 The tools are not tied to the MCP server. `@iyulab/u-board-mcp/tools` hands a host the same tools to give its own model — a chat
@@ -133,4 +147,5 @@ output (the report then goes to the standard error). A board with problems is no
 
 ## License
 
-MIT.
+MIT. The page behind `show_board` carries the MCP Apps library (`@modelcontextprotocol/ext-apps`), which is licensed MIT and Apache-2.0; its licence text
+is shipped with the page as `dist/app/ext-apps.LICENSE`.
