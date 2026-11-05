@@ -118,6 +118,19 @@ and no network of its own: the page it draws in ships with this package and is s
 binding no adapter answers for, or an adapter that throws, is drawn as disconnected and counted in `report.quality`. In a browser app
 there is nothing to run: the viewer is already on the page, and printing it (or saving it as PDF) gives the same colours.
 
+From a program that is not JavaScript, run `u-board-render` (installed with this package) as a process: the board comes from a file or the standard input, the
+answers of its sources from a file, and it writes the PNG and a JSON report.
+
+```sh
+u-board-render line-3.board.json --width 1280 --height 720 --out line-3.png --data line-3.answers.json   # the report is on the standard output
+```
+
+`--data` is `{ "<adapter id>": { "<path>": <the body that source answered> } }` — what each source of the board answered for a path, read as of
+`--now` (the moment of the call when left out); a source or a path it holds nothing for is drawn as disconnected. `--appearance`, `--variables`,
+`--locale` and `--browser` are as for `renderBoard`; `--report <file>` writes the report to a file, and `--out -` writes the picture to the standard
+output (the report then goes to the standard error). A board with problems is not drawn: they are listed by where they are, and the exit status is 2
+(1: it could not run; 0: drawn).
+
 ## License
 
 MIT.

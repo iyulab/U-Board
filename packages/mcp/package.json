@@ -18,7 +18,8 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "u-board-mcp": "dist/index.js"
+    "u-board-mcp": "dist/index.js",
+    "u-board-render": "dist/render-bin.js"
   },
   "files": [
     "dist",

@@ -16,6 +16,7 @@ All notable changes to this package are documented here. The format follows
 ### Added
 
 - `renderBoard` (`@iyulab/u-board-mcp/render`): a board as a PNG, for a host that keeps its boards itself — a report, a record, a share. It draws the board with the library's own viewer in Chrome or Edge on this computer, reads its values through the host's own adapters (they stay in the host's process; the page asks them one reference at a time), and answers the picture with the report `look` gives: what did not draw as written, how current the values were, what the page complained of. No server and no network: the page it draws in ships with the package. `look` takes its pictures the same way.
+- `u-board-render`, a program for the same picture: `u-board-render <board.json | -> --width <px> --height <px> --out <file.png | ->`, for a host that is not a JavaScript program (a server in another language runs it as a process). The board comes from a file or the standard input, the answers of its sources from a file (`--data`, `{ "<adapter id>": { "<path>": <the body that source answered> } }`; a source it holds nothing for is drawn as disconnected), and it writes the PNG and a JSON report of what was drawn. A board with problems is not drawn: they are listed by where they are and the exit status is 2.
 
 ## [0.28.1] - 2026-11-05
 

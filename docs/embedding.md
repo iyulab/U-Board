@@ -105,7 +105,7 @@ what the assistant drew.
 
 A report, a record or a share wants the board as a file, as the people who read it see it. On a server or in a script, `renderBoard` from
 `@iyulab/u-board-mcp/render` draws a board with the viewer in Chrome or Edge on that computer and answers a PNG: you give it the board and the
-adapters your app already has (they run in your process, and the picture shows what they answer now), and a size. In a browser app the viewer is
+adapters your app already has (they run in your process, and the picture shows what they answer now), and a size; from another language, run `u-board-render` as a process (a board file, a file of the answers its sources gave, a size). In a browser app the viewer is
 already on the page: printing it, or saving it as PDF, keeps its colours and leaves the zoom controls out. See
 [A board as a picture](../packages/mcp/README.md#a-board-as-a-picture).
 
