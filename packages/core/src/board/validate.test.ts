@@ -410,6 +410,16 @@ describe('validateBoard', () => {
     expect(hints({ frame: 'bevel', radius: 0 })).toEqual([]);
   });
 
+  it('says "key" is not a field where an option names one — and names the field that names the items', () => {
+    const entry = { from: 'plant', path: '/plant/pumps', list: '/value', key: 'id' };
+    const hints = (parts: Record<string, unknown>, data = { pumps: entry }) => validateBoard({ data, parts, layout: { kind: 'canvas', size: [400, 300], place: Object.fromEntries(Object.keys(parts).map((id, i) => [id, [10, 10 + i * 80, 150, 70]])) } } as never).filter(i => i.hint).map(i => `${i.at}: ${i.message}`);
+    expect(hints({ b: { as: 'bar-list', of: 'pumps', label: 'key', value: 'flow' } })).toEqual(['/parts/b/label: "key" is not a field — "label" names a field of each item, and the items of "pumps" are named by their "id" field: write "id"']);
+    expect(hints({ l: { as: 'list', of: 'pumps', primary: 'key' } })).toEqual(['/parts/l/primary: "key" is not a field — "primary" names a field of each item, and the items of "pumps" are named by their "id" field: write "id"']);
+    // an item that has a field called key is read; an entry with no key named has nothing to point at
+    expect(hints({ b: { as: 'bar-list', of: 'pumps', label: 'key', value: 'flow' } }, { pumps: { ...entry, fields: { key: { label: 'Key' } } } } as never)).toEqual([]);
+    expect(hints({ b: { as: 'bar-list', of: 'pumps', label: 'key', value: 'flow' } }, { pumps: { from: 'plant', path: '/plant/pumps', list: '/value' } } as never)).toEqual([]);
+  });
+
   it('takes `header` on a table — the rows alone, the headers kept for a screen reader — and says what a table takes', () => {
     expect(issues(canvas({ t: { as: 'table', of: 'totals', header: false } }))).toEqual([]);
     expect(issues(canvas({ t: { as: 'table', of: 'totals', heading: false } }))[0]).toContain('is not an option — options of a table: state, pageSize, compact, searchable, sortable, interactive, maxItems, header');

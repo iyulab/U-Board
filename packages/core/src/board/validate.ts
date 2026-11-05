@@ -82,6 +82,13 @@ const spanSteps = (cell: number) => list(Array.from({ length: 12 }, (_, i) => i 
 const OF = /^([\w-]+)(?:\[([^\]]+)\])?$/;
 
 /** What a board says at its top, in the order it is written. */
+/** The options of a part that name a field of each item it shows, by kind — where `"key"` is not one. */
+const KEY_FIELD_OPTIONS: Readonly<Record<string, readonly string[]>> = {
+  'bar-list': ['label', 'value'],
+  'status-grid': ['label', 'value'],
+  list: ['primary', 'secondary', 'trailing', 'badge', 'time'],
+};
+
 /** The frames whose corners are square — a skin's `radius` does not round them. */
 const SQUARE_FRAMES: readonly string[] = ['bevel', 'well', 'block', 'double'];
 const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'titles', 'density', 'numerals'];
@@ -557,6 +564,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     checkTexts(part, at, reads);
     if (kind.kind === 'header') checkHeaderOptions(part, at, reads);
     checkOptions(raw, part, kind, at);
+    checkKeyAsField(part, kind.kind, at, reads);
     if (kind.kind === 'status-card' && part.meter !== undefined) checkMeter(part.meter, `${at}/meter`);
     // `highlight` marks one item out from the others like it, apart from its status: a boolean field of the item the part reads.
     // `dim` is its opposite — the same field, and while it is true the part is drawn faded.
@@ -699,6 +707,24 @@ export function validateBoard(input: unknown): BoardIssue[] {
     }
     if (part.numerals !== undefined && (kind === 'stat' || kind === 'list' || kind === 'status-card' || kind === 'stat-list')) {
       checkNumerals(part.numerals, `${at}/numerals`, kind === 'stat' ? 'the headline figure' : kind === 'list' ? 'the values at the end of a row and its time' : kind === 'stat-list' ? 'the values of the list' : 'the readings of the card');
+    }
+  };
+
+  /**
+   * `"key"` written where an option names a field of each item — a bar list's `label`, a list's `primary`: `key` is not a field,
+   * and the part draws nothing for it. Said as advice naming the field that does name the items. Not an error: an item may have a
+   * field that is called "key".
+   */
+  const checkKeyAsField = (part: Obj, kind: string, at: string, reads: string | null | undefined) => {
+    const options = KEY_FIELD_OPTIONS[kind];
+    if (options === undefined || typeof reads !== 'string') return;
+    const q = data[reads];
+    const keyField = isObj(q) && typeof q.key === 'string' && q.key !== '' && q.key !== 'key' ? q.key : undefined;
+    if (keyField === undefined || fieldOf(reads, 'key') !== undefined) return;
+    for (const option of options) {
+      if (part[option] === 'key') {
+        issues.push({ at: `${at}/${option}`, message: `"key" is not a field — "${option}" names a field of each item, and the items of "${reads}" are named by their "${keyField}" field: write "${keyField}"`, hint: true });
+      }
     }
   };
 

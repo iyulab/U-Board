@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- The check says `"key"` is not a field where an option names a field of each item — a bar list's or status grid's `label` and `value`, a list's `primary` and its other lines: the part draws nothing for it, and the message names the field that does name the items (`key: "id"` on the data → write `"id"`). Advice, not an error: an item may have a field called key.
 - A `table` part takes `header: false`: the rows alone on screen, with no column headers (they stay in the page for a screen reader, and a column cannot then be sorted by clicking its header). Needs a widget library that has the option (the version after 0.48.0).
 - The check says a skin's `radius` changes nothing under a frame with square corners (`bevel`, `well`, `block`, `double`) — it was accepted and the corners stayed square, with no word of why.
 - A `stat-list` takes `numerals` (`scale`, `weight`, `face`) for its values, as a `list` and a `status-card` do. The scale and the weight need a widget library whose `kv` reads them (the version after 0.48.0); the face reaches it already.
