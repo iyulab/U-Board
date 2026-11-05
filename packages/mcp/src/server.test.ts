@@ -116,12 +116,12 @@ async function call(name: string, args: Record<string, unknown> = {}) {
 }
 
 /** `look` on a board, through a looker that answers `problems` — the report's text, and what the looker was asked. */
-async function looking(problems: Array<{ path?: string; message: string }> = [], quality: Record<string, number> = {}, unchecked?: number) {
+async function looking(problems: Array<{ path?: string; message: string }> = [], quality: Record<string, number> = {}, unchecked?: number, pageLog: string[] = []) {
   const asked: Array<{ request: unknown; document: ViewDocument }> = [];
   const looker: Looker = {
     look: async (request, document) => {
       asked.push({ request, document });
-      return { image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems, quality, console: [], ...(unchecked !== undefined && { unchecked }) } };
+      return { image: 'iVBORw==', report: { picture: { width: 1600, height: 900 }, problems, quality, console: pageLog, ...(unchecked !== undefined && { unchecked }) } };
     },
   };
   const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), looker);
@@ -280,6 +280,15 @@ describe('u-board-mcp', () => {
     expect((await (await looking([{ message: 'x' }], { disconnected: 1 })).look('b4')).report.status).toBe('not done — 1 problem and 1 disconnected part (board_state says which, and why) to fix');
     // Up close the count is the whole board's, not the part's.
     expect((await (await looking([], { disconnected: 2 })).look('b1', { focus: '/parts/a' })).report.status).not.toContain('disconnected');
+  });
+
+  it('does not call a board done while the page logged errors drawing it — a part can be blank with nothing else to say why', async () => {
+    server.boards.set('b4', { name: 'Clean', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
+    const log = ['Cannot convert undefined or null to object', 'Cannot convert undefined or null to object'];
+    expect((await (await looking([], {}, undefined, log)).look('b4')).report.status).toBe('not done — 2 page errors logged while drawing (console says what) to fix');
+    expect((await (await looking([{ message: 'x' }], {}, undefined, log.slice(0, 1))).look('b4')).report.status).toBe('not done — 1 problem and 1 page error logged while drawing (console says what) to fix');
+    // Up close the log is the whole page's, not the part's.
+    expect((await (await looking([], {}, undefined, log)).look('b1', { focus: '/parts/a' })).report.status).not.toContain('page error');
   });
 
   it('says when an operation or a board is wrapped in its own first key — the commonest shape mistake', async () => {
