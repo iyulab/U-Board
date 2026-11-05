@@ -110,6 +110,13 @@ export function findProblems(
     return false;
   }
 
+  /** What is written inside `root`, shadow roots within it included — a widget's own text sits a shadow root or two down. */
+  function textIn(root: ShadowRoot | Element): string {
+    let text = root.textContent ?? '';
+    for (const part of root.querySelectorAll('*')) if (part.shadowRoot) text += ` ${textIn(part.shadowRoot)}`;
+    return text;
+  }
+
   const out: Array<{ path?: string; message: string }> = [];
   for (const { id, path, attr } of placed) {
     const frame = root.querySelector(`[${attr}="${CSS.escape(id)}"]`);
@@ -145,6 +152,10 @@ export function findProblems(
     if (shortened > 0) out.push({ path, message: `its widget cuts ${shortened === 1 ? 'a text' : `${shortened} texts`} short with "…" — the box is too narrow for ${shortened === 1 ? 'it' : 'them'}; give the part more width` });
     const text = widget?.shadowRoot?.textContent ?? '';
     if (/Invalid widget spec|잘못된 위젯 명세/i.test(text)) out.push({ path, message: 'the widget draws its "invalid spec" card — validate the board and read its advice' });
+    // A value the widget could not make a text or a number of is drawn as what the language calls it: a read that answers an object, with
+    // no valuePath or field that says where in it the value is. It is drawn live — nothing says it is wrong but the words on the part.
+    const unvalued = (widget?.shadowRoot ? textIn(widget.shadowRoot) : '').match(/\[object Object\]|(?<![\p{L}\p{N}])(?:NaN|undefined|Infinity)(?![\p{L}\p{N}])/u)?.[0];
+    if (unvalued !== undefined) out.push({ path, message: `its widget draws "${unvalued}" where a value goes — the data it shows is an object, or has no number, where the part shows a text or a number; name where in the answer the value is (a valuePath on the read, or the field it shows)` });
   }
   return out;
 }

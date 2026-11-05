@@ -107,6 +107,29 @@ describe('findProblems', () => {
     ]);
   });
 
+  it('reports a widget that draws "[object Object]", "NaN" or "undefined" where a value goes — also from a shadow root down — and not a word that holds one', async () => {
+    await show(`
+      <div data-node-id="a"><u-widget style="display:block;width:200px;height:80px">
+        <template shadowrootmode="open"><uw-metric style="display:block;height:80px">
+          <template shadowrootmode="open"><span>[object Object]</span> <span>m3/h</span></template>
+        </uw-metric></template>
+      </u-widget></div>
+      <div data-node-id="b"><u-widget style="display:block;width:200px;height:80px">
+        <template shadowrootmode="open"><div style="height:80px">NaN rpm</div></template>
+      </u-widget></div>
+      <div data-node-id="c"><u-widget style="display:block;width:200px;height:80px">
+        <template shadowrootmode="open"><div style="height:80px">Banana · undefinedness · 12 NaNometers</div></template>
+      </u-widget></div>
+      <div data-node-id="d"><u-widget style="display:block;width:200px;height:80px">
+        <template shadowrootmode="open"><div style="height:80px">undefined</div></template>
+      </u-widget></div>`);
+    const found = await page.evaluate(findProblems, [node('a'), node('b'), node('c'), node('d')]);
+    expect(found.map(f => f.path)).toEqual(['/nodes/a', '/nodes/b', '/nodes/d']);
+    expect(found[0]!.message).toContain('draws "[object Object]" where a value goes');
+    expect(found[1]!.message).toContain('draws "NaN"');
+    expect(found[2]!.message).toContain('draws "undefined"');
+  });
+
   it('reports rows running past the bottom, inside a widget’s own shadow root too — and not a line whose font is taller than its line height', async () => {
     await show(`
       <div data-node-id="a"><u-widget style="display:block;width:200px;height:60px">

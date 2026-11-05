@@ -524,8 +524,8 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
       'look',
       {
         description: looker.picture === false
-          ? 'Draws a saved board as its viewers see it and answers what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box or is cut off inside it, values not live) and the advice that stands (parts drawn over one another) — no picture. Look after a change, then fix what it reports and advises. `focus` a part for only its problems and advice.'
-          : 'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box or is cut off inside it, values not live) and the advice that stands (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a part to see it up close — and only its problems and advice.',
+          ? 'Draws a saved board as its viewers see it and answers what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box or is cut off inside it, a value drawn as “[object Object]” or “NaN”, values not live) and the advice that stands (parts drawn over one another) — no picture. Look after a change, then fix what it reports and advises. `focus` a part for only its problems and advice.'
+          : 'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box or is cut off inside it, a value drawn as “[object Object]” or “NaN”, values not live) and the advice that stands (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a part to see it up close — and only its problems and advice.',
         inputSchema: z.strictObject({
           board: boardId,
           focus: z.string().max(200).optional().describe('One part: "/parts/<id>".'),
