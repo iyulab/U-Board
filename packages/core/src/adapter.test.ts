@@ -346,6 +346,13 @@ describe('deriveValue', () => {
     expect(deriveValue({ op: 'count', where: { kind: 'valve' } }, items)).toBe(0);
   });
 
+  it('does not count a `null` where an item would be — a list a source cuts or pads — not even for what a field is not', () => {
+    const padded = [null, ...items, null, undefined];
+    expect(deriveValue({ op: 'count' }, padded)).toBe(4);
+    expect(deriveValue({ op: 'count', where: { kind: { not: 'pump' } } }, padded)).toBe(1);
+    expect(deriveValue({ op: 'sum', field: 'flow' }, padded)).toBe(60.5);
+  });
+
   it('counts the items a field is not, or is one of', () => {
     expect(deriveValue({ op: 'count', where: { kind: { not: 'pump' } } }, items)).toBe(1);
     expect(deriveValue({ op: 'count', where: { kind: { in: ['pump', 'fan'] }, state: { not: 'trip' } } }, items)).toBe(3);

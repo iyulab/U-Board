@@ -304,7 +304,8 @@ export function deriveValue(derive: Derive, value: unknown): number | undefined 
     }
   };
   const where = isObject(derive.where) ? Object.entries(derive.where) : [];
-  const kept = value.filter(item => where.every(([from, expected]) => whereMatches(read(item, from), expected)));
+  // A list a source cuts or pads may hold `null` where an item would be: nothing is there, so nothing is counted or read.
+  const kept = value.filter(item => item !== null && item !== undefined && where.every(([from, expected]) => whereMatches(read(item, from), expected)));
   if (derive.op === 'count') return kept.length;
   if (typeof derive.field !== 'string') return undefined;
   const numbers = kept.map(item => numericValue(read(item, derive.field!))).filter((n): n is number => n !== undefined);
