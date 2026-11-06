@@ -7,6 +7,7 @@ import { PictureError, dataReadOf, isDataPlace, isFlowPlace, keyReadsOf, keysIn,
 import type { Board } from './types.js';
 import { validateBoard } from './validate.js';
 import { checkStyle, checkTemplateMarkup } from '../elements/markup-policy.js';
+import { PART_KINDS } from './kinds.js';
 
 // What the source answers, by request path.
 const SOURCE: Record<string, unknown> = {
@@ -1603,4 +1604,101 @@ describe('a board that reads variables', () => {
     const b = withVariables({ one: { as: 'status-card', of: 'pumps[$pump]', show: ['state'], title: 'Pump {{$pump}}' } }, { kind: 'grid', items: ['one'] });
     expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
   });
+});
+
+describe("an option a kind lists reaches its widget", () => {
+  // A part names a widget's option by the widget's own word (`max`, `form`, `compact`); the kind lists the ones it takes.
+  // Listed and not handed on is the same defect the widget library's tests look for one layer down: advertised, and nothing.
+  const PART: Record<string, Record<string, unknown>> = {
+    'status-card': { of: 'pumps[P1]', show: ['state', 'flow'] },
+    header: { title: 'Plant' },
+    stat: { of: 'totals', show: 'output' },
+    'stat-list': { of: 'totals', show: ['oee', 'temp'] },
+    list: { of: 'pumps', primary: 'id' },
+    table: { of: 'pumps', show: ['id', 'state', 'flow'] },
+    'bar-list': { of: 'pumps', show: 'flow' },
+    'status-grid': { of: 'pumps', show: ['id', 'state'] },
+    gauge: { of: 'totals', show: 'temp' },
+  };
+  const PROBE: Record<string, unknown> = {
+    format: 'number:2', label: 'LBL', min: 10, max: 200, unit: 'kg', thresholds: [{ to: 50, tone: 'ok' }, { to: 100, tone: 'alarm' }], band: { lo: 20, hi: 40 },
+    marks: [{ at: 50, label: 'half' }], subtitle: 'SUB', glyph: '★', glyphValue: 2, sort: 'desc', compact: true, pageSize: 5, searchable: true,
+    sortable: false, interactive: false, header: false, columns: 3, cell: 'chip', counts: true, face: 'pill', overflow: 'scroll', frame: 'well',
+    timeZone: 'America/New_York', locale: 'ko', maxItems: 2, form: 'pictogram', layout: 'tiles', stack: true, smooth: true, horizontal: true,
+    showLabel: true, legend: false, grid: false, animate: false, colors: ['#123456'], xFormat: 'number:1', yFormat: 'number:1',
+    valueAxisZero: false, donut: true, step: true, histogram: true, bins: 3, xAxisType: 'value',
+  };
+  // Each kind's own words, or a widget option the board reads before the widget does, are not under test here.
+  for (const kind of PART_KINDS.filter(k => k.widget !== undefined && !k.kind.startsWith('chart.'))) {
+    it(`${kind.kind}: ${kind.options.join(' · ') || '(none)'}`, () => {
+      const part = PART[kind.kind];
+      expect(part, `no sample part for ${kind.kind}`).toBeDefined();
+      // The board is valid, but the widget library's own check is not run: the question is whether the option is handed on,
+      // not whether the library installed here already knows it (a kind lists what the written catalog does).
+      const reached = (options: Record<string, unknown>) => {
+        const drawing = board({ p: { as: kind.kind, ...part, ...options } as Board['parts'][string] }, { kind: 'grid', items: ['p'] });
+        expect(validateBoard(drawing).filter(i => !i.hint)).toEqual([]);
+        return (drawn(nodeOf(toViewDocument(drawing, { keysOf: () => [] }), 'p').widget).options ?? {}) as Record<string, unknown>;
+      };
+      const lost: string[] = [];
+      for (const name of kind.options) {
+        const probe = kind.choices?.[name]?.[0] ?? PROBE[name];
+        expect(probe, `no probe for ${kind.kind}.${name}`).toBeDefined();
+        if (JSON.stringify(reached({ [name]: probe })[name]) !== JSON.stringify(probe)) lost.push(name);
+      }
+      expect(lost, `${kind.kind} lists options its widget never receives`).toEqual([]);
+    });
+  }
+});
+
+describe('a word a kind reads itself changes its picture', () => {
+  // The words of a part a kind lists as its own (`own`) are read by the board before the widget is handed anything. Each is
+  // given a value the sample can show and the part's whole drawing is compared with the one without it: equal means the
+  // kind advertises a word that does nothing — the same defect as an option a widget lists and never reads.
+  const PART: Record<string, Record<string, unknown>> = {
+    'status-card': { of: 'pumps[P1]', show: ['flow'] },
+    header: { of: 'totals', title: 'Plant' },
+    stat: { of: 'totals', show: 'output' },
+    'stat-list': { of: 'totals', show: ['oee', 'temp'] },
+    list: { of: 'pumps', primary: 'id', show: ['id', 'flow'] },
+    table: { of: 'pumps', show: ['id', 'state', 'flow'] },
+    'bar-list': { of: 'pumps', show: 'flow' },
+    'status-grid': { of: 'pumps', show: ['id', 'flow'] },
+    marker: { of: 'pumps[P2]', show: ['state'] },
+    label: { title: 'Unit: million' },
+  };
+  const OWN: Record<string, Record<string, unknown>> = {
+    'status-card': { meter: 'flow', subtitle: 'Line 1', note: 'checked', state: 'state', numerals: { scale: 'large' } },
+    header: { kicker: 'Plant', subtitle: 'Shift A', clock: true, time: 'updatedAt', date: 'updatedAt', since: 'updatedAt', scale: 'large', kickerInk: 'accent' },
+    stat: { trend: 'oee', numerals: { scale: 'large' } },
+    'stat-list': { state: 'temp', numerals: { scale: 'large' } },
+    list: { primary: 'flow', secondary: 'state', trailing: 'rpm', badge: 'state', time: 'updatedAt', state: 'state', max: 1, variant: 'tiles', numerals: { scale: 'large' } },
+    table: { state: 'state' },
+    'bar-list': { label: 'state', value: 'rpm', state: 'state' },
+    'status-grid': { label: 'state', value: 'rpm', state: 'state' },
+    marker: { shape: 'ring', symbol: 'pump-a', note: 'flow', labelAt: 'left' },
+    label: { scale: 'small', ink: 'muted', face: 'pill' },
+  };
+  // Words whose picture needs more than this sample holds, each with what covers it instead.
+  const NOT_SHOWN: Record<string, string> = {};
+  for (const kind of PART_KINDS.filter(k => OWN[k.kind] !== undefined)) {
+    it(`${kind.kind}: ${kind.own.join(' · ')}`, () => {
+      const drawing = (extra: Record<string, unknown>) => {
+        const parts = { p: { as: kind.kind, ...PART[kind.kind], ...extra } as Board['parts'][string] };
+        // A canvas holds a part of its own kinds as well as the general ones; a grid holds only the general ones.
+        const b = board(parts, kind.shows.includes('canvas') ? { kind: 'canvas', size: [400, 300], place: { p: [10, 10, 120, 40] } } : { kind: 'grid', items: ['p'] });
+        expect(validateBoard(b).filter(i => !i.hint)).toEqual([]);
+        return JSON.stringify(toViewDocument(b, { keysOf: () => [] }));
+      };
+      const base = drawing({});
+      const inert: string[] = [];
+      for (const word of kind.own) {
+        if (NOT_SHOWN[`${kind.kind}.${word}`]) continue;
+        const probe = OWN[kind.kind]![word];
+        expect(probe, `no probe for ${kind.kind}.${word}`).toBeDefined();
+        if (drawing({ [word]: probe }) === base) inert.push(word);
+      }
+      expect(inert, `${kind.kind} lists words that change nothing`).toEqual([]);
+    });
+  }
 });
