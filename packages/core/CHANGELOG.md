@@ -30,6 +30,7 @@ All notable changes to this package are documented here. The format follows
 
 - The check's advice (`checkBoard`, `sourceAdvice`) gives the same finding in full three times and counts the rest in one line (`BoardFinding.count`): a board whose hundreds of data reads name the same unknown source was answered with a line for each — 85 kB for 520 reads. A finding made fewer times is left as it is.
 - The check refuses a `stat` or a `gauge` with no field to draw — no `show` — and a `status-card`, `stat-list` or `bar-list` that has neither a field (`show`; for a card also `state` or `meter`; a bar list may name its field as `value`) nor a `title`. They were accepted and drawn empty, a `stat` as "[object Object]" and a `gauge` as "NaN", with nothing in the board saying why. A card, a list or a bar list with a title and nothing else is a titled frame — the skeleton of a window or a button — and is left alone. A `table`, a `list` and a `status-grid` still take their columns, lines and cells from the data when `show` is left out.
+- The advice on a `template` element that draws no shape of its own says to use a built-in when one shows the thing, and says in the same sentence that the element is the right choice when its look is one no built-in option gives (its own type size, tracking, gradient or colour) — it read as a rule against such an element. The rulebook's sentence on the look no longer says parts set no fonts or colours: a built-in part sets none, an element's own CSS may.
 
 ## [0.43.0] - 2026-11-05
 

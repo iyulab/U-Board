@@ -502,7 +502,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (!DRAWING.test(el.template + (typeof el.style === 'string' ? el.style : '')) && Object.keys(props).length <= 4) {
       issues.push({
         at,
-        message: `"${name}" draws no shape of its own — a title, a status and a few values are a status-card, stat or stat-list; keep an element for a drawing no built-in makes`,
+        message: `"${name}" draws no shape of its own — if a built-in shows it (a title, a status and a few values are a status-card, stat or stat-list), use that; keep the element when its look is one no built-in option gives (its own type size, tracking, gradient or colour)`,
         hint: true,
       });
     }
