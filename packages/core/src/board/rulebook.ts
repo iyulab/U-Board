@@ -113,7 +113,7 @@ ${keys('groupLink')}`,
 Use a built-in whenever one shows the thing — a title, a status and a few values are a \`status-card\`, \`stat\` or
 \`stat-list\`. Write an element only for a drawing or look no built-in makes:
 \`"elements": { "tank": { "template": "<svg …>{{level}}</svg>", "style"?: "…", "props": { "level": "number", "tone": "string" } } }\`
-— every \`{{hole}}\` is a declared prop (\`number\` · \`string\` · \`boolean\` · \`list\` · \`object\`). A part places it with
+— its name is lowercase with hyphens (\`wafer-map\`); every \`{{hole}}\` is a declared prop (\`number\` · \`string\` · \`boolean\` · \`list\` · \`object\`). A part places it with
 \`"as": "element", "element": "tank"\`, fixed \`props\` and \`bind\` (\`{ "level": "<field>", "tone": "<field>.tone" }\`). What markup cannot draw runs as a
 \`"script"\` in place of the template — in a sandboxed frame with no network, its props through \`ub.onProps\`, values out by \`ub.emit(name, value)\`, \`"resources"\` the
 https:// origins it loads from. The look is \`board.skin\`, once for the board; a built-in part sets no fonts or colours (an element's own CSS may, where the skin has no word for it):
