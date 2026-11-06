@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- `look` and `renderBoard` wait for the page's fonts to finish loading before they take the picture, so text set in a face the board brought along is not photographed in the fallback face.
 - `u-board-mcp --help` (and `-h`) prints how it is used and exits 0, instead of refusing "unknown argument" with exit status 1.
 - The advice of `validate` (and of `create_board` and `patch_board` against a file) no longer grows with the board: the same finding made at many places — one unknown source named by hundreds of data reads — is given three times and then counted in one line.
 - `look` and `renderBoard` no longer answer "done — nothing to fix" for a board whose markers are drawn as points: a view crowded enough to draw them so (more than 500) has no page element for them, so what is wrong with them and how current their values are could not be read — a board whose every value was disconnected passed as clean. The report now has `unchecked` (how many parts it could not look at) and the status line says so; `board_state` tells their values.

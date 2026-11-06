@@ -110,6 +110,8 @@ export async function photograph(
 ): Promise<LookResult> {
   await page.waitForSelector('.ub-viewer__surface', { timeout: 20_000 });
   await page.waitForLoadState('networkidle', { timeout: 20_000 }).catch(() => {});
+  // A face the page asked for (a script element's font, a host's) draws its text in the fallback until it has loaded.
+  await page.evaluate(() => window.document.fonts.ready.then(() => true)).catch(() => {});
   await page.waitForTimeout(SETTLE_MS);
   await untilReadsAnswer(page);
 
