@@ -565,7 +565,9 @@ describe('validateBoard', () => {
     }
     expect(issues(canvas({ c: { as: 'chart.bar', of: 'equipment', x: 'name', y: 'load', min: 0 } }))[0]).toContain('"yAxis": { "min": … }');
     // a chart kind without a value axis of that kind, and a kind that does take `max`, are not told
-    expect(issues(parts('chart.pie'))[0]).toBe('/parts/c/max: "max" is not an option — options of a chart.pie: x, y, start, end, label, name, value, group, color, size, task, category, axis, total, opacity, donut, colors, legend, animate, showLabel, echarts');
+    expect(issues(canvas({ c: { as: 'chart.pie', of: 'equipment', label: 'name', value: 'load', max: 100 } }))[0]).toBe('/parts/c/max: "max" is not an option — options of a chart.pie: label, value, donut, colors, legend, animate, showLabel, echarts');
+    // a field word the chart does not read is said, with what it does read — a pie names its slices by `label`, not `name`
+    expect(issues(canvas({ c: { as: 'chart.pie', of: 'equipment', name: 'name', value: 'load' } }))[0]).toBe('/parts/c/name: "name" is not an option — options of a chart.pie: label, value, donut, colors, legend, animate, showLabel, echarts');
     expect(issues(canvas({ g: { as: 'gauge', of: 'totals', show: 'load', max: 120 } }))).toEqual([]);
   });
 

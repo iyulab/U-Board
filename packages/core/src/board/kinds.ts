@@ -28,16 +28,14 @@ export interface PartKind {
   stands?: Record<string, string>;
 }
 
-/** The options of a chart part that are its mapping — which field is x, y, … */
-export const CHART_MAPPING: readonly string[] = ['x', 'y', 'start', 'end', 'label', 'name', 'value', 'group', 'color', 'size', 'task', 'category', 'axis', 'total', 'opacity'];
-
-/** The mapping a chart of this widget takes: the shared ones, and what the library names for it alone — a gantt's `texture`, the field
- *  of the words (`hatch`, `dashed`) that say how an interval is drawn. Read from the catalog, so a key the library gives a chart
- *  is one a part of it takes once the catalog is written again. */
+/** The mapping a chart of this widget takes — which field is x, y, … — exactly what the library names for it, read from the
+ *  catalog: a key the chart does not read is not one a part of it takes (it was accepted and changed nothing — a pie's `name`,
+ *  a bar's `group`), and a key the library gives a chart is one a part takes once the catalog is written again. A gantt's
+ *  `texture` is the field of the words (`hatch`, `dashed`) that say how an interval is drawn. The library's treemap names none:
+ *  the part's `name` and `value` are read here, where the rows gain them (see the picture). */
 export function chartMapping(widget: string): readonly string[] {
   const named = WIDGET_CATALOG.find(c => c.widget === widget)?.mappingKeys ?? [];
-  const alone = named.filter(key => !CHART_MAPPING.includes(key));
-  return alone.length > 0 ? [...CHART_MAPPING, ...alone] : CHART_MAPPING;
+  return widget === 'chart.treemap' ? [...named, 'name', 'value'] : named;
 }
 
 /**
