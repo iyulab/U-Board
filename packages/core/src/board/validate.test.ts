@@ -672,7 +672,7 @@ describe('validateBoard', () => {
       '/elements/bad/props/level: "float" is not a prop type — number · string · boolean · list · object',
       '/elements/bad/template: "{{ level * 2 }}" — a hole is a prop this element declares (level); compute with CSS calc() on a prop, not inside the braces',
       '/parts/u/props/colour: "tank" has no prop "colour" — props: level, name, state',
-      '/parts/u/bind/level: "count" has no "state" in /data/totals/fields — its status needs one',
+      '/parts/u/bind/level: "count" has no "state" in /data/totals/fields — its status needs one: "fields": { "count": { "state": { "<value>": "<status>" } } } ("raw" when its values already are status names)',
       '/parts/u/bind/zz: "tank" has no prop "zz" — props: level, name, state',
       '/parts/v/element: no element "pump" — elements: tank, bad; define it under "elements": { "pump": { "template": "<div>{{text}}</div>", "props": { "text": "string" } } } — in the same patch as the part, since a refused patch leaves nothing behind',
     ]);
@@ -832,7 +832,7 @@ describe('validateBoard', () => {
     expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state' })).toEqual([]);
     expect(shapes({ box: [0, 0, 50, 30], show: 'state' })).toEqual(['/layout/shapes/zone/show: a shape shows a field "of" a data item — give "of": "<data>" or "<data>[<key>]"']);
     expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', fill: 'tone' })).toEqual(['/layout/shapes/zone/show: a shape shows the state of a field "of" a data item — give "show": "<field>"']);
-    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'count' })).toEqual(['/layout/shapes/zone/show: "count" has no "state" in /data/equipment/fields — the field that colours a shape needs one']);
+    expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'count' })).toEqual(['/layout/shapes/zone/show: "count" has no "state" in /data/equipment/fields — the field that colours a shape needs one: "fields": { "count": { "state": { "<value>": "<status>" } } } ("raw" when its values already are status names)']);
     expect(shapes({ box: [0, 0, 50, 30], of: 'equipment[PR-01]', show: 'state', fill: 'blue' })).toEqual([
       '/layout/shapes/zone/fill: "fill" is how the inside of a box or a path that shows a state is drawn — "tone" (filled in its colour) or "hatch" (hatched in it, which reads without colour)',
     ]);

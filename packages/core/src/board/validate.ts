@@ -193,6 +193,11 @@ function checkVariables(raw: Obj, fail: (at: string, message: string) => void): 
   }
 }
 
+/** A field that has to give a state and has none: what is missing, and the shape that supplies it. */
+function noStateMessage(field: string, data: string, what: string): string {
+  return `"${field}" has no "state" in /data/${data}/fields — ${what} needs one: "fields": { "${field}": { "state": { "<value>": "<status>" } } } ("raw" when its values already are status names)`;
+}
+
 export function validateBoard(input: unknown): BoardIssue[] {
   const issues: BoardIssue[] = [];
   const fail = (at: string, message: string) => void issues.push({ at, message });
@@ -590,7 +595,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (part.state !== undefined && kind.own.includes('state')) {
       if (typeof part.state !== 'string') fail(`${at}/state`, '"state" names a field of what the part reads');
       else if (typeof reads === 'string' && fieldOf(reads, part.state)?.state === undefined) {
-        fail(`${at}/state`, `"${part.state}" has no "state" in /data/${reads}/fields — the field that colours the rows needs one`);
+        fail(`${at}/state`, noStateMessage(part.state, reads, 'the field that colours the rows'));
       }
     }
     if (kind.kind === 'group') checkGroup(part, at, reads);
@@ -853,7 +858,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
             : `"${String(ref)}" — write a field of "${reads}", "<field>.status" or "<field>.tone"`);
         continue;
       }
-      if (m[2] && fieldOf(reads, m[1]!)?.state === undefined) fail(bindAt, `"${m[1]}" has no "state" in /data/${reads}/fields — its ${m[2]} needs one`);
+      if (m[2] && fieldOf(reads, m[1]!)?.state === undefined) fail(bindAt, noStateMessage(m[1]!, reads, `its ${m[2]}`));
     }
   };
 
@@ -963,7 +968,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (typeof s.show !== 'string') { fail(`${at}/show`, '"show" names a field of the item the shape reads'); return; }
     if (reads === null) fail(`${at}/show`, 'a shape shows a field "of" a data item — give "of": "<data>" or "<data>[<key>]"');
     else if (typeof reads === 'string' && fieldOf(reads, s.show)?.state === undefined) {
-      fail(`${at}/show`, `"${s.show}" has no "state" in /data/${reads}/fields — the field that colours a shape needs one`);
+      fail(`${at}/show`, noStateMessage(String(s.show), reads, 'the field that colours a shape'));
     }
   };
 

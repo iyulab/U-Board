@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- The check's refusal of a field that has to give a state and has none (`state` of a row colour, of a bound reading, of a shape) says how to supply one: `"fields": { "<field>": { "state": { "<value>": "<status>" } } }`, or `"raw"` when its values already are status names. It named only what was missing — the most repeated refusal in first attempts at a board.
 - The rulebook says an element's name is lowercase with hyphens (`wafer-map`): a model writing a board from it named elements in camelCase in most first attempts at a board that needs one, and the check refused the name. In a repeat of that attempt (eight answers) none did.
 - A part that shows a text or a number — a figure, a status card's reading, a state's word, a label's text — draws no value when the read answers an object or a list, instead of the text `[object Object]` with its quality `live`: the reading is `disconnected` for the reason `format`, its `message` says to name where in the answer the value is (a `valuePath` on the read, or the field's own pointer), and the prop keeps its static value. The picture marks such a binding `scalar` (`Binding.scalar`); a binding without the mark, and what takes a structure (an element's data), take what the source answered, as before.
 - The check says, as advice, that a marker that draws a symbol puts its words under the symbol, so its `labelAt` (the side of a point's words) changes nothing on it.
