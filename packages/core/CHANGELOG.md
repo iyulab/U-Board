@@ -8,6 +8,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- The check's refusal of a part made per item of a data list inside a group (`each` on a part of a group) says where such a part goes: on the board canvas, placed there by a rule at the panel (`"flow": { "at": [x, y], "cell": [w, h], "columns": n }`). Repairing a refused board with the earlier message cleared the refusal in 13 of 39 attempts and the whole board in 6; with this one, 35 and 24.
 - The check's refusal of an element prop written in a part's `props` with the wrong kind of value says what to do when the same prop is already in `bind`: leave it out of `props` — a model that copied the prop's declared type (`"dies": "list"`) into `props` kept it after being told "props hold a fixed value", and cleared it once the message said the data fills it (27 of 27 repairs, 24 of 27 before).
 - The check's refusal of a field that has to give a state and has none (`state` of a row colour, of a bound reading, of a shape) says how to supply one: `"fields": { "<field>": { "state": { "<value>": "<status>" } } }`, or `"raw"` when its values already are status names. It named only what was missing — the most repeated refusal in first attempts at a board.
 - The rulebook says an element's name is lowercase with hyphens (`wafer-map`): a model writing a board from it named elements in camelCase in most first attempts at a board that needs one, and the check refused the name. In a repeat of that attempt (eight answers) none did.

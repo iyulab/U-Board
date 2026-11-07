@@ -196,6 +196,11 @@ describe('validateBoard', () => {
     ]);
   });
 
+  it('tells a part made per item of a data list inside a group that it goes on the board canvas, placed there by a rule', () => {
+    const parts = { card: { as: 'status-card', each: 'equipment', show: ['state'] } };
+    expect(issues({ data, parts: { panel: { as: 'group', size: [200, 100], parts, place: { card: [0, 0, 100, 50] } } }, layout: { kind: 'grid', items: ['panel'] } })).toEqual([expect.stringMatching(/^\/parts\/panel\/parts\/card\/each: a part inside a group is one part .* goes on the board canvas, placed there by a rule at the panel: "<part>": \{ "flow"/)]);
+  });
+
   it('checks a group: its parts placed on its canvas, read of the group', () => {
     const pump = {
       as: 'group', size: [220, 140],

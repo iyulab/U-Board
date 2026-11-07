@@ -898,7 +898,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
       if (id.includes('/')) fail(innerAt, `a part id has no "/" — "/" joins a group and its parts ("<group>/${id.replace(/\//g, '-')}")`);
       const part = checkPart(raw, innerAt, { reads });
       const insideEach = typeof part?.each === 'string' && part.each.startsWith('/');
-      if (part?.each !== undefined && !insideEach) fail(`${innerAt}/each`, 'a part inside a group is one part — repeat the group with "each" instead, or "each": "/<list in the item of the group>" for one per item of a list inside it');
+      if (part?.each !== undefined && !insideEach) fail(`${innerAt}/each`, 'a part inside a group is one part — repeat the group with "each" instead, or "each": "/<list in the item of the group>" for one per item of a list inside it; a part made per item of a list of the data goes on the board canvas, placed there by a rule at the panel: "<part>": { "flow": { "at": [x, y], "cell": [w, h], "columns": n } }');
       if (insideEach) madePerItem.add(id);
       if (!(id in place)) fail(innerAt, `"${id}" is not placed in the group — put it in its "place", or remove it`);
     }
