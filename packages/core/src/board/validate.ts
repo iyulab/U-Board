@@ -1177,7 +1177,11 @@ export function validateBoard(input: unknown): BoardIssue[] {
       };
       if (typeof item === 'string') name(item, itemAt);
       else if (Array.isArray(item)) {
-        if (item.length !== 2) { fail(itemAt, 'an item with a span is ["<part>", span]'); return; }
+        if (item.length !== 2 || typeof item[0] !== 'string') {
+          // A cell that holds a canvas or a grid is an object: the pair is a part's name and its span, nothing else.
+          fail(itemAt, `an item with a span is ["<part>", span]${item.some(isObj) ? ' — a cell holding a canvas or a grid is an object: { "canvas": { … }, "span": n } or { "grid": [ … ], "span": n }; several cells side by side are separate items of the list' : ''}`);
+          return;
+        }
         name(item[0], `${itemAt}/0`);
         span(item[1], `${itemAt}/1`);
       } else if (isObj(item)) {

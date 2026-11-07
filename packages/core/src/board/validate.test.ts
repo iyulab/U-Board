@@ -205,6 +205,13 @@ describe('validateBoard', () => {
     expect(issues({ data, parts: { panel: { as: 'group', size: [200, 100], parts: ['a', 'b'], place: {} } }, layout: { kind: 'grid', items: ['panel'] } })).toEqual(["/parts/panel/parts: a group needs \"parts\": { \"<id>\": <part>, … } — the parts drawn together, written out here (a list of ids draws nothing), each placed in the group's \"place\""]);
   });
 
+  it('says what a grid cell holding a canvas or a grid is, when it is written as a pair with an object in it', () => {
+    const parts = { a: { as: 'label', title: 'A' } };
+    const messages = issues({ data, parts, layout: { kind: 'grid', items: [[{ grid: [['a', 6]] }, 4], ['a', 12]] } });
+    expect(messages).toContain('/layout/items/0: an item with a span is ["<part>", span] — a cell holding a canvas or a grid is an object: { "canvas": { … }, "span": n } or { "grid": [ … ], "span": n }; several cells side by side are separate items of the list');
+    expect(messages.join()).not.toContain('[object Object]');
+  });
+
   it('checks a group: its parts placed on its canvas, read of the group', () => {
     const pump = {
       as: 'group', size: [220, 140],
