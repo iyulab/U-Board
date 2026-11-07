@@ -201,6 +201,10 @@ describe('validateBoard', () => {
     expect(issues({ data, parts: { panel: { as: 'group', size: [200, 100], parts, place: { card: [0, 0, 100, 50] } } }, layout: { kind: 'grid', items: ['panel'] } })).toEqual([expect.stringMatching(/^\/parts\/panel\/parts\/card\/each: a part inside a group is one part .* goes on the board canvas, placed there by a rule at the panel: "<part>": \{ "flow"/)]);
   });
 
+  it('says what the parts of a group are written as when they are a list of ids', () => {
+    expect(issues({ data, parts: { panel: { as: 'group', size: [200, 100], parts: ['a', 'b'], place: {} } }, layout: { kind: 'grid', items: ['panel'] } })).toEqual(["/parts/panel/parts: a group needs \"parts\": { \"<id>\": <part>, … } — the parts drawn together, written out here (a list of ids draws nothing), each placed in the group's \"place\""]);
+  });
+
   it('checks a group: its parts placed on its canvas, read of the group', () => {
     const pump = {
       as: 'group', size: [220, 140],

@@ -889,7 +889,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
       fail(`${at}/size`, group.size === undefined ? 'a group needs "size": [width, height] — or a box [x, y, width, height] for every part, which sizes the canvas as far as they reach' : typeof group.size === 'string' ? '"size" of a group is [width, height] — how large a heading or a text is, is "scale" on a header or a label' : 'a group needs "size": [width, height]');
     }
     const inner = isObj(group.parts) ? group.parts : undefined;
-    if (!inner) { fail(`${at}/parts`, 'a group needs "parts": the parts drawn together'); return; }
+    if (!inner) { fail(`${at}/parts`, 'a group needs "parts": { "<id>": <part>, … } — the parts drawn together, written out here (a list of ids draws nothing), each placed in the group\'s "place"'); return; }
     const place = isObj(group.place) ? group.place : {};
     const madePerItem = new Set<string>();
     if (!isObj(group.place)) fail(`${at}/place`, 'a group needs "place": { "<part>": [x, y, width?, height?] } on its own canvas');
