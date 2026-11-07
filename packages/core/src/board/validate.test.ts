@@ -763,6 +763,10 @@ describe('validateBoard', () => {
       '/parts/t/props/items: "items" is a list — "x" is not one; props hold a fixed value — one read from data is bound: "bind": { "items": "<field>" }',
       '/parts/t/props/on: "on" is a boolean — "yes" is not one; props hold a fixed value — one read from data is bound: "bind": { "on": "<field>" }',
     ]);
+    // A prop that is already bound and also written in props (its declared type taken for a value): the message says to leave it out.
+    expect(issues({ ...canvas({ t: { as: 'element', element: 'tank', props: { items: 'list' }, bind: { items: 'rows' } } }), elements: el })).toContain(
+      '/parts/t/props/items: "items" is bound in "bind" — the data fills it, so remove it from props (props hold only fixed values; "list" is not a list)',
+    );
   });
 
   it('links parts drawn on its own canvas — not a group itself, not a part of another cell; names no part like a cell', () => {

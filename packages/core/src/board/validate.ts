@@ -833,7 +833,11 @@ export function validateBoard(input: unknown): BoardIssue[] {
       const type = declared[key];
       const fits = type === 'number' ? isNum(value) : type === 'string' ? typeof value === 'string' : type === 'boolean' ? typeof value === 'boolean'
         : type === 'list' ? Array.isArray(value) : type === 'object' ? isObj(value) : true;
-      if (!fits) fail(`${at}/props/${key}`, `"${key}" is a ${String(type)} — ${JSON.stringify(value)} is not one; props hold a fixed value — one read from data is bound: "bind": { "${key}": "<field>" }`);
+      if (!fits) {
+        // A prop that is already bound and still written in props: the value there is the prop's declared type taken for a value — nothing to fix but to leave it out.
+        if (isObj(part.bind) && key in part.bind) fail(`${at}/props/${key}`, `"${key}" is bound in "bind" — the data fills it, so remove it from props (props hold only fixed values; ${JSON.stringify(value)} is not a ${String(type)})`);
+        else fail(`${at}/props/${key}`, `"${key}" is a ${String(type)} — ${JSON.stringify(value)} is not one; props hold a fixed value — one read from data is bound: "bind": { "${key}": "<field>" }`);
+      }
     }
     if (part.bind === undefined) return;
     if (!isObj(part.bind)) { fail(`${at}/bind`, 'bind is { "<prop>": "<field>" | "<field>.status" | "<field>.tone" }'); return; }
