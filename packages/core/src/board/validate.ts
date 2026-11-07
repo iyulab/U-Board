@@ -1225,13 +1225,13 @@ export function validateBoard(input: unknown): BoardIssue[] {
     for (const { span, at: spanAt } of spans) {
       if ((cell * span) % 12 !== 0) fail(spanAt, `in a cell of ${cell} columns a span takes whole columns: one of ${spanSteps(cell)}`);
       if (used + span > 12) {
-        if (used < 12) fail(spanAt, `each row of a grid in a cell fills the cell — the row before this item takes ${used} of 12`);
+        if (used < 12) fail(spanAt, `each row of a grid in a cell fills the cell — the row before this item takes ${used} of 12 (inside a cell a span is a twelfth of the cell: a row adds up to 12 — widen an item of that row by ${12 - used}, or add one)`);
         rows++;
         used = 0;
       }
       used += span;
     }
-    if (spans.length > 0 && used < 12) fail(`${at}/${items.length - 1}`, `each row of a grid in a cell fills the cell — the last row takes ${used} of 12`);
+    if (spans.length > 0 && used < 12) fail(`${at}/${items.length - 1}`, `each row of a grid in a cell fills the cell — the last row takes ${used} of 12 (inside a cell a span is a twelfth of the cell: a row adds up to 12 — widen an item of that row by ${12 - used}, or add one)`);
     if (rows > 6) fail(at, `a grid in a cell lays out at most six rows — this one has ${rows}`);
   };
 

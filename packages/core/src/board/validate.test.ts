@@ -174,8 +174,8 @@ describe('validateBoard', () => {
     const grid = (items: unknown[]) => ({ data, parts, layout: { kind: 'grid', items } });
     expect(issues(grid([{ grid: [['a', 6], ['b', 6], 'c'], span: 4 }, ['map', 8]]))).toEqual([]);
     expect(issues(grid([{ grid: [['a', 6], 'b', ['c', 6]], span: 4 }, ['map', 8]]))).toEqual([
-      '/layout/items/0/grid/1: each row of a grid in a cell fills the cell — the row before this item takes 6 of 12',
-      '/layout/items/0/grid/2: each row of a grid in a cell fills the cell — the last row takes 6 of 12',
+      '/layout/items/0/grid/1: each row of a grid in a cell fills the cell — the row before this item takes 6 of 12 (inside a cell a span is a twelfth of the cell: a row adds up to 12 — widen an item of that row by 6, or add one)',
+      '/layout/items/0/grid/2: each row of a grid in a cell fills the cell — the last row takes 6 of 12 (inside a cell a span is a twelfth of the cell: a row adds up to 12 — widen an item of that row by 6, or add one)',
     ]);
     expect(issues(grid([{ grid: [['a', 4], ['b', 8]], span: 4 }, ['map', 8], 'c']))).toEqual([
       '/layout/items/0/grid/0/1: in a cell of 4 columns a span takes whole columns: one of 3, 6, 9, 12',
