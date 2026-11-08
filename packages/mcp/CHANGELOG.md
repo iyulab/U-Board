@@ -6,6 +6,12 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-08
+
+### Changed
+
+- Follows `@iyulab/u-board` `^0.44.0` and `@iyulab/u-widgets` `^0.49.0`.
+
 ### Fixed
 
 - `validate` of a whole `document` that passes says that nothing is saved (`next`), as the check of a patch already did: a writer that took "valid" for "written" kept checking drafts and never wrote the board.
