@@ -1072,6 +1072,12 @@ export function validateBoard(input: unknown): BoardIssue[] {
   const layout = board.layout;
   const checkCanvas = (canvas: Obj, at: string) => {
     if (!isSize(canvas.size)) fail(`${at}/size`, 'a canvas needs "size": [width, height]');
+    /** A placed box with a side under `MIN_BOX_SIDE` can hold no part: it draws as a dot. The usual cause is a "size" written as a scale or a ratio ([1, 1]) when it is [width, height] in the canvas's own units. */
+    const tooSmall = (w: unknown, h: unknown, boxAt: string, what: string) => {
+      if (!isNum(w) || !isNum(h) || (w >= MIN_BOX_SIDE && h >= MIN_BOX_SIDE)) return;
+      const canvasSize = isSize(canvas.size) ? ` (this canvas is ${(canvas.size as number[])[0]} × ${(canvas.size as number[])[1]})` : '';
+      fail(boxAt, `${what} is ${w} × ${h} canvas units — too small to draw a part in, it shows as a dot; a size is in the canvas's own units${canvasSize}, not a scale or a ratio, and a side is at least ${MIN_BOX_SIDE}`);
+    };
     // An image: an https:// address, an inline image, or a path on the site that serves the board — nothing that runs.
     if (canvas.background !== undefined && (typeof canvas.background !== 'string'
       || !/^(https:\/\/\S+|data:image\/(png|jpeg|gif|webp|svg\+xml)[;,]\S*|\/(?!\/)\S*)$/i.test(canvas.background))) {
@@ -1098,6 +1104,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
         else if (m[0]! * m[3]! - m[1]! * m[2]! === 0) fail(`${placeAt}/matrix`, '"matrix" must not flatten the plane onto a line — a·d − b·c is not 0');
       }
       if (p.size !== undefined && !isSize(p.size)) fail(`${placeAt}/size`, '"size" is [width, height], both above 0');
+      else if (Array.isArray(p.size)) tooSmall(p.size[0], p.size[1], `${placeAt}/size`, 'a box');
       if (p.anchor !== undefined && !['center', 'left', 'right', 'top', 'bottom'].includes(p.anchor as string)) fail(`${placeAt}/anchor`, '"anchor" is the point of the box the position is: center, left, right, top or bottom');
     };
     /** A part's items placed by a rule: flowing in columns, or grouped by a field into boxes whose items flow. */
@@ -1115,6 +1122,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
         if (!['at', 'cell', 'gap', 'columns', 'pad'].includes(key)) fail(`${placeAt}/flow/${key}`, `"flow" takes "at", "cell", "gap", "columns" and "pad" — "${key}" is not one`);
       }
       if (!isSize(flow.cell)) fail(`${placeAt}/flow/cell`, '"cell" is the size of one item: [width, height], both above 0');
+      else tooSmall((flow.cell as number[])[0], (flow.cell as number[])[1], `${placeAt}/flow/cell`, 'a cell');
       columns(flow.columns, `${placeAt}/flow/columns`);
       if (flow.at !== undefined && !(Array.isArray(flow.at) && flow.at.length === 2 && flow.at.every(isNum))) fail(`${placeAt}/flow/at`, '"at" is where the first item goes: [x, y]');
       if (flow.gap !== undefined && !pair(flow.gap)) fail(`${placeAt}/flow/gap`, '"gap" is the space between items: [across, down], 0 or more');
@@ -1153,10 +1161,15 @@ export function validateBoard(input: unknown): BoardIssue[] {
         if (isObj(q) && q.list !== undefined && q.key === undefined) fail(placeAt, `items placed one by one are named by their "key" — give "${String(entry.part.each)}" a "key", or lay them out in a grid`);
         if (isByFields(p)) checkPlaceByFields(p, placeAt);
         else if (isByRule(p)) checkPlaceByFlow(p, placeAt, q);
-        else for (const [key, q] of Object.entries(p)) if (!isPlace(q)) fail(`${placeAt}/${key}`, 'a place is [x, y] or [x, y, width, height]');
+        else {
+          for (const [key, q] of Object.entries(p)) {
+            if (!isPlace(q)) fail(`${placeAt}/${key}`, 'a place is [x, y] or [x, y, width, height]');
+            else if ((q as number[]).length === 4) tooSmall((q as number[])[2], (q as number[])[3], `${placeAt}/${key}`, 'a box');
+          }
+        }
       } else if (!isPlace(p)) {
         fail(placeAt, `"${id}" is not a part with "each", so its place is [x, y, width?, height?]`);
-      }
+      } else if ((p as number[]).length === 4) tooSmall((p as number[])[2], (p as number[])[3], placeAt, 'a box');
     }
     checkShapes(canvas.shapes, `${at}/shapes`);
     checkLinks(canvas.links, `${at}/links`, isEndOn(new Set(Object.keys(place))));
@@ -1369,6 +1382,9 @@ export function validateBoard(input: unknown): BoardIssue[] {
   }
   return issues;
 }
+
+/** The smallest side, in a canvas's own units, of a placed box that can hold a part (a text, a value, a symbol). */
+const MIN_BOX_SIDE = 8;
 
 function isSize(v: unknown): boolean {
   return Array.isArray(v) && v.length === 2 && v.every(n => isNum(n) && n > 0);

@@ -25,6 +25,25 @@ const canvas = (parts: Record<string, unknown>, more: Record<string, unknown> = 
 const issues = (board: unknown) => validateBoard(board).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
 
 describe('validateBoard', () => {
+  it("refuses a placed box too small to hold a part — a size written as a scale instead of [width, height] in the canvas's units", () => {
+    const part = { as: 'stat', of: 'totals', show: 'count' };
+    const each = { m: { as: 'status-card', show: 'state', each: 'equipment' } };
+    const tail = " canvas units — too small to draw a part in, it shows as a dot; a size is in the canvas's own units (this canvas is 400 × 600), not a scale or a ratio, and a side is at least 8";
+    const placing = (place: unknown) => ({ ...canvas(each), layout: { kind: 'canvas', size: [400, 600], place: { m: place } } });
+    // a box written by hand
+    expect(issues(canvas({ a: part }, { place: { a: [10, 10, 1, 1] } }))).toEqual([`/layout/place/a: a box is 1 × 1${tail}`]);
+    // one box of an "each" part
+    expect(issues(placing({ 'PR-01': [0, 0, 100, 7] }))).toEqual([`/layout/place/m/PR-01: a box is 100 × 7${tail}`]);
+    // items placed by their fields: the "size" an assistant wrote as [1, 1]
+    expect(issues(placing({ at: ['x', 'y'], size: [1, 1] }))).toEqual([`/layout/place/m/size: a box is 1 × 1${tail}`]);
+    // a flow's cell
+    expect(issues(placing({ flow: { cell: [100, 4], columns: 2 } }))).toEqual([`/layout/place/m/flow/cell: a cell is 100 × 4${tail}`]);
+    // the smallest box that is taken, a place that is a point, and an ordinary size
+    expect(issues(canvas({ a: part }, { place: { a: [10, 10, 8, 8] } }))).toEqual([]);
+    expect(issues(canvas({ a: part }, { place: { a: [10, 10] } }))).toEqual([]);
+    expect(issues(placing({ at: ['x', 'y'], size: [260, 170] }))).toEqual([]);
+  });
+
   it('takes a board that is right', () => {
     expect(issues(canvas({ a: { as: 'status-card', of: 'equipment[PR-01]', show: 'state' }, t: { as: 'stat', of: 'totals', show: 'count' } }))).toEqual([]);
   });

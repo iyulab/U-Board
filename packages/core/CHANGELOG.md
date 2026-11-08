@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- The check refuses a placed box with a side under 8 canvas units. A `size` written as a scale — `"size": [1, 1]`, where it is `[width, height]` in the canvas's own units — was accepted and drew the part as a dot, with nothing in the check to say why; a model writing a board without a picture to look at could not see it. The message names the box's size and the canvas's size and says a size is not a scale or a ratio. It covers a box written by hand (`[x, y, width, height]`), the `size` of items placed by their fields, and the `cell` of a flow. A point (`[x, y]`) is still a point.
+
 ## [0.44.0] - 2026-11-08
 
 ### Added
