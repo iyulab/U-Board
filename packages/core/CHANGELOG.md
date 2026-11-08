@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-11-08
+
 ### Added
 
 - The check's refusal of a row that does not fill a grid in a cell says how a span is counted there (a twelfth of the cell, so a row adds up to 12) and how far the row is short: "widen an item of that row by n, or add one". In a repair of 13 boards that had it, the refusal was cleared in 25 of 39 attempts (9 of 39 with the message that only said how much the row took).
@@ -30,6 +32,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Fixed
 
+- A board in a box that is as wide as the window prints fitted to the paper, not to the screen it was on, and its text can be selected again when the host asks for it through `style`: the viewer pin is `@canvas-kit/viewer` `^0.11.0`, which measures the box again when printing starts and gives `user-select` back to the host.
 - A `chart.treemap` part takes the `name` and `value` options the rulebook gives every chart: it drew nothing — with an empty report — for a list shaped any other way than `{ name, value }`, because the library's treemap takes no mapping. The part now gives its rows `name` and `value` from the fields it names; a treemap whose rows are already `{ name, value }` is as it was.
 - A skin's `palette.ground` is drawn: it is the colour of a text shape that has no tone of its own — the words written on the board's own background (`palette.backdrop`), which stayed in the theme's text colour whatever the backdrop was. It was accepted and checked, and the check said it was not drawn yet; that notice is gone.
 
