@@ -517,7 +517,9 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
         // A check of a change to a board saves nothing: say so, with the revision the change is to be sent on — a
         // writer that took the check for the save sends the next patch on a revision the board never reached.
         const unsaved = revision !== undefined && issues.length === 0 && { next: `nothing is saved yet — send this patch with patch_board, on revision ${revision}` };
-        return { valid: issues.length === 0, issues, advice, ...unsaved };
+        // A document the writer sent is not saved either: a writer that takes «valid» for «written» keeps checking drafts and never writes.
+        const unsavedDocument = document !== undefined && issues.length === 0 && { next: 'nothing is saved — this checked the document you sent; to put it on the board, add its parts with patch_board' };
+        return { valid: issues.length === 0, issues, advice, ...unsaved, ...unsavedDocument };
       })
   );
 

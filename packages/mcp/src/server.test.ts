@@ -409,6 +409,8 @@ describe('u-board-mcp', () => {
   it('advises, as saving does, on a read that names its source by its name — with the id to write', async () => {
     const { value } = await call('validate', { document: { ...gaugeBoard(), data: { line: { ...line.line, from: 'plant api' } } } });
     expect(value).toMatchObject({ valid: true, advice: [{ path: '/data/line/from', message: expect.stringContaining('"from" takes its id: "s1"') }] });
+    // A valid document is not saved by the check: it says so, as the check of a patch does.
+    expect(value.next).toBe('nothing is saved — this checked the document you sent; to put it on the board, add its parts with patch_board');
   });
 
   it('reads a source asked for a given time with the zone and request time a binding will have', async () => {
