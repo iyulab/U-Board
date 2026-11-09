@@ -7,6 +7,7 @@ import { UBoardApiError, type ResolveRef } from './client.js';
 import { isWorkspaceStore, type BoardStore, type WorkspaceStore } from './store.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
+import { placementProblems } from './placement.js';
 import { BundleError, fromBundle, toBundle, whereIs, withEdits, BOARD_FILE } from './bundle.js';
 import type { Looker } from './look.js';
 
@@ -555,16 +556,7 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
           // What went wrong while drawing is the whole board's; up close, only the part's — as its advice is.
           const seen = [
             ...report.problems.map(p => inBoard(read, picture, p)),
-            // Items placed by their fields that were left out: no number in a field, or outside the frame.
-            ...Object.entries(found.unplaced ?? {}).map(([part, count]) => ({
-              path: `/parts/${part}`,
-              message: `${count} item${count === 1 ? '' : 's'} of "${part}" ${count === 1 ? 'is' : 'are'} not drawn: no number in the fields its place names, or outside its frame — check "at" and "frame"`,
-            })),
-            // An answer keyed by names ({ "g1": {…} }) is no list: a part made per item of it makes none.
-            ...(found.notLists ?? []).map(data => ({
-              path: `/data/${data.replace(/~/g, '~0').replace(/\//g, '~1')}`,
-              message: `"${data}" is read as an object keyed by names, not a list, so a part made per item of it ("each") makes none — write the answer as a list whose items hold their name in a field ([{ "id": "g1", … }]) and name that field with "key"`,
-            })),
+            ...placementProblems(found.unplaced, found.notLists),
           ];
           const problems = focus ? seen.filter(p => concerns(p, focus)) : seen;
           const said = { type: 'text' as const, text: JSON.stringify({ revision: found.revision, status: lookStatus(problems.length, left, focus, focus ? 0 : report.quality.disconnected ?? 0, focus ? 0 : report.unchecked ?? 0, focus ? 0 : report.console.length), ...report, problems, advice }) };

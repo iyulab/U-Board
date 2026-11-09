@@ -129,6 +129,21 @@ describe('renderBoard', () => {
     expect(report.unchecked).toBe(count);
   }, 60_000);
 
+  it('reports the items a canvas leaves out because they fall outside the frame it places them by, instead of saying nothing', async () => {
+    // Three zones, the frame covers the y values of two: the third is declared and never drawn — a picture that looks whole.
+    const zones = [{ id: 'a', x: 20, y: 120 }, { id: 'b', x: 120, y: 200 }, { id: 'c', x: 40, y: 60 }];
+    const placed: Board = {
+      data: { zones: { from: 'plant', ref: 'zones', list: '/value', key: 'id', fields: { id: {}, x: {}, y: {} } } },
+      parts: { zone: { as: 'status-card', each: 'zones', title: '{{id}}', show: ['x'] } },
+      layout: { kind: 'canvas', size: [400, 240], place: { zone: { at: ['x', 'y'], frame: [0, 100, 200, 300], size: [80, 50] } } },
+    };
+    const adapter: Adapter = { id: 'plant', async resolve() { return { value: zones, quality: 'live' }; } };
+    const { report } = await renderBoard({ board: placed, adapters: [adapter], width: 480, height: 320 });
+    const said = report.problems.filter(p => p.message.includes('not drawn'));
+    expect(said).toHaveLength(1);
+    expect(said[0]!.message).toContain('1 item of "zone" is not drawn');
+  }, 60_000);
+
   it('refuses a size that is not a whole number of pixels', async () => {
     await expect(renderBoard({ board, width: 0, height: 100 })).rejects.toThrow(/width must be a whole number/);
     await expect(renderBoard({ board, width: 100, height: 1.5 })).rejects.toThrow(/height must be a whole number/);
