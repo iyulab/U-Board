@@ -142,9 +142,24 @@ gets no link. Triggers only show, move and tell — they write to nothing the bo
 ## Example
 
 \`\`\`json
-${JSON.stringify(RULEBOOK_EXAMPLE, null, 1)}
+${exampleText(RULEBOOK_EXAMPLE)}
 \`\`\``,
   ].join('\n\n');
+}
+
+/** A value on one line, `{"a": 1, "b": [1, 2]}`. */
+function inline(v: unknown): string {
+  if (Array.isArray(v)) return `[${v.map(inline).join(', ')}]`;
+  if (v && typeof v === 'object') return `{${Object.entries(v).map(([k, x]) => `${JSON.stringify(k)}: ${inline(x)}`).join(', ')}}`;
+  return JSON.stringify(v);
+}
+
+/** The example as text: each entry of the board's maps (`parts`, `data`, …) on a line of its own, what is inside an entry on that line — the same board in a third fewer characters than a one-item-per-line print. */
+function exampleText(v: unknown, depth = 0): string {
+  if (!v || typeof v !== 'object' || Array.isArray(v) || depth >= 2) return inline(v);
+  const pad = ' '.repeat(depth + 1);
+  const lines = Object.entries(v).map(([k, x]) => `${pad}${JSON.stringify(k)}: ${exampleText(x, depth + 1)}`);
+  return `{\n${lines.join(',\n')}\n${' '.repeat(depth)}}`;
 }
 
 const optionsOf = (k: PartKind) => [...k.own, ...k.options];

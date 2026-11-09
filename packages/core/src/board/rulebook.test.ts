@@ -15,7 +15,9 @@ describe('the v2 rulebook', () => {
   it('works through a board that is valid and draws', () => {
     expect(validateBoard(RULEBOOK_EXAMPLE).filter(i => !i.hint)).toEqual([]);
     expect(() => toViewDocument(RULEBOOK_EXAMPLE)).not.toThrow();
-    expect(rulebook).toContain(JSON.stringify(RULEBOOK_EXAMPLE, null, 1));
+    // The example is printed one entry to a line to save characters; what the assistant reads is the same board.
+    const printed = rulebook.match(/```json\n([\s\S]*?)\n```/)![1];
+    expect(JSON.parse(printed)).toEqual(RULEBOOK_EXAMPLE);
   });
 
   it('lists every kind a part may be, with its options', () => {
