@@ -52,8 +52,9 @@ describe('the v2 rulebook', () => {
   // and the state a shape shows; 18 000 → 18 500 for the options the widget library grew — a status card's compact and frame;
   // 18 500 → 19 500, once, for the second wave of words: `dim`, and `not` / `in` in a where — the room the rest of that wave shares;
   // 19 500 → 19 600 for each chart row naming the fields it reads — a pie's `label` and `value`, a bar's `x` and `y` — in place of
-  // fifteen field words said once for every chart, most of which a given chart ignored).
+  // fifteen field words said once for every chart, most of which a given chart ignored; 19 600 → 19 500 again, the line the stage
+  // contract of the first stage draws — two sentences the rest of the rulebook already says (a data read's `ref`, and that there is one way to write each thing)).
   it('stays short enough to read whole', () => {
-    expect(rulebook.length).toBeLessThan(19_600);
+    expect(rulebook.length).toBeLessThan(19_500);
   });
 });

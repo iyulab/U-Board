@@ -47,15 +47,14 @@ export function boardRulebook(): string {
     `# Writing a board
 
 A board is one JSON object. Say once where values come from and what they mean (\`data\`), what is shown (\`parts\`) and
-where (\`layout\`); statuses and the look are said once for the board. Everything is addressed by id; there is one way
-to write each thing.
+where (\`layout\`); statuses and the look are said once for the board. Everything is addressed by id.
 
 ${['board', 'statuses', 'symbols', 'elements', 'data', 'presets', 'parts', 'layout', 'triggers'].filter(k => k in (schema.properties ?? {})).map(k => `- \`${k}\`${schema.properties![k]!.description ? ` — ${schema.properties![k]!.description}` : ''}`).join('\n')}`,
 
     `## data — read once, give meaning once
 
 A data read asks an HTTP connector a \`path\` — the usual read. Only an adapter the host names itself is given its own
-\`ref\` instead (one item, its \`fields\` only, never with \`path\`).
+\`ref\` instead.
 Parts name a read (\`"pumps"\`, the whole list) or one item of it (\`"pumps[P1]"\`, by its \`key\`). Data stays raw —
 names, units, places and statuses live in \`fields\`, never in the data. A board takes values from outside with \`variables\` (see the example): \`{ "variable": "line" }\` in a \`where\`, \`[$line]\` in an \`of\`, \`{{$line}}\` in a text; a viewer asks for one in its address (\`?v.line=L2\`). A value no list names — a day, a number, a word — is a \`kind\` (\`date\`, \`datetime\`, \`number\`, \`text\`) with a \`default\`, read in a \`where\` or a text only. A field's \`at\` points into one item, so with a \`list\` what sits beside it (a count, a total) is out of reach: read that
 with a read of its own and no \`list\` — \`{ from: 'plant', path: '/plant/pumps?limit=1', fields: { total: { at: '/total' } } }\`. With a \`list\`, \`time\` is a field of each item (an item lacking it has no value); the answer's own is \`answerTime\`.
