@@ -545,7 +545,7 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
           const read = found.document;
           // What the viewers' page draws: the board's picture, made by the server with its data's items.
           const { picture } = found;
-          const { image, report } = await looker.look({ board, focus: focus && inPicture(picture, focus), appearance, width, height }, picture);
+          const { image, report } = await looker.look({ board: which(board), focus: focus && inPicture(picture, focus), appearance, width, height }, picture);
           // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
           // Up close, every layout finding is read before keeping the part's own — a fold past the limit would hide some.
           const layout = lintViewDocument(picture, focus ? { geometryLimit: Infinity } : {}).map(a => inBoard(read, picture, a));

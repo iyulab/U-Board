@@ -26,3 +26,19 @@ describe('starting with the board app', () => {
     expect(startOf(['--help'], {})).toMatchObject({ mode: 'help', message: expect.stringContaining('--app') });
   });
 });
+
+describe('starting with the answers of the sources', () => {
+  it('takes a file of them with a board kept in a file, so look draws it with values', () => {
+    expect(startOf(['--board', 'board.json', '--data', 'answers.json'], {})).toEqual({ mode: 'document', path: 'board.json', kind: 'grid', data: 'answers.json' });
+    expect(startOf(['--board=board.json', '--data=answers.json', '--kind', 'canvas'], {})).toMatchObject({ mode: 'document', kind: 'canvas', data: 'answers.json' });
+  });
+
+  it('is refused against a server, which reads its own data sources, and without a value', () => {
+    expect(startOf(['--data', 'answers.json'], server)).toMatchObject({ mode: 'refused', message: expect.stringContaining('--data') });
+    expect(startOf(['--board', 'board.json', '--data'], {})).toMatchObject({ mode: 'refused', message: expect.stringContaining('--data needs a value') });
+  });
+
+  it('is told of in the usage', () => {
+    expect(startOf(['--help'], {})).toMatchObject({ mode: 'help', message: expect.stringContaining('--data') });
+  });
+});

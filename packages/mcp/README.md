@@ -47,7 +47,7 @@ In a client's JSON configuration:
 | `rename_board` | Renames a board; its id, share links and history stay. |
 | `delete_board` | Deletes a board for good (marked destructive, so a client can ask first). A data source is removed in the console. |
 | `validate` | Checks a board, a board with a patch, or — with neither — the board as it is saved, without saving. |
-| `look` | A picture of a saved board as its viewers see it, with what went wrong while drawing; `focus` one part (`/parts/<id>`), or `appearance` the other paper. Needs Chrome or Edge on this computer, or `UBOARD_BROWSER`. |
+| `look` | A picture of a saved board as its viewers see it, with what went wrong while drawing; `focus` one part (`/parts/<id>`), or `appearance` the other paper. Needs Chrome or Edge on this computer, or `UBOARD_BROWSER`. Against a file (`--board`) it draws that board here, with no server. |
 | `list_sources` | The workspace's data sources — never a credential; a static one with the paths it answers and whether its answers are example data. |
 | `sample_source` | What a source's response looks like: each value's JSON Pointer, type and example, and the fields that tell a list's items apart. |
 | `create_source` | A data source that needs no credential — an API, or one that answers what is stored in it by path (example values when no source has them yet); one that needs a credential is made by a person in the console. |
@@ -85,6 +85,13 @@ read), and this process never fetches an address itself. A read that cannot be m
 a file (`--board`) has no data sources to read through, and the two are refused together.
 
 The page is one file of about 2 MB (the viewer with its chart and form parts inside it, as a host takes an app's page in one piece).
+
+### A board in a file
+
+`u-board-mcp --board board.json [--kind grid|canvas] [--data answers.json]` works on one board kept in a file, with no server and no data
+sources (the file is made when it is not there). `look` draws the board in a browser on this computer. A board that reads values draws them
+from `--data`, the answers of its sources: `{ "<source id>": { "<path>": <the body that source answered> } }`, the file `u-board-render --data`
+takes; without it a part made per item of a list draws no item, and a value is drawn as not read. `--data` is for a file, not a server.
 
 ## In your own app
 

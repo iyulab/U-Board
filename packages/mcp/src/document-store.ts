@@ -3,7 +3,7 @@ import { basename } from 'node:path';
 import type { Board } from '@iyulab/u-board/domain';
 import { checkBoard, emptyBoard } from '@iyulab/u-board/check';
 import type { ViewKind } from '@iyulab/u-board/picture';
-import { DocumentBoardStore, describeIssues } from './document-board.js';
+import { DocumentBoardStore, describeIssues, type DocumentBoardOptions } from './document-board.js';
 
 export { DOCUMENT_BOARD_ID } from './document-board.js';
 
@@ -19,14 +19,14 @@ export class DocumentStore extends DocumentBoardStore {
    * Opens the board in `path`, or — when there is no such file — starts one there: an empty board of `kind`. A file that is
    * not a board a server would store is refused with the reasons, rather than opened to be worked on and never saved.
    */
-  static async open(path: string, kind: ViewKind = 'grid'): Promise<DocumentStore> {
+  static async open(path: string, kind: ViewKind = 'grid', extra: Pick<DocumentBoardOptions, 'pictureOf'> = {}): Promise<DocumentStore> {
     let text: string | undefined;
     try {
       text = await readFile(path, 'utf8');
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
     }
-    const options = { name: basename(path), save: (document: Board) => write(path, document) };
+    const options = { name: basename(path), save: (document: Board) => write(path, document), ...extra };
     if (text === undefined) {
       const document = emptyBoard(kind);
       await write(path, document);

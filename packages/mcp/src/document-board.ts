@@ -1,6 +1,6 @@
 import { applyJsonPatch, toViewDocument, type Board } from '@iyulab/u-board/domain';
 import { checkBoard, emptyBoard } from '@iyulab/u-board/check';
-import type { ViewKind } from '@iyulab/u-board/picture';
+import type { ViewDocument, ViewKind } from '@iyulab/u-board/picture';
 import { UBoardApiError, type Saved, type SavedBoard } from './client.js';
 import type { BoardStore } from './store.js';
 
@@ -19,6 +19,9 @@ export interface DocumentBoardOptions {
   /** Writes the board a change produced — to a database, a file, wherever the host keeps it. A change is answered only once
    *  this has resolved, and is undone when it rejects, so the store never says "saved" for what the host did not keep. */
   save?: (document: Board) => Promise<void>;
+  /** Draws a board from the values the host can read — what its `picture` is when the host holds data for it (a snapshot of what its
+   *  sources answer), so a part made per item of a list has its items. Left out, a board is drawn with no data. */
+  pictureOf?: (board: Board) => Promise<ViewDocument>;
 }
 
 /**
@@ -34,6 +37,7 @@ export class DocumentBoardStore implements BoardStore {
   private updatedAt = new Date().toISOString();
   private readonly name: string;
   private readonly save: (document: Board) => Promise<void>;
+  private readonly pictureOf: ((board: Board) => Promise<ViewDocument>) | undefined;
   /** Changes go one after another: two arriving together never read the same revision. */
   private queue: Promise<unknown> = Promise.resolve();
 
@@ -44,6 +48,7 @@ export class DocumentBoardStore implements BoardStore {
     this.name = options.name ?? DOCUMENT_BOARD_ID;
     this.revision = options.revision ?? 1;
     this.save = options.save ?? (async () => {});
+    this.pictureOf = options.pictureOf;
   }
 
   /** An empty board of `kind` — what a new board starts as. */
@@ -57,8 +62,8 @@ export class DocumentBoardStore implements BoardStore {
       id: DOCUMENT_BOARD_ID,
       name: this.name,
       document: this.document,
-      // What its viewers draw, with no data to read.
-      picture: toViewDocument(this.document, NO_ITEMS),
+      // What its viewers draw: with the data the host holds for it, else none to read.
+      picture: this.pictureOf ? await this.pictureOf(this.document) : toViewDocument(this.document, NO_ITEMS),
       revision: this.revision,
       updatedAt: this.updatedAt,
     };

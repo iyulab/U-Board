@@ -52,12 +52,11 @@ ${JSON_PATCH}
   changing \`from\` alone. Say the board shows example data.`;
 }
 
-/** The workflow for one board kept in a file: no list of boards, no sources, no values, no picture. */
-function documentWorkflow(): string {
+/** The workflow for one board kept in a file: no list of boards, no sources; a picture of it when the tools can draw one. */
+function documentWorkflow(offered: ReadonlySet<string>): string {
   return `# Changing the board with these tools
 
-This is one board, kept in a file — no U-Board server, so no list of boards, no data sources and no values: the board is laid out and
-checked here, not drawn. Tools that need a server are not offered.
+This is one board, kept in a file — no U-Board server, so no list of boards and no data sources: the board is laid out and checked here${offered.has('look') ? ', and look draws it' : ', not drawn'}. Tools that need a server are not offered.
 
 ## Workflow
 1. get_board({ pointer }) — read only the part you need ("/parts/pump", "/layout"); note its revision. A new board is empty: no parts, an empty layout.
@@ -65,7 +64,7 @@ checked here, not drawn. Tools that need a server are not offered.
    Each save is a new revision.
 3. Read the answer: the new revision and advice — act on it. A 412: someone saved since — get_board, patch again.
 4. validate({ document } | { patch }) checks without saving, exactly as saving does; validate({}) checks the board as it is saved.
-
+${offered.has('look') ? '5. look() after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands: parts over one another, a part past the edge, a part that drew nothing. Fix what you see; focus a part to see it up close. Values are drawn only if the person gave the answers of the sources when starting; with none, a part made per item of a list draws no item.\n' : ''}
 ${JSON_PATCH}
 
 ## Sources
@@ -78,7 +77,7 @@ ${JSON_PATCH}
 
 /** The rules: how the tools change a board, then the board language itself — generated from its schema and kinds. */
 function rules(offered: ReadonlySet<string>): string {
-  return `${offered.has('list_boards') ? workspaceWorkflow(offered) : documentWorkflow()}\n\n${boardRulebook()}`;
+  return `${offered.has('list_boards') ? workspaceWorkflow(offered) : documentWorkflow(offered)}\n\n${boardRulebook()}`;
 }
 
 function schemaPart(pointer: string): unknown {
