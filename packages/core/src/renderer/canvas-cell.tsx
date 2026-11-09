@@ -68,7 +68,7 @@ export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAU
     <div className="ub-grid__canvas" style={CELL_STYLE}>
       {item.height === undefined && <div aria-hidden="true" style={{ width: '100%', aspectRatio: cellAspectRatio(view) }} />}
       {controls && (
-        <span style={CONTROLS_STYLE}>
+        <span className="ub-grid__canvas-controls" style={CONTROLS_STYLE}>
           <ViewControls view={fitted} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />
         </span>
       )}

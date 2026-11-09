@@ -7,6 +7,8 @@
       html, body { margin: 0; padding: 0; }
       /* The picture is the board alone: the zoom controls and the strip they sit in are not part of it. */
       .ub-viewer__toolbar { display: none !important; }
+      /* The same for the controls a canvas drawn in a grid keeps at its corner: they sit on its parts, and a picture has no hand to use them. */
+      .ub-grid__canvas-controls { display: none !important; }
       .ub-viewer__surface { border: 0 !important; border-radius: 0 !important; }
     </style>
   </head>
