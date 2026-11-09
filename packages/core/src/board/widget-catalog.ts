@@ -16,12 +16,22 @@ export interface WidgetCatalogEntry {
   /** For an option the widget lets only some words through (a gauge's `form`), those words — an option that takes any text, or a
    *  number, is not here. Left out when no option of the widget is closed. */
   choices?: Record<string, string[]>;
+  /** For an option that is a list of settings (a chart's `referenceLines`), the fields each item takes and the type of each — a field
+   *  not named is read by no chart. Left out when the widget has no such option. */
+  lists?: Record<string, Record<string, WidgetSetting>>;
+}
+
+/** What one field of a list option's item takes: a type in the library's notation (`string`, `number`, `number | string`,
+ *  `"solid" | "dashed" | "dotted" | object`) and, for a closed choice, its words. */
+export interface WidgetSetting {
+  type: string;
+  enum?: string[];
 }
 
 /** The two functions of the library's `./tools` entry this reads. */
 export interface WidgetLibraryTools {
   help(): unknown;
-  getWidgetOptions(widget: string): readonly { key: string; enum?: readonly string[] }[] | null | undefined;
+  getWidgetOptions(widget: string): readonly { key: string; enum?: readonly string[]; items?: Readonly<Record<string, { type: string; enum?: readonly string[] }>> }[] | null | undefined;
 }
 
 /** The catalog as the library reports it now. */
@@ -30,6 +40,7 @@ export function readWidgetCatalog(tools: WidgetLibraryTools): WidgetCatalogEntry
   return catalog.map(({ widget, category, description, mappingKeys }) => {
     const options = tools.getWidgetOptions(widget) ?? [];
     const closed = options.filter(o => o.enum !== undefined && o.enum.length > 0);
+    const lists = options.filter(o => o.items !== undefined);
     return {
       widget,
       category,
@@ -37,6 +48,9 @@ export function readWidgetCatalog(tools: WidgetLibraryTools): WidgetCatalogEntry
       options: options.map(o => o.key),
       ...(mappingKeys !== undefined && mappingKeys.length > 0 ? { mappingKeys: [...mappingKeys] } : {}),
       ...(closed.length > 0 ? { choices: Object.fromEntries(closed.map(o => [o.key, [...o.enum!]])) } : {}),
+      ...(lists.length > 0
+        ? { lists: Object.fromEntries(lists.map(o => [o.key, Object.fromEntries(Object.entries(o.items!).map(([field, { type, enum: words }]) => [field, { type, ...(words !== undefined ? { enum: [...words] } : {}) }]))])) }
+        : {}),
     };
   });
 }

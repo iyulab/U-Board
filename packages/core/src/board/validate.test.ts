@@ -481,6 +481,30 @@ describe('validateBoard', () => {
     expect(hints({ frame: 'bevel', radius: 0 })).toEqual([]);
   });
 
+  it('holds a chart\'s list settings to what the chart reads — a list, and the fields each item takes', () => {
+    const chart = (extra: Record<string, unknown>) => issues(canvas({ c: { as: 'chart.line', of: 'equipment', x: 'id', y: 'flow', ...extra } }));
+    // an ECharts-shaped reference line: the chart drops every one of these words without a sign
+    expect(chart({ referenceLines: [{ yAxis: 20, lineStyle: { type: 'dashed' }, label: { formatter: '20' } }] })).toEqual([
+      '/parts/c/referenceLines/0/yAxis: "yAxis" is not a field of an item of "referenceLines" — it takes axis, value, label, color, style',
+      '/parts/c/referenceLines/0/lineStyle: "lineStyle" is not a field of an item of "referenceLines" — it takes axis, value, label, color, style',
+      '/parts/c/referenceLines/0/label: "label" should be a text, not {"formatter":"20"}',
+    ]);
+    // an object where the list goes stops the chart, and an item that is not an object, and a value of the wrong kind
+    expect(chart({ referenceLines: { y: [{ value: 20 }] } })).toEqual(['/parts/c/referenceLines: "referenceLines" is a list of objects, one per item — [{ axis, value, label, color, style }, …]']);
+    expect(chart({ referenceLines: [20] })).toEqual(['/parts/c/referenceLines/0: an item of "referenceLines" is an object — { axis, value, label, color, style }']);
+    expect(chart({ referenceLines: [{ value: 20, axis: 'z', style: 'wavy' }] })).toEqual([
+      '/parts/c/referenceLines/0/axis: "axis" should be one of "x", "y", not "z"',
+      '/parts/c/referenceLines/0/style: "style" should be one of "solid", "dashed", "dotted", not "wavy"',
+    ]);
+    // what a reference line takes is taken; a series' line style is a word or an object
+    expect(chart({ referenceLines: [{ value: 20, label: 'Target', axis: 'y', color: '#c00', style: 'dashed' }, { value: '2026-04-06', axis: 'x' }] })).toEqual([]);
+    expect(chart({ series: [{ lineStyle: 'dotted' }, { lineStyle: { type: 'dashed' }, yAxisIndex: 1 }] })).toEqual([]);
+    expect(chart({ series: [{ lineStyle: 'dash', symbol: 3 }] })).toEqual([
+      '/parts/c/series/0/lineStyle: "lineStyle" should be one of "solid", "dashed", "dotted" or an object, not "dash"',
+      '/parts/c/series/0/symbol: "symbol" should be a text, not 3',
+    ]);
+  });
+
   it('refuses a template where an option names a field — "{{key}}" draws no row, the name of the field does', () => {
     const entry = { from: 'plant', path: '/plant/pumps', list: '/value', key: 'id' };
     const refused = (parts: Record<string, unknown>, data: Record<string, unknown> = { pumps: entry }) => issues({ data, parts, layout: { kind: 'canvas', size: [400, 300], place: Object.fromEntries(Object.keys(parts).map((id, i) => [id, [0, i * 100, 200, 90]])) } });

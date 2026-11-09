@@ -28,7 +28,60 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "mappingKeys": [
       "x",
       "y"
-    ]
+    ],
+    "lists": {
+      "series": {
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "lineStyle": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\" | object",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "yAxisIndex": {
+          "type": "number"
+        }
+      },
+      "referenceLines": {
+        "axis": {
+          "type": "\"x\" | \"y\"",
+          "enum": [
+            "x",
+            "y"
+          ]
+        },
+        "value": {
+          "type": "number | string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "style": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\"",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        }
+      }
+    }
   },
   {
     "widget": "chart.line",
@@ -56,7 +109,60 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "mappingKeys": [
       "x",
       "y"
-    ]
+    ],
+    "lists": {
+      "series": {
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "lineStyle": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\" | object",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "yAxisIndex": {
+          "type": "number"
+        }
+      },
+      "referenceLines": {
+        "axis": {
+          "type": "\"x\" | \"y\"",
+          "enum": [
+            "x",
+            "y"
+          ]
+        },
+        "value": {
+          "type": "number | string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "style": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\"",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        }
+      }
+    }
   },
   {
     "widget": "chart.area",
@@ -83,7 +189,60 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     "mappingKeys": [
       "x",
       "y"
-    ]
+    ],
+    "lists": {
+      "series": {
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "lineStyle": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\" | object",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        },
+        "symbol": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "yAxisIndex": {
+          "type": "number"
+        }
+      },
+      "referenceLines": {
+        "axis": {
+          "type": "\"x\" | \"y\"",
+          "enum": [
+            "x",
+            "y"
+          ]
+        },
+        "value": {
+          "type": "number | string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "style": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\"",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        }
+      }
+    }
   },
   {
     "widget": "chart.pie",
@@ -123,7 +282,35 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "color",
       "size",
       "opacity"
-    ]
+    ],
+    "lists": {
+      "referenceLines": {
+        "axis": {
+          "type": "\"x\" | \"y\"",
+          "enum": [
+            "x",
+            "y"
+          ]
+        },
+        "value": {
+          "type": "number | string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "style": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\"",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        }
+      }
+    }
   },
   {
     "widget": "chart.radar",
@@ -236,7 +423,35 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
     ],
     "mappingKeys": [
       "value"
-    ]
+    ],
+    "lists": {
+      "referenceLines": {
+        "axis": {
+          "type": "\"x\" | \"y\"",
+          "enum": [
+            "x",
+            "y"
+          ]
+        },
+        "value": {
+          "type": "number | string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "style": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\"",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        }
+      }
+    }
   },
   {
     "widget": "chart.gantt",
@@ -260,7 +475,35 @@ export const WIDGET_CATALOG: readonly WidgetCatalogEntry[] = [
       "label",
       "color",
       "texture"
-    ]
+    ],
+    "lists": {
+      "referenceLines": {
+        "axis": {
+          "type": "\"x\" | \"y\"",
+          "enum": [
+            "x",
+            "y"
+          ]
+        },
+        "value": {
+          "type": "number | string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "color": {
+          "type": "string"
+        },
+        "style": {
+          "type": "\"solid\" | \"dashed\" | \"dotted\"",
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        }
+      }
+    }
   },
   {
     "widget": "metric",

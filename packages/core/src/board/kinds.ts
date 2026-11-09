@@ -4,6 +4,7 @@
 // itself, so this module reaches no package at runtime.
 
 import { WIDGET_CATALOG } from './widget-catalog.generated.js';
+import type { WidgetCatalogEntry } from './widget-catalog.js';
 
 /** A kind of part: its name, what draws it, what it shows, and whether it reads data. */
 export interface PartKind {
@@ -19,6 +20,8 @@ export interface PartKind {
   options: string[];
   /** For an option of the widget that lets only some words through (a gauge's `form`), those words. */
   choices?: Record<string, string[]>;
+  /** For an option of the widget that is a list of settings (a chart's `referenceLines`), the fields each item takes — see `WidgetCatalogEntry.lists`. */
+  lists?: WidgetCatalogEntry['lists'];
   /** The options the board reads itself, before it hands the rest to the widget: which field a list's line shows, a
    *  chart's mapping, a marker's shape. */
   own: string[];
@@ -86,6 +89,9 @@ function generate(): PartKind[] {
       of,
       options: entry(widget).options.filter(option => !replaced.has(option)),
       ...(choices.length > 0 ? { choices: Object.fromEntries(choices.map(([option, words]) => [option, [...words]])) } : {}),
+      ...(entry(widget).lists !== undefined
+        ? { lists: Object.fromEntries(Object.entries(entry(widget).lists!).map(([option, fields]) => [option, Object.fromEntries(Object.entries(fields).map(([field, { type, enum: words }]) => [field, { type, ...(words !== undefined ? { enum: [...words] } : {}) }]))])) }
+        : {}),
       own: [...own],
       ...(stands !== undefined ? { stands: { ...stands } } : {}),
     };

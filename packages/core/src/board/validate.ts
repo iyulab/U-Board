@@ -722,6 +722,30 @@ export function validateBoard(input: unknown): BoardIssue[] {
       }
       fail(keyAt, `"${value}" is not a ${key} of a ${kind.kind} — ${words.join(' · ')}`);
     }
+    // An option that is a list of settings (a chart's `referenceLines`): a list of objects that carry only the fields the widget reads. A field it
+    // does not know is dropped by the chart without a sign (an ECharts-shaped `yAxis` or `lineStyle` on a reference line), and an object where
+    // the list goes stops the chart — it draws nothing, on a board that was accepted.
+    for (const [key, fields] of Object.entries(kind.lists ?? {})) {
+      const value = part[key];
+      if (value === undefined) continue;
+      const keyAt = key in raw ? `${at}/${key}` : `/presets/${String(raw.use)}/${key}`;
+      if (!(key in raw)) {
+        if (reportedPresetOptions.has(keyAt)) continue;
+        reportedPresetOptions.add(keyAt);
+      }
+      const takes = Object.keys(fields).join(', ');
+      if (!Array.isArray(value)) { fail(keyAt, `"${key}" is a list of objects, one per item — [{ ${takes} }, …]`); continue; }
+      value.forEach((item, n) => {
+        const itemAt = `${keyAt}/${n}`;
+        if (!isObj(item)) { fail(itemAt, `an item of "${key}" is an object — { ${takes} }`); return; }
+        for (const [field, v] of Object.entries(item)) {
+          const spec = fields[field];
+          if (!spec) { fail(`${itemAt}/${field}`, `"${field}" is not a field of an item of "${key}" — it takes ${takes}`); continue; }
+          const problem = settingProblem(v, spec);
+          if (problem) fail(`${itemAt}/${field}`, `"${field}" ${problem}`);
+        }
+      });
+    }
     if (unknown.length === 0) return;
     const options = [...kind.own, ...kind.options];
     const offered = options.length === 0 ? `a ${kind.kind} takes no options` : `options of a ${kind.kind}: ${list(options, 24)}`;
@@ -1393,6 +1417,19 @@ export function validateBoard(input: unknown): BoardIssue[] {
     if (!said.has(at)) fail(at, `"${key}" has no place here — it would be kept but never drawn; this holds ${known.length > 0 ? known.join(', ') : 'nothing more'}`);
   }
   return issues;
+}
+
+/** What is wrong with the value of one field of a list option's item, by the type the widget library gives it — `undefined` when it is right. */
+function settingProblem(value: unknown, { type, enum: words }: { type: string; enum?: readonly string[] }): string | undefined {
+  const orObject = type.endsWith(' | object');
+  if (words) {
+    if (orObject && isObj(value)) return undefined;
+    return words.includes(value as string) ? undefined : `should be one of ${words.map(w => `"${w}"`).join(', ')}${orObject ? ' or an object' : ''}, not ${JSON.stringify(value)}`;
+  }
+  if (type === 'number | string') return isNum(value) || typeof value === 'string' ? undefined : `should be a number or a text, not ${JSON.stringify(value)}`;
+  if (type === 'string') return typeof value === 'string' ? undefined : `should be a text, not ${JSON.stringify(value)}`;
+  if (type === 'number') return isNum(value) ? undefined : `should be a number, not ${JSON.stringify(value)}`;
+  return undefined;
 }
 
 /** The smallest side, in a canvas's own units, of a placed box that can hold a part (a text, a value, a symbol). */
