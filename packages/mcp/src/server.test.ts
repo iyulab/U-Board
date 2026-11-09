@@ -258,13 +258,20 @@ describe('u-board-mcp', () => {
   });
 
   it('says a clean board is done', async () => {
-    server.boards.set('b4', { name: 'Clean', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
+    server.boards.set('b4', { name: 'Clean', revision: 1, document: gaugeBoard() });
     expect((await (await looking([{ message: 'x' }, { message: 'y' }])).look('b4')).report.status).toBe('not done — 2 problems to fix');
     expect((await (await looking()).look('b4')).report.status).toBe('done — nothing to fix');
   });
 
+  it('does not call a board done that draws nothing — a blank picture has no part to be wrong', async () => {
+    server.boards.set('b4', { name: 'Blank', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
+    const { report } = await (await looking()).look('b4');
+    expect(report.status).toBe('not done — 1 problem to fix');
+    expect((report.problems as { message: string }[])[0]!.message).toContain('nothing is drawn');
+  });
+
   it('does not call a board done over parts it could not look at — a crowded view draws markers as points, which are not page content', async () => {
-    server.boards.set('b4', { name: 'Crowded', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
+    server.boards.set('b4', { name: 'Crowded', revision: 1, document: gaugeBoard() });
     const status = async (...args: Parameters<typeof looking>) => (await (await looking(...args)).look('b4')).report.status as string;
     expect(await status([], {}, 520)).toBe('nothing found in what could be read — but 520 parts are drawn as points and not checked — what is wrong with them and how current their values are is not in this report; board_state says the values');
     expect(await status([], {}, 1)).toContain('1 part is drawn as points and not checked — what is wrong with it and how current its value is');
@@ -275,7 +282,7 @@ describe('u-board-mcp', () => {
   });
 
   it('does not call a board done while a part is disconnected — it draws its own «no value» notice', async () => {
-    server.boards.set('b4', { name: 'Clean', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
+    server.boards.set('b4', { name: 'Clean', revision: 1, document: gaugeBoard() });
     expect((await (await looking([], { disconnected: 2, stale: 1 })).look('b4')).report.status).toBe('not done — 2 disconnected parts (board_state says which, and why) to fix');
     expect((await (await looking([{ message: 'x' }], { disconnected: 1 })).look('b4')).report.status).toBe('not done — 1 problem and 1 disconnected part (board_state says which, and why) to fix');
     // Up close the count is the whole board's, not the part's.
@@ -283,7 +290,7 @@ describe('u-board-mcp', () => {
   });
 
   it('does not call a board done while the page logged errors drawing it — a part can be blank with nothing else to say why', async () => {
-    server.boards.set('b4', { name: 'Clean', revision: 1, document: { parts: {}, layout: { kind: 'grid', items: [] } } });
+    server.boards.set('b4', { name: 'Clean', revision: 1, document: gaugeBoard() });
     const log = ['Cannot convert undefined or null to object', 'Cannot convert undefined or null to object'];
     expect((await (await looking([], {}, undefined, log)).look('b4')).report.status).toBe('not done — 2 page errors logged while drawing (console says what) to fix');
     expect((await (await looking([{ message: 'x' }], {}, undefined, log.slice(0, 1))).look('b4')).report.status).toBe('not done — 1 problem and 1 page error logged while drawing (console says what) to fix');

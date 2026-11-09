@@ -144,6 +144,12 @@ describe('renderBoard', () => {
     expect(said[0]!.message).toContain('1 item of "zone" is not drawn');
   }, 60_000);
 
+  it('says in its report that a board with no part draws nothing, instead of reading as clean over blank paper', async () => {
+    const blank: Board = { parts: {}, layout: { kind: 'grid', items: [] } };
+    const { report } = await renderBoard({ board: blank, width: 480, height: 320 });
+    expect(report.problems.map(p => p.message)).toEqual([expect.stringContaining('nothing is drawn')]);
+  }, 60_000);
+
   it('refuses a size that is not a whole number of pixels', async () => {
     await expect(renderBoard({ board, width: 0, height: 100 })).rejects.toThrow(/width must be a whole number/);
     await expect(renderBoard({ board, width: 100, height: 1.5 })).rejects.toThrow(/height must be a whole number/);

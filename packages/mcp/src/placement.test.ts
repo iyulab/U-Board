@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { placementProblems } from './placement.js';
+import type { ViewDocument } from '@iyulab/u-board/picture';
+import { emptyProblems, placementProblems } from './placement.js';
 
 describe('placementProblems', () => {
   it('says, for a part whose items fell off the canvas, how many and where to look', () => {
@@ -18,5 +19,21 @@ describe('placementProblems', () => {
   it('says nothing when everything was drawn', () => {
     expect(placementProblems({}, [])).toEqual([]);
     expect(placementProblems(undefined, undefined)).toEqual([]);
+  });
+});
+
+describe('emptyProblems', () => {
+  const canvas = (nodes: unknown[], decorations?: unknown[]) => ({ kind: 'canvas', background: {}, nodes, connectors: [], ...(decorations && { decorations }) }) as unknown as ViewDocument;
+  const grid = (items: unknown[]) => ({ kind: 'grid', items }) as unknown as ViewDocument;
+
+  it('says a picture with nothing in it is blank paper, for a grid and for a canvas', () => {
+    expect(emptyProblems(grid([]))[0]!.message).toContain('nothing is drawn');
+    expect(emptyProblems(canvas([]))[0]!.path).toBe('/parts');
+  });
+
+  it('says nothing of a picture with a part, or only a drawn shape', () => {
+    expect(emptyProblems(grid([{ id: 'a' }]))).toEqual([]);
+    expect(emptyProblems(canvas([{ id: 'n' }]))).toEqual([]);
+    expect(emptyProblems(canvas([], [{ id: 'd' }]))).toEqual([]);
   });
 });

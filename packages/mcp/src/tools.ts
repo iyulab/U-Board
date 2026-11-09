@@ -7,7 +7,7 @@ import { UBoardApiError, type ResolveRef } from './client.js';
 import { isWorkspaceStore, type BoardStore, type WorkspaceStore } from './store.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
-import { placementProblems } from './placement.js';
+import { emptyProblems, placementProblems } from './placement.js';
 import { BundleError, fromBundle, toBundle, whereIs, withEdits, BOARD_FILE } from './bundle.js';
 import type { Looker } from './look.js';
 
@@ -557,6 +557,7 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
           const seen = [
             ...report.problems.map(p => inBoard(read, picture, p)),
             ...placementProblems(found.unplaced, found.notLists),
+            ...(focus ? [] : emptyProblems(picture)),
           ];
           const problems = focus ? seen.filter(p => concerns(p, focus)) : seen;
           const said = { type: 'text' as const, text: JSON.stringify({ revision: found.revision, status: lookStatus(problems.length, left, focus, focus ? 0 : report.quality.disconnected ?? 0, focus ? 0 : report.unchecked ?? 0, focus ? 0 : report.console.length), ...report, problems, advice }) };
