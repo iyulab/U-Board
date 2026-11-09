@@ -36,6 +36,15 @@ export interface Placed {
   dim?: { from: string };
 }
 
+/** A web font the board loads once; its `family` is what the skin's font stacks and an element's CSS call it by. `src` is an `https://` address
+ *  or an inline `data:font/…` URL. */
+export interface ViewFont {
+  family: string;
+  src: string;
+  weight?: number;
+  style?: 'normal' | 'italic';
+}
+
 /**
  * How the board's widgets and elements are drawn — the board's `skin`, carried to the renderer. Colours are CSS colours.
  * Absent keys keep the theme's own.
@@ -74,6 +83,8 @@ export interface CanvasView {
   accent?: string;
   /** The board's skin — see `ViewSkin`. Absent means the theme's look. */
   skin?: ViewSkin;
+  /** The web fonts the board loads — see `ViewFont`. Absent means none. */
+  fonts?: ViewFont[];
   /** The elements this board defines, by name — see `ElementDefinition`. */
   elements?: Record<string, ElementDefinition>;
   /** Drawings its template elements share, by name — see `SymbolDefinition`. */
@@ -96,6 +107,8 @@ export interface GridView {
   accent?: string;
   /** As a canvas view's — the board's skin. */
   skin?: ViewSkin;
+  /** As a canvas view's — the web fonts the board loads. */
+  fonts?: ViewFont[];
   /** As a canvas view's — the elements this board defines. */
   elements?: Record<string, ElementDefinition>;
   /** As a canvas view's — the drawings its template elements share. */

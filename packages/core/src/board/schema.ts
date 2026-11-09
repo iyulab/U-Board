@@ -33,7 +33,7 @@ export function boardSchema(): Schema {
     additionalProperties: false,
     properties: {
       board: {
-        description: 'Its title, theme (light or dark), accent colour and skin — the look, once.',
+        description: 'Its title, theme (light or dark), accent colour, skin and web fonts — the look, once.',
         type: 'object',
         additionalProperties: false,
         properties: {
@@ -41,6 +41,22 @@ export function boardSchema(): Schema {
           theme: { enum: ['light', 'dark'] },
           accent: { type: 'string', description: "The board's accent colour: the accent tone, a header's banner." },
           skin: ref('skin'),
+          fonts: {
+            type: 'array',
+            maxItems: 8,
+            description: "Web fonts the board loads once; name a family in a skin font stack or an element's CSS.",
+            items: {
+              type: 'object',
+              required: ['family', 'src'],
+              additionalProperties: false,
+              properties: {
+                family: { type: 'string', description: 'The name the font is called by — one family, no commas or quotes.' },
+                src: { type: 'string', description: 'An https:// address or an inline data:font/… URL.' },
+                weight: { type: 'integer', minimum: 100, maximum: 900 },
+                style: { enum: ['normal', 'italic'] },
+              },
+            },
+          },
         },
       },
       statuses: map(ref('status'), "The board's own statuses by name: each a tone, its words and optionally a glyph and an emphasis."),

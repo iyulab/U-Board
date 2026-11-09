@@ -1434,7 +1434,7 @@ export function toViewDocument(input: Board, options: PictureOptions = {}): View
       : {}),
   });
   const head = board.board ?? {};
-  const look = { ...(head.theme !== undefined ? { appearance: head.theme } : {}), ...(head.accent !== undefined ? { accent: head.accent } : {}), ...(head.skin !== undefined ? { skin: head.skin } : {}) };
+  const look = { ...(head.theme !== undefined ? { appearance: head.theme } : {}), ...(head.accent !== undefined ? { accent: head.accent } : {}), ...(head.skin !== undefined ? { skin: head.skin } : {}), ...(head.fonts !== undefined && head.fonts.length > 0 ? { fonts: head.fonts } : {}) };
   const layout = board.layout;
   const drawn: ViewDocument = layout.kind === 'canvas'
     ? { kind: 'canvas', background: background(layout), ...canvasOf(layout, '/layout'), ...look, ...withElements() }

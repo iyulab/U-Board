@@ -16,6 +16,7 @@ import { isWhereValue } from '../where.js';
 import { expandVariables, isFree, isListed, isValueOfKind, isVariableRef, VARIABLE_KINDS, variableValues, variablesOf } from './variables.js';
 import { VIEW_BOX, symbolReferences } from '../elements/symbols.js';
 import { DRAWING_COLOR_FORMS, isDrawingColor, isFontStack, isSkinColor } from '../css-color.js';
+import { FONT_FAMILY, FONT_SRC, MAX_FONTS, MAX_INLINE_FONT } from './fonts.js';
 import { THEME_COLORS, isThemeColor } from '../theme-colors.js';
 import { parseTemplate } from '../elements/template.js';
 import { unknownKeys } from './schema-keys.js';
@@ -96,6 +97,7 @@ const KEY_FIELD_OPTIONS: Readonly<Record<string, readonly string[]>> = {
 
 /** The frames whose corners are square — a skin's `radius` does not round them. */
 const SQUARE_FRAMES: readonly string[] = ['bevel', 'well', 'block', 'double'];
+const FONT_FORMS = 'fonts is a list — [{ "family": "Noto Sans KR", "src": "https://…", "weight"?: 400, "style"?: "normal" }], each a font the board loads once';
 const SKIN_KEYS = ['font', 'display', 'mono', 'palette', 'frame', 'radius', 'shadow', 'titles', 'density', 'numerals'];
 const PALETTE_KEYS = ['paper', 'ink', 'muted', 'rule', 'ground', 'backdrop'];
 /** The sides of a marker's point its words may go on. */
@@ -223,7 +225,7 @@ export function validateBoard(input: unknown): BoardIssue[] {
   // ── look ──
   const head = isObj(board.board) ? board.board : {};
   for (const key of Object.keys(head)) {
-    if (!['title', 'theme', 'accent', 'skin'].includes(key)) fail(`/board/${key}`, `"board" has no "${key}" — it has title, theme, accent, skin`);
+    if (!['title', 'theme', 'accent', 'skin', 'fonts'].includes(key)) fail(`/board/${key}`, `"board" has no "${key}" — it has title, theme, accent, skin, fonts`);
   }
   if (head.theme !== undefined && head.theme !== 'light' && head.theme !== 'dark') fail('/board/theme', 'a theme is "light" or "dark"');
   // The accent is a colour itself — drawn as the accent tone and a header's banner, so only the forms every canvas reads.
@@ -268,6 +270,28 @@ export function validateBoard(input: unknown): BoardIssue[] {
   }
   for (const key of ['font', 'display', 'mono'] as const) {
     if (skin[key] !== undefined && !isFontStack(skin[key])) fail(`/board/skin/${key}`, 'a font is family names separated by commas — "Noto Sans KR", serif — not a url, a function or a rule');
+  }
+  // ── web fonts ── a font the board loads once; its family is then a name a skin's font stack or an element's CSS can use.
+  if (head.fonts !== undefined) {
+    if (!Array.isArray(head.fonts)) fail('/board/fonts', FONT_FORMS);
+    else {
+      if (head.fonts.length > MAX_FONTS) fail('/board/fonts', `a board loads at most ${MAX_FONTS} fonts — each is a request the viewer makes before it draws`);
+      head.fonts.forEach((font: unknown, i) => {
+        const at = `/board/fonts/${i}`;
+        if (!isObj(font)) return fail(at, FONT_FORMS);
+        for (const key of Object.keys(font)) if (!['family', 'src', 'weight', 'style'].includes(key)) fail(`${at}/${key}`, `a font has no "${key}" — it has family, src, weight, style`);
+        if (typeof font.family !== 'string' || !FONT_FAMILY.test(font.family) || font.family.trim() === '') {
+          fail(`${at}/family`, 'a family is one name — "Noto Sans KR" — in letters, digits, spaces, dots, hyphens or underscores: no comma, quote, url or rule');
+        }
+        if (typeof font.src !== 'string' || !FONT_SRC.test(font.src)) {
+          fail(`${at}/src`, "a font's src is an https:// address or an inline data:font/woff2;base64,… URL (woff2 · woff · ttf · otf) — nothing else loads");
+        } else if (font.src.startsWith('data:') && font.src.length > MAX_INLINE_FONT) {
+          fail(`${at}/src`, `an inline font over ${MAX_INLINE_FONT.toLocaleString('en-US')} characters is too large to carry in the board — host it at an https:// address (a large CJK font especially)`);
+        } else if (font.src.length > 2048 && !font.src.startsWith('data:')) fail(`${at}/src`, 'an address is at most 2,048 characters');
+        if (font.weight !== undefined && !(isNum(font.weight) && Number.isInteger(font.weight) && font.weight >= 100 && font.weight <= 900)) fail(`${at}/weight`, 'a weight is a whole number from 100 to 900 — 400 regular, 700 bold');
+        if (font.style !== undefined && font.style !== 'normal' && font.style !== 'italic') fail(`${at}/style`, 'a style is normal · italic');
+      });
+    }
   }
   if (skin.radius !== undefined && !(isNum(skin.radius) && skin.radius >= 0)) fail('/board/skin/radius', 'a radius is a number of pixels, 0 or more');
   // A frame with square corners draws no radius: said, so a board that rounds its cards is not left wondering why the corners stayed square.

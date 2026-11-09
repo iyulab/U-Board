@@ -1213,6 +1213,33 @@ describe('the variables of a board', () => {
     });
   });
 
+  it('checks the web fonts of a board: one family, an https:// or inline font source, a weight, a style, a few of them', () => {
+    const base = canvas({}, { kind: 'canvas', size: [100, 100], place: {} });
+    const at = (fonts: unknown) => validateBoard({ ...base, board: { fonts } } as never).filter(i => !i.hint).map(i => `${i.at}: ${i.message}`);
+    const inline = 'data:font/woff2;base64,d09GMgABAAAAAA==';
+    expect(at([{ family: 'Noto Sans KR', src: 'https://fonts.example.com/NotoSansKR.woff2', weight: 700, style: 'italic' }, { family: 'Plain_Mono-2', src: inline }])).toEqual([]);
+    expect(at([])).toEqual([]);
+    expect(at('Noto Sans KR')).toEqual([expect.stringContaining('/board/fonts: fonts is a list')]);
+    expect(at(['Noto Sans KR'])).toEqual([expect.stringContaining('/board/fonts/0: fonts is a list')]);
+    // a family is one name: a stack, a quote or a rule is not
+    for (const family of ['Noto, serif', '"Noto"', 'a;b', 'x{y}', '', ' ', 'u'.repeat(65), 7]) {
+      expect(at([{ family, src: inline }]), String(family)).toEqual([expect.stringContaining('/board/fonts/0/family: a family is one name')]);
+    }
+    // a source is an https:// address or an inline font - nothing else loads
+    for (const src of ['http://fonts.example.com/a.woff2', '//fonts.example.com/a.woff2', '/fonts/a.woff2', 'data:image/png;base64,AAAA', 'data:font/woff2,AAAA', 'https://fonts.example.com/a.woff2")', 'url(https://fonts.example.com/a.woff2)', 'javascript:alert(1)', '', 3]) {
+      expect(at([{ family: 'A', src }]), String(src)).toEqual([expect.stringContaining("/board/fonts/0/src: a font's src is an https:// address")]);
+    }
+    expect(at([{ family: 'A', src: `data:font/woff2;base64,${'A'.repeat(300_001)}` }])).toEqual([expect.stringContaining('/board/fonts/0/src: an inline font over 300,000 characters')]);
+    expect(at([{ family: 'A' }])).toEqual([expect.stringContaining('/board/fonts/0/src:')]);
+    expect(at([{ family: 'A', src: inline, weight: 450.5 }, { family: 'B', src: inline, weight: 1000 }, { family: 'C', src: inline, style: 'oblique' }, { family: 'D', src: inline, format: 'woff2' }])).toEqual([
+      '/board/fonts/0/weight: a weight is a whole number from 100 to 900 — 400 regular, 700 bold',
+      '/board/fonts/1/weight: a weight is a whole number from 100 to 900 — 400 regular, 700 bold',
+      '/board/fonts/2/style: a style is normal · italic',
+      '/board/fonts/3/format: a font has no "format" — it has family, src, weight, style',
+    ]);
+    expect(at(Array.from({ length: 9 }, (_, i) => ({ family: `F${i}`, src: inline })))).toEqual([expect.stringContaining('/board/fonts: a board loads at most 8 fonts')]);
+  });
+
   it('says a variable reference goes in a where, not anywhere else', () => {
     const b = board(declared, { c: { ...card, title: { variable: 'line' } } });
     expect(problems(b)).toContain("/parts/c/title: { \"variable\": \"line\" } is read in a data's where — a text takes {{$line}}, an of takes …[$line]");

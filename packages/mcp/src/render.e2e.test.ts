@@ -150,6 +150,19 @@ describe('renderBoard', () => {
     expect(report.problems.map(p => p.message)).toEqual([expect.stringContaining('nothing is drawn')]);
   }, 60_000);
 
+  it('draws a board in a web font it declares: the same board is drawn in another face than the fallback, and nothing is reported', async () => {
+    // A font of one glyph, "A", a solid box: where the family is loaded, "AAAA" is a row of boxes; where it is not, the stack's next family draws it.
+    const face = 'data:font/ttf;base64,AAEAAAAKAIAAAwAgT1MvMkUhRDUAAAEoAAAAYGNtYXAADACUAAABkAAAADRnbHlmdqB2ngAAAcwAAAA0aGVhZC+eOlgAAACsAAAANmhoZWEFegHOAAAA5AAAACRobXR4ApQAPAAAAYgAAAAGbG9jYQAaAA0AAAHEAAAABm1heHAABAAGAAABCAAAACBuYW1ltg9KAQAAAgAAAABpcG9zdAAoAAAAAAJsAAAAJgABAAAAAQAAUfoYwF8PPPUAAwPoAAAAAOcX+ywAAAAA5xf7LAA8AAACHAMgAAAAAwACAAAAAAAAAAEAAAMg/zgAAAJYADwAPAIcAAEAAAAAAAAAAAAAAAAAAAABAAEAAAACAAQAAQAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAwJYAZAABQAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAPz8/PwAAAEEAQQMg/zgAAAMgAMgAAAAAAAAAAAAAAAAAAAAgAAACWAA8ADwAAAAAAAIAAAADAAAAFAADAAEAAAAUAAQAIAAAAAQABAABAAAAQf//AAAAQf///8AAAQAAAAAAAAANABoAAAABADwAAAIcAyAAAwAAMxEhETwB4AMg/OAAAAEAPAAAAhwDIAADAAAzESERPAHgAyD84AAAAAAEADYAAQAAAAAAAQAKAAAAAQAAAAAAAgAHAAoAAwABBAkAAQAUABEAAwABBAkAAgAOACVVYlRlc3RGYWNlUmVndWxhcgBVAGIAVABlAHMAdABGAGEAYwBlAFIAZQBnAHUAbABhAHIAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAJAAA';
+    const withFamily = (fonts?: unknown): Board => ({ ...board, board: { skin: { font: 'UbTestFace, serif' }, ...(fonts ? { fonts } : {}) } } as Board);
+    const titled = (b: Board): Board => ({ ...b, parts: { pump: { ...b.parts.pump!, title: 'AAAA' } } });
+    const asked = { adapters: [live()], width: 480, height: 320, now: Date.parse('2026-11-05T09:00:30.000Z') };
+    const declared = await renderBoard({ board: titled(withFamily([{ family: 'UbTestFace', src: face }])), ...asked });
+    const undeclared = await renderBoard({ board: titled(withFamily()), ...asked });
+    expect(declared.report.problems).toEqual([]);
+    expect(declared.report.console).toEqual([]);
+    expect(Buffer.from(declared.png).equals(Buffer.from(undeclared.png))).toBe(false);
+  }, 60_000);
+
   it('refuses a size that is not a whole number of pixels', async () => {
     await expect(renderBoard({ board, width: 0, height: 100 })).rejects.toThrow(/width must be a whole number/);
     await expect(renderBoard({ board, width: 100, height: 1.5 })).rejects.toThrow(/height must be a whole number/);

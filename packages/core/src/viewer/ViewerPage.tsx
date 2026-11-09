@@ -3,6 +3,7 @@ import { Viewer } from '@canvas-kit/viewer';
 import { useResolvedDocument } from './useResolvedDocument.js';
 import { documentExtent } from './document-extent.js';
 import { useFittedView } from './use-fitted-view.js';
+import { useDocumentFonts } from './use-document-fonts.js';
 import { ViewControls } from './ViewControls.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
@@ -148,6 +149,8 @@ export function ViewerPage({
   // A chart is drawn by an entry of the widget library that loads when a board names one: start it with the document,
   // before the first reading is back, so a chart is not first drawn as «module not loaded».
   useEffect(() => needChartEntry(placedIn(document).map(placed => placed.widget.type)), [document]);
+  // The board's web fonts, registered with the page before its text is drawn in a family they name.
+  useDocumentFonts(document.fonts);
   const { resolved: received, resolvedAt, stalled } = useResolvedDocument(document, adapters, { pollIntervalMs, clock });
   // A view that is not updating cannot vouch that any value is current, so none reads as `live`.
   const resolved = useMemo(() => (received && stalled ? asLastKnown(received) : received), [received, stalled]);

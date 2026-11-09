@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `board.fonts`: web fonts a board loads once — `[{ "family": "Noto Sans KR", "src": "https://…" | "data:font/woff2;base64,…", "weight"?: 400, "style"?: "normal" }]`, up to eight. The viewer registers each with the page's font set before the board's text is drawn, so `skin.font`, `skin.display`, `skin.mono` and a template element's CSS name the family like an installed one (text is drawn in the next family of its stack until the face has loaded). `validateBoard` refuses a family that is not one name, a source that is neither an `https://` address nor an inline `data:font/…` URL, a weight outside 100–900 and an inline font over 300,000 characters; the schema and the rulebook carry it. The board only names where a font comes from — which origins may serve one is the host page's (its content security policy `font-src`); a font's licence is its author's. `ViewDocument` carries it as `fonts`.
+
 ### Changed
 
 - The rulebook an assistant reads (`boardRulebook`) is 87 characters shorter: two sentences the rest of it already says — what a data read's `ref` takes, and that there is one way to write each thing — are gone. Nothing it asks of a board changed.

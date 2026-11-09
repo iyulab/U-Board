@@ -495,6 +495,17 @@ describe('the picture model of a v2 board', () => {
     expect(grid).toMatchObject({ kind: 'grid', skin });
   });
 
+  it('carries the web fonts of a board to the picture, on a canvas and on a grid, and none when it declares none', () => {
+    const fonts = [{ family: 'Noto Sans KR', src: 'https://fonts.example.com/NotoSansKR.woff2', weight: 700 }];
+    const parts = { pump: { as: 'status-card', show: ['state', 'flow'], each: 'pumps', title: 'Pump {{key}}' } } as Board['parts'];
+    const canvas = view({ ...board(parts, { kind: 'canvas', size: [800, 400], place: { pump: { P1: [10, 10, 220, 110] } } }), board: { fonts } }, { pumps: ['P1'] });
+    const grid = view({ ...board(parts, { kind: 'grid', items: [['pump', 4]] }), board: { fonts } }, { pumps: ['P1'] });
+    expect(canvas).toMatchObject({ kind: 'canvas', fonts });
+    expect(grid).toMatchObject({ kind: 'grid', fonts });
+    expect(view({ ...board(parts, { kind: 'grid', items: [['pump', 4]] }), board: { fonts: [] } }, { pumps: ['P1'] })).not.toHaveProperty('fonts');
+    expect(view(board(parts, { kind: 'grid', items: [['pump', 4]] }), { pumps: ['P1'] })).not.toHaveProperty('fonts');
+  });
+
   it('draws a status card’s meter, subtitle and note from its item', () => {
     const doc = view(board(
       {

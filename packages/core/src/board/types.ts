@@ -309,6 +309,16 @@ export interface GridLayout {
 
 export type Layout = CanvasLayout | GridLayout;
 
+/** A web font the board loads once: `family` is the name a skin's font stacks and an element's CSS call it by; `src` an `https://`
+ *  address or an inline `data:font/…` URL. */
+export interface BoardFont {
+  family: string;
+  src: string;
+  /** 100–900; absent means 400. */
+  weight?: number;
+  style?: 'normal' | 'italic';
+}
+
 /** The board's look, once — every built-in reads it; no part sets fonts or colours. */
 export interface Skin {
   font?: string;
@@ -404,7 +414,7 @@ export type VariableKind = 'text' | 'number' | 'date' | 'datetime';
 
 export interface Board {
   /** The board's title, theme, accent colour (the `accent` tone, a header's banner) and look. */
-  board?: { title?: string; theme?: 'light' | 'dark'; accent?: string; skin?: Skin };
+  board?: { title?: string; theme?: 'light' | 'dark'; accent?: string; skin?: Skin; fonts?: BoardFont[] };
   statuses?: Record<string, Status>;
   symbols?: Record<string, { viewBox?: string; path?: string }>;
   elements?: Record<string, ElementDefinition>;

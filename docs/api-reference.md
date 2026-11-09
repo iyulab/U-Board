@@ -72,7 +72,7 @@ A board is what is written, stored and sent; the picture is what the renderer ma
 
 ```ts
 interface Board {
-  board?: { title?: string; theme?: 'light' | 'dark'; accent?: string; skin?: Skin };
+  board?: { title?: string; theme?: 'light' | 'dark'; accent?: string; skin?: Skin; fonts?: BoardFont[] };
   statuses?: Record<string, Status>;
   symbols?: Record<string, { viewBox?: string; path?: string }>;
   elements?: Record<string, ElementDefinition>;
@@ -118,7 +118,7 @@ in a canvas layout. A worked board, valid as written, is exported as `RULEBOOK_E
 ### `board` — the look
 
 `title`, `theme` (`light`, the default, or `dark` — set to match the background, not the viewer's theme), `accent` —
-the board's own primary colour, which a header's banner and the `accent` tone draw with — and `skin`:
+the board's own primary colour, which a header's banner and the `accent` tone draw with — `skin`, and `fonts` (below):
 
 ```ts
 interface Skin {
@@ -152,6 +152,26 @@ fallback; when the board's skin names that token, the viewer writes the skin's v
 picture the board carries (`data:image/svg+xml`) can be read — one at an address is drawn as it is — and a picture that names no token is
 untouched. The same holds for the pictures a template element's `style` carries as `url("data:image/svg+xml,…")` (a pictogram repeated as a
 background, a pattern): written with the tokens and a fallback, they take the skin's values.
+
+#### `fonts` — web fonts a board loads
+
+```ts
+interface BoardFont {
+  family: string;            // one name — "Noto Sans KR" — which a skin's font stacks and an element's CSS call it by
+  src: string;               // an https:// address, or an inline data:font/woff2;base64,… URL (woff2 · woff · ttf · otf)
+  weight?: number;           // 100–900, default 400
+  style?: 'normal' | 'italic';
+}
+```
+
+`board.fonts` lists up to eight fonts. The viewer registers each with the page's font set (`FontFace`) once, before the board's text is drawn,
+so `skin.font`, `skin.display`, `skin.mono` and a template element's CSS name the family like an installed one; until a face has loaded, text is drawn
+in the next family of its stack, and a face that cannot be fetched leaves it there. A font the host page already provides needs no entry.
+`validateBoard` refuses a family that is not one name, a source that is neither form, a weight or style out of range, and an inline font over
+300,000 characters — a large font, a CJK one especially, belongs at an address. The board only names where a font comes from: the host decides
+which origins may serve one (a page's content security policy `font-src`, as `setMediaOrigins` does for images), and `u-board-render` fetches
+the address from the machine it runs on. The licence of a font is its author's to check — a board that names a font carries no licence with it.
+A script element runs in a frame with no network and does not see the board's fonts.
 
 ### `statuses`
 
