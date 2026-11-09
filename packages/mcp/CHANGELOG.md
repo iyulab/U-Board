@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The report of `renderBoard` and `u-board-render` names, in `problems`, every adapter that answers short of live — `stale` (a last-known value, or one that is late: `lagging`) or `disconnected` — not only one that throws: one line for each adapter and way of answering, with the reason it gave, the references that were read and what it said. The drawing already showed these states in frames of their own; the report now says which source and why. No new field.
+
 ## [0.29.0] - 2026-11-08
 
 ### Changed

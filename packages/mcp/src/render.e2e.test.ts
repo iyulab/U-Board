@@ -71,6 +71,36 @@ describe('renderBoard', () => {
     expect(fine.report.problems.filter(p => p.message.includes('threw'))).toEqual([]);
   });
 
+  it('names, for every source that answers short of live, the adapter, the way it answered and its reason — not only the ones that throw', async () => {
+    const three: Board = {
+      statuses: board.statuses,
+      data: Object.fromEntries(['a', 'b', 'c'].map(id => [`pump-${id}`, { from: id, ref: 'pump', fields: { value: { at: '', label: `Pump ${id}`, state: { running: 'running', '*': 'stopped' } } } }])),
+      parts: Object.fromEntries(['a', 'b', 'c'].map(id => [`pump-${id}`, { as: 'status-card', of: `pump-${id}`, title: `Pump ${id}`, show: ['value'] }])),
+      layout: { kind: 'canvas', size: [800, 240], place: { 'pump-a': [20, 40, 240, 100], 'pump-b': [280, 40, 240, 100], 'pump-c': [540, 40, 240, 100] } },
+    };
+    const answering = (id: string, answer: Awaited<ReturnType<Adapter['resolve']>>): Adapter => ({ id, resolve: async () => answer });
+    const { report } = await renderBoard({
+      board: three,
+      adapters: [
+        answering('a', { value: 'running', quality: 'stale', reason: 'transport', message: 'timed out', observedAt: '2026-11-05T08:00:00.000Z' }),
+        answering('b', { value: 'running', quality: 'stale', reason: 'lagging', observedAt: '2026-11-05T05:00:00.000Z' }),
+        answering('c', { value: undefined, quality: 'disconnected', reason: 'auth', message: 'token refused' }),
+      ],
+      width: 800,
+      height: 240,
+      now: Date.parse('2026-11-05T09:00:30.000Z'),
+    });
+    const lines = report.problems.map(p => p.message);
+    expect(lines.some(m => /^adapter "a" answered stale \(transport\) on \d+ reads? of pump: "timed out"/.test(m))).toBe(true);
+    expect(lines.some(m => /^adapter "b" answered stale \(lagging\) on \d+ reads? of pump$/.test(m))).toBe(true);
+    expect(lines.some(m => /^adapter "c" answered disconnected \(auth\) on \d+ reads? of pump: "token refused"/.test(m))).toBe(true);
+    // One line for each adapter and way of answering, not one for each read.
+    expect(lines.filter(m => m.startsWith('adapter "a" answered'))).toHaveLength(1);
+    // A source that answers live says nothing of the kind.
+    const fine = await renderBoard({ board, adapters: [live()], width: 480, height: 320 });
+    expect(fine.report.problems.filter(p => p.message.includes('answered'))).toEqual([]);
+  }, 60_000);
+
   it('draws the other paper when asked', async () => {
     const light = await renderBoard({ board, adapters: [live()], width: 480, height: 320, appearance: 'light' });
     const dark = await renderBoard({ board, adapters: [live()], width: 480, height: 320, appearance: 'dark' });

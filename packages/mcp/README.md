@@ -129,7 +129,7 @@ console.log(report.problems); // parts that did not draw as written, as `look` s
 
 It needs Chrome or Edge on the computer (or `browser`, or `UBOARD_BROWSER`, the path of a Chromium-based browser). There is no server
 and no network of its own: the page it draws in ships with this package and is served from it, and a blinking state is drawn on, still. A
-binding no adapter answers for, or an adapter that throws, is drawn as disconnected and counted in `report.quality`. In a browser app
+binding no adapter answers for, or an adapter that throws, is drawn as disconnected and counted in `report.quality`. An adapter that answers `stale` or `disconnected` is drawn so too, and the report's `problems` name it: one line for each adapter and way of answering, with the reason it gave, the references that were read and what it said (`adapter "farm" answered stale (transport) on 3 reads of /farm/now: "…"`). In a browser app
 there is nothing to run: the viewer is already on the page, and printing it (or saving it as PDF) gives the same colours.
 
 From a program that is not JavaScript, run `u-board-render` (installed with this package) as a process: the board comes from a file or the standard input, the
