@@ -481,6 +481,15 @@ describe('validateBoard', () => {
     expect(hints({ frame: 'bevel', radius: 0 })).toEqual([]);
   });
 
+  it('refuses a template where an option names a field — "{{key}}" draws no row, the name of the field does', () => {
+    const entry = { from: 'plant', path: '/plant/pumps', list: '/value', key: 'id' };
+    const refused = (parts: Record<string, unknown>, data: Record<string, unknown> = { pumps: entry }) => issues({ data, parts, layout: { kind: 'canvas', size: [400, 300], place: Object.fromEntries(Object.keys(parts).map((id, i) => [id, [0, i * 100, 200, 90]])) } });
+    expect(refused({ b: { as: 'bar-list', of: 'pumps', label: '{{key}}', value: 'flow' } })).toEqual(['/parts/b/label: "{{key}}" is a template, not a field — "label" names a field of each item: write "id", without the braces (the items of "pumps" are named by their "id" field)']);
+    expect(refused({ l: { as: 'list', of: 'pumps', primary: '{{name}}' } })).toEqual(['/parts/l/primary: "{{name}}" is a template, not a field — "primary" names a field of each item: write "name", without the braces']);
+    // a name is taken, and a title may be a template
+    expect(refused({ b: { as: 'bar-list', of: 'pumps', label: 'id', value: 'flow', title: '{{id}} flow' } })).toEqual([]);
+  });
+
   it('says "key" is not a field where an option names one — and names the field that names the items', () => {
     const entry = { from: 'plant', path: '/plant/pumps', list: '/value', key: 'id' };
     const hints = (parts: Record<string, unknown>, data = { pumps: entry }) => validateBoard({ data, parts, layout: { kind: 'canvas', size: [400, 300], place: Object.fromEntries(Object.keys(parts).map((id, i) => [id, [10, 10 + i * 80, 150, 70]])) } } as never).filter(i => i.hint).map(i => `${i.at}: ${i.message}`);

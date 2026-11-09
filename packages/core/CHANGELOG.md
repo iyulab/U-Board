@@ -9,6 +9,7 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - The check refuses a placed box with a side under 8 canvas units. A `size` written as a scale — `"size": [1, 1]`, where it is `[width, height]` in the canvas's own units — was accepted and drew the part as a dot, with nothing in the check to say why; a model writing a board without a picture to look at could not see it. The message names the box's size and the canvas's size and says a size is not a scale or a ratio. It covers a box written by hand (`[x, y, width, height]`), the `size` of items placed by their fields, and the `cell` of a flow. A point (`[x, y]`) is still a point.
+- The check refuses a template — `"{{key}}"`, `"{{name}}"` — where an option names a field of each item: a bar list's or status grid's `label` and `value`, a list's `primary` and its other lines. A part given a template finds no field of that name and draws no row: an empty list on a board the check had accepted. The message names the field to write, and for `{{key}}` the field that names the items. A plain `"key"` stays advice, as before.
 
 ## [0.44.0] - 2026-11-08
 

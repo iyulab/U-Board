@@ -793,6 +793,18 @@ export function validateBoard(input: unknown): BoardIssue[] {
   const checkKeyAsField = (part: Obj, kind: string, at: string, reads: string | null | undefined) => {
     const options = KEY_FIELD_OPTIONS[kind];
     if (options === undefined || typeof reads !== 'string') return;
+    // `{{field}}` written where a field's name goes: a template is for a title or a note, an option that names a field takes the name
+    // itself, and a part given a template finds no field by that name and draws no row. A refusal, not advice — it cannot draw.
+    for (const option of options) {
+      const value = part[option];
+      const hole = typeof value === 'string' ? /^\{\{\s*([\w.-]+)\s*\}\}$/.exec(value)?.[1] : undefined;
+      if (hole !== undefined) {
+        const q0 = data[reads];
+        const keyName = isObj(q0) && typeof q0.key === 'string' && q0.key !== '' ? q0.key : undefined;
+        const name = hole === 'key' && keyName !== undefined ? keyName : hole;
+        fail(`${at}/${option}`, `"${String(value)}" is a template, not a field — "${option}" names a field of each item: write "${name}", without the braces${hole === 'key' ? ` (the items of "${reads}" are named by ${keyName !== undefined ? `their "${keyName}" field` : 'their key'})` : ''}`);
+      }
+    }
     const q = data[reads];
     const keyField = isObj(q) && typeof q.key === 'string' && q.key !== '' && q.key !== 'key' ? q.key : undefined;
     if (keyField === undefined || fieldOf(reads, 'key') !== undefined) return;
