@@ -190,7 +190,10 @@ function remove(root: unknown, tokens: string[]): { root: unknown; value: unknow
     delete parent[key];
     return { root, value };
   }
-  throw new Error(`nothing at ${pointerOf(tokens)}`);
+  // What the parent does have, as "replace" and "add" say — and that a refused patch saves nothing, so a writer whose
+  // operation was not meant (a stray one at the end) knows to send the patch again without it.
+  const members = isObject(parent) ? ` — ${membersOf(parent, tokens.slice(0, -1), key)}` : '';
+  throw new Error(`nothing at ${pointerOf(tokens)}${members}; "remove" takes out a value that is there — if this operation was not meant, send the patch again without it`);
 }
 
 /** An array index token — digits, no leading zero — at most `max`. */

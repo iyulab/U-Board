@@ -32,7 +32,8 @@ describe('applyJsonPatch — RFC 6902 Appendix A', () => {
     ['A.12 add to a nonexistent target', { foo: 'bar' }, [{ op: 'add', path: '/baz/bat', value: 'qux' }], 'nothing at /baz — the document has foo — "add" makes only the last part of its path: add that first'],
     ['"/" taken for the whole document', { a: 1 }, [{ op: 'replace', path: '/', value: {} }], 'nothing at / — the whole document is the path "", not "/"'],
     ['A.15 compare strings and numbers', { '/': 9, '~1': 10 }, [{ op: 'test', path: '/~01', value: '10' }], 'test failed'],
-    ['remove what is not there', { a: 1 }, [{ op: 'remove', path: '/b' }], 'nothing at /b'],
+    ['remove what is not there', { a: 1 }, [{ op: 'remove', path: '/b' }], 'nothing at /b — the document has a; "remove" takes out a value that is there — if this operation was not meant, send the patch again without it'],
+    ['remove a member the parent does not have', { parts: { header: {}, map: {} } }, [{ op: 'remove', path: '/parts/fro' }], 'nothing at /parts/fro — /parts has header, map; "remove"'],
     ['replace a member that is not there', { a: {} }, [{ op: 'replace', path: '/a/b', value: 1 }], 'nothing at /a/b — /a is empty — "replace" changes a value that is there; to set one that is not, use "add"'],
     [
       'a member guessed one level too high',
