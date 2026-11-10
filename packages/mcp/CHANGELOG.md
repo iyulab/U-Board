@@ -23,6 +23,7 @@ All notable changes to this package are documented here. The format follows
 ### Changed
 
 - Follows `@iyulab/u-board` `^0.44.0` and `@iyulab/u-widgets` `^0.49.0`.
+- The workflow `describe("rules")` gives, and the tool-use instructions, ask for `look` in the same turn as the `patch_board`, after it: the picture's answer names the revision it drew, so a client that runs a turn's calls out of order, or a refused patch, shows. A model that asked for the picture in a turn of its own spent a round trip on each look.
 
 ### Fixed
 
