@@ -351,6 +351,39 @@ describe('u-board-mcp', () => {
     expect((server.boards.get('b1')!.document as Board).parts.a).toEqual({ as: 'gauge', of: 'line', show: 'temp', title: 'Temp' });
   });
 
+  it('answers a saved change with the layout advice the picture gives, so an overlap is learnt of in the change that made it', async () => {
+    server.boards.set('b3', { name: 'Crowded', revision: 2, document: canvasBoard({ n1: [0, 0, 200, 100], n2: [400, 0, 200, 100] }) });
+    // Moving n2 onto n1: the answer of the patch carries what `look` would have advised, at the board's paths — no drawing needed.
+    const moved = await call('patch_board', { board: 'b3', revision: 2, patch: [{ op: 'replace', path: '/layout/place/n2', value: [0, 0, 200, 100] }] });
+    expect(moved.value).toEqual({ id: 'b3', revision: 3, advice: [{ path: '/parts/n1', message: 'its box overlaps node "n2" (/parts/n2) — one widget draws over the other; move or resize one' }] });
+    // The look of the same board says the same thing, once — not twice.
+    const { look } = await looking();
+    expect((await look('b3')).report.advice).toEqual((moved.value as { advice: unknown[] }).advice);
+    // Moved clear again: the answer is as saving gave it, with nothing added.
+    const clear = await call('patch_board', { board: 'b3', revision: 3, patch: [{ op: 'replace', path: '/layout/place/n2', value: [400, 0, 200, 100] }] });
+    expect(clear.value).toEqual({ id: 'b3', revision: 4, advice: [] });
+  });
+
+  it('keeps the change when the board cannot be read back for its layout advice', async () => {
+    server.boards.set('b3', { name: 'Crowded', revision: 2, document: canvasBoard({ n1: [0, 0, 200, 100], n2: [400, 0, 200, 100] }) });
+    const real = server.fetchImpl;
+    let patched = false;
+    // The save goes through; the read after it fails — the answer is the save's own.
+    const dropping = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (patched && (init?.method ?? 'GET') === 'GET') throw new Error('the connection dropped');
+      if (init?.method === 'PATCH') patched = true;
+      return real(input, init);
+    }) as typeof fetch;
+    const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', dropping));
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const dropped = new Client({ name: 'test', version: '0' });
+    await Promise.all([mcp.connect(b), dropped.connect(a)]);
+    const saved = (await dropped.callTool({ name: 'patch_board', arguments: { board: 'b3', revision: 2, patch: [{ op: 'replace', path: '/layout/place/n2', value: [0, 0, 200, 100] }] } })) as { content: { text: string }[]; isError?: boolean };
+    expect(saved.isError).toBeUndefined();
+    expect(JSON.parse(saved.content[0].text)).toEqual({ id: 'b3', revision: 3, advice: [] });
+    expect((server.boards.get('b3')!.document as Board).layout).toMatchObject({ place: { n2: [0, 0, 200, 100] } });
+  });
+
   it('says what to do when the board was saved since', async () => {
     const { value, isError } = await call('patch_board', { board: 'b1', revision: 2, patch: [{ op: 'remove', path: '/parts/a' }] });
     expect(isError).toBe(true);

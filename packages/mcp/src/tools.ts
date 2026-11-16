@@ -3,7 +3,7 @@ import { applyJsonPatch, getByPointer, JsonPatchError } from '@iyulab/u-board/do
 import { lintViewDocument, placedAt, type ViewDocument } from '@iyulab/u-board/picture';
 import { type Board } from '@iyulab/u-board/domain';
 import { checkBoard, sourceAdvice } from '@iyulab/u-board/check';
-import { UBoardApiError, type ResolveRef } from './client.js';
+import { UBoardApiError, type ResolveRef, type Saved } from './client.js';
 import { isWorkspaceStore, type BoardStore, type WorkspaceStore } from './store.js';
 import { describeTopic, TOPICS } from './describe.js';
 import { shapeOf } from './shape.js';
@@ -249,6 +249,22 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
     if (id === undefined) throw new Error('say which board: its id, from list_boards');
     return id;
   };
+  /**
+   * What a change that was saved is answered with: the advice saving gave, and the advice about the layout `look` gives — parts
+   * drawn over one another, a text under a part. That is read from the board's picture and needs no drawing, so the writer learns
+   * of an overlap in the answer of the change that made it, not a turn later in a picture. A read that fails after the save leaves
+   * the answer as saving gave it: the change is kept either way.
+   */
+  const withLayoutAdvice = async (id: string, saved: Saved): Promise<Saved> => {
+    try {
+      const { document: kept, picture } = await store.getBoard(id);
+      const known = new Set(saved.advice.map(a => `${a.path}\n${a.message}`));
+      const layout = lintViewDocument(picture).map(a => inBoard(kept, picture, a)).filter(a => !known.has(`${a.path}\n${a.message}`));
+      return layout.length > 0 ? { ...saved, advice: [...saved.advice, ...layout] } : saved;
+    } catch {
+      return saved;
+    }
+  };
   const tools: BoardTool[] = [];
   // The names of the tools this store is offered, known once all are defined — `describe` tells the assistant only of those.
   let offered: ReadonlySet<string> = new Set();
@@ -353,7 +369,7 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
           const next = fromBundle(withEdits({ ...toBundle(found.document), ...files }, edits ?? []));
           try {
             // on the revision the files were read at, unless the caller names one: the merge is of what was there
-            return await store.putDocument(id, next, revision ?? found.revision);
+            return await withLayoutAdvice(id, await store.putDocument(id, next, revision ?? found.revision));
           } catch (error) {
             if (error instanceof UBoardApiError && error.body.issues) error.body.issues = error.body.issues.map(issue => ({ ...issue, file: whereIs(next, issue.path).file }));
             throw error;
@@ -475,7 +491,7 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
             changed.set(pointer, text.slice(0, first) + replacement + text.slice(first + old.length));
           });
           const patch = [...changed].map(([path, value]) => ({ op: 'replace' as const, path, value }));
-          return store.patchDocument(id, patch, revision ?? found.revision);
+          return withLayoutAdvice(id, await store.patchDocument(id, patch, revision ?? found.revision));
         })
     );
   }
@@ -489,7 +505,8 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
     },
     async ({ board, revision, patch }) =>
       tool(async () => {
-        return store.patchDocument(which(board), patch, revision);
+        const id = which(board);
+        return withLayoutAdvice(id, await store.patchDocument(id, patch, revision));
       })
   );
 

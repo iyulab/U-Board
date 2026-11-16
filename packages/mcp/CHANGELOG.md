@@ -14,6 +14,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- `patch_board`, `edit_text` and `put_bundle` answer a saved change with the layout advice `look` gives, beside the advice saving gave — parts drawn over one another, a text lying under a part — read from the board's picture, so no drawing is needed. A writer learns of an overlap in the answer of the change that made it, not a turn later in a picture; a fix that was a patch and then a look is a patch. The answer has the shape it had (`advice` was already in it), and a failure to read the board back after the save leaves the answer as saving gave it — the change is kept either way.
 - Follows `@iyulab/u-widgets` `^0.50.0`.
 
 ### Fixed
