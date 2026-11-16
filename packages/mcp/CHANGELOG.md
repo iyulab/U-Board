@@ -12,6 +12,10 @@ All notable changes to this package are documented here. The format follows
 - The report of `renderBoard` and `u-board-render` names, in `problems`, every adapter that answers short of live — `stale` (a last-known value, or one that is late: `lagging`) or `disconnected` — not only one that throws: one line for each adapter and way of answering, with the reason it gave, the references that were read and what it said. The drawing already showed these states in frames of their own; the report now says which source and why. No new field.
 - The pictures `look, `renderBoard` and `u-board-render` take draw a board in the web fonts it declares (`board.fonts`, in `@iyulab/u-board`): the browser on the machine that draws fetches an `https://` font from its address, as it does an image a board names.
 
+### Changed
+
+- Follows `@iyulab/u-widgets` `^0.50.0`.
+
 ### Fixed
 
 - The report of `look`, `renderBoard` and `u-board-render` says when a canvas leaves items out. A part made per item of a list, placed by fields (`place` with `at`, `frame` and `size`), draws no item whose fields hold no number or whose position falls outside its frame — and a board read from a file got a clean report for it, where `look` against a server already named the part. The report now names the part and how many of its items are not drawn, in the same sentence for a board in a file and one on a server.

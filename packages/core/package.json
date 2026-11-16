@@ -83,7 +83,7 @@
   "dependencies": {
     "@canvas-kit/core": "^0.9.0",
     "@canvas-kit/viewer": "^0.11.0",
-    "@iyulab/u-widgets": "^0.49.0",
+    "@iyulab/u-widgets": "^0.50.0",
     "@lit/react": "^1.0.8",
     "echarts": "^6.1.0"
   },

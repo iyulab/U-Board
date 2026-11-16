@@ -12,6 +12,7 @@ All notable changes to this package are documented here. The format follows
 
 ### Changed
 
+- Follows `@iyulab/u-widgets` `^0.50.0`: a table orders its text columns with digit runs read as numbers (`A-2` before `A-10`) and a column's `align: left | right` reads as the start / end of the line, so it flips in a right-to-left page.
 - A JSON Patch `remove` of a member that is not there now says what its parent does have and that the patch can be sent again without the operation — `nothing at /parts/fro — /parts has header, map; "remove" takes out a value that is there — if this operation was not meant, send the patch again without it` — as `replace` and `add` already refuse. A refused patch still changes nothing.
 - The rulebook an assistant reads (`boardRulebook`) is 87 characters shorter: two sentences the rest of it already says — what a data read's `ref` takes, and that there is one way to write each thing — are gone. Nothing it asks of a board changed.
 - The example board in the rulebook is printed one entry to a line, the same board in about 470 fewer characters; the rulebook stays well under its length limit.
