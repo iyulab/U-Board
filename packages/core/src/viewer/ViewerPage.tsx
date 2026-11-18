@@ -6,7 +6,6 @@ import { useFittedView } from './use-fitted-view.js';
 import { useDocumentFonts } from './use-document-fonts.js';
 import { ViewControls } from './ViewControls.js';
 import { useViewMenu } from './ViewMenu.js';
-import { useCoarsePointer } from './use-coarse-pointer.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { GridBoard } from '../renderer/grid-board.js';
@@ -99,8 +98,8 @@ export interface ViewerPageProps {
    *  Default `true`. The browser's own menu stays on a link, an input and selected text, and with Shift held. Turn it off for a
    *  board that is only to be looked at — a kiosk, a frame inside another page. */
   contextMenu?: boolean;
-  /** Whether the zoom buttons are drawn above a canvas board. Default `false`: the board has its menu, the wheel, drag and the
-   *  keys. (On a screen that cannot hover — a finger — they are drawn anyway until the viewer pinches.) */
+  /** Whether the zoom buttons are drawn above a canvas board. Default `false`: the board has its menu, the wheel, drag, the
+   *  keys and, under a finger, a two-finger pinch. */
   zoomButtons?: boolean;
 }
 
@@ -176,9 +175,8 @@ export function ViewerPage({
   const view = useFittedView();
   const { fitTo, focusOn } = view;
   const fitView = useMemo(() => (extent ? () => fitTo(extent) : undefined), [fitTo, extent]);
-  const touchOnly = useCoarsePointer();
   const viewMenu = useViewMenu({ enabled: contextMenu && drawn?.kind === 'canvas', view, onFit: fitView, labels });
-  const showsButtons = drawn?.kind === 'canvas' && (zoomButtons || touchOnly);
+  const showsButtons = drawn?.kind === 'canvas' && zoomButtons;
   const surface = useRef<HTMLDivElement>(null);
   // A part a trigger points at: on a canvas, its box brought into view; in a grid, its cell scrolled into view.
   // A grid's cells exist a draw after its document is resolved, so a part pointed at as the board is first drawn is kept

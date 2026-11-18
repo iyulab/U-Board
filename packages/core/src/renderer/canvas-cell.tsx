@@ -6,7 +6,6 @@ import { DOCUMENT_FIT_OPTIONS, documentExtent } from '../viewer/document-extent.
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
 import { useViewMenu } from '../viewer/ViewMenu.js';
-import { useCoarsePointer } from '../viewer/use-coarse-pointer.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { toCanvasKit } from './to-canvas-kit.js';
 import type { PartInput } from '../board-input.js';
@@ -42,10 +41,10 @@ export interface CanvasCellProps {
   onNodeActivate?: (node: string) => void;
   onElementEvent?: (node: string, name: string) => void;
   onInput?: (node: string, input: PartInput) => void;
-  /** Whether it has its view controls — the right-click menu, the `0` key and, on a screen that cannot hover, the zoom buttons —
+  /** Whether it has its view controls — the right-click menu and the `0` key —
    *  not where the cell is shown, not used: an editor's grid. Default true. */
   controls?: boolean;
-  /** Whether it draws the zoom buttons whatever the screen. Default false. */
+  /** Whether it draws the zoom buttons. Default false. */
   buttons?: boolean;
 }
 
@@ -67,7 +66,6 @@ export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAU
   const extent = useMemo(() => JSON.parse(extentKey) as ReturnType<typeof documentExtent>, [extentKey]);
   useEffect(() => fitTo(extent), [fitTo, extent]);
   const fitView = useMemo(() => (extent ? () => fitTo(extent) : undefined), [fitTo, extent]);
-  const touchOnly = useCoarsePointer();
   const viewMenu = useViewMenu({ enabled: controls, view: fitted, onFit: fitView, labels });
 
   // The canvas fills its cell. Without a height of its own, an in-flow sizer in the canvas's proportions gives the cell
@@ -75,7 +73,7 @@ export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAU
   return (
     <div className="ub-grid__canvas" style={CELL_STYLE} {...viewMenu.props}>
       {item.height === undefined && <div aria-hidden="true" style={{ width: '100%', aspectRatio: cellAspectRatio(view) }} />}
-      {controls && (buttons || touchOnly) && (
+      {controls && buttons && (
         <span className="ub-grid__canvas-controls" style={CONTROLS_STYLE}>
           <ViewControls view={fitted} onFit={fitView} labels={labels} />
         </span>

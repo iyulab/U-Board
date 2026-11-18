@@ -148,8 +148,8 @@ reader's pan and zoom where they are.
 A canvas board opens fitted into view. People move it with the wheel, drag and the `+` and `-` keys; a right click over the board (the ContextMenu
 key or Shift+F10 on a keyboard) opens a menu — zoom in, zoom out, fit to view — and `0` fits it. The browser's own menu stays on a link, an
 input and selected text, and with Shift held. Two options change this: `contextMenu={false}` takes the menu and the `0` key away, for a board that
-is only to be looked at (a kiosk, a frame inside another page), and `zoomButtons` draws zoom buttons above the board as well. On a screen
-that cannot hover, where there is no right click, the buttons are drawn whatever you choose.
+is only to be looked at (a kiosk, a frame inside another page), and `zoomButtons` draws zoom buttons above the board as well. Under a finger, two
+fingers pinch the board.
 
 ## Large boards
 

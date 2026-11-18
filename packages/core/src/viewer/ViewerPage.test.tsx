@@ -363,10 +363,15 @@ describe('ViewerPage view menu', () => {
     expect(lastViewerProps().transform).toEqual({ x: 1, y: 2, scale: 0.7 });
   });
 
-  it('draws the zoom buttons on a screen that cannot hover, where a right click is out of reach', async () => {
+  it('does not draw the zoom buttons on a screen that cannot hover — a finger pinches', async () => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as unknown as typeof window.matchMedia;
     await open({ contextMenu: false });
-    expect(window.matchMedia).toHaveBeenCalledWith('(hover: none) and (pointer: coarse)');
+    expect(screen.queryByRole('button', { name: 'Zoom in' })).not.toBeInTheDocument();
+  });
+
+  it('still draws them on any screen when the host asks', async () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as unknown as typeof window.matchMedia;
+    await open({ contextMenu: false, zoomButtons: true });
     expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument();
   });
 });

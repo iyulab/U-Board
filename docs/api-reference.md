@@ -535,7 +535,7 @@ The view of a canvas board has two more `ViewerPage` options:
 | Prop | |
 |---|---|
 | `contextMenu` | A right click over the board (and the ContextMenu key, Shift+F10) opens «zoom in / zoom out / fit to view», and `0` fits it. Default `true`; `false` for a board that is only to be looked at. The browser's own menu stays on a link, an input, selected text, and with Shift held. |
-| `zoomButtons` | Draw the zoom buttons above a canvas board. Default `false`. On a screen that cannot hover they are drawn anyway. |
+| `zoomButtons` | Draw the zoom buttons above a canvas board. Default `false`; a finger pinches. |
 
 ## Checking a board
 

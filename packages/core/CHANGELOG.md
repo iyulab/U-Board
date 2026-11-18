@@ -6,6 +6,10 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- On a screen that cannot hover the zoom buttons are no longer drawn on their own: two fingers pinch the board, which `@canvas-kit/viewer` 0.12 does and the library now takes at `^0.12.0`. The `zoomButtons` option of `ViewerPage` and `canvasButtons` of `GridBoard` still draw them on any screen.
+
 ## [0.45.0] - 2026-11-19
 
 ### Added
