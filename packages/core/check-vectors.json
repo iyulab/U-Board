@@ -476,6 +476,129 @@
       ]
     },
     {
+      "name": "font-at-an-https-address",
+      "about": "A web font the board loads from an https address: nothing to say.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "board": {
+          "fonts": [
+            {
+              "family": "Noto Sans KR",
+              "src": "https://fonts.example.com/noto-sans-kr.woff2",
+              "weight": 400,
+              "style": "normal"
+            }
+          ]
+        }
+      },
+      "paths": []
+    },
+    {
+      "name": "font-from-plain-http",
+      "about": "A web font at an address that is not https.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "board": {
+          "fonts": [
+            {
+              "family": "Noto Sans KR",
+              "src": "http://fonts.example.com/noto-sans-kr.woff2"
+            }
+          ]
+        }
+      },
+      "paths": [
+        "/board/fonts/0/src"
+      ]
+    },
+    {
+      "name": "font-family-is-a-list",
+      "about": "A web font whose family names several families at once.",
+      "board": {
+        "data": {
+          "d": {
+            "from": "x",
+            "path": "/x",
+            "fields": {
+              "v": {
+                "at": "/v"
+              }
+            }
+          }
+        },
+        "parts": {
+          "a": {
+            "as": "status-card",
+            "of": "d",
+            "show": "v"
+          }
+        },
+        "layout": {
+          "kind": "grid",
+          "items": [
+            "a"
+          ]
+        },
+        "board": {
+          "fonts": [
+            {
+              "family": "Noto Sans KR, serif",
+              "src": "https://fonts.example.com/noto-sans-kr.woff2"
+            }
+          ]
+        }
+      },
+      "paths": [
+        "/board/fonts/0/family"
+      ]
+    },
+    {
       "name": "trigger-opens-plain-http",
       "about": "A trigger that opens an address that is not https.",
       "board": {

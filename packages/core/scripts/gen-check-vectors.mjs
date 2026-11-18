@@ -26,6 +26,9 @@ const vectors = [
   one('element-loads-unlisted-address', 'An element that loads an address it was not given.', { ...good, elements: { e: { template: '<img src="https://evil.example/x.png">' } }, parts: { a: { as: 'element', element: 'e' } } }),
   one('script-lists-origins', 'A script element that lists the origins it loads from, each as an origin: nothing to say.', { ...good, elements: { e: { script: 'ub.onProps(() => {})', resources: ['https://cdn.example', 'https://cdn.example:8443'] } }, parts: { a: { as: 'element', element: 'e' } } }),
   one('script-origin-with-a-path', 'A script element that lists an address, not an origin.', { ...good, elements: { e: { script: 'ub.onProps(() => {})', resources: ['https://cdn.example/lib.js'] } }, parts: { a: { as: 'element', element: 'e' } } }),
+  one('font-at-an-https-address', 'A web font the board loads from an https address: nothing to say.', { ...good, board: { fonts: [{ family: 'Noto Sans KR', src: 'https://fonts.example.com/noto-sans-kr.woff2', weight: 400, style: 'normal' }] } }),
+  one('font-from-plain-http', 'A web font at an address that is not https.', { ...good, board: { fonts: [{ family: 'Noto Sans KR', src: 'http://fonts.example.com/noto-sans-kr.woff2' }] } }),
+  one('font-family-is-a-list', 'A web font whose family names several families at once.', { ...good, board: { fonts: [{ family: 'Noto Sans KR, serif', src: 'https://fonts.example.com/noto-sans-kr.woff2' }] } }),
   one('trigger-opens-plain-http', 'A trigger that opens an address that is not https.', { ...good, triggers: [{ on: { event: 'click', part: 'a' }, do: [{ action: 'open-link', url: 'http://plain.example' }] }] }),
 ];
 writeFileSync(resolve(packageDir, 'check-vectors.json'), JSON.stringify({

@@ -123,7 +123,7 @@ write it a second time; it runs the one the library ships on a JavaScript engine
   the same as the package does. An address in a board is read by its shape — an `https://` host written as ASCII, with no user name, and
   an IP address only in dotted decimal — so an exotic one (a bracketed IPv6 host, a non-ASCII name) is refused here as it is everywhere;
   write such a host in the form a resolver gives it.
-- `@iyulab/u-board/check-vectors.json` is a dozen boards with the paths the check tells each one off at, and nothing about the wording of
+- `@iyulab/u-board/check-vectors.json` is a set of boards with the paths the check tells each one off at, and nothing about the wording of
   a message. Run them on your engine to see the bundle answers there as it does here: compare the set of `path`s of `issues` with `paths`.
   It is a smoke test of the engine, not a copy of the rules.
 
