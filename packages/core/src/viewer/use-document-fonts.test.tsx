@@ -59,6 +59,11 @@ describe('registerFont', () => {
     expect(added).toHaveLength(0);
   });
 
+  it('loads no family the check would have refused — a name is one family, not a list, a quote or a rule', () => {
+    for (const family of ['A, serif', 'A"; x', "A'", 'url(x)', '', 'x'.repeat(65)]) expect(registerFont({ ...fresh(), family })).toBe(false);
+    expect(added).toHaveLength(0);
+  });
+
   it('accepts an inline font', () => {
     expect(registerFont({ family: 'Inline', src: inline })).toBe(true);
     expect(added[0]!.source).toBe(`url(${JSON.stringify(inline)})`);

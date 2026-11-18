@@ -1,16 +1,16 @@
 import { useEffect } from 'react';
-import { FONT_SRC } from '../board/fonts.js';
+import { FONT_FAMILY, FONT_SRC } from '../board/fonts.js';
 import type { ViewFont } from '../view-document.js';
 
 // A board's `fonts` are registered with the page once, by what they say: the same font on a board drawn again (a new object each time) loads
 // nothing more. They stay registered for the life of the page — a family is a name, and a second board that names it again finds it there.
 const registered = new Set<string>();
 
-/** Registers one font with the page's font set and starts loading it; false when it is not loadable here (no font API, or a source the check would have refused —
+/** Registers one font with the page's font set and starts loading it; false when it is not loadable here (no font API, or a family or a source the check would have refused —
  *  a document can reach a viewer from outside the check). */
 export function registerFont(font: ViewFont): boolean {
   if (typeof FontFace === 'undefined' || typeof document === 'undefined' || document.fonts === undefined) return false;
-  if (typeof font.family !== 'string' || typeof font.src !== 'string' || !FONT_SRC.test(font.src)) return false;
+  if (typeof font.family !== 'string' || typeof font.src !== 'string' || !FONT_FAMILY.test(font.family) || !FONT_SRC.test(font.src)) return false;
   const weight = font.weight ?? 400;
   const style = font.style ?? 'normal';
   const id = JSON.stringify([font.family, font.src, weight, style]);
