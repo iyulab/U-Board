@@ -125,7 +125,7 @@ write it a second time; it runs the one the library ships on a JavaScript engine
   write such a host in the form a resolver gives it.
 - `@iyulab/u-board/check-vectors.json` is a set of boards with the paths the check tells each one off at, and nothing about the wording of
   a message. Run them on your engine to see the bundle answers there as it does here: compare the set of `path`s of `issues` with `paths`.
-  It is a smoke test of the engine, not a copy of the rules.
+  It is a smoke test of the engine, not a copy of the rules. The bundle and the vectors have been run on Jint 4 (.NET), where every vector answers the same set of paths.
 
 The bundle is the library's own check, so a board that passes it passes the same check anywhere the library runs. It does not draw a
 board or read its data.
