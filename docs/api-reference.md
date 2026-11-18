@@ -530,6 +530,13 @@ The viewer runs them; `BoardAuthoring` runs them in View only. Both take the hos
 | `onNavigate({ board })` | A `go-to-board`. Without it, nothing happens: the viewer does not go anywhere on its own. |
 | `linkOrigins` | The origins an `open-link` may open besides this installation's paths. Left out: any `https` address. |
 
+The view of a canvas board has two more `ViewerPage` options:
+
+| Prop | |
+|---|---|
+| `contextMenu` | A right click over the board (and the ContextMenu key, Shift+F10) opens «zoom in / zoom out / fit to view», and `0` fits it. Default `true`; `false` for a board that is only to be looked at. The browser's own menu stays on a link, an input, selected text, and with Shift held. |
+| `zoomButtons` | Draw the zoom buttons above a canvas board. Default `false`. On a screen that cannot hover they are drawn anyway. |
+
 ## Checking a board
 
 A board that comes from outside your own code — a file, a request body, an assistant's output — is checked before

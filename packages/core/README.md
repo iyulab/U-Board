@@ -105,9 +105,12 @@ every credited source the board reads on a line under it. `attribution={false}` 
 to the host.
 
 The board opens fitted into view — shrunk to fit, never magnified past its natural size — and stays
-fitted as the view resizes until the viewer pans or zooms; a "Fit to view" control restores that,
-and zoom in/out controls do what the wheel does from the keyboard. Pass `width`/`height` (CSS px) for a
-fixed-size view instead.
+fitted as the view resizes until the viewer pans or zooms; a right click on the board (the ContextMenu
+key, Shift+F10) opens a menu — zoom in, zoom out, fit to view — and `0` fits it, beside the wheel, drag and the
+`+` / `-` keys. The browser's own menu stays on a link, an input and selected text, and with Shift held.
+`contextMenu={false}` takes the menu away (a kiosk, a frame inside another page); `zoomButtons` draws zoom
+buttons above the board as well — they are also drawn on a screen that cannot hover. Pass `width`/`height`
+(CSS px) for a fixed-size view instead.
 
 With `pollIntervalMs` the board re-reads its data on that interval — and within a few seconds when
 the page is shown again after a hidden tab or a sleeping machine — and is made to be left open on a
@@ -238,7 +241,8 @@ class, loaded after the sheet, overrides them. The class names are stable hooks:
 | `ub-grid__canvas-controls` | The zoom buttons of a grid cell's canvas — the part a picture of the board leaves out |
 | `ub-viewer__attribution` | The line under a board naming where its data comes from (`Adapter.attribution`) — in the viewer |
 | `ub-viewer__example` | In that line, first: that the board shows example data — it binds to an adapter whose values are (`Adapter.sample`) |
-| `ub-view-controls` | The zoom out / zoom in / fit buttons |
+| `ub-view-controls` | The zoom out / zoom in / fit buttons (with `zoomButtons`, or on a screen that cannot hover) |
+| `ub-view-menu`, `ub-view-menu__item` | The menu a right click opens over a board, and one of its items |
 | `ub-freshness`, `ub-freshness__time`, `ub-freshness__alert` | When the values were last updated, and the "not updating" notice |
 | `ub-action` (`--icon`) | Every button; a button holding one symbol |
 | `ub-state-blink` (`--ring`) | A part in a state whose look blinks (`StateLook.blink`) — the part, or its ring when the look has one; still under `prefers-reduced-motion` |

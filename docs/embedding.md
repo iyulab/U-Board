@@ -137,6 +137,20 @@ public: leave out the words an adapter keeps for whoever fixes the data source (
 Whoever may call `save` may change the board; put your own permission check in front of it, and in front of anything you do in
 `onInput`.
 
+## An open board: staying current and moving around
+
+`ViewerPage` reads a board's data once, when the board opens. Give it `pollIntervalMs` and it reads again on that interval, so the values and
+their connection quality stay current. A read that has not finished within twice the interval shows the board as not updating, so no value
+claims to be current; a page that was hidden and is shown again reads again at once, after a random wait of up to three seconds (or the
+interval, if that is shorter) so a screenful of pages coming back together does not ask a source in the same instant. A refresh leaves the
+reader's pan and zoom where they are.
+
+A canvas board opens fitted into view. People move it with the wheel, drag and the `+` and `-` keys; a right click over the board (the ContextMenu
+key or Shift+F10 on a keyboard) opens a menu — zoom in, zoom out, fit to view — and `0` fits it. The browser's own menu stays on a link, an
+input and selected text, and with Shift held. Two options change this: `contextMenu={false}` takes the menu and the `0` key away, for a board that
+is only to be looked at (a kiosk, a frame inside another page), and `zoomButtons` draws zoom buttons above the board as well. On a screen
+that cannot hover, where there is no right click, the buttons are drawn whatever you choose.
+
 ## Large boards
 
 A canvas with thousands of parts is met as far as the view has reached: past 500 parts the viewer leaves out those well outside the

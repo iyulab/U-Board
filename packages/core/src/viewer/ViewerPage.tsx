@@ -5,6 +5,8 @@ import { documentExtent } from './document-extent.js';
 import { useFittedView } from './use-fitted-view.js';
 import { useDocumentFonts } from './use-document-fonts.js';
 import { ViewControls } from './ViewControls.js';
+import { useViewMenu } from './ViewMenu.js';
+import { useCoarsePointer } from './use-coarse-pointer.js';
 import { toCanvasKit } from '../renderer/to-canvas-kit.js';
 import type { CanvasKitRenderOutput } from '../renderer/to-canvas-kit.js';
 import { GridBoard } from '../renderer/grid-board.js';
@@ -93,6 +95,13 @@ export interface ViewerPageProps {
   /** The origins a trigger's link may open (`open-link`), besides paths on this installation. Left out: any `https`
    *  address. */
   linkOrigins?: readonly string[];
+  /** Whether a right click over the board (the ContextMenu key, Shift+F10) opens «zoom in / zoom out / fit to view», and `0` fits.
+   *  Default `true`. The browser's own menu stays on a link, an input and selected text, and with Shift held. Turn it off for a
+   *  board that is only to be looked at — a kiosk, a frame inside another page. */
+  contextMenu?: boolean;
+  /** Whether the zoom buttons are drawn above a canvas board. Default `false`: the board has its menu, the wheel, drag and the
+   *  keys. (On a screen that cannot hover — a finger — they are drawn anyway until the viewer pinches.) */
+  zoomButtons?: boolean;
 }
 
 /** What is on screen: a canvas view as canvas-kit draws it, or a grid view as it lays out — with the time its
@@ -128,6 +137,8 @@ export function ViewerPage({
   onTrigger,
   onNavigate,
   linkOrigins,
+  contextMenu = true,
+  zoomButtons = false,
 }: ViewerPageProps) {
   const labels = useLabels(labelsProp);
   const [drawn, setDrawn] = useState<Drawn | null>(null);
@@ -164,6 +175,10 @@ export function ViewerPage({
   const example = useMemo(() => showsExampleData(document, adapters), [document, adapters]);
   const view = useFittedView();
   const { fitTo, focusOn } = view;
+  const fitView = useMemo(() => (extent ? () => fitTo(extent) : undefined), [fitTo, extent]);
+  const touchOnly = useCoarsePointer();
+  const viewMenu = useViewMenu({ enabled: contextMenu && drawn?.kind === 'canvas', view, onFit: fitView, labels });
+  const showsButtons = drawn?.kind === 'canvas' && (zoomButtons || touchOnly);
   const surface = useRef<HTMLDivElement>(null);
   // A part a trigger points at: on a canvas, its box brought into view; in a grid, its cell scrolled into view.
   // A grid's cells exist a draw after its document is resolved, so a part pointed at as the board is first drawn is kept
@@ -205,15 +220,15 @@ export function ViewerPage({
   return (
     <ElementHost origins={elementOrigins} frames={elementFrames}>
       <div className="ub-viewer" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {drawn && (drawn.kind === 'canvas' || pollIntervalMs !== undefined) && (
+        {drawn && (showsButtons || (drawn.kind === 'canvas' && drawn.preview.backgroundBlocked) || pollIntervalMs !== undefined) && (
           <div className="ub-viewer__toolbar" style={TOOLBAR_STYLE}>
-            {drawn.kind === 'canvas' && <ViewControls view={view} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />}
+            {showsButtons && <ViewControls view={view} onFit={fitView} labels={labels} />}
             {drawn.kind === 'canvas' && drawn.preview.backgroundBlocked && <span role="status" style={NOT_UPDATING_STYLE}>{labels.backgroundBlocked}</span>}
             {pollIntervalMs !== undefined && <Freshness resolvedAt={resolvedAt} stalled={stalled} labels={labels} />}
           </div>
         )}
         {drawn ? (
-          <div ref={surface} className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} style={{ flex: 1, minHeight: 0, ...(isSkinColor(document.skin?.palette?.backdrop) && { background: document.skin.palette.backdrop }), ...(drawn.kind === 'grid' && { width, height }) }}>
+          <div ref={surface} className="ub-viewer__surface" data-appearance={document.appearance ?? 'light'} {...viewMenu.props} style={{ flex: 1, minHeight: 0, position: 'relative', ...(isSkinColor(document.skin?.palette?.backdrop) && { background: document.skin.palette.backdrop }), ...(drawn.kind === 'grid' && { width, height }) }}>
             {drawn.kind === 'canvas' ? (
               <Viewer
                 width={width}
@@ -240,8 +255,11 @@ export function ViewerPage({
                 onItemActivate={activate}
                 onElementEvent={elementEvent}
                 onInput={tellInput}
+                canvasControls={contextMenu}
+                canvasButtons={zoomButtons}
               />
             )}
+            {viewMenu.menu}
           </div>
         ) : (
           <p className="ub-viewer__status">{labels.resolving}</p>

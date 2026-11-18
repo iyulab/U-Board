@@ -153,12 +153,15 @@ export interface GridBoardProps {
   /** The language the widgets speak (BCP 47). */
   locale?: string;
   /** Words for a canvas cell's zoom buttons, its name and the line its wheel shows (English by default). */
-  labels?: Pick<UBoardLabels, 'zoomIn' | 'zoomOut' | 'fitToView' | 'canvasCell' | 'wheelZoomHint'>;
+  labels?: Pick<UBoardLabels, 'zoomIn' | 'zoomOut' | 'fitToView' | 'viewMenu' | 'canvasCell' | 'wheelZoomHint'>;
   /** What each cell holds, given the item and its frame — the frame by default. The editor wraps it to make the item
    *  selectable; a viewer has no reason to. */
   renderCell?: (item: ResolvedGridItem, frame: ReactNode, index: number) => ReactNode;
-  /** Whether a canvas cell has its zoom buttons — off where the grid is shown, not used (an editor). Default true. */
+  /** Whether a canvas cell has its view controls — the right-click menu and the `0` key, and the zoom buttons on a screen that cannot
+   *  hover — off where the grid is shown, not used (an editor). Default true. */
   canvasControls?: boolean;
+  /** Whether a canvas cell draws its zoom buttons whatever the screen. Default false. */
+  canvasButtons?: boolean;
   /** The items a click does something on (`Triggers.activatable`), and what it does. */
   activatable?: ReadonlySet<string>;
   onItemActivate?: (item: string) => void;
@@ -183,7 +186,7 @@ function elementHeight(doc: ResolvedGridView, item: ResolvedGridItem): number | 
   return name === undefined ? undefined : doc.elements?.[name]?.size?.height;
 }
 
-export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, renderCell, canvasControls, activatable, onItemActivate, onElementEvent, onInput }: GridBoardProps) {
+export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, renderCell, canvasControls, canvasButtons, activatable, onItemActivate, onElementEvent, onInput }: GridBoardProps) {
   const listened = onElementEvent ? elementListeners(doc.triggers) : undefined;
   const spans = gridSpans(doc.items);
   return (
@@ -199,7 +202,7 @@ export function GridBoard({ doc, ariaLabel, qualityText, now, locale, labels, re
             <div key={item.id} className="ub-grid__item" data-item-id={item.id} style={style}>
               {(renderCell ?? ((_item, frame) => frame))(
                 item,
-                isCanvasItem(item) ? <CanvasCell doc={doc} item={item} qualityText={qualityText} now={now} locale={locale} labels={labels} activatable={activatable} onNodeActivate={onItemActivate} onElementEvent={onElementEvent} onInput={onInput} controls={canvasControls} /> : <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} highlighted={item.highlighted} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} onInput={onInput && (input => onInput(item.id, input))} elementEvents={listened?.get(item.id)} />,
+                isCanvasItem(item) ? <CanvasCell doc={doc} item={item} qualityText={qualityText} now={now} locale={locale} labels={labels} activatable={activatable} onNodeActivate={onItemActivate} onElementEvent={onElementEvent} onInput={onInput} controls={canvasControls} buttons={canvasButtons} /> : <NodeFrame widget={item.widget} appearance={doc.appearance} accent={doc.accent} skin={doc.skin} symbols={doc.symbols} qualityText={qualityText} now={now} locale={locale} elements={doc.elements} state={item.state} looks={item.states?.looks} highlighted={item.highlighted} onActivate={onItemActivate && activatable?.has(item.id) ? () => onItemActivate(item.id) : undefined} onElementEvent={onElementEvent && (name => onElementEvent(item.id, name))} onInput={onInput && (input => onInput(item.id, input))} elementEvents={listened?.get(item.id)} />,
                 index
               )}
             </div>

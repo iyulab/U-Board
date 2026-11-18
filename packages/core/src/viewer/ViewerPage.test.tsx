@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, act, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, act, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import { setMediaOrigins } from '@iyulab/u-widgets';
@@ -14,7 +14,9 @@ const viewerProps = vi.fn();
 vi.mock('@canvas-kit/viewer', () => ({
   Viewer: (props: Record<string, unknown>) => {
     viewerProps(props);
-    return <div data-testid="viewer" />;
+    // The real viewer is a focusable region; the keys and the menu look for it.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+    return <div data-testid="viewer" role="region" tabIndex={0} />;
   },
 }));
 
@@ -161,7 +163,7 @@ describe('ViewerPage', () => {
     });
 
     it('fits again on demand from the "Fit to view" control', async () => {
-      render(<ViewerPage adapters={[]} document={docWithBackground()} />);
+      render(<ViewerPage adapters={[]} document={docWithBackground()} zoomButtons />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
       act(() => lastViewerProps().onTransformChange({ x: 1, y: 2, scale: 0.7 }));
@@ -202,7 +204,7 @@ describe('ViewerPage', () => {
     });
 
     it('zooms in and out from keyboard-operable controls, around the middle of the view', async () => {
-      render(<ViewerPage adapters={[]} document={docWithBackground()} />);
+      render(<ViewerPage adapters={[]} document={docWithBackground()} zoomButtons />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
 
@@ -213,12 +215,159 @@ describe('ViewerPage', () => {
     });
 
     it('offers no fit control for an empty document, and leaves its view at identity', async () => {
-      render(<ViewerPage adapters={[]} document={doc()} />);
+      render(<ViewerPage adapters={[]} document={doc()} zoomButtons />);
       await screen.findByTestId('viewer');
       act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
       expect(screen.queryByRole('button', { name: 'Fit to view' })).not.toBeInTheDocument();
+      fireEvent.contextMenu(screen.getByTestId('viewer'));
+      expect(screen.getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Zoom in', 'Zoom out']);
       expect(lastViewerProps().transform).toEqual({ x: 0, y: 0, scale: 1 });
     });
+  });
+});
+
+describe('ViewerPage view menu', () => {
+  function docWithBackground(): CanvasView {
+    return { kind: 'canvas', background: { image: { src: 'bg.png', width: 1200, height: 800 } }, nodes: [], connectors: [] };
+  }
+
+  const open = async (props: Partial<React.ComponentProps<typeof ViewerPage>> = {}) => {
+    render(<ViewerPage adapters={[]} document={docWithBackground()} {...props} />);
+    const viewer = await screen.findByTestId('viewer');
+    act(() => lastViewerProps().onViewportResize({ width: 632, height: 432 }));
+    return viewer;
+  };
+
+  afterEach(() => {
+    delete (window as { matchMedia?: unknown }).matchMedia;
+    window.getSelection()?.removeAllRanges();
+  });
+
+  it('draws no zoom buttons unless the host asks for them', async () => {
+    await open();
+    expect(screen.queryByRole('button', { name: 'Zoom in' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Fit to view' })).not.toBeInTheDocument();
+  });
+
+  it('opens a menu on a right click, and an item does its work and closes it', async () => {
+    const viewer = await open();
+    act(() => lastViewerProps().onTransformChange({ x: 1, y: 2, scale: 0.7 }));
+    // `fireEvent` answers false when the event's default was prevented — the browser's own menu is not shown.
+    expect(fireEvent.contextMenu(viewer, { clientX: 50, clientY: 60 })).toBe(false);
+
+    const menu = screen.getByRole('menu', { name: 'View' });
+    expect(within(menu).getAllByRole('menuitem').map(item => item.textContent)).toEqual(['Zoom in', 'Zoom out', 'Fit to view']);
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Fit to view' }));
+
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(lastViewerProps().transform).toEqual({ x: 16, y: 16, scale: 0.5 });
+  });
+
+  it('does not close when a press lands on an item before the click — where a button takes no focus', async () => {
+    const viewer = await open();
+    fireEvent.contextMenu(viewer);
+    // A press on an item has its default prevented, so the focus stays and the menu stays until the click.
+    expect(fireEvent.mouseDown(screen.getByRole('menuitem', { name: 'Zoom out' }))).toBe(false);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+  });
+
+  it('zooms around the middle from the menu', async () => {
+    const viewer = await open();
+    fireEvent.contextMenu(viewer);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Zoom in' }));
+    expect(lastViewerProps().transform.scale).toBeCloseTo(0.625);
+    fireEvent.contextMenu(viewer);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Zoom out' }));
+    expect(lastViewerProps().transform.scale).toBeCloseTo(0.5);
+  });
+
+  it('puts the focus on the first item, moves it with the arrow keys, and gives it back to the board on Escape', async () => {
+    const viewer = await open();
+    viewer.focus();
+    fireEvent.contextMenu(viewer);
+    const menu = screen.getByRole('menu');
+    expect(screen.getByRole('menuitem', { name: 'Zoom in' })).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(screen.getByRole('menuitem', { name: 'Zoom out' })).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'End' });
+    expect(screen.getByRole('menuitem', { name: 'Fit to view' })).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'ArrowDown' });
+    expect(screen.getByRole('menuitem', { name: 'Zoom in' })).toHaveFocus();
+    fireEvent.keyDown(menu, { key: 'ArrowUp' });
+    expect(screen.getByRole('menuitem', { name: 'Fit to view' })).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(viewer).toHaveFocus();
+  });
+
+  it('closes on a press anywhere else', async () => {
+    const viewer = await open();
+    fireEvent.contextMenu(viewer);
+    expect(screen.getByRole('menu')).toBeInTheDocument();
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('disables an item the zoom bounds have reached', async () => {
+    const viewer = await open();
+    act(() => lastViewerProps().onTransformChange({ x: 0, y: 0, scale: 10 }));
+    fireEvent.contextMenu(viewer);
+    expect(screen.getByRole('menuitem', { name: 'Zoom in' })).toBeDisabled();
+    expect(screen.getByRole('menuitem', { name: 'Zoom out' })).toBeEnabled();
+  });
+
+  it("leaves the browser's own menu on a link, a place to type, selected text and with Shift held", async () => {
+    const viewer = await open();
+    const link = document.createElement('a');
+    link.href = 'https://example.com/';
+    const field = document.createElement('input');
+    viewer.parentElement!.append(link, field);
+
+    expect(fireEvent.contextMenu(link)).toBe(true);
+    expect(fireEvent.contextMenu(field)).toBe(true);
+    expect(fireEvent.contextMenu(viewer, { shiftKey: true })).toBe(true);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+
+    const text = document.createElement('p');
+    text.textContent = 'a figure';
+    viewer.parentElement!.append(text);
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    window.getSelection()!.addRange(range);
+    expect(fireEvent.contextMenu(viewer)).toBe(true);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('fits on the 0 key when the board itself holds the focus, and not from a part of it', async () => {
+    const viewer = await open();
+    act(() => lastViewerProps().onTransformChange({ x: 1, y: 2, scale: 0.7 }));
+    const part = document.createElement('button');
+    viewer.parentElement!.append(part);
+
+    fireEvent.keyDown(part, { key: '0' });
+    expect(lastViewerProps().transform).toEqual({ x: 1, y: 2, scale: 0.7 });
+    fireEvent.keyDown(viewer, { key: '0', ctrlKey: true });
+    expect(lastViewerProps().transform).toEqual({ x: 1, y: 2, scale: 0.7 });
+    fireEvent.keyDown(viewer, { key: '0' });
+    expect(lastViewerProps().transform).toEqual({ x: 16, y: 16, scale: 0.5 });
+  });
+
+  it('has no menu and no 0 key when the host turns it off', async () => {
+    const viewer = await open({ contextMenu: false });
+    act(() => lastViewerProps().onTransformChange({ x: 1, y: 2, scale: 0.7 }));
+    expect(fireEvent.contextMenu(viewer)).toBe(true);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    fireEvent.keyDown(viewer, { key: '0' });
+    expect(lastViewerProps().transform).toEqual({ x: 1, y: 2, scale: 0.7 });
+  });
+
+  it('draws the zoom buttons on a screen that cannot hover, where a right click is out of reach', async () => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }) as unknown as typeof window.matchMedia;
+    await open({ contextMenu: false });
+    expect(window.matchMedia).toHaveBeenCalledWith('(hover: none) and (pointer: coarse)');
+    expect(screen.getByRole('button', { name: 'Zoom in' })).toBeInTheDocument();
   });
 });
 
@@ -244,7 +393,7 @@ describe('ViewerPage labels', () => {
   };
 
   it('shows the given text on its controls, view and quality tooltips', async () => {
-    render(<ViewerPage adapters={[new FailingAdapter()]} document={docWithBinding()} labels={ko} />);
+    render(<ViewerPage adapters={[new FailingAdapter()]} document={docWithBinding()} labels={ko} zoomButtons />);
     await screen.findByTestId('viewer');
     expect(screen.getByRole('button', { name: '확대' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '축소' })).toBeInTheDocument();
@@ -255,7 +404,7 @@ describe('ViewerPage labels', () => {
   });
 
   it('keeps English for any label not given', async () => {
-    render(<ViewerPage adapters={[new SpyAdapter()]} document={docWithBinding()} labels={{ zoomIn: '확대' }} />);
+    render(<ViewerPage adapters={[new SpyAdapter()]} document={docWithBinding()} labels={{ zoomIn: '확대' }} zoomButtons />);
     await screen.findByTestId('viewer');
     expect(screen.getByRole('button', { name: 'Zoom out' })).toBeInTheDocument();
     expect(lastViewerProps().ariaLabel).toBe('Board');
@@ -458,7 +607,7 @@ describe('ViewerPage with a grid view', () => {
         },
       ],
     };
-    render(<ViewerPage document={mixed} adapters={[new SpyAdapter()]} />);
+    render(<ViewerPage document={mixed} adapters={[new SpyAdapter()]} zoomButtons />);
     await waitFor(() => expect(viewerProps).toHaveBeenCalled());
     const props = lastViewerProps();
     expect(props).toMatchObject({ wheel: 'modified', ariaLabel: 'Canvas' });
@@ -471,6 +620,17 @@ describe('ViewerPage with a grid view', () => {
     expect(cellAspectRatio({ kind: 'canvas', ...plan.canvas, nodes: [], connectors: [] })).toBeCloseTo(832 / 432);
     expect(cellAspectRatio({ kind: 'canvas', background: {}, nodes: [], connectors: [] })).toBe(2);
     expect(screen.getByRole('button', { name: 'Fit to view' })).toBeInTheDocument();
+    // A canvas cell has the same menu as a canvas board.
+    fireEvent.contextMenu(screen.getByTestId('viewer'));
+    expect(screen.getByRole('menu', { name: 'View' })).toBeInTheDocument();
+  });
+
+  it('gives a canvas cell no menu where the host turns it off', async () => {
+    const mixed: GridView = { kind: 'grid', items: [{ id: 'plan', span: 12, canvas: { background: {}, nodes: [], connectors: [] } }] };
+    render(<ViewerPage document={mixed} adapters={[new SpyAdapter()]} contextMenu={false} />);
+    await waitFor(() => expect(viewerProps).toHaveBeenCalled());
+    expect(fireEvent.contextMenu(screen.getByTestId('viewer'))).toBe(true);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });
 

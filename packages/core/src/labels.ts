@@ -21,6 +21,8 @@ export interface UBoardLabels {
   zoomIn: string;
   zoomOut: string;
   fitToView: string;
+  /** The accessible name of the menu a right click opens over a board — the three controls above. */
+  viewMenu: string;
   /** The accessible name of a `ViewerPage` board view when no `ariaLabel` is given. */
   boardRegion: string;
   /** Before the sources a board's data comes from, under the board (`Adapter.attribution`). */
@@ -62,6 +64,7 @@ export const DEFAULT_LABELS: UBoardLabels = {
   zoomIn: 'Zoom in',
   zoomOut: 'Zoom out',
   fitToView: 'Fit to view',
+  viewMenu: 'View',
   boardRegion: 'Board',
   dataSources: 'Data',
   exampleData: 'Example data',

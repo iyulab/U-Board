@@ -15,6 +15,7 @@ export const KO_LABELS: UBoardLabels = {
   zoomIn: '확대',
   zoomOut: '축소',
   fitToView: '화면에 맞추기',
+  viewMenu: '보기',
   boardRegion: '보드',
   dataSources: '데이터 출처',
   exampleData: '예시 데이터',

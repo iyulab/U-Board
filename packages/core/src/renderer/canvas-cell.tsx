@@ -5,6 +5,8 @@ import type { QualityText } from '../quality-text.js';
 import { DOCUMENT_FIT_OPTIONS, documentExtent } from '../viewer/document-extent.js';
 import { useFittedView } from '../viewer/use-fitted-view.js';
 import { ViewControls } from '../viewer/ViewControls.js';
+import { useViewMenu } from '../viewer/ViewMenu.js';
+import { useCoarsePointer } from '../viewer/use-coarse-pointer.js';
 import { DEFAULT_LABELS, type UBoardLabels } from '../labels.js';
 import { toCanvasKit } from './to-canvas-kit.js';
 import type { PartInput } from '../board-input.js';
@@ -35,21 +37,24 @@ export interface CanvasCellProps {
   qualityText?: QualityText;
   now: number;
   locale?: string;
-  labels?: Pick<UBoardLabels, 'zoomIn' | 'zoomOut' | 'fitToView' | 'canvasCell' | 'wheelZoomHint'>;
+  labels?: Pick<UBoardLabels, 'zoomIn' | 'zoomOut' | 'fitToView' | 'viewMenu' | 'canvasCell' | 'wheelZoomHint'>;
   activatable?: ReadonlySet<string>;
   onNodeActivate?: (node: string) => void;
   onElementEvent?: (node: string, name: string) => void;
   onInput?: (node: string, input: PartInput) => void;
-  /** Whether it has its zoom buttons — not where the cell is shown, not used: an editor's grid. Default true. */
+  /** Whether it has its view controls — the right-click menu, the `0` key and, on a screen that cannot hover, the zoom buttons —
+   *  not where the cell is shown, not used: an editor's grid. Default true. */
   controls?: boolean;
+  /** Whether it draws the zoom buttons whatever the screen. Default false. */
+  buttons?: boolean;
 }
 
 /**
  * A grid's canvas cell, drawn as a canvas board is — fitted to its cell, and fitted again whenever the cell changes
  * size, until the viewer pans or zooms it. The grid around it scrolls, so the wheel here scrolls the page and zooms
- * only with Ctrl or ⌘ held; drag, the keys and the zoom buttons work as on a canvas board.
+ * only with Ctrl or ⌘ held; drag, the keys and the right-click menu work as on a canvas board.
  */
-export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAULT_LABELS, activatable, onNodeActivate, onElementEvent, onInput, controls = true }: CanvasCellProps) {
+export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAULT_LABELS, activatable, onNodeActivate, onElementEvent, onInput, controls = true, buttons = false }: CanvasCellProps) {
   const view = useMemo(() => cellCanvasView(doc, item), [doc, item]);
   const drawn = useMemo(
     () => toCanvasKit(view, { qualityText, now, locale, activatable, onNodeActivate, onElementEvent, onInput }),
@@ -61,15 +66,18 @@ export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAU
   const extentKey = JSON.stringify(documentExtent(view));
   const extent = useMemo(() => JSON.parse(extentKey) as ReturnType<typeof documentExtent>, [extentKey]);
   useEffect(() => fitTo(extent), [fitTo, extent]);
+  const fitView = useMemo(() => (extent ? () => fitTo(extent) : undefined), [fitTo, extent]);
+  const touchOnly = useCoarsePointer();
+  const viewMenu = useViewMenu({ enabled: controls, view: fitted, onFit: fitView, labels });
 
   // The canvas fills its cell. Without a height of its own, an in-flow sizer in the canvas's proportions gives the cell
   // its height — the least it takes; a row made taller by its neighbours, or rows it spans, stretch it further.
   return (
-    <div className="ub-grid__canvas" style={CELL_STYLE}>
+    <div className="ub-grid__canvas" style={CELL_STYLE} {...viewMenu.props}>
       {item.height === undefined && <div aria-hidden="true" style={{ width: '100%', aspectRatio: cellAspectRatio(view) }} />}
-      {controls && (
+      {controls && (buttons || touchOnly) && (
         <span className="ub-grid__canvas-controls" style={CONTROLS_STYLE}>
-          <ViewControls view={fitted} onFit={extent ? () => fitTo(extent) : undefined} labels={labels} />
+          <ViewControls view={fitted} onFit={fitView} labels={labels} />
         </span>
       )}
       <div style={VIEWER_STYLE}>
@@ -84,6 +92,7 @@ export function CanvasCell({ doc, item, qualityText, now, locale, labels = DEFAU
           wheelHint={labels.wheelZoomHint}
         />
       </div>
+      {viewMenu.menu}
     </div>
   );
 }
