@@ -83,7 +83,11 @@ export function LineView() {
 - **The board** names no system: `from: 'plant'` selects your adapter, and what a part shows is a field of what it reads.
   Changing the board never changes your code, and the other way round.
 - **`variables`** are values your app gives the board — a line, a shift, a day (`kind: 'date'` for one no list names). The board is
-  drawn again when they change; a value the board does not accept is read as the variable's default.
+  drawn again when they change; a value the board does not accept is read as the variable's default. A variable can stand in a data's
+  `path` (`/lines/{{$line}}/pumps`), in its `where` (`{ "variable": "line" }`), in an `of` and in a text — so one value filters every
+  part that reads it. It is also how a long list is read a page at a time: put the page in a variable
+  (`path: '/orders?$top=20&$skip={{$skip}}'`) and let your app change it, drawing the next page when it does. A table's own
+  page buttons turn the pages of the rows that were read.
 - **`onTrigger` and `onInput`** are how the board talks back. A trigger tells you an event happened on a part (a click, a status
   change); `onInput` tells you what a person typed into an input widget of a picture you draw yourself, and the value a script element of a board raised (`ub.emit(name, value)`). Whether to ask for a
   confirmation, where the values go and who may send them are yours: the viewer writes to no system the board reads.

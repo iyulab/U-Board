@@ -572,7 +572,8 @@ function boardSchema(): object;   // JSON Schema 2020-12
   a board reads it.
 - `boardSchema()` — the same rules a JSON Schema can say, generated from the lists the validator reads.
 - `boardRulebook()` — the language as Markdown, for an assistant that writes boards: generated from the schema and the
-  part kinds, with `RULEBOOK_EXAMPLE`.
+  part kinds, with `RULEBOOK_EXAMPLE`. It is where to look for what a part kind takes — a bar chart's `stack`, for one;
+  `boardSchema()` has the structure of a board, not each kind's options.
 
 ## Drawing a board
 
