@@ -31,7 +31,7 @@ function workspaceWorkflow(offered: ReadonlySet<string>): string {
     'validate({ document } | { board, patch }) checks without saving, exactly as saving does.',
     ...(offered.has('board_state') ? ['board_state({ board }) — what each part shows now (state, quality), no picture: the cheap check after a change to states or data.'] : []),
     ...(offered.has('look')
-      ? ['look({ board }) after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands. Fix both, and any part it says is disconnected (board_state says why) — the board is done when its status says so; focus a part to see it up close. Call it in the same turn, after the patch_board — it names the revision it drew.']
+      ? ['After a change, send it with patch_board({ board, revision, patch, look: true }) — saved and drawn in one call: a picture as viewers see it, what went wrong while drawing, and the advice that still stands (a look() of its own is for a board as it is saved, and for focus: one part up close). Fix both, and any part it says is disconnected (board_state says why) — the board is done when its status says so.']
       : []),
   ];
   return `# Changing boards with these tools
@@ -64,7 +64,7 @@ This is one board, kept in a file — no U-Board server, so no list of boards an
    Each save is a new revision.
 3. Read the answer: the new revision and advice — act on it. A 412: someone saved since — get_board, patch again.
 4. validate({ document } | { patch }) checks without saving, exactly as saving does; validate({}) checks the board as it is saved.
-${offered.has('look') ? '5. look() after a change — a picture as viewers see it, what went wrong while drawing, and the advice that still stands: parts over one another, a part past the edge, a part that drew nothing. Fix what you see; focus a part to see it up close. Call it in the same turn, after the patch_board — it names the revision it drew (a refused patch leaves the last one). Values are drawn only if the person gave the answers of the sources when starting; with none, a part made per item of a list draws no item.\n' : ''}
+${offered.has('look') ? '5. After a change, patch_board with look: true — saved and drawn in one call: a picture as viewers see it, what went wrong while drawing, and the advice that still stands: parts over one another, a part past the edge, a part that drew nothing. Fix what you see; look({ focus }) shows one part up close (a refused patch leaves the last revision, and draws nothing). Values are drawn only if the person gave the answers of the sources when starting; with none, a part made per item of a list draws no item.\n' : ''}
 ${JSON_PATCH}
 
 ## Sources

@@ -85,4 +85,17 @@ describe('the file of answers', () => {
     await writeFile(good, JSON.stringify(answers));
     await expect(readAnswers(good)).resolves.toEqual(answers);
   });
+  it('saves a change and draws it in one call when patch_board is asked to look — the picture and the report of the saved revision', async () => {
+    const store = await openStore(true);
+    const tools = boardTools(store, { looker: new LocalLooker(store, answers) });
+    const patch = tools.find(t => t.name === 'patch_board')!;
+    const result = (await patch.run({ revision: 1, patch: [{ op: 'add', path: '/parts/room/title', value: 'name' }], look: true } as never)) as { content: Array<{ type: string; data?: string; text?: string }>; isError?: boolean };
+    expect(result.isError ?? false).toBe(false);
+    const said = JSON.parse(result.content.find(c => c.type === 'text')!.text!);
+    expect(Buffer.from(result.content.find(c => c.type === 'image')!.data!, 'base64').subarray(0, 4).toString('hex')).toBe('89504e47');
+    expect(said.revision).toBe(2);
+    expect(said.status).toBeDefined();
+    expect(said.picture).toEqual({ width: 1600, height: 900 });
+    expect((await store.getBoard('board')).revision).toBe(2);
+  }, 60_000);
 });

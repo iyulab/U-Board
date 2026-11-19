@@ -132,7 +132,8 @@ async function looking(problems: Array<{ path?: string; message: string }> = [],
     const result = (await viewer.callTool({ name: 'look', arguments: { board, ...args } })) as { content: Array<{ type: string; text?: string }>; isError?: boolean };
     return { content: result.content, report: result.isError ? undefined : JSON.parse(result.content.at(-1)!.text!), isError: result.isError ?? false };
   };
-  return { look, asked };
+  const call = (name: string, args: Record<string, unknown>) => viewer.callTool({ name, arguments: args }) as Promise<{ content: Array<{ type: string; text?: string }>; isError?: boolean }>;
+  return { look, asked, call, viewer };
 }
 
 beforeEach(async () => {
@@ -261,6 +262,53 @@ describe('u-board-mcp', () => {
     server.boards.set('b4', { name: 'Clean', revision: 1, document: gaugeBoard() });
     expect((await (await looking([{ message: 'x' }, { message: 'y' }])).look('b4')).report.status).toBe('not done — 2 problems to fix');
     expect((await (await looking()).look('b4')).report.status).toBe('done — nothing to fix');
+  });
+
+  it('saves a change and draws it in one call when patch_board is asked to look — the answer is what look would give, and the save is kept if the drawing fails', async () => {
+    const { call, asked, viewer } = await looking([{ path: '/items/0', message: 'cut off' }]);
+    const answer = await call('patch_board', { board: 'b1', revision: 4, patch: [{ op: 'add', path: '/parts/a/title', value: 'Temp' }], look: true });
+    expect(answer.isError ?? false).toBe(false);
+    // The picture first, then one text: the revision it saved, what was wrong while drawing, the status and the advice.
+    expect(answer.content.map(c => c.type)).toEqual(['image', 'text']);
+    const said = JSON.parse(answer.content.at(-1)!.text!);
+    expect(said.revision).toBe(5);
+    expect(said.status).toBe('not done — 1 problem to fix');
+    expect(said.problems).toHaveLength(1);
+    expect(asked).toHaveLength(1);
+    // Asked for nothing, it answers as before: no drawing, no picture.
+    const plain = await call('patch_board', { board: 'b1', revision: 5, patch: [{ op: 'add', path: '/parts/a/title', value: 'Temp 2' }] });
+    expect(plain.content.map(c => c.type)).toEqual(['text']);
+    expect(JSON.parse(plain.content[0]!.text!).revision).toBe(6);
+    expect(asked).toHaveLength(1);
+    // A refused patch draws nothing.
+    const refused = await call('patch_board', { board: 'b1', revision: 1, patch: [{ op: 'add', path: '/parts/a/title', value: 'Stale' }], look: true });
+    expect(refused.isError).toBe(true);
+    expect(asked).toHaveLength(1);
+    await viewer.close();
+  });
+
+  it('keeps a saved change when the drawing after it fails, and says so', async () => {
+    const looker: Looker = { look: async () => { throw new Error('no browser'); } };
+    const mcp = createServer(new UBoardClient('https://board.example.com', 'ubt_test', server.fetchImpl), looker);
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    const viewer = new Client({ name: 'test', version: '0' });
+    await Promise.all([mcp.connect(b), viewer.connect(a)]);
+    const result = (await viewer.callTool({ name: 'patch_board', arguments: { board: 'b1', revision: 4, patch: [{ op: 'add', path: '/parts/a/title', value: 'Temp' }], look: true } })) as { content: Array<{ type: string; text?: string }>; isError?: boolean };
+    expect(result.isError ?? false).toBe(false);
+    const said = JSON.parse(result.content.at(-1)!.text!);
+    expect(said.revision).toBe(5);
+    expect(said.look).toContain('no browser');
+    expect(server.boards.get('b1')!.revision).toBe(5);
+  });
+
+  it('offers `look` on patch_board only with a looker — without one the tool is as it was', async () => {
+    const { tools } = await client.listTools();
+    const patchTool = tools.find(t => t.name === 'patch_board')!;
+    expect(Object.keys((patchTool.inputSchema as { properties: object }).properties)).toEqual(['board', 'revision', 'patch']);
+    const { viewer } = await looking();
+    const drawn = (await viewer.listTools()).tools.find(t => t.name === 'patch_board')!;
+    expect(Object.keys((drawn.inputSchema as { properties: object }).properties)).toEqual(['board', 'revision', 'patch', 'look']);
+    await viewer.close();
   });
 
   it('does not call a board done that draws nothing — a blank picture has no part to be wrong', async () => {

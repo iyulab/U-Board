@@ -6,6 +6,14 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `patch_board` takes `look: true` where `look` is offered: the change is saved and the board drawn in the same call, and the answer is what `look` answers of the saved revision — the picture, what went wrong while drawing, the status and the advice. A writer that checks after every change spends one round trip on it instead of two; a refused patch draws nothing, and a drawing that fails leaves the saved change as saving answered it, with the reason. `look` on its own stays for a board as it is saved and for one part up close (`focus`).
+
+### Changed
+
+- The `patch` argument's description no longer repeats that a patch is applied entirely or not at all; `patch_board`'s own description says it.
+
 ## [0.30.0] - 2026-11-19
 
 ### Added

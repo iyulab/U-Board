@@ -149,7 +149,7 @@ const operation = z.object({
   value: z.unknown().optional().describe('For add, replace and test.'),
   from: z.string().optional().describe('For move and copy.'),
 });
-const patch = z.array(operation).min(1).describe('A JSON Patch (RFC 6902), applied entirely or not at all.');
+const patch = z.array(operation).min(1).describe('A JSON Patch (RFC 6902).');
 // `additionalProperties: true`, not the `{}` a passthrough object is written as: a widely used open-model tool-call
 // parser (vLLM's, serving Qwen) rewrites the values under an empty schema — arrays came back as objects — and the
 // model was told off for what it never sent.
@@ -496,18 +496,60 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
     );
   }
 
+  /**
+   * Draws a saved board as its viewers see it, and what `look` answers of it: the picture (when the looker takes one) and a body — the
+   * status, what went wrong while drawing, the advice that still stands. One place, so `look` and a change that asks to be drawn
+   * (`patch_board` with `look`) answer alike.
+   */
+  const draw = looker
+    ? async (id: string, { focus, appearance, width = 1600, height = 900 }: { focus?: string; appearance?: 'light' | 'dark'; width?: number; height?: number }) => {
+      const found = await store.getBoard(id);
+      const read = found.document;
+      // What the viewers' page draws: the board's picture, made by the server with its data's items.
+      const { picture } = found;
+      const { image, report } = await looker.look({ board: id, focus: focus && inPicture(picture, focus), appearance, width, height }, picture);
+      // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
+      // Up close, every layout finding is read before keeping the part's own — a fold past the limit would hide some.
+      const layout = lintViewDocument(picture, focus ? { geometryLimit: Infinity } : {}).map(a => inBoard(read, picture, a));
+      const advice = [...checkBoard(read).advice, ...layout].filter(a => !focus || concerns(a, focus));
+      // A folded line stands for the findings it counts.
+      const left = advice.reduce((n, a) => n + ((a as { count?: number }).count ?? 1), 0);
+      // What went wrong while drawing is the whole board's; up close, only the part's — as its advice is.
+      const seen = [
+        ...report.problems.map(p => inBoard(read, picture, p)),
+        ...placementProblems(found.unplaced, found.notLists),
+        ...(focus ? [] : emptyProblems(picture)),
+      ];
+      const problems = focus ? seen.filter(p => concerns(p, focus)) : seen;
+      const said = { revision: found.revision, status: lookStatus(problems.length, left, focus, focus ? 0 : report.quality.disconnected ?? 0, focus ? 0 : report.unchecked ?? 0, focus ? 0 : report.console.length), ...report, problems, advice };
+      return { image, body: said };
+    }
+    : undefined;
+
   define(
     'patch_board',
     {
       description: 'Changes part of a board with a JSON Patch, applied entirely or not at all, and saves it. Answers the new revision and advice.',
-      inputSchema: z.strictObject({ board: boardId, revision, patch }),
+      inputSchema: z.strictObject({ board: boardId, revision, patch, ...(draw ? { look: z.boolean().optional().describe('Also draw it: the answer of look.') } : {}) }),
       annotations: CHANGES_BOARD,
     },
-    async ({ board, revision, patch }) =>
-      tool(async () => {
+    async ({ board, revision, patch, look }) => {
+      try {
         const id = which(board);
-        return withLayoutAdvice(id, await store.patchDocument(id, patch, revision));
-      })
+        const saved = await withLayoutAdvice(id, await store.patchDocument(id, patch, revision));
+        if (!look || !draw) return ok(saved);
+        // The change is kept either way: a picture that could not be taken leaves the answer as saving gave it, and says so.
+        try {
+          const { image, body } = await draw(id, {});
+          const said = { type: 'text' as const, text: JSON.stringify({ ...saved, ...body }) };
+          return { content: image ? [{ type: 'image' as const, data: image, mimeType: 'image/png' }, said] : [said] };
+        } catch (error) {
+          return ok({ ...saved, look: `not drawn: ${error instanceof Error ? error.message : String(error)} — the change is saved; look tries again` });
+        }
+      } catch (error) {
+        return failed(error);
+      }
+    }
   );
 
   define(
@@ -546,8 +588,8 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
       'look',
       {
         description: looker.picture === false
-          ? 'Draws a saved board as its viewers see it and answers what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box or is cut off inside it, a value drawn as “[object Object]” or “NaN”, values not live) and the advice that stands (parts drawn over one another) — no picture. Look after a change, then fix what it reports and advises. `focus` a part for only its problems and advice.'
-          : 'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box or is cut off inside it, a value drawn as “[object Object]” or “NaN”, values not live) and the advice that stands (parts drawn over one another). Look after a change, then fix what you see and what it advises. `focus` a part to see it up close — and only its problems and advice.',
+          ? 'Draws a saved board as its viewers see it and answers what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box or is cut off inside it, a value drawn as “[object Object]” or “NaN”, values not live) and the advice that stands (parts drawn over one another) — no picture. Fix what it reports and advises. `focus` a part for only its problems and advice.'
+          : 'Draws a saved board as its viewers see it and answers a picture of it, with what went wrong while drawing (problems: an element’s error, a widget whose content runs past its box or is cut off inside it, a value drawn as “[object Object]” or “NaN”, values not live) and the advice that stands (parts drawn over one another). Fix what you see and what it advises. `focus` a part to see it up close — and only its problems and advice.',
         inputSchema: z.strictObject({
           board: boardId,
           focus: z.string().max(200).optional().describe('One part: "/parts/<id>".'),
@@ -559,25 +601,8 @@ export function boardTools(store: BoardStore | WorkspaceStore, { looker, boardSt
       },
       async ({ board, focus, appearance, width = 1600, height = 900 }) => {
         try {
-          const found = await store.getBoard(which(board));
-          const read = found.document;
-          // What the viewers' page draws: the board's picture, made by the server with its data's items.
-          const { picture } = found;
-          const { image, report } = await looker.look({ board: which(board), focus: focus && inPicture(picture, focus), appearance, width, height }, picture);
-          // What saving advised stands until it is fixed: the picture's last word must not read as «nothing wrong» over it.
-          // Up close, every layout finding is read before keeping the part's own — a fold past the limit would hide some.
-          const layout = lintViewDocument(picture, focus ? { geometryLimit: Infinity } : {}).map(a => inBoard(read, picture, a));
-          const advice = [...checkBoard(read).advice, ...layout].filter(a => !focus || concerns(a, focus));
-          // A folded line stands for the findings it counts.
-          const left = advice.reduce((n, a) => n + ((a as { count?: number }).count ?? 1), 0);
-          // What went wrong while drawing is the whole board's; up close, only the part's — as its advice is.
-          const seen = [
-            ...report.problems.map(p => inBoard(read, picture, p)),
-            ...placementProblems(found.unplaced, found.notLists),
-            ...(focus ? [] : emptyProblems(picture)),
-          ];
-          const problems = focus ? seen.filter(p => concerns(p, focus)) : seen;
-          const said = { type: 'text' as const, text: JSON.stringify({ revision: found.revision, status: lookStatus(problems.length, left, focus, focus ? 0 : report.quality.disconnected ?? 0, focus ? 0 : report.unchecked ?? 0, focus ? 0 : report.console.length), ...report, problems, advice }) };
+          const { image, body } = await draw!(which(board), { focus, appearance, width, height });
+          const said = { type: 'text' as const, text: JSON.stringify(body) };
           return { content: image ? [{ type: 'image' as const, data: image, mimeType: 'image/png' }, said] : [said] };
         } catch (error) {
           return failed(error);

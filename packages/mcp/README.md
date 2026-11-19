@@ -42,7 +42,7 @@ In a client's JSON configuration:
 | `list_boards` | The workspace's boards. |
 | `get_board` | A board, or one part of it by JSON Pointer (`/parts/pump`), with its revision. |
 | `create_board` | A new board of a kind (`grid` or `canvas`), empty or with a first board. |
-| `patch_board` | Changes part of a board with a JSON Patch (RFC 6902) on a revision; answers the new revision and advice. |
+| `patch_board` | Changes part of a board with a JSON Patch (RFC 6902) on a revision; answers the new revision and advice. With `look: true` (where `look` is offered) it also draws the saved board and answers what `look` answers. |
 | `edit_text` | Changes words inside strings of a board — an element's CSS or markup, a title — without sending the whole string: each edit names the string by JSON Pointer and the text to replace, which stands once in it; all are made or none; answers the new revision and advice. `UBOARD_EDIT_TEXT=0` leaves it out. |
 | `rename_board` | Renames a board; its id, share links and history stay. |
 | `delete_board` | Deletes a board for good (marked destructive, so a client can ask first). A data source is removed in the console. |
